@@ -1,0 +1,481 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Calendar, MapPin, Users, Plus, Search, Edit } from 'lucide-react';
+import api from '../services/api';
+import ImageUpload from '../components/ImageUpload';
+import CampgroundSelector from '../components/CampgroundSelector';
+
+interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  location?: string;
+  imageUrl?: string;
+  campground?: {
+    id: string;
+    name: string;
+    location?: string;
+    state?: string;
+  };
+  _count?: {
+    attendees: number;
+  };
+}
+
+interface Friend {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string;
+}
+
+export default function EventsPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  
+  // Helper to get date string in YYYY-MM-DD format
+  const getDateString = (daysFromNow: number = 0) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromNow);
+    return date.toISOString().split("T")[0];
+  };
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startDate: getDateString(0),
+    endDate: getDateString(7),
+    location: '',
+    campgroundId: null as string | null,
+    imageUrl: '',
+    attendeeIds: [] as string[],
+  });
+
+  useEffect(() => {
+    loadEvents();
+    loadFriends();
+  }, []);
+
+  useEffect(() => {
+    filterEvents();
+  }, [events, searchQuery]);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/trips/my`);
+      setEvents(data);
+    } catch (error) {
+      console.error('Load events error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFriends = async () => {
+    try {
+      const { data } = await api.get('/friends');
+      setFriends(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Load friends error:', error);
+    }
+  };
+
+  const filterEvents = () => {
+    let filtered = events;
+
+    if (searchQuery) {
+      filtered = filtered.filter(e =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.campground?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    setFilteredEvents(filtered);
+  };
+
+  const handleCreateEvent = async () => {
+    if (!formData.title || !formData.startDate) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const { data } = await api.post('/trips', {
+        title: formData.title,
+        description: formData.description,
+        startDate: formData.startDate,
+        endDate: formData.endDate || formData.startDate,
+        location: formData.location,
+        campgroundId: formData.campgroundId,
+        imageUrl: formData.imageUrl,
+      });
+
+      // Invite attendees if any selected
+      if (formData.attendeeIds.length > 0) {
+        await api.post(`/trips/${data.id}/attendees`, {
+          userIds: formData.attendeeIds,
+        });
+      }
+
+      alert('✅ Event created successfully!');
+      setShowCreateModal(false);
+      setFormData({
+        title: '',
+        description: '',
+        startDate: getDateString(0),
+        endDate: getDateString(7),
+        location: '',
+        campgroundId: null,
+        imageUrl: '',
+        attendeeIds: [],
+      });
+      loadEvents();
+    } catch (error) {
+      console.error('Create event error:', error);
+      alert('Failed to create event');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-green-500 to-blue-500 p-3 rounded-xl shadow-lg">
+            <Calendar className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Events</h1>
+            <p className="text-gray-600">Discover and join camping events! ⛺</p>
+          </div>
+        </div>
+       
+
+         <button
+          onClick={() => {
+            setFormData({
+              title: '',
+              description: '',
+              startDate: getDateString(0),
+              endDate: getDateString(7),
+              location: '',
+              campgroundId: null,
+              imageUrl: '',
+              attendeeIds: [],
+            });
+            setShowCreateModal(true);
+          }}
+          className="btn btn-primary flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Create Event
+        </button>
+
+
+      </div>
+
+      {/* Search */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search events..."
+            className="input w-full pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Events Grid */}
+      {filteredEvents.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEvents.map((event) => (
+            <div
+              key={event.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition group relative"
+            >
+              <Link to={`/trips/${event.id}`}>
+                {/* Event Image */}
+                <div className="h-48 bg-gradient-to-br from-green-100 to-blue-100 relative overflow-hidden">
+                  {event.imageUrl ? (
+                    <img
+                      src={event.imageUrl}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Calendar className="w-16 h-16 text-green-300" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Event Info */}
+                <div className="p-4">
+                  <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+                    {event.title}
+                  </h3>
+                  {event.description && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {event.description}
+                    </p>
+                  )}
+
+                  {/* Date */}
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <Calendar className="w-4 h-4 text-primary-600" />
+                    {new Date(event.startDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    {event.endDate && event.endDate !== event.startDate && (
+                      <>
+                        {' - '}
+                        {new Date(event.endDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 text-sm text-gray-600">
+                    {(event.campground || event.location) && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-primary-600" />
+                        {event.campground ? (
+                          <span>{event.campground.name}</span>
+                        ) : (
+                          <span>{event.location}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary-600" />
+                      {event._count?.attendees || 0} attendees
+                    </div>
+                  </div>
+
+                  {event.campground?.location && (
+                    <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                      {event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}
+                    </div>
+                  )}
+                </div>
+              </Link>
+
+              {/* Edit Button - Top Right */}
+              <Link
+                to={`/trips/${event.id}/edit`}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 bg-white hover:bg-gray-100 p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Edit Event"
+              >
+                <Edit className="w-4 h-4 text-gray-700" />
+              </Link>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-white rounded-lg shadow-md">
+          <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No events found</p>
+        </div>
+      )}
+
+      {/* Create Event Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6 rounded-t-xl sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-8 h-8" />
+                  <h2 className="text-2xl font-bold">Create Event</h2>
+                </div>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Event Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="input w-full"
+                  placeholder="Summer Camping Trip 2024"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="input w-full"
+                  placeholder="Tell everyone about this event..."
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Campground Selector */}
+              <CampgroundSelector
+                selectedCampgroundId={formData.campgroundId}
+                manualLocation={formData.location}
+                onCampgroundSelect={(id, name, location) => {
+                  setFormData({
+                    ...formData,
+                    campgroundId: id,
+                    location: location || name,
+                  });
+                }}
+                onManualLocationChange={(location) => {
+                  setFormData({
+                    ...formData,
+                    campgroundId: null,
+                    location,
+                  });
+                }}
+              />
+
+              {/* Image Upload */}
+              <ImageUpload
+                onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
+                currentImage={formData.imageUrl}
+                label="Cover Image"
+              />
+
+              {/* Tag Friends */}
+              {friends.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Invite Friends (Optional)
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                    {friends.map((friend) => (
+                      <label
+                        key={friend.id}
+                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.attendeeIds.includes(friend.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                attendeeIds: [...formData.attendeeIds, friend.id]
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                attendeeIds: formData.attendeeIds.filter(id => id !== friend.id)
+                              });
+                            }
+                          }}
+                          className="rounded text-primary-600"
+                        />
+                        <div className="flex items-center gap-2 flex-1">
+                          {friend.profilePicture ? (
+                            <img
+                              src={`http://127.0.0.1:3001${friend.profilePicture}`}
+                              alt={friend.firstName}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                              <Users className="w-3 h-3 text-gray-500" />
+                            </div>
+                          )}
+                          <span className="text-sm">{friend.firstName} {friend.lastName}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Submit */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={handleCreateEvent}
+                  className="btn btn-primary flex-1"
+                  disabled={!formData.title || !formData.startDate}
+                >
+                  ✨ Create Event
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

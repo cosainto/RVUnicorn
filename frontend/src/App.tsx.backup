@@ -1,0 +1,175 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Navbar from './components/Navbar';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import FeedPage from './pages/FeedPage';
+import ProfilePage from './pages/ProfilePage';
+import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
+import CampgroundsPage from './pages/CampgroundsPage';
+import CampgroundDetailPage from './pages/CampgroundDetailPage';
+import AlbumDetailPage from './pages/AlbumDetailPage';
+import RecipeDetailPage from './pages/RecipeDetailPage';
+import TravelMapPage from './pages/TravelMapPage';
+import GearPackingPage from './pages/GearPackingPage';
+import FriendsPage from './pages/FriendsPage';
+import MessagesPage from './pages/MessagesPage';
+import MaintenancePage from './pages/MaintenancePage';
+import JobBoardPage from './pages/JobBoardPage';
+
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return user ? <>{children}</> : <Navigate to="/login" />;
+}
+
+function AppContent() {
+  const { user } = useAuth();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {user && <Navbar />}
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/feed"
+          element={
+            <PrivateRoute>
+              <FeedPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile/:username"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/events"
+          element={
+            <PrivateRoute>
+              <EventsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/events/:eventId"
+          element={
+            <PrivateRoute>
+              <EventDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/campgrounds"
+          element={
+            <PrivateRoute>
+              <CampgroundsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/campgrounds/:slug"
+          element={
+            <PrivateRoute>
+              <CampgroundDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/albums/:albumId"
+          element={
+            <PrivateRoute>
+              <AlbumDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/recipes/:recipeId"
+          element={
+            <PrivateRoute>
+              <RecipeDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/travel"
+          element={
+            <PrivateRoute>
+              <TravelMapPage />
+            </PrivateRoute>
+          }
+        />
+               <Route
+          path="/jobs"
+          element={
+            <PrivateRoute>
+              <JobBoardPage />
+            </PrivateRoute>
+          }
+        />
+
+
+        <Route
+          path="/gear"
+          element={
+            <PrivateRoute>
+              <GearPackingPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/friends"
+          element={
+            <PrivateRoute>
+              <FriendsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <PrivateRoute>
+              <MessagesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/maintenance"
+          element={
+            <PrivateRoute>
+              <MaintenancePage />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/feed" />} />
+      </Routes>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;

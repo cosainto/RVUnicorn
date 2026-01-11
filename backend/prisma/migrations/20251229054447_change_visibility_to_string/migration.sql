@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "StateVisit" ALTER COLUMN "visibility" SET DEFAULT 'PUBLIC',
+ALTER COLUMN "visibility" SET DATA TYPE TEXT;

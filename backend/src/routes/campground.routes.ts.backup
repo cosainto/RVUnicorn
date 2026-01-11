@@ -1,0 +1,199 @@
+import { Router } from 'express';
+import { prisma } from '../index';
+import { optionalAuth } from '../middleware/auth.middleware';
+
+const router = Router();
+
+// GET /api/campgrounds - List campgrounds with search and filters
+router.get('/', async (req, res) => {
+  try {
+    const {
+      search,
+      state,
+      page = '1',
+      limit = '20',
+    } = req.query;
+
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const take = parseInt(limit as string);
+
+    // Build where clause
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: 'insensitive' } },
+        { location: { contains: search as string, mode: 'insensitive' } },
+        { description: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    if (state) {
+      where.state = state;
+    }
+
+    const [campgrounds, total] = await Promise.all([
+      prisma.campground.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { name: 'asc' },
+      }),
+      prisma.campground.count({ where }),
+    ]);
+
+    res.json({
+      campgrounds,
+      total,
+      page: parseInt(page as string),
+      totalPages: Math.ceil(total / take),
+    });
+  } catch (error) {
+    console.error('Get campgrounds error:', error);
+    res.status(500).json({ error: 'Failed to fetch campgrounds' });
+  }
+});
+
+// GET /api/campgrounds/:slug - Get campground details
+router.get('/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const campground = await prisma.campground.findUnique({
+      where: { slug },
+      include: {
+        reviews: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: {
+          select: {
+            reviews: true,
+            stateVisits: true,
+          },
+        },
+      },
+    });
+
+    if (!campground) {
+      return res.status(404).json({ error: 'Campground not found' });
+    }
+
+    res.json(campground);
+  } catch (error) {
+    console.error('Get campground error:', error);
+    res.status(500).json({ error: 'Failed to fetch campground' });
+  }
+});
+
+// POST /api/campgrounds/:id/reviews - Add review
+router.post('/:id/reviews', optionalAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const review = await prisma.campgroundReview.create({
+      data: {
+        campgroundId: id,
+        userId,
+        rating,
+        comment,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    res.json(review);
+  } catch (error) {
+    console.error('Add review error:', error);
+    res.status(500).json({ error: 'Failed to add review' });
+  }
+
+
+// Suggest a new campground (user-submitted)
+router.post('/suggest', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const {
+      name,
+      location,
+      state,
+      description,
+      latitude,
+      longitude,
+      amenities,
+      phone,
+      website,
+      email
+    } = req.body;
+
+    if (!name || !location) {
+      return res.status(400).json({ error: 'Name and location are required' });
+    }
+
+    // Create slug
+    const baseSlug = `${name}-${state || location}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 90);
+
+    // Make sure slug is unique
+    let slug = baseSlug;
+    let counter = 1;
+    while (await prisma.campground.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    const campground = await prisma.campground.create({
+      data: {
+        name,
+        slug,
+        location,
+        state,
+        description,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+        amenities: amenities || [],
+        phone,
+        website,
+        email,
+      },
+    });
+
+    res.json({ 
+      message: 'Campground suggestion submitted successfully!',
+      campground 
+    });
+  } catch (error) {
+    console.error('Error suggesting campground:', error);
+    res.status(500).json({ error: 'Failed to submit campground suggestion' });
+  }
+});
+
+export default router;

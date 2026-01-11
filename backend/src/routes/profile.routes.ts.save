@@ -1,0 +1,805 @@
+
+import { Router } from 'express';
+import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
+import { prisma } from '../index';
+
+const router = Router();
+
+// GET /api/profile/:username - Get user profile by username
+router.get('/:username', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const currentUserId = (req as any).userId;
+
+    const profile = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: currentUserId ? true : false,
+        profilePicture: true,
+        coverPhoto: true,
+        bio: true,
+        location: true,
+        website: true,
+        facebookUrl: true,
+        instagramUrl: true,
+        tiktokUrl: true,
+        redditUrl: true,
+        youtubeUrl: true,
+        rvType: true,
+        rvYear: true,
+        rvMake: true,
+        rvModel: true,
+        status: true,
+        statusEmoji: true,
+        statusType: true,
+        currentCampsite: true,
+        createdAt: true,
+        _count: {
+          select: {
+            posts: true,
+            followersAsFollowing: true,
+            followingAsFollower: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Transform the _count data
+    const formattedProfile = {
+      ...profile,
+      _count: {
+        posts: profile._count.posts,
+        followers: profile._count.followersAsFollowing,
+        following: profile._count.followingAsFollower,
+      },
+    };
+
+    res.json(formattedProfile);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// PUT /api/profile/:username - Update user profile
+router.put('/:username', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const userId = (req as any).userId;
+    const { 
+      firstName, 
+      lastName, 
+      bio, 
+      location, 
+      website, 
+      facebookUrl, 
+      instagramUrl, 
+      tiktokUrl, 
+      redditUrl, 
+      youtubeUrl,
+      profilePicture, 
+      coverPhoto,
+    } = req.body;
+
+    // Verify the user is updating their own profile
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user || user.id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const updatedProfile = await prisma.user.update({
+      where: { username },
+      data: {
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        bio: bio !== undefined ? bio : undefined,
+        location: location !== undefined ? location : undefined,
+        website: website !== undefined ? website : undefined,
+        facebookUrl: facebookUrl !== undefined ? facebookUrl : undefined,
+        instagramUrl: instagramUrl !== undefined ? instagramUrl : undefined,
+        tiktokUrl: tiktokUrl !== undefined ? tiktokUrl : undefined,
+        redditUrl: redditUrl !== undefined ? redditUrl : undefined,
+        youtubeUrl: youtubeUrl !== undefined ? youtubeUrl : undefined,
+        profilePicture: profilePicture !== undefined ? profilePicture : undefined,
+        coverPhoto: coverPhoto !== undefined ? coverPhoto : undefined,
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        profilePicture: true,
+        coverPhoto: true,
+        bio: true,
+        location: true,
+        website: true,
+        facebookUrl: true,
+        instagramUrl: true,
+        tiktokUrl: true,
+        redditUrl: true,
+        youtubeUrl: true,
+        rvType: true,
+        rvYear: true,
+        rvMake: true,
+        rvModel: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(updatedProfile);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// POST /api/profile/:userId/follow - Follow a user
+router.post('/:userId/follow', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const followerId = (req as any).userId;
+
+    if (userId === followerId) {
+      return res.status(400).json({ error: 'Cannot follow yourself' });
+    }
+
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: userId,
+        },
+      },
+    });
+
+    if (existingFollow) {
+      return res.status(400).json({ error: 'Already following this user' });
+    }
+
+    await prisma.follow.create({
+      data: {
+        followerId,
+        followingId: userId,
+      },
+    });
+
+    // Create notification
+    await prisma.notification.create({
+      data: {
+        userId: userId,
+        type: 'FOLLOW',
+        content: 'started following you',
+        link: `/profile/${followerId}`,
+      },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Follow error:', error);
+    res.status(500).json({ error: 'Failed to follow user' });
+  }
+});
+
+// DELETE /api/profile/:userId/follow - Unfollow a user
+router.delete('/:userId/follow', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const followerId = (req as any).userId;
+
+    await prisma.follow.delete({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: userId,
+        },
+      },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unfollow error:', error);
+    res.status(500).json({ error: 'Failed to unfollow user' });
+  }
+});
+
+// GET /api/profile/:userId/is-following - Check if current user is following another user
+router.get('/:userId/is-following', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const followerId = (req as any).userId;
+
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: userId,
+        },
+      },
+    });
+
+    res.json({ isFollowing: !!follow });
+  } catch (error) {
+    console.error('Check following error:', error);
+    res.status(500).json({ error: 'Failed to check following status' });
+  }
+});
+
+// GET /api/profile/:username/states - Get user's visited states
+router.get('/:username/states', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const stateVisits = await prisma.stateVisit.findMany({
+      where: { userId: user.id },
+      select: { state: true },
+      distinct: ['state'],
+    });
+
+    const states = stateVisits.map((visit) => visit.state);
+
+    res.json({ states });
+  } catch (error) {
+    console.error('Get visited states error:', error);
+    res.status(500).json({ error: 'Failed to get visited states' });
+  }
+});
+
+// GET /api/profile/:username/stats - Get comprehensive camping statistics
+router.get('/:username/stats', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true, location: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get campgrounds visited (unique stays)
+    const uniqueStays = await prisma.stay.findMany({
+      where: { userId: user.id },
+      distinct: ['campgroundId'],
+      select: { campgroundId: true },
+    });
+
+    // Get total days camped
+    const totalDays = await prisma.stay.count({
+      where: { userId: user.id },
+    });
+
+    // Get future trips
+    const futureTrips = await prisma.trip.count({
+      where: {
+        userId: user.id,
+        startDate: { gte: new Date() },
+      },
+    });
+
+    // Get unique people camped with
+    const campedWith = await prisma.stateVisitAttendee.findMany({
+      where: {
+        stateVisit: {
+          userId: user.id,
+        },
+      },
+      distinct: ['attendeeId'],
+      select: { attendeeId: true },
+    });
+
+    // Get meals cooked (from events)
+    const mealsCooked = await prisma.event.count({
+      where: {
+        organizerId: user.id,
+        // You might want to add a meal-specific field
+      },
+    });
+
+    // Get campsite reviews (using posts or comments)
+    const reviews = await prisma.post.count({
+      where: {
+        authorId: user.id,
+        // Could add a review type field
+      },
+    });
+
+    // Calculate miles traveled (simplified - would need geocoding for accuracy)
+    // For now, return 0 - you can enhance this with actual distance calculation
+    const milesTraveled = 0;
+
+    res.json({
+      campgroundsVisited: uniqueStays.length,
+      totalDaysCamped: totalDays,
+      milesTraveled,
+      futureTripsPlanned: futureTrips,
+      peopleCampedWith: campedWith.length,
+      mealsCooked,
+      campsiteReviews: reviews,
+    });
+  } catch (error) {
+    console.error('Get profile stats error:', error);
+    res.status(500).json({ error: 'Failed to get profile stats' });
+  }
+});
+
+// GET /api/profile/:username/friends - Get user's friends with ranking
+router.get('/:username/friends', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get accepted friendships
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { initiatorId: user.id, status: 'ACCEPTED' },
+          { receiverId: user.id, status: 'ACCEPTED' },
+        ],
+      },
+      include: {
+        initiator: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    // Extract friend data
+    const friends = friendships.map((friendship) => {
+      return friendship.initiatorId === user.id
+        ? friendship.receiver
+        : friendship.initiator;
+    });
+
+    res.json({ friends });
+  } catch (error) {
+    console.error('Get friends error:', error);
+    res.status(500).json({ error: 'Failed to get friends' });
+  }
+});
+
+// GET /api/profile/:username/feed - Get user's activity feed
+router.get('/:username/feed', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get user's posts and interactions
+    const posts = await prisma.post.findMany({
+      where: { authorId: user.id },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    res.json({ posts });
+  } catch (error) {
+    console.error('Get user feed error:', error);
+    res.status(500).json({ error: 'Failed to get user feed' });
+  }
+});
+
+// GET /api/profile/:username/gear - Get user's gear list
+router.get('/:username/gear', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const gear = await prisma.gearItem.findMany({
+      where: { userId: user.id },
+      orderBy: { category: 'asc' },
+    });
+
+    res.json({ gear });
+  } catch (error) {
+    console.error('Get gear error:', error);
+    res.status(500).json({ error: 'Failed to get gear' });
+  }
+});
+
+// GET /api/profile/:username/recipes - Get user's saved/favorited recipes
+router.get('/:username/recipes', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const limit = parseInt(req.query.limit as string) || 6;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get recipes created by user
+    const recipes = await prisma.recipe.findMany({
+      where: { authorId: user.id },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+        _count: {
+          select: {
+            ratings: true,
+          },
+        },
+      },
+    });
+
+    res.json({ recipes });
+  } catch (error) {
+    console.error('Get recipes error:', error);
+    res.status(500).json({ error: 'Failed to get recipes' });
+  }
+});
+
+// POST /api/profile/:username/wall-post - Post to someone's wall
+router.post('/:username/wall-post', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { content } = req.body;
+    const authorId = (req as any).userId;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    // Get the profile owner
+    const profileOwner = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!profileOwner) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Create the wall post
+    const post = await prisma.post.create({
+      data: {
+        content: content.trim(),
+        authorId,
+        // You might want to add a field to track that this is a wall post
+        // and which profile it was posted to
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    // Create a notification for the profile owner
+    if (profileOwner.id !== authorId) {
+      await prisma.notification.create({
+        data: {
+          userId: profileOwner.id,
+          type: 'WALL_POST',
+          content: 'posted on your wall',
+          link: `/profile/${username}`,
+        },
+      });
+    }
+
+    res.json(post);
+  } catch (error) {
+    console.error('Wall post error:', error);
+    res.status(500).json({ error: 'Failed to create wall post' });
+  }
+});
+
+// PUT /api/profile/:username/status - Update user status
+router.put('/:username/status', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const userId = (req as any).userId;
+    const { status, statusEmoji, statusType } = req.body;
+
+    // Verify the user is updating their own status
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user || user.id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Update status
+    const updatedUser = await prisma.user.update({
+      where: { username },
+      data: {
+        status: status || null,
+        statusEmoji: statusEmoji || null,
+        statusType: statusType || null,
+      },
+      select: {
+        id: true,
+        username: true,
+        status: true,
+        statusEmoji: true,
+        statusType: true,
+      },
+    });
+
+// Create a status update in the activity feed (optional)
+if (status) {
+  await prisma.post.create({
+    data: {
+      content: `${statusEmoji || ''} ${status}`.trim(),
+      author: {
+        connect: { id: userId }
+      },
+    },
+  });
+}    
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update status error:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// POST /api/profile/:username/status/auto - Enable automatic status updates
+router.post('/:username/status/auto', authenticateToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const userId = (req as any).userId;
+
+    // Verify the user is updating their own status
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user || user.id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Check for active camping events
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const activeEvent = await prisma.eventAttendee.findFirst({
+      where: {
+        userId: user.id,
+        status: 'ATTENDING',
+        event: {
+          startDate: { lte: tomorrow },
+          endDate: { gte: today },
+        },
+      },
+      include: {
+        event: {
+          include: {
+            campground: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let newStatus = 'Home';
+    let newEmoji = '🏠';
+    let newType = 'AUTO_HOME';
+    let currentCampsite = null;
+
+    if (activeEvent) {
+      newStatus = 'Camping';
+      newEmoji = '🏕️';
+      newType = 'AUTO_CAMPING';
+      currentCampsite = activeEvent.event.campground?.name || null;
+    }
+
+    // Update status
+    const updatedUser = await prisma.user.update({
+      where: { username },
+      data: {
+        status: newStatus,
+        statusEmoji: newEmoji,
+        statusType: newType,
+        currentCampsite: currentCampsite,
+      },
+      select: {
+        id: true,
+        username: true,
+        status: true,
+        statusEmoji: true,
+        statusType: true,
+        currentCampsite: true,
+      },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Enable auto status error:', error);
+    res.status(500).json({ error: 'Failed to enable automatic status' });
+  }
+});
+
+// GET /api/profile/:username/activity-feed - Get comprehensive activity feed
+router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+    const currentUserId = (req as any).userId;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isOwnProfile = currentUserId === user.id;
+
+    // Get posts BY the user AND posts ON the user's wall (for now, we'll show all posts)
+    // In a real implementation, you'd add a profileId field to posts to track wall ownership
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          { authorId: user.id }, // Posts the user made
+          // TODO: Add wall posts made by others on this user's profile
+          // { profileId: user.id }
+        ],
+      },
+      take: limit,
+      skip,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    // Transform posts into feed items
+    const feedItems = posts.map((post) => ({
+      id: post.id,
+      type: 'POST',
+      actor: post.author,
+      content: post.content,
+      createdAt: post.createdAt,
+      _count: post._count,
+      canDelete: isOwnProfile || currentUserId === post.authorId,
+    }));
+
+    // TODO: Add more activity types:
+    // - Comments from user
+    // - Events user is attending
+    // - Campgrounds user favorited
+    // - Friend posts (if showing friend activity)
+    // - Tagged posts
+
+    // Sort all feed items by date
+    feedItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const hasMore = feedItems.length === limit;
+
+    res.json({
+      feedItems: feedItems.slice(0, limit),
+      hasMore,
+      page,
+    });
+  } catch (error) {
+    console.error('Get activity feed error:', error);
+    res.status(500).json({ error: 'Failed to get activity feed' });
+  }
+});
+
+export default router;

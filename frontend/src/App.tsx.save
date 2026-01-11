@@ -1,0 +1,124 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { authService, User } from './services/auth.service';
+import EventsPage from './pages/EventsPage';
+import FeedPage from './pages/FeedPage';
+
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import HomePage from './pages/HomePage';
+import CampgroundsPage from './pages/CampgroundsPage';
+import CampgroundDetailPage from './pages/CampgroundDetailPage';
+import ProfilePage from './pages/ProfilePage';
+import MyProfilePage from './pages/MyProfilePage';
+import FriendsPage from './pages/FriendsPage';
+
+// Components
+import Navbar from './components/Navbar';
+
+function App() {
+  const [user, setUser] = useState<User | null>(authService.getStoredUser());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (authService.isAuthenticated()) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          console.error('Auth check failed:', error);
+          authService.logout();
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      {user && <Navbar user={user} />}
+
+
+<Routes>
+        {/* Public routes */}
+        <Route
+          path="/login"
+          element={!user ? <LoginPage onLogin={setUser} /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/register"
+          element={!user ? <RegisterPage onRegister={setUser} /> : <Navigate to="/" />}
+        />
+
+        {/* Protected routes */}
+        <Route
+          path="/"
+          element={user ? <HomePage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile"
+          element={user ? <MyProfilePage user={user} onUpdate={setUser} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile/:username"
+          element={<ProfilePage />}
+        />
+        <Route
+          path="/campgrounds"
+          element={user ? <CampgroundsPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/campgrounds/:slug"
+          element={user ? <CampgroundDetailPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/events"
+          element={user ? <EventsPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/feed"
+          element={user ? <FeedPage user={user} /> : <Navigate to="/login" />}
+        />
+        
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+
+
+
+
+
+
+
+          element={user ? <MyProfilePage user={user} onUpdate={setUser} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile/:username"
+          element={user ? <ProfilePage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/friends"
+          element={user ? <FriendsPage /> : <Navigate to="/login" />}
+        />
+
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

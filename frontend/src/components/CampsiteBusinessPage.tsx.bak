@@ -1,0 +1,832 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  MapPin, Phone, Mail, Globe, Calendar, Star, Heart, Users, 
+  Megaphone, ShoppingCart, Image as ImageIcon, Bike, DollarSign,
+  Clock, Utensils, CheckCircle, MessageSquare, Send
+} from 'lucide-react';
+import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+interface Campground {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  fullDescription?: string;
+  location: string;
+  state: string;
+  amenities: string[];
+  imageUrl?: string;
+  nightlyRate?: number;
+  phone?: string;
+  email?: string;
+  website?: string;
+  socialLinks?: any;
+  hours?: any;
+  bathroomSchedule?: string;
+  restaurantMenu?: any;
+}
+
+interface Stats {
+  followers: number;
+  ratings: number;
+  announcements: number;
+  events: number;
+  rentals: number;
+  gallery: number;
+  averageRating: number;
+  checkedInToday: number;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  target: string;
+  createdAt: string;
+}
+
+interface CampsiteEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  imageUrl?: string;
+}
+
+interface Rental {
+  id: string;
+  name: string;
+  description?: string;
+  pricePerDay?: number;
+  pricePerHour?: number;
+  available: boolean;
+  imageUrl?: string;
+}
+
+interface StoreItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  inStock: boolean;
+  imageUrl?: string;
+}
+
+interface Rating {
+  id: string;
+  smores: number;
+  review?: string;
+  createdAt: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
+}
+
+export default function CampsiteBusinessPage() {
+  const { slug } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [campground, setCampground] = useState<Campground | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [events, setEvents] = useState<CampsiteEvent[]>([]);
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+
+  const [showRentalModal, setShowRentalModal] = useState(false);
+  const [selectedRental, setSelectedRental] = useState<Rental | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+
+  const [rentalRequest, setRentalRequest] = useState({
+    startDate: '',
+    endDate: '',
+    message: '',
+  });
+
+  const [newRating, setNewRating] = useState({
+    smores: 0,
+    review: '',
+  });
+
+  useEffect(() => {
+    loadCampground();
+  }, [slug]);
+
+  useEffect(() => {
+    if (campground) {
+      loadStats();
+      loadAnnouncements();
+      loadEvents();
+      loadRentals();
+      loadStore();
+      loadRatings();
+      checkFollowStatus();
+    }
+  }, [campground]);
+
+  const loadCampground = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/campgrounds/${slug}`);
+      setCampground(data);
+    } catch (error) {
+      console.error('Load campground error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/stats`);
+      setStats(data);
+    } catch (error) {
+      console.error('Load stats error:', error);
+    }
+  };
+
+  const loadAnnouncements = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/announcements`);
+      setAnnouncements(data);
+    } catch (error) {
+      console.error('Load announcements error:', error);
+    }
+  };
+
+  const loadEvents = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/events?upcoming=true`);
+      setEvents(data);
+    } catch (error) {
+      console.error('Load events error:', error);
+    }
+  };
+
+  const loadRentals = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/rentals`);
+      setRentals(data);
+    } catch (error) {
+      console.error('Load rentals error:', error);
+    }
+  };
+
+  const loadStore = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/store`);
+      setStoreItems(data);
+    } catch (error) {
+      console.error('Load store error:', error);
+    }
+  };
+
+  const loadRatings = async () => {
+    if (!campground) return;
+    try {
+      const { data } = await api.get(`/campsite/${campground.id}/ratings`);
+      setRatings(data);
+      
+      // Check if user has rated
+      const myRating = data.find((r: Rating) => r.user.username === user?.username);
+      if (myRating) {
+        setUserRating(myRating.smores);
+      }
+    } catch (error) {
+      console.error('Load ratings error:', error);
+    }
+  };
+
+  const checkFollowStatus = async () => {
+    // This would need an endpoint to check follow status
+    // For now, we'll skip this
+  };
+
+  const handleFollow = async () => {
+    if (!campground || !user) return;
+
+    try {
+      if (isFollowing) {
+        await api.delete(`/campsite/${campground.id}/follow`);
+        setIsFollowing(false);
+      } else {
+        await api.post(`/campsite/${campground.id}/follow`);
+        setIsFollowing(true);
+      }
+      await loadStats();
+    } catch (error) {
+      console.error('Follow error:', error);
+    }
+  };
+
+  const handleSubmitRating = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campground || !user || newRating.smores === 0) return;
+
+    try {
+      await api.post(`/campsite/${campground.id}/rate`, newRating);
+      setShowRatingModal(false);
+      setNewRating({ smores: 0, review: '' });
+      await loadRatings();
+      await loadStats();
+      alert('Rating submitted! 🏕️');
+    } catch (error) {
+      console.error('Submit rating error:', error);
+      alert('Failed to submit rating');
+    }
+  };
+
+  const handleRequestRental = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRental || !user) return;
+
+    try {
+      await api.post(`/campsite/rentals/${selectedRental.id}/request`, rentalRequest);
+      setShowRentalModal(false);
+      setSelectedRental(null);
+      setRentalRequest({ startDate: '', endDate: '', message: '' });
+      alert('Rental request sent! The campground will contact you soon. 🚴');
+    } catch (error) {
+      console.error('Request rental error:', error);
+      alert('Failed to request rental');
+    }
+  };
+
+  const renderSmores = (count: number, interactive = false, onClick?: (rating: number) => void) => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button
+            key={i}
+            onClick={() => interactive && onClick && onClick(i)}
+            disabled={!interactive}
+            className={interactive ? 'cursor-pointer hover:scale-110 transition' : ''}
+          >
+            <span className={`text-2xl ${i <= count ? '' : 'opacity-30'}`}>
+              🔥
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: MapPin },
+    { id: 'announcements', label: 'News', icon: Megaphone, badge: announcements.length },
+    { id: 'events', label: 'Events', icon: Calendar, badge: events.length },
+    { id: 'rentals', label: 'Rentals', icon: Bike, badge: rentals.length },
+    { id: 'store', label: 'Store', icon: ShoppingCart, badge: storeItems.length },
+    { id: 'ratings', label: 'Reviews', icon: Star, badge: ratings.length },
+  ];
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading campground...</p>
+      </div>
+    );
+  }
+
+  if (!campground) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Campground not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        {campground.imageUrl && (
+          <div className="h-64 bg-gray-200">
+            <img
+              src={`http://127.0.0.1:3001${campground.imageUrl}`}
+              alt={campground.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{campground.name}</h1>
+              <p className="text-gray-600 flex items-center gap-2 mb-2">
+                <MapPin className="w-5 h-5" />
+                {campground.location}
+              </p>
+              <p className="text-gray-700">{campground.description}</p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {user && (
+                <button
+                  onClick={handleFollow}
+                  className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} flex items-center gap-2`}
+                >
+                  <Heart className={`w-4 h-4 ${isFollowing ? 'fill-current' : ''}`} />
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+              )}
+              {user && (
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  {userRating > 0 ? 'Update Rating' : 'Rate'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Stats */}
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  {renderSmores(Math.round(stats.averageRating))}
+                </div>
+                <p className="text-sm text-gray-600">{stats.ratings} reviews</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{stats.followers}</p>
+                <p className="text-sm text-gray-600">Followers</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{stats.checkedInToday}</p>
+                <p className="text-sm text-gray-600">Checked in today</p>
+              </div>
+              {campground.nightlyRate && (
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary-600">
+                    ${campground.nightlyRate.toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-600">Per night</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contact Info */}
+          <div className="flex flex-wrap gap-4 mt-6 pt-6 border-t border-gray-200">
+            {campground.phone && (
+              <a href={`tel:${campground.phone}`} className="flex items-center gap-2 text-gray-700 hover:text-primary-600">
+                <Phone className="w-4 h-4" />
+                {campground.phone}
+              </a>
+            )}
+            {campground.email && (
+              <a href={`mailto:${campground.email}`} className="flex items-center gap-2 text-gray-700 hover:text-primary-600">
+                <Mail className="w-4 h-4" />
+                {campground.email}
+              </a>
+            )}
+            {campground.website && (
+              <a href={campground.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-primary-600">
+                <Globe className="w-4 h-4" />
+                Website
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="flex overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium whitespace-nowrap transition ${
+                  activeTab === tab.id
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <tab.icon className="w-5 h-5" />
+                {tab.label}
+                {tab.badge && tab.badge > 0 && (
+                  <span className="bg-primary-600 text-white text-xs rounded-full px-2 py-0.5">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-6">
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {campground.fullDescription && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">About</h2>
+                  <p className="text-gray-700">{campground.fullDescription}</p>
+                </div>
+              )}
+
+              {/* Amenities */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Amenities</h2>
+                <div className="flex flex-wrap gap-2">
+                  {campground.amenities.map((amenity) => (
+                    <span
+                      key={amenity}
+                      className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm"
+                    >
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hours */}
+              {campground.hours && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    Hours of Operation
+                  </h2>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(campground.hours).map(([day, hours]) => (
+                      <div key={day} className="flex justify-between">
+                        <span className="font-medium capitalize text-gray-900">{day}:</span>
+                        <span className="text-gray-700">{hours as string}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Restaurant Menu */}
+              {campground.restaurantMenu && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Utensils className="w-5 h-5" />
+                    Restaurant Menu
+                  </h2>
+                  {Object.entries(campground.restaurantMenu).map(([meal, items]) => (
+                    <div key={meal} className="mb-4">
+                      <h3 className="font-bold text-gray-900 capitalize mb-2">{meal}</h3>
+                      <ul className="space-y-1">
+                        {(items as string[]).map((item, i) => (
+                          <li key={i} className="text-gray-700">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Bathroom Schedule */}
+              {campground.bathroomSchedule && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">Facility Information</h2>
+                  <p className="text-gray-700">{campground.bathroomSchedule}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Announcements Tab */}
+          {activeTab === 'announcements' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Latest News & Announcements</h2>
+              {announcements.length > 0 ? (
+                announcements.map((announcement) => (
+                  <div key={announcement.id} className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-bold text-gray-900 mb-2">{announcement.title}</h3>
+                    <p className="text-gray-700 mb-2">{announcement.content}</p>
+                    {announcement.imageUrl && (
+                      <img
+                        src={`http://127.0.0.1:3001${announcement.imageUrl}`}
+                        alt={announcement.title}
+                        className="rounded-lg max-h-64 w-auto mt-2"
+                      />
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(announcement.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-600 text-center py-8">No announcements yet</p>
+              )}
+            </div>
+          )}
+
+          {/* Events Tab */}
+          {activeTab === 'events' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Upcoming Events</h2>
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <div key={event.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 mb-2">{event.title}</h3>
+                        {event.description && (
+                          <p className="text-gray-700 mb-2">{event.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(event.startDate).toLocaleDateString()}
+                          {event.endDate && ` - ${new Date(event.endDate).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      {event.imageUrl && (
+                        <img
+                          src={`http://127.0.0.1:3001${event.imageUrl}`}
+                          alt={event.title}
+                          className="w-24 h-24 rounded-lg object-cover ml-4"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-600 text-center py-8">No upcoming events</p>
+              )}
+            </div>
+          )}
+
+          {/* Rentals Tab */}
+          {activeTab === 'rentals' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment Rentals</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {rentals.length > 0 ? (
+                  rentals.map((rental) => (
+                    <div key={rental.id} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="font-bold text-gray-900 mb-2">{rental.name}</h3>
+                      {rental.description && (
+                        <p className="text-gray-700 text-sm mb-2">{rental.description}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="text-sm text-gray-600">
+                          {rental.pricePerHour && (
+                            <p>${rental.pricePerHour}/hour</p>
+                          )}
+                          {rental.pricePerDay && (
+                            <p>${rental.pricePerDay}/day</p>
+                          )}
+                        </div>
+                        {user && rental.available && (
+                          <button
+                            onClick={() => {
+                              setSelectedRental(rental);
+                              setShowRentalModal(true);
+                            }}
+                            className="btn btn-primary btn-sm"
+                          >
+                            Request
+                          </button>
+                        )}
+                      </div>
+                      {!rental.available && (
+                        <p className="text-sm text-red-600 mt-2">Currently unavailable</p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600 col-span-2 text-center py-8">No rentals available</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Store Tab */}
+          {activeTab === 'store' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Camp Store</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {storeItems.length > 0 ? (
+                  storeItems.map((item) => (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="font-medium text-gray-900 mb-1">{item.name}</h3>
+                      {item.description && (
+                        <p className="text-gray-600 text-sm mb-2">{item.description}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-lg font-bold text-primary-600">
+                          ${item.price.toFixed(2)}
+                        </p>
+                        {!item.inStock && (
+                          <span className="text-xs text-red-600">Out of stock</span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600 col-span-3 text-center py-8">No store items</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Ratings Tab */}
+          {activeTab === 'ratings' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Camper Reviews</h2>
+              {ratings.length > 0 ? (
+                ratings.map((rating) => (
+                  <div key={rating.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      {rating.user.profilePicture ? (
+                        <img
+                          src={`http://127.0.0.1:3001${rating.user.profilePicture}`}
+                          alt={rating.user.firstName}
+                          className="w-10 h-10 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-gray-500" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium text-gray-900">
+                            {rating.user.firstName} {rating.user.lastName}
+                          </p>
+                          {renderSmores(rating.smores)}
+                        </div>
+                        {rating.review && (
+                          <p className="text-gray-700">{rating.review}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(rating.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-600 text-center py-8">No reviews yet. Be the first!</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Rental Request Modal */}
+      {showRentalModal && selectedRental && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full">
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-6 rounded-t-lg">
+              <h2 className="text-2xl font-bold">Request Rental</h2>
+            </div>
+
+            <form onSubmit={handleRequestRental} className="p-6 space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="font-medium text-gray-900">{selectedRental.name}</p>
+                {selectedRental.pricePerHour && (
+                  <p className="text-sm text-gray-600">${selectedRental.pricePerHour}/hour</p>
+                )}
+                {selectedRental.pricePerDay && (
+                  <p className="text-sm text-gray-600">${selectedRental.pricePerDay}/day</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={rentalRequest.startDate}
+                    onChange={(e) => setRentalRequest({ ...rentalRequest, startDate: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={rentalRequest.endDate}
+                    onChange={(e) => setRentalRequest({ ...rentalRequest, endDate: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (optional)
+                </label>
+                <textarea
+                  value={rentalRequest.message}
+                  onChange={(e) => setRentalRequest({ ...rentalRequest, message: e.target.value })}
+                  rows={3}
+                  className="input"
+                  placeholder="Any questions or special requests?"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <button type="submit" className="btn btn-primary flex-1">
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Request
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRentalModal(false);
+                    setSelectedRental(null);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full">
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-6 rounded-t-lg">
+              <h2 className="text-2xl font-bold">Rate Your Stay</h2>
+            </div>
+
+            <form onSubmit={handleSubmitRating} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How many s'mores? *
+                </label>
+                {renderSmores(newRating.smores, true, (rating) => setNewRating({ ...newRating, smores: rating }))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Review (optional)
+                </label>
+                <textarea
+                  value={newRating.review}
+                  onChange={(e) => setNewRating({ ...newRating, review: e.target.value })}
+                  rows={4}
+                  className="input"
+                  placeholder="Share your experience..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="submit"
+                  disabled={newRating.smores === 0}
+                  className="btn btn-primary flex-1"
+                >
+                  Submit Rating
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRatingModal(false);
+                    setNewRating({ smores: 0, review: '' });
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

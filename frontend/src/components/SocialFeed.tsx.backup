@@ -1,0 +1,346 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Heart,
+  MessageSquare,
+  Share2,
+  Trash2,
+  Flag,
+  MapPin,
+  Calendar,
+  Star,
+  Users,
+  ChefHat,
+  Camera,
+  User,
+  MoreHorizontal,
+} from 'lucide-react';
+import api from '../services/api';
+
+interface FeedItem {
+  id: string;
+  type: 'POST' | 'COMMENT' | 'EVENT' | 'FAVORITE' | 'FRIEND_POST' | 'CAMPSITE_UPDATE' | 'TAGGED';
+  actor: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  content?: string;
+  targetName?: string;
+  targetLink?: string;
+  createdAt: string;
+  _count?: {
+    likes: number;
+    comments: number;
+  };
+  canDelete?: boolean;
+}
+
+interface SocialFeedProps {
+  username: string;
+  isOwnProfile: boolean;
+}
+
+export default function SocialFeed({ username, isOwnProfile }: SocialFeedProps) {
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showMoreActions, setShowMoreActions] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    loadFeed();
+  }, [username, page]);
+
+  const loadFeed = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/profile/${username}/activity-feed?page=${page}&limit=20`);
+      
+      if (page === 1) {
+        setFeedItems(data.feedItems || []);
+      } else {
+        setFeedItems((prev) => [...prev, ...(data.feedItems || [])]);
+      }
+      
+      setHasMore(data.hasMore || false);
+    } catch (error) {
+      console.error('Load feed error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'POST':
+        return <MessageSquare className="w-4 h-4" />;
+      case 'EVENT':
+        return <Calendar className="w-4 h-4" />;
+      case 'FAVORITE':
+        return <Star className="w-4 h-4" />;
+      case 'CAMPSITE_UPDATE':
+        return <MapPin className="w-4 h-4" />;
+      case 'FRIEND_POST':
+        return <Users className="w-4 h-4" />;
+      case 'TAGGED':
+        return <Camera className="w-4 h-4" />;
+      default:
+        return <MessageSquare className="w-4 h-4" />;
+    }
+  };
+
+  const getActivityText = (item: FeedItem) => {
+    const actorName = `${item.actor.firstName} ${item.actor.lastName}`;
+    
+    switch (item.type) {
+      case 'POST':
+        return `${actorName} posted`;
+      case 'COMMENT':
+        return `${actorName} commented on ${item.targetName}`;
+      case 'EVENT':
+        return `${actorName} is attending ${item.targetName}`;
+      case 'FAVORITE':
+        return `${actorName} favorited ${item.targetName}`;
+      case 'FRIEND_POST':
+        return `${actorName} (friend) posted`;
+      case 'CAMPSITE_UPDATE':
+        return `${actorName} reviewed ${item.targetName}`;
+      case 'TAGGED':
+        return `${actorName} was tagged in ${item.targetName}`;
+      default:
+        return `${actorName} shared an update`;
+    }
+  };
+
+  const handleLike = async (itemId: string) => {
+    try {
+      await api.post(`/posts/${itemId}/like`);
+      // Optimistically update the UI
+      setFeedItems((items) =>
+        items.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                _count: {
+                  ...item._count,
+                  likes: (item._count?.likes || 0) + 1,
+                },
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error('Like error:', error);
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (confirm('Are you sure you want to delete this post?')) {
+      try {
+        await api.delete(`/posts/${itemId}`);
+        // Remove from feed
+        setFeedItems((items) => items.filter((item) => item.id !== itemId));
+        alert('Post deleted successfully');
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete post');
+      }
+    }
+  };
+
+  const handleReport = async (itemId: string) => {
+    if (confirm('Report this content as inappropriate?')) {
+      try {
+        await api.post(`/posts/${itemId}/report`, {
+          reason: 'inappropriate',
+        });
+        alert('Content reported. Our moderators will review it shortly.');
+      } catch (error) {
+        console.error('Report error:', error);
+        alert('Failed to report content');
+      }
+    }
+  };
+
+  const loadMore = () => {
+    setPage(page + 1);
+    loadFeed();
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <MessageSquare className="w-6 h-6 text-primary-600" />
+          Activity Wall
+        </h2>
+        {isOwnProfile && (
+          <Link to="/posts/create" className="btn btn-primary btn-sm">
+            Create Post
+          </Link>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4 text-sm">Loading activity...</p>
+        </div>
+      ) : feedItems.length === 0 ? (
+        <div className="text-center py-16 text-gray-600">
+          <MessageSquare className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <p className="text-lg font-medium">No activity yet</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {isOwnProfile 
+              ? "Start sharing your camping adventures!"
+              : "This user hasn't posted anything yet."}
+          </p>
+          {isOwnProfile && (
+            <Link to="/posts/create" className="btn btn-primary mt-4 inline-block">
+              Create Your First Post
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {feedItems.map((item) => (
+            <div
+              key={item.id}
+              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition bg-white"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {/* Profile Picture */}
+                  <Link to={`/profile/${item.actor.username}`} className="flex-shrink-0">
+                    {item.actor.profilePicture ? (
+                      <img
+                        src={`http://127.0.0.1:3001${item.actor.profilePicture}`}
+                        alt={item.actor.firstName}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center border-2 border-gray-200">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </Link>
+
+                  {/* Activity Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary-600 flex-shrink-0">
+                        {getActivityIcon(item.type)}
+                      </span>
+                      <p className="text-sm text-gray-700 truncate">
+                        {getActivityText(item)}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(item.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* More Actions Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMoreActions(showMoreActions === item.id ? null : item.id)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition"
+                  >
+                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                  </button>
+
+                  {showMoreActions === item.id && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                      {item.canDelete && (
+                        <button
+                          onClick={() => {
+                            handleDelete(item.id);
+                            setShowMoreActions(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          handleReport(item.id);
+                          setShowMoreActions(null);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                      >
+                        <Flag className="w-4 h-4" />
+                        Report Abuse
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Content */}
+              {item.content && (
+                <div className="mb-3">
+                  <p className="text-gray-900 whitespace-pre-wrap">{item.content}</p>
+                </div>
+              )}
+
+              {/* Target Link */}
+              {item.targetLink && item.targetName && (
+                <Link
+                  to={item.targetLink}
+                  className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mb-3"
+                >
+                  View {item.targetName} →
+                </Link>
+              )}
+
+              {/* Interaction Bar */}
+              <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => handleLike(item.id)}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span>{item._count?.likes || 0}</span>
+                </button>
+
+                <Link
+                  to={`/posts/${item.id}`}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 transition"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{item._count?.comments || 0}</span>
+                </Link>
+
+                <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition">
+                  <Share2 className="w-4 h-4" />
+                  <span>Share</span>
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="text-center pt-4">
+              <button onClick={loadMore} className="btn btn-secondary">
+                Load More Activity
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

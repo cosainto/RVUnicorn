@@ -1,0 +1,866 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints } from 'lucide-react';
+import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import MealPlanner from '../components/MealPlanner';
+import EventPackList from '../components/EventPackList';
+import InventoryPackingModal from '../components/InventoryPackingModal';
+import EventSchedule from '../components/EventSchedule';
+import EventAlbum from '../components/EventAlbum';
+import EventCommentWall from '../components/EventCommentWall';
+
+interface Event {
+  id: string;
+  organizerId: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  location?: string;
+  imageUrl?: string;
+  isWishlist?: boolean;
+  organizer?: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
+  campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number };
+  attendees?: Attendee[];
+  _count?: { attendees: number; meals: number };
+}
+
+interface Attendee {
+  id: string;
+  userId: string;
+  status: string;
+  user: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
+}
+
+interface Friend {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  profilePicture?: string;
+}
+
+interface PitStop {
+  id: string;
+  name: string;
+  location?: string;
+  stopType: string;
+  notes?: string;
+  estimatedDuration?: number;
+  orderIndex: number;
+}
+
+const STOP_TYPES = [
+  { id: 'OVERNIGHT', label: 'Overnight', emoji: '🌙', icon: Moon },
+  { id: 'NAP', label: 'Nap', emoji: '😴', icon: Moon },
+  { id: 'SNACK', label: 'Snack', emoji: '🍿', icon: Coffee },
+  { id: 'LUNCH', label: 'Lunch', emoji: '🥪', icon: Utensils },
+  { id: 'FOOD', label: 'Food', emoji: '🍔', icon: Utensils },
+  { id: 'GAS', label: 'Gas', emoji: '⛽', icon: Fuel },
+  { id: 'REPAIR', label: 'Repair', emoji: '🔧', icon: Wrench },
+  { id: 'WALK', label: 'Walk', emoji: '🚶', icon: Footprints },
+  { id: 'PLAY', label: 'Play', emoji: '🎮', icon: Play },
+  { id: 'DOG', label: 'Dog Break', emoji: '🐕', icon: Dog },
+  { id: 'OTHER', label: 'Other', emoji: '📍', icon: MapPin },
+];
+
+export default function EventDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('details');
+  const [showPackingModal, setShowPackingModal] = useState(false);
+  const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [copying, setCopying] = useState(false);
+  const [tripPlan, setTripPlan] = useState<any>(null);
+  const [allTripPlans, setAllTripPlans] = useState<any[]>([]);
+  const [tripLoading, setTripLoading] = useState(false);
+  const [showTripModal, setShowTripModal] = useState(false);
+  const [showPitStopModal, setShowPitStopModal] = useState(false);
+  const [tripForm, setTripForm] = useState({
+    startLocation: '',
+    useHometown: true,
+    isDriving: true,
+    ridingWithId: '',
+    routePreference: 'FASTEST',
+    avoidTolls: false,
+    avoidHighways: false,
+  });
+  const [pitStopForm, setPitStopForm] = useState({
+    name: '',
+    location: '',
+    stopType: 'GAS',
+    notes: '',
+    estimatedDuration: 15,
+  });
+
+  const [copyForm, setCopyForm] = useState({
+    startDate: '',
+    endDate: '',
+    isWishlist: false,
+    copyMealPlan: true,
+  });
+
+  useEffect(() => {
+    loadEvent();
+    loadFriends();
+    if (user) {
+      loadTripPlan();
+      loadAllTripPlans();
+    }
+  }, [id, user]);
+
+  const loadTripPlan = async () => {
+    if (!id || !user) return;
+    try {
+      setTripLoading(true);
+      const { data } = await api.get(`/trip-planner/event/${id}/my-trip`);
+      setTripPlan(data);
+    } catch (error) {
+      console.error('Load trip plan error:', error);
+    } finally {
+      setTripLoading(false);
+    }
+  };
+
+  const loadAllTripPlans = async () => {
+    if (!id) return;
+    try {
+      const { data } = await api.get(`/trip-planner/event/${id}/all-trips`);
+      setAllTripPlans(data);
+    } catch (error) {
+      console.error('Load all trip plans error:', error);
+    }
+  };
+
+  const handleCreateTripPlan = async () => {
+    if (!id) return;
+    try {
+      setTripLoading(true);
+      const { data } = await api.post(`/trip-planner/event/${id}/plan`, tripForm);
+      setTripPlan(data);
+      setShowTripModal(false);
+      loadAllTripPlans();
+      alert('✅ Trip plan created!');
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to create trip plan');
+    } finally {
+      setTripLoading(false);
+    }
+  };
+
+  const handleAddPitStop = async () => {
+    if (!tripPlan) return;
+    try {
+      await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, pitStopForm);
+      setShowPitStopModal(false);
+      setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
+      loadTripPlan();
+      alert('✅ Pit stop added!');
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to add pit stop');
+    }
+  };
+
+  const handleDeletePitStop = async (pitStopId: string) => {
+    if (!confirm('Delete this pit stop?')) return;
+    try {
+      await api.delete(`/trip-planner/pit-stop/${pitStopId}`);
+      loadTripPlan();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to delete pit stop');
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+    try {
+      await api.delete(`/events/${id}`);
+      alert('Event deleted successfully');
+      navigate('/trips');
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to delete event');
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    if (!tripPlan) return;
+    const actualMiles = prompt('Enter actual miles driven (or leave blank to use estimated):', tripPlan.distanceMiles?.toString() || '');
+    if (actualMiles === null) return;
+    
+    try {
+      await api.post(`/trip-planner/trip/${tripPlan.id}/complete`, {
+        actualMiles: actualMiles ? parseFloat(actualMiles) : null
+      });
+      loadTripPlan();
+      alert('✅ Trip completed! Miles have been logged.');
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to complete trip');
+    }
+  };
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins} min`;
+    if (mins === 0) return `${hours} hr`;
+    return `${hours} hr ${mins} min`;
+  };
+
+  const getStopTypeInfo = (type: string) => {
+    return STOP_TYPES.find(s => s.id === type) || STOP_TYPES[STOP_TYPES.length - 1];
+  };
+
+  const loadEvent = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/events/${id}`);
+      setEvent(data);
+      if (data.attendees && user) {
+        const attendee = data.attendees.find((a: Attendee) => a.userId === user.id);
+        setUserAttendee(attendee || null);
+      }
+    } catch (error) {
+      console.error('Load event error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFriends = async () => {
+    try {
+      const { data } = await api.get('/friends');
+      setFriends(data);
+    } catch (error) {
+      console.error('Load friends error:', error);
+    }
+  };
+
+  const handleInvite = async () => {
+    try {
+      await api.post(`/events/${id}/attendees`, { userIds: selectedFriends });
+      setShowInviteModal(false);
+      setSelectedFriends([]);
+      await loadEvent();
+      alert('Invitations sent! 🎉');
+    } catch (error) {
+      console.error('Invite error:', error);
+      alert('Failed to send invitations');
+    }
+  };
+
+  const handleRSVP = async (status: string) => {
+    try {
+      if (userAttendee) {
+        await api.put(`/events/${id}/attendees/${userAttendee.id}`, { status });
+      }
+      await loadEvent();
+    } catch (error) {
+      console.error('RSVP error:', error);
+    }
+  };
+
+  const handleAddToTravelMap = async () => {
+    if (!event?.campground) return;
+    try {
+      await api.post('/travel-map/visits', {
+        state: event.campground.state,
+        startDate: event.startDate,
+        endDate: event.endDate || event.startDate,
+        eventId: event.id,
+        campsiteId: event.campground.id,
+        notes: `${event.title} at ${event.campground.name}`,
+      });
+      alert('✅ Added to your Travel Map!');
+    } catch (error: any) {
+      if (error.response?.status === 400) {
+        alert('This trip is already on your Travel Map!');
+      } else {
+        alert('Failed to add to travel map');
+      }
+    }
+  };
+
+  const handleCopyEvent = async () => {
+    if (!copyForm.isWishlist && !copyForm.startDate) {
+      alert('Please set a start date or mark as wishlist');
+      return;
+    }
+    setCopying(true);
+    try {
+      const { data } = await api.post(`/events/${id}/copy`, {
+        startDate: copyForm.isWishlist ? null : copyForm.startDate,
+        endDate: copyForm.isWishlist ? null : copyForm.endDate,
+        isWishlist: copyForm.isWishlist,
+        copyMealPlan: copyForm.copyMealPlan,
+      });
+      setShowCopyModal(false);
+      alert('🎉 Event copied to your events!');
+      navigate(`/events/${data.id}`);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to copy event');
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const handleRemoveAttendee = async (attendeeId: string) => {
+    if (!confirm('Remove this attendee?')) return;
+    try {
+      await api.delete(`/events/${id}/attendees/${attendeeId}`);
+      await loadEvent();
+    } catch (error) {
+      console.error('Remove attendee error:', error);
+    }
+  };
+
+  const calculateDuration = () => {
+    if (!event?.startDate || event.isWishlist) return '';
+    const start = new Date(event.startDate);
+    const end = event.endDate ? new Date(event.endDate) : start;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays === 1 ? '1 day' : `${diffDays} days`;
+  };
+
+  const getDaysUntilEvent = () => {
+    if (!event?.startDate) return null;
+    if (event.isWishlist) return { text: '⭐ Wishlist', color: 'text-yellow-600' };
+    const start = new Date(event.startDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { text: 'Event has passed', color: 'text-gray-500' };
+    if (diffDays === 0) return { text: 'Today! 🎉', color: 'text-green-600' };
+    if (diffDays === 1) return { text: 'Tomorrow!', color: 'text-green-600' };
+    return { text: `In ${diffDays} days`, color: diffDays <= 7 ? 'text-blue-600' : 'text-gray-600' };
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+  if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
+
+  const isOrganizer = user?.id === event.organizerId;
+  const daysUntil = getDaysUntilEvent();
+
+  const tabs = [
+    { id: 'details', label: 'Details', icon: Calendar },
+    { id: 'trip', label: 'Trip Planner', icon: Car },
+    { id: 'schedule', label: 'Schedule', icon: Clock },
+    { id: 'photos', label: 'Photos', icon: Image },
+    { id: 'meals', label: 'Meal Plan', icon: ChefHat },
+    { id: 'pack', label: 'Pack List', icon: Package },
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <button onClick={() => navigate('/events')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
+        <ArrowLeft className="w-5 h-5 mr-2" />Back to Events
+      </button>
+
+      {event.isWishlist && (
+        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-300 rounded-lg p-4 mb-4 flex items-center gap-3">
+          <Star className="w-6 h-6 text-yellow-600 fill-yellow-400" />
+          <div>
+            <p className="font-semibold text-yellow-800">Wishlist Event</p>
+            <p className="text-sm text-yellow-700">This trip is on your wishlist - set dates when you're ready!</p>
+          </div>
+          {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="ml-auto btn btn-primary btn-sm">Set Dates</Link>}
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative">
+          {event.imageUrl ? (
+            <img src={event.imageUrl.startsWith('http') ? event.imageUrl : `http://127.0.0.1:3001${event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
+          )}
+          {daysUntil && (
+            <div className={`absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg ${event.isWishlist ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'}`}>
+              <span className={`font-semibold ${daysUntil.color}`}>{daysUntil.text}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {event.title}
+                {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
+              </h1>
+              {event.organizer && (
+                <Link to={`/profile/${event.organizer.username}`} className="text-sm text-gray-600 hover:text-primary-600 mb-2 inline-block">
+                  Organized by {event.organizer.firstName} {event.organizer.lastName}
+                </Link>
+              )}
+              {!event.isWishlist && (
+                <div className="flex items-center gap-2 text-gray-600 mb-2">
+                  <Calendar className="w-5 h-5 text-primary-600" />
+                  <span>
+                    {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {event.endDate && event.endDate !== event.startDate && ` - ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
+                  </span>
+                  <span className="text-sm text-gray-500">({calculateDuration()})</span>
+                </div>
+              )}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-1 text-gray-600"><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {!isOrganizer && user && (
+                <button onClick={() => { setCopyForm({ startDate: '', endDate: '', isWishlist: false, copyMealPlan: true }); setShowCopyModal(true); }} className="btn btn-secondary btn-sm flex items-center gap-2">
+                  <Copy className="w-4 h-4" />Copy Event
+                </button>
+              )}
+              {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />Invite</button>}
+              {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
+              {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
+            </div>
+          </div>
+
+          {userAttendee && userAttendee.status === 'invited' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-gray-700 mb-3">You've been invited to this event. Will you attend?</p>
+              <div className="flex gap-2">
+                <button onClick={() => handleRSVP('going')} className="btn btn-primary btn-sm flex items-center gap-2"><Check className="w-4 h-4" />Going</button>
+                <button onClick={() => handleRSVP('maybe')} className="btn btn-secondary btn-sm">Maybe</button>
+                <button onClick={() => handleRSVP('not_going')} className="btn btn-secondary btn-sm flex items-center gap-2"><XCircle className="w-4 h-4" />Can't Go</button>
+              </div>
+            </div>
+          )}
+
+          {userAttendee && userAttendee.status !== 'invited' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+              <span className="text-sm text-green-700">You're {userAttendee.status === 'going' ? 'attending' : userAttendee.status === 'maybe' ? 'maybe attending' : 'not attending'} this event</span>
+              <button onClick={() => handleRSVP('invited')} className="text-sm text-gray-600 hover:text-gray-900">Change RSVP</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="border-b border-gray-200">
+          <div className="flex gap-4 px-6 overflow-x-auto">
+            {tabs.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 py-4 px-2 border-b-2 transition whitespace-nowrap ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+                <tab.icon className="w-5 h-5" />{tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'details' && (
+            <div className="space-y-6">
+              {/* Event Settings - Moved to top for organizers */}
+              {isOrganizer && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div><h4 className="font-semibold text-gray-900">Event Settings</h4><p className="text-sm text-gray-600">Update event details</p></div>
+                    <Link to={`/trips/${event.id}/edit`} className="btn btn-primary flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>
+                  </div>
+                </div>
+              )}
+
+              {event.description && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 About This Event</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5 text-blue-600" /><h4 className="font-semibold text-gray-900">Event Dates</h4></div>
+                  {event.isWishlist ? (
+                    <div className="text-center py-4"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p className="text-gray-600">Dates not set yet</p></div>
+                  ) : (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-600">Start:</span><span className="font-medium">{new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">End:</span><span className="font-medium">{new Date(event.endDate || event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+                      <div className="flex justify-between pt-2 border-t border-blue-200"><span className="text-gray-600">Duration:</span><span className="font-semibold text-blue-700">{calculateDuration()}</span></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3"><MapPin className="w-5 h-5 text-green-600" /><h4 className="font-semibold text-gray-900">Location</h4></div>
+                  {event.campground ? (
+                    <div className="space-y-3">
+                      <div><p className="font-semibold text-gray-900">{event.campground.name}</p><p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p></div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><ExternalLink className="w-4 h-4" />View Campground</Link>
+                        {!event.isWishlist && <button onClick={handleAddToTravelMap} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Map className="w-4 h-4" />Add to Map</button>}
+                        {event.campground.latitude && event.campground.longitude && (
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${event.campground.latitude},${event.campground.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium"><Navigation className="w-4 h-4" />Directions</a>
+                        )}
+                      </div>
+                    </div>
+                  ) : event.location ? (
+                    <div className="space-y-3">
+                      <p className="text-gray-900">{event.location}</p>
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium"><Navigation className="w-4 h-4" />Get Directions</a>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No location set</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Comment Wall */}
+              {event.attendees && user && (
+                <EventCommentWall
+                  eventId={event.id}
+                  currentUserId={user.id}
+                  isOrganizer={isOrganizer}
+                  attendees={event.attendees}
+                />
+              )}
+
+              {event.attendees && event.attendees.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">👥 Attendees ({event.attendees.length})</h3>
+                    {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />Invite More</button>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {event.attendees.map((attendee) => (
+                      <div key={attendee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <Link to={`/profile/${attendee.user.username}`} className="flex items-center gap-3 flex-1">
+                          {attendee.user.profilePicture ? <img src={`http://127.0.0.1:3001${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-700 font-semibold">{attendee.user.firstName[0]}</span></div>}
+                          <div>
+                            <p className="font-semibold text-gray-900">{attendee.user.firstName} {attendee.user.lastName}{attendee.userId === event.organizerId && <span className="ml-2 text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Organizer</span>}</p>
+                            <p className="text-sm text-gray-600">{attendee.status === 'going' && '✅ Going'}{attendee.status === 'maybe' && '🤔 Maybe'}{attendee.status === 'not_going' && '❌ Not Going'}{attendee.status === 'invited' && '📨 Invited'}</p>
+                          </div>
+                        </Link>
+                        {isOrganizer && attendee.userId !== event.organizerId && <button onClick={() => handleRemoveAttendee(attendee.id)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'trip' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold flex items-center gap-2"><Car className="w-6 h-6" />My Trip</h3>
+                  {!tripPlan && <button onClick={() => setShowTripModal(true)} className="btn btn-primary btn-sm">Plan My Trip</button>}
+                </div>
+
+                {tripLoading ? (
+                  <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" /></div>
+                ) : tripPlan ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-500">From</p>
+                        <p className="font-semibold">{tripPlan.startLocation || 'Not set'}</p>
+                        {tripPlan.useHometown && <span className="text-xs text-gray-400">(Using hometown)</span>}
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-500">To</p>
+                        <p className="font-semibold">{tripPlan.endLocation}</p>
+                      </div>
+                      <div className="bg-primary-50 rounded-lg p-4">
+                        <p className="text-sm text-primary-600">Estimated Distance</p>
+                        <p className="text-2xl font-bold text-primary-700">{tripPlan.distanceMiles ? `${tripPlan.distanceMiles} mi` : 'Calculating...'}</p>
+                        {tripPlan.durationMinutes && <p className="text-sm text-primary-600">{formatDuration(tripPlan.durationMinutes)}</p>}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <span className={`px-2 py-1 rounded ${tripPlan.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{tripPlan.status}</span>
+                      {tripPlan.isDriving ? <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">🚗 Driving</span> : <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">🚐 Riding with {tripPlan.ridingWith?.firstName}</span>}
+                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">Route: {tripPlan.routePreference}</span>
+                    </div>
+
+                    {/* Pit Stops Section */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <MapPin className="w-5 h-5" />
+                          Pit Stops ({tripPlan.pitStops?.length || 0})
+                        </h4>
+                        <button onClick={() => setShowPitStopModal(true)} className="btn btn-secondary btn-sm flex items-center gap-1">
+                          <Plus className="w-4 h-4" />Add Stop
+                        </button>
+                      </div>
+
+                      {tripPlan.pitStops && tripPlan.pitStops.length > 0 ? (
+                        <div className="space-y-2">
+                          {tripPlan.pitStops.map((stop: PitStop, index: number) => {
+                            const stopInfo = getStopTypeInfo(stop.stopType);
+                            return (
+                              <div key={stop.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-gray-200">
+                                  <span className="text-xl">{stopInfo.emoji}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium">{stop.name}</p>
+                                  <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                                    <span className="bg-gray-100 px-2 py-0.5 rounded">{stopInfo.label}</span>
+                                    {stop.location && <span>📍 {stop.location}</span>}
+                                    {stop.estimatedDuration && <span>⏱️ {stop.estimatedDuration} min</span>}
+                                  </div>
+                                  {stop.notes && <p className="text-sm text-gray-600 mt-1">{stop.notes}</p>}
+                                </div>
+                                <button onClick={() => handleDeletePitStop(stop.id)} className="text-red-500 hover:text-red-700 p-1">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 bg-gray-50 rounded-lg">
+                          <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-gray-500 text-sm">No pit stops planned</p>
+                          <button onClick={() => setShowPitStopModal(true)} className="text-primary-600 hover:text-primary-700 text-sm mt-1">+ Add your first stop</button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-4 border-t">
+                      {tripPlan.endLatitude && tripPlan.endLongitude && (
+                        <a href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(tripPlan.startLocation)}&destination=${tripPlan.endLatitude},${tripPlan.endLongitude}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm flex items-center gap-1">
+                          <Navigation className="w-4 h-4" />Open in Google Maps
+                        </a>
+                      )}
+                      <button onClick={() => setShowTripModal(true)} className="btn btn-secondary btn-sm">Edit Trip</button>
+                      {tripPlan.status === 'PLANNED' && <button onClick={handleCompleteTrip} className="btn btn-sm bg-green-500 text-white hover:bg-green-600">✅ Mark Complete</button>}
+                    </div>
+
+                    {tripPlan.status === 'COMPLETED' && tripPlan.actualMiles && (
+                      <div className="bg-green-50 rounded-lg p-4 mt-4">
+                        <p className="text-green-700 font-medium">🎉 Trip Completed!</p>
+                        <p className="text-green-600">Logged {tripPlan.actualMiles * 2} miles (round trip)</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500 mb-4">No trip planned yet</p>
+                    <button onClick={() => setShowTripModal(true)} className="btn btn-primary">Plan My Trip</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Group Trip Plans */}
+              {event.attendees && event.attendees.length > 0 && (
+                <div className="bg-white rounded-lg border p-6">
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Users className="w-6 h-6" />
+                    Group Travelers ({event.attendees.filter(a => a.status === 'going').length})
+                  </h3>
+                  <div className="space-y-3">
+                    {event.attendees.filter(a => a.status === 'going').map((attendee) => {
+                      const plan = allTripPlans.find(p => p.userId === attendee.userId);
+                      const isCurrentUser = attendee.userId === user?.id;
+                      const ridingWithUser = plan?.ridingWithId ? event.attendees?.find(a => a.userId === plan.ridingWithId) : null;
+                      const ridersWithThisPerson = allTripPlans.filter(p => p.ridingWithId === attendee.userId);
+                      
+                      return (
+                        <div key={attendee.id} className={`flex items-center justify-between p-3 rounded-lg ${isCurrentUser ? 'bg-primary-50 border-2 border-primary-200' : 'bg-gray-50'}`}>
+                          <div className="flex items-center gap-3">
+                            {attendee.user.profilePicture ? (
+                              <img src={`http://127.0.0.1:3001${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                                <span className="text-primary-600 font-bold text-sm">{attendee.user.firstName[0]}{attendee.user.lastName[0]}</span>
+                              </div>
+                            )}
+                            <div>
+                              <Link to={`/profile/${attendee.user.username}`} className="font-medium hover:text-primary-600">
+                                {attendee.user.firstName} {attendee.user.lastName}
+                                {isCurrentUser && <span className="ml-2 text-xs bg-primary-500 text-white px-2 py-0.5 rounded-full">You</span>}
+                                {attendee.userId === event.organizerId && <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Organizer</span>}
+                              </Link>
+                              {plan && plan.startLocation && (
+                                <p className="text-sm text-gray-500">{plan.startLocation}</p>
+                              )}
+                              {ridersWithThisPerson.length > 0 && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  🚐 Riding along: {ridersWithThisPerson.map(r => {
+                                    const riderAttendee = event.attendees?.find(a => a.userId === r.userId);
+                                    return riderAttendee?.user.firstName;
+                                  }).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex items-center gap-3">
+                            {plan && (
+                              <div>
+                                <p className="font-semibold text-primary-600">
+                                  {plan.distanceMiles ? `${plan.distanceMiles} mi` : '—'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {plan.isDriving ? '🚗 Driving' : `🚐 w/ ${ridingWithUser?.user.firstName || '?'}`}
+                                </p>
+                                {plan.pitStops?.length > 0 && (
+                                  <p className="text-xs text-gray-400">
+                                    {plan.pitStops.length} stop{plan.pitStops.length !== 1 ? 's' : ''}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {isOrganizer && attendee.userId !== event.organizerId && (
+                              <button onClick={() => handleRemoveAttendee(attendee.id)} className="text-red-500 hover:text-red-700 p-1">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'schedule' && <EventSchedule eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate} />}
+          {activeTab === 'photos' && <EventAlbum eventId={event.id} />}
+          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer} />}
+          {activeTab === 'pack' && (
+            <EventPackList eventId={event.id} />
+          )}
+        </div>
+      </div>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4 rounded-t-lg">
+              <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Invite Friends</h2><button onClick={() => setShowInviteModal(false)} className="text-white hover:text-gray-200"><X className="w-6 h-6" /></button></div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">Select friends to invite:</p>
+              {friends.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto space-y-2 mb-4">
+                  {friends.filter(friend => !event.attendees?.some(a => a.userId === friend.id)).map((friend) => (
+                    <label key={friend.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                      <input type="checkbox" checked={selectedFriends.includes(friend.id)} onChange={(e) => e.target.checked ? setSelectedFriends([...selectedFriends, friend.id]) : setSelectedFriends(selectedFriends.filter(fid => fid !== friend.id))} className="rounded text-primary-600" />
+                      {friend.profilePicture ? <img src={`http://127.0.0.1:3001${friend.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><Users className="w-5 h-5 text-gray-500" /></div>}
+                      <span className="font-medium">{friend.firstName} {friend.lastName}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-center py-8">No friends to invite</p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={handleInvite} disabled={selectedFriends.length === 0} className="btn btn-primary flex-1">Invite {selectedFriends.length > 0 && `(${selectedFriends.length})`}</button>
+                <button onClick={() => setShowInviteModal(false)} className="btn btn-secondary">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Event Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-t-lg">
+              <div className="flex items-center justify-between"><h2 className="text-xl font-bold flex items-center gap-2"><Copy className="w-5 h-5" />Copy Event</h2><button onClick={() => setShowCopyModal(false)} className="text-white hover:text-gray-200"><X className="w-6 h-6" /></button></div>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-600">Copy <strong>"{event.title}"</strong> to your events.</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2"><Star className={`w-5 h-5 ${copyForm.isWishlist ? 'text-yellow-500 fill-yellow-400' : 'text-gray-400'}`} /><div><span className="font-medium text-gray-900">Add to Wishlist</span><p className="text-xs text-gray-600">Save for later!</p></div></div>
+                  <div onClick={() => setCopyForm({ ...copyForm, isWishlist: !copyForm.isWishlist })} className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${copyForm.isWishlist ? 'bg-yellow-500' : 'bg-gray-300'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${copyForm.isWishlist ? 'translate-x-7' : 'translate-x-1'}`} /></div>
+                </label>
+              </div>
+              {!copyForm.isWishlist && (
+                <div className="space-y-3">
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label><input type="date" value={copyForm.startDate} onChange={(e) => setCopyForm({ ...copyForm, startDate: e.target.value })} className="input w-full" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">End Date</label><input type="date" value={copyForm.endDate} onChange={(e) => setCopyForm({ ...copyForm, endDate: e.target.value })} className="input w-full" min={copyForm.startDate} /></div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Include:</label>
+                <label className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"><input type="checkbox" checked={copyForm.copyMealPlan} onChange={(e) => setCopyForm({ ...copyForm, copyMealPlan: e.target.checked })} className="rounded text-primary-600" /><ChefHat className="w-4 h-4 text-gray-500" /><span>Meal Plan</span></label>
+              </div>
+              <div className="flex gap-3 pt-4 border-t">
+                <button onClick={handleCopyEvent} disabled={copying || (!copyForm.isWishlist && !copyForm.startDate)} className="btn btn-primary flex-1 disabled:opacity-50">{copying ? 'Copying...' : copyForm.isWishlist ? 'Add to Wishlist' : 'Copy Event'}</button>
+                <button onClick={() => setShowCopyModal(false)} className="btn btn-secondary">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trip Plan Modal */}
+      {showTripModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Plan Your Trip</h3><button onClick={() => setShowTripModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button></div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2"><input type="checkbox" id="useHometown" checked={tripForm.useHometown} onChange={(e) => setTripForm({ ...tripForm, useHometown: e.target.checked })} /><label htmlFor="useHometown" className="text-sm text-gray-700">Use my hometown as starting point</label></div>
+              {!tripForm.useHometown && <div><label className="block text-sm font-medium text-gray-700 mb-1">Starting Location</label><input type="text" value={tripForm.startLocation} onChange={(e) => setTripForm({ ...tripForm, startLocation: e.target.value })} className="input w-full" placeholder="City, State or Address" /></div>}
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Route Preference</label><select value={tripForm.routePreference} onChange={(e) => setTripForm({ ...tripForm, routePreference: e.target.value })} className="input w-full"><option value="FASTEST">Fastest Route</option><option value="SHORTEST">Shortest Distance</option><option value="RV_FRIENDLY">RV-Friendly</option></select></div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2"><input type="checkbox" checked={tripForm.avoidTolls} onChange={(e) => setTripForm({ ...tripForm, avoidTolls: e.target.checked })} /><span className="text-sm">Avoid Tolls</span></label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={tripForm.avoidHighways} onChange={(e) => setTripForm({ ...tripForm, avoidHighways: e.target.checked })} /><span className="text-sm">Avoid Highways</span></label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Transportation</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2"><input type="radio" name="transport" checked={tripForm.isDriving} onChange={() => setTripForm({ ...tripForm, isDriving: true })} /><span className="text-sm">🚗 I'm Driving</span></label>
+                  <label className="flex items-center gap-2"><input type="radio" name="transport" checked={!tripForm.isDriving} onChange={() => setTripForm({ ...tripForm, isDriving: false })} /><span className="text-sm">🚐 Riding With Someone</span></label>
+                </div>
+              </div>
+              {!tripForm.isDriving && <div><label className="block text-sm font-medium text-gray-700 mb-1">Riding With</label><select value={tripForm.ridingWithId} onChange={(e) => setTripForm({ ...tripForm, ridingWithId: e.target.value })} className="input w-full"><option value="">Select traveler...</option>{event.attendees?.filter(a => a.userId !== user?.id && a.status === 'going').map((attendee) => <option key={attendee.userId} value={attendee.userId}>{attendee.user.firstName} {attendee.user.lastName}</option>)}</select></div>}
+            </div>
+            <div className="flex gap-3 mt-6"><button onClick={() => setShowTripModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleCreateTripPlan} disabled={tripLoading} className="btn btn-primary flex-1">{tripLoading ? 'Saving...' : 'Save Trip Plan'}</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Pit Stop Modal */}
+      {showPitStopModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Add Pit Stop</h3><button onClick={() => setShowPitStopModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button></div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stop Type *</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {STOP_TYPES.map((type) => (
+                    <button key={type.id} onClick={() => setPitStopForm({ ...pitStopForm, stopType: type.id })} className={`p-2 rounded-lg border-2 text-center transition ${pitStopForm.stopType === type.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className="text-xl block">{type.emoji}</span>
+                      <span className="text-xs text-gray-600">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Name *</label><input type="text" value={pitStopForm.name} onChange={(e) => setPitStopForm({ ...pitStopForm, name: e.target.value })} className="input w-full" placeholder="e.g., Love's Travel Stop" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Location</label><input type="text" value={pitStopForm.location} onChange={(e) => setPitStopForm({ ...pitStopForm, location: e.target.value })} className="input w-full" placeholder="City, State or Address" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Estimated Duration (minutes)</label><input type="number" value={pitStopForm.estimatedDuration} onChange={(e) => setPitStopForm({ ...pitStopForm, estimatedDuration: parseInt(e.target.value) || 0 })} className="input w-full" min="5" step="5" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea value={pitStopForm.notes} onChange={(e) => setPitStopForm({ ...pitStopForm, notes: e.target.value })} className="input w-full" rows={2} placeholder="Any notes about this stop..." /></div>
+            </div>
+            <div className="flex gap-3 mt-6"><button onClick={() => setShowPitStopModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleAddPitStop} disabled={!pitStopForm.name} className="btn btn-primary flex-1 disabled:opacity-50">Add Pit Stop</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

@@ -1,0 +1,134 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { Tent, MapPin, Users, Calendar, MessageSquare, Mail, User, LogOut } from 'lucide-react';
+import { authService, User as UserType } from '../services/auth.service';
+import NotificationBell from './NotificationBell';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+
+interface NavbarProps {
+  user: UserType;
+  onLogout: () => void;
+}
+
+export default function Navbar({ user, onLogout }: NavbarProps) {
+  const navigate = useNavigate();
+  const [eventNotificationCount, setEventNotificationCount] = useState(0);
+
+//  useEffect(() => {
+//    loadEventNotifications();
+    // Poll every 30 seconds
+ //   const interval = setInterval(loadEventNotifications, 30000);
+  //  return () => clearInterval(interval);
+ //  }, []);
+
+  const loadEventNotifications = async () => {
+    try {
+      const { data } = await api.get('/notifications');
+      // Count unread event-related notifications
+      const eventTypes = [
+        'EVENT_INVITE',
+        'EVENT_UPDATE',
+        'NOTE_ADDED',
+        'CHECKLIST_ASSIGNED',
+        'CHECKLIST_COMPLETED',
+        'RSVP_CHANGE',
+        'COMMENT_ADDED',
+        'CAMPGROUND_ADDED',
+      ];
+      const eventNotifs = data.filter(
+        (n: any) => !n.isRead && eventTypes.includes(n.type)
+      );
+      setEventNotificationCount(eventNotifs.length);
+    } catch (error) {
+      console.error('Load event notifications error:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    onLogout();
+    navigate('/login');
+  };
+
+  return (
+    <nav className="bg-white shadow-md sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center space-x-2">
+            <Tent className="w-8 h-8 text-primary-600" />
+            <span className="text-xl font-bold text-gray-900">KindleTribe</span>
+          </Link>
+
+          <div className="flex items-center space-x-6">
+            <Link to="/campgrounds" className="flex items-center space-x-1 text-gray-700 hover:text-primary-600">
+              <MapPin className="w-5 h-5" />
+              <span>Campgrounds</span>
+            </Link>
+
+
+
+<Link to="/events" className="flex items-center space-x-1 text-gray-700 hover:text-primary-600 relative">
+              <Calendar className="w-5 h-5" />
+              <span>Events</span>
+              {eventNotificationCount > 0 && (
+                <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full pointer-events-none">
+                  {eventNotificationCount > 9 ? '9+' : eventNotificationCount}
+                </span>
+              )}
+
+
+            <Link to="/feed" className="flex items-center space-x-1 text-gray-700 hover:text-primary-600">
+              <MessageSquare className="w-5 h-5" />
+              <span>Feed</span>
+            </Link>
+
+            <Link to="/friends" className="flex items-center space-x-1 text-gray-700 hover:text-primary-600">
+              <Users className="w-5 h-5" />
+              <span>Friends</span>
+            </Link>
+
+            <Link to="/messages" className="flex items-center space-x-1 text-gray-700 hover:text-primary-600">
+              <Mail className="w-5 h-5" />
+              <span>Messages</span>
+            </Link>
+
+            <NotificationBell />
+
+            <div className="relative group">
+              <button className="flex items-center space-x-2 text-gray-700 hover:text-primary-600">
+                {user.profilePicture ? (
+                  <img
+                    src={user.profilePicture}
+                    alt={user.firstName}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <User className="w-5 h-5 text-primary-600" />
+                  </div>
+                )}
+                <span>{user.firstName}</span>
+              </button>
+
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 invisible group-hover:visible">
+                <Link
+                  to="/profile"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                >
+                  My Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}

@@ -1,0 +1,157 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ChefHat, Star, Clock, Users } from 'lucide-react';
+import api from '../services/api';
+
+interface Recipe {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  createdAt: string;
+  author: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  _count?: {
+    ratings: number;
+  };
+}
+
+export default function UserRecipesPage() {
+  const { username } = useParams<{ username: string }>();
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [profileName, setProfileName] = useState('');
+
+  useEffect(() => {
+    loadRecipes();
+  }, [username]);
+
+  const loadRecipes = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/profile/${username}/recipes`);
+      setRecipes(data.recipes || []);
+      
+      if (data.recipes && data.recipes.length > 0) {
+        setProfileName(`${data.recipes[0].author.firstName} ${data.recipes[0].author.lastName}`);
+      }
+    } catch (error) {
+      console.error('Load recipes error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          to={`/profile/${username}`}
+          className="text-primary-600 hover:text-primary-700 text-sm mb-4 inline-block"
+        >
+          ← Back to Profile
+        </Link>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <ChefHat className="w-8 h-8 text-red-600" />
+          {profileName ? `${profileName}'s Recipe Box` : 'Recipe Box'}
+        </h1>
+        <p className="text-gray-600 mt-2">
+          {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+        </p>
+      </div>
+
+      {/* Recipes Grid */}
+      {recipes.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recipes.map((recipe) => (
+            <Link
+              key={recipe.id}
+              to={`/recipes/${recipe.id}`}
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition"
+            >
+              {/* Recipe Image */}
+              <div className="aspect-video bg-gradient-to-br from-red-100 to-orange-100 relative">
+                {recipe.imageUrl ? (
+                  <img
+                    src={`http://127.0.0.1:3001${recipe.imageUrl}`}
+                    alt={recipe.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ChefHat className="w-16 h-16 text-red-300" />
+                  </div>
+                )}
+              </div>
+
+              {/* Recipe Info */}
+              <div className="p-4">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                  {recipe.title}
+                </h3>
+                
+                {recipe.description && (
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {recipe.description}
+                  </p>
+                )}
+
+                {/* Meta Info */}
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  {recipe.prepTime && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{recipe.prepTime + (recipe.cookTime || 0)} min</span>
+                    </div>
+                  )}
+                  
+                  {recipe.servings && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      <span>{recipe.servings} servings</span>
+                    </div>
+                  )}
+
+                  {recipe._count && recipe._count.ratings > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-500" />
+                      <span>{recipe._count.ratings} ratings</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <ChefHat className="w-24 h-24 mx-auto text-gray-300 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">No Recipes Yet</h2>
+          <p className="text-gray-600 mb-6">
+            {profileName} hasn't shared any recipes yet.
+          </p>
+          <Link to="/recipes" className="btn btn-primary">
+            Browse All Recipes
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}

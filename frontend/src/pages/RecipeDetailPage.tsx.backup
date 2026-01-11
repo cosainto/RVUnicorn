@@ -1,0 +1,656 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { 
+  ChefHat, 
+  Clock, 
+  Users, 
+  Star, 
+  ArrowLeft, 
+  Globe, 
+  Lock, 
+  MessageSquare,
+  Bookmark,
+  BookmarkCheck,
+  Heart,
+  Edit,
+  Trash2,
+  Camera,
+  X,
+  Copy
+} from 'lucide-react';
+import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+interface Recipe {
+  id: string;
+  title: string;
+  description?: string;
+  ingredients: string[];
+  instructions: string[];
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  difficulty?: string;
+  cuisine?: string;
+  category?: string;
+  privacy?: string;
+  imageUrl?: string;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
+  _count?: {
+    ratings: number;
+    comments: number;
+  };
+  averageRating?: number;
+  userRating?: number;
+  isSaved?: boolean;
+  isFavorite?: boolean;
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
+}
+
+export default function RecipeDetailPage() {
+  const { recipeId } = useParams<{ recipeId: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [newComment, setNewComment] = useState('');
+  const [commentImage, setCommentImage] = useState<File | null>(null);
+  const [commentImagePreview, setCommentImagePreview] = useState<string>('');
+
+  useEffect(() => {
+    if (recipeId) {
+      loadRecipe();
+      loadComments();
+    }
+  }, [recipeId]);
+
+  const loadRecipe = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/recipes/${recipeId}`);
+      setRecipe(data);
+      setRating(data.userRating || 0);
+    } catch (error) {
+      console.error('Load recipe error:', error);
+      alert('Failed to load recipe');
+      navigate('/recipes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadComments = async () => {
+    try {
+      const { data } = await api.get(`/recipes/${recipeId}/comments`);
+      setComments(data);
+    } catch (error) {
+      console.error('Load comments error:', error);
+    }
+  };
+
+  const handleSaveToggle = async () => {
+    if (!user) {
+      alert('Please login to save recipes');
+      return;
+    }
+
+    try {
+      if (recipe?.isSaved) {
+        await api.delete(`/recipes/${recipeId}/save`);
+        setRecipe({ ...recipe, isSaved: false, isFavorite: false });
+      } else {
+        await api.post(`/recipes/${recipeId}/save`);
+        setRecipe({ ...recipe!, isSaved: true });
+      }
+    } catch (error) {
+      console.error('Save toggle error:', error);
+      alert('Failed to save recipe');
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!user) {
+      alert('Please login to favorite recipes');
+      return;
+    }
+
+    if (!recipe?.isSaved) {
+      alert('Save the recipe first before marking as favorite!');
+      return;
+    }
+
+    try {
+      const { data } = await api.put(`/recipes/${recipeId}/favorite`);
+      setRecipe({ ...recipe!, isFavorite: data.favorite });
+    } catch (error) {
+      console.error('Favorite toggle error:', error);
+      alert('Failed to toggle favorite');
+    }
+  };
+
+  const handleRate = async (newRating: number) => {
+    if (!user) {
+      alert('Please login to rate recipes');
+      return;
+    }
+
+    try {
+      await api.post(`/recipes/${recipeId}/rate`, { rating: newRating });
+      setRating(newRating);
+      await loadRecipe();
+    } catch (error) {
+      console.error('Rate recipe error:', error);
+      alert('Failed to rate recipe');
+    }
+  };
+
+  const handleCommentImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCommentImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommentImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeCommentImage = () => {
+    setCommentImage(null);
+    setCommentImagePreview('');
+  };
+
+  const handleAddComment = async () => {
+    if (!user) {
+      alert('Please login to comment');
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    try {
+      let imageUrl = '';
+
+      // Upload image if present
+      if (commentImage) {
+        const formData = new FormData();
+        formData.append('image', commentImage);
+
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = uploadRes.data.url;
+      }
+
+      // Create comment
+      await api.post(`/recipes/${recipeId}/comments`, { 
+        content: newComment.trim(),
+        imageUrl: imageUrl || undefined
+      });
+
+      setNewComment('');
+      setCommentImage(null);
+      setCommentImagePreview('');
+      await loadComments();
+      await loadRecipe();
+    } catch (error) {
+      console.error('Add comment error:', error);
+      alert('Failed to add comment');
+    }
+  };
+
+  const handleCopyRecipe = async () => {
+    if (!user) {
+      alert('Please login to copy recipes');
+      return;
+    }
+
+    if (!recipe) return;
+
+    try {
+      const copiedRecipe = await api.post('/recipes', {
+        title: `${recipe.title} (Copy)`,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prepTime: recipe.prepTime,
+        cookTime: recipe.cookTime,
+        servings: recipe.servings,
+        difficulty: recipe.difficulty,
+        cuisine: recipe.cuisine,
+        category: recipe.category,
+        privacy: 'PRIVATE', // Default to private
+        imageUrl: recipe.imageUrl,
+      });
+
+      alert('Recipe copied! Redirecting to your copy...');
+      navigate(`/recipes/${copiedRecipe.data.id}`);
+    } catch (error) {
+      console.error('Copy recipe error:', error);
+      alert('Failed to copy recipe');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this recipe?')) return;
+
+    try {
+      await api.delete(`/recipes/${recipeId}`);
+      alert('Recipe deleted!');
+      navigate('/recipes');
+    } catch (error) {
+      console.error('Delete recipe error:', error);
+      alert('Failed to delete recipe');
+    }
+  };
+
+  const getPrivacyIcon = () => {
+    switch (recipe?.privacy) {
+      case 'PRIVATE':
+        return <Lock className="w-5 h-5 text-gray-600" />;
+      case 'FRIENDS':
+        return <Users className="w-5 h-5 text-blue-600" />;
+      default:
+        return <Globe className="w-5 h-5 text-green-600" />;
+    }
+  };
+
+  const getPrivacyLabel = () => {
+    switch (recipe?.privacy) {
+      case 'PRIVATE':
+        return 'Private';
+      case 'FRIENDS':
+        return 'Friends Only';
+      default:
+        return 'Public';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading recipe...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <ChefHat className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Recipe not found</h2>
+          <Link to="/recipes" className="btn btn-primary">
+            Browse Recipes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwner = recipe.user.id === user?.id;
+  const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Back Button */}
+      <Link
+        to="/recipes"
+        className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Recipes
+      </Link>
+
+      {/* Recipe Header */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        {/* Recipe Image */}
+        {recipe.imageUrl ? (
+          <img
+            src={`http://127.0.0.1:3001${recipe.imageUrl}`}
+            alt={recipe.title}
+            className="w-full h-64 object-cover"
+          />
+        ) : (
+          <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
+            <ChefHat className="w-24 h-24 text-red-300" />
+          </div>
+        )}
+
+        <div className="p-6">
+          {/* Title, Privacy, and Action Buttons */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{recipe.title}</h1>
+              {recipe.description && (
+                <p className="text-gray-600">{recipe.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                {getPrivacyIcon()}
+                <span className="text-sm font-medium text-gray-700">{getPrivacyLabel()}</span>
+              </div>
+              
+              {/* Non-owner actions: Save, Favorite, Copy */}
+              {user && !isOwner && (
+                <>
+                  {/* Save to Recipe Box Button */}
+                  <button
+                    onClick={handleSaveToggle}
+                    className={`p-2 rounded-full transition ${
+                      recipe.isSaved
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title={recipe.isSaved ? 'Remove from Recipe Box' : 'Save to Recipe Box'}
+                  >
+                    {recipe.isSaved ? (
+                      <BookmarkCheck className="w-5 h-5" />
+                    ) : (
+                      <Bookmark className="w-5 h-5" />
+                    )}
+                  </button>
+
+                  {/* Favorite Button - Only show if saved */}
+                  {recipe.isSaved && (
+                    <button
+                      onClick={handleFavoriteToggle}
+                      className={`p-2 rounded-full transition ${
+                        recipe.isFavorite
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      title={recipe.isFavorite ? 'Remove from Favorites' : 'Mark as Favorite'}
+                    >
+                      <Heart className={`w-5 h-5 ${recipe.isFavorite ? 'fill-white' : ''}`} />
+                    </button>
+                  )}
+
+                  {/* Save a Copy Button */}
+                  <button
+                    onClick={handleCopyRecipe}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Save a Copy
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Author */}
+          <Link
+            to={`/profile/${recipe.user.username}`}
+            className="flex items-center gap-3 mb-4 hover:bg-gray-50 p-2 rounded-lg transition"
+          >
+            {recipe.user.profilePicture ? (
+              <img
+                src={`http://127.0.0.1:3001${recipe.user.profilePicture}`}
+                alt={recipe.user.firstName}
+                className="w-10 h-10 rounded-full"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
+                {recipe.user.firstName[0]}
+              </div>
+            )}
+            <div>
+              <p className="font-medium text-gray-900">
+                {recipe.user.firstName} {recipe.user.lastName}
+              </p>
+              <p className="text-sm text-gray-500">@{recipe.user.username}</p>
+            </div>
+          </Link>
+
+          {/* Meta Info */}
+          <div className="flex flex-wrap gap-6 text-sm text-gray-600 mb-6">
+            {totalTime > 0 && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>{totalTime} minutes</span>
+              </div>
+            )}
+            {recipe.servings && (
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>{recipe.servings} servings</span>
+              </div>
+            )}
+            {recipe.difficulty && (
+              <div className="px-3 py-1 bg-gray-100 rounded-full">
+                <span className="font-medium">{recipe.difficulty}</span>
+              </div>
+            )}
+            {recipe.category && (
+              <div className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full">
+                <span className="font-medium">{recipe.category}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Rating Display and Rate */}
+          <div className="mb-6">
+            {/* Average Rating - Show to everyone */}
+            {recipe.averageRating !== undefined && recipe.averageRating > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                <span className="font-bold text-gray-900">{recipe.averageRating.toFixed(1)}</span>
+                <span className="text-sm text-gray-500">
+                  ({recipe._count?.ratings || 0} ratings)
+                </span>
+              </div>
+            )}
+
+            {/* Rate this recipe - Only non-owners can rate */}
+            {user && !isOwner && (
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  {rating > 0 ? 'Your rating:' : 'Rate this recipe:'}
+                </p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRate(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="transition"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= (hoverRating || rating)
+                            ? 'text-yellow-500 fill-yellow-500'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Ingredients */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Ingredients</h2>
+        <ul className="space-y-2">
+          {recipe.ingredients.map((ingredient, index) => (
+            <li key={index} className="flex items-start gap-3">
+              <span className="text-primary-600 mt-1">•</span>
+              <span className="text-gray-700">{ingredient}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Instructions */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Instructions</h2>
+        <ol className="space-y-4">
+          {recipe.instructions.map((instruction, index) => (
+            <li key={index} className="flex gap-4">
+              <span className="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold">
+                {index + 1}
+              </span>
+              <p className="text-gray-700 pt-1">{instruction}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Comments Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <MessageSquare className="w-6 h-6" />
+            Comments ({recipe._count?.comments || 0})
+          </h2>
+        </div>
+
+        {/* Add Comment */}
+        {user && (
+          <div className="mb-6">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="input w-full"
+              rows={3}
+            />
+
+            {/* Image Upload */}
+            <div className="mt-3">
+              {commentImagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={commentImagePreview}
+                    alt="Comment preview"
+                    className="h-32 rounded-lg object-cover"
+                  />
+                  <button
+                    onClick={removeCommentImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition">
+                  <Camera className="w-4 h-4" />
+                  <span className="text-sm">Add Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCommentImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            <button
+              onClick={handleAddComment}
+              disabled={!newComment.trim()}
+              className="btn btn-primary mt-2"
+            >
+              Add Comment
+            </button>
+          </div>
+        )}
+
+        {/* Comments List */}
+        <div className="space-y-4">
+          {comments.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No comments yet. Be the first!</p>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="border-b border-gray-200 pb-4 last:border-0">
+                <Link
+                  to={`/profile/${comment.user.username}`}
+                  className="flex items-center gap-3 mb-2"
+                >
+                  {comment.user.profilePicture ? (
+                    <img
+                      src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                      alt={comment.user.firstName}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-bold">
+                      {comment.user.firstName[0]}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {comment.user.firstName} {comment.user.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Link>
+                <p className="text-gray-700 ml-11 mb-2">{comment.content}</p>
+                {comment.imageUrl && (
+                  <img
+                    src={`http://127.0.0.1:3001${comment.imageUrl}`}
+                    alt="Comment"
+                    className="ml-11 rounded-lg max-w-md"
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Owner Actions */}
+      {isOwner && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Manage Recipe</h3>
+          <div className="flex gap-3">
+            <Link to={`/recipes/${recipeId}/edit`} className="btn btn-secondary flex items-center gap-2">
+              <Edit className="w-4 h-4" />
+              Edit Recipe
+            </Link>
+            <button onClick={handleDelete} className="btn btn-danger flex items-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              Delete Recipe
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

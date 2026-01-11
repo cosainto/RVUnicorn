@@ -1,0 +1,302 @@
+// ============================================
+// CREATOR PAGES - Schema Additions
+// Add these to your schema.prisma file
+// ============================================
+
+// ===========================================
+// 1. ADD THESE FIELDS TO THE USER MODEL
+// ===========================================
+// Find your User model and add these fields:
+
+  // Creator Page Settings
+  isCreator         Boolean   @default(false)
+  creatorEnabledAt  DateTime?
+  creatorBio        String?
+  creatorSpecialties String[]  // e.g., ["Full-Time RV", "Gear Reviews", "Weekend Warrior"]
+  creatorCoverImage String?
+  creatorVerified   Boolean   @default(false)
+  creatorFeatured   Boolean   @default(false)
+  
+  // Creator Relations (add to User model's relations section)
+  creatorContent       CreatorContent[]
+  creatorFollowers     CreatorFollow[]   @relation("CreatorFollowers")
+  followingCreators    CreatorFollow[]   @relation("FollowingCreators")
+  creatorLikes         CreatorContentLike[]
+  creatorComments      CreatorContentComment[]
+  creatorReposts       CreatorRepost[]
+  creatorSaves         CreatorSave[]
+  creatorCollaborations CreatorCollaboration[]
+  creatorStats         CreatorStats?
+
+
+// ===========================================
+// 2. ADD THESE NEW MODELS
+// ===========================================
+
+// Main content model for creator posts
+model CreatorContent {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  // Content Type
+  contentType     String   // VIDEO, SHORT, BLOG, PHOTO_GALLERY, EMBED
+  
+  // Core Content
+  title           String?
+  description     String?
+  body            String?  // For blog posts - rich text/markdown
+  
+  // Media
+  thumbnailUrl    String?
+  videoUrl        String?
+  embedUrl        String?  // YouTube, TikTok, Instagram embeds
+  embedPlatform   String?  // YOUTUBE, TIKTOK, INSTAGRAM
+  
+  // Organization
+  category        String?  // GEAR_REVIEWS, CAMPGROUND_REVIEWS, TRAVEL_DAYS, TIPS_HACKS, FULL_TIME_RV, WEEKEND_TRIPS
+  tags            String[]
+  
+  // Attachments (linked entities)
+  campgroundId    String?
+  campground      Campground? @relation(fields: [campgroundId], references: [id])
+  eventId         String?
+  tripId          String?
+  
+  // Monetization
+  isSponsored     Boolean  @default(false)
+  sponsorName     String?
+  affiliateLinks  Json?    // Array of { label, url }
+  
+  // Status
+  status          String   @default("DRAFT")  // DRAFT, PUBLISHED, ARCHIVED
+  publishedAt     DateTime?
+  
+  // Stats (denormalized for performance)
+  viewCount       Int      @default(0)
+  likeCount       Int      @default(0)
+  commentCount    Int      @default(0)
+  repostCount     Int      @default(0)
+  saveCount       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  likes           CreatorContentLike[]
+  comments        CreatorContentComment[]
+  reposts         CreatorRepost[]
+  saves           CreatorSave[]
+  photos          CreatorContentPhoto[]
+  gearItems       CreatorContentGear[]
+  taggedUsers     CreatorContentTag[]
+  collaborators   CreatorCollaboration[]
+  
+  @@index([creatorId])
+  @@index([category])
+  @@index([status, publishedAt])
+  @@index([campgroundId])
+}
+
+// Photos for gallery-type content
+model CreatorContentPhoto {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  imageUrl        String
+  caption         String?
+  sortOrder       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([contentId])
+}
+
+// Gear items attached to content
+model CreatorContentGear {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  gearItemId      String?  // Link to user's GearItem if exists
+  
+  // Or manual entry
+  name            String
+  description     String?
+  imageUrl        String?
+  affiliateUrl    String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([contentId])
+}
+
+// User/campground tags in content
+model CreatorContentTag {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  tagType         String   // USER, CAMPGROUND, BRAND
+  
+  userId          String?
+  user            User?    @relation("TaggedInContent", fields: [userId], references: [id])
+  
+  campgroundId    String?
+  campground      Campground? @relation("TaggedCampground", fields: [campgroundId], references: [id])
+  
+  brandName       String?  // For brand tags (no relation yet)
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([contentId, tagType, userId])
+  @@unique([contentId, tagType, campgroundId])
+  @@index([contentId])
+  @@index([userId])
+  @@index([campgroundId])
+}
+
+// Creator collaborations
+model CreatorCollaboration {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  collaboratorId  String
+  collaborator    User     @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  
+  role            String   @default("COLLABORATOR")  // COLLABORATOR, CO_AUTHOR, FEATURED
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([contentId, collaboratorId])
+  @@index([collaboratorId])
+}
+
+// Follow creators
+model CreatorFollow {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         User     @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  followerId      String
+  follower        User     @relation("FollowingCreators", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([creatorId, followerId])
+  @@index([creatorId])
+  @@index([followerId])
+}
+
+// Likes on creator content
+model CreatorContentLike {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([contentId, userId])
+  @@index([contentId])
+  @@index([userId])
+}
+
+// Comments on creator content
+model CreatorContentComment {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  body            String
+  
+  // Reply threading
+  parentId        String?
+  parent          CreatorContentComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies         CreatorContentComment[] @relation("CommentReplies")
+  
+  isCreatorReply  Boolean  @default(false)  // Highlight creator responses
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([contentId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+// Reposts of creator content
+model CreatorRepost {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  comment         String?  // Optional quote/comment when reposting
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([contentId, userId])
+  @@index([contentId])
+  @@index([userId])
+}
+
+// Save/bookmark creator content
+model CreatorSave {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([contentId, userId])
+  @@index([userId])
+}
+
+// Creator analytics/stats (aggregated)
+model CreatorStats {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  totalViews      Int      @default(0)
+  totalLikes      Int      @default(0)
+  totalComments   Int      @default(0)
+  totalReposts    Int      @default(0)
+  totalSaves      Int      @default(0)
+  followerCount   Int      @default(0)
+  
+  // Growth tracking
+  viewsThisWeek   Int      @default(0)
+  viewsThisMonth  Int      @default(0)
+  followersThisWeek Int    @default(0)
+  followersThisMonth Int   @default(0)
+  
+  lastCalculatedAt DateTime @default(now())
+  
+  updatedAt       DateTime @updatedAt
+}
+
+
+// ===========================================
+// 3. ADD TO EXISTING MODELS
+// ===========================================
+
+// Add to Campground model:
+//   creatorContent    CreatorContent[]
+//   taggedInContent   CreatorContentTag[] @relation("TaggedCampground")
+
+// Add to User model relations:
+//   taggedInContent   CreatorContentTag[] @relation("TaggedInContent")
