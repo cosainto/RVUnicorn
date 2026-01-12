@@ -164,7 +164,7 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
           link: "/events/" + eventId
         }
       });
-    });
+    }
 
     res.json(tripPlan);
   } catch (error) {
