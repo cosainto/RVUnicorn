@@ -214,5 +214,22 @@ router.post('/seed', async (req, res) => {
   }
 });
 
+// POST /api/badges/award - Admin award badge to user
+router.post('/award', authenticateToken, async (req: any, res) => {
+  try {
+    const { userId, badgeSlug } = req.body;
+    
+    if (!userId || !badgeSlug) {
+      return res.status(400).json({ error: 'userId and badgeSlug required' });
+    }
+
+    const result = await awardBadge(userId, badgeSlug);
+    res.json(result);
+  } catch (error) {
+    console.error('Award badge error:', error);
+    res.status(500).json({ error: 'Failed to award badge' });
+  }
+});
+
 export default router;
 
