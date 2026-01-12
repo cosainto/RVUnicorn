@@ -131,16 +131,9 @@ async function importFacility(facility: any): Promise<boolean> {
     // Check if already exists
     const existing = await prisma.campground.findFirst({
       where: {
-        OR: [
-          { slug },
-          {
-            AND: [
-              { name },
-              { latitude: parseFloat(lat) },
-              { longitude: parseFloat(lon) }
-            ]
-          }
-        ]
+        name: name,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lon)
       }
     });
 
@@ -158,24 +151,17 @@ async function importFacility(facility: any): Promise<boolean> {
     const amenities = parseAmenities(facility);
     const description = facility.FacilityDescription || `${name} - Federal recreation area`;
 
-    // Get contact info
-    const phone = facility.FacilityPhone;
-    const email = facility.FacilityEmail;
-    const website = facility.FacilityReservationURL || facility.FacilityMapURL;
-
     await prisma.campground.create({
       data: {
         name,
-        slug,
+        // slug removed,
         location,
         state,
         latitude: parseFloat(lat),
         longitude: parseFloat(lon),
         amenities,
         description: description.substring(0, 1000), // Limit description length
-        phone,
-        email,
-        website,
+
       }
     });
 
