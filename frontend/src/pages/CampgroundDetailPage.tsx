@@ -168,6 +168,7 @@ export default function CampgroundDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const isSiteAdmin = user?.email?.toLowerCase() === 'wroberts82@yahoo.com';
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [avgRating, setAvgRating] = useState(0);
@@ -268,6 +269,18 @@ export default function CampgroundDetailPage() {
   const handleUploadMap = async () => {
     if (!user || !campground || !mapFile) return;
     try { setUploadingMap(true); const fd = new FormData(); fd.append('map', mapFile); const { data } = await api.post(`/campground-features/${campground.id}/map`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }); setCampgroundMapUrl(data.mapUrl); setMapFile(null); alert('✅ Map uploaded!'); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); } finally { setUploadingMap(false); }
+  };
+
+  const handleDeleteCampground = async () => {
+    if (!user || !campground || !isSiteAdmin) return;
+    if (!confirm(`Are you sure you want to DELETE "${campground.name}"? This cannot be undone!`)) return;
+    try {
+      await api.delete(`/campgrounds/${campground.id}`);
+      alert("✅ Campground deleted!");
+      navigate("/campgrounds");
+    } catch (e: any) {
+      alert(e.response?.data?.error || "Failed to delete campground");
+    }
   };
 
   const handleDeleteMap = async () => {
@@ -814,6 +827,7 @@ export default function CampgroundDetailPage() {
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
           {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
+          {isSiteAdmin && <button onClick={handleDeleteCampground} className="absolute top-28 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Trash2 className="w-5 h-5" />Delete Campground</button>}
           {campground.verificationStatus === "PENDING" && <div className="absolute top-16 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⏳ Claim Pending</div>}
           {user && (!campground.verificationStatus || campground.verificationStatus === "UNCLAIMED") && <button onClick={() => setShowClaimModal(true)} className="absolute bottom-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Award className="w-5 h-5" />Own this campground? Claim it</button>}
         </div>
