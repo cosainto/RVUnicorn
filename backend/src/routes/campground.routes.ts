@@ -4,6 +4,29 @@ import { prisma } from '../index';
 
 const router = Router();
 
+// Admin email that can delete/edit campgrounds
+const ADMIN_EMAIL = 'wroberts82@yahoo.com';
+
+// Middleware to check if user is admin
+const isAdmin = async (req: Request, res: Response, next: Function) => {
+  try {
+    const userId = (req as any).userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+    
+    if (!user || user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ error: 'Failed to verify admin status' });
+  }
+};
+
 // Get all campgrounds
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -188,6 +211,65 @@ router.get('/:id/followers', optionalAuth, async (req: Request, res: Response) =
   } catch (error) {
     console.error('Get campground followers error:', error);
     res.status(500).json({ error: 'Failed to get followers' });
+  }
+});
+
+// UPDATE campground (ADMIN ONLY) - Must come before /:id GET route
+router.put('/:id', authenticateToken, isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if campground exists
+    const existing = await prisma.campground.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Campground not found' });
+    }
+
+    const campground = await prisma.campground.update({
+      where: { id },
+      data: updateData
+    });
+
+    res.json(campground);
+  } catch (error) {
+    console.error('Update campground error:', error);
+    res.status(500).json({ error: 'Failed to update campground' });
+  }
+});
+
+// DELETE campground (ADMIN ONLY) - Must come before /:id GET route
+router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if campground exists
+    const existing = await prisma.campground.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Campground not found' });
+    }
+
+    // Delete related records first (to avoid foreign key constraints)
+    await prisma.campgroundFollow.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundReview.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundPhoto.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundCheckIn.deleteMany({ where: { campgroundId: id } });
+    
+    // Delete the campground
+    await prisma.campground.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Campground deleted successfully' });
+  } catch (error) {
+    console.error('Delete campground error:', error);
+    res.status(500).json({ error: 'Failed to delete campground' });
   }
 });
 
