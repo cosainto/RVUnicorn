@@ -642,14 +642,14 @@ router.delete('/:id/save', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/recipes/:id/favorite - Toggle favorite status of saved recipe
+// PUT /api/recipes/:id/favorite - Toggle favorite status (auto-saves if not saved)
 router.put('/:id/favorite', authenticateToken, async (req, res) => {
   try {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
     // Find the saved recipe
-    const savedRecipe = await prisma.savedRecipe.findUnique({
+    let savedRecipe = await prisma.savedRecipe.findUnique({
       where: {
         userId_recipeId: {
           userId,
@@ -658,8 +658,20 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
       }
     });
 
+    // If not saved yet, auto-save it and mark as favorite
     if (!savedRecipe) {
-      return res.status(404).json({ error: 'Recipe not saved yet. Save it first to mark as favorite.' });
+      savedRecipe = await prisma.savedRecipe.create({
+        data: {
+          userId,
+          recipeId,
+          favorite: true
+        }
+      });
+      return res.json({ 
+        message: 'Recipe saved and marked as favorite',
+        favorite: true,
+        isSaved: true
+      });
     }
 
     // Toggle favorite

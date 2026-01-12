@@ -292,10 +292,6 @@ export default function RecipeDetailPage() {
       return;
     }
 
-    if (!recipe?.isSaved) {
-      alert('Save the recipe first before marking as favorite!');
-      return;
-    }
 
     try {
       await api.put(`/recipes/${recipeId}/favorite`);
