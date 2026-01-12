@@ -1,6 +1,7 @@
 
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import api from '../services/api';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Star, Plus, Phone, Globe, Navigation } from 'lucide-react';
 import SuggestCampground from '../components/SuggestCampground';
