@@ -63,7 +63,7 @@ export default function CampgroundsPage() {
       params.append('page', currentPage.toString());
       params.append('limit', '50');
 
-      const res = await api.get(`/api/campgrounds?${params.toString()}`);
+      const res = await api.get(`/campgrounds?${params.toString()}`);
       // api.get returns data directly
 
       const data = res.data;
