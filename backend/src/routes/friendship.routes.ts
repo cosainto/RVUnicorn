@@ -257,29 +257,6 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
       }
     });
 
-    // Create profile Activity for both users
-    // Activity for the person who accepted (receiver)
-    await prisma.activity.create({
-      data: {
-        userId: updated.receiverId,
-        type: 'NEW_CAMPING_BUDDY',
-        targetUserId: updated.initiatorId,
-        content: '', // Content handled by frontend
-        isPublic: true
-      }
-    });
-    
-    // Activity for the person who sent the request (initiator)
-    await prisma.activity.create({
-      data: {
-        userId: updated.initiatorId,
-        type: 'NEW_CAMPING_BUDDY',
-        targetUserId: updated.receiverId,
-        content: '', // Content handled by frontend
-        isPublic: true
-      }
-    });
-    
     // Create BasecampActivity so it shows in the basecamp feed for both users
     await prisma.basecampActivity.create({
       data: {
