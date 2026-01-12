@@ -256,10 +256,48 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
     }
 
     // Delete related records first (to avoid foreign key constraints)
+    // Order matters - delete child records before parent records
+    
+    // Delete post-related items first (comments and likes reference posts)
+    const posts = await prisma.campgroundPost.findMany({ where: { campgroundId: id }, select: { id: true } });
+    const postIds = posts.map(p => p.id);
+    if (postIds.length > 0) {
+      await prisma.campgroundPostComment.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.campgroundPostLike.deleteMany({ where: { postId: { in: postIds } } });
+    }
+    
+    // Delete all direct campground relations
+    await prisma.campgroundPost.deleteMany({ where: { campgroundId: id } });
     await prisma.campgroundFollow.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundAdmin.deleteMany({ where: { campgroundId: id } });
     await prisma.campgroundReview.deleteMany({ where: { campgroundId: id } });
     await prisma.campgroundPhoto.deleteMany({ where: { campgroundId: id } });
-    await prisma.campgroundCheckIn.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundEvent.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundAnnouncement.deleteMany({ where: { campgroundId: id } });
+    await prisma.campgroundAnalytics.deleteMany({ where: { campgroundId: id } });
+    
+    // Delete other relations
+    await prisma.checkIn.deleteMany({ where: { campgroundId: id } });
+    await prisma.sticker.deleteMany({ where: { campgroundId: id } });
+    await prisma.stay.deleteMany({ where: { campgroundId: id } });
+    await prisma.stateVisit.deleteMany({ where: { campsiteId: id } });
+    await prisma.thread.deleteMany({ where: { campgroundId: id } });
+    await prisma.mention.deleteMany({ where: { campgroundId: id } });
+    await prisma.savedTrip.deleteMany({ where: { campgroundId: id } });
+    await prisma.mutedEntity.deleteMany({ where: { entityId: id, entityType: 'CAMPGROUND' } });
+    await prisma.photoCampgroundTag.deleteMany({ where: { campgroundId: id } });
+    await prisma.bookingClick.deleteMany({ where: { campgroundId: id } });
+    await prisma.activity.deleteMany({ where: { campgroundId: id } });
+    
+    // Handle creator content tags
+    await prisma.creatorContentTag.deleteMany({ where: { campgroundId: id } });
+    await prisma.creatorContent.deleteMany({ where: { campgroundId: id } });
+    
+    // Nullify event references instead of deleting events
+    await prisma.event.updateMany({ 
+      where: { campgroundId: id },
+      data: { campgroundId: null }
+    });
     
     // Delete the campground
     await prisma.campground.delete({
