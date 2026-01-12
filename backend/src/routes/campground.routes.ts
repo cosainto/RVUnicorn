@@ -284,10 +284,11 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
     });
 
     // Delete muted entities (uses entityId not campgroundId)
-    await prisma.mutedEntity.deleteMany({ 
-      where: { entityId: id, entityType: 'CAMPGROUND' } 
-    });
-    
+    // MutedEntity has onDelete: Cascade, handled automatically
+    // await prisma.mutedEntity.deleteMany({ 
+    //       where: { entityId: id, entityType: 'CAMPGROUND' } 
+    //     });
+    //     
     // Delete sticker-related records before deleting stickers
     const stickers = await prisma.sticker.findMany({ 
       where: { campgroundId: id }, 
