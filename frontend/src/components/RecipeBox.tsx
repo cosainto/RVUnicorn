@@ -232,7 +232,7 @@ export default function RecipeBox({ userId, isOwnProfile }: RecipeBoxProps) {
               <div className="relative h-48 bg-gray-200">
                 {recipe.photos[0] ? (
                   <img
-                    src={`http://127.0.0.1:3001${recipe.photos[0].imageUrl}`}
+                    src={`${recipe.photos[0].imageUrl}`}
                     alt={recipe.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />

@@ -96,7 +96,7 @@ export default function UserGearPage() {
                   >
                     {item.imageUrl && (
                       <img
-                        src={`http://127.0.0.1:3001${item.imageUrl}`}
+                        src={`${item.imageUrl}`}
                         alt={item.name}
                         className="w-full h-32 object-cover rounded mb-3"
                       />

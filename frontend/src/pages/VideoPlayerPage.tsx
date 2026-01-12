@@ -326,11 +326,11 @@ export default function VideoPlayerPage() {
     
     // Direct video file
     if (content.videoUrl && !content.videoUrl.includes("youtube") && !content.videoUrl.includes("tiktok") && !content.videoUrl.includes("instagram")) {
-      return <video src={content.videoUrl.startsWith("http") ? content.videoUrl : `http://127.0.0.1:3001${content.videoUrl}`} controls autoPlay className="w-full h-full" />;
+      return <video src={content.videoUrl.startsWith("http") ? content.videoUrl : `${content.videoUrl}`} controls autoPlay className="w-full h-full" />;
     }
     
     // Fallback to thumbnail
-    return content.thumbnailUrl ? <img src={content.thumbnailUrl.startsWith("http") ? content.thumbnailUrl : `http://127.0.0.1:3001${content.thumbnailUrl}`} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-800"><Video className="w-24 h-24 text-gray-600" /></div>;
+    return content.thumbnailUrl ? <img src={content.thumbnailUrl.startsWith("http") ? content.thumbnailUrl : `${content.thumbnailUrl}`} alt={content.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-800"><Video className="w-24 h-24 text-gray-600" /></div>;
   };
 
 
@@ -418,7 +418,7 @@ export default function VideoPlayerPage() {
                 <Link to={`/creators/${content.creator.username}`}>
                   {content.creator.profilePicture ? (
                     <img
-                      src={content.creator.profilePicture.startsWith('http') ? content.creator.profilePicture : `http://127.0.0.1:3001${content.creator.profilePicture}`}
+                      src={content.creator.profilePicture.startsWith('http') ? content.creator.profilePicture : `${content.creator.profilePicture}`}
                       alt={content.creator.username}
                       className="w-14 h-14 rounded-full object-cover"
                     />
@@ -490,7 +490,7 @@ export default function VideoPlayerPage() {
                       <Link to={`/profile/${comment.user.username}`}>
                         {comment.user.profilePicture ? (
                           <img
-                            src={comment.user.profilePicture.startsWith('http') ? comment.user.profilePicture : `http://127.0.0.1:3001${comment.user.profilePicture}`}
+                            src={comment.user.profilePicture.startsWith('http') ? comment.user.profilePicture : `${comment.user.profilePicture}`}
                             alt={comment.user.username}
                             className="w-8 h-8 rounded-full object-cover"
                           />
@@ -531,7 +531,7 @@ export default function VideoPlayerPage() {
                       <Link to={`/creators/${creator.username}`}>
                         {creator.profilePicture ? (
                           <img
-                            src={creator.profilePicture.startsWith('http') ? creator.profilePicture : `http://127.0.0.1:3001${creator.profilePicture}`}
+                            src={creator.profilePicture.startsWith('http') ? creator.profilePicture : `${creator.profilePicture}`}
                             alt={creator.username}
                             className="w-10 h-10 rounded-full object-cover"
                           />
@@ -571,7 +571,7 @@ export default function VideoPlayerPage() {
                       <div className="relative w-28 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                         {item.thumbnailUrl ? (
                           <img
-                            src={item.thumbnailUrl.startsWith('http') ? item.thumbnailUrl : `http://127.0.0.1:3001${item.thumbnailUrl}`}
+                            src={item.thumbnailUrl.startsWith('http') ? item.thumbnailUrl : `${item.thumbnailUrl}`}
                             alt={item.title}
                             className="w-full h-full object-cover"
                           />

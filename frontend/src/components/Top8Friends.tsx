@@ -208,7 +208,7 @@ export default function Top8Friends({ username }: Top8FriendsProps) {
                       <div className="relative">
                         {friend.profilePicture ? (
                           <img
-                            src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `http://127.0.0.1:3001${friend.profilePicture}`}
+                            src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `${friend.profilePicture}`}
                             alt={friend.firstName}
                             className={`w-full aspect-square rounded-lg object-cover transition-all ${
                               isEditing ? 'cursor-grab active:cursor-grabbing' : 'group-hover:ring-2 ring-pink-400'
@@ -298,7 +298,7 @@ export default function Top8Friends({ username }: Top8FriendsProps) {
                     >
                       {friend.profilePicture ? (
                         <img
-                          src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `http://127.0.0.1:3001${friend.profilePicture}`}
+                          src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `${friend.profilePicture}`}
                           alt={friend.firstName}
                           className="w-10 h-10 rounded-full object-cover"
                         />

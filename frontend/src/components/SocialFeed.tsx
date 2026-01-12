@@ -680,7 +680,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
 
       {item.imageUrl && (
         <img
-          src={item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl.startsWith('/images/') ? item.imageUrl : `http://127.0.0.1:3001${item.imageUrl}`)}
+          src={item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl.startsWith('/images/') ? item.imageUrl : `${item.imageUrl}`)}
           alt="Post"
           className="w-1/4 rounded-lg mb-3 max-h-24 object-cover"
         />
@@ -714,7 +714,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   <Link to={`/profile/${comment.user.username}`}>
                     {comment.user.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                        src={`${comment.user.profilePicture}`}
                         alt={comment.user.firstName}
                         className="w-8 h-8 rounded-full"
                       />
@@ -826,7 +826,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             <Link to={`/profile/${item.actor.username}`} className="flex-shrink-0">
               {item.actor.profilePicture ? (
                 <img
-                  src={`http://127.0.0.1:3001${item.actor.profilePicture}`}
+                  src={`${item.actor.profilePicture}`}
                   alt={item.actor.firstName}
                   className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                 />
@@ -898,7 +898,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         {item.imageUrl && (
           <div className="mb-3">
             <img
-              src={item.imageUrl.startsWith("http") ? item.imageUrl : (item.imageUrl.startsWith("/images/") ? item.imageUrl : `http://127.0.0.1:3001${item.imageUrl}`)}
+              src={item.imageUrl.startsWith("http") ? item.imageUrl : (item.imageUrl.startsWith("/images/") ? item.imageUrl : `${item.imageUrl}`)}
               alt="Post"
               className="w-1/4 rounded-lg max-h-24 object-cover"
             />

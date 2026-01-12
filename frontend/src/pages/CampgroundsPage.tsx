@@ -62,7 +62,7 @@ export default function CampgroundsPage() {
       params.append('page', currentPage.toString());
       params.append('limit', '50');
 
-      const res = await fetch(`http://127.0.0.1:3001/api/campgrounds?${params.toString()}`);
+      const res = await fetch(`/api/campgrounds?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch campgrounds');
 
       const data = await res.json();
@@ -161,7 +161,7 @@ export default function CampgroundsPage() {
           >
             <div className="relative h-48 bg-gradient-to-br from-primary-100 to-secondary-100">
               {c.imageUrl ? (
-                <img src={c.imageUrl.startsWith("http") ? c.imageUrl : `http://127.0.0.1:3001${c.imageUrl}`} alt={c.name} className="w-full h-full object-cover" />
+                <img src={c.imageUrl.startsWith("http") ? c.imageUrl : `${c.imageUrl}`} alt={c.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <MapPin className="w-16 h-16 text-primary-300" />

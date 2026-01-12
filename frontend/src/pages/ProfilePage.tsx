@@ -411,7 +411,7 @@ const [editForm, setEditForm] = useState({
       <div className="h-48 sm:h-64 md:h-80 bg-gradient-to-br from-green-400 to-blue-500 relative">
         {profile.coverPhoto && (
           <img
-            src={`http://127.0.0.1:3001${profile.coverPhoto}`}
+            src={`${profile.coverPhoto}`}
             alt="Cover"
             className="w-full h-full object-cover"
           />
@@ -479,7 +479,7 @@ const [editForm, setEditForm] = useState({
                   <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-xl">
                     {profile.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${profile.profilePicture}`}
+                        src={`${profile.profilePicture}`}
                         alt={profile.firstName}
                         className="w-full h-full object-cover"
                       />
@@ -795,7 +795,7 @@ const [editForm, setEditForm] = useState({
                 {rvShowcase.videoUrl && (
                   <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <video
-                      src={rvShowcase.videoUrl.startsWith('http') ? rvShowcase.videoUrl : `http://127.0.0.1:3001${rvShowcase.videoUrl}`}
+                      src={rvShowcase.videoUrl.startsWith('http') ? rvShowcase.videoUrl : `${rvShowcase.videoUrl}`}
                       controls
                       className="w-full h-full object-cover"
                     />
@@ -806,7 +806,7 @@ const [editForm, setEditForm] = useState({
                     {rvShowcase.photos.slice(0, 3).map((photo: any, idx: number) => (
                       <img
                         key={idx}
-                        src={photo.startsWith('http') ? photo : `http://127.0.0.1:3001${photo}`}
+                        src={photo.startsWith('http') ? photo : `${photo}`}
                         alt={`RV ${idx + 1}`}
                         className="aspect-square object-cover rounded"
                       />
@@ -860,7 +860,7 @@ const [editForm, setEditForm] = useState({
                     >
                       {album.photos && album.photos[0] ? (
                         <img
-                          src={`http://127.0.0.1:3001${album.photos[0].imageUrl}`}
+                          src={`${album.photos[0].imageUrl}`}
                           alt={album.title}
                           className="w-full h-full object-cover"
                         />
@@ -993,7 +993,7 @@ const [editForm, setEditForm] = useState({
                     >
                       {group.imageUrl ? (
                         <img
-                          src={group.imageUrl.startsWith("http") ? group.imageUrl : `http://127.0.0.1:3001${group.imageUrl}`}
+                          src={group.imageUrl.startsWith("http") ? group.imageUrl : `${group.imageUrl}`}
                           alt={group.name}
                           className="w-10 h-10 rounded-lg object-cover"
                         />

@@ -360,7 +360,7 @@ export default function MyRVPage() {
           {showcase.videoUrl ? (
             <div className="relative">
               <video
-                src={showcase.videoUrl.startsWith('http') ? showcase.videoUrl : `http://127.0.0.1:3001${showcase.videoUrl}`}
+                src={showcase.videoUrl.startsWith('http') ? showcase.videoUrl : `${showcase.videoUrl}`}
                 className="w-full rounded-lg max-h-64"
                 controls
               />
@@ -394,7 +394,7 @@ export default function MyRVPage() {
             {showcase.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
                 <img
-                  src={photo.startsWith('http') ? photo : `http://127.0.0.1:3001${photo}`}
+                  src={photo.startsWith('http') ? photo : `${photo}`}
                   alt={`RV Photo ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg"
                 />

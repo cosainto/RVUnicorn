@@ -180,7 +180,7 @@ export default function MyGear() {
       price: item.price?.toString() || '',
       saleDescription: item.saleDescription || '',
     });
-    setImagePreview(item.imageUrl ? `http://127.0.0.1:3001${item.imageUrl}` : '');
+    setImagePreview(item.imageUrl ? `${item.imageUrl}` : '');
     setShowAddModal(true);
   };
 
@@ -303,7 +303,7 @@ export default function MyGear() {
                 {/* Image */}
                 {item.imageUrl ? (
                   <img
-                    src={`http://127.0.0.1:3001${item.imageUrl}`}
+                    src={`${item.imageUrl}`}
                     alt={item.name}
                     className="w-full h-48 object-cover"
                   />

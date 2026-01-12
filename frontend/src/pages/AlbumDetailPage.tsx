@@ -454,7 +454,7 @@ export default function AlbumDetailPage() {
               className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition relative group"
             >
               <img
-                src={`http://127.0.0.1:3001${photo.imageUrl}`}
+                src={`${photo.imageUrl}`}
                 alt={photo.caption || 'Photo'}
                 className="w-full h-full object-cover"
               />
@@ -500,7 +500,7 @@ export default function AlbumDetailPage() {
                 <div className="flex-shrink-0">
                   {comment.user.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                      src={`${comment.user.profilePicture}`}
                       alt={comment.user.firstName}
                       className="w-10 h-10 rounded-full"
                     />
@@ -665,7 +665,7 @@ export default function AlbumDetailPage() {
               <div className="flex-1 flex items-center justify-center relative">
                 <img
                   ref={imageRef}
-                  src={`http://127.0.0.1:3001${selectedPhoto.imageUrl}`}
+                  src={`${selectedPhoto.imageUrl}`}
                   alt={selectedPhoto.caption || 'Photo'}
                   className="max-w-full max-h-full object-contain cursor-crosshair"
                   onClick={handleImageClick}
@@ -685,7 +685,7 @@ export default function AlbumDetailPage() {
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg shadow-lg p-3 whitespace-nowrap z-10">
                         <div className="flex items-center gap-2">
                           {tag.user.profilePicture ? (
-                            <img src={`http://127.0.0.1:3001${tag.user.profilePicture}`} alt="" className="w-8 h-8 rounded-full" />
+                            <img src={`${tag.user.profilePicture}`} alt="" className="w-8 h-8 rounded-full" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
                               <span className="text-primary-600 text-sm font-medium">{tag.user.firstName[0]}</span>
@@ -770,7 +770,7 @@ export default function AlbumDetailPage() {
                               className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition"
                             >
                               {person.profilePicture ? (
-                                <img src={`http://127.0.0.1:3001${person.profilePicture}`} alt="" className="w-9 h-9 rounded-full" />
+                                <img src={`${person.profilePicture}`} alt="" className="w-9 h-9 rounded-full" />
                               ) : (
                                 <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
                                   <span className="text-primary-600 font-medium">{person.firstName?.[0]}</span>
@@ -794,7 +794,7 @@ export default function AlbumDetailPage() {
                               className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition"
                             >
                               {cg.imageUrl ? (
-                                <img src={`http://127.0.0.1:3001${cg.imageUrl}`} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                                <img src={`${cg.imageUrl}`} alt="" className="w-9 h-9 rounded-lg object-cover" />
                               ) : (
                                 <div className="w-9 h-9 rounded-lg bg-forest-100 flex items-center justify-center">
                                   <span className="text-forest-600">🏕️</span>
@@ -862,7 +862,7 @@ export default function AlbumDetailPage() {
                           <div key={tag.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
                             <Link to={`/profile/${tag.user.username}`} className="flex items-center gap-2 hover:text-primary-600">
                               {tag.user.profilePicture ? (
-                                <img src={`http://127.0.0.1:3001${tag.user.profilePicture}`} alt="" className="w-8 h-8 rounded-full" />
+                                <img src={`${tag.user.profilePicture}`} alt="" className="w-8 h-8 rounded-full" />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
                                   <span className="text-primary-600 text-sm font-medium">{tag.user.firstName[0]}</span>
@@ -892,7 +892,7 @@ export default function AlbumDetailPage() {
                           <div key={tag.id} className="flex items-center justify-between bg-forest-50 rounded-lg p-2">
                             <Link to={`/campgrounds/${tag.campground.id}`} className="flex items-center gap-2 hover:text-forest-600">
                               {tag.campground.imageUrl ? (
-                                <img src={`http://127.0.0.1:3001${tag.campground.imageUrl}`} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                                <img src={`${tag.campground.imageUrl}`} alt="" className="w-8 h-8 rounded-lg object-cover" />
                               ) : (
                                 <div className="w-8 h-8 rounded-lg bg-forest-100 flex items-center justify-center">
                                   <span>🏕️</span>

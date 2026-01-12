@@ -76,7 +76,7 @@ export default function ProfilePhotoUpload({ currentPhoto, type, onUploadSuccess
           <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-xl">
             {currentPhoto ? (
               <img
-                src={`http://127.0.0.1:3001${currentPhoto}`}
+                src={`${currentPhoto}`}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />

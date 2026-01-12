@@ -234,7 +234,7 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
                     {/* User Avatar */}
                     {otherUser.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${otherUser.profilePicture}`}
+                        src={`${otherUser.profilePicture}`}
                         alt={otherUser.firstName}
                         className="w-12 h-12 rounded-full"
                       />

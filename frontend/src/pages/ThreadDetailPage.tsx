@@ -339,7 +339,7 @@ export default function ThreadDetailPage() {
             <Link to={`/profile/${thread.author.username}`}>
               {thread.author.profilePicture ? (
                 <img
-                  src={`http://127.0.0.1:3001${thread.author.profilePicture}`}
+                  src={`${thread.author.profilePicture}`}
                   alt=""
                   className="w-10 h-10 rounded-full"
                 />
@@ -395,7 +395,7 @@ export default function ThreadDetailPage() {
           <div className="flex gap-3">
             {user.profilePicture ? (
               <img
-                src={`http://127.0.0.1:3001${user.profilePicture}`}
+                src={`${user.profilePicture}`}
                 alt=""
                 className="w-10 h-10 rounded-full"
               />
@@ -478,7 +478,7 @@ export default function ThreadDetailPage() {
                   <Link to={`/profile/${post.author.username}`}>
                     {post.author.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${post.author.profilePicture}`}
+                        src={`${post.author.profilePicture}`}
                         alt=""
                         className="w-10 h-10 rounded-full"
                       />
@@ -574,7 +574,7 @@ export default function ThreadDetailPage() {
                         <Link to={`/profile/${reply.author.username}`}>
                           {reply.author.profilePicture ? (
                             <img
-                              src={`http://127.0.0.1:3001${reply.author.profilePicture}`}
+                              src={`${reply.author.profilePicture}`}
                               alt=""
                               className="w-8 h-8 rounded-full"
                             />

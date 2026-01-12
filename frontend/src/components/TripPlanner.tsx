@@ -1144,7 +1144,7 @@ export default function TripPlanner() {
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   {collaborators.owner.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${collaborators.owner.profilePicture}`}
+                      src={`${collaborators.owner.profilePicture}`}
                       alt={collaborators.owner.firstName}
                       className="w-10 h-10 rounded-full"
                     />
@@ -1172,7 +1172,7 @@ export default function TripPlanner() {
                         <div className="flex items-center gap-3">
                           {collab.user.profilePicture ? (
                             <img
-                              src={`http://127.0.0.1:3001${collab.user.profilePicture}`}
+                              src={`${collab.user.profilePicture}`}
                               alt={collab.user.firstName}
                               className="w-10 h-10 rounded-full"
                             />
@@ -1216,7 +1216,7 @@ export default function TripPlanner() {
                           <div className="flex items-center gap-3">
                             {friend.friend.profilePicture ? (
                               <img
-                                src={`http://127.0.0.1:3001${friend.friend.profilePicture}`}
+                                src={`${friend.friend.profilePicture}`}
                                 alt={friend.friend.firstName}
                                 className="w-10 h-10 rounded-full"
                               />
@@ -1280,7 +1280,7 @@ export default function TripPlanner() {
                       <div className="flex items-start gap-3">
                         {update.user.profilePicture ? (
                           <img
-                            src={`http://127.0.0.1:3001${update.user.profilePicture}`}
+                            src={`${update.user.profilePicture}`}
                             alt={update.user.firstName}
                             className="w-10 h-10 rounded-full"
                           />
@@ -1313,7 +1313,7 @@ export default function TripPlanner() {
 
                           {update.imageUrl && (
                             <img
-                              src={`http://127.0.0.1:3001${update.imageUrl}`}
+                              src={`${update.imageUrl}`}
                               alt="Update"
                               className="mt-2 rounded-lg max-h-64 w-auto"
                             />

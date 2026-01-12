@@ -64,7 +64,7 @@ export default function RVShowcase({ showcase }: RVShowcaseProps) {
           <h3 className="text-lg font-semibold text-gray-900 mb-3">🎬 Video Tour</h3>
           <div className="relative bg-black rounded-lg overflow-hidden aspect-video cursor-pointer hover:opacity-90 transition">
             <video
-              src={`http://127.0.0.1:3001${showcase.videoUrl}`}
+              src={`${showcase.videoUrl}`}
               className="w-full h-full"
               controls
               onClick={(e) => {
@@ -95,7 +95,7 @@ export default function RVShowcase({ showcase }: RVShowcaseProps) {
                 className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition group"
               >
                 <img
-                  src={`http://127.0.0.1:3001${photo}`}
+                  src={`${photo}`}
                   alt={`RV Photo ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
@@ -124,13 +124,13 @@ export default function RVShowcase({ showcase }: RVShowcaseProps) {
           <div className="max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
             {selectedMedia.type === 'photo' ? (
               <img
-                src={`http://127.0.0.1:3001${selectedMedia.url}`}
+                src={`${selectedMedia.url}`}
                 alt="RV Photo"
                 className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
               />
             ) : (
               <video
-                src={`http://127.0.0.1:3001${selectedMedia.url}`}
+                src={`${selectedMedia.url}`}
                 className="w-full h-auto max-h-[90vh] rounded-lg"
                 controls
                 autoPlay

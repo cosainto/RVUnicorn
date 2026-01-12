@@ -182,7 +182,7 @@ export default function MentionInput({
             className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
           },
             user.profilePicture
-              ? React.createElement('img', { src: user.profilePicture.startsWith('http') ? user.profilePicture : 'http://127.0.0.1:3001' + user.profilePicture, alt: '', className: 'w-8 h-8 rounded-full object-cover' })
+              ? React.createElement('img', { src: user.profilePicture.startsWith('http') ? user.profilePicture : '' + user.profilePicture, alt: '', className: 'w-8 h-8 rounded-full object-cover' })
               : React.createElement('div', { className: 'w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center' },
                   React.createElement(User, { className: 'w-4 h-4 text-primary-600' })
                 ),
@@ -208,7 +208,7 @@ export default function MentionInput({
             className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
           },
             campground.imageUrl
-              ? React.createElement('img', { src: campground.imageUrl.startsWith('http') ? campground.imageUrl : 'http://127.0.0.1:3001' + campground.imageUrl, alt: '', className: 'w-8 h-8 rounded-lg object-cover' })
+              ? React.createElement('img', { src: campground.imageUrl.startsWith('http') ? campground.imageUrl : '' + campground.imageUrl, alt: '', className: 'w-8 h-8 rounded-lg object-cover' })
               : React.createElement('div', { className: 'w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center' },
                   React.createElement(Tent, { className: 'w-4 h-4 text-green-600' })
                 ),

@@ -172,7 +172,7 @@ export default function RVShowcaseEdit({ onSaved }: RVShowcaseEditProps) {
           {formData.videoUrl ? (
             <div className="relative">
               <video
-                src={`http://127.0.0.1:3001${formData.videoUrl}`}
+                src={`${formData.videoUrl}`}
                 className="w-full rounded-lg max-h-64"
                 controls
               />
@@ -207,7 +207,7 @@ export default function RVShowcaseEdit({ onSaved }: RVShowcaseEditProps) {
             {formData.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
                 <img
-                  src={`http://127.0.0.1:3001${photo}`}
+                  src={`${photo}`}
                   alt={`Photo ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg"
                 />

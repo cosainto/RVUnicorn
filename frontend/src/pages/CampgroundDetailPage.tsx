@@ -323,7 +323,7 @@ export default function CampgroundDetailPage() {
         <div className="relative">
           {/* Full-width hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
-            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
+            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             
             {/* Back button */}
@@ -387,7 +387,7 @@ export default function CampgroundDetailPage() {
           <div className="max-w-5xl mx-auto px-4 py-6">
             <div className="border-4 border-amber-700 rounded-lg overflow-hidden shadow-lg">
               <div className={themeStyles.heroHeight + " relative"}>
-                {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-amber-200 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-600" /></div>}
+                {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-amber-200 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-600" /></div>}
                 {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
               </div>
             </div>
@@ -421,7 +421,7 @@ export default function CampgroundDetailPage() {
         <div className="relative">
           {/* Wave-decorated hero */}
           <div className={themeStyles.heroHeight + " w-full relative overflow-hidden"}>
-            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
+            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-sky-900/60 via-sky-600/20 to-transparent" />
             
             {/* Back button */}
@@ -489,7 +489,7 @@ export default function CampgroundDetailPage() {
           
           {/* Hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
-            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" style={{ filter: 'contrast(1.1) saturate(1.1)' }} /> : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-orange-500/30" /></div>}
+            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" style={{ filter: 'contrast(1.1) saturate(1.1)' }} /> : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-orange-500/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
             
             {/* Back button */}
@@ -555,7 +555,7 @@ export default function CampgroundDetailPage() {
           
           {/* Compact hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
-            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><MapPin className="w-16 h-16 text-gray-300" /></div>}
+            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><MapPin className="w-16 h-16 text-gray-300" /></div>}
             {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-2 transition ${isFavorited ? 'text-red-500' : 'text-white/70 hover:text-white'}`}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>}
           </div>
           
@@ -591,7 +591,7 @@ export default function CampgroundDetailPage() {
             {/* Large image section */}
             <div className="lg:w-1/2 h-64 lg:h-auto relative">
               {campground.imageUrl ? (
-                <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" />
+                <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gray-900 flex items-center justify-center"><MapPin className="w-24 h-24 text-gray-700" /></div>
               )}
@@ -665,7 +665,7 @@ export default function CampgroundDetailPage() {
                 <div className="relative mx-6 mt-4 border-8 border-amber-200 shadow-inner">
                   <div className="h-64 md:h-80">
                     {campground.imageUrl ? (
-                      <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover sepia-[0.2]" />
+                      <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover sepia-[0.2]" />
                     ) : (
                       <div className="w-full h-full bg-amber-100 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-400" /></div>
                     )}
@@ -737,7 +737,7 @@ export default function CampgroundDetailPage() {
           {/* Hero with glow effects */}
           <div className="relative h-[60vh] min-h-[400px] overflow-hidden">
             {campground.imageUrl ? (
-              <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover opacity-60" style={{ filter: 'saturate(1.3) contrast(1.1)' }} />
+              <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover opacity-60" style={{ filter: 'saturate(1.3) contrast(1.1)' }} />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-purple-900 to-gray-950 flex items-center justify-center"><MapPin className="w-32 h-32 text-purple-500/30" /></div>
             )}
@@ -809,7 +809,7 @@ export default function CampgroundDetailPage() {
           {/* Header */}
           <div className={themeStyles.header}>
             <div className={"h-72 md:h-96 bg-gradient-to-br from-green-400 to-blue-500 relative"}>
-          {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><MapPin className="w-32 h-32 text-white/50" /></div>}
+          {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><MapPin className="w-32 h-32 text-white/50" /></div>}
           {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
@@ -927,7 +927,7 @@ export default function CampgroundDetailPage() {
                     {announcement.imageUrl && (
                       <div className="flex-shrink-0 hidden sm:block">
                         <img 
-                          src={announcement.imageUrl.startsWith('http') ? announcement.imageUrl : `http://127.0.0.1:3001${announcement.imageUrl}`} 
+                          src={announcement.imageUrl.startsWith('http') ? announcement.imageUrl : `${announcement.imageUrl}`} 
                           alt="" 
                           className="w-20 h-20 rounded-lg object-cover"
                         />
@@ -1036,7 +1036,7 @@ export default function CampgroundDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {campground.checkIns.map(ci => (
                       <div key={ci.id} className={`border rounded-lg p-4 flex items-center gap-3 ${isAdventure ? "border-gray-700 bg-gray-800" : isNeon ? "border-purple-500/30 bg-gray-900" : ""}`}>
-                        {ci.user.profilePicture ? <img src={`http://127.0.0.1:3001${ci.user.profilePicture}`} alt="" className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-600 font-bold">{ci.user.firstName[0]}{ci.user.lastName[0]}</span></div>}
+                        {ci.user.profilePicture ? <img src={`${ci.user.profilePicture}`} alt="" className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-600 font-bold">{ci.user.firstName[0]}{ci.user.lastName[0]}</span></div>}
                         <div><Link to={`/profile/${ci.user.username}`} className="font-semibold hover:text-primary-600">{ci.user.firstName} {ci.user.lastName}</Link>{ci.siteNumber && <p className={(isAdventure || isNeon) ? "text-sm text-gray-400" : "text-sm text-gray-600"}>Site {ci.siteNumber}</p>}<p className={isAdventure ? "text-xs text-gray-500" : "text-xs text-gray-500"}>{formatDate(ci.checkInDate)}</p></div>
                       </div>
                     ))}
@@ -1058,7 +1058,7 @@ export default function CampgroundDetailPage() {
               </div>
               {campgroundMapUrl ? (
                 <div className={`rounded-lg overflow-hidden border ${isAdventure ? "border-gray-700" : isNeon ? "border-purple-500/30" : "border-gray-200"}`}>
-                  <img src={`http://127.0.0.1:3001${campgroundMapUrl}`} alt={`${campground.name} Map`} className="w-full h-auto" />
+                  <img src={`${campgroundMapUrl}`} alt={`${campground.name} Map`} className="w-full h-auto" />
                 </div>
               ) : (
                 <div className={`text-center py-12 rounded-lg border-2 border-dashed ${isAdventure ? "bg-gray-800 border-gray-600" : isNeon ? "bg-gray-900 border-purple-500/30" : "bg-gray-50 border-gray-300"}`}>
@@ -1096,7 +1096,7 @@ export default function CampgroundDetailPage() {
                   <Link key={t.id} to={`/threads/${t.id}`} className="block border rounded-lg p-4 hover:shadow-md transition">
                     <div className="flex items-start gap-3">
                       {t.author.profilePicture ? (
-                        <img src={`http://127.0.0.1:3001${t.author.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
+                        <img src={`${t.author.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                           <span className="text-primary-600 font-bold text-sm">{t.author.firstName[0]}{t.author.lastName[0]}</span>
@@ -1144,7 +1144,7 @@ export default function CampgroundDetailPage() {
                     </div>
                     <h4 className="font-bold text-lg mb-2">{a.title}</h4>
                     <p className="text-gray-700 mb-3">{a.content}</p>
-                    {a.imageUrl && <img src={a.imageUrl.startsWith('http') ? a.imageUrl : `http://127.0.0.1:3001${a.imageUrl}`} alt="" className="w-full rounded-lg mb-3 max-h-64 object-cover" />}
+                    {a.imageUrl && <img src={a.imageUrl.startsWith('http') ? a.imageUrl : `${a.imageUrl}`} alt="" className="w-full rounded-lg mb-3 max-h-64 object-cover" />}
                     <p className="text-sm text-gray-500">Posted by {a.author.firstName} {a.author.lastName} • {formatDate(a.createdAt)}</p>
                   </div>
                 );
@@ -1170,9 +1170,9 @@ export default function CampgroundDetailPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Photos</h3>{user && <button onClick={() => setShowPhotoModal(true)} className="btn btn-primary btn-sm"><Upload className="w-4 h-4 mr-1" />Submit</button>}</div>
               {isAdmin && pendingPhotos.length > 0 && (
-                <div className="mb-6"><h4 className="font-bold mb-3 text-yellow-600">⏳ Pending ({pendingPhotos.length})</h4><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{pendingPhotos.map(p => (<div key={p.id} className="border-2 border-yellow-400 rounded-lg overflow-hidden"><img src={`http://127.0.0.1:3001${p.imageUrl}`} alt="" className="w-full h-32 object-cover" /><div className="p-2 bg-yellow-50"><p className="text-xs text-gray-600 truncate">{p.user.firstName}</p><div className="flex gap-1 mt-2"><button onClick={() => handleReviewPhoto(p.id, 'APPROVED')} className="flex-1 btn btn-sm bg-green-500 text-white hover:bg-green-600"><Check className="w-3 h-3" /></button><button onClick={() => handleReviewPhoto(p.id, 'REJECTED')} className="flex-1 btn btn-sm bg-red-500 text-white hover:bg-red-600"><X className="w-3 h-3" /></button></div></div></div>))}</div></div>
+                <div className="mb-6"><h4 className="font-bold mb-3 text-yellow-600">⏳ Pending ({pendingPhotos.length})</h4><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{pendingPhotos.map(p => (<div key={p.id} className="border-2 border-yellow-400 rounded-lg overflow-hidden"><img src={`${p.imageUrl}`} alt="" className="w-full h-32 object-cover" /><div className="p-2 bg-yellow-50"><p className="text-xs text-gray-600 truncate">{p.user.firstName}</p><div className="flex gap-1 mt-2"><button onClick={() => handleReviewPhoto(p.id, 'APPROVED')} className="flex-1 btn btn-sm bg-green-500 text-white hover:bg-green-600"><Check className="w-3 h-3" /></button><button onClick={() => handleReviewPhoto(p.id, 'REJECTED')} className="flex-1 btn btn-sm bg-red-500 text-white hover:bg-red-600"><X className="w-3 h-3" /></button></div></div></div>))}</div></div>
               )}
-              {photos.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{photos.map(p => (<div key={p.id} className="rounded-lg overflow-hidden group relative"><img src={`http://127.0.0.1:3001${p.imageUrl}`} alt={p.caption || ''} className="w-full h-48 object-cover" /><div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition">{p.caption && <p className="text-white text-sm">{p.caption}</p>}<p className="text-white/70 text-xs">by {p.user.firstName}</p></div></div>))}</div> : <div className="text-center py-12 text-gray-500"><Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No photos yet</p></div>}
+              {photos.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{photos.map(p => (<div key={p.id} className="rounded-lg overflow-hidden group relative"><img src={`${p.imageUrl}`} alt={p.caption || ''} className="w-full h-48 object-cover" /><div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition">{p.caption && <p className="text-white text-sm">{p.caption}</p>}<p className="text-white/70 text-xs">by {p.user.firstName}</p></div></div>))}</div> : <div className="text-center py-12 text-gray-500"><Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No photos yet</p></div>}
             </div>
           )}
 
@@ -1183,7 +1183,7 @@ export default function CampgroundDetailPage() {
               {reviews.length > 0 ? reviews.map(r => (
                 <div key={r.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    {r.user.profilePicture ? <img src={`http://127.0.0.1:3001${r.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-600 font-bold text-sm">{r.user.firstName[0]}{r.user.lastName[0]}</span></div>}
+                    {r.user.profilePicture ? <img src={`${r.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-600 font-bold text-sm">{r.user.firstName[0]}{r.user.lastName[0]}</span></div>}
                     <div className="flex-1"><div className="flex items-center justify-between"><Link to={`/profile/${r.user.username}`} className="font-semibold hover:text-primary-600">{r.user.firstName} {r.user.lastName}</Link>{renderSmores(r.rating)}</div>{r.title && <h4 className="font-medium mt-1">{r.title}</h4>}{r.review && <p className="text-gray-700 mt-2">{r.review}</p>}<p className="text-sm text-gray-500 mt-2">{formatDate(r.createdAt)}{r.visitDate && ` • Visited ${formatDate(r.visitDate)}`}</p></div>
                   </div>
                 </div>

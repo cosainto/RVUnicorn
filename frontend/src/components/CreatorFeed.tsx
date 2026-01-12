@@ -213,7 +213,7 @@ export default function CreatorFeed({
             <div className="relative aspect-video bg-gray-200">
               {item.thumbnailUrl ? (
                 <img
-                  src={item.thumbnailUrl.startsWith('http') ? item.thumbnailUrl : `http://127.0.0.1:3001${item.thumbnailUrl}`}
+                  src={item.thumbnailUrl.startsWith('http') ? item.thumbnailUrl : `${item.thumbnailUrl}`}
                   alt={item.title || 'Video'}
                   className="w-full h-full object-cover"
                 />
@@ -249,7 +249,7 @@ export default function CreatorFeed({
               <div className="flex items-center gap-2 mt-2">
                 {item.creator.profilePicture ? (
                   <img
-                    src={item.creator.profilePicture.startsWith('http') ? item.creator.profilePicture : `http://127.0.0.1:3001${item.creator.profilePicture}`}
+                    src={item.creator.profilePicture.startsWith('http') ? item.creator.profilePicture : `${item.creator.profilePicture}`}
                     alt={item.creator.username}
                     className="w-6 h-6 rounded-full object-cover"
                   />

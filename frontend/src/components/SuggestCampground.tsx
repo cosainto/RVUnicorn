@@ -35,7 +35,7 @@ export default function SuggestCampground({ onClose, onSuccess }: SuggestCampgro
     setError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/campgrounds/suggest', {
+      const response = await fetch('/api/campgrounds/suggest', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

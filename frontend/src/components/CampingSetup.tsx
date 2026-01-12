@@ -336,7 +336,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                     {profile.rvImages.map((image, index) => (
                       <div key={index} className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
                         <img
-                          src={`http://127.0.0.1:3001${image}`}
+                          src={`${image}`}
                           alt={`RV ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
@@ -357,7 +357,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                     <video
                       controls
                       className="w-full h-full"
-                      src={`http://127.0.0.1:3001${profile.setupVideo}`}
+                      src={`${profile.setupVideo}`}
                     >
                       Your browser does not support the video tag.
                     </video>
@@ -462,7 +462,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                   {existingImages.map((image, index) => (
                     <div key={index} className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
                       <img
-                        src={`http://127.0.0.1:3001${image}`}
+                        src={`${image}`}
                         alt={`RV ${index + 1}`}
                         className="w-full h-full object-cover"
                       />

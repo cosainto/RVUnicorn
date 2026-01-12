@@ -450,7 +450,7 @@ export default function FeedPage() {
                   <div className="hidden sm:block">
                     {thread.author.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${thread.author.profilePicture}`}
+                        src={`${thread.author.profilePicture}`}
                         alt=""
                         className="w-10 h-10 rounded-full"
                       />
@@ -580,7 +580,7 @@ export default function FeedPage() {
                 <div className="hidden sm:block">
                   {thread.author.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${thread.author.profilePicture}`}
+                      src={`${thread.author.profilePicture}`}
                       alt=""
                       className="w-10 h-10 rounded-full"
                     />

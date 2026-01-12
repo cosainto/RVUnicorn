@@ -181,7 +181,7 @@ export default function BadgesPage() {
                       <div className="flex items-center gap-2">
                         {entry.user.profilePicture ? (
                           <img
-                            src={entry.user.profilePicture.startsWith('http') ? entry.user.profilePicture : `http://127.0.0.1:3001${entry.user.profilePicture}`}
+                            src={entry.user.profilePicture.startsWith('http') ? entry.user.profilePicture : `${entry.user.profilePicture}`}
                             alt={entry.user.firstName}
                             className="w-8 h-8 rounded-full object-cover"
                           />

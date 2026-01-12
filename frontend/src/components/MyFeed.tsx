@@ -215,7 +215,7 @@ export default function MyFeed({ maxPosts = 10, showTitle = true }: MyFeedProps)
             {/* Post Image */}
             {post.imageUrl && (
               <img 
-                src={`http://127.0.0.1:3001${post.imageUrl}`}
+                src={`${post.imageUrl}`}
                 alt="Post"
                 className="w-full rounded-lg mb-3 max-h-96 object-cover"
               />
@@ -252,7 +252,7 @@ export default function MyFeed({ maxPosts = 10, showTitle = true }: MyFeedProps)
                         <Link to={`/profile/${comment.user.username}`}>
                           {comment.user.profilePicture ? (
                             <img
-                              src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                              src={`${comment.user.profilePicture}`}
                               alt={comment.user.firstName}
                               className="w-8 h-8 rounded-full"
                             />

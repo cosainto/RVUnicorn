@@ -93,7 +93,7 @@ export default function EventAlbum({ eventId }: EventAlbumProps) {
   const getImageUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    return `http://127.0.0.1:3001${url}`;
+    return `${url}`;
   };
 
   if (loading) {

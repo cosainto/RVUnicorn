@@ -258,7 +258,7 @@ export default function RecipesPage() {
               <div className="h-48 bg-gradient-to-br from-orange-100 to-red-100 relative overflow-hidden">
                 {recipe.imageUrl ? (
                   <img
-                    src={recipe.imageUrl.startsWith('http') ? recipe.imageUrl : `http://127.0.0.1:3001${recipe.imageUrl}`}
+                    src={recipe.imageUrl.startsWith('http') ? recipe.imageUrl : `${recipe.imageUrl}`}
                     alt={recipe.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition"
                   />

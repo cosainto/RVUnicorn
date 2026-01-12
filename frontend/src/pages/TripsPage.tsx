@@ -439,7 +439,7 @@ export default function EventsPage() {
                         <div className="flex items-center gap-2 flex-1">
                           {friend.profilePicture ? (
                             <img
-                              src={`http://127.0.0.1:3001${friend.profilePicture}`}
+                              src={`${friend.profilePicture}`}
                               alt={friend.firstName}
                               className="w-6 h-6 rounded-full"
                             />

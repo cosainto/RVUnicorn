@@ -147,7 +147,7 @@ export default function CampgroundCommunity({ campgroundId, campgroundName }: Ca
               <div className="relative overflow-hidden rounded-full">
                 {follower.profilePicture ? (
                   <img
-                    src={follower.profilePicture.startsWith('http') ? follower.profilePicture : `http://127.0.0.1:3001${follower.profilePicture}`}
+                    src={follower.profilePicture.startsWith('http') ? follower.profilePicture : `${follower.profilePicture}`}
                     alt={follower.firstName}
                     className={`w-16 h-16 rounded-full object-cover ${
                       campingStatus === 'camping' 

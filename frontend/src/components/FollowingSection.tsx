@@ -145,7 +145,7 @@ export default function FollowingSection({
               >
                 {creator.profilePicture ? (
                   <img
-                    src={creator.profilePicture.startsWith('http') ? creator.profilePicture : `http://127.0.0.1:3001${creator.profilePicture}`}
+                    src={creator.profilePicture.startsWith('http') ? creator.profilePicture : `${creator.profilePicture}`}
                     alt={creator.username}
                     className="w-12 h-12 rounded-full object-cover"
                   />

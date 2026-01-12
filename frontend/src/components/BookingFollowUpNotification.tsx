@@ -110,7 +110,7 @@ export default function BookingFollowUpNotification() {
           <div className="flex gap-3 mb-4">
             {campground.imageUrl ? (
               <img 
-                src={campground.imageUrl.startsWith('http') ? campground.imageUrl : `http://127.0.0.1:3001${campground.imageUrl}`}
+                src={campground.imageUrl.startsWith('http') ? campground.imageUrl : `${campground.imageUrl}`}
                 alt={campground.name}
                 className="w-16 h-16 rounded-lg object-cover"
               />

@@ -103,7 +103,7 @@ export default function GroupEditPage() {
             {formData.coverPhoto ? (
               <div className="relative">
                 <img
-                  src={formData.coverPhoto.startsWith('http') ? formData.coverPhoto : 'http://127.0.0.1:3001' + formData.coverPhoto}
+                  src={formData.coverPhoto.startsWith('http') ? formData.coverPhoto : '' + formData.coverPhoto}
                   alt="Cover"
                   className="w-full h-48 object-cover rounded-lg"
                 />

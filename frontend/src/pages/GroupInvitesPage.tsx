@@ -118,7 +118,7 @@ export default function GroupInvitesPage() {
                   <div className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg overflow-hidden flex-shrink-0">
                     {invite.group.coverPhoto ? (
                       <img
-                        src={invite.group.coverPhoto.startsWith('http') ? invite.group.coverPhoto : 'http://127.0.0.1:3001' + invite.group.coverPhoto}
+                        src={invite.group.coverPhoto.startsWith('http') ? invite.group.coverPhoto : '' + invite.group.coverPhoto}
                         alt={invite.group.name}
                         className="w-full h-full object-cover"
                       />

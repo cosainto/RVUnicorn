@@ -546,7 +546,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
         <div className="flex-shrink-0">
           {user?.profilePicture ? (
             <img
-              src={`http://127.0.0.1:3001${user.profilePicture}`}
+              src={`${user.profilePicture}`}
               alt={user.firstName}
               className="w-12 h-12 rounded-full object-cover border-2 border-primary-100"
             />
@@ -626,7 +626,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
                           <>
                             {item.profilePicture ? (
                               <img
-                                src={`http://127.0.0.1:3001${item.profilePicture}`}
+                                src={`${item.profilePicture}`}
                                 alt={item.firstName}
                                 className="w-8 h-8 rounded-full object-cover"
                               />
@@ -2016,7 +2016,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               <div className="aspect-video bg-slate-100 relative">
                 {rvShowcase?.photos?.[0] ? (
                   <img
-                    src={rvShowcase.photos[0].startsWith('http') ? rvShowcase.photos[0] : `http://127.0.0.1:3001${rvShowcase.photos[0]}`}
+                    src={rvShowcase.photos[0].startsWith('http') ? rvShowcase.photos[0] : `${rvShowcase.photos[0]}`}
                     alt="My RV"
                     className="w-full h-full object-cover"
                   />
@@ -2393,7 +2393,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                         >
                           {saved.recipe.imageUrl ? (
                             <img
-                              src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `http://127.0.0.1:3001${saved.recipe.imageUrl}`}
+                              src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `${saved.recipe.imageUrl}`}
                               alt={saved.recipe.title}
                               className="w-12 h-12 rounded-lg object-cover"
                             />
@@ -2447,7 +2447,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                     >
                       {saved.recipe.imageUrl ? (
                         <img
-                          src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `http://127.0.0.1:3001${saved.recipe.imageUrl}`}
+                          src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `${saved.recipe.imageUrl}`}
                           alt={saved.recipe.title}
                           className="w-10 h-10 rounded-lg object-cover hover:scale-110 transition-transform"
                         />
@@ -2644,7 +2644,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     >
                       {group.imageUrl ? (
                         <img
-                          src={group.imageUrl.startsWith('http') ? group.imageUrl : `http://127.0.0.1:3001${group.imageUrl}`}
+                          src={group.imageUrl.startsWith('http') ? group.imageUrl : `${group.imageUrl}`}
                           alt={group.name}
                           className="w-10 h-10 rounded-lg object-cover"
                         />

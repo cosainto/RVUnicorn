@@ -379,7 +379,7 @@ export default function EventDetailPage() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
         <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative">
           {event.imageUrl ? (
-            <img src={event.imageUrl.startsWith('http') ? event.imageUrl : `http://127.0.0.1:3001${event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
+            <img src={event.imageUrl.startsWith('http') ? event.imageUrl : `${event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
           )}
@@ -537,7 +537,7 @@ export default function EventDetailPage() {
                     {event.attendees.map((attendee) => (
                       <div key={attendee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
                         <Link to={`/profile/${attendee.user.username}`} className="flex items-center gap-3 flex-1">
-                          {attendee.user.profilePicture ? <img src={`http://127.0.0.1:3001${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-700 font-semibold">{attendee.user.firstName[0]}</span></div>}
+                          {attendee.user.profilePicture ? <img src={`${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-700 font-semibold">{attendee.user.firstName[0]}</span></div>}
                           <div>
                             <p className="font-semibold text-gray-900">{attendee.user.firstName} {attendee.user.lastName}{attendee.userId === event.organizerId && <span className="ml-2 text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Organizer</span>}</p>
                             <p className="text-sm text-gray-600">{attendee.status === 'going' && '✅ Going'}{attendee.status === 'maybe' && '🤔 Maybe'}{attendee.status === 'not_going' && '❌ Not Going'}{attendee.status === 'invited' && '📨 Invited'}</p>
@@ -677,7 +677,7 @@ export default function EventDetailPage() {
                         <div key={attendee.id} className={`flex items-center justify-between p-3 rounded-lg ${isCurrentUser ? 'bg-primary-50 border-2 border-primary-200' : 'bg-gray-50'}`}>
                           <div className="flex items-center gap-3">
                             {attendee.user.profilePicture ? (
-                              <img src={`http://127.0.0.1:3001${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
+                              <img src={`${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                                 <span className="text-primary-600 font-bold text-sm">{attendee.user.firstName[0]}{attendee.user.lastName[0]}</span>
@@ -756,7 +756,7 @@ export default function EventDetailPage() {
                   {friends.filter(friend => !event.attendees?.some(a => a.userId === friend.id)).map((friend) => (
                     <label key={friend.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
                       <input type="checkbox" checked={selectedFriends.includes(friend.id)} onChange={(e) => e.target.checked ? setSelectedFriends([...selectedFriends, friend.id]) : setSelectedFriends(selectedFriends.filter(fid => fid !== friend.id))} className="rounded text-primary-600" />
-                      {friend.profilePicture ? <img src={`http://127.0.0.1:3001${friend.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><Users className="w-5 h-5 text-gray-500" /></div>}
+                      {friend.profilePicture ? <img src={`${friend.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><Users className="w-5 h-5 text-gray-500" /></div>}
                       <span className="font-medium">{friend.firstName} {friend.lastName}</span>
                     </label>
                   ))}

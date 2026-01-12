@@ -196,7 +196,7 @@ export default function FriendsPage() {
                 >
                   {result.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${result.profilePicture}`}
+                      src={`${result.profilePicture}`}
                       alt={result.firstName}
                       className="w-10 h-10 rounded-full"
                     />
@@ -245,7 +245,7 @@ export default function FriendsPage() {
                 >
                   {request.initiator?.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${request.initiator.profilePicture}`}
+                      src={`${request.initiator.profilePicture}`}
                       alt={request.initiator.firstName}
                       className="w-10 h-10 rounded-full"
                     />
@@ -299,7 +299,7 @@ export default function FriendsPage() {
                 >
                   {request.receiver?.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${request.receiver.profilePicture}`}
+                      src={`${request.receiver.profilePicture}`}
                       alt={request.receiver.firstName}
                       className="w-10 h-10 rounded-full"
                     />
@@ -355,7 +355,7 @@ export default function FriendsPage() {
                 >
                   {friend.profilePicture ? (
                     <img
-                      src={`http://127.0.0.1:3001${friend.profilePicture}`}
+                      src={`${friend.profilePicture}`}
                       alt={friend.firstName}
                       className="w-12 h-12 rounded-full"
                     />

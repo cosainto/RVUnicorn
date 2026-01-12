@@ -518,7 +518,7 @@ export default function RecipeDetailPage() {
             {imagePreview || recipe.imageUrl ? (
               <div className="relative">
                 <img
-                  src={imagePreview || `http://127.0.0.1:3001${recipe.imageUrl}`}
+                  src={imagePreview || `${recipe.imageUrl}`}
                   alt={recipe.title}
                   className="w-full h-64 object-cover"
                 />
@@ -563,7 +563,7 @@ export default function RecipeDetailPage() {
           <>
             {recipe.imageUrl ? (
               <img
-                src={recipe.imageUrl.startsWith('http') ? recipe.imageUrl : `http://127.0.0.1:3001${recipe.imageUrl}`}
+                src={recipe.imageUrl.startsWith('http') ? recipe.imageUrl : `${recipe.imageUrl}`}
                 alt={recipe.title}
                 className="w-full h-64 object-cover"
               />
@@ -789,7 +789,7 @@ export default function RecipeDetailPage() {
               >
                 {recipe.user.profilePicture ? (
                   <img
-                    src={`http://127.0.0.1:3001${recipe.user.profilePicture}`}
+                    src={`${recipe.user.profilePicture}`}
                     alt={recipe.user.firstName}
                     className="w-10 h-10 rounded-full"
                   />
@@ -1038,7 +1038,7 @@ export default function RecipeDetailPage() {
                   >
                     {comment.user.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                        src={`${comment.user.profilePicture}`}
                         alt={comment.user.firstName}
                         className="w-8 h-8 rounded-full"
                       />
@@ -1065,10 +1065,10 @@ export default function RecipeDetailPage() {
                   <p className="text-gray-700 ml-11 mb-2">{comment.content}</p>
                   {comment.imageUrl && (
                     <img
-                      src={`http://127.0.0.1:3001${comment.imageUrl}`}
+                      src={`${comment.imageUrl}`}
                       alt="Comment"
                       className="ml-11 rounded-lg max-w-md hover:scale-105 transition cursor-pointer"
-                      onClick={() => window.open(`http://127.0.0.1:3001${comment.imageUrl}`, '_blank')}
+                      onClick={() => window.open(`${comment.imageUrl}`, '_blank')}
                     />
                   )}
                 </div>

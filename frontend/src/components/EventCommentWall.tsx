@@ -197,7 +197,7 @@ export default function EventCommentWall({ eventId, currentUserId, isOrganizer, 
                   >
                     {attendee.user.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${attendee.user.profilePicture}`}
+                        src={`${attendee.user.profilePicture}`}
                         alt=""
                         className="w-6 h-6 rounded-full"
                       />
@@ -245,7 +245,7 @@ export default function EventCommentWall({ eventId, currentUserId, isOrganizer, 
               <Link to={`/profile/${comment.user.username}`}>
                 {comment.user.profilePicture ? (
                   <img
-                    src={`http://127.0.0.1:3001${comment.user.profilePicture}`}
+                    src={`${comment.user.profilePicture}`}
                     alt=""
                     className="w-10 h-10 rounded-full"
                   />

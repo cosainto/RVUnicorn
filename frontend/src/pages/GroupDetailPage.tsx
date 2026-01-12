@@ -313,7 +313,7 @@ export default function GroupDetailPage() {
           <div className="h-48 bg-gradient-to-r from-primary-500 to-primary-600 rounded-t-lg relative overflow-hidden">
             {group.coverPhoto && (
               <img
-                src={group.coverPhoto.startsWith('http') ? group.coverPhoto : 'http://127.0.0.1:3001' + group.coverPhoto}
+                src={group.coverPhoto.startsWith('http') ? group.coverPhoto : '' + group.coverPhoto}
                 alt={group.name}
                 className="w-full h-full object-cover"
               />
@@ -414,7 +414,7 @@ export default function GroupDetailPage() {
                         <div key={request.id} className="flex items-center justify-between bg-white rounded-lg p-3">
                           <Link to={'/profile/' + request.user.username} className="flex items-center gap-3">
                             {request.user.profilePicture ? (
-                              <img src={'http://127.0.0.1:3001' + request.user.profilePicture} alt="" className="w-10 h-10 rounded-full" />
+                              <img src={'' + request.user.profilePicture} alt="" className="w-10 h-10 rounded-full" />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                                 <span className="text-primary-700 font-semibold">{request.user.firstName[0]}</span>
@@ -482,7 +482,7 @@ export default function GroupDetailPage() {
                             <div className="flex items-center gap-3 mb-3">
                               {post.user.profilePicture ? (
                                 <img
-                                  src={post.user.profilePicture.startsWith('http') ? post.user.profilePicture : 'http://127.0.0.1:3001' + post.user.profilePicture}
+                                  src={post.user.profilePicture.startsWith('http') ? post.user.profilePicture : '' + post.user.profilePicture}
                                   alt={post.user.firstName}
                                   className="w-10 h-10 rounded-full"
                                 />
@@ -501,7 +501,7 @@ export default function GroupDetailPage() {
                             <p className="text-gray-700">{post.content}</p>
                             {post.imageUrl && (
                               <img
-                                src={post.imageUrl.startsWith('http') ? post.imageUrl : 'http://127.0.0.1:3001' + post.imageUrl}
+                                src={post.imageUrl.startsWith('http') ? post.imageUrl : '' + post.imageUrl}
                                 alt="Post"
                                 className="mt-3 rounded-lg max-h-96 object-cover"
                               />
@@ -588,7 +588,7 @@ export default function GroupDetailPage() {
                           >
                             {member.user.profilePicture ? (
                               <img
-                                src={member.user.profilePicture.startsWith('http') ? member.user.profilePicture : 'http://127.0.0.1:3001' + member.user.profilePicture}
+                                src={member.user.profilePicture.startsWith('http') ? member.user.profilePicture : '' + member.user.profilePicture}
                                 alt={member.user.firstName}
                                 className="w-12 h-12 rounded-full"
                               />

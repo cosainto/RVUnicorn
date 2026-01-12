@@ -145,7 +145,7 @@ export default function GearMarketplace() {
               {/* Image */}
               {item.imageUrl ? (
                 <img
-                  src={`http://127.0.0.1:3001${item.imageUrl}`}
+                  src={`${item.imageUrl}`}
                   alt={item.name}
                   className="w-full h-48 object-cover"
                 />
@@ -190,7 +190,7 @@ export default function GearMarketplace() {
                   >
                     {item.user.profilePicture ? (
                       <img
-                        src={`http://127.0.0.1:3001${item.user.profilePicture}`}
+                        src={`${item.user.profilePicture}`}
                         alt={item.user.firstName}
                         className="w-8 h-8 rounded-full"
                       />
@@ -246,7 +246,7 @@ export default function GearMarketplace() {
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 {selectedItem.imageUrl && (
                   <img
-                    src={`http://127.0.0.1:3001${selectedItem.imageUrl}`}
+                    src={`${selectedItem.imageUrl}`}
                     alt={selectedItem.name}
                     className="w-16 h-16 rounded object-cover"
                   />

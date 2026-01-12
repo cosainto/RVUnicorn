@@ -394,7 +394,7 @@ export default function BusinessBasecampPage() {
                         {pendingItems.photos.slice(0, 5).map((photo: any) => (
                           <div key={photo.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                             <div className="flex items-center gap-3">
-                              <img src={`http://127.0.0.1:3001${photo.imageUrl}`} className="w-12 h-12 rounded object-cover" />
+                              <img src={`${photo.imageUrl}`} className="w-12 h-12 rounded object-cover" />
                               <div>
                                 <p className="text-sm font-medium">Photo from {photo.user.firstName}</p>
                                 <p className="text-xs text-gray-500">Pending approval</p>
@@ -449,7 +449,7 @@ export default function BusinessBasecampPage() {
                       <div key={admin.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-3">
                           {admin.user.profilePicture ? (
-                            <img src={`http://127.0.0.1:3001${admin.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
+                            <img src={`${admin.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                               <span className="text-primary-600 font-medium">{admin.user.firstName[0]}</span>
@@ -654,7 +654,7 @@ export default function BusinessBasecampPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {pendingPhotos.map((photo: any) => (
                       <div key={photo.id} className="bg-white rounded-lg overflow-hidden shadow">
-                        <img src={`http://127.0.0.1:3001${photo.imageUrl}`} alt="" className="w-full h-32 object-cover" />
+                        <img src={`${photo.imageUrl}`} alt="" className="w-full h-32 object-cover" />
                         <div className="p-2">
                           <p className="text-xs text-gray-600 truncate">{photo.user.firstName} {photo.user.lastName}</p>
                           <div className="flex gap-1 mt-2">
@@ -674,7 +674,7 @@ export default function BusinessBasecampPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {photos.map((photo: any) => (
                       <div key={photo.id} className="bg-white rounded-lg overflow-hidden shadow relative group">
-                        <img src={`http://127.0.0.1:3001${photo.imageUrl}`} alt="" className="w-full h-32 object-cover" />
+                        <img src={`${photo.imageUrl}`} alt="" className="w-full h-32 object-cover" />
                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleSetBanner(photo.id)} className="bg-blue-500 text-white p-1 rounded-full" title="Set as banner"><Image className="w-3 h-3" /></button>
                           <button onClick={() => handleDeletePhoto(photo.id)} className="bg-red-500 text-white p-1 rounded-full" title="Delete photo"><Trash2 className="w-3 h-3" /></button>
@@ -713,7 +713,7 @@ export default function BusinessBasecampPage() {
                   <div key={review.id} className="bg-white rounded-lg shadow p-4">
                     <div className="flex items-start gap-4">
                       {review.user?.profilePicture ? (
-                        <img src={`http://127.0.0.1:3001${review.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={`${review.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                           <span className="text-gray-500 font-medium">{review.user?.firstName?.[0] || '?'}</span>
@@ -750,7 +750,7 @@ export default function BusinessBasecampPage() {
                   <div key={ci.id} className="bg-white rounded-lg shadow p-4">
                     <div className="flex items-center gap-4">
                       {ci.user?.profilePicture ? (
-                        <img src={`http://127.0.0.1:3001${ci.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={`${ci.user.profilePicture}`} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                           <span className="text-gray-500 font-medium">{ci.user?.firstName?.[0] || '?'}</span>

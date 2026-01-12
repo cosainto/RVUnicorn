@@ -161,7 +161,7 @@ export default function CommentThread({ comment, postAuthorId, onUpdate }: Comme
         <Link to={'/profile/' + comment.user.username} className="flex-shrink-0">
           {comment.user.profilePicture ? (
             <img
-              src={comment.user.profilePicture.startsWith('http') ? comment.user.profilePicture : 'http://127.0.0.1:3001' + comment.user.profilePicture}
+              src={comment.user.profilePicture.startsWith('http') ? comment.user.profilePicture : '' + comment.user.profilePicture}
               alt=""
               className="w-8 h-8 rounded-full object-cover"
             />
@@ -213,7 +213,7 @@ export default function CommentThread({ comment, postAuthorId, onUpdate }: Comme
               </p>
               {comment.imageUrl && (
                 <img
-                  src={comment.imageUrl.startsWith('http') ? comment.imageUrl : 'http://127.0.0.1:3001' + comment.imageUrl}
+                  src={comment.imageUrl.startsWith('http') ? comment.imageUrl : '' + comment.imageUrl}
                   alt=""
                   className="mt-2 rounded-lg max-h-48 object-cover"
                 />
@@ -370,7 +370,7 @@ function ReplyItem({ reply, onUpdate }: { reply: Reply; onUpdate: () => void }) 
       <Link to={'/profile/' + reply.user.username} className="flex-shrink-0">
         {reply.user.profilePicture ? (
           <img
-            src={reply.user.profilePicture.startsWith('http') ? reply.user.profilePicture : 'http://127.0.0.1:3001' + reply.user.profilePicture}
+            src={reply.user.profilePicture.startsWith('http') ? reply.user.profilePicture : '' + reply.user.profilePicture}
             alt=""
             className="w-6 h-6 rounded-full object-cover"
           />

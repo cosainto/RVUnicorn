@@ -323,7 +323,7 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
                                 >
                                   {attendee.user.profilePicture ? (
                                     <img
-                                      src={`http://127.0.0.1:3001${attendee.user.profilePicture}`}
+                                      src={`${attendee.user.profilePicture}`}
                                       alt={attendee.user.firstName}
                                       className="w-4 h-4 rounded-full"
                                     />

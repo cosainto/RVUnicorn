@@ -110,7 +110,7 @@ export default function HashtagPage() {
               React.createElement(Link, { to: '/profile/' + post.user.username },
                 post.user.profilePicture ? (
                   React.createElement('img', {
-                    src: post.user.profilePicture.startsWith('http') ? post.user.profilePicture : 'http://127.0.0.1:3001' + post.user.profilePicture,
+                    src: post.user.profilePicture.startsWith('http') ? post.user.profilePicture : '' + post.user.profilePicture,
                     alt: '',
                     className: 'w-10 h-10 rounded-full object-cover'
                   })
@@ -137,7 +137,7 @@ export default function HashtagPage() {
                 React.createElement(RenderHashtags, { content: post.content })
               ),
               post.imageUrl && React.createElement('img', {
-                src: post.imageUrl.startsWith('http') ? post.imageUrl : 'http://127.0.0.1:3001' + post.imageUrl,
+                src: post.imageUrl.startsWith('http') ? post.imageUrl : '' + post.imageUrl,
                 alt: '',
                 className: 'mt-3 rounded-lg max-h-96 object-cover'
               })

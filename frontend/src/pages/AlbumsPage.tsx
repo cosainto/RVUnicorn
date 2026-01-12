@@ -220,7 +220,7 @@ export default function AlbumsPage() {
               <div className="aspect-video bg-gray-200 relative overflow-hidden">
                 {album.photos[0] ? (
                   <img
-                    src={`http://127.0.0.1:3001${album.photos[0].imageUrl}`}
+                    src={`${album.photos[0].imageUrl}`}
                     alt={album.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

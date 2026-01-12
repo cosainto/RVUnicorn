@@ -331,7 +331,7 @@ export default function CreatorDashboardPage() {
                         >
                           {u.profilePicture ? (
                             <img
-                              src={`http://127.0.0.1:3001${u.profilePicture}`}
+                              src={`${u.profilePicture}`}
                               alt=""
                               className="w-10 h-10 rounded-full object-cover"
                             />
@@ -380,7 +380,7 @@ export default function CreatorDashboardPage() {
                     <div className="flex items-center gap-3">
                       {collab.collaborator.profilePicture ? (
                         <img
-                          src={`http://127.0.0.1:3001${collab.collaborator.profilePicture}`}
+                          src={`${collab.collaborator.profilePicture}`}
                           alt=""
                           className="w-12 h-12 rounded-full object-cover"
                         />

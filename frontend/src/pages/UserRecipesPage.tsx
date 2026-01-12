@@ -147,7 +147,7 @@ export default function UserRecipesPage() {
                   <div className="aspect-video bg-gradient-to-br from-red-100 to-orange-100 relative">
                     {recipe.imageUrl ? (
                       <img
-                        src={`http://127.0.0.1:3001${recipe.imageUrl}`}
+                        src={`${recipe.imageUrl}`}
                         alt={recipe.title}
                         className="w-full h-full object-cover"
                       />

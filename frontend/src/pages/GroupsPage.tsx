@@ -265,7 +265,7 @@ export default function GroupsPage() {
               <div className="h-48 bg-gradient-to-br from-green-100 to-blue-100 relative">
                 {group.coverPhoto ? (
                   <img
-                    src={`http://127.0.0.1:3001${group.coverPhoto}`}
+                    src={`${group.coverPhoto}`}
                     alt={group.name}
                     className="w-full h-full object-cover"
                   />
