@@ -72,7 +72,12 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'https://www.rvunicorn.com',
+    'https://rvunicorn.com',
+    'https://ideal-renewal-production.up.railway.app'
+  ],
   credentials: true
 }));
 app.use(express.json());
