@@ -2,35 +2,19 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Configure multer for profile uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'uploads/profiles';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Configure multer to use memory storage for Cloudinary
 const upload = multer({ 
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    if (mimetype) {
       return cb(null, true);
     }
     cb(new Error('Only image files are allowed'));
@@ -46,7 +30,8 @@ router.post('/picture', authenticateToken, upload.single('photo'), async (req, r
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const imageUrl = `/uploads/profiles/${req.file.filename}`;
+    // Upload to Cloudinary
+    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/profiles');
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -70,7 +55,8 @@ router.post('/cover', authenticateToken, upload.single('photo'), async (req, res
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const imageUrl = `/uploads/profiles/${req.file.filename}`;
+    // Upload to Cloudinary
+    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/covers');
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
