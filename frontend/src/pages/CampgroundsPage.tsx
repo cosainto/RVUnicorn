@@ -62,10 +62,10 @@ export default function CampgroundsPage() {
       params.append('page', currentPage.toString());
       params.append('limit', '50');
 
-      const res = await fetch(`/api/campgrounds?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch campgrounds');
+      const res = await api.get(`/api/campgrounds?${params.toString()}`);
+      // api.get returns data directly
 
-      const data = await res.json();
+      const data = res.data;
       setCampgrounds(data.campgrounds ?? []);
       setTotalPages(data.totalPages ?? 1);
       setTotal(data.total ?? 0);
