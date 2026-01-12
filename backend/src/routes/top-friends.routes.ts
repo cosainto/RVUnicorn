@@ -106,6 +106,11 @@ router.post('/:friendId', authenticateToken, async (req: any, res) => {
     const { friendId } = req.params;
     const { rank } = req.body;
 
+    // Prevent adding yourself as a friend
+    if (friendId === userId) {
+      return res.status(400).json({ error: 'You cannot add yourself as a top friend' });
+    }
+
     // Check if already have 8 top friends
     const count = await prisma.topFriend.count({
       where: { userId },
