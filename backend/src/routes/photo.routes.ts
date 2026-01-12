@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
 
@@ -279,10 +278,13 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
       }
     }
 
+    // Upload to Cloudinary
+    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/photos');
+
     const photo = await prisma.photo.create({
       data: {
         userId,
-        imageUrl: `/uploads/photos/${req.file.filename}`,
+        imageUrl,
         caption,
         albumId: albumId || null,
         eventId: eventId || null,
