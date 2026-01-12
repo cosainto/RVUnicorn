@@ -189,3 +189,29 @@ router.get('/:badgeSlug', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// POST /api/badges/seed - Seed default badges (run once)
+router.post('/seed', async (req, res) => {
+  try {
+    const badges = [
+      { slug: 'rvunicorn-member', name: 'RVUnicorn Member', description: 'Joined the RVUnicorn community', imageUrl: '/images/Logo_RVUnicorn.png', category: 'GENERAL', requirement: 'Create an account', triggerType: 'ACCOUNT_CREATED', triggerValue: 1, sortOrder: 1 },
+      { slug: 'welcome-to-club', name: 'Welcome to the Club', description: 'Joined your first RV group', imageUrl: '/images/Welcome_to_the_Club.png', category: 'SOCIAL', requirement: 'Join a group', triggerType: 'GROUP_JOINED', triggerValue: 1, sortOrder: 10 },
+      { slug: 'weekend-warrior', name: 'Weekend Warrior', description: 'Spent 10 weekends at campgrounds', imageUrl: '/images/Weekendwarriorbadge.png', category: 'CAMPING', requirement: '10 weekend stays', triggerType: 'WEEKEND_STAYS', triggerValue: 10, sortOrder: 20 },
+      { slug: 'true-camper', name: 'True Camper', description: 'Camped for over 90 days total', imageUrl: '/images/TruecamperBadge.png', category: 'CAMPING', requirement: '90+ days camped', triggerType: 'DAYS_CAMPED', triggerValue: 90, sortOrder: 21 },
+      { slug: 'social-butterfly', name: 'Social Butterfly', description: 'Made 25 friends in the community', imageUrl: '/images/social-butterfly.png', category: 'SOCIAL', requirement: 'Have 25 friends', triggerType: 'FRIENDS_COUNT', triggerValue: 25, sortOrder: 11 },
+    ];
+
+    for (const badge of badges) {
+      await prisma.badge.upsert({
+        where: { slug: badge.slug },
+        update: badge,
+        create: badge,
+      });
+    }
+
+    res.json({ success: true, message: 'Badges seeded!' });
+  } catch (error) {
+    console.error('Seed badges error:', error);
+    res.status(500).json({ error: 'Failed to seed badges' });
+  }
+});
