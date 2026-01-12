@@ -188,8 +188,6 @@ router.get('/:badgeSlug', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
-
 // POST /api/badges/seed - Seed default badges (run once)
 router.post('/seed', async (req, res) => {
   try {
@@ -215,3 +213,6 @@ router.post('/seed', async (req, res) => {
     res.status(500).json({ error: 'Failed to seed badges' });
   }
 });
+
+export default router;
+
