@@ -751,7 +751,7 @@ export default function RecipeDetailPage() {
                       </button>
 
                       {/* Favorite Button - Only show if saved */}
-                      {recipe.isSaved && (
+                      {true && (
                         <button
                           onClick={handleFavoriteToggle}
                           className={`p-2 rounded-full transition ${
