@@ -124,6 +124,7 @@ model User {
   threadFavorites        ThreadFavorite[]
   activities             Activity[]
   activityTargets        Activity[] @relation("ActivityTarget")
+  activitySecondary      Activity[] @relation("ActivitySecondaryUser")
   wallPosts              Post[] @relation("WallPosts")  
   inventoryItems              InventoryItem[]
   assignedTripPackItems       TripPackItem[]     @relation("AssignedTripPackItems")
@@ -1153,7 +1154,16 @@ model Activity {
 
   mentions        Mention[]
   
-  isPublic        Boolean   @default(true)
+  isPublic          Boolean   @default(true)
+  
+  // Friend activity tracking
+  secondaryUserId   String?
+  secondaryUser     User?     @relation("ActivitySecondaryUser", fields: [secondaryUserId], references: [id], onDelete: SetNull)
+  
+  albumId           String?
+  photoId           String?
+  
+  isCreatorContent  Boolean   @default(false)
   
   createdAt       DateTime  @default(now())
   

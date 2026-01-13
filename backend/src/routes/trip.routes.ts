@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logEventCreated, logEventJoined } from '../services/activity.service';
 import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
@@ -327,6 +328,9 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
+    // Log activity for friend feed
+    await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
+
     res.json(event);
   } catch (error) {
     console.error('Get event error:', error);
@@ -375,6 +379,9 @@ router.post('/', authenticateToken, async (req, res) => {
     if (event.campground) {
       await createStateVisitForUser(userId, event, event.campground);
     }
+
+    // Log activity for friend feed
+    await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
 
     res.json(event);
   } catch (error) {

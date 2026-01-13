@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { logFriendAdded } from '../services/activity.service';
-import { logFriendAdded } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
@@ -290,6 +289,10 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
         actorId: updated.initiatorId
       }
     });
+
+    // Log activity for friend feed
+    await logFriendAdded(updated.initiatorId, updated.receiverId, updated.receiver.firstName + ' ' + updated.receiver.lastName);
+    await logFriendAdded(updated.receiverId, updated.initiatorId, updated.initiator.firstName + ' ' + updated.initiator.lastName);
 
     res.json(updated);
   } catch (error) {

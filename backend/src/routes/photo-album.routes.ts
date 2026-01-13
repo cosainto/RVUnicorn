@@ -1,4 +1,5 @@
 import express from 'express';
+import { logAlbumCreated, logPhotoUploaded } from '../services/activity.service';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -122,6 +123,9 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Album not found' });
     }
 
+    // Log activity for friend feed
+    await logAlbumCreated(userId, album.id, album.title);
+
     res.json(album);
   } catch (error) {
     console.error('Get album error:', error);
@@ -153,6 +157,9 @@ router.post('/', authenticateToken, async (req, res) => {
         },
       },
     });
+
+    // Log activity for friend feed
+    await logAlbumCreated(userId, album.id, album.title);
 
     res.json(album);
   } catch (error) {

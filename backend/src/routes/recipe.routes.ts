@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { logRecipeCreated } from '../services/activity.service';
+import { logRecipeCreated, logRecipeLiked } from '../services/activity.service';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
@@ -611,6 +611,12 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
           link: `/recipes/${recipeId}`,
         }
       });
+    }
+
+    // Log activity for friend feed
+    if (recipe.userId !== userId) {
+      const recipeOwner = await prisma.user.findUnique({ where: { id: recipe.userId }, select: { firstName: true, lastName: true } });
+      await logRecipeLiked(userId, recipeId, recipe.title, recipe.userId, (recipeOwner?.firstName || '') + ' ' + (recipeOwner?.lastName || ''));
     }
 
     res.status(201).json({ message: 'Recipe saved', savedRecipe });
