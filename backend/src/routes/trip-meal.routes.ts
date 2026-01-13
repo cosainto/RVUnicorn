@@ -397,4 +397,3 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
   }
 });
 
-export default router;
