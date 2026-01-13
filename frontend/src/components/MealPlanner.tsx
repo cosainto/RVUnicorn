@@ -184,13 +184,31 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
 
   const loadAttendees = async () => {
     try {
-      const { data } = await api.get(`/events/${eventId}/attendees`);
-      setAttendees(data);
+      // Get attendees
+      const { data: attendeesData } = await api.get(`/events/${eventId}/attendees`);
+      
+      // Get event to include organizer
+      const { data: eventData } = await api.get(`/events/${eventId}`);
+      
+      // Check if organizer is already in attendees list
+      const organizerInAttendees = attendeesData.some((a: Attendee) => a.user.id === eventData.organizerId);
+      
+      if (!organizerInAttendees && eventData.organizer) {
+        // Add organizer as a pseudo-attendee at the start of the list
+        const organizerAsAttendee = {
+          id: 'organizer',
+          userId: eventData.organizerId,
+          status: 'going',
+          user: eventData.organizer
+        };
+        setAttendees([organizerAsAttendee, ...attendeesData]);
+      } else {
+        setAttendees(attendeesData);
+      }
     } catch (error) {
       console.error('Load attendees error:', error);
     }
   };
-
   const openAddModal = (date: string, mealType: string) => {
     setEditingMeal(null);
     setSelectedDate(date);
