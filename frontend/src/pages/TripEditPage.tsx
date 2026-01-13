@@ -20,6 +20,7 @@ export default function EventEditPage() {
     location: '',
     imageUrl: '',
     campgroundId: null as string | null,
+    privacy: 'PUBLIC',
   });
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function EventEditPage() {
         location: data.location || '',
         imageUrl: data.imageUrl || '',
         campgroundId: data.campgroundId || null,
+        privacy: data.privacy || 'PUBLIC',
       });
     } catch (error) {
       console.error('Load event error:', error);
@@ -87,6 +89,7 @@ export default function EventEditPage() {
         location: formData.location,
         campgroundId: formData.campgroundId,
         imageUrl: formData.imageUrl,
+        privacy: formData.privacy,
         notifyAttendees,
       });
 
