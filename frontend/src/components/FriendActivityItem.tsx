@@ -1,4 +1,5 @@
 import React from 'react';
+import ActivityMuteMenu from './ActivityMuteMenu';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -263,7 +264,16 @@ const FriendActivityItem: React.FC<FriendActivityItemProps> = ({
               <span className="text-lg flex-shrink-0">{item.activityIcon}</span>
               <div className="flex-1">
                 {renderActivityMessage()}
-                <div className="text-xs text-gray-400 mt-1">{timeAgo}</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-400">{timeAgo}</div>
+                  <ActivityMuteMenu
+                    activityId={item.id}
+                    actorId={item.actor?.id}
+                    actorName={item.actor?.firstName}
+                    eventId={item.type.includes("EVENT") ? item.targetLink?.split("/").pop() : undefined}
+                    eventTitle={item.type.includes("EVENT") ? item.targetName : undefined}
+                  />
+                </div>
               </div>
             </div>
 
