@@ -329,8 +329,6 @@ router.get('/:id', async (req, res) => {
     }
 
     // Log activity for friend feed
-    await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
-
     res.json(event);
   } catch (error) {
     console.error('Get event error:', error);

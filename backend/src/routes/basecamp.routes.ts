@@ -406,7 +406,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
       const events = await prisma.event.findMany({
         where: {
           organizerId: { in: visibleUserIds },
-          isPublic: true,
         },
         take: limit,
         skip,
