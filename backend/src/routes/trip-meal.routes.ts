@@ -77,7 +77,7 @@ router.post('/', authenticateToken, async (req, res) => {
       where: { id: eventId },
       include: {
         attendees: {
-          where: { userId, status: "GOING" }
+          where: { userId, status: { in: ["GOING", "going"] } }
         }
       }
     });
@@ -162,7 +162,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       where: { id: meal.eventId },
       include: {
         attendees: {
-          where: { userId, status: "GOING" }
+          where: { userId, status: { in: ["GOING", "going"] } }
         }
       }
     });
@@ -239,7 +239,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       where: { id: meal.eventId },
       include: {
         attendees: {
-          where: { userId, status: "GOING" }
+          where: { userId, status: { in: ["GOING", "going"] } }
         }
       }
     });

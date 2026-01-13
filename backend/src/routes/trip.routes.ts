@@ -755,7 +755,7 @@ router.post('/:id/meals', authenticateToken, async (req, res) => {
       where: { id },
       include: {
         attendees: {
-          where: { userId, status: "GOING" }
+          where: { userId, status: { in: ["GOING", "going"] } }
         }
       }
     });
@@ -807,7 +807,7 @@ router.delete('/:id/meals/:mealId', authenticateToken, async (req, res) => {
       where: { id },
       include: {
         attendees: {
-          where: { userId, status: "GOING" }
+          where: { userId, status: { in: ["GOING", "going"] } }
         }
       }
     });
