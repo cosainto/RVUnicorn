@@ -406,6 +406,7 @@ model Event {
   location     String?
   tags         String[]  @default([])
   isWishlist  Boolean  @default(false)
+  privacy     String   @default("PUBLIC")  // PUBLIC, FRIENDS, PRIVATE
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

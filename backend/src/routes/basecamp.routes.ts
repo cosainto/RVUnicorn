@@ -75,6 +75,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Get friends
     const friendships = await prisma.friendship.findMany({
       where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
         OR: [
           { initiatorId: userId, status: 'ACCEPTED' },
           { receiverId: userId, status: 'ACCEPTED' },
@@ -102,6 +107,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     
     const activeTrips = await prisma.stateVisit.findMany({
       where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
         userId,
         campsiteId: { not: null },
         startDate: { lte: today },
@@ -120,6 +130,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const mutedEntities = await prisma.mutedEntity.findMany({
       
       where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
         userId,
         OR: [
           { snoozeUntil: null },
@@ -159,6 +174,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const activities = await prisma.activity.findMany({
         where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
           AND: [
             { isCreatorContent: { not: true } },
             {
@@ -296,6 +316,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const photos = await prisma.photo.findMany({
         where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
           userId: { in: visibleUserIds },
           album: { privacy: { in: ['PUBLIC', 'FRIENDS'] } }
         },
@@ -334,6 +359,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const albums = await prisma.photoAlbum.findMany({
         where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
           userId: { in: visibleUserIds },
           privacy: { in: ['PUBLIC', 'FRIENDS'] },
         },
@@ -405,7 +435,12 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const events = await prisma.event.findMany({
         where: {
-          organizerId: { in: visibleUserIds },
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
+          
         },
         take: limit,
         skip,
@@ -441,6 +476,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const recipes = await prisma.recipe.findMany({
         where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
           userId: { in: visibleUserIds },
           privacy: { in: ['PUBLIC', 'FRIENDS'] },
         },
@@ -478,6 +518,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const packingActivities = await prisma.basecampActivity.findMany({
         where: {
+          OR: [
+            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
+            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
+            { privacy: "PRIVATE", organizerId: userId },
+          ],
           userId,
           type: {
             in: [

@@ -340,7 +340,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { title, description, startDate, endDate, location, campgroundId } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, privacy } = req.body;
 
     const event = await prisma.event.create({
       data: {
@@ -351,6 +351,7 @@ router.post('/', authenticateToken, async (req, res) => {
         endDate: new Date(endDate),
         location,
         campgroundId: campgroundId || null,
+        privacy: privacy || 'PUBLIC',
       },
       include: {
         organizer: {
@@ -393,7 +394,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy } = req.body;
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -418,6 +419,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         location: location !== undefined ? location : undefined,
         campgroundId: campgroundId !== undefined ? campgroundId : undefined,
         isWishlist: isWishlist !== undefined ? isWishlist : undefined,
+        privacy: privacy !== undefined ? privacy : undefined,
       },
       include: {
         organizer: {
