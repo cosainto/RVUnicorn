@@ -439,12 +439,12 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                                     <h4 className="font-semibold text-sm text-gray-900 mb-1">
                                       {meal.menuItems.join(', ')}
                                     </h4>
-                                    {meal.cook && (
+                                    {meal.cook ? (
                                       <p className="text-xs text-gray-700 flex items-center gap-1 mt-1">
                                         <ChefHat className="w-3 h-3" />
                                         <span className="font-medium">{meal.cook.firstName}</span>
                                       </p>
-                                    )}
+                                    ) : (<p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><ChefHat className="w-3 h-3" /><span className="italic">Not assigned</span></p>)}
                                     <div className="flex items-center gap-2 mt-2">
                                       <div className="text-xs font-semibold text-gray-700 flex items-center gap-1">
                                         <Users className="w-3 h-3" />
