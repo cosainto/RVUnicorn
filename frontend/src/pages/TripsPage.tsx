@@ -60,6 +60,7 @@ export default function EventsPage() {
     campgroundId: null as string | null,
     imageUrl: '',
     attendeeIds: [] as string[],
+    privacy: 'PUBLIC',
   });
 
   useEffect(() => {
@@ -169,6 +170,7 @@ export default function EventsPage() {
         campgroundId: null,
         imageUrl: '',
         attendeeIds: [],
+        privacy: 'PUBLIC',
       });
       loadEvents();
     } catch (error) {
@@ -514,6 +516,22 @@ export default function EventsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Privacy */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Privacy
+                </label>
+                <select
+                  value={formData.privacy}
+                  onChange={(e) => setFormData({ ...formData, privacy: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="PUBLIC">🌍 Public - Anyone can see this event</option>
+                  <option value="FRIENDS">👥 Friends - Only friends can see this event</option>
+                  <option value="PRIVATE">🔒 Private - Only you and invited attendees</option>
+                </select>
+              </div>
 
               {/* Submit */}
               <div className="flex gap-3 pt-4 border-t">
