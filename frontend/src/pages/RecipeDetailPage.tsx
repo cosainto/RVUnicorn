@@ -730,6 +730,21 @@ export default function RecipeDetailPage() {
                     </button>
                   )}
                   
+                  {/* Favorite Button - Available to all logged in users */}
+                  {user && (
+                    <button
+                      onClick={handleFavoriteToggle}
+                      className={`p-2 rounded-full transition ${
+                        recipe.isFavorite
+                          ? "bg-red-500 text-white hover:bg-red-600"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                      title={recipe.isFavorite ? "Remove from Favorites" : "Mark as Favorite"}
+                    >
+                      <Heart className={`w-5 h-5 ${recipe.isFavorite ? "fill-white" : ""}`} />
+                    </button>
+                  )}
+                  
                   {/* Non-owner actions: Save, Favorite, Copy */}
                   {user && !isOwner && (
                     <>
@@ -750,20 +765,6 @@ export default function RecipeDetailPage() {
                         )}
                       </button>
 
-                      {/* Favorite Button - Only show if saved */}
-                      {true && (
-                        <button
-                          onClick={handleFavoriteToggle}
-                          className={`p-2 rounded-full transition ${
-                            recipe.isFavorite
-                              ? 'bg-red-500 text-white hover:bg-red-600'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                          title={recipe.isFavorite ? 'Remove from Favorites' : 'Mark as Favorite'}
-                        >
-                          <Heart className={`w-5 h-5 ${recipe.isFavorite ? 'fill-white' : ''}`} />
-                        </button>
-                      )}
 
                       {/* Save a Copy Button */}
                       <button
