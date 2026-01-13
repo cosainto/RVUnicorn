@@ -422,6 +422,7 @@ model Event {
   comments    EventComment[]
   savedTrips  SavedTrip[]  
   tripPackItems TripPackItem[] @relation("EventTripPackItems")
+  mutedBy     MutedEntity[]
 
 
 
@@ -611,24 +612,35 @@ model Notification {
 }
 
 model MutedEntity {
-  id             String      @id @default(cuid())
-  userId         String
-  mutedUserId    String?
+  id                String      @id @default(cuid())
+  userId            String
+  mutedUserId       String?
   mutedCampgroundId String?
-  createdAt      DateTime    @default(now())
-
-  user           User        @relation("UserMutes", fields: [userId], references: [id], onDelete: Cascade)
-  mutedUser      User?       @relation("MutedByUsers", fields: [mutedUserId], references: [id], onDelete: Cascade)
-  mutedCampground Campground? @relation(fields: [mutedCampgroundId], references: [id], onDelete: Cascade)
-
+  mutedEventId      String?     // NEW: mute specific events
+  mutedActivityId   String?     // NEW: dismiss specific activities
+  
+  // Snooze duration
+  snoozeDuration    String?     // "7_DAYS", "30_DAYS", "120_DAYS", "FOREVER"
+  snoozeUntil       DateTime?   // When snooze expires (null = forever)
+  
+  createdAt         DateTime    @default(now())
+  
+  user              User        @relation("UserMutes", fields: [userId], references: [id], onDelete: Cascade)
+  mutedUser         User?       @relation("MutedByUsers", fields: [mutedUserId], references: [id], onDelete: Cascade)
+  mutedCampground   Campground? @relation(fields: [mutedCampgroundId], references: [id], onDelete: Cascade)
+  mutedEvent        Event?      @relation(fields: [mutedEventId], references: [id], onDelete: Cascade)
+  
   @@unique([userId, mutedUserId])
   @@unique([userId, mutedCampgroundId])
+  @@unique([userId, mutedEventId])
+  @@unique([userId, mutedActivityId])
   @@index([userId])
   @@index([mutedUserId])
   @@index([mutedCampgroundId])
+  @@index([snoozeUntil])
 }
 
-
+// DELETE the old model below this line
 model Recipe {
   id           String   @id @default(cuid())
   userId       String

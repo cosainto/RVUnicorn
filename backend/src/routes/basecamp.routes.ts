@@ -91,7 +91,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
     // Get followed campgrounds
     const followedCampgrounds = await prisma.campgroundFollow.findMany({
-      where: { userId },
+      
       select: { campgroundId: true },
     });
     const followedCampgroundIds = followedCampgrounds.map((f) => f.campgroundId);
@@ -116,12 +116,22 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const campgroundIds = [...new Set([...followedCampgroundIds, ...activeTripCampgroundIds])];
 
     // Get muted entities
+    const now = new Date();
     const mutedEntities = await prisma.mutedEntity.findMany({
-      where: { userId },
-      select: { mutedCampgroundId: true, mutedUserId: true }
+      
+      where: {
+        userId,
+        OR: [
+          { snoozeUntil: null },
+          { snoozeUntil: { gt: now } }
+        ]
+      },
+      select: { mutedCampgroundId: true, mutedUserId: true, mutedEventId: true, mutedActivityId: true }
     });
     const mutedCampgroundIds = new Set(mutedEntities.filter(m => m.mutedCampgroundId).map(m => m.mutedCampgroundId));
     const mutedUserIds = new Set(mutedEntities.filter(m => m.mutedUserId).map(m => m.mutedUserId));
+    const mutedEventIds = new Set(mutedEntities.filter(m => m.mutedEventId).map(m => m.mutedEventId));
+    const mutedActivityIds = new Set(mutedEntities.filter(m => m.mutedActivityId).map(m => m.mutedActivityId));
 
     const unmutedCampgroundIds = campgroundIds.filter(id => !mutedCampgroundIds.has(id));
     const unmutedFriendIds = friendIds.filter(id => !mutedUserIds.has(id));
@@ -408,6 +418,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
       events.forEach((event) => {
         if (blockedUserIds.has(event.organizerId)) return;
+        if (mutedEventIds.has(event.id)) return;
         allActivities.push({
           id: 'event-created-' + event.id,
           type: 'EVENT_CREATED',
@@ -587,6 +598,10 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Deduplicate
     const seen = new Map<string, any>();
     const deduplicatedActivities = allActivities.filter((activity) => {
+      // Skip dismissed activities
+      const activityId = activity.id.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-)/g, "");
+      if (mutedActivityIds.has(activityId) || mutedActivityIds.has(activity.id)) return false;
+
       const key = activity.type + '-' + activity.actor?.id + '-' + (activity.targetLink || activity.title);
       if (!seen.has(key)) {
         seen.set(key, activity);

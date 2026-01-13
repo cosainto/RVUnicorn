@@ -1,169 +1,225 @@
-import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { prisma } from '../index';
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// GET /api/mute - Get all muted entities for current user
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-
-    const mutedEntities = await prisma.mutedEntity.findMany({
-      where: { userId },
-      include: {
-        mutedUser: {
-          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true }
-        },
-        mutedCampground: {
-          select: { id: true, name: true, location: true }
-        }
-      }
-    });
-
-    res.json(mutedEntities);
-  } catch (error) {
-    console.error('Get muted entities error:', error);
-    res.status(500).json({ error: 'Failed to get muted entities' });
+// Calculate snooze expiration date
+function getSnoozeExpiration(duration: string): Date | null {
+  const now = new Date();
+  switch (duration) {
+    case '7_DAYS':
+      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    case '30_DAYS':
+      return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    case '120_DAYS':
+      return new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000);
+    case 'FOREVER':
+      return null; // null means forever
+    default:
+      return null;
   }
-});
+}
 
-// POST /api/mute/user/:userId - Mute a user
-router.post('/user/:targetUserId', authenticateToken, async (req: Request, res: Response) => {
+// POST /api/mute/user - Mute/snooze a user
+router.post('/user', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { targetUserId } = req.params;
+    const { mutedUserId, duration } = req.body;
 
-    if (userId === targetUserId) {
-      return res.status(400).json({ error: 'Cannot mute yourself' });
+    if (!mutedUserId) {
+      return res.status(400).json({ error: 'mutedUserId is required' });
     }
 
-    const existing = await prisma.mutedEntity.findFirst({
-      where: { userId, mutedUserId: targetUserId }
-    });
+    const snoozeUntil = getSnoozeExpiration(duration || 'FOREVER');
 
-    if (existing) {
-      return res.status(400).json({ error: 'User already muted' });
-    }
-
-    const muted = await prisma.mutedEntity.create({
-      data: {
-        userId,
-        mutedUserId: targetUserId
+    const mute = await prisma.mutedEntity.upsert({
+      where: {
+        userId_mutedUserId: { userId, mutedUserId }
       },
-      include: {
-        mutedUser: {
-          select: { id: true, username: true, firstName: true, lastName: true }
-        }
-      }
+      create: {
+        userId,
+        mutedUserId,
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
+      update: {
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
     });
 
-    res.status(201).json(muted);
+    res.json({ message: 'User muted', mute });
   } catch (error) {
     console.error('Mute user error:', error);
     res.status(500).json({ error: 'Failed to mute user' });
   }
 });
 
-// DELETE /api/mute/user/:userId - Unmute a user
-router.delete('/user/:targetUserId', authenticateToken, async (req: Request, res: Response) => {
+// POST /api/mute/event - Mute/snooze an event
+router.post('/event', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { targetUserId } = req.params;
+    const { mutedEventId, duration } = req.body;
 
-    await prisma.mutedEntity.deleteMany({
-      where: { userId, mutedUserId: targetUserId }
+    if (!mutedEventId) {
+      return res.status(400).json({ error: 'mutedEventId is required' });
+    }
+
+    const snoozeUntil = getSnoozeExpiration(duration || 'FOREVER');
+
+    const mute = await prisma.mutedEntity.upsert({
+      where: {
+        userId_mutedEventId: { userId, mutedEventId }
+      },
+      create: {
+        userId,
+        mutedEventId,
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
+      update: {
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
     });
 
-    res.json({ success: true });
+    res.json({ message: 'Event muted', mute });
+  } catch (error) {
+    console.error('Mute event error:', error);
+    res.status(500).json({ error: 'Failed to mute event' });
+  }
+});
+
+// POST /api/mute/activity - Dismiss a specific activity from feed
+router.post('/activity', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { activityId } = req.body;
+
+    if (!activityId) {
+      return res.status(400).json({ error: 'activityId is required' });
+    }
+
+    const mute = await prisma.mutedEntity.create({
+      data: {
+        userId,
+        mutedActivityId: activityId,
+        snoozeDuration: 'FOREVER',
+        snoozeUntil: null,
+      },
+    });
+
+    res.json({ message: 'Activity dismissed', mute });
+  } catch (error) {
+    console.error('Dismiss activity error:', error);
+    res.status(500).json({ error: 'Failed to dismiss activity' });
+  }
+});
+
+// GET /api/mute/list - Get all muted entities for settings page
+router.get('/list', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    const mutes = await prisma.mutedEntity.findMany({
+      where: { userId },
+      include: {
+        mutedUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          }
+        },
+        mutedCampground: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        mutedEvent: {
+          select: {
+            id: true,
+            title: true,
+          }
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Filter out expired snoozes for display (but they still exist in DB)
+    const now = new Date();
+    const activeMutes = mutes.map(mute => ({
+      ...mute,
+      isExpired: mute.snoozeUntil && mute.snoozeUntil < now,
+    }));
+
+    res.json(activeMutes);
+  } catch (error) {
+    console.error('Get mutes error:', error);
+    res.status(500).json({ error: 'Failed to get muted list' });
+  }
+});
+
+// DELETE /api/mute/:id - Unmute/remove ignore
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+
+    const mute = await prisma.mutedEntity.findFirst({
+      where: { id, userId }
+    });
+
+    if (!mute) {
+      return res.status(404).json({ error: 'Mute not found' });
+    }
+
+    await prisma.mutedEntity.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Unmuted successfully' });
+  } catch (error) {
+    console.error('Unmute error:', error);
+    res.status(500).json({ error: 'Failed to unmute' });
+  }
+});
+
+// DELETE /api/mute/user/:mutedUserId - Unmute a specific user
+router.delete('/user/:mutedUserId', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { mutedUserId } = req.params;
+
+    await prisma.mutedEntity.deleteMany({
+      where: { userId, mutedUserId }
+    });
+
+    res.json({ message: 'User unmuted' });
   } catch (error) {
     console.error('Unmute user error:', error);
     res.status(500).json({ error: 'Failed to unmute user' });
   }
 });
 
-// POST /api/mute/campground/:campgroundId - Mute a campground
-router.post('/campground/:campgroundId', authenticateToken, async (req: Request, res: Response) => {
+// DELETE /api/mute/event/:mutedEventId - Unmute a specific event
+router.delete('/event/:mutedEventId', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { campgroundId } = req.params;
-
-    const existing = await prisma.mutedEntity.findFirst({
-      where: { userId, mutedCampgroundId: campgroundId }
-    });
-
-    if (existing) {
-      return res.status(400).json({ error: 'Campground already muted' });
-    }
-
-    const muted = await prisma.mutedEntity.create({
-      data: {
-        userId,
-        mutedCampgroundId: campgroundId
-      },
-      include: {
-        mutedCampground: {
-          select: { id: true, name: true, location: true }
-        }
-      }
-    });
-
-    res.status(201).json(muted);
-  } catch (error) {
-    console.error('Mute campground error:', error);
-    res.status(500).json({ error: 'Failed to mute campground' });
-  }
-});
-
-// DELETE /api/mute/campground/:campgroundId - Unmute a campground
-router.delete('/campground/:campgroundId', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { campgroundId } = req.params;
+    const { mutedEventId } = req.params;
 
     await prisma.mutedEntity.deleteMany({
-      where: { userId, mutedCampgroundId: campgroundId }
+      where: { userId, mutedEventId }
     });
 
-    res.json({ success: true });
+    res.json({ message: 'Event unmuted' });
   } catch (error) {
-    console.error('Unmute campground error:', error);
-    res.status(500).json({ error: 'Failed to unmute campground' });
-  }
-});
-
-// GET /api/mute/check/user/:userId - Check if user is muted
-router.get('/check/user/:targetUserId', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { targetUserId } = req.params;
-
-    const muted = await prisma.mutedEntity.findFirst({
-      where: { userId, mutedUserId: targetUserId }
-    });
-
-    res.json({ isMuted: !!muted });
-  } catch (error) {
-    console.error('Check muted user error:', error);
-    res.status(500).json({ error: 'Failed to check muted status' });
-  }
-});
-
-// GET /api/mute/check/campground/:campgroundId - Check if campground is muted
-router.get('/check/campground/:campgroundId', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { campgroundId } = req.params;
-
-    const muted = await prisma.mutedEntity.findFirst({
-      where: { userId, mutedCampgroundId: campgroundId }
-    });
-
-    res.json({ isMuted: !!muted });
-  } catch (error) {
-    console.error('Check muted campground error:', error);
-    res.status(500).json({ error: 'Failed to check muted status' });
+    console.error('Unmute event error:', error);
+    res.status(500).json({ error: 'Failed to unmute event' });
   }
 });
 
