@@ -396,3 +396,5 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to RSVP to meal' });
   }
 });
+
+export default router;
