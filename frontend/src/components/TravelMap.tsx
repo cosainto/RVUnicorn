@@ -1094,27 +1094,41 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex gap-2">
-                            {visit.eventId && (
-                              <Link
-                                to={`/trips/${visit.eventId}`}
-                                className="flex items-center gap-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg"
-                              >
-                                <Eye className="w-4 h-4" />
-                                View Details
-                              </Link>
-                            )}
-                            <button
-                              onClick={() => handleCopyTrip(visit)}
-                              disabled={copyingTrip === visit.id}
+                          visit.eventId ? (
+                            <Link
+                              to={`/trips/${visit.eventId}`}
                               className="flex items-center gap-1 text-sm bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg"
                             >
-                              <Copy className="w-4 h-4" />
-                              {copyingTrip === visit.id ? "Copying..." : "Copy Trip"}
-                            </button>
-                          </div>
+                              <Eye className="w-4 h-4" />
+                              View Trip Details
+                            </Link>
+                          ) : null
                         )}
                       </div>
+                      {/* Event title if available */}
+                      {visit.event && (
+                        <h4 className="font-medium text-gray-900 mb-2">{visit.event.title}</h4>
+                      )}
+                      {/* Attendees */}
+                      {visit.attendees && visit.attendees.length > 0 && (
+                        <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
+                          <Users className="w-4 h-4" />
+                          <span>{visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"}</span>
+                          <div className="flex -space-x-2">
+                            {visit.attendees.slice(0, 5).map((a) => (
+                              <img
+                                key={a.user.id}
+                                src={a.user.profilePicture || "/default-avatar.png"}
+                                alt={a.user.username}
+                                className="w-6 h-6 rounded-full border-2 border-white"
+                              />
+                            ))}
+                            {visit.attendees.length > 5 && (
+                              <span className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs">+{visit.attendees.length - 5}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {visit.campsite && (
                         <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="text-primary-600 hover:text-primary-700 flex items-center gap-2 mb-2">
                           <MapPin className="w-4 h-4" />
