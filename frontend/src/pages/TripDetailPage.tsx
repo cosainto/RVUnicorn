@@ -522,7 +522,7 @@ export default function EventDetailPage() {
                 <EventCommentWall
                   eventId={event.id}
                   currentUserId={user.id}
-                  isOrganizer={isOrganizer}
+                  isOrganizer={isOrganizer || (userAttendee?.status === 'going')}
                   attendees={event.attendees}
                 />
               )}
@@ -735,7 +735,7 @@ export default function EventDetailPage() {
 
           {activeTab === 'schedule' && <EventSchedule eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate} />}
           {activeTab === 'photos' && <EventAlbum eventId={event.id} />}
-          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer} />}
+          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} />}
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
           )}
