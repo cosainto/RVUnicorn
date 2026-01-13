@@ -80,6 +80,7 @@ export default function GroupDetailPage() {
     location: '',
     campgroundId: null as string | null,
     tags: [] as string[],
+    privacy: 'PUBLIC',
   });
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [eventTagInput, setEventTagInput] = useState('');
@@ -181,7 +182,7 @@ export default function GroupDetailPage() {
     try {
       setCreatingEvent(true);
       const { data: newEvent } = await api.post('/groups/' + slug + '/events', eventForm);
-      setEventForm({ title: '', description: '', startDate: '', endDate: '', location: '', campgroundId: null, tags: [] });
+      setEventForm({ title: '', description: '', startDate: '', endDate: '', location: '', campgroundId: null, tags: [], privacy: 'PUBLIC' });
       setEventTagInput('');
       setShowEventModal(false);
       navigate('/trips/' + newEvent.id);
@@ -787,10 +788,24 @@ export default function GroupDetailPage() {
                 )}
               </div>
             </div>
+            
+              {/* Privacy */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Privacy</label>
+                <select
+                  value={eventForm.privacy}
+                  onChange={(e) => setEventForm({ ...eventForm, privacy: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="PUBLIC">🌍 Public - Anyone can see this event</option>
+                  <option value="FRIENDS">👥 Friends - Only friends can see this event</option>
+                  <option value="PRIVATE">🔒 Private - Only you and invited attendees</option>
+                </select>
+              </div>
             <p className="text-sm text-gray-500 mt-4">All group members will be invited to this trip.</p>
             <div className="flex gap-3 mt-4">
               <button
-                onClick={() => { setShowEventModal(false); setEventForm({ title: '', description: '', startDate: '', endDate: '', location: '', campgroundId: null, tags: [] });
+                onClick={() => { setShowEventModal(false); setEventForm({ title: '', description: '', startDate: '', endDate: '', location: '', campgroundId: null, tags: [], privacy: 'PUBLIC' });
       setEventTagInput(''); }}
                 className="flex-1 btn btn-secondary"
               >
