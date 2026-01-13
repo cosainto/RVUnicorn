@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Bell, Check, Trash2, ExternalLink, RefreshCw, MoreHorizontal } from 'lucide-react';
+import ActivityMuteMenu from './ActivityMuteMenu';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -189,6 +190,14 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       <Check className="w-4 h-4" />
                     </button>
                   )}
+                  <ActivityMuteMenu
+                    activityId={activity.id}
+                    actorId={activity.actor?.id}
+                    actorName={activity.actor?.firstName}
+                    eventId={activity.entityType === "EVENT" ? activity.entityId : undefined}
+                    eventTitle={activity.entityType === "EVENT" ? activity.entityName : undefined}
+                    onDismiss={loadActivities}
+                  />
                   <button onClick={() => deleteActivity(activity.id)} className="p-1 text-gray-400 hover:text-red-500" title="Delete">
                     <Trash2 className="w-4 h-4" />
                   </button>
