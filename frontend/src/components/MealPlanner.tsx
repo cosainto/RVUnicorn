@@ -211,7 +211,7 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
     setSelectedRecipe('');
     setNotifyAttendees(false);
     setFormData({
-      menuItems: meal.menuItems.join(', '),
+      menuItems: meal.menuItems.length > 0 ? meal.menuItems.join(', ') : (meal.notes || ''),
       ingredients: meal.ingredients.join(', '),
       assignedTo: meal.cook?.id || '',
       notes: meal.notes || '',
