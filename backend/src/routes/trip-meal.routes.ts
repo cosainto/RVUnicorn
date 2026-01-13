@@ -21,6 +21,18 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     const meals = await prisma.eventMeal.findMany({
       where: { eventId },
       include: {
+        rsvps: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+              }
+            }
+          }
+        },
         cook: {
           select: {
             id: true,
@@ -61,6 +73,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       notes: meal.notes,
       recipe: meal.recipe,
       cook: meal.cook,
+      rsvps: meal.rsvps,
     }));
 
     res.json(transformedMeals);
@@ -113,6 +126,18 @@ router.post('/', authenticateToken, async (req, res) => {
         cookId: assignedTo || null,
       },
       include: {
+        rsvps: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+              }
+            }
+          }
+        },
         cook: {
           select: {
             id: true,
@@ -149,6 +174,7 @@ router.post('/', authenticateToken, async (req, res) => {
       notes: meal.notes,
       recipe: meal.recipe,
       cook: meal.cook,
+      rsvps: meal.rsvps,
     };
 
     res.json(transformedMeal);
@@ -201,6 +227,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
         cookId: assignedTo !== undefined ? (assignedTo || null) : undefined,
       },
       include: {
+        rsvps: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+              }
+            }
+          }
+        },
         cook: {
           select: {
             id: true,
@@ -288,3 +326,73 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 export default router;
+
+// POST /api/event-meals/:id/rsvp - RSVP to a meal
+router.post('/:id/rsvp', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id: mealId } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['attending', 'not_attending', 'maybe'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status required: attending, not_attending, or maybe' });
+    }
+
+    // Check meal exists
+    const meal = await prisma.eventMeal.findUnique({
+      where: { id: mealId }
+    });
+
+    if (!meal) {
+      return res.status(404).json({ error: 'Meal not found' });
+    }
+
+    // Check user is attending the event
+    const event = await prisma.event.findUnique({
+      where: { id: meal.eventId },
+      include: {
+        attendees: {
+          where: { userId, status: { in: ["GOING", "going"] } }
+        }
+      }
+    });
+
+    const isOrganizer = event?.organizerId === userId;
+    const isGoingAttendee = event?.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can RSVP to meals' });
+    }
+
+    // Upsert the RSVP
+    const rsvp = await prisma.mealRSVP.upsert({
+      where: {
+        mealId_userId: {
+          mealId,
+          userId
+        }
+      },
+      update: { status },
+      create: {
+        mealId,
+        userId,
+        status
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true
+          }
+        }
+      }
+    });
+
+    res.json(rsvp);
+  } catch (error) {
+    console.error('Meal RSVP error:', error);
+    res.status(500).json({ error: 'Failed to RSVP to meal' });
+  }
+});

@@ -197,6 +197,7 @@ model User {
 
   badges            UserBadge[]
   assignedMeals     EventMeal[]   @relation("MealCook")
+  mealRSVPs         MealRSVP[]    @relation("MealRSVPs")
 
   @@index([email])
   @@index([username])
@@ -458,9 +459,26 @@ model EventMeal {
   event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   cook   User?   @relation("MealCook", fields: [cookId], references: [id], onDelete: SetNull)
+  rsvps  MealRSVP[]
 
   @@index([eventId])
   @@index([recipeId])
+}
+
+model MealRSVP {
+  id        String   @id @default(cuid())
+  mealId    String
+  userId    String
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meal EventMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  user User      @relation("MealRSVPs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mealId, userId])
+  @@index([mealId])
+  @@index([userId])
 }
 
 model GearItem {
