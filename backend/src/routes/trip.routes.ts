@@ -753,14 +753,22 @@ router.post('/:id/meals', authenticateToken, async (req, res) => {
 
     const event = await prisma.event.findUnique({
       where: { id },
+      include: {
+        attendees: {
+          where: { userId, status: "GOING" }
+        }
+      }
     });
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    if (event.organizerId !== userId) {
-      return res.status(403).json({ error: 'Only the event organizer can add meals' });
+    const isOrganizer = event.organizerId === userId;
+    const isGoingAttendee = event.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can add meals' });
     }
 
     const meal = await prisma.eventMeal.create({
@@ -797,14 +805,22 @@ router.delete('/:id/meals/:mealId', authenticateToken, async (req, res) => {
 
     const event = await prisma.event.findUnique({
       where: { id },
+      include: {
+        attendees: {
+          where: { userId, status: "GOING" }
+        }
+      }
     });
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    if (event.organizerId !== userId) {
-      return res.status(403).json({ error: 'Only the event organizer can remove meals' });
+    const isOrganizer = event.organizerId === userId;
+    const isGoingAttendee = event.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can remove meals' });
     }
 
     await prisma.eventMeal.delete({
