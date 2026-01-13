@@ -251,11 +251,11 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
     if (activeLayers.includes('gasPrices') && gasPrices.length === 0) {
       loadGasPrices();
     }
-    if ((activeLayers.includes('gasStations') || activeLayers.includes('restStops')) && 
+    if ((activeLayers.includes('gasStations') || activeLayers.includes('restStops')) && selectedInterstate && 
         gasStations.length === 0 && restStops.length === 0) {
       loadRoadtripResources();
     }
-  }, [activeLayers]);
+  }, [activeLayers, selectedInterstate]);
 
   useEffect(() => {
     if (selectedInterstate) {
