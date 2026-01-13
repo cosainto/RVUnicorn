@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, Plus, Search, Edit } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import CampgroundSelector from '../components/CampgroundSelector';
 
 interface Event {
+  organizerId?: string;
+  isStateVisit?: boolean;
   id: string;
   title: string;
   description?: string;
@@ -33,6 +36,7 @@ interface Friend {
 }
 
 export default function EventsPage() {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +120,18 @@ export default function EventsPage() {
     }
 
     setFilteredEvents(filtered);
+  };
+
+  const handleDeleteEvent = async (eventId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this event?")) return;
+    try {
+      await api.delete(`/events/${eventId}`);
+      setEvents(prev => prev.filter(ev => ev.id !== eventId));
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to delete event");
+    }
   };
 
   const handleCreateEvent = async () => {
@@ -316,15 +332,26 @@ export default function EventsPage() {
                 </div>
               </Link>
 
-              {/* Edit Button - Top Right */}
-              <Link
-                to={`/trips/${event.id}/edit`}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 bg-white hover:bg-gray-100 p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                title="Edit Event"
-              >
-                <Edit className="w-4 h-4 text-gray-700" />
-              </Link>
+              {/* Action Buttons - Top Right (only for organizer) */}
+              {user && event.organizerId === user.id && !event.isStateVisit && (
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <Link
+                    to={`/trips/${event.id}/edit`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white hover:bg-gray-100 p-2 rounded-lg shadow-lg"
+                    title="Edit Event"
+                  >
+                    <Edit className="w-4 h-4 text-gray-700" />
+                  </Link>
+                  <button
+                    onClick={(e) => handleDeleteEvent(event.id, e)}
+                    className="bg-white hover:bg-red-100 p-2 rounded-lg shadow-lg"
+                    title="Delete Event"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
