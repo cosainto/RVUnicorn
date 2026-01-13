@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import CampgroundSelector from '../components/CampgroundSelector';
 
