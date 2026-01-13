@@ -129,6 +129,7 @@ export default function SettingsPage() {
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </Link>
+          <Link 
             to="/settings/activity" 
             className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
           >
