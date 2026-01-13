@@ -1094,14 +1094,25 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleCopyTrip(visit)}
-                            disabled={copyingTrip === visit.id}
-                            className="flex items-center gap-1 text-sm bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg"
-                          >
-                            <Copy className="w-4 h-4" />
-                            {copyingTrip === visit.id ? 'Copying...' : 'Copy Trip'}
-                          </button>
+                          <div className="flex gap-2">
+                            {visit.eventId && (
+                              <Link
+                                to={`/trips/${visit.eventId}`}
+                                className="flex items-center gap-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View Details
+                              </Link>
+                            )}
+                            <button
+                              onClick={() => handleCopyTrip(visit)}
+                              disabled={copyingTrip === visit.id}
+                              className="flex items-center gap-1 text-sm bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg"
+                            >
+                              <Copy className="w-4 h-4" />
+                              {copyingTrip === visit.id ? "Copying..." : "Copy Trip"}
+                            </button>
+                          </div>
                         )}
                       </div>
                       {visit.campsite && (
@@ -1111,6 +1122,28 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
                         </Link>
                       )}
                       {visit.notes && <p className="text-gray-700 text-sm">{visit.notes}</p>}
+                      {/* Show albums if available */}
+                      {visit.albums && visit.albums.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                            <Image className="w-4 h-4" /> Albums ({visit.albums.length})
+                          </p>
+                          <div className="flex gap-2 flex-wrap">
+                            {visit.albums.map((album) => (
+                              <Link
+                                key={album.id}
+                                to={`/albums/${album.id}`}
+                                className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1"
+                              >
+                                {album.photos && album.photos[0] && (
+                                  <img src={album.photos[0].imageUrl} className="w-6 h-6 rounded object-cover" />
+                                )}
+                                {album.title} ({album._count?.photos || 0})
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
