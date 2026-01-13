@@ -65,19 +65,32 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
 // POST /api/event-meals - Add meal to event
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    const userId = (req as any).userId;
     const { eventId, date, mealType, menuItems, recipeId, notes } = req.body;
 
     if (!eventId || !date || !mealType) {
       return res.status(400).json({ error: 'Event, date, and meal type are required' });
     }
 
-    // Verify event exists
+    // Verify event exists and check permissions
     const event = await prisma.event.findUnique({
-      where: { id: eventId }
+      where: { id: eventId },
+      include: {
+        attendees: {
+          where: { userId, status: "GOING" }
+        }
+      }
     });
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const isOrganizer = event.organizerId === userId;
+    const isGoingAttendee = event.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can add meals' });
     }
 
     // If menuItems provided but no recipeId, we'll just store the notes
@@ -131,15 +144,34 @@ router.post('/', authenticateToken, async (req, res) => {
 // PUT /api/event-meals/:id - Update meal
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    const userId = (req as any).userId;
     const { id } = req.params;
     const { date, mealType, menuItems, recipeId, notes } = req.body;
 
     const meal = await prisma.eventMeal.findUnique({
-      where: { id }
+      where: { id },
+      include: { event: true }
     });
 
     if (!meal) {
       return res.status(404).json({ error: 'Meal not found' });
+    }
+
+    // Check permissions
+    const event = await prisma.event.findUnique({
+      where: { id: meal.eventId },
+      include: {
+        attendees: {
+          where: { userId, status: "GOING" }
+        }
+      }
+    });
+
+    const isOrganizer = event?.organizerId === userId;
+    const isGoingAttendee = event?.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can update meals' });
     }
 
     const updatedMeal = await prisma.eventMeal.update({
@@ -191,6 +223,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // DELETE /api/event-meals/:id - Delete meal
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
+    const userId = (req as any).userId;
     const { id } = req.params;
 
     const meal = await prisma.eventMeal.findUnique({
@@ -199,6 +232,23 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     if (!meal) {
       return res.status(404).json({ error: 'Meal not found' });
+    }
+
+    // Check permissions
+    const event = await prisma.event.findUnique({
+      where: { id: meal.eventId },
+      include: {
+        attendees: {
+          where: { userId, status: "GOING" }
+        }
+      }
+    });
+
+    const isOrganizer = event?.organizerId === userId;
+    const isGoingAttendee = event?.attendees && event.attendees.length > 0;
+
+    if (!isOrganizer && !isGoingAttendee) {
+      return res.status(403).json({ error: 'Only the organizer or attending members can delete meals' });
     }
 
     await prisma.eventMeal.delete({
