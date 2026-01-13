@@ -251,17 +251,13 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
     if (activeLayers.includes('gasPrices') && gasPrices.length === 0) {
       loadGasPrices();
     }
-    if ((activeLayers.includes('gasStations') || activeLayers.includes('restStops')) && selectedInterstate && 
-        gasStations.length === 0 && restStops.length === 0) {
-      loadRoadtripResources();
-    }
   }, [activeLayers, selectedInterstate]);
 
   useEffect(() => {
-    if (selectedInterstate) {
+    if (selectedInterstate && (activeLayers.includes('gasStations') || activeLayers.includes('restStops'))) {
       loadRoadtripResources();
     }
-  }, [selectedInterstate]);
+  }, [selectedInterstate, activeLayers]);
 
   const loadTravelMap = async () => {
     try {
@@ -496,7 +492,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
 
   // Get highways to display
   const getDisplayHighways = () => {
-    if (selectedInterstate) {
+    if (selectedInterstate && (activeLayers.includes('gasStations') || activeLayers.includes('restStops'))) {
       return interstateRoutes.filter(r => r.id === selectedInterstate);
     }
     return interstateRoutes;
