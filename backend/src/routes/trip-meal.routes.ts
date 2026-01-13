@@ -21,6 +21,13 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     const meals = await prisma.eventMeal.findMany({
       where: { eventId },
       include: {
+        cook: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        },
         recipe: {
           select: {
             id: true,
@@ -53,6 +60,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       ingredients: meal.recipe?.ingredients || [],
       notes: meal.notes,
       recipe: meal.recipe,
+      cook: meal.cook,
     }));
 
     res.json(transformedMeals);
@@ -66,7 +74,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { eventId, date, mealType, menuItems, recipeId, notes } = req.body;
+    const { eventId, date, mealType, menuItems, recipeId, notes, assignedTo } = req.body;
 
     if (!eventId || !date || !mealType) {
       return res.status(400).json({ error: 'Event, date, and meal type are required' });
@@ -102,8 +110,16 @@ router.post('/', authenticateToken, async (req, res) => {
         mealType,
         recipeId: recipeId || null,
         notes: menuItems ? (Array.isArray(menuItems) ? menuItems.join(', ') : menuItems) : notes,
+        cookId: assignedTo || null,
       },
       include: {
+        cook: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        },
         recipe: {
           select: {
             id: true,
@@ -132,6 +148,7 @@ router.post('/', authenticateToken, async (req, res) => {
       ingredients: meal.recipe?.ingredients || [],
       notes: meal.notes,
       recipe: meal.recipe,
+      cook: meal.cook,
     };
 
     res.json(transformedMeal);
@@ -146,7 +163,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { date, mealType, menuItems, recipeId, notes } = req.body;
+    const { date, mealType, menuItems, recipeId, notes, assignedTo } = req.body;
 
     const meal = await prisma.eventMeal.findUnique({
       where: { id },
@@ -181,8 +198,16 @@ router.put('/:id', authenticateToken, async (req, res) => {
         mealType: mealType || undefined,
         recipeId: recipeId !== undefined ? recipeId : undefined,
         notes: menuItems ? (Array.isArray(menuItems) ? menuItems.join(', ') : menuItems) : (notes !== undefined ? notes : undefined),
+        cookId: assignedTo !== undefined ? (assignedTo || null) : undefined,
       },
       include: {
+        cook: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        },
         recipe: {
           select: {
             id: true,

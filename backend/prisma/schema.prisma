@@ -196,6 +196,7 @@ model User {
 // Badges for users
 
   badges            UserBadge[]
+  assignedMeals     EventMeal[]   @relation("MealCook")
 
   @@index([email])
   @@index([username])
@@ -450,11 +451,13 @@ model EventMeal {
   mealType    String
   scheduledAt DateTime
   notes       String?
+  cookId      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  cook   User?   @relation("MealCook", fields: [cookId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
   @@index([recipeId])
@@ -1460,6 +1463,7 @@ model RestStop {
   
   is24Hours   Boolean @default(true)
   notes       String?
+  cookId      String?
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1788,6 +1792,7 @@ model InventoryItem {
   category    String   @default("General")
   quantity    Int      @default(1)
   notes       String?
+  cookId      String?
   imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
