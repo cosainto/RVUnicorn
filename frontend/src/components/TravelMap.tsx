@@ -687,20 +687,20 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
                     <span className="text-gray-600">Cheapest {fuelType}:</span>
                     <p className="font-bold text-green-700">
                       {fuelType === 'diesel' ? priceStats.cheapest.diesel?.stateName : priceStats.cheapest.regular?.stateName} - $
-                      {fuelType === 'diesel' ? priceStats.cheapest.diesel?.dieselPrice.toFixed(2) : priceStats.cheapest.regular?.regularPrice.toFixed(2)}
+                      {fuelType === 'diesel' ? priceStats.cheapest.diesel?.dieselPrice?.toFixed(2) || "N/A" : priceStats.cheapest.regular?.regularPrice?.toFixed(2) || "N/A"}
                     </p>
                   </div>
                   <div className="bg-red-50 p-2 rounded">
                     <span className="text-gray-600">Most Expensive:</span>
                     <p className="font-bold text-red-700">
                       {fuelType === 'diesel' ? priceStats.mostExpensive.diesel?.stateName : priceStats.mostExpensive.regular?.stateName} - $
-                      {fuelType === 'diesel' ? priceStats.mostExpensive.diesel?.dieselPrice.toFixed(2) : priceStats.mostExpensive.regular?.regularPrice.toFixed(2)}
+                      {fuelType === 'diesel' ? priceStats.mostExpensive.diesel?.dieselPrice?.toFixed(2) || "N/A" : priceStats.mostExpensive.regular?.regularPrice?.toFixed(2) || "N/A"}
                     </p>
                   </div>
                   <div className="bg-blue-50 p-2 rounded col-span-2">
                     <span className="text-gray-600">National Average:</span>
                     <p className="font-bold text-blue-700">
-                      ${fuelType === 'diesel' ? priceStats.nationalAverage.diesel.toFixed(2) : priceStats.nationalAverage.regular.toFixed(2)}
+                      ${fuelType === 'diesel' ? priceStats.nationalAverage.diesel?.toFixed(2) || "N/A" : priceStats.nationalAverage.regular?.toFixed(2) || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -791,8 +791,8 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
             <p className="font-semibold">{STATE_NAMES[hoveredState]}</p>
             {activeLayers.includes('gasPrices') && gasPrices.find(p => p.stateCode === hoveredState) && (
               <div className="text-sm text-gray-600 mt-1">
-                <p>Regular: ${gasPrices.find(p => p.stateCode === hoveredState)?.regularPrice.toFixed(2)}</p>
-                <p>Diesel: ${gasPrices.find(p => p.stateCode === hoveredState)?.dieselPrice.toFixed(2)}</p>
+                <p>Regular: ${gasPrices.find(p => p.stateCode === hoveredState)?.regularPrice?.toFixed(2) || "N/A"}</p>
+                <p>Diesel: ${gasPrices.find(p => p.stateCode === hoveredState)?.dieselPrice?.toFixed(2) || "N/A"}</p>
               </div>
             )}
             {activeLayers.includes('visits') && (
@@ -1034,8 +1034,8 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
               </div>
               {activeLayers.includes('gasPrices') && gasPrices.find(p => p.stateCode === selectedState) && (
                 <div className="mt-2 flex gap-4 text-sm">
-                  <span>Regular: ${gasPrices.find(p => p.stateCode === selectedState)?.regularPrice.toFixed(2)}</span>
-                  <span>Diesel: ${gasPrices.find(p => p.stateCode === selectedState)?.dieselPrice.toFixed(2)}</span>
+                  <span>Regular: ${gasPrices.find(p => p.stateCode === selectedState)?.regularPrice?.toFixed(2) || "N/A"}</span>
+                  <span>Diesel: ${gasPrices.find(p => p.stateCode === selectedState)?.dieselPrice?.toFixed(2) || "N/A"}</span>
                 </div>
               )}
             </div>

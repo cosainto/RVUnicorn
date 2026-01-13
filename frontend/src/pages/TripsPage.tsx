@@ -38,6 +38,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [friends, setFriends] = useState<Friend[]>([]);
   
   // Helper to get date string in YYYY-MM-DD format
@@ -64,7 +65,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     filterEvents();
-  }, [events, searchQuery]);
+  }, [events, searchQuery, activeTab]);
 
   const loadEvents = async () => {
     try {
@@ -88,6 +89,8 @@ export default function EventsPage() {
   };
 
   const filterEvents = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     let filtered = events;
 
     if (searchQuery) {
@@ -97,6 +100,19 @@ export default function EventsPage() {
         e.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         e.campground?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    }
+
+    // Filter by tab (upcoming vs past)
+    if (activeTab === "upcoming") {
+      filtered = filtered.filter(e => {
+        const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
+        return endDate >= today;
+      });
+    } else {
+      filtered = filtered.filter(e => {
+        const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
+        return endDate < today;
+      });
     }
 
     setFilteredEvents(filtered);
@@ -191,6 +207,22 @@ export default function EventsPage() {
 
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setActiveTab("upcoming")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "upcoming" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          🗓️ Upcoming
+        </button>
+        <button
+          onClick={() => setActiveTab("past")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "past" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          ✅ Past Trips
+        </button>
+      </div>
+
       {/* Search */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="relative">
@@ -213,7 +245,7 @@ export default function EventsPage() {
               key={event.id}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition group relative"
             >
-              <Link to={`/trips/${event.id}`}>
+              <Link to={event.isStateVisit ? `/travel-map` : `/trips/${event.id}`}>
                 {/* Event Image */}
                 <div className="h-48 bg-gradient-to-br from-green-100 to-blue-100 relative overflow-hidden">
                   {event.imageUrl ? (
