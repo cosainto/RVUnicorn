@@ -1,27 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, Trash2, ExternalLink, RefreshCw, MoreHorizontal } from 'lucide-react';
-import ActivityMuteMenu from './ActivityMuteMenu';
+import { Bell, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import ActivityMuteMenu from './ActivityMuteMenu';
 
-interface Activity {
+interface FeedItem {
   id: string;
   type: string;
-  entityType: string;
-  entityId: string;
-  entityName: string;
-  message: string;
-  icon: string;
-  link: string;
-  isRead: boolean;
-  createdAt: string;
   actor: {
     id: string;
     firstName: string;
     lastName: string;
     username: string;
-    profileImage?: string;
+    profilePicture?: string;
   };
+  content?: string;
+  title?: string;
+  targetName?: string;
+  targetLink?: string;
+  targetUser?: { id: string; firstName: string; lastName: string; username: string };
+  secondaryUser?: { id: string; firstName: string; lastName: string; username: string; profileLink: string };
+  createdAt: string;
+  activityType: string;
+  activityIcon: string;
+  activityLabel: string;
+  activityColor?: string;
+  campground?: { id: string; name: string; state?: string };
+  imageUrl?: string;
+  isFriendActivity?: boolean;
+  hasMutualFriendInteraction?: boolean;
+  isPackingActivity?: boolean;
+  isFriendRequest?: boolean;
+  canRespond?: boolean;
+  isRead?: boolean;
+  metadata?: any;
 }
 
 interface Props {
@@ -30,18 +42,16 @@ interface Props {
 }
 
 export default function BasecampActivityFeed({ maxItems = 10, showHeader = true }: Props) {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadActivities = useCallback(async () => {
+  const loadFeed = useCallback(async () => {
     try {
-      const { data } = await api.get('/basecamp-activity', { params: { limit: maxItems } });
-      setActivities(data.activities || []);
-      setUnreadCount(data.unreadCount || 0);
+      const { data } = await api.get('/basecamp/feed', { params: { limit: maxItems } });
+      setFeedItems(data.feedItems || []);
     } catch (error) {
-      console.error('Failed to load activities:', error);
+      console.error('Failed to load feed:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -49,50 +59,33 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
   }, [maxItems]);
 
   useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
-
-  const markAsRead = async (activityId: string) => {
-    try {
-      await api.put(`/basecamp-activity/${activityId}/read`);
-      setActivities(prev => prev.map(a => (a.id === activityId ? { ...a, isRead: true } : a)));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to mark as read:', error);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await api.put('/basecamp-activity/read-all');
-      setActivities(prev => prev.map(a => ({ ...a, isRead: true })));
-      setUnreadCount(0);
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
-    }
-  };
-
-  const deleteActivity = async (activityId: string) => {
-    try {
-      await api.delete(`/basecamp-activity/${activityId}`);
-      setActivities(prev => prev.filter(a => a.id !== activityId));
-    } catch (error) {
-      console.error('Failed to delete:', error);
-    }
-  };
+    loadFeed();
+  }, [loadFeed]);
 
   const refresh = () => {
     setRefreshing(true);
-    loadActivities();
+    loadFeed();
   };
 
-  const handleVolunteer = async (activityId: string, packItemId: string, willBring: boolean) => {
+  const handleVolunteer = async (packItemId: string, willBring: boolean) => {
     try {
       await api.put(`/trip-packing/${packItemId}/volunteer`, { willBring });
-      await markAsRead(activityId);
-      await loadActivities();
+      await loadFeed();
     } catch (error) {
       console.error('Failed to volunteer:', error);
+    }
+  };
+
+  const handleFriendRequest = async (friendshipId: string, accept: boolean) => {
+    try {
+      if (accept) {
+        await api.put(`/friends/accept/${friendshipId}`);
+      } else {
+        await api.delete(`/friends/${friendshipId}`);
+      }
+      await loadFeed();
+    } catch (error) {
+      console.error('Failed to handle friend request:', error);
     }
   };
 
@@ -130,79 +123,156 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
             <Bell className="w-5 h-5 text-blue-600" />
-            Activity
-            {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
-            )}
+            Friend Activity
           </h3>
-          <div className="flex items-center gap-2">
-            <button onClick={refresh} disabled={refreshing} className="p-1.5 text-gray-400 hover:text-gray-600" title="Refresh">
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-            {unreadCount > 0 && (
-              <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-700">Mark all read</button>
-            )}
-          </div>
+          <button onClick={refresh} disabled={refreshing} className="p-1.5 text-gray-400 hover:text-gray-600" title="Refresh">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       )}
 
-      {activities.length === 0 ? (
+      {feedItems.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">No recent activity</p>
+          <p className="text-sm">No recent activity from friends</p>
+          <p className="text-xs mt-1">When your friends create events, share recipes, or upload photos, you'll see it here!</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {activities.map(activity => (
-            <div key={activity.id} className={`p-3 rounded-lg border transition ${activity.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-200'}`}>
-              <div className="flex items-start gap-3">
-                <span className="text-xl flex-shrink-0">{activity.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">{activity.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-500">{formatTime(activity.createdAt)}</span>
-                    {activity.link && (
-                      <Link to={activity.link} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                        View <ExternalLink className="w-3 h-3" />
+          {feedItems.map(item => (
+            <div key={item.id} className={`p-3 rounded-lg border transition ${!item.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+              {/* Friend Request */}
+              {item.isFriendRequest && (
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">👋</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">
+                      <Link to={`/profile/${item.actor?.username}`} className="font-semibold hover:underline">
+                        {item.actor?.firstName} {item.actor?.lastName}
+                      </Link>
+                      {' '}wants to be your camping buddy!
+                    </p>
+                    <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
+                  </div>
+                  {item.canRespond && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleFriendRequest(item.metadata?.friendshipId, true)}
+                        className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleFriendRequest(item.metadata?.friendshipId, false)}
+                        className="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Packing Activity */}
+              {item.isPackingActivity && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{item.activityIcon}</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">{item.content || item.activityLabel}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
+                      {item.targetLink && (
+                        <Link to={item.targetLink} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                          View <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  {item.canRespond && (item.type === 'PACK_ITEM_NEEDS_VOLUNTEER' || item.type === 'PACK_ITEM_ASSIGNMENT_REQUEST') && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleVolunteer(item.metadata?.packItemId, true)}
+                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        I'll bring it
+                      </button>
+                      <button
+                        onClick={() => handleVolunteer(item.metadata?.packItemId, false)}
+                        className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                      >
+                        Can't
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Regular Activity */}
+              {!item.isFriendRequest && !item.isPackingActivity && (
+                <div className="flex items-start gap-3">
+                  <Link to={`/profile/${item.actor?.username}`} className="flex-shrink-0">
+                    {item.actor?.profilePicture ? (
+                      <img src={item.actor.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-semibold text-sm">
+                        {item.actor?.firstName?.[0]}{item.actor?.lastName?.[0]}
+                      </div>
+                    )}
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <Link to={`/profile/${item.actor?.username}`} className="font-semibold hover:underline">
+                        {item.actor?.firstName} {item.actor?.lastName}
+                      </Link>
+                      {' '}
+                      <span className={item.activityColor || ''}>{item.activityIcon} {item.activityLabel}</span>
+                      {' '}
+                      {item.hasMutualFriendInteraction && item.secondaryUser ? (
+                        <>
+                          <Link to={item.secondaryUser.profileLink} className="font-semibold hover:underline">
+                            {item.secondaryUser.firstName}'s
+                          </Link>
+                          {' '}wall
+                        </>
+                      ) : item.targetLink ? (
+                        <Link to={item.targetLink} className="font-medium text-blue-600 hover:underline">
+                          {item.targetName}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{item.targetName}</span>
+                      )}
+                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
+                      <ActivityMuteMenu
+                        activityId={item.id}
+                        actorId={item.actor?.id}
+                        actorName={item.actor?.firstName}
+                        eventId={item.type.includes('EVENT') ? item.targetLink?.split('/').pop() : undefined}
+                        eventTitle={item.type.includes('EVENT') ? item.targetName : undefined}
+                        onDismiss={loadFeed}
+                      />
+                    </div>
+                    {item.imageUrl && (
+                      <div className="mt-2">
+                        {item.targetLink ? (
+                          <Link to={item.targetLink}>
+                            <img src={item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200 hover:opacity-90" />
+                          </Link>
+                        ) : (
+                          <img src={item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200" />
+                        )}
+                      </div>
+                    )}
+                    {item.campground && (
+                      <Link to={`/campgrounds/${item.campground.id}`} className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm">
+                        🏕️ {item.campground.name}
+                        {item.campground.state && <span className="text-gray-500 text-xs">{item.campground.state}</span>}
                       </Link>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {(activity.type === 'PACK_ITEM_NEEDS_VOLUNTEER' || activity.type === 'PACK_ITEM_ASSIGNMENT_REQUEST') && !activity.isRead && (
-                    <div className="flex gap-1 mr-2">
-                      <button
-                        onClick={() => handleVolunteer(activity.id, (activity.metadata as any)?.packItemId, true)}
-                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        Yes, I'll bring it
-                      </button>
-                      <button
-                        onClick={() => handleVolunteer(activity.id, (activity.metadata as any)?.packItemId, false)}
-                        className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                      >
-                        No
-                      </button>
-                    </div>
-                  )}
-                  {!activity.isRead && activity.type !== 'PACK_ITEM_NEEDS_VOLUNTEER' && (
-                    <button onClick={() => markAsRead(activity.id)} className="p-1 text-gray-400 hover:text-green-600" title="Mark as read">
-                      <Check className="w-4 h-4" />
-                    </button>
-                  )}
-                  <ActivityMuteMenu
-                    activityId={activity.id}
-                    actorId={activity.actor?.id}
-                    actorName={activity.actor?.firstName}
-                    eventId={activity.entityType === "EVENT" ? activity.entityId : undefined}
-                    eventTitle={activity.entityType === "EVENT" ? activity.entityName : undefined}
-                    onDismiss={loadActivities}
-                  />
-                  <button onClick={() => deleteActivity(activity.id)} className="p-1 text-gray-400 hover:text-red-500" title="Delete">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
