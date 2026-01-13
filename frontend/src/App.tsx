@@ -42,6 +42,7 @@ import SettingsPage from "./pages/SettingsPage";
 import DrivePlanner from './components/DrivePlanner';
 import PrivacySettingsPage from './pages/PrivacySettingsPage';
 import BlockedUsersPage from './pages/BlockedUsersPage';
+import MutedSettingsPage from './pages/MutedSettingsPage';
 import AccountActivityLogPage from './pages/AccountActivityLogPage';
 import AccountDeletionPage from './pages/AccountDeletionPage';
 import BadgesPage from './pages/BadgesPage';
@@ -122,6 +123,7 @@ function AppContent() {
         <Route path="/threads/:id" element={<ThreadDetailPage />} />
         <Route path="/settings/privacy" element={<PrivacySettingsPage />} />
         <Route path="/settings/blocked" element={<BlockedUsersPage />} />
+        <Route path="/settings/muted" element={<MutedSettingsPage />} />
         <Route path="/settings/activity" element={<AccountActivityLogPage />} />
         <Route path="/settings/delete-account" element={<AccountDeletionPage />} />
         <Route path="/badges" element={<BadgesPage />} />
