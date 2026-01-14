@@ -348,6 +348,15 @@ export default function EventDetailPage() {
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
 
   const isOrganizer = user?.id === event.organizerId;
+
+  const handlePrivacyChange = async (newPrivacy: string) => {
+    try {
+      await api.put(`/events/${id}`, { privacy: newPrivacy });
+      setEvent({ ...event, privacy: newPrivacy });
+    } catch (error) {
+      console.error('Failed to update privacy:', error);
+    }
+  };
   const daysUntil = getDaysUntilEvent();
 
   const tabs = [
@@ -425,6 +434,17 @@ export default function EventDetailPage() {
               {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />Invite</button>}
               {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
               {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
+              {isOrganizer && (
+                <select
+                  value={(event as any).privacy || 'PUBLIC'}
+                  onChange={(e) => handlePrivacyChange(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="PUBLIC">🌍 Public</option>
+                  <option value="FRIENDS">👥 Friends Only</option>
+                  <option value="PRIVATE">🔒 Private</option>
+                </select>
+              )}
             </div>
           </div>
 

@@ -328,7 +328,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Log activity for friend feed
+    // Log activity for friend feed (only for non-private events)
     res.json(event);
   } catch (error) {
     console.error('Get event error:', error);
@@ -379,8 +379,10 @@ router.post('/', authenticateToken, async (req, res) => {
       await createStateVisitForUser(userId, event, event.campground);
     }
 
-    // Log activity for friend feed
-    await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
+    // Log activity for friend feed (only for non-private events)
+    if (event.privacy !== 'PRIVATE') {
+      await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
+    }
 
     res.json(event);
   } catch (error) {
@@ -442,6 +444,31 @@ router.put('/:id', authenticateToken, async (req, res) => {
         attendees: true,
       },
     });
+
+    // Handle privacy changes for activity feed
+    if (privacy === 'PRIVATE') {
+      // Delete activity records so it doesn't show in feeds
+      await prisma.activity.deleteMany({
+        where: { eventId: id }
+      });
+    } else if (privacy === 'PUBLIC' || privacy === 'FRIENDS') {
+      // If changing to PUBLIC or FRIENDS, create activity if it doesn't exist
+      const existingActivity = await prisma.activity.findFirst({
+        where: { eventId: id, type: 'EVENT_CREATED' }
+      });
+      if (!existingActivity) {
+        await prisma.activity.create({
+          data: {
+            userId,
+            type: 'EVENT_CREATED',
+            eventId: id,
+            title: updatedEvent.title,
+            isPublic: true,
+            campgroundId: updatedEvent.campgroundId,
+          }
+        });
+      }
+    }
 
     // Update or create StateVisit for organizer and all "going" attendees
     if (updatedEvent.campground) {
