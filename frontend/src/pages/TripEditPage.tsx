@@ -217,6 +217,20 @@ export default function EventEditPage() {
           label="Cover Image"
         />
 
+        {/* Privacy */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Privacy</label>
+          <select
+            value={formData.privacy}
+            onChange={(e) => setFormData({ ...formData, privacy: e.target.value })}
+            className="input w-full"
+          >
+            <option value="PUBLIC">🌍 Public - Anyone can see this event</option>
+            <option value="FRIENDS">👥 Friends - Only friends can see this event</option>
+            <option value="PRIVATE">🔒 Private - Only you and invited attendees</option>
+          </select>
+        </div>
+
         {/* Notify Attendees */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <label className="flex items-center gap-3 cursor-pointer">
