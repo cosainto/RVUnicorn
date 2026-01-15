@@ -19,6 +19,7 @@ import jobRoutes from './routes/job.routes';
 import communityRoutes from './routes/community.routes';
 import checkinRoutes from './routes/checkin.routes';
 import eventAccessRoutes from './event-access.routes';
+import tripCommentsRoutes from './trip-comments.routes';
 
 dotenv.config();
 
@@ -45,6 +46,8 @@ app.use('/api/map', mapRoutes);
 app.use('/api/rv', rvRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/events', tripRoutes);
+app.use('/api/events', tripCommentsRoutes);
+app.use('/api/events', eventAccessRoutes);
 app.use('/api/campgrounds', campgroundRoutes);
 app.use('/api/campsite', campsiteRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
