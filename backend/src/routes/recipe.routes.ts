@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { logRecipeCreated, logRecipeLiked } from '../services/activity.service';
+import { logRecipeCreated, logRecipeLiked, logRecipeCommented } from '../services/activity.service';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
@@ -524,6 +524,12 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
+    // Get the commenter's info for notifications
+    const commenter = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, username: true }
+    });
+
     const comment = await prisma.recipeComment.create({
       data: {
         recipeId,
@@ -555,6 +561,60 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         }
       });
     }
+
+    // === NOTIFY ALL PREVIOUS COMMENTERS (except muted users) ===
+    const previousCommenters = await prisma.recipeComment.findMany({
+      where: {
+        recipeId,
+        userId: { not: userId }
+      },
+      select: { userId: true },
+      distinct: ['userId']
+    });
+
+    // Get users who have muted this recipe's comment notifications
+    const mutedUsers = await prisma.recipeCommentMute.findMany({
+      where: { recipeId },
+      select: { userId: true }
+    });
+    const mutedUserIds = new Set(mutedUsers.map(m => m.userId));
+
+    // Filter: exclude recipe owner, muted users, and current user
+    const usersToNotify = previousCommenters
+      .map(c => c.userId)
+      .filter(id => id !== recipe.userId && id !== userId && !mutedUserIds.has(id));
+
+    // Create Basecamp activity notifications for previous commenters
+    const commenterName = commenter?.firstName && commenter?.lastName 
+      ? `${commenter.firstName} ${commenter.lastName}`
+      : commenter?.username || 'Someone';
+
+    for (const notifyUserId of usersToNotify) {
+      await prisma.basecampActivity.create({
+        data: {
+          userId: notifyUserId,
+          actorId: userId,
+          type: 'RECIPE_COMMENT_THREAD',
+          entityType: 'RECIPE',
+          entityId: recipeId,
+          entityName: recipe.title,
+          metadata: {
+            commentPreview: content.trim().substring(0, 100),
+            canMute: true,
+            commenterName
+          }
+        }
+      });
+    }
+
+    // === PROFILE ACTIVITY (visibility only - no notification alert) ===
+    await logRecipeCommented(
+      userId,
+      recipeId,
+      recipe.title,
+      recipe.userId,
+      content.trim().substring(0, 100)
+    );
 
     res.status(201).json(comment);
   } catch (error) {
@@ -700,6 +760,78 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Toggle favorite error:', error);
     res.status(500).json({ error: 'Failed to toggle favorite' });
+  }
+});
+
+
+// POST /api/recipes/:id/mute-comments - Mute comment notifications for a recipe
+router.post('/:id/mute-comments', authenticateToken, async (req, res) => {
+  try {
+    const { id: recipeId } = req.params;
+    const userId = (req as any).userId;
+
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: recipeId }
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    const existing = await prisma.recipeCommentMute.findUnique({
+      where: {
+        userId_recipeId: { userId, recipeId }
+      }
+    });
+
+    if (existing) {
+      return res.json({ message: 'Already muted', muted: true });
+    }
+
+    await prisma.recipeCommentMute.create({
+      data: { userId, recipeId }
+    });
+
+    res.json({ message: 'Recipe comment notifications muted', muted: true });
+  } catch (error) {
+    console.error('Mute recipe comments error:', error);
+    res.status(500).json({ error: 'Failed to mute recipe comments' });
+  }
+});
+
+// DELETE /api/recipes/:id/mute-comments - Unmute comment notifications for a recipe
+router.delete('/:id/mute-comments', authenticateToken, async (req, res) => {
+  try {
+    const { id: recipeId } = req.params;
+    const userId = (req as any).userId;
+
+    await prisma.recipeCommentMute.deleteMany({
+      where: { userId, recipeId }
+    });
+
+    res.json({ message: 'Recipe comment notifications unmuted', muted: false });
+  } catch (error) {
+    console.error('Unmute recipe comments error:', error);
+    res.status(500).json({ error: 'Failed to unmute recipe comments' });
+  }
+});
+
+// GET /api/recipes/:id/mute-status - Check if user has muted a recipe's comments
+router.get('/:id/mute-status', authenticateToken, async (req, res) => {
+  try {
+    const { id: recipeId } = req.params;
+    const userId = (req as any).userId;
+
+    const muted = await prisma.recipeCommentMute.findUnique({
+      where: {
+        userId_recipeId: { userId, recipeId }
+      }
+    });
+
+    res.json({ muted: !!muted });
+  } catch (error) {
+    console.error('Check mute status error:', error);
+    res.status(500).json({ error: 'Failed to check mute status' });
   }
 });
 

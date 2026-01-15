@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Trash2, AtSign } from 'lucide-react';
+import { Send, Trash2, AtSign, BellOff, Bell } from 'lucide-react';
 import api from '../services/api';
 
 interface Comment {
@@ -43,10 +43,13 @@ export default function EventCommentWall({ eventId, currentUserId, isOrganizer, 
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [muteLoading, setMuteLoading] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadComments();
+    checkMuteStatus();
   }, [eventId]);
 
   const loadComments = async () => {
@@ -57,6 +60,32 @@ export default function EventCommentWall({ eventId, currentUserId, isOrganizer, 
       console.error('Load comments error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkMuteStatus = async () => {
+    try {
+      const { data } = await api.get(`/events/${eventId}/mute-status`);
+      setIsMuted(data.muted);
+    } catch (error) {
+      console.error('Check mute status error:', error);
+    }
+  };
+
+  const toggleMute = async () => {
+    setMuteLoading(true);
+    try {
+      if (isMuted) {
+        await api.delete(`/events/${eventId}/mute-comments`);
+        setIsMuted(false);
+      } else {
+        await api.get(`/events/${eventId}/mute-status`);    
+        setIsMuted(true);
+      }
+    } catch (error) {
+      console.error('Toggle mute error:', error);
+    } finally {
+      setMuteLoading(false);
     }
   };
 
@@ -168,9 +197,37 @@ export default function EventCommentWall({ eventId, currentUserId, isOrganizer, 
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        💬 Discussion Wall
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          💬 Discussion Wall
+        </h3>
+        
+        {/* Mute Toggle */}
+        <button
+          onClick={toggleMute}
+          disabled={muteLoading}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            isMuted
+              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+          }`}
+          title={isMuted ? 'Turn on notifications for this event' : 'Turn off notifications for this event'}
+        >
+          {muteLoading ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : isMuted ? (
+            <>
+              <BellOff className="w-4 h-4" />
+              <span>Muted</span>
+            </>
+          ) : (
+            <>
+              <Bell className="w-4 h-4" />
+              <span>Notifications On</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Comment Input */}
       <form onSubmit={handleSubmit} className="mb-4 relative">

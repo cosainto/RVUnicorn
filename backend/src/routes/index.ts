@@ -18,6 +18,7 @@ import stickerRoutes from './routes/sticker.routes';
 import jobRoutes from './routes/job.routes';
 import communityRoutes from './routes/community.routes';
 import checkinRoutes from './routes/checkin.routes';
+import eventAccessRoutes from './event-access.routes';
 
 dotenv.config();
 

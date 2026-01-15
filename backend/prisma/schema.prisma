@@ -199,6 +199,10 @@ model User {
   badges            UserBadge[]
   assignedMeals     EventMeal[]   @relation("MealCook")
   mealRSVPs         MealRSVP[]    @relation("MealRSVPs")
+  recipeCommentMutes RecipeCommentMute[]
+  eventCommentMutes  EventCommentMute[]
+  blockedFromEvents  EventBlockedUser[] @relation("BlockedFromEvents")
+  eventBlocksCreated EventBlockedUser[] @relation("EventBlocker")
 
   @@index([email])
   @@index([username])
@@ -423,7 +427,10 @@ model Event {
   comments    EventComment[]
   savedTrips  SavedTrip[]  
   tripPackItems TripPackItem[] @relation("EventTripPackItems")
-  mutedBy     MutedEntity[]
+  mutedBy          MutedEntity[]
+  commentMutes     EventCommentMute[]
+  blockedUsers     EventBlockedUser[]
+  subtabPrivacy    EventSubtabPrivacy[]
 
 
 
@@ -456,6 +463,7 @@ model EventMeal {
   scheduledAt DateTime
   notes       String?
   cookId      String?
+  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -666,6 +674,7 @@ model Recipe {
   comments RecipeComment[]
   savedBy  SavedRecipe[]
   activities Activity[]
+  commentMutes RecipeCommentMute[]
 
   @@index([userId])
   @@index([category])
@@ -1505,6 +1514,7 @@ model RestStop {
   is24Hours   Boolean @default(true)
   notes       String?
   cookId      String?
+  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1834,6 +1844,7 @@ model InventoryItem {
   quantity    Int      @default(1)
   notes       String?
   cookId      String?
+  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
   imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2154,4 +2165,69 @@ model BookingClick {
   @@index([userId])
   @@index([campgroundId])
   @@index([clickedAt])
+}
+
+
+// Recipe Comment Mute - Users can mute notifications for specific recipes
+model RecipeCommentMute {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+
+// Event Comment Mute - Users can mute notifications for specific events
+model EventCommentMute {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+// Event Blocked Users - Event creator can restrict specific users from accessing event
+model EventBlockedUser {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String   // User who is blocked
+  blockedBy String   // Event creator who blocked them
+  reason    String?
+  createdAt DateTime @default(now())
+
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User  @relation("BlockedFromEvents", fields: [userId], references: [id], onDelete: Cascade)
+  blocker User  @relation("EventBlocker", fields: [blockedBy], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// Event Subtab Privacy - Per-subtab privacy settings
+model EventSubtabPrivacy {
+  id        String   @id @default(cuid())
+  eventId   String
+  subtab    String   // DETAILS, MEAL_PLAN, PACKING_LIST, DISCUSSIONS, PHOTOS, ATTENDEES
+  privacy   String   @default("INHERIT") // INHERIT (use event privacy), PUBLIC, FRIENDS, PRIVATE, ATTENDEES_ONLY
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, subtab])
+  @@index([eventId])
 }

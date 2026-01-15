@@ -30,6 +30,7 @@ interface FeedItem {
   isFriendActivity?: boolean;
   hasMutualFriendInteraction?: boolean;
   isPackingActivity?: boolean;
+  isMealAssignment?: boolean;
   isFriendRequest?: boolean;
   canRespond?: boolean;
   isRead?: boolean;
@@ -89,6 +90,15 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
     }
   };
 
+
+  const handleMealAssignment = async (mealId: string, status: 'ACCEPTED' | 'DECLINED' | 'UNDECIDED') => {
+    try {
+      await api.put(`/event-meals/${mealId}/cook-response`, { status });
+      await loadFeed();
+    } catch (error) {
+      console.error('Failed to respond to meal assignment:', error);
+    }
+  };
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -207,8 +217,47 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                 </div>
               )}
 
+
+              {/* Meal Assignment */}
+              {item.isMealAssignment && (
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">👨‍🍳</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">{item.content}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
+                      {item.targetLink && (
+                        <Link to={item.targetLink} className="text-xs text-blue-600 hover:underline">View Event</Link>
+                      )}
+                    </div>
+                  </div>
+                  {item.canRespond && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleMealAssignment(item.metadata?.mealId, 'ACCEPTED')}
+                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleMealAssignment(item.metadata?.mealId, 'DECLINED')}
+                        className="px-2 py-1 text-xs bg-red-400 text-white rounded hover:bg-red-500"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleMealAssignment(item.metadata?.mealId, 'UNDECIDED')}
+                        className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                      >
+                        Maybe
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Regular Activity */}
-              {!item.isFriendRequest && !item.isPackingActivity && (
+              {!item.isFriendRequest && !item.isPackingActivity && !item.isMealAssignment && (
                 <div className="flex items-start gap-3">
                   <Link to={`/profile/${item.actor?.username}`} className="flex-shrink-0">
                     {item.actor?.profilePicture ? (

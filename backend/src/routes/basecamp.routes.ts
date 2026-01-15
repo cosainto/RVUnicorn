@@ -529,7 +529,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'PACK_ITEM_ASSIGNED',
               'PACK_ITEM_ASSIGNMENT_REQUEST', 'PACK_ITEM_CONFIRMED', 'PACK_ITEM_DECLINED',
               'PACK_ITEM_NEEDS_VOLUNTEER', 'PACK_ITEM_VOLUNTEERED', 'PACK_ITEM_VOLUNTEER_DECLINED',
-              'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO'
+              'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE'
             ]
           }
         },
@@ -598,6 +598,16 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' shared: "' + activity.entityName + '" by ' + (shareMeta?.originalCreatorName || 'a creator');
             activityIcon = '🔄';
             break;
+          case 'MEAL_ASSIGNMENT_REQUEST':
+            const mealMeta = meta;
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' asked you to prepare "' + (mealMeta.recipeTitle || 'a meal') + '" for ' + (mealMeta.eventTitle || 'an event');
+            activityIcon = '👨‍🍳';
+            break;
+          case 'MEAL_ASSIGNMENT_RESPONSE':
+            const responseMeta = meta;
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' ' + (responseMeta.status || 'responded to') + ' cooking "' + (responseMeta.recipeTitle || 'a meal') + '"';
+            activityIcon = responseMeta.status === 'ACCEPTED' ? '✅' : responseMeta.status === 'DECLINED' ? '❌' : '🤔';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -608,6 +618,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
         } else if (activity.type === 'CREATOR_VIDEO_UPLOAD' || activity.type === 'SHARED_CREATOR_VIDEO') {
           const creatorUsername = (activity.metadata as any)?.creatorUsername || (activity.metadata as any)?.originalCreatorUsername || activity.actor?.username;
           targetLink = '/creators/' + creatorUsername + '/content/' + activity.entityId;
+        } else if (activity.type === 'MEAL_ASSIGNMENT_REQUEST' || activity.type === 'MEAL_ASSIGNMENT_RESPONSE') {
+          targetLink = '/trips/' + meta.eventId;
         }
 
         allActivities.push({
@@ -622,13 +634,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityType: activity.type,
           activityIcon,
           activityLabel,
-          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY'].includes(activity.type),
+          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE'].includes(activity.type),
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
+          isMealAssignment: activity.type === 'MEAL_ASSIGNMENT_REQUEST',
           packItemId: meta.packItemId,
           friendshipId: meta.friendshipId,
           metadata: meta,
-          canRespond: ['PACK_ITEM_ASSIGNMENT_REQUEST', 'PACK_ITEM_NEEDS_VOLUNTEER', 'FRIEND_REQUEST'].includes(activity.type) && activity.userId === userId,
+          canRespond: ['PACK_ITEM_ASSIGNMENT_REQUEST', 'PACK_ITEM_NEEDS_VOLUNTEER', 'FRIEND_REQUEST', 'MEAL_ASSIGNMENT_REQUEST'].includes(activity.type) && activity.userId === userId,
           isRead: activity.isRead,
         });
       });

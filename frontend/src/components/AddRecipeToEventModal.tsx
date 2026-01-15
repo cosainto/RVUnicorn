@@ -10,6 +10,18 @@ interface Event {
   location?: string;
 }
 
+interface Attendee {
+  id: string;
+  userId: string;
+  status: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+}
+
 interface Recipe {
   id: string;
   title: string;
@@ -40,6 +52,8 @@ export default function AddRecipeToEventModal({ recipe, isOpen, onClose }: AddRe
   const [selectedMealType, setSelectedMealType] = useState('DINNER');
   const [notes, setNotes] = useState('');
   const [eventDates, setEventDates] = useState<string[]>([]);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [selectedCook, setSelectedCook] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -52,12 +66,39 @@ export default function AddRecipeToEventModal({ recipe, isOpen, onClose }: AddRe
       const event = events.find(e => e.id === selectedEventId);
       if (event) {
         generateEventDates(event);
+        loadAttendees(selectedEventId);
       }
     } else {
       setEventDates([]);
       setSelectedDate('');
+      setAttendees([]);
+      setSelectedCook('');
     }
   }, [selectedEventId, events]);
+
+  const loadAttendees = async (eventId: string) => {
+    try {
+      const { data } = await api.get(`/events/${eventId}`);
+      const goingAttendees = (data.attendees || []).filter(
+        (a: Attendee) => ['going', 'GOING'].includes(a.status)
+      );
+      // Include organizer
+      if (data.organizer) {
+        const organizerAsAttendee = {
+          id: 'organizer',
+          userId: data.organizer.id,
+          status: 'going',
+          user: data.organizer
+        };
+        setAttendees([organizerAsAttendee, ...goingAttendees]);
+      } else {
+        setAttendees(goingAttendees);
+      }
+    } catch (error) {
+      console.error('Load attendees error:', error);
+      setAttendees([]);
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -100,16 +141,25 @@ export default function AddRecipeToEventModal({ recipe, isOpen, onClose }: AddRe
     try {
       setSubmitting(true);
       
-      await api.post('/event-meals', {
+      const { data: meal } = await api.post('/event-meals', {
         eventId: selectedEventId,
         date: selectedDate,
         mealType: selectedMealType,
+        recipeId: recipe.id,
         menuItems: [recipe.title],
         ingredients: recipe.ingredients || [],
         notes: notes || null,
+        assignedTo: selectedCook || null,
       });
 
-      alert(`✅ "${recipe.title}" added to meal plan!`);
+      // If a cook was assigned, send notification
+      if (selectedCook && meal.id) {
+        await api.post(`/event-meals/${meal.id}/assign-cook`, {
+          cookId: selectedCook
+        });
+      }
+
+      alert('Success! ' + recipe.title + ' added to meal plan!');
       onClose();
       
       // Reset form
@@ -117,6 +167,7 @@ export default function AddRecipeToEventModal({ recipe, isOpen, onClose }: AddRe
       setSelectedDate('');
       setSelectedMealType('DINNER');
       setNotes('');
+      setSelectedCook('');
     } catch (error) {
       console.error('Add to event error:', error);
       alert('Failed to add recipe to event');
@@ -246,6 +297,30 @@ export default function AddRecipeToEventModal({ recipe, isOpen, onClose }: AddRe
                     className="input w-full"
                     placeholder="Any special instructions..."
                   />
+                </div>
+              )}
+
+              {/* Assign Cook */}
+              {selectedEventId && attendees.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    👨‍🍳 Assign Cook (Optional)
+                  </label>
+                  <select
+                    value={selectedCook}
+                    onChange={(e) => setSelectedCook(e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">No one assigned yet</option>
+                    {attendees.map((attendee) => (
+                      <option key={attendee.userId} value={attendee.userId}>
+                        {attendee.user.firstName} {attendee.user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    The assigned person will be notified and can accept or decline.
+                  </p>
                 </div>
               )}
             </>

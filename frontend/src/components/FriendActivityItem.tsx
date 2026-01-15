@@ -94,25 +94,52 @@ const FriendActivityItem: React.FC<FriendActivityItemProps> = ({
       );
     }
 
-    // Likes on friend content
-    if (item.type === 'RECIPE_LIKED' && item.targetUser) {
+    // Recipe likes - "User likes a recipe"
+    if (item.type === 'RECIPE_LIKED') {
       return (
         <span className="text-gray-700">
           {actorName}
-          <span className="mx-1 text-red-500">❤️ liked</span>
-          <Link
-            to={'/profile/' + item.targetUser.username}
-            className="font-semibold text-navy-700 hover:underline"
-          >
-            {item.targetUser.firstName}'s
-          </Link>
-          <span> recipe </span>
+          <span className="mx-1">❤️ likes</span>
           {item.targetLink ? (
             <Link to={item.targetLink} className="font-medium text-orange-600 hover:underline">
-              {item.targetName}
+              {item.targetName || 'a recipe'}
             </Link>
           ) : (
-            <span className="font-medium">{item.targetName}</span>
+            <span className="font-medium">{item.targetName || 'a recipe'}</span>
+          )}
+        </span>
+      );
+    }
+
+    // Recipe comments - "User commented on this recipe"
+    if (item.type === 'RECIPE_COMMENTED') {
+      return (
+        <span className="text-gray-700">
+          {actorName}
+          <span className="mx-1">💬 commented on</span>
+          {item.targetLink ? (
+            <Link to={item.targetLink} className="font-medium text-orange-600 hover:underline">
+              {item.targetName || 'this recipe'}
+            </Link>
+          ) : (
+            <span className="font-medium">{item.targetName || 'this recipe'}</span>
+          )}
+        </span>
+      );
+    }
+
+    // Event comments - "User commented on this event"
+    if (item.type === 'EVENT_COMMENTED') {
+      return (
+        <span className="text-gray-700">
+          {actorName}
+          <span className="mx-1">💬 commented on</span>
+          {item.targetLink ? (
+            <Link to={item.targetLink} className="font-medium text-blue-600 hover:underline">
+              {item.targetName || 'this event'}
+            </Link>
+          ) : (
+            <span className="font-medium">{item.targetName || 'this event'}</span>
           )}
         </span>
       );

@@ -26,6 +26,7 @@ export type ActivityType =
   | 'EVENT_CREATED'
   | 'EVENT_JOINED'
   | 'EVENT_UPDATED'
+  | 'EVENT_COMMENTED'
   | 'RECIPE_LIKED'
   | 'RECIPE_COMMENTED'
   | 'PHOTO_LIKED'
@@ -330,6 +331,21 @@ export const logMutualFriendAdded = (
     title: newFriendName
   });
 
+
+export const logEventCommented = (
+  userId: string,
+  eventId: string,
+  eventTitle: string,
+  commentPreview?: string
+) =>
+  createActivity({
+    userId,
+    type: 'EVENT_COMMENTED',
+    eventId,
+    title: eventTitle,
+    content: commentPreview
+  });
+
 export default {
   createActivity,
   logRecipeCreated,
@@ -365,4 +381,5 @@ export default {
   logGearReview,
   logRVUpdated,
   logMutualFriendAdded,
+  logEventCommented,
 };
