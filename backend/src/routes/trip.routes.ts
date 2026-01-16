@@ -340,13 +340,14 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { title, description, startDate, endDate, location, campgroundId, privacy } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, privacy, bannerImage } = req.body;
 
     const event = await prisma.event.create({
       data: {
         organizerId: userId,
         title,
         description,
+        bannerImage: bannerImage || null,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         location,
@@ -396,7 +397,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage } = req.body;
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -416,6 +417,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       data: {
         title: title || undefined,
         description: description !== undefined ? description : undefined,
+        bannerImage: bannerImage !== undefined ? bannerImage : undefined,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         location: location !== undefined ? location : undefined,

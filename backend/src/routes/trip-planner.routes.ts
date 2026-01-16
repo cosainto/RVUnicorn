@@ -75,7 +75,13 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { location: true }
+      select: { 
+        location: true,
+        homeAddress: true,
+        homeCity: true,
+        homeState: true,
+        homeZipCode: true
+      }
     });
 
     const event = await prisma.event.findUnique({
@@ -91,7 +97,18 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    const finalStartLocation = useHometown ? (user?.location || startLocation) : startLocation;
+    // Build home location from new fields, fall back to legacy location field
+    let homeLocation = '';
+    if (user?.homeCity && user?.homeState) {
+      homeLocation = user.homeAddress 
+        ? `${user.homeAddress}, ${user.homeCity}, ${user.homeState}`
+        : `${user.homeCity}, ${user.homeState}`;
+      if (user.homeZipCode) homeLocation += ` ${user.homeZipCode}`;
+    } else if (user?.location) {
+      homeLocation = user.location;
+    }
+    
+    const finalStartLocation = useHometown ? (homeLocation || startLocation) : startLocation;
     const endLocation = event.campground 
       ? `${event.campground.name}, ${event.campground.location}, ${event.campground.state}`
       : event.location || '';

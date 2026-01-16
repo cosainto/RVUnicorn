@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints } from 'lucide-react';
+import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
@@ -9,6 +9,7 @@ import InventoryPackingModal from '../components/InventoryPackingModal';
 import EventSchedule from '../components/EventSchedule';
 import EventAlbum from '../components/EventAlbum';
 import EventCommentWall from '../components/EventCommentWall';
+import EventSettingsPanel from '../components/EventSettingsPanel';
 
 interface Event {
   id: string;
@@ -19,6 +20,7 @@ interface Event {
   endDate?: string;
   location?: string;
   imageUrl?: string;
+  bannerImage?: string;
   isWishlist?: boolean;
   organizer?: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number };
@@ -76,6 +78,7 @@ export default function EventDetailPage() {
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
@@ -108,14 +111,28 @@ export default function EventDetailPage() {
     copyMealPlan: true,
   });
 
+  const [userHomeLocation, setUserHomeLocation] = useState<string | null>(null);
+
   useEffect(() => {
     loadEvent();
     loadFriends();
     if (user) {
       loadTripPlan();
       loadAllTripPlans();
+      loadHomeLocation();
     }
   }, [id, user]);
+
+  const loadHomeLocation = async () => {
+    try {
+      const { data } = await api.get('/onboarding/home-location');
+      if (data.formattedAddress) {
+        setUserHomeLocation(data.formattedAddress);
+      }
+    } catch (error) {
+      console.error('Load home location error:', error);
+    }
+  };
 
   const loadTripPlan = async () => {
     if (!id || !user) return;
@@ -357,6 +374,31 @@ export default function EventDetailPage() {
       console.error('Failed to update privacy:', error);
     }
   };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const uploadRes = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const bannerImage = uploadRes.data.url;
+      await api.put(`/events/${id}`, { bannerImage });
+      setEvent({ ...event, bannerImage });
+    } catch (error) {
+      console.error('Failed to upload banner:', error);
+      alert('Failed to upload banner image');
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
   const daysUntil = getDaysUntilEvent();
 
   const tabs = [
@@ -386,11 +428,28 @@ export default function EventDetailPage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative">
-          {event.imageUrl ? (
-            <img src={event.imageUrl.startsWith('http') ? event.imageUrl : `${event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
+        <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative group">
+          {(event.bannerImage || event.imageUrl) ? (
+            <img src={(event.bannerImage || event.imageUrl)?.startsWith('http') ? (event.bannerImage || event.imageUrl) : `${event.bannerImage || event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
+          )}
+          {isOrganizer && (
+            <label className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${event.bannerImage ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100' : 'bg-white shadow-lg text-gray-700 hover:bg-gray-50'}`}>
+              {uploadingBanner ? (
+                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5" />
+              )}
+              <span className="font-medium">{event.bannerImage ? 'Change Banner' : 'Add Banner Image'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBannerUpload}
+                className="hidden"
+                disabled={uploadingBanner}
+              />
+            </label>
           )}
           {daysUntil && (
             <div className={`absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg ${event.isWishlist ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'}`}>
@@ -491,6 +550,9 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Advanced Event Settings - Privacy & Blocked Users */}
+              <EventSettingsPanel eventId={event.id} isOrganizer={isOrganizer} />
 
               {event.description && (
                 <div className="bg-gray-50 rounded-xl p-4">
@@ -833,7 +895,18 @@ export default function EventDetailPage() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Plan Your Trip</h3><button onClick={() => setShowTripModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button></div>
             <div className="space-y-4">
-              <div className="flex items-center gap-2"><input type="checkbox" id="useHometown" checked={tripForm.useHometown} onChange={(e) => setTripForm({ ...tripForm, useHometown: e.target.checked })} /><label htmlFor="useHometown" className="text-sm text-gray-700">Use my hometown as starting point</label></div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="useHometown" checked={tripForm.useHometown} onChange={(e) => setTripForm({ ...tripForm, useHometown: e.target.checked })} />
+                  <label htmlFor="useHometown" className="text-sm text-gray-700">Use my hometown as starting point</label>
+                </div>
+                {tripForm.useHometown && userHomeLocation && (
+                  <p className="text-sm text-primary-600 mt-1 ml-6">📍 {userHomeLocation}</p>
+                )}
+                {tripForm.useHometown && !userHomeLocation && (
+                  <p className="text-sm text-amber-600 mt-1 ml-6">⚠️ No hometown set. <a href="/my-rv" className="underline">Add it in your profile</a></p>
+                )}
+              </div>
               {!tripForm.useHometown && <div><label className="block text-sm font-medium text-gray-700 mb-1">Starting Location</label><input type="text" value={tripForm.startLocation} onChange={(e) => setTripForm({ ...tripForm, startLocation: e.target.value })} className="input w-full" placeholder="City, State or Address" /></div>}
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Route Preference</label><select value={tripForm.routePreference} onChange={(e) => setTripForm({ ...tripForm, routePreference: e.target.value })} className="input w-full"><option value="FASTEST">Fastest Route</option><option value="SHORTEST">Shortest Distance</option><option value="RV_FRIENDLY">RV-Friendly</option></select></div>
               <div className="flex gap-4">

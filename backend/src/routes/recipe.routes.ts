@@ -509,7 +509,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
   try {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
-    const { content, imageUrl } = req.body;
+    const { content, imageUrl, mentions } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Comment content is required' });
@@ -535,7 +535,8 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         recipeId,
         userId,
         content: content.trim(),
-        imageUrl
+        imageUrl,
+        mentions: mentions || []
       },
       include: {
         user: {
@@ -605,6 +606,48 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
           }
         }
       });
+    }
+
+    // === NOTIFY MENTIONED USERS ===
+    if (mentions && mentions.length > 0) {
+      const mentionedUsers = await prisma.user.findMany({
+        where: { username: { in: mentions } },
+        select: { id: true }
+      });
+
+      for (const mentionedUser of mentionedUsers) {
+        // Skip if it's the commenter, recipe owner (already notified), or muted
+        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId || mutedUserIds.has(mentionedUser.id)) {
+          continue;
+        }
+
+        // Create notification
+        await prisma.notification.create({
+          data: {
+            userId: mentionedUser.id,
+            type: 'RECIPE_MENTION',
+            content: `${commenterName} mentioned you in a comment on "${recipe.title}"`,
+            link: `/recipes/${recipeId}`,
+          }
+        });
+
+        // Create Basecamp activity
+        await prisma.basecampActivity.create({
+          data: {
+            userId: mentionedUser.id,
+            actorId: userId,
+            type: 'RECIPE_MENTION',
+            entityType: 'RECIPE',
+            entityId: recipeId,
+            entityName: recipe.title,
+            metadata: {
+              commentPreview: content.trim().substring(0, 100),
+              commenterName,
+              canMute: true
+            }
+          }
+        });
+      }
     }
 
     // === PROFILE ACTIVITY (visibility only - no notification alert) ===

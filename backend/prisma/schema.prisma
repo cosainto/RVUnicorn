@@ -70,6 +70,27 @@ model User {
   rvWeight        Int?
   rvDescription   String?
   rvFeatures      String[]
+  
+  // Home location for trip planning
+  homeAddress     String?
+  homeCity        String?
+  homeState       String?
+  homeZipCode     String?
+  homeCountry     String?   @default("USA")
+  homeLatitude    Float?
+  homeLongitude   Float?
+  
+  // Travel preferences
+  travelPartyType   String?   // SOLO, COUPLE, FAMILY, GROUP
+  travelPartySize   Int?
+  hasPets           Boolean   @default(false)
+  petTypes          String[]  @default([])
+  preferredTripLength String? // WEEKEND, WEEK, EXTENDED, FULLTIME
+  
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      Int     @default(0)
+  
   status          String?
   statusEmoji     String?
   statusType      String?
@@ -405,6 +426,7 @@ model Event {
   groupId      String?
   title        String
   description  String?
+  bannerImage  String?
   startDate    DateTime
   endDate      DateTime
   location     String?
@@ -705,6 +727,7 @@ model RecipeComment {
   userId    String
   content   String
   imageUrl  String?
+  mentions  String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

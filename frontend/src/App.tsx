@@ -1,7 +1,10 @@
 import FeedPage from './pages/FeedPage';
 import ThreadDetailPage from './pages/ThreadDetailPage';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import OnboardingWizard from './components/OnboardingWizard';
+import api from './services/api';
 import Navbar from './components/Navbar';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
 import LoginPage from './pages/LoginPage';
@@ -71,10 +74,39 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (user && !onboardingChecked) {
+        try {
+          const { data } = await api.get('/onboarding/status');
+          if (!data.completed) {
+            setShowOnboarding(true);
+          }
+        } catch (error) {
+          console.error('Check onboarding error:', error);
+        }
+        setOnboardingChecked(true);
+      }
+    };
+    checkOnboarding();
+  }, [user, onboardingChecked]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {user && <Navbar />}
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingComplete}
+        />
+      )}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

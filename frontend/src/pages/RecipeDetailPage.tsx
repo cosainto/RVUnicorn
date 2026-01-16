@@ -19,7 +19,8 @@ import {
   Copy,
   Calendar,
   Save,
-  Loader2
+  Loader2,
+  AtSign
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,10 +58,19 @@ interface Recipe {
   isFavorite?: boolean;
 }
 
+interface Friend {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  profilePicture?: string;
+}
+
 interface Comment {
   id: string;
   content: string;
   imageUrl?: string;
+  mentions?: string[];
   createdAt: string;
   user: {
     id: string;
@@ -94,6 +104,13 @@ export default function RecipeDetailPage() {
   const [commentImage, setCommentImage] = useState<File | null>(null);
   const [commentImagePreview, setCommentImagePreview] = useState<string>('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [uploadingQuickImage, setUploadingQuickImage] = useState(false);
+  const quickImageInputRef = useRef<HTMLInputElement>(null);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [showAddToEventModal, setShowAddToEventModal] = useState(false);
 
   // Edit mode state
@@ -166,6 +183,64 @@ export default function RecipeDetailPage() {
     } catch (error) {
       console.error('Load comments error:', error);
     }
+  };
+
+  const loadFriends = async () => {
+    try {
+      const { data } = await api.get('/friends');
+      setFriends(data.map((f: any) => f.friend));
+    } catch (error) {
+      console.error('Load friends error:', error);
+    }
+  };
+
+  const handleCommentInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+    setCursorPosition(e.target.selectionStart || 0);
+
+    const textBeforeCursor = value.substring(0, e.target.selectionStart || 0);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      setShowMentions(true);
+      setMentionSearch(mentionMatch[1].toLowerCase());
+      if (friends.length === 0) loadFriends();
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (username: string) => {
+    const textBeforeCursor = newComment.substring(0, cursorPosition);
+    const textAfterCursor = newComment.substring(cursorPosition);
+    const newText = textBeforeCursor.replace(/@(\w*)$/, `@${username} `) + textAfterCursor;
+    setNewComment(newText);
+    setShowMentions(false);
+    commentInputRef.current?.focus();
+  };
+
+  const filteredFriends = friends.filter(
+    (f) => f.username.toLowerCase().includes(mentionSearch) ||
+           `${f.firstName} ${f.lastName}`.toLowerCase().includes(mentionSearch)
+  );
+
+  const renderCommentContent = (commentContent: string) => {
+    return commentContent.split(/(@\w+)/g).map((part, index) => {
+      if (part.startsWith('@')) {
+        const username = part.substring(1);
+        return (
+          <Link
+            key={index}
+            to={`/profile/${username}`}
+            className="text-primary-600 hover:text-primary-700 font-medium"
+          >
+            {part}
+          </Link>
+        );
+      }
+      return part;
+    });
   };
 
   // Handle recipe image selection
@@ -360,9 +435,18 @@ export default function RecipeDetailPage() {
         imageUrl = uploadRes.data.url;
       }
 
+      // Extract mentions from content
+      const mentionRegex = /@(\w+)/g;
+      const mentions: string[] = [];
+      let match;
+      while ((match = mentionRegex.exec(newComment)) !== null) {
+        mentions.push(match[1]);
+      }
+
       await api.post(`/recipes/${recipeId}/comments`, { 
         content: newComment.trim(),
-        imageUrl: imageUrl || undefined
+        imageUrl: imageUrl || undefined,
+        mentions
       });
 
       setNewComment('');
@@ -556,7 +640,7 @@ export default function RecipeDetailPage() {
             />
           </div>
         ) : (
-          <>
+          <div className="relative group">
             {recipe.imageUrl ? (
               <img
                 src={recipe.imageUrl.startsWith('http') ? recipe.imageUrl : `${recipe.imageUrl}`}
@@ -568,7 +652,25 @@ export default function RecipeDetailPage() {
                 <ChefHat className="w-24 h-24 text-red-300" />
               </div>
             )}
-          </>
+            {isOwner && (
+              <label className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${recipe.imageUrl ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100' : 'bg-white shadow-lg text-gray-700 hover:bg-gray-50'}`}>
+                {uploadingQuickImage ? (
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
+                <span className="font-medium">{recipe.imageUrl ? 'Change Photo' : 'Add Photo'}</span>
+                <input
+                  ref={quickImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQuickImageUpload}
+                  className="hidden"
+                  disabled={uploadingQuickImage}
+                />
+              </label>
+            )}
+          </div>
         )}
 
         <div className="p-6">
@@ -959,14 +1061,50 @@ export default function RecipeDetailPage() {
 
           {user && (
             <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Share your thoughts about this recipe..."
-                className="input w-full"
-                rows={3}
-                disabled={submittingComment}
-              />
+              <div className="relative">
+                <textarea
+                  ref={commentInputRef}
+                  value={newComment}
+                  onChange={handleCommentInputChange}
+                  placeholder="Share your thoughts about this recipe... Use @username to mention someone"
+                  className="input w-full"
+                  rows={3}
+                  disabled={submittingComment}
+                />
+                
+                {/* Mention Dropdown */}
+                {showMentions && filteredFriends.length > 0 && (
+                  <div className="absolute bottom-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg mb-1 max-h-48 overflow-y-auto z-10">
+                    {filteredFriends.slice(0, 5).map((friend) => (
+                      <button
+                        key={friend.id}
+                        type="button"
+                        onClick={() => insertMention(friend.username)}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left"
+                      >
+                        {friend.profilePicture ? (
+                          <img
+                            src={friend.profilePicture}
+                            alt=""
+                            className="w-6 h-6 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
+                            <span className="text-primary-700 text-xs font-semibold">
+                              {friend.firstName[0]}
+                            </span>
+                          </div>
+                        )}
+                        <span className="font-medium">{friend.firstName} {friend.lastName}</span>
+                        <span className="text-gray-400 text-sm">@{friend.username}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                <AtSign className="w-3 h-3 inline" /> Type @ to mention friends
+              </p>
 
               <div className="mt-3">
                 {commentImagePreview ? (
@@ -1059,7 +1197,7 @@ export default function RecipeDetailPage() {
                       </p>
                     </div>
                   </Link>
-                  <p className="text-gray-700 ml-11 mb-2">{comment.content}</p>
+                  <p className="text-gray-700 ml-11 mb-2">{renderCommentContent(comment.content)}</p>
                   {comment.imageUrl && (
                     <img
                       src={`${comment.imageUrl}`}
