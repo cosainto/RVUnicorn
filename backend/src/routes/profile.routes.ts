@@ -266,9 +266,9 @@ router.put('/:username', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedProfile);
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
+  } catch (error: any) {
+    console.error('Update profile error:', error?.message || error);
+    res.status(500).json({ error: 'Failed to update profile', details: error?.message });
   }
 });
 
