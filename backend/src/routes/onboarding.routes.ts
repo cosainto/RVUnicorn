@@ -46,11 +46,46 @@ router.get('/status', authenticateToken, async (req, res) => {
   }
 });
 
+// Helper function to geocode address
+async function geocodeAddress(city: string, state: string, zipCode?: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const query = zipCode 
+      ? `${city}, ${state} ${zipCode}, USA`
+      : `${city}, ${state}, USA`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'RVUnicorn/1.0' }
+    });
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+}
+
 // PUT /api/onboarding/hometown - Save hometown info
 router.put('/hometown', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { homeAddress, homeCity, homeState, homeZipCode, homeCountry } = req.body;
+
+    // Geocode the address to get coordinates
+    let homeLatitude = null;
+    let homeLongitude = null;
+    
+    if (homeCity && homeState) {
+      const coords = await geocodeAddress(homeCity, homeState, homeZipCode);
+      if (coords) {
+        homeLatitude = coords.lat;
+        homeLongitude = coords.lon;
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -60,6 +95,8 @@ router.put('/hometown', authenticateToken, async (req, res) => {
         homeState,
         homeZipCode,
         homeCountry: homeCountry || 'USA',
+        homeLatitude,
+        homeLongitude,
         onboardingStep: { increment: 1 }
       },
       select: {
@@ -67,6 +104,8 @@ router.put('/hometown', authenticateToken, async (req, res) => {
         homeCity: true,
         homeState: true,
         homeZipCode: true,
+        homeLatitude: true,
+        homeLongitude: true,
         onboardingStep: true,
       }
     });

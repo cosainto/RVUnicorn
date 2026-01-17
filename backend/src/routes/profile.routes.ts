@@ -5,6 +5,29 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Helper function to geocode address
+async function geocodeAddress(city: string, state: string, zipCode?: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const query = zipCode 
+      ? \`\${city}, \${state} \${zipCode}, USA\`
+      : \`\${city}, \${state}, USA\`;
+    const url = \`https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(query)}&limit=1\`;
+    
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'RVUnicorn/1.0' }
+    });
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+}
+
 // GET /api/profile/:username - Get user profile by username
 router.get('/:username', optionalAuth, async (req, res) => {
   try {
@@ -147,6 +170,21 @@ router.put('/:username', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // Geocode if homeCity or homeState changed
+    let homeLatitude = undefined;
+    let homeLongitude = undefined;
+    if (homeCity !== undefined || homeState !== undefined) {
+      const coords = await geocodeAddress(
+        homeCity || '',
+        homeState || '',
+        homeZipCode
+      );
+      if (coords) {
+        homeLatitude = coords.lat;
+        homeLongitude = coords.lon;
+      }
+    }
+
     const updatedProfile = await prisma.user.update({
       where: { username },
       data: {
@@ -175,6 +213,8 @@ router.put('/:username', authenticateToken, async (req, res) => {
         homeCity: homeCity !== undefined ? homeCity : undefined,
         homeState: homeState !== undefined ? homeState : undefined,
         homeZipCode: homeZipCode !== undefined ? homeZipCode : undefined,
+        homeLatitude: homeLatitude !== undefined ? homeLatitude : undefined,
+        homeLongitude: homeLongitude !== undefined ? homeLongitude : undefined,
         travelPartyType: travelPartyType !== undefined ? travelPartyType : undefined,
         travelPartySize: travelPartySize !== undefined ? travelPartySize : undefined,
         hasPets: hasPets !== undefined ? hasPets : undefined,
