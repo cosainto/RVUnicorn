@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
+  Plus,
   User as UserIcon,
   MapPin,
   Link as LinkIcon,
@@ -22,7 +23,8 @@ import {
   Play
 } from 'lucide-react';
 import api from '../services/api';
-import { User as UserType } from '../services/auth.service';
+import {
+  Plus, User as UserType } from '../services/auth.service';
 import RVShowcaseEdit from '../components/RVShowcaseEdit';
 import SocialLinks from '../components/SocialLinks';
 import SocialFeed from '../components/SocialFeed';
@@ -30,7 +32,8 @@ import UserStatus from '../components/UserStatus';
 import TravelMap from '../components/TravelMap';
 import Top8Friends from '../components/Top8Friends';
 import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
-import { UserActionsMenu } from '../components/BlockUserButton';
+import {
+  Plus, UserActionsMenu } from '../components/BlockUserButton';
 import FollowingSection from '../components/FollowingSection';
 
 
