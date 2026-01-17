@@ -22,7 +22,7 @@ export default function RegisterPage() {
 
     try {
       await register(email, username, password, firstName, lastName);
-      navigate('/');
+      navigate('/welcome');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to register');
     } finally {

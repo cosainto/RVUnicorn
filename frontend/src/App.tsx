@@ -3,12 +3,12 @@ import ThreadDetailPage from './pages/ThreadDetailPage';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import OnboardingWizard from './components/OnboardingWizard';
 import api from './services/api';
 import Navbar from './components/Navbar';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import WelcomePage from './pages/WelcomePage';
 import ProfilePage from './pages/ProfilePage';
 import UserRecipesPage from './pages/UserRecipesPage';
 import UserGearPage from './pages/UserGearPage';
@@ -74,58 +74,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const checkOnboarding = async () => {
-      if (!user) return;
-      
-      // Check if we already checked this session
-      const sessionKey = `onboarding_checked_${user.id}`;
-      const alreadyChecked = sessionStorage.getItem(sessionKey);
-      
-      if (alreadyChecked === 'true') {
-        // Check if wizard was showing
-        if (sessionStorage.getItem(`onboarding_show_${user.id}`) === 'true') {
-          setShowOnboarding(true);
-        }
-        return;
-      }
-      
-      try {
-        const { data } = await api.get('/onboarding/status');
-        sessionStorage.setItem(sessionKey, 'true');
-        if (!data.completed) {
-          sessionStorage.setItem(`onboarding_show_${user.id}`, 'true');
-          setShowOnboarding(true);
-        }
-      } catch (error) {
-        console.error('Check onboarding error:', error);
-        sessionStorage.setItem(sessionKey, 'true');
-      }
-    };
-    checkOnboarding();
-  }, [user]);
-
-  const handleOnboardingComplete = () => {
-    if (user) {
-      sessionStorage.setItem(`onboarding_show_${user.id}`, 'false');
-    }
-    setShowOnboarding(false);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {user && <Navbar />}
-      {showOnboarding && (
-        <OnboardingWizard
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingComplete}
-        />
-      )}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route
           path="/feed"
           element={
