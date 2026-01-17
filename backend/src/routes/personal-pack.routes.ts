@@ -20,7 +20,7 @@ router.get('/', authenticateToken, async (req, res) => {
       where,
       include: {
         trip: {
-          select: { id: true, name: true, startDate: true },
+          select: { id: true, startLocation: true },
         },
         event: {
           select: { id: true, title: true, startDate: true },
@@ -74,7 +74,7 @@ router.post('/', authenticateToken, async (req, res) => {
       },
       include: {
         trip: {
-          select: { id: true, name: true, startDate: true },
+          select: { id: true, startLocation: true },
         },
         event: {
           select: { id: true, title: true, startDate: true },
@@ -118,7 +118,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       },
       include: {
         trip: {
-          select: { id: true, name: true, startDate: true },
+          select: { id: true, startLocation: true },
         },
         event: {
           select: { id: true, title: true, startDate: true },
