@@ -19,7 +19,7 @@ import jobRoutes from './routes/job.routes';
 import communityRoutes from './routes/community.routes';
 import checkinRoutes from './routes/checkin.routes';
 import eventAccessRoutes from './event-access.routes';
-import onboardingRoutes from './routes/onboarding.routes';
+import onboardingRoutes from './onboarding.routes';
 import tripCommentsRoutes from './trip-comments.routes';
 
 dotenv.config();
