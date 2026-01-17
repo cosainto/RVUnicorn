@@ -846,12 +846,18 @@ export default function BasecampPage({ user }: BasecampProps) {
   // RV Info State
   const [rvInfo, setRvInfo] = useState<any>(null);
   const [rvShowcase, setRvShowcase] = useState<any>(null);
-  const [rvTab, setRvTab] = useState<'overview' | 'edit'>('overview');
+  const [rvTab, setRvTab] = useState<'overview' | 'edit' | 'log'>('overview');
   const [rvEditData, setRvEditData] = useState({
     rvType: '',
     rvYear: '',
     rvMake: '',
     rvModel: '',
+    rvLength: '',
+    rvWidth: '',
+    rvHeight: '',
+    licensePlate: '',
+    licensePlateState: '',
+    tagExpiration: '',
     homeCity: '',
     homeState: '',
     homeZipCode: '',
@@ -1081,6 +1087,12 @@ export default function BasecampPage({ user }: BasecampProps) {
         rvYear: profile.rvYear || '',
         rvMake: profile.rvMake || '',
         rvModel: profile.rvModel || '',
+        rvLength: profile.rvLength || '',
+        rvWidth: profile.rvWidth || '',
+        rvHeight: profile.rvHeight || '',
+        licensePlate: profile.licensePlate || '',
+        licensePlateState: profile.licensePlateState || '',
+        tagExpiration: profile.tagExpiration || '',
         homeCity: profile.homeCity || '',
         homeState: profile.homeState || '',
         homeZipCode: profile.homeZipCode || '',
@@ -2144,12 +2156,63 @@ export default function BasecampPage({ user }: BasecampProps) {
                   </div>
                 )}
 
+                {/* RV Photo Gallery */}
+                {rvShowcase?.photos && rvShowcase.photos.length > 1 && (
+                  <div className="mt-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">More Photos</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {rvShowcase.photos.slice(1, 5).map((photo: string, index: number) => (
+                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                          <img
+                            src={photo.startsWith('http') ? photo : photo}
+                            alt={`RV photo ${index + 2}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/rv-showcase/${rvShowcase.id}/set-main`, { photoIndex: index + 1 });
+                                  const { data } = await api.get(`/rv-showcase/user/${user?.id}`);
+                                  setRvShowcase(data);
+                                } catch (e) { console.error(e); }
+                              }}
+                              className="p-1 bg-white rounded text-xs"
+                              title="Set as main"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (confirm('Delete this photo?')) {
+                                  try {
+                                    await api.delete(`/rv-showcase/${rvShowcase.id}/photo/${index + 1}`);
+                                    const { data } = await api.get(`/rv-showcase/user/${user?.id}`);
+                                    setRvShowcase(data);
+                                  } catch (e) { console.error(e); }
+                                }
+                              }}
+                              className="p-1 bg-white rounded text-xs text-red-600"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {rvShowcase.photos.length > 5 && (
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        +{rvShowcase.photos.length - 5} more photos
+                      </p>
+                    )}
+                  </div>
+                )}
                 <Link
-                  to="/maintenance"
-                  className="mt-4 block w-full bg-slate-700 hover:bg-slate-800 text-white text-center py-2 rounded-lg transition-colors"
+                  to={`/profile/${user?.username}/edit`}
+                  className="mt-3 block text-center text-sm text-primary-600 hover:text-primary-700"
                 >
-                  <Wrench className="w-4 h-4 inline mr-2" />
-                  Open RV Log
+                  Manage RV Photos
                 </Link>
               </div>
               </>
@@ -2215,6 +2278,80 @@ export default function BasecampPage({ user }: BasecampProps) {
                     </div>
                   </div>
 
+                  {/* RV Dimensions */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">Dimensions (optional)</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Length (ft)</label>
+                        <input
+                          type="text"
+                          value={rvEditData.rvLength}
+                          onChange={(e) => setRvEditData({...rvEditData, rvLength: e.target.value})}
+                          placeholder="25"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Width (ft)</label>
+                        <input
+                          type="text"
+                          value={rvEditData.rvWidth}
+                          onChange={(e) => setRvEditData({...rvEditData, rvWidth: e.target.value})}
+                          placeholder="8"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Height (ft)</label>
+                        <input
+                          type="text"
+                          value={rvEditData.rvHeight}
+                          onChange={(e) => setRvEditData({...rvEditData, rvHeight: e.target.value})}
+                          placeholder="11"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* License & Registration */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">License & Registration</h4>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">License Plate</label>
+                        <input
+                          type="text"
+                          value={rvEditData.licensePlate}
+                          onChange={(e) => setRvEditData({...rvEditData, licensePlate: e.target.value})}
+                          placeholder="ABC-1234"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                        <input
+                          type="text"
+                          value={rvEditData.licensePlateState}
+                          onChange={(e) => setRvEditData({...rvEditData, licensePlateState: e.target.value})}
+                          placeholder="CO"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tag Expiration</label>
+                      <input
+                        type="date"
+                        value={rvEditData.tagExpiration}
+                        onChange={(e) => setRvEditData({...rvEditData, tagExpiration: e.target.value})}
+                        className="w-full border rounded-lg p-2"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">We'll remind you when it's time to renew</p>
+                    </div>
+                  </div>
+
                   {/* Home Base */}
                   <div className="border-t pt-4">
                     <h4 className="font-semibold text-gray-800 mb-2">Home Base</h4>
@@ -2277,6 +2414,12 @@ export default function BasecampPage({ user }: BasecampProps) {
                           rvYear: rvEditData.rvYear,
                           rvMake: rvEditData.rvMake,
                           rvModel: rvEditData.rvModel,
+                          rvLength: rvEditData.rvLength,
+                          rvWidth: rvEditData.rvWidth,
+                          rvHeight: rvEditData.rvHeight,
+                          licensePlate: rvEditData.licensePlate,
+                          licensePlateState: rvEditData.licensePlateState,
+                          tagExpiration: rvEditData.tagExpiration,
                           homeCity: rvEditData.homeCity,
                           homeState: rvEditData.homeState,
                           travelPartyType: rvEditData.travelPartyType,
@@ -2300,6 +2443,83 @@ export default function BasecampPage({ user }: BasecampProps) {
                   >
                     {savingRv ? 'Saving...' : 'Save Changes'}
                   </button>
+                </div>
+              )}
+
+              {/* RV Log Tab */}
+              {rvTab === 'log' && (
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-gray-800">Maintenance Log</h4>
+                    <Link
+                      to="/maintenance"
+                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                    >
+                      Open Full Log <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  
+                  {maintenanceStats && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-slate-700">{maintenanceStats.totalRecords}</p>
+                          <p className="text-xs text-slate-500">Service Records</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-green-600">${maintenanceStats.totalSpent?.toLocaleString() || 0}</p>
+                          <p className="text-xs text-slate-500">Total Spent</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-blue-600">{maintenanceStats.upcomingCount}</p>
+                          <p className="text-xs text-slate-500">Upcoming</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className={`text-2xl font-bold ${maintenanceStats.overdueCount > 0 ? 'text-red-600' : 'text-slate-700'}`}>
+                            {maintenanceStats.overdueCount}
+                          </p>
+                          <p className="text-xs text-slate-500">Overdue</p>
+                        </div>
+                      </div>
+
+                      {maintenanceStats.overdueCount > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5 text-red-500" />
+                          <p className="text-sm text-red-700">
+                            {maintenanceStats.overdueCount} overdue item{maintenanceStats.overdueCount > 1 ? 's' : ''}!
+                          </p>
+                        </div>
+                      )}
+
+                      {maintenanceStats.lastService && (
+                        <div className="text-sm text-gray-500">
+                          Last service: <span className="font-medium">{maintenanceStats.lastService.serviceType}</span>
+                          {' '}on {new Date(maintenanceStats.lastService.serviceDate).toLocaleDateString()}
+                        </div>
+                      )}
+
+                      <Link
+                        to="/maintenance"
+                        className="block w-full bg-slate-700 hover:bg-slate-800 text-white text-center py-2 rounded-lg transition-colors"
+                      >
+                        <Wrench className="w-4 h-4 inline mr-2" />
+                        View Full Maintenance Log
+                      </Link>
+                    </div>
+                  )}
+
+                  {!maintenanceStats && (
+                    <div className="text-center py-6 text-gray-500">
+                      <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p>No maintenance records yet</p>
+                      <Link
+                        to="/maintenance"
+                        className="mt-2 inline-block text-primary-600 hover:text-primary-700"
+                      >
+                        Add your first record
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

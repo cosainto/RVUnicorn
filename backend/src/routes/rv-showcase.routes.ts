@@ -222,4 +222,84 @@ router.delete('/', authenticateToken, async (req, res) => {
   }
 });
 
+
+// PUT /api/rv-showcase/:id/set-main - Set a photo as the main (first) photo
+router.put('/:id/set-main', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const { photoIndex } = req.body;
+
+    const showcase = await prisma.rVShowcase.findUnique({
+      where: { id },
+    });
+
+    if (!showcase) {
+      return res.status(404).json({ error: 'Showcase not found' });
+    }
+
+    if (showcase.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const photos = showcase.photos as string[];
+    if (photoIndex < 0 || photoIndex >= photos.length) {
+      return res.status(400).json({ error: 'Invalid photo index' });
+    }
+
+    // Move the selected photo to the front
+    const selectedPhoto = photos[photoIndex];
+    const newPhotos = [selectedPhoto, ...photos.filter((_, i) => i !== photoIndex)];
+
+    const updated = await prisma.rVShowcase.update({
+      where: { id },
+      data: { photos: newPhotos },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Set main photo error:', error);
+    res.status(500).json({ error: 'Failed to set main photo' });
+  }
+});
+
+// DELETE /api/rv-showcase/:id/photo/:photoIndex - Delete a specific photo
+router.delete('/:id/photo/:photoIndex', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id, photoIndex } = req.params;
+    const index = parseInt(photoIndex);
+
+    const showcase = await prisma.rVShowcase.findUnique({
+      where: { id },
+    });
+
+    if (!showcase) {
+      return res.status(404).json({ error: 'Showcase not found' });
+    }
+
+    if (showcase.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const photos = showcase.photos as string[];
+    if (index < 0 || index >= photos.length) {
+      return res.status(400).json({ error: 'Invalid photo index' });
+    }
+
+    // Remove the photo at the specified index
+    const newPhotos = photos.filter((_, i) => i !== index);
+
+    const updated = await prisma.rVShowcase.update({
+      where: { id },
+      data: { photos: newPhotos },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Delete photo error:', error);
+    res.status(500).json({ error: 'Failed to delete photo' });
+  }
+});
+
 export default router;

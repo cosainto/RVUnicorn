@@ -65,6 +65,11 @@ model User {
   rvMake          String?
   rvModel         String?
   rvLength        Int?
+  rvWidth         Int?
+  rvHeight        Int?
+  licensePlate    String?
+  licensePlateState String?
+  tagExpiration   DateTime?
   rvSleeps        Int?
   rvSlideouts     Int?
   rvWeight        Int?
