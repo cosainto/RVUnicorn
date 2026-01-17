@@ -2021,8 +2021,56 @@ export default function BasecampPage({ user }: BasecampProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Truck className="w-16 h-16 text-slate-300" />
+                  <div className="w-full h-full relative">
+                    <img src="/images/showusyourrig.png" alt="Show us your rig" className="w-full h-full object-cover" />
+                    <Link
+                      to={`/profile/${user.username}/edit`}
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                    >
+                      <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Add Your Rig
+                      </span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    <img src="/images/showusyourrig.png" alt="Show us your rig" className="w-full h-full object-cover" />
+                    <Link
+                      to={`/profile/${user.username}/edit`}
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                    >
+                      <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Add Your Rig
+                      </span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    <img src="/images/showusyourrig.png" alt="Show us your rig" className="w-full h-full object-cover" />
+                    <Link
+                      to={`/profile/${user.username}/edit`}
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                    >
+                      <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Add Your Rig
+                      </span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    <img src="/images/showusyourrig.png" alt="Show us your rig" className="w-full h-full object-cover" />
+                    <Link
+                      to={`/profile/${user.username}/edit`}
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                    >
+                      <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Add Your Rig
+                      </span>
+                    </Link>
                   </div>
                 )}
               </div>
