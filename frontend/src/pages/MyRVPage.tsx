@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, Wrench, Save, Upload, X, Trash2, Camera, Video, ChevronDown, ChevronUp } from 'lucide-react';
+import { Truck, Wrench, Save, Upload, X, Trash2, Camera, Video, ChevronDown, ChevronUp, MapPin, Users, PawPrint } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from '../components/ImageUpload';
@@ -36,6 +36,27 @@ const RV_FEATURES = [
   'Tow Package', 'Hitch', 'Weight Distribution',
 ];
 
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
+  'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
+  'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+  'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+];
+
+const TRAVEL_PARTY_TYPES = [
+  { value: '', label: 'Select...' },
+  { value: 'SOLO', label: 'Solo Adventurer' },
+  { value: 'COUPLE', label: 'Couple' },
+  { value: 'FAMILY', label: 'Family' },
+  { value: 'GROUP', label: 'Group/Friends' },
+  { value: 'VARIES', label: 'It Varies' },
+];
+
+const PET_TYPES = ['Dog', 'Cat', 'Bird', 'Other'];
+
 export default function MyRVPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -53,6 +74,16 @@ export default function MyRVPage() {
     rvWeight: '',
     rvDescription: '',
     rvFeatures: [] as string[],
+  });
+
+  const [homeData, setHomeData] = useState({
+    homeCity: '',
+    homeState: '',
+    homeZipCode: '',
+    travelPartyType: '',
+    travelPartySize: '',
+    hasPets: false,
+    petTypes: [] as string[],
   });
 
   const [showcase, setShowcase] = useState({
@@ -84,6 +115,16 @@ export default function MyRVPage() {
         rvWeight: profile.rvWeight?.toString() || '',
         rvDescription: profile.rvDescription || '',
         rvFeatures: profile.rvFeatures || [],
+      });
+
+      setHomeData({
+        homeCity: profile.homeCity || '',
+        homeState: profile.homeState || '',
+        homeZipCode: profile.homeZipCode || '',
+        travelPartyType: profile.travelPartyType || '',
+        travelPartySize: profile.travelPartySize?.toString() || '',
+        hasPets: profile.hasPets || false,
+        petTypes: profile.petTypes || [],
       });
 
       // Load RV showcase for photos/video
@@ -189,6 +230,127 @@ export default function MyRVPage() {
               Maintenance Log
             </Link>
             <p className="text-gray-600">Manage your rig details and showcase</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Home Location Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-green-600" />
+          Home Base & Travel Style
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">This is used as your default starting point for trip planning.</p>
+
+        <div className="space-y-6">
+          {/* City and State */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+              <input
+                type="text"
+                value={homeData.homeCity}
+                onChange={(e) => setHomeData({ ...homeData, homeCity: e.target.value })}
+                placeholder="e.g., Denver"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+              <select
+                value={homeData.homeState}
+                onChange={(e) => setHomeData({ ...homeData, homeState: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="">Select state...</option>
+                {US_STATES.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+              <input
+                type="text"
+                value={homeData.homeZipCode}
+                onChange={(e) => setHomeData({ ...homeData, homeZipCode: e.target.value })}
+                placeholder="e.g., 80202"
+                maxLength={10}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Travel Party */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Who do you usually travel with?
+              </label>
+              <select
+                value={homeData.travelPartyType}
+                onChange={(e) => setHomeData({ ...homeData, travelPartyType: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              >
+                {TRAVEL_PARTY_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+            {(homeData.travelPartyType === 'FAMILY' || homeData.travelPartyType === 'GROUP') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Party Size</label>
+                <input
+                  type="number"
+                  value={homeData.travelPartySize}
+                  onChange={(e) => setHomeData({ ...homeData, travelPartySize: e.target.value })}
+                  placeholder="How many people?"
+                  min="1"
+                  max="20"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Pets */}
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={homeData.hasPets}
+                onChange={(e) => setHomeData({ ...homeData, hasPets: e.target.checked, petTypes: e.target.checked ? homeData.petTypes : [] })}
+                className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+              />
+              <PawPrint className="w-5 h-5 text-amber-600" />
+              <span className="font-medium">I travel with pets</span>
+            </label>
+
+            {homeData.hasPets && (
+              <div className="mt-3 ml-8 flex flex-wrap gap-2">
+                {PET_TYPES.map((pet) => (
+                  <button
+                    key={pet}
+                    type="button"
+                    onClick={() => {
+                      if (homeData.petTypes.includes(pet)) {
+                        setHomeData({ ...homeData, petTypes: homeData.petTypes.filter(p => p !== pet) });
+                      } else {
+                        setHomeData({ ...homeData, petTypes: [...homeData.petTypes, pet] });
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-full border transition-all ${
+                      homeData.petTypes.includes(pet)
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {pet}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
