@@ -2068,7 +2068,17 @@ export default function BasecampPage({ user }: BasecampProps) {
                         : 'bg-slate-600 text-white hover:bg-slate-500'
                     }`}
                   >
-                    Settings
+                    Details
+                  </button>
+                  <button
+                    onClick={() => setRvTab('log')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                      rvTab === 'log' 
+                        ? 'bg-white text-slate-800' 
+                        : 'bg-slate-600 text-white hover:bg-slate-500'
+                    }`}
+                  >
+                    RV Log
                   </button>
                 </div>
               </div>
