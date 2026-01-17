@@ -858,6 +858,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     licensePlate: '',
     licensePlateState: '',
     tagExpiration: '',
+    rvOdometer: '',
     homeCity: '',
     homeState: '',
     homeZipCode: '',
@@ -1093,6 +1094,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         licensePlate: profile.licensePlate || '',
         licensePlateState: profile.licensePlateState || '',
         tagExpiration: profile.tagExpiration || '',
+        rvOdometer: profile.rvOdometer || '',
         homeCity: profile.homeCity || '',
         homeState: profile.homeState || '',
         homeZipCode: profile.homeZipCode || '',
@@ -2362,6 +2364,25 @@ export default function BasecampPage({ user }: BasecampProps) {
                     </div>
                   </div>
 
+                  {/* Odometer */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">Odometer</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Current Mileage</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={rvEditData.rvOdometer}
+                          onChange={(e) => setRvEditData({...rvEditData, rvOdometer: e.target.value})}
+                          placeholder="45000"
+                          className="w-full border rounded-lg p-2 pr-16"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Update periodically to track maintenance intervals</p>
+                    </div>
+                  </div>
+
                   {/* Home Base */}
                   <div className="border-t pt-4">
                     <h4 className="font-semibold text-gray-800 mb-2">Home Base</h4>
@@ -2430,6 +2451,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                           licensePlate: rvEditData.licensePlate,
                           licensePlateState: rvEditData.licensePlateState,
                           tagExpiration: rvEditData.tagExpiration,
+                          rvOdometer: rvEditData.rvOdometer ? parseInt(rvEditData.rvOdometer) : null,
                           homeCity: rvEditData.homeCity,
                           homeState: rvEditData.homeState,
                           travelPartyType: rvEditData.travelPartyType,

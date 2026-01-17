@@ -70,6 +70,7 @@ model User {
   licensePlate    String?
   licensePlateState String?
   tagExpiration   DateTime?
+  rvOdometer      Int?        // Current odometer reading
   rvSleeps        Int?
   rvSlideouts     Int?
   rvWeight        Int?
