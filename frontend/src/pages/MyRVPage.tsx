@@ -72,6 +72,8 @@ export default function MyRVPage() {
     rvSleeps: '',
     rvSlideouts: '',
     rvWeight: '',
+    rvWidth: '',
+    rvHeight: '',
     rvDescription: '',
     rvFeatures: [] as string[],
   });
@@ -113,6 +115,8 @@ export default function MyRVPage() {
         rvSleeps: profile.rvSleeps?.toString() || '',
         rvSlideouts: profile.rvSlideouts?.toString() || '',
         rvWeight: profile.rvWeight?.toString() || '',
+        rvWidth: profile.rvWidth?.toString() || '',
+        rvHeight: profile.rvHeight?.toString() || '',
         rvDescription: profile.rvDescription || '',
         rvFeatures: profile.rvFeatures || [],
       });
@@ -165,6 +169,8 @@ export default function MyRVPage() {
         rvSleeps: rvData.rvSleeps ? parseInt(rvData.rvSleeps) : null,
         rvSlideouts: rvData.rvSlideouts ? parseInt(rvData.rvSlideouts) : null,
         rvWeight: rvData.rvWeight ? parseInt(rvData.rvWeight) : null,
+        rvWidth: rvData.rvWidth ? parseInt(rvData.rvWidth) : null,
+        rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
         rvDescription: rvData.rvDescription || null,
         rvFeatures: rvData.rvFeatures,
       });
@@ -414,7 +420,7 @@ export default function MyRVPage() {
           </div>
 
           {/* Specs Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Length (ft)</label>
               <input
@@ -452,6 +458,26 @@ export default function MyRVPage() {
                 value={rvData.rvWeight}
                 onChange={(e) => setRvData({ ...rvData, rvWeight: e.target.value })}
                 placeholder="12000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Width (ft)</label>
+              <input
+                type="number"
+                value={rvData.rvWidth}
+                onChange={(e) => setRvData({ ...rvData, rvWidth: e.target.value })}
+                placeholder="8"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Height (ft)</label>
+              <input
+                type="number"
+                value={rvData.rvHeight}
+                onChange={(e) => setRvData({ ...rvData, rvHeight: e.target.value })}
+                placeholder="11"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
