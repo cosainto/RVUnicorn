@@ -1075,6 +1075,19 @@ export default function BasecampPage({ user }: BasecampProps) {
         rvModel: profile.rvModel,
       });
 
+      // Populate edit form data
+      setRvEditData({
+        rvType: profile.rvType || '',
+        rvYear: profile.rvYear || '',
+        rvMake: profile.rvMake || '',
+        rvModel: profile.rvModel || '',
+        homeCity: profile.homeCity || '',
+        homeState: profile.homeState || '',
+        homeZipCode: profile.homeZipCode || '',
+        travelPartyType: profile.travelPartyType || '',
+        hasPets: profile.hasPets || false,
+      });
+
       // Load social links
       setSocialLinks({
         website: profile.website || '',
@@ -2023,8 +2036,33 @@ export default function BasecampPage({ user }: BasecampProps) {
                     <Edit className="w-4 h-4" />
                   </Link>
                 </div>
+                {/* Sub-tabs */}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => setRvTab('overview')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                      rvTab === 'overview' 
+                        ? 'bg-white text-slate-800' 
+                        : 'bg-slate-600 text-white hover:bg-slate-500'
+                    }`}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setRvTab('edit')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                      rvTab === 'edit' 
+                        ? 'bg-white text-slate-800' 
+                        : 'bg-slate-600 text-white hover:bg-slate-500'
+                    }`}
+                  >
+                    Settings
+                  </button>
+                </div>
               </div>
 
+              {rvTab === 'overview' && (
+              <>
               {/* RV Photo */}
               <div className="aspect-video bg-slate-100 relative">
                 {rvShowcase?.photos?.[0] ? (
@@ -2114,6 +2152,156 @@ export default function BasecampPage({ user }: BasecampProps) {
                   Open RV Log
                 </Link>
               </div>
+              </>
+              )}
+
+              {/* Settings Tab */}
+              {rvTab === 'edit' && (
+                <div className="p-4 space-y-4">
+                  {/* RV Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">RV Type</label>
+                    <select
+                      value={rvEditData.rvType}
+                      onChange={(e) => setRvEditData({...rvEditData, rvType: e.target.value})}
+                      className="w-full border rounded-lg p-2"
+                    >
+                      <option value="">Select type...</option>
+                      <option value="class_a">Class A</option>
+                      <option value="class_b">Class B</option>
+                      <option value="class_c">Class C</option>
+                      <option value="travel_trailer">Travel Trailer</option>
+                      <option value="fifth_wheel">Fifth Wheel</option>
+                      <option value="pop_up">Pop-up Camper</option>
+                      <option value="truck_camper">Truck Camper</option>
+                      <option value="teardrop">Teardrop</option>
+                      <option value="toy_hauler">Toy Hauler</option>
+                      <option value="tent">Tent Camping</option>
+                      <option value="van">Camper Van</option>
+                    </select>
+                  </div>
+
+                  {/* Year, Make, Model */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                      <input
+                        type="text"
+                        value={rvEditData.rvYear}
+                        onChange={(e) => setRvEditData({...rvEditData, rvYear: e.target.value})}
+                        placeholder="2020"
+                        className="w-full border rounded-lg p-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Make</label>
+                      <input
+                        type="text"
+                        value={rvEditData.rvMake}
+                        onChange={(e) => setRvEditData({...rvEditData, rvMake: e.target.value})}
+                        placeholder="Airstream"
+                        className="w-full border rounded-lg p-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                      <input
+                        type="text"
+                        value={rvEditData.rvModel}
+                        onChange={(e) => setRvEditData({...rvEditData, rvModel: e.target.value})}
+                        placeholder="Basecamp"
+                        className="w-full border rounded-lg p-2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Home Base */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">Home Base</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        <input
+                          type="text"
+                          value={rvEditData.homeCity}
+                          onChange={(e) => setRvEditData({...rvEditData, homeCity: e.target.value})}
+                          placeholder="Denver"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                        <input
+                          type="text"
+                          value={rvEditData.homeState}
+                          onChange={(e) => setRvEditData({...rvEditData, homeState: e.target.value})}
+                          placeholder="CO"
+                          className="w-full border rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Travel Party */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">Travel Style</h4>
+                    <select
+                      value={rvEditData.travelPartyType}
+                      onChange={(e) => setRvEditData({...rvEditData, travelPartyType: e.target.value})}
+                      className="w-full border rounded-lg p-2 mb-2"
+                    >
+                      <option value="">Select travel party...</option>
+                      <option value="solo">Solo Traveler</option>
+                      <option value="couple">Couple</option>
+                      <option value="family">Family</option>
+                      <option value="group">Group/Friends</option>
+                    </select>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={rvEditData.hasPets}
+                        onChange={(e) => setRvEditData({...rvEditData, hasPets: e.target.checked})}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-gray-700">Traveling with pets</span>
+                    </label>
+                  </div>
+
+                  {/* Save Button */}
+                  <button
+                    onClick={async () => {
+                      setSavingRv(true);
+                      try {
+                        await api.put('/profile/update', {
+                          rvType: rvEditData.rvType,
+                          rvYear: rvEditData.rvYear,
+                          rvMake: rvEditData.rvMake,
+                          rvModel: rvEditData.rvModel,
+                          homeCity: rvEditData.homeCity,
+                          homeState: rvEditData.homeState,
+                          travelPartyType: rvEditData.travelPartyType,
+                          hasPets: rvEditData.hasPets,
+                        });
+                        setRvInfo({
+                          rvType: rvEditData.rvType,
+                          rvYear: rvEditData.rvYear,
+                          rvMake: rvEditData.rvMake,
+                          rvModel: rvEditData.rvModel,
+                        });
+                        setRvTab('overview');
+                      } catch (error) {
+                        console.error('Failed to save RV info:', error);
+                      } finally {
+                        setSavingRv(false);
+                      }
+                    }}
+                    disabled={savingRv}
+                    className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                  >
+                    {savingRv ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              )}
             </div>
               
              <Top8Friends username={user?.username} />
