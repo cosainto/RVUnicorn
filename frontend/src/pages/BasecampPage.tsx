@@ -2440,7 +2440,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                     onClick={async () => {
                       setSavingRv(true);
                       try {
-                        await api.put('/profile/update', {
+                        await api.put(`/profile/${user?.username}`, {
                           rvType: rvEditData.rvType,
                           rvYear: rvEditData.rvYear,
                           rvMake: rvEditData.rvMake,
