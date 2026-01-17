@@ -202,7 +202,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [loading, setLoading] = useState(true);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [showAddVisitModal, setShowAddVisitModal] = useState(true);
+  const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [editingVisit, setEditingVisit] = useState<StateVisit | null>(null);
   const [campgrounds, setCampgrounds] = useState<any[]>([]);
   const [loadingCampgrounds, setLoadingCampgrounds] = useState(true);
