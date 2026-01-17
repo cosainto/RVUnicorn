@@ -9,10 +9,9 @@ const prisma = new PrismaClient();
 async function geocodeAddress(city: string, state: string, zipCode?: string): Promise<{ lat: number; lon: number } | null> {
   try {
     const query = zipCode 
-      ? \`\${city}, \${state} \${zipCode}, USA\`
-      : \`\${city}, \${state}, USA\`;
-    const url = \`https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(query)}&limit=1\`;
-    
+      ? `${city}, ${state} ${zipCode}, USA`
+      : `${city}, ${state}, USA`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
     const response = await fetch(url, {
       headers: { 'User-Agent': 'RVUnicorn/1.0' }
     });
