@@ -82,17 +82,18 @@ function AppContent() {
       if (user && !onboardingChecked) {
         try {
           const { data } = await api.get('/onboarding/status');
+          setOnboardingChecked(true);
           if (!data.completed) {
             setShowOnboarding(true);
           }
         } catch (error) {
           console.error('Check onboarding error:', error);
+          setOnboardingChecked(true);
         }
-        setOnboardingChecked(true);
       }
     };
     checkOnboarding();
-  }, [user, onboardingChecked]);
+  }, [user]);
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
