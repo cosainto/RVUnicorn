@@ -23,8 +23,7 @@ import {
   Play
 } from 'lucide-react';
 import api from '../services/api';
-import {
-  Plus, User as UserType } from '../services/auth.service';
+import { User as UserType } from '../services/auth.service';
 import RVShowcaseEdit from '../components/RVShowcaseEdit';
 import SocialLinks from '../components/SocialLinks';
 import SocialFeed from '../components/SocialFeed';
