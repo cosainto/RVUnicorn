@@ -846,6 +846,19 @@ export default function BasecampPage({ user }: BasecampProps) {
   // RV Info State
   const [rvInfo, setRvInfo] = useState<any>(null);
   const [rvShowcase, setRvShowcase] = useState<any>(null);
+  const [rvTab, setRvTab] = useState<'overview' | 'edit'>('overview');
+  const [rvEditData, setRvEditData] = useState({
+    rvType: '',
+    rvYear: '',
+    rvMake: '',
+    rvModel: '',
+    homeCity: '',
+    homeState: '',
+    homeZipCode: '',
+    travelPartyType: '',
+    hasPets: false,
+  });
+  const [savingRv, setSavingRv] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats | null>(null);
 
@@ -1069,7 +1082,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         instagramUrl: profile.instagramUrl || '',
         twitterUrl: profile.twitterUrl || '',
         youtubeUrl: profile.youtubeUrl || '',
-        $$tiktokUrl: profile.tiktokUrl || '',
+        tiktokUrl: profile.tiktokUrl || '',
         showSocialOnProfile: profile.showSocialOnProfile ?? true,
         showSocialOnCreator: profile.showSocialOnCreator ?? true,
       });
