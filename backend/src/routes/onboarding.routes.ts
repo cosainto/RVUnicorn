@@ -182,6 +182,42 @@ router.put('/travel-party', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/onboarding/social-links - Save social links
+router.put('/social-links', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { website, facebookUrl, instagramUrl, twitterUrl, youtubeUrl, tiktokUrl } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        website: website || null,
+        facebookUrl: facebookUrl || null,
+        instagramUrl: instagramUrl || null,
+        twitterUrl: twitterUrl || null,
+        youtubeUrl: youtubeUrl || null,
+        tiktokUrl: tiktokUrl || null,
+        onboardingStep: { increment: 1 }
+      },
+      select: {
+        id: true,
+        website: true,
+        facebookUrl: true,
+        instagramUrl: true,
+        twitterUrl: true,
+        youtubeUrl: true,
+        tiktokUrl: true,
+        onboardingStep: true,
+      }
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Save social links error:', error);
+    res.status(500).json({ error: 'Failed to save social links' });
+  }
+});
+
 // PUT /api/onboarding/complete - Mark onboarding as complete
 router.put('/complete', authenticateToken, async (req, res) => {
   try {
