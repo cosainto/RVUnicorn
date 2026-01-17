@@ -64,6 +64,7 @@ import creatorRoutes from './routes/creator.routes';
 import basecampCreatorFeedRoutes from './routes/basecamp-creator-feed.routes';
 import creatorFollowingRoutes from './routes/creator-following.routes';
 import bookingClickRoutes from './routes/bookingClick.routes';
+import onboardingRoutes from './routes/onboarding.routes';
 
 
 
@@ -146,6 +147,7 @@ app.use('/api/creators', creatorRoutes);
 app.use('/api/basecamp', basecampCreatorFeedRoutes);
 app.use('/api/creators', creatorFollowingRoutes);
 app.use('/api/booking-clicks', bookingClickRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 
 
