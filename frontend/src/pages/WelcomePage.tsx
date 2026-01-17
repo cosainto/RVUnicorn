@@ -8,7 +8,7 @@ export default function WelcomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -20,13 +20,16 @@ export default function WelcomePage() {
       try {
         const { data } = await api.get('/onboarding/status');
         if (data.completed) {
+          // Already completed onboarding, go to basecamp
           navigate('/');
         } else {
-          setNeedsOnboarding(true);
+          // Needs onboarding
+          setShowWizard(true);
         }
       } catch (error) {
+        // API failed - show wizard anyway for new users
         console.error('Check onboarding error:', error);
-        navigate('/');
+        setShowWizard(true);
       } finally {
         setLoading(false);
       }
@@ -40,6 +43,12 @@ export default function WelcomePage() {
   };
 
   const handleSkip = async () => {
+    // Mark onboarding as skipped/completed
+    try {
+      await api.put('/onboarding/skip');
+    } catch (error) {
+      console.error('Skip onboarding error:', error);
+    }
     navigate('/');
   };
 
@@ -51,7 +60,7 @@ export default function WelcomePage() {
     );
   }
 
-  if (!needsOnboarding) {
+  if (!showWizard) {
     return null;
   }
 
@@ -61,4 +70,3 @@ export default function WelcomePage() {
     </div>
   );
 }
-// trigger rebuild Fri Jan 16 21:04:37 CST 2026
