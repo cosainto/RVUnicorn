@@ -2633,14 +2633,20 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               </div>
 
               {userGroups.length === 0 ? (
-                <div className="text-center py-6">
-                  <Users className="w-12 h-12 mx-auto mb-2 text-gray-200" />
-                  <p className="text-sm text-gray-400">No groups yet</p>
-                  <Link 
-                    to="/groups" 
-                    className="text-xs text-blue-500 hover:text-blue-600 mt-2 inline-block"
+                <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src="/images/Find_Your_Herd_Default_Poppy.png" 
+                    alt="Find your herd" 
+                    className="w-full h-full object-cover"
+                  />
+                  <Link
+                    to="/groups"
+                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
                   >
-                    Browse groups to join →
+                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                      <Plus className="w-5 h-5" />
+                      Find Your Herd
+                    </span>
                   </Link>
                 </div>
               ) : (
