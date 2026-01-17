@@ -5,7 +5,8 @@ interface MapMarker {
   name: string;
   latitude: number;
   longitude: number;
-  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop';
+  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home';
+  isCurrentlyCamping?: boolean;
   isVisited?: boolean;
   brand?: string;
 }
@@ -56,6 +57,9 @@ const getMarkerColor = (marker: MapMarker) => {
     if (marker.brand === 'TA') return '#3b82f6'; // blue
     if (marker.brand === 'Petro') return '#3b82f6'; // blue
     return '#f97316'; // orange default
+  }
+  if (marker.type === 'home') {
+    return marker.isCurrentlyCamping ? '#f97316' : '#22c55e'; // orange if camping, green if home
   }
   if (marker.type === 'restStop') {
     return '#0ea5e9'; // sky blue
@@ -219,6 +223,25 @@ export default function USMapSVG({
                     stroke="#fff"
                     strokeWidth={1}
                   />
+                </>
+              ) : marker.type === 'home' ? (
+                <>
+                  {/* Home marker - house shape */}
+                  <g transform="translate(-8, -16) scale(0.7)">
+                    {/* House roof */}
+                    <path
+                      d="M12 2 L2 12 L5 12 L5 22 L19 22 L19 12 L22 12 Z"
+                      fill={getMarkerColor(marker)}
+                      stroke="#fff"
+                      strokeWidth={2}
+                    />
+                    {/* Door */}
+                    <rect x="10" y="14" width="4" height="8" fill="#fff" />
+                    {/* Camping indicator (tent on top if camping) */}
+                    {marker.isCurrentlyCamping && (
+                      <circle cx="12" cy="-4" r="6" fill="#f97316" stroke="#fff" strokeWidth={1} />
+                    )}
+                  </g>
                 </>
               ) : (
                 <>

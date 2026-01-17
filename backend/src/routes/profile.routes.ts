@@ -1269,3 +1269,84 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to get suggested tags' });
   }
 });
+
+// GET /api/profile/:userId/home-location - Get user's home location for map
+router.get('/:userId/home-location', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get the requesting user if authenticated
+    let requestingUserId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        requestingUserId = (decoded as any).userId;
+      } catch (e) {
+        // Not authenticated, that's okay
+      }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        homeCity: true,
+        homeState: true,
+        homeLatitude: true,
+        homeLongitude: true,
+
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check privacy settings
+    const privacy = 'PUBLIC'; // TODO: Add hometownPrivacy field to schema
+    
+    // If private, only show to self
+    if (privacy === 'PRIVATE' && requestingUserId !== userId) {
+      return res.json({ visible: false });
+    }
+    
+    // If friends only, check friendship
+    if (privacy === 'FRIENDS' && requestingUserId !== userId) {
+      if (!requestingUserId) {
+        return res.json({ visible: false });
+      }
+      
+      const friendship = await prisma.friendship.findFirst({
+        where: {
+          OR: [
+            { requesterId: requestingUserId, addresseeId: userId, status: 'ACCEPTED' },
+            { requesterId: userId, addresseeId: requestingUserId, status: 'ACCEPTED' },
+          ]
+        }
+      });
+      
+      if (!friendship) {
+        return res.json({ visible: false });
+      }
+    }
+
+    // Return home location if coordinates exist
+    if (user.homeLatitude && user.homeLongitude) {
+      res.json({
+        visible: true,
+        homeCity: user.homeCity,
+        homeState: user.homeState,
+        homeLatitude: user.homeLatitude,
+        homeLongitude: user.homeLongitude,
+      });
+    } else {
+      res.json({ visible: false });
+    }
+  } catch (error) {
+    console.error('Get home location error:', error);
+    res.status(500).json({ error: 'Failed to get home location' });
+  }
+});

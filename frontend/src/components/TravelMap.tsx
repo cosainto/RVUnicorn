@@ -211,6 +211,15 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [isFriend, setIsFriend] = useState(true);
   const [copyingTrip, setCopyingTrip] = useState<string | null>(null);
+  
+  // Home location state
+  const [homeLocation, setHomeLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    city: string;
+    state: string;
+  } | null>(null);
+  const [isCurrentlyCamping, setIsCurrentlyCamping] = useState(false);
 
   // Roadtrip state
   const [activeLayers, setActiveLayers] = useState<MapLayer[]>(['visits']);
@@ -240,6 +249,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
 
   useEffect(() => {
     loadTravelMap();
+    loadHomeLocation();
     if (isOwnProfile) {
       loadFriends();
       loadAlbums();
@@ -290,6 +300,31 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
       console.error('Load travel map error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHomeLocation = async () => {
+    try {
+      const { data } = await api.get(`/profile/${userId}/home-location`);
+      if (data && data.homeLatitude && data.homeLongitude) {
+        setHomeLocation({
+          latitude: data.homeLatitude,
+          longitude: data.homeLongitude,
+          city: data.homeCity || '',
+          state: data.homeState || '',
+        });
+      }
+      
+      // Check if currently on a trip
+      const today = new Date();
+      const activeTrip = stateVisits.find(visit => {
+        const start = new Date(visit.startDate);
+        const end = visit.endDate ? new Date(visit.endDate) : start;
+        return start <= today && today <= end;
+      });
+      setIsCurrentlyCamping(!!activeTrip);
+    } catch (error) {
+      // Home location not set or not visible
     }
   };
 
@@ -525,6 +560,15 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
       longitude: s.longitude,
       type: "restStop" as const,
     })) : []),
+    // Home location marker
+    ...(homeLocation ? [{
+      id: 'home-location',
+      name: `Home: ${homeLocation.city}, ${homeLocation.state}`,
+      latitude: homeLocation.latitude,
+      longitude: homeLocation.longitude,
+      type: "home" as const,
+      isCurrentlyCamping: isCurrentlyCamping,
+    }] : []),
   ];
 
   if (loading) {
