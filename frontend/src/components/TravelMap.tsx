@@ -202,14 +202,14 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [loading, setLoading] = useState(true);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [showAddVisitModal, setShowAddVisitModal] = useState(false);
+  const [showAddVisitModal, setShowAddVisitModal] = useState(true);
   const [editingVisit, setEditingVisit] = useState<StateVisit | null>(null);
   const [campgrounds, setCampgrounds] = useState<any[]>([]);
-  const [loadingCampgrounds, setLoadingCampgrounds] = useState(false);
+  const [loadingCampgrounds, setLoadingCampgrounds] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
-  const [isFriend, setIsFriend] = useState(false);
+  const [isFriend, setIsFriend] = useState(true);
   const [copyingTrip, setCopyingTrip] = useState<string | null>(null);
 
   // Roadtrip state
@@ -220,10 +220,10 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [selectedGasStation, setSelectedGasStation] = useState<GasStation | null>(null);
   const [selectedRestStop, setSelectedRestStop] = useState<RestStop | null>(null);
   const [selectedInterstate, setSelectedInterstate] = useState<string>('');
-  const [loadingRoadtrip, setLoadingRoadtrip] = useState(false);
-  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [loadingRoadtrip, setLoadingRoadtrip] = useState(true);
+  const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [fuelType, setFuelType] = useState<'regular' | 'diesel'>('diesel');
-  const [updatingPrices, setUpdatingPrices] = useState(false);
+  const [updatingPrices, setUpdatingPrices] = useState(true);
   const [priceStats, setPriceStats] = useState<any>(null);
 
   const [visitForm, setVisitForm] = useState({
@@ -549,15 +549,6 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
           </p>
         </div>
         
-        <button
-          onClick={() => setShowLayerPanel(!showLayerPanel)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
-            showLayerPanel ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <Layers className="w-5 h-5" />
-          Map Layers
-        </button>
       </div>
 
       {/* Layer Control Panel */}
