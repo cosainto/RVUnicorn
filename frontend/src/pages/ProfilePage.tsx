@@ -32,8 +32,7 @@ import UserStatus from '../components/UserStatus';
 import TravelMap from '../components/TravelMap';
 import Top8Friends from '../components/Top8Friends';
 import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
-import {
-  Plus, UserActionsMenu } from '../components/BlockUserButton';
+import { UserActionsMenu } from '../components/BlockUserButton';
 import FollowingSection from '../components/FollowingSection';
 
 
