@@ -75,27 +75,42 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      if (user && !onboardingChecked) {
-        try {
-          const { data } = await api.get('/onboarding/status');
-          setOnboardingChecked(true);
-          if (!data.completed) {
-            setShowOnboarding(true);
-          }
-        } catch (error) {
-          console.error('Check onboarding error:', error);
-          setOnboardingChecked(true);
+      if (!user) return;
+      
+      // Check if we already checked this session
+      const sessionKey = `onboarding_checked_${user.id}`;
+      const alreadyChecked = sessionStorage.getItem(sessionKey);
+      
+      if (alreadyChecked === 'true') {
+        // Check if wizard was showing
+        if (sessionStorage.getItem(`onboarding_show_${user.id}`) === 'true') {
+          setShowOnboarding(true);
         }
+        return;
+      }
+      
+      try {
+        const { data } = await api.get('/onboarding/status');
+        sessionStorage.setItem(sessionKey, 'true');
+        if (!data.completed) {
+          sessionStorage.setItem(`onboarding_show_${user.id}`, 'true');
+          setShowOnboarding(true);
+        }
+      } catch (error) {
+        console.error('Check onboarding error:', error);
+        sessionStorage.setItem(sessionKey, 'true');
       }
     };
     checkOnboarding();
   }, [user]);
 
   const handleOnboardingComplete = () => {
+    if (user) {
+      sessionStorage.setItem(`onboarding_show_${user.id}`, 'false');
+    }
     setShowOnboarding(false);
   };
 
