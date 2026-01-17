@@ -75,11 +75,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Get friends
     const friendships = await prisma.friendship.findMany({
       where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
         OR: [
           { initiatorId: userId, status: 'ACCEPTED' },
           { receiverId: userId, status: 'ACCEPTED' },
@@ -96,7 +91,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
     // Get followed campgrounds
     const followedCampgrounds = await prisma.campgroundFollow.findMany({
-      
+      where: { userId },
       select: { campgroundId: true },
     });
     const followedCampgroundIds = followedCampgrounds.map((f) => f.campgroundId);
@@ -107,11 +102,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     
     const activeTrips = await prisma.stateVisit.findMany({
       where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
         userId,
         campsiteId: { not: null },
         startDate: { lte: today },
@@ -128,13 +118,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Get muted entities
     const now = new Date();
     const mutedEntities = await prisma.mutedEntity.findMany({
-      
       where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
         userId,
         OR: [
           { snoozeUntil: null },

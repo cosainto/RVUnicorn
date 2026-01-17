@@ -65,6 +65,8 @@ import basecampCreatorFeedRoutes from './routes/basecamp-creator-feed.routes';
 import creatorFollowingRoutes from './routes/creator-following.routes';
 import bookingClickRoutes from './routes/bookingClick.routes';
 import onboardingRoutes from './routes/onboarding.routes';
+import preferencesRoutes from "./routes/preferences.routes";
+import personalPackRoutes from "./routes/personal-pack.routes";
 
 
 
@@ -148,6 +150,8 @@ app.use('/api/basecamp', basecampCreatorFeedRoutes);
 app.use('/api/creators', creatorFollowingRoutes);
 app.use('/api/booking-clicks', bookingClickRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use("/api/preferences", preferencesRoutes);
+app.use("/api/personal-pack", personalPackRoutes);
 
 
 
