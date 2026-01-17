@@ -824,15 +824,21 @@ const [editForm, setEditForm] = useState({
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-600">
-                <Tent className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                <p className="text-sm">No RV showcase yet</p>
+              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                <img 
+                  src="/images/Showusyourrig_Default_Badge.jpeg" 
+                  alt="Show us your rig" 
+                  className="w-full h-full object-cover"
+                />
                 {isOwnProfile && (
                   <button
                     onClick={() => setShowRVShowcaseEdit(true)}
-                    className="btn btn-primary btn-sm mt-3"
+                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
                   >
-                    Create Showcase
+                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                      <Plus className="w-5 h-5" />
+                      Add Your Rig
+                    </span>
                   </button>
                 )}
               </div>
