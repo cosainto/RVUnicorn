@@ -21,7 +21,7 @@ export default function MentionText({ content, className = '' }: MentionTextProp
       parts.push(
         <Link
           key={keyCounter++}
-          to={`/campgrounds?search=${encodeURIComponent(campgroundName)}`}
+          to={"/campgrounds?search=" + encodeURIComponent(campgroundName)}
           className="text-green-600 hover:text-green-800 hover:underline font-medium"
         >
           🏕️ {campgroundName}
@@ -38,7 +38,7 @@ export default function MentionText({ content, className = '' }: MentionTextProp
       parts.push(
         <Link
           key={keyCounter++}
-          to={`/threads?tag=${tag.toLowerCase()}`}
+          to={"/threads?tag=" + tag.toLowerCase()}
           className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
         >
           #{tag}
@@ -55,7 +55,7 @@ export default function MentionText({ content, className = '' }: MentionTextProp
       parts.push(
         <Link
           key={keyCounter++}
-          to={`/profile/${username}`}
+          to={"/profile/" + username}
           className="text-primary-600 hover:text-primary-800 hover:underline font-medium"
         >
           @{username}
