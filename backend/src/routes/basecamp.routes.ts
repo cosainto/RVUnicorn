@@ -675,7 +675,70 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const paginatedActivities = deduplicatedActivities.slice(0, limit);
     const hasMore = deduplicatedActivities.length > limit;
 
-    res.json({ feedItems: paginatedActivities, hasMore, page });
+    // Enrich activities with source like counts
+    const enrichedActivities = await Promise.all(paginatedActivities.map(async (activity) => {
+      const meta = activity.metadata || {};
+      const entityType = meta.entityType || (activity.type?.includes('THREAD') ? 'THREAD' : null);
+      let sourceLikeCount = 0;
+      let sourceLikers: { id: string; firstName: string; lastName: string; username: string }[] = [];
+      let userHasLiked = false;
+
+      try {
+        if (entityType === 'THREAD' || ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION'].includes(activity.type)) {
+          const postId = meta.postId || meta.replyId;
+          if (postId) {
+            const likes = await prisma.threadPostLike.findMany({
+              where: { postId },
+              include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+              take: 5,
+              orderBy: { createdAt: 'desc' }
+            });
+            sourceLikeCount = await prisma.threadPostLike.count({ where: { postId } });
+            sourceLikers = likes.map(l => l.user);
+            userHasLiked = likes.some(l => l.userId === userId);
+          }
+        } else if (entityType === 'RECIPE') {
+          const recipeId = meta.recipeId;
+          if (recipeId) {
+            const likes = await prisma.recipeLike.findMany({
+              where: { recipeId },
+              include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+              take: 5,
+              orderBy: { createdAt: 'desc' }
+            });
+            sourceLikeCount = await prisma.recipeLike.count({ where: { recipeId } });
+            sourceLikers = likes.map(l => l.user);
+            userHasLiked = likes.some(l => l.userId === userId);
+          }
+        } else if (entityType === 'CREATOR_CONTENT' || ['CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO'].includes(activity.type)) {
+          const contentId = meta.contentId || activity.id.replace('basecamp-', '');
+          if (contentId) {
+            try {
+              const likes = await prisma.creatorContentLike.findMany({
+                where: { contentId },
+                include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+                take: 5,
+                orderBy: { createdAt: 'desc' }
+              });
+              sourceLikeCount = await prisma.creatorContentLike.count({ where: { contentId } });
+              sourceLikers = likes.map(l => l.user);
+              userHasLiked = likes.some(l => l.userId === userId);
+            } catch (e) { /* content might not exist */ }
+          }
+        }
+      } catch (e) {
+        // Silently fail - don't break the feed
+      }
+
+      return {
+        ...activity,
+        sourceLikeCount,
+        sourceLikers,
+        userHasLiked
+      };
+    }));
+
+    res.json({ feedItems: enrichedActivities, hasMore, page });
   } catch (error) {
     console.error('Get basecamp feed error:', error);
     res.status(500).json({ error: 'Failed to get basecamp feed' });
@@ -757,6 +820,7 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
 });
 
 // React to a basecamp activity (like, love, dislike, or remove reaction)
+// Syncs reactions to source content so likes appear on the original item
 router.post('/activity/:id/react', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
@@ -778,30 +842,154 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
       data: { reaction: reaction || null }
     });
 
-    // If this is a thread-related activity, sync like to actual thread post
-    const threadTypes = ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION'];
-    if (threadTypes.includes(activity.type)) {
-      const meta = activity.metadata as any || {};
-      const postId = meta.postId || meta.replyId;
-      
-      if (postId) {
-        // If positive reaction (like or love), create ThreadPostLike
-        if (reaction === 'like' || reaction === 'love') {
-          await prisma.threadPostLike.upsert({
-            where: { postId_userId: { postId, userId } },
-            update: {},
-            create: { postId, userId }
-          });
-        } else {
-          // If removing reaction or dislike, remove ThreadPostLike
-          await prisma.threadPostLike.deleteMany({
-            where: { postId, userId }
-          });
+    const meta = activity.metadata as any || {};
+    const entityId = activity.entityId;
+    const entityType = activity.entityType;
+    const isLike = reaction === 'like';
+    const isDislike = reaction === 'dislike';
+
+    // Sync like/dislike to the source content based on entity type
+    try {
+      // THREAD content (posts/replies/comments)
+      if (entityType === 'THREAD') {
+        const postId = meta.postId || meta.replyId || entityId;
+        if (postId) {
+          if (isLike) {
+            await prisma.threadPostLike.upsert({
+              where: { postId_userId: { postId, userId } },
+              update: {},
+              create: { postId, userId }
+            });
+          } else {
+            await prisma.threadPostLike.deleteMany({
+              where: { postId, userId }
+            });
+          }
         }
       }
+      
+      // RECIPE content
+      else if (entityType === 'RECIPE') {
+        const recipeId = meta.recipeId || entityId;
+        if (recipeId) {
+          if (isLike) {
+            await prisma.recipeLike.upsert({
+              where: { recipeId_userId: { recipeId, userId } },
+              update: {},
+              create: { recipeId, userId }
+            });
+          } else {
+            await prisma.recipeLike.deleteMany({
+              where: { recipeId, userId }
+            });
+          }
+        }
+      }
+      
+      // CREATOR_CONTENT (videos, articles, etc.)
+      else if (entityType === 'CREATOR_CONTENT') {
+        const contentId = meta.contentId || entityId;
+        if (contentId) {
+          if (isLike) {
+            await prisma.creatorContentLike.upsert({
+              where: { contentId_userId: { contentId, userId } },
+              update: {},
+              create: { contentId, userId }
+            });
+          } else {
+            await prisma.creatorContentLike.deleteMany({
+              where: { contentId, userId }
+            });
+          }
+        }
+      }
+      
+      // Regular POST (wall posts)
+      else if (entityType === 'POST') {
+        const postId = meta.postId || entityId;
+        if (postId) {
+          if (isLike) {
+            await prisma.like.upsert({
+              where: { postId_userId: { postId, userId } },
+              update: {},
+              create: { postId, userId }
+            });
+          } else {
+            await prisma.like.deleteMany({
+              where: { postId, userId }
+            });
+          }
+        }
+      }
+    } catch (syncError) {
+      // Log but don't fail - the basecamp reaction was saved
+      console.error('Error syncing like to source:', syncError);
     }
 
-    res.json({ success: true, reaction: updated.reaction });
+    // Fetch updated like count from source
+    let sourceLikeCount = 0;
+    let sourceLikers: { id: string; firstName: string; lastName: string; username: string }[] = [];
+    
+    try {
+      if (entityType === 'THREAD') {
+        const postId = meta.postId || meta.replyId || entityId;
+        if (postId) {
+          const likes = await prisma.threadPostLike.findMany({
+            where: { postId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          });
+          sourceLikeCount = await prisma.threadPostLike.count({ where: { postId } });
+          sourceLikers = likes.map(l => l.user);
+        }
+      } else if (entityType === 'RECIPE') {
+        const recipeId = meta.recipeId || entityId;
+        if (recipeId) {
+          const likes = await prisma.recipeLike.findMany({
+            where: { recipeId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          });
+          sourceLikeCount = await prisma.recipeLike.count({ where: { recipeId } });
+          sourceLikers = likes.map(l => l.user);
+        }
+      } else if (entityType === 'CREATOR_CONTENT') {
+        const contentId = meta.contentId || entityId;
+        if (contentId) {
+          const likes = await prisma.creatorContentLike.findMany({
+            where: { contentId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          });
+          sourceLikeCount = await prisma.creatorContentLike.count({ where: { contentId } });
+          sourceLikers = likes.map(l => l.user);
+        }
+      } else if (entityType === 'POST') {
+        const postId = meta.postId || entityId;
+        if (postId) {
+          const likes = await prisma.like.findMany({
+            where: { postId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          });
+          sourceLikeCount = await prisma.like.count({ where: { postId } });
+          sourceLikers = likes.map(l => l.user);
+        }
+      }
+    } catch (fetchError) {
+      console.error('Error fetching source likes:', fetchError);
+    }
+
+    res.json({ 
+      success: true, 
+      reaction: updated.reaction,
+      sourceLikeCount,
+      sourceLikers
+    });
   } catch (error) {
     console.error('React to activity error:', error);
     res.status(500).json({ error: 'Failed to react to activity' });

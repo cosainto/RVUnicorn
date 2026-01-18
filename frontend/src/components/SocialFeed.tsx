@@ -81,6 +81,9 @@ interface FeedItem {
   activityType?: string;
   activityIcon?: string;
   activityLabel?: string;
+  sourceLikeCount?: number;
+  sourceLikers?: { id: string; firstName: string; lastName: string; username: string }[];
+  userHasLiked?: boolean;
 }
 
 interface SocialFeedProps {
@@ -1065,40 +1068,68 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
 
         {/* Reaction buttons for basecamp activities (thread replies, etc.) */}
         {item.isBasecampActivity && (
-          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-            <button
-              onClick={() => handleBasecampReaction(item.id, item.reaction === 'like' ? null : 'like')}
-              className={"p-2 rounded-full transition " + (item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100')}
-              title="Like"
-            >
-              <ThumbsUp className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleBasecampReaction(item.id, item.reaction === 'love' ? null : 'love')}
-              className={"p-2 rounded-full transition " + (item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100')}
-              title="Love"
-            >
-              <Heart className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleBasecampReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
-              className={"p-2 rounded-full transition " + (item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100')}
-              title="Dislike"
-            >
-              <ThumbsDown className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleBasecampDismiss(item.id)}
-              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-              title="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            {item.targetLink && (
-              <Link to={item.targetLink} className="ml-auto text-sm text-primary-600 hover:underline">
-                View Thread →
-              </Link>
+          <div className="pt-3 border-t border-gray-100">
+            {/* Source like count display */}
+            {(item.sourceLikeCount !== undefined && item.sourceLikeCount > 0) && (
+              <div className="flex items-center gap-1 mb-2 text-sm text-gray-600">
+                <ThumbsUp className="w-3 h-3" />
+                <span>
+                  {item.sourceLikers && item.sourceLikers.length > 0 ? (
+                    <>
+                      {item.sourceLikers.slice(0, 2).map((liker, idx) => (
+                        <span key={liker.id}>
+                          <Link to={`/profile/${liker.username}`} className="font-medium hover:underline">
+                            {liker.firstName}
+                          </Link>
+                          {idx < Math.min(item.sourceLikers!.length, 2) - 1 && ', '}
+                        </span>
+                      ))}
+                      {item.sourceLikeCount > 2 && (
+                        <span> and {item.sourceLikeCount - 2} other{item.sourceLikeCount - 2 > 1 ? 's' : ''}</span>
+                      )}
+                      {' liked this'}
+                    </>
+                  ) : (
+                    <span>{item.sourceLikeCount} like{item.sourceLikeCount > 1 ? 's' : ''}</span>
+                  )}
+                </span>
+              </div>
             )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleBasecampReaction(item.id, item.reaction === 'like' ? null : 'like')}
+                className={"p-2 rounded-full transition " + (item.reaction === 'like' || item.userHasLiked ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100')}
+                title="Like"
+              >
+                <ThumbsUp className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleBasecampReaction(item.id, item.reaction === 'love' ? null : 'love')}
+                className={"p-2 rounded-full transition " + (item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100')}
+                title="Love"
+              >
+                <Heart className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleBasecampReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
+                className={"p-2 rounded-full transition " + (item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100')}
+                title="Dislike"
+              >
+                <ThumbsDown className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleBasecampDismiss(item.id)}
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {item.targetLink && (
+                <Link to={item.targetLink} className="ml-auto text-sm text-primary-600 hover:underline">
+                  View Thread →
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

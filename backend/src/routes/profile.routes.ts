@@ -1131,6 +1131,9 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
             activityLabel: activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on',
             isBasecampActivity: true,
             reaction: activity.reaction,
+            metadata: meta,
+            entityType: activity.entityType,
+            entityId: activity.entityId,
           };
         });
       } catch (error) {
@@ -1144,9 +1147,46 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     );
 
     const hasMore = allItems.length >= limit;
+    const paginatedItems = allItems.slice(0, limit);
+
+    // Enrich basecamp items with source like counts
+    const enrichedItems = await Promise.all(paginatedItems.map(async (item: any) => {
+      if (!item.isBasecampActivity) return item;
+      
+      const meta = item.metadata || {};
+      let sourceLikeCount = 0;
+      let sourceLikers: { id: string; firstName: string; lastName: string; username: string }[] = [];
+      let userHasLiked = false;
+
+      try {
+        if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION'].includes(item.type)) {
+          const postId = meta.postId || meta.replyId;
+          if (postId) {
+            const likes = await prisma.threadPostLike.findMany({
+              where: { postId },
+              include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+              take: 5,
+              orderBy: { createdAt: 'desc' }
+            });
+            sourceLikeCount = await prisma.threadPostLike.count({ where: { postId } });
+            sourceLikers = likes.map((l: any) => l.user);
+            userHasLiked = currentUserId ? likes.some((l: any) => l.userId === currentUserId) : false;
+          }
+        }
+      } catch (e) {
+        // Silently fail
+      }
+
+      return {
+        ...item,
+        sourceLikeCount,
+        sourceLikers,
+        userHasLiked
+      };
+    }));
 
     res.json({
-      feedItems: allItems.slice(0, limit),
+      feedItems: enrichedItems,
       hasMore,
       page,
     });
