@@ -1088,8 +1088,57 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       };
     });
 
+    // Get BasecampActivity items for own profile (thread replies, mentions, etc.)
+    let basecampItems: any[] = [];
+    if (isOwnProfile && currentUserId) {
+      try {
+        const basecampActivities = await prisma.basecampActivity.findMany({
+          where: {
+            userId: user.id,
+            type: {
+              in: ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD']
+            }
+          },
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            actor: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+              },
+            },
+          },
+        });
+
+        basecampItems = basecampActivities.map((activity) => {
+          const meta = (activity.metadata as any) || {};
+          return {
+            id: `basecamp-${activity.id}`,
+            type: activity.type,
+            actor: activity.actor,
+            content: `${activity.actor?.firstName || 'Someone'} ${activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on'} "${activity.entityName || meta.threadTitle || 'a thread'}"`,
+            targetName: activity.entityName || meta.threadTitle,
+            targetLink: `/threads/${activity.entityId || meta.threadId}`,
+            createdAt: activity.createdAt,
+            _count: { likes: 0, comments: 0 },
+            canDelete: false,
+            activityType: activity.type,
+            activityIcon: activity.type === 'THREAD_MENTION' ? '📣' : '💬',
+            activityLabel: activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on',
+            isBasecampActivity: true,
+          };
+        });
+      } catch (error) {
+        console.log('BasecampActivity model not available');
+      }
+    }
+
     // Merge and sort all items by date
-    const allItems = [...postItems, ...activityItems].sort(
+    const allItems = [...postItems, ...activityItems, ...basecampItems].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 

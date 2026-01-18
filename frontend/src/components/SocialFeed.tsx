@@ -5,7 +5,7 @@ import ReactionPicker from './ReactionPicker';
 import CommentThread from './CommentThread';
 import { GifButton } from './GifPicker';
 import { Link } from 'react-router-dom';
-import { X,
+import { X, ThumbsUp, ThumbsDown,
   Heart,
   MessageSquare,
   Share2,
@@ -57,6 +57,8 @@ interface FeedItem {
   };
   canDelete?: boolean;
   isLiked?: boolean;
+  isBasecampActivity?: boolean;
+  reaction?: string | null;
   campground?: {
     id: string;
     name: string;
@@ -512,6 +514,29 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       }
     } catch (error) {
       console.error('Like error:', error);
+    }
+  };
+
+  const handleBasecampReaction = async (itemId: string, reaction: string | null) => {
+    try {
+      // Extract the real ID (remove basecamp- prefix)
+      const realId = itemId.replace(/^basecamp-/, '');
+      const { data } = await api.post(`/basecamp/activity/${realId}/react`, { reaction });
+      setFeedItems(items => items.map(item => 
+        item.id === itemId ? { ...item, reaction: data.reaction } : item
+      ));
+    } catch (error) {
+      console.error('Reaction error:', error);
+    }
+  };
+
+  const handleBasecampDismiss = async (itemId: string) => {
+    try {
+      const realId = itemId.replace(/^basecamp-/, '');
+      await api.delete(`/basecamp/activity/${realId}`);
+      setFeedItems(items => items.filter(item => item.id !== itemId));
+    } catch (error) {
+      console.error('Dismiss error:', error);
     }
   };
 
@@ -1040,7 +1065,46 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         )}
 
-        {!item.isPackingActivity && item.type !== 'FRIEND_REQUEST' && item.activityType !== 'FRIEND_REQUEST' && (
+        {/* Reaction buttons for basecamp activities (thread replies, etc.) */}
+        {item.isBasecampActivity && (
+          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+            <button
+              onClick={() => handleBasecampReaction(item.id, item.reaction === 'like' ? null : 'like')}
+              className={`p-2 rounded-full transition ${item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100'}`}
+              title="Like"
+            >
+              <ThumbsUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleBasecampReaction(item.id, item.reaction === 'love' ? null : 'love')}
+              className={`p-2 rounded-full transition ${item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100'}`}
+              title="Love"
+            >
+              <Heart className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleBasecampReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
+              className={`p-2 rounded-full transition ${item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100'}`}
+              title="Dislike"
+            >
+              <ThumbsDown className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleBasecampDismiss(item.id)}
+              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {item.targetLink && (
+              <Link to={item.targetLink} className="ml-auto text-sm text-primary-600 hover:underline">
+                View Thread →
+              </Link>
+            )}
+          </div>
+        )}
+
+        {!item.isPackingActivity && !item.isBasecampActivity && item.type !== 'FRIEND_REQUEST' && item.activityType !== 'FRIEND_REQUEST' && (
           <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
             <button
               onClick={() => handleLike(item)}
