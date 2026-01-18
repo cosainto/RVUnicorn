@@ -9,54 +9,84 @@ interface MentionTextProps {
 export default function MentionText({ content, className = '' }: MentionTextProps) {
   if (!content) return null;
 
-  // Parse @username mentions and @[Campground Name] mentions
   const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  
-  // Combined regex for both @username and @[Campground Name]
-  const mentionRegex = /@(\w+)|@\[([^\]]+)\]/g;
-  let match;
+  let remaining = content;
+  let keyCounter = 0;
 
-  while ((match = mentionRegex.exec(content)) !== null) {
-    // Add text before the mention
-    if (match.index > lastIndex) {
-      parts.push(content.substring(lastIndex, match.index));
-    }
-
-    if (match[1]) {
-      // @username mention
-      const username = match[1];
+  while (remaining.length > 0) {
+    // Check for campground mention @[Name]
+    const bracketMatch = remaining.match(/^@\[([^\]]+)\]/);
+    if (bracketMatch) {
+      const campgroundName = bracketMatch[1];
       parts.push(
         <Link
-          key={match.index}
+          key={keyCounter++}
+          to={`/campgrounds?search=${encodeURIComponent(campgroundName)}`}
+          className="text-green-600 hover:text-green-800 hover:underline font-medium"
+        >
+          🏕️ {campgroundName}
+        </Link>
+      );
+      remaining = remaining.substring(bracketMatch[0].length);
+      continue;
+    }
+
+    // Check for hashtag #tag
+    const hashtagMatch = remaining.match(/^#(\w+)/);
+    if (hashtagMatch) {
+      const tag = hashtagMatch[1];
+      parts.push(
+        <Link
+          key={keyCounter++}
+          to={`/threads?tag=${tag.toLowerCase()}`}
+          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+        >
+          #{tag}
+        </Link>
+      );
+      remaining = remaining.substring(hashtagMatch[0].length);
+      continue;
+    }
+
+    // Check for user mention @username
+    const userMatch = remaining.match(/^@(\w+)/);
+    if (userMatch) {
+      const username = userMatch[1];
+      parts.push(
+        <Link
+          key={keyCounter++}
           to={`/profile/${username}`}
           className="text-primary-600 hover:text-primary-800 hover:underline font-medium"
         >
           @{username}
         </Link>
       );
-    } else if (match[2]) {
-      // @[Campground Name] mention
-      const campgroundName = match[2];
-      // Create a URL-friendly slug from the name
-      const slug = campgroundName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      parts.push(
-        <Link
-          key={match.index}
-          to={`/campgrounds?search=${encodeURIComponent(campgroundName)}`}
-          className="text-green-600 hover:text-green-800 hover:underline font-medium"
-        >
-          @{campgroundName}
-        </Link>
-      );
+      remaining = remaining.substring(userMatch[0].length);
+      continue;
     }
 
-    lastIndex = match.index + match[0].length;
-  }
+    // Find next special character (@ or #)
+    const nextAt = remaining.indexOf('@', 1);
+    const nextHash = remaining.indexOf('#', 1);
+    let nextSpecial = -1;
 
-  // Add remaining text
-  if (lastIndex < content.length) {
-    parts.push(content.substring(lastIndex));
+    if (nextAt === -1 && nextHash === -1) {
+      nextSpecial = -1;
+    } else if (nextAt === -1) {
+      nextSpecial = nextHash;
+    } else if (nextHash === -1) {
+      nextSpecial = nextAt;
+    } else {
+      nextSpecial = Math.min(nextAt, nextHash);
+    }
+
+    if (nextSpecial === -1) {
+      parts.push(<span key={keyCounter++}>{remaining}</span>);
+      break;
+    } else {
+      parts.push(<span key={keyCounter++}>{remaining.substring(0, nextSpecial)}</span>);
+      remaining = remaining.substring(nextSpecial);
+    }
   }
 
   return <span className={className}>{parts}</span>;

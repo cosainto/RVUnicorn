@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { User, Tent } from 'lucide-react';
+import { User, Tent, Hash } from 'lucide-react';
 import api from '../services/api';
 
 interface MentionUser {
@@ -17,6 +17,15 @@ interface MentionCampground {
   state: string;
   location?: string;
   imageUrl?: string;
+}
+
+interface MentionTag {
+  id: string;
+  name: string;
+  slug: string;
+  _count?: {
+    threads: number;
+  };
 }
 
 interface MentionInputProps {
@@ -39,6 +48,8 @@ export default function MentionInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [userSuggestions, setUserSuggestions] = useState<MentionUser[]>([]);
   const [campgroundSuggestions, setCampgroundSuggestions] = useState<MentionCampground[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<MentionTag[]>([]);
+  const [mentionType, setMentionType] = useState<'@' | '#' | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -47,21 +58,32 @@ export default function MentionInput({
   const allSuggestions = [
     ...userSuggestions.map(u => ({ type: 'user' as const, data: u })),
     ...campgroundSuggestions.map(c => ({ type: 'campground' as const, data: c })),
+    ...tagSuggestions.map(t => ({ type: 'tag' as const, data: t })),
   ];
 
   useEffect(() => {
     const pos = cursorPosition;
     const textBeforeCursor = value.substring(0, pos);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    const isInMention = lastAtIndex !== -1 && !textBeforeCursor.substring(lastAtIndex).includes(' ');
+    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+    
+    const isInAtMention = lastAtIndex !== -1 && !textBeforeCursor.substring(lastAtIndex).includes(' ');
+    const isInHashMention = lastHashIndex !== -1 && !textBeforeCursor.substring(lastHashIndex).includes(' ');
 
-    if (isInMention) {
+    if (isInAtMention && (!isInHashMention || lastAtIndex > lastHashIndex)) {
       const query = textBeforeCursor.substring(lastAtIndex + 1);
+      setMentionType('@');
       searchAll(query);
+    } else if (isInHashMention && (!isInAtMention || lastHashIndex > lastAtIndex)) {
+      const query = textBeforeCursor.substring(lastHashIndex + 1);
+      setMentionType('#');
+      searchTags(query);
     } else {
       setShowSuggestions(false);
       setUserSuggestions([]);
       setCampgroundSuggestions([]);
+      setTagSuggestions([]);
+      setMentionType(null);
     }
   }, [value, cursorPosition]);
 
@@ -90,19 +112,42 @@ export default function MentionInput({
     }
   };
 
-  const insertMention = (type: 'user' | 'campground', suggestion: MentionUser | MentionCampground) => {
+  const searchTags = async (query: string) => {
+    if (query.length < 1) {
+      setTagSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const res = await api.get('/mentions/search/tags?q=' + encodeURIComponent(query));
+      setTagSuggestions(res.data || []);
+      setUserSuggestions([]);
+      setCampgroundSuggestions([]);
+      setShowSuggestions((res.data?.length || 0) > 0);
+      setSelectedIndex(0);
+    } catch (error) {
+      console.error('Tag search error:', error);
+    }
+  };
+
+  const insertMention = (type: 'user' | 'campground' | 'tag', suggestion: MentionUser | MentionCampground | MentionTag) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const pos = cursorPosition;
     const textBeforeCursor = value.substring(0, pos);
-    const startIndex = textBeforeCursor.lastIndexOf('@');
+    const startIndex = type === 'tag' 
+      ? textBeforeCursor.lastIndexOf('#')
+      : textBeforeCursor.lastIndexOf('@');
     
     let mentionText: string;
     if (type === 'user') {
       mentionText = '@' + (suggestion as MentionUser).username + ' ';
-    } else {
+    } else if (type === 'campground') {
       mentionText = '@[' + (suggestion as MentionCampground).name + '] ';
+    } else {
+      mentionText = '#' + (suggestion as MentionTag).slug + ' ';
     }
 
     const newValue = value.substring(0, startIndex) + mentionText + value.substring(pos);
@@ -110,6 +155,8 @@ export default function MentionInput({
     setShowSuggestions(false);
     setUserSuggestions([]);
     setCampgroundSuggestions([]);
+    setTagSuggestions([]);
+    setMentionType(null);
 
     setTimeout(() => {
       const newCursorPos = startIndex + mentionText.length;
@@ -218,10 +265,34 @@ export default function MentionInput({
             )
           );
         })
+      ),
+      tagSuggestions.length > 0 && React.createElement('div', null,
+        React.createElement('div', { className: 'px-3 py-2 bg-gray-50 border-b border-gray-100' },
+          React.createElement('span', { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1' },
+            React.createElement(Hash, { className: 'w-3 h-3' }), ' Tags'
+          )
+        ),
+        tagSuggestions.map((tag) => {
+          const idx = currentIndex++;
+          return React.createElement('button', {
+            key: 'tag-' + tag.id,
+            type: 'button',
+            onClick: () => insertMention('tag', tag),
+            className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
+          },
+            React.createElement('div', { className: 'w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center' },
+              React.createElement(Hash, { className: 'w-4 h-4 text-blue-600' })
+            ),
+            React.createElement('div', null,
+              React.createElement('p', { className: 'font-medium text-gray-900' }, '#' + tag.slug),
+              React.createElement('p', { className: 'text-sm text-gray-500' }, (tag._count?.threads || 0) + ' threads')
+            )
+          );
+        })
       )
     ),
     React.createElement('p', { className: 'text-xs text-gray-400 mt-1' },
-      'Type ', React.createElement('span', { className: 'font-mono bg-gray-100 px-1 rounded' }, '@'), ' to mention people or campgrounds'
+      'Type ', React.createElement('span', { className: 'font-mono bg-gray-100 px-1 rounded' }, '@'), ' to mention people or campgrounds, ', React.createElement('span', { className: 'font-mono bg-gray-100 px-1 rounded' }, '#'), ' for tags'
     )
   );
 }

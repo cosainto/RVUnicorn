@@ -282,4 +282,38 @@ router.get('/my', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/mentions/search/tags?q=query - Search tags for #hashtag autocomplete
+router.get('/search/tags', authenticateToken, async (req: any, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') {
+      return res.json([]);
+    }
+
+    const tags = await prisma.threadTag.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { slug: { contains: q.toLowerCase() } }
+        ]
+      },
+      take: 10,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: { threads: true }
+        }
+      }
+    });
+
+    res.json(tags);
+  } catch (error) {
+    console.error('Tag search error:', error);
+    res.status(500).json({ error: 'Failed to search tags' });
+  }
+});
+
 export default router;
