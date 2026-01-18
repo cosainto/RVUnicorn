@@ -7,6 +7,20 @@ import ImageUpload from '../components/ImageUpload';
 import CampgroundSelector from '../components/CampgroundSelector';
 
 interface Event {
+  organizer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
+  organizer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
   organizerId?: string;
   isStateVisit?: boolean;
   id: string;
@@ -42,7 +56,9 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "discover" | "friends">("upcoming");
+  const [discoverEvents, setDiscoverEvents] = useState<Event[]>([]);
+  const [friendsEvents, setFriendsEvents] = useState<Event[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   
   // Helper to get date string in YYYY-MM-DD format
@@ -70,7 +86,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     filterEvents();
-  }, [events, searchQuery, activeTab]);
+  }, [events, discoverEvents, friendsEvents, searchQuery, activeTab]);
 
   const loadEvents = async () => {
     try {
@@ -93,6 +109,24 @@ export default function EventsPage() {
     }
   };
 
+  const loadDiscoverEvents = async () => {
+    try {
+      const { data } = await api.get('/trips/discover');
+      setDiscoverEvents(data);
+    } catch (error) {
+      console.error('Load discover events error:', error);
+    }
+  };
+
+  const loadFriendsEvents = async () => {
+    try {
+      const { data } = await api.get('/trips/friends-events');
+      setFriendsEvents(data);
+    } catch (error) {
+      console.error('Load friends events error:', error);
+    }
+  };
+
   const filterEvents = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -107,8 +141,12 @@ export default function EventsPage() {
       );
     }
 
-    // Filter by tab (upcoming vs past)
-    if (activeTab === "upcoming") {
+    // Filter by tab
+    if (activeTab === "discover") {
+      filtered = discoverEvents;
+    } else if (activeTab === "friends") {
+      filtered = friendsEvents;
+    } else if (activeTab === "upcoming") {
       filtered = filtered.filter(e => {
         const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
         return endDate >= today;
@@ -118,6 +156,18 @@ export default function EventsPage() {
         const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
         return endDate < today;
       });
+    }
+
+    // Apply search to discover/friends tabs too
+    if ((activeTab === "discover" || activeTab === "friends") && searchQuery) {
+      filtered = filtered.filter(e =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.campground?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.organizer?.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.organizer?.lastName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
     setFilteredEvents(filtered);
@@ -173,6 +223,8 @@ export default function EventsPage() {
         privacy: 'PUBLIC',
       });
       loadEvents();
+      loadDiscoverEvents();
+      loadFriendsEvents();
     } catch (error) {
       console.error('Create event error:', error);
       alert('Failed to create event');
@@ -226,18 +278,30 @@ export default function EventsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setActiveTab("upcoming")}
           className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "upcoming" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
         >
-          🗓️ Upcoming
+          🗓️ My Upcoming
         </button>
         <button
           onClick={() => setActiveTab("past")}
           className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "past" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
         >
-          ✅ Past Trips
+          ✅ My Past
+        </button>
+        <button
+          onClick={() => setActiveTab("friends")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "friends" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          👥 Friends' Trips
+        </button>
+        <button
+          onClick={() => setActiveTab("discover")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "discover" ? "bg-primary-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          🌎 Discover
         </button>
       </div>
 
@@ -284,6 +348,26 @@ export default function EventsPage() {
                   <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
                     {event.title}
                   </h3>
+                  {(activeTab === "discover" || activeTab === "friends") && event.organizer && (
+                    <Link 
+                      to={`/profile/${event.organizer.username}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 mb-2 hover:bg-gray-50 rounded-lg p-1 -ml-1 transition"
+                    >
+                      {event.organizer.profilePicture ? (
+                        <img src={event.organizer.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span className="text-xs font-medium text-primary-600">
+                            {event.organizer.firstName?.[0]}{event.organizer.lastName?.[0]}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {event.organizer.firstName} {event.organizer.lastName}
+                      </span>
+                    </Link>
+                  )}
                   {event.description && (
                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                       {event.description}

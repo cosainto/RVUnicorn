@@ -955,4 +955,129 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
   }
 });
 
+
+// Discover public events from everyone
+router.get('/discover', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const events = await prisma.event.findMany({
+      where: {
+        privacy: 'PUBLIC',
+        isWishlist: false,
+        startDate: {
+          gte: today,
+        },
+      },
+      include: {
+        organizer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            state: true,
+            imageUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            attendees: true,
+          },
+        },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 50,
+    });
+
+    res.json(events);
+  } catch (error) {
+    console.error('Discover events error:', error);
+    res.status(500).json({ error: 'Failed to fetch public events' });
+  }
+});
+
+// Get events from friends (PUBLIC or FRIENDS privacy)
+router.get('/friends-events', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get friend IDs
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { initiatorId: userId },
+          { receiverId: userId },
+        ],
+      },
+      select: {
+        initiatorId: true,
+        receiverId: true,
+      },
+    });
+
+    const friendIds = friendships.map(f => 
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    if (friendIds.length === 0) {
+      return res.json([]);
+    }
+
+    const events = await prisma.event.findMany({
+      where: {
+        organizerId: { in: friendIds },
+        isWishlist: false,
+        privacy: { in: ['PUBLIC', 'FRIENDS'] },
+        startDate: {
+          gte: today,
+        },
+      },
+      include: {
+        organizer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            state: true,
+            imageUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            attendees: true,
+          },
+        },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 50,
+    });
+
+    res.json(events);
+  } catch (error) {
+    console.error('Friends events error:', error);
+    res.status(500).json({ error: 'Failed to fetch friends events' });
+  }
+});
 export default router;
