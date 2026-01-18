@@ -1130,6 +1130,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
             activityIcon: activity.type === 'THREAD_MENTION' ? '📣' : '💬',
             activityLabel: activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on',
             isBasecampActivity: true,
+            reaction: activity.reaction,
           };
         });
       } catch (error) {
