@@ -729,6 +729,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
           metadata: {
             threadId: id,
             threadTitle: thread.title,
+            postId: post.id,
             replierName: `${replier?.firstName || ''} ${replier?.lastName || ''}`.trim()
           }
         }
@@ -800,6 +801,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
             metadata: {
               threadId: id,
               threadTitle: thread.title,
+              postId: post.id,
               commenterName
             }
           }
@@ -834,6 +836,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
             metadata: {
               threadId: id,
               threadTitle: thread.title,
+              postId: post.id,
               commenterName
             }
           }
