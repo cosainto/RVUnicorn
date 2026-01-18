@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GifButton } from '../components/GifPicker';
+import MentionInput from '../components/MentionInput';
+import MentionText from '../components/MentionText';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Star, Eye, EyeOff, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X } from 'lucide-react';
 import api from '../services/api';
@@ -488,12 +490,12 @@ export default function ThreadDetailPage() {
               </div>
             )}
             <div className="flex-1">
-              <textarea
+              <MentionInput
                 value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
+                onChange={setNewPost}
                 className="input w-full resize-none"
                 rows={3}
-                placeholder="Write a reply..."
+                placeholder="Write a reply... Type @ to mention people or campgrounds"
               />
               {postImage && (
                 <div className="relative inline-block mt-2">
@@ -593,7 +595,7 @@ export default function ThreadDetailPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-gray-700 mt-2 whitespace-pre-wrap">{post.content}</p>
+                    <p className="text-gray-700 mt-2 whitespace-pre-wrap"><MentionText content={post.content} /></p>
                     {post.imageUrl && (
                       <img src={post.imageUrl} alt="" className="mt-3 rounded-lg max-h-64 object-cover" />
                     )}
@@ -689,7 +691,7 @@ export default function ThreadDetailPage() {
                               </button>
                             )}
                           </div>
-                          <p className="text-gray-700 text-sm mt-1 whitespace-pre-wrap">{reply.content}</p>
+                          <p className="text-gray-700 text-sm mt-1 whitespace-pre-wrap"><MentionText content={reply.content} /></p>
                           {reply.imageUrl && (
                             <img src={reply.imageUrl} alt="" className="mt-2 rounded-lg max-h-48 object-cover" />
                           )}
