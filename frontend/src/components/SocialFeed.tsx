@@ -810,18 +810,12 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
               </div>
             )}
             <div className="flex gap-2 items-center">
-              <input
-                type="text"
+              <MentionInput
                 value={newComments[item.id] || ''}
-                onChange={(e) => setNewComments({ ...newComments, [item.id]: e.target.value })}
-                placeholder="Write a comment..."
-                className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAddComment(item);
-                  }
-                }}
+                onChange={(value) => setNewComments({ ...newComments, [item.id]: value })}
+                placeholder="Write a comment... @ to mention, # for tags"
+                rows={1}
+                className="flex-1 rounded-full px-4 py-2 text-sm"
               />
               <GifButton onSelect={(gifUrl) => setCommentImages({ ...commentImages, [item.id]: gifUrl })} />
               <button
@@ -1187,18 +1181,12 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                 </div>
               )}
               <div className="flex gap-2 items-center">
-                <input
-                  type="text"
+                <MentionInput
                   value={newComments[item.id] || ''}
-                  onChange={(e) => setNewComments({ ...newComments, [item.id]: e.target.value })}
-                  placeholder="Write a comment..."
-                  className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddComment(item);
-                    }
-                  }}
+                  onChange={(value) => setNewComments({ ...newComments, [item.id]: value })}
+                  placeholder="Write a comment... @ to mention, # for tags"
+                  rows={1}
+                  className="flex-1 rounded-full px-4 py-2 text-sm"
                 />
                 <GifButton onSelect={(gifUrl) => setCommentImages({ ...commentImages, [item.id]: gifUrl })} />
                 <button
