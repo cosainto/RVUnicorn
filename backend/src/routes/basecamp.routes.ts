@@ -699,6 +699,63 @@ router.get('/trips/upcoming', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/basecamp/campground-feed - Only campground announcements and updates
+router.get('/campground-feed', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // Get followed campgrounds
+    const followedCampgrounds = await prisma.campgroundFollow.findMany({
+      where: { userId },
+      select: { campgroundId: true },
+    });
+    const followedCampgroundIds = followedCampgrounds.map((f) => f.campgroundId);
+
+    if (followedCampgroundIds.length === 0) {
+      return res.json({ feedItems: [], hasMore: false });
+    }
+
+    // Get campground announcements and updates
+    const activities = await prisma.activity.findMany({
+      where: {
+        type: { in: ['CAMPGROUND_ANNOUNCEMENT', 'CAMPGROUND_UPDATE', 'NEW_CAMPGROUND_THREAD'] },
+        campgroundId: { in: followedCampgroundIds },
+      },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        },
+        campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+      },
+    });
+
+    const feedItems = activities.map((activity) => ({
+      id: 'campground-' + activity.id,
+      type: activity.type,
+      actor: activity.user,
+      content: activity.content,
+      title: activity.title,
+      targetName: activity.campground?.name || '',
+      targetLink: activity.campground ? '/campgrounds/' + activity.campground.id : undefined,
+      createdAt: activity.createdAt,
+      activityType: activity.type,
+      activityIcon: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? '📢' : '🏕️',
+      activityLabel: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? 'announced' : 'update from',
+      activityColor: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? 'text-amber-600' : 'text-green-600',
+      campground: activity.campground,
+      isCampgroundActivity: true,
+    }));
+
+    res.json({ feedItems, hasMore: activities.length === limit });
+  } catch (error) {
+    console.error('Get campground feed error:', error);
+    res.status(500).json({ error: 'Failed to get campground feed' });
+  }
+});
+
 // React to a basecamp activity (like, love, dislike, or remove reaction)
 router.post('/activity/:id/react', authenticateToken, async (req, res) => {
   try {
