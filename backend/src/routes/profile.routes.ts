@@ -1096,7 +1096,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           where: {
             userId: user.id,
             type: {
-              in: ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD']
+              in: ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION']
             }
           },
           take: limit,
@@ -1116,19 +1116,29 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
 
         basecampItems = basecampActivities.map((activity) => {
           const meta = (activity.metadata as any) || {};
+          const isRecipe = ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type);
+          const isThread = ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type);
+          
+          let activityLabel = 'commented on';
+          let activityIcon = '💬';
+          if (activity.type === 'THREAD_REPLY') activityLabel = 'replied to your thread';
+          else if (activity.type === 'THREAD_MENTION') { activityLabel = 'mentioned you in'; activityIcon = '📣'; }
+          else if (activity.type === 'RECIPE_COMMENT_THREAD') { activityLabel = 'commented on your recipe'; activityIcon = '🍳'; }
+          else if (activity.type === 'RECIPE_MENTION') { activityLabel = 'mentioned you in a comment on'; activityIcon = '📣'; }
+          
           return {
             id: `basecamp-${activity.id}`,
             type: activity.type,
             actor: activity.actor,
-            content: `${activity.actor?.firstName || 'Someone'} ${activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on'} "${activity.entityName || meta.threadTitle || 'a thread'}"`,
+            content: `${activity.actor?.firstName || 'Someone'} ${activityLabel} "${activity.entityName || meta.threadTitle || (isRecipe ? 'a recipe' : 'a thread')}"`,
             targetName: activity.entityName || meta.threadTitle,
-            targetLink: `/threads/${activity.entityId || meta.threadId}`,
+            targetLink: isRecipe ? `/recipes/${activity.entityId}` : `/threads/${activity.entityId || meta.threadId}`,
             createdAt: activity.createdAt,
             _count: { likes: 0, comments: 0 },
             canDelete: false,
             activityType: activity.type,
-            activityIcon: activity.type === 'THREAD_MENTION' ? '📣' : '💬',
-            activityLabel: activity.type === 'THREAD_REPLY' ? 'replied to your thread' : activity.type === 'THREAD_MENTION' ? 'mentioned you in' : 'commented on',
+            activityIcon,
+            activityLabel,
             isBasecampActivity: true,
             reaction: activity.reaction,
             metadata: meta,
