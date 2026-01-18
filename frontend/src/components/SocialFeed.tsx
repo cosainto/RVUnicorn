@@ -490,16 +490,19 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
               : i
           )
         );
-      } else if (!item.id.startsWith('activity-')) {
-        await api.post(`/posts/${item.id}/like`);
+      } else {
+        // Handle both regular posts and activity items
+        const postId = item.id.startsWith('activity-') ? item.id.replace('activity-', '') : item.id;
+        const { data } = await api.post(`/activity/${postId}/like`);
         setFeedItems((items) =>
           items.map((i) =>
             i.id === item.id
               ? {
                   ...i,
+                  isLiked: data.liked !== undefined ? data.liked : !i.isLiked,
                   _count: {
                     ...i._count,
-                    likes: (i._count?.likes || 0) + 1,
+                    likes: data.liked ? (i._count?.likes || 0) + 1 : Math.max((i._count?.likes || 1) - 1, 0),
                     comments: i._count?.comments || 0,
                   },
                 }
@@ -852,7 +855,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             </div>
           </div>
 
-          {item.canDelete && !item.id.startsWith('activity-') && (
+          {(item.canDelete || !isOwnProfile) && (
             <div className="relative">
               <button
                 onClick={() => setShowMoreActions(showMoreActions === item.id ? null : item.id)}
@@ -1015,7 +1018,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         )}
 
-        {!item.id.startsWith('activity-') && !item.isPackingActivity && (
+        {!item.isPackingActivity && item.type !== 'FRIEND_REQUEST' && item.activityType !== 'FRIEND_REQUEST' && (
           <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
             <button
               onClick={() => handleLike(item)}

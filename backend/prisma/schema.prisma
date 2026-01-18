@@ -148,6 +148,7 @@ model User {
   threads                Thread[]
   threadPosts            ThreadPost[]
   threadPostLikes        ThreadPostLike[]
+  activityLikes          ActivityLike[]
   threadFavorites        ThreadFavorite[]
   activities             Activity[]
   activityTargets        Activity[] @relation("ActivityTarget")
@@ -257,6 +258,7 @@ model Post {
   
   @@index([userId])
   @@index([wallOwnerId])
+
   @@index([createdAt])
 }
 
@@ -645,6 +647,7 @@ model Notification {
 
   @@index([userId])
   @@index([read])
+
   @@index([createdAt])
 }
 
@@ -879,6 +882,7 @@ model CampgroundPost {
 
   @@index([campgroundId])
   @@index([authorId])
+
   @@index([createdAt])
 }
 
@@ -1215,10 +1219,13 @@ model Activity {
   photoId           String?
   
   isCreatorContent  Boolean   @default(false)
+
+  likes           ActivityLike[]
   
   createdAt       DateTime  @default(now())
   
   @@index([userId])
+
   @@index([createdAt])
 }
 
@@ -1434,6 +1441,7 @@ model EventComment {
 
   @@index([eventId])
   @@index([userId])
+
   @@index([createdAt])
 }
 
@@ -1783,6 +1791,7 @@ model AccountActivityLog {
 
   @@index([userId])
   @@index([action])
+
   @@index([createdAt])
 }
 
@@ -2259,4 +2268,18 @@ model EventSubtabPrivacy {
 
   @@unique([eventId, subtab])
   @@index([eventId])
+}
+
+model ActivityLike {
+  id         String   @id @default(cuid())
+  activityId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+  @@index([userId])
 }
