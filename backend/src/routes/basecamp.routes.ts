@@ -626,7 +626,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         }
 
         allActivities.push({
-          id: 'packing-' + activity.id,
+          id: 'basecamp-' + activity.id,
           type: activity.type,
           actor: activity.actor,
           content: activityLabel,
@@ -638,6 +638,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityIcon,
           activityLabel,
           isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type),
+          reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
           isMealAssignment: activity.type === 'MEAL_ASSIGNMENT_REQUEST',
@@ -659,7 +661,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const seen = new Map<string, any>();
     const deduplicatedActivities = allActivities.filter((activity) => {
       // Skip dismissed activities
-      const activityId = activity.id.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-)/g, "");
+      const activityId = activity.id.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-|basecamp-)/g, "");
       if (mutedActivityIds.has(activityId) || mutedActivityIds.has(activity.id)) return false;
 
       const key = activity.type + '-' + activity.actor?.id + '-' + (activity.targetLink || activity.title);
