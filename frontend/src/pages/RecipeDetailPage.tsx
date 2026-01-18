@@ -280,6 +280,36 @@ export default function RecipeDetailPage() {
     }
   };
 
+  // Quick image upload for recipe (without edit mode)
+  const handleQuickImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !recipe) return;
+
+    setUploadingQuickImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const { data: uploadData } = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      // Update recipe with new image
+      await api.put(`/recipes/${recipe.id}`, { imageUrl: uploadData.url });
+      
+      // Update local state
+      setRecipe({ ...recipe, imageUrl: uploadData.url });
+    } catch (error) {
+      console.error('Quick image upload error:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingQuickImage(false);
+      if (quickImageInputRef.current) {
+        quickImageInputRef.current.value = '';
+      }
+    }
+  };
+
   // Remove selected image
   const removeImage = () => {
     setRecipeImage(null);
