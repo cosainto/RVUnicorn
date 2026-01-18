@@ -356,15 +356,26 @@ router.post('/:id/comments', authenticateToken, async (req: Request, res: Respon
   try {
     const { id } = req.params;
     const userId = (req as any).userId;
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Content is required' });
+    if (!content && !imageUrl) {
+      return res.status(400).json({ error: 'Content or image is required' });
+    }
+
+    // First check if the post exists
+    const post = await prisma.post.findUnique({
+      where: { id }
+    });
+
+    if (!post) {
+      console.error('Post not found for comment:', id);
+      return res.status(404).json({ error: 'Post not found' });
     }
 
     const comment = await prisma.comment.create({
       data: {
-        content,
+        content: content || '',
+        imageUrl: imageUrl || null,
         postId: id,
         userId
       },
