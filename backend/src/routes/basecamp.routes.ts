@@ -506,11 +506,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const packingActivities = await prisma.basecampActivity.findMany({
         where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
           userId,
           type: {
             in: [
