@@ -106,6 +106,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
       // Extract the real ID (remove prefix like 'packing-')
       const realId = activityId.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-)/g, '');
       await api.post(`/basecamp/activity/${realId}/react`, { reaction });
+
       // Update local state
       setFeedItems(items => items.map(item => 
         item.id === activityId ? { ...item, reaction } : item
