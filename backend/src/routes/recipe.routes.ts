@@ -878,4 +878,122 @@ router.get('/:id/mute-status', authenticateToken, async (req, res) => {
   }
 });
 
+
+// POST /api/recipes/:id/like - Like/unlike a recipe
+router.post('/:id/like', authenticateToken, async (req, res) => {
+  try {
+    const { id: recipeId } = req.params;
+    const userId = (req as any).userId;
+
+    // Check if recipe exists
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: recipeId }
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Check if already liked
+    const existingLike = await prisma.recipeLike.findUnique({
+      where: {
+        recipeId_userId: { recipeId, userId }
+      }
+    });
+
+    if (existingLike) {
+      // Unlike
+      await prisma.recipeLike.delete({
+        where: { id: existingLike.id }
+      });
+      
+      const likeCount = await prisma.recipeLike.count({ where: { recipeId } });
+      return res.json({ liked: false, likeCount });
+    } else {
+      // Like
+      await prisma.recipeLike.create({
+        data: { recipeId, userId }
+      });
+      
+      const likeCount = await prisma.recipeLike.count({ where: { recipeId } });
+
+      // Notify recipe owner (if not self-like)
+      if (recipe.userId !== userId) {
+        const liker = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true }
+        });
+        
+        await prisma.notification.create({
+          data: {
+            userId: recipe.userId,
+            type: 'RECIPE_LIKE',
+            content: `${liker?.firstName} ${liker?.lastName} liked your recipe`,
+            link: `/recipes/${recipeId}`
+          }
+        });
+      }
+
+      return res.json({ liked: true, likeCount });
+    }
+  } catch (error) {
+    console.error('Recipe like error:', error);
+    res.status(500).json({ error: 'Failed to like recipe' });
+  }
+});
+
+// POST /api/recipes/:id/share - Share a recipe to your feed
+router.post('/:id/share', authenticateToken, async (req, res) => {
+  try {
+    const { id: recipeId } = req.params;
+    const userId = (req as any).userId;
+
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: recipeId },
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, username: true }
+        }
+      }
+    });
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    // Create an activity for sharing
+    await prisma.activity.create({
+      data: {
+        userId,
+        type: 'RECIPE_SHARED',
+        recipeId,
+        title: recipe.title,
+        content: `Shared ${recipe.user.firstName}'s recipe: ${recipe.title}`,
+        isPublic: true
+      }
+    });
+
+    // Notify recipe owner (if not self-share)
+    if (recipe.userId !== userId) {
+      const sharer = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true }
+      });
+      
+      await prisma.notification.create({
+        data: {
+          userId: recipe.userId,
+          type: 'RECIPE_SHARE',
+          content: `${sharer?.firstName} ${sharer?.lastName} shared your recipe`,
+          link: `/recipes/${recipeId}`
+        }
+      });
+    }
+
+    res.json({ shared: true, message: 'Recipe shared to your feed!' });
+  } catch (error) {
+    console.error('Recipe share error:', error);
+    res.status(500).json({ error: 'Failed to share recipe' });
+  }
+});
 export default router;

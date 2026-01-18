@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ChefHat, 
+  ChefHat,
+  Share2, 
   Clock, 
   Users, 
   Star, 
@@ -56,6 +57,8 @@ interface Recipe {
   userRating?: number;
   isSaved?: boolean;
   isFavorite?: boolean;
+  isLiked?: boolean;
+  likeCount?: number;
 }
 
 interface Friend {
@@ -98,6 +101,30 @@ export default function RecipeDetailPage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+
+  const handleLike = async () => {
+    if (!user || !recipe) return;
+    try {
+      const { data } = await api.post(`/recipes/${recipe.id}/like`);
+      setIsLiked(data.liked);
+      setLikeCount(data.likeCount);
+    } catch (error) {
+      console.error('Like error:', error);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!user || !recipe) return;
+    try {
+      await api.post(`/recipes/${recipe.id}/share`);
+      alert('Recipe shared to your feed!');
+    } catch (error) {
+      console.error('Share error:', error);
+      alert('Failed to share recipe');
+    }
+  };
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [newComment, setNewComment] = useState('');
@@ -875,6 +902,31 @@ export default function RecipeDetailPage() {
                       >
                         <Copy className="w-4 h-4" />
                         Save a Copy
+                      </button>
+                    </>
+                  )}
+
+                  {/* Like and Share - visible to all logged in users */}
+                  {user && (
+                    <>
+                      <button
+                        onClick={handleLike}
+                        className={`p-2 rounded-full transition flex items-center gap-1 ${
+                          isLiked
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                        title={isLiked ? 'Unlike' : 'Like this recipe'}
+                      >
+                        <Heart className={`w-5 h-5 ${isLiked ? 'fill-white' : ''}`} />
+                        {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
+                      </button>
+                      <button
+                        onClick={handleShare}
+                        className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                        title="Share to your feed"
+                      >
+                        <Share2 className="w-5 h-5" />
                       </button>
                     </>
                   )}
