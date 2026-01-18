@@ -111,6 +111,7 @@ export default function TripPlanner() {
   const [collaborators, setCollaborators] = useState<{ owner: any; collaborators: Collaborator[] } | null>(null);
   const [updates, setUpdates] = useState<TripUpdate[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<{ homeCity?: string; homeState?: string; homeZipCode?: string } | null>(null);
 
   const [checkInData, setCheckInData] = useState({
     content: '',
@@ -144,6 +145,7 @@ export default function TripPlanner() {
   useEffect(() => {
     loadTrips();
     loadFriends();
+    loadUserProfile();
   }, []);
 
   useEffect(() => {
@@ -201,6 +203,15 @@ export default function TripPlanner() {
       setFriends(data.filter((f: any) => f.status === 'accepted'));
     } catch (error) {
       console.error('Load friends error:', error);
+    }
+  };
+
+  const loadUserProfile = async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Load user profile error:', error);
     }
   };
 
@@ -399,7 +410,16 @@ export default function TripPlanner() {
           <p className="text-gray-600">Plan routes, collaborate, and track your journey</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+          // Pre-fill start location with home base if available
+          if (userProfile?.homeCity && userProfile?.homeState) {
+            setNewTrip(prev => ({
+              ...prev,
+              startLocation: `${userProfile.homeCity}, ${userProfile.homeState}`,
+            }));
+          }
+          setShowCreateModal(true);
+        }}
           className="btn btn-primary flex items-center"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -743,34 +763,72 @@ export default function TripPlanner() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Location *
-                  </label>
-                  <input
-                    type="text"
-                    value={newTrip.startLocation}
-                    onChange={(e) => setNewTrip({ ...newTrip, startLocation: e.target.value })}
-                    className="input"
-                    required
-                    placeholder="Chicago, IL"
-                  />
-                </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Location *
+                    </label>
+                    <input
+                      type="text"
+                      value={newTrip.startLocation}
+                      onChange={(e) => setNewTrip({ ...newTrip, startLocation: e.target.value })}
+                      className="input"
+                      required
+                      placeholder="Chicago, IL"
+                    />
+                    {userProfile?.homeCity && userProfile?.homeState && newTrip.startLocation !== `${userProfile.homeCity}, ${userProfile.homeState}` && (
+                      <button
+                        type="button"
+                        onClick={() => setNewTrip({ ...newTrip, startLocation: `${userProfile.homeCity}, ${userProfile.homeState}` })}
+                        className="text-xs text-primary-600 hover:text-primary-700 mt-1"
+                      >
+                        📍 Use home: {userProfile.homeCity}, {userProfile.homeState}
+                      </button>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Location *
-                  </label>
-                  <input
-                    type="text"
-                    value={newTrip.endLocation}
-                    onChange={(e) => setNewTrip({ ...newTrip, endLocation: e.target.value })}
-                    className="input"
-                    required
-                    placeholder="Denver, CO"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Location *
+                    </label>
+                    <input
+                      type="text"
+                      value={newTrip.endLocation}
+                      onChange={(e) => setNewTrip({ ...newTrip, endLocation: e.target.value })}
+                      className="input"
+                      required
+                      placeholder="Denver, CO"
+                    />
+                    {userProfile?.homeCity && userProfile?.homeState && newTrip.endLocation !== `${userProfile.homeCity}, ${userProfile.homeState}` && (
+                      <button
+                        type="button"
+                        onClick={() => setNewTrip({ ...newTrip, endLocation: `${userProfile.homeCity}, ${userProfile.homeState}` })}
+                        className="text-xs text-primary-600 hover:text-primary-700 mt-1"
+                      >
+                        🏠 Use home: {userProfile.homeCity}, {userProfile.homeState}
+                      </button>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Reverse Trip Button */}
+                {(newTrip.startLocation || newTrip.endLocation) && (
+                  <button
+                    type="button"
+                    onClick={() => setNewTrip({ 
+                      ...newTrip, 
+                      startLocation: newTrip.endLocation,
+                      endLocation: newTrip.startLocation 
+                    })}
+                    className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                    Reverse trip (swap start ↔ end)
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
