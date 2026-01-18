@@ -21,7 +21,9 @@ import {
   Calendar,
   Save,
   Loader2,
-  AtSign
+  AtSign,
+  ThumbsUp,
+  MessageCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';

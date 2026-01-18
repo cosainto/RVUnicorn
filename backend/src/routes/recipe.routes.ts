@@ -479,6 +479,8 @@ router.get('/:id/comments', async (req, res) => {
   try {
     const { id: recipeId } = req.params;
 
+    const userId = (req as any).userId;
+    
     const comments = await prisma.recipeComment.findMany({
       where: { recipeId },
       include: {
@@ -490,6 +492,18 @@ router.get('/:id/comments', async (req, res) => {
             lastName: true,
             profilePicture: true,
           }
+        },
+        likes: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, username: true }
+            }
+          },
+          take: 5,
+          orderBy: { createdAt: 'desc' }
+        },
+        _count: {
+          select: { likes: true }
         }
       },
       orderBy: {
@@ -497,7 +511,15 @@ router.get('/:id/comments', async (req, res) => {
       }
     });
 
-    res.json(comments);
+    // Transform to include like info
+    const commentsWithLikes = comments.map(comment => ({
+      ...comment,
+      likeCount: comment._count.likes,
+      likers: comment.likes.map(l => l.user),
+      userHasLiked: userId ? comment.likes.some(l => l.userId === userId) : false
+    }));
+
+    res.json(commentsWithLikes);
   } catch (error) {
     console.error('Get comments error:', error);
     res.status(500).json({ error: 'Failed to get comments' });
@@ -998,4 +1020,73 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to share recipe' });
   }
 });
+
+// Like/unlike a recipe comment
+router.post('/comments/:commentId/like', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { commentId } = req.params;
+
+    // Check if comment exists
+    const comment = await prisma.recipeComment.findUnique({
+      where: { id: commentId }
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Check if already liked
+    const existingLike = await prisma.recipeCommentLike.findUnique({
+      where: { commentId_userId: { commentId, userId } }
+    });
+
+    if (existingLike) {
+      // Unlike
+      await prisma.recipeCommentLike.delete({
+        where: { id: existingLike.id }
+      });
+      const likeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+      return res.json({ liked: false, likeCount });
+    } else {
+      // Like
+      await prisma.recipeCommentLike.create({
+        data: { commentId, userId }
+      });
+      const likeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+      return res.json({ liked: true, likeCount });
+    }
+  } catch (error) {
+    console.error('Comment like error:', error);
+    res.status(500).json({ error: 'Failed to like comment' });
+  }
+});
+
+// Get comment likes
+router.get('/comments/:commentId/likes', optionalAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { commentId } = req.params;
+
+    const likes = await prisma.recipeCommentLike.findMany({
+      where: { commentId },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const likeCount = likes.length;
+    const userHasLiked = userId ? likes.some(l => l.userId === userId) : false;
+    const likers = likes.map(l => l.user);
+
+    res.json({ likeCount, userHasLiked, likers });
+  } catch (error) {
+    console.error('Get comment likes error:', error);
+    res.status(500).json({ error: 'Failed to get likes' });
+  }
+});
+
 export default router;
