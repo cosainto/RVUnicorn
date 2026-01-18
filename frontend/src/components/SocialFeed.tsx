@@ -309,7 +309,9 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   };
 
   const getActivityText = (item: FeedItem) => {
-    const actorName = `${item.actor.firstName} ${item.actor.lastName}`;
+    // Show "You" if the actor is the profile owner viewing their own feed
+    const isActorProfileOwner = isOwnProfile && item.actor.username === username;
+    const actorName = isActorProfileOwner ? 'You' : `${item.actor.firstName} ${item.actor.lastName}`;
     
     // Friend requests - show linked name
     if (item.isFriendRequest || item.activityType === 'FRIEND_REQUEST') {
