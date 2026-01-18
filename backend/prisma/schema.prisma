@@ -151,6 +151,7 @@ model User {
   activityLikes          ActivityLike[]
   recipeLikes            RecipeLike[]
   threadFavorites        ThreadFavorite[]
+  threadIgnores          ThreadIgnore[]
   activities             Activity[]
   activityTargets        Activity[] @relation("ActivityTarget")
   activitySecondary      Activity[] @relation("ActivitySecondaryUser")
@@ -1114,6 +1115,7 @@ model Thread {
   posts           ThreadPost[]
   tags            ThreadTagLink[]
   favorites       ThreadFavorite[]
+  ignores         ThreadIgnore[]
   activities      Activity[]
 }
 
@@ -2298,4 +2300,20 @@ model RecipeLike {
   @@unique([recipeId, userId])
   @@index([recipeId])
   @@index([userId])
+}
+
+model ThreadIgnore {
+  id        String    @id @default(cuid())
+  userId    String
+  threadId  String
+  expiresAt DateTime? // null means permanent ignore
+  createdAt DateTime  @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@index([userId])
+  @@index([threadId])
+  @@index([expiresAt])
 }

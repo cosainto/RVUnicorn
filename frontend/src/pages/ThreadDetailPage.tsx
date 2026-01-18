@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GifButton } from '../components/GifPicker';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Star, Eye, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Star, Eye, EyeOff, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -77,6 +77,9 @@ export default function ThreadDetailPage() {
   const [replyContent, setReplyContent] = useState('');
   const [postImage, setPostImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showIgnoreMenu, setShowIgnoreMenu] = useState(false);
+  const [isIgnored, setIsIgnored] = useState(false);
+  const [ignoreExpiresAt, setIgnoreExpiresAt] = useState<string | null>(null);
 
   useEffect(() => {
     loadThread();
@@ -206,6 +209,24 @@ export default function ThreadDetailPage() {
     }
   };
 
+  const handleIgnore = async (duration: string | null) => {
+    if (!user || !thread) return;
+    
+    try {
+      const { data } = await api.post(`/threads/${thread.id}/ignore`, { duration });
+      setIsIgnored(data.ignored);
+      setIgnoreExpiresAt(data.expiresAt || null);
+      setShowIgnoreMenu(false);
+      
+      if (data.ignored) {
+        // Optionally navigate away since they're ignoring this thread
+        // navigate('/feed');
+      }
+    } catch (error) {
+      console.error('Ignore error:', error);
+    }
+  };
+
   const formatDate = (date: string) => {
     const d = new Date(date);
     return d.toLocaleDateString('en-US', {
@@ -320,6 +341,66 @@ export default function ThreadDetailPage() {
               >
                 <Star className={`w-5 h-5 ${thread.isFavorited ? 'fill-current' : ''}`} />
               </button>
+
+              {/* Ignore Button */}
+              {user && !isAuthor && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowIgnoreMenu(!showIgnoreMenu)}
+                    className={`p-2 rounded-full transition ${
+                      isIgnored
+                        ? 'text-orange-500 bg-orange-50 hover:bg-orange-100'
+                        : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100'
+                    }`}
+                    title={isIgnored ? 'Thread ignored' : 'Ignore thread'}
+                  >
+                    <EyeOff className="w-5 h-5" />
+                  </button>
+                  
+                  {showIgnoreMenu && (
+                    <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[160px]">
+                      <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 border-b">
+                        Ignore for...
+                      </div>
+                      <button
+                        onClick={() => handleIgnore('day')}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      >
+                        1 Day
+                      </button>
+                      <button
+                        onClick={() => handleIgnore('week')}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      >
+                        1 Week
+                      </button>
+                      <button
+                        onClick={() => handleIgnore('month')}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      >
+                        1 Month
+                      </button>
+                      <button
+                        onClick={() => handleIgnore('forever')}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      >
+                        Forever
+                      </button>
+                      {isIgnored && (
+                        <>
+                          <div className="border-t my-1"></div>
+                          <button
+                            onClick={() => handleIgnore(null)}
+                            className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50"
+                          >
+                            Stop Ignoring
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Delete (author only) */}
               {isAuthor && (

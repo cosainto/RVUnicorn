@@ -323,24 +323,44 @@ router.post('/:id/ignore', authenticateToken, async (req: Request, res: Response
   try {
     const { id } = req.params;
     const userId = (req as any).userId;
+    const { duration } = req.body; // 'day', 'week', 'month', 'forever', or null to un-ignore
 
     // Check if already ignored
     const existing = await prisma.threadIgnore.findUnique({
-      where: { threadId_userId: { threadId: id, userId } }
+      where: { userId_threadId: { threadId: id, userId } }
     });
 
-    if (existing) {
-      // Un-ignore
+    if (existing && !duration) {
+      // Un-ignore if no duration specified and already ignored
       await prisma.threadIgnore.delete({
         where: { id: existing.id }
       });
       res.json({ ignored: false });
     } else {
-      // Ignore
-      await prisma.threadIgnore.create({
-        data: { threadId: id, userId }
-      });
-      res.json({ ignored: true });
+      // Calculate expiration date based on duration
+      let expiresAt: Date | null = null;
+      if (duration === 'day') {
+        expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      } else if (duration === 'week') {
+        expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      } else if (duration === 'month') {
+        expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      }
+      // 'forever' or undefined = null (permanent)
+
+      if (existing) {
+        // Update existing ignore with new duration
+        await prisma.threadIgnore.update({
+          where: { id: existing.id },
+          data: { expiresAt }
+        });
+      } else {
+        // Create new ignore
+        await prisma.threadIgnore.create({
+          data: { threadId: id, userId, expiresAt }
+        });
+      }
+      res.json({ ignored: true, expiresAt });
     }
   } catch (error: any) {
     // If ThreadIgnore model doesn't exist yet
@@ -567,6 +587,58 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       campgroundId: thread.campgroundId || undefined
     });
 
+    // Notify campground followers and checked-in users about new thread
+    if (thread.campgroundId) {
+      const creator = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true }
+      });
+
+      // Get users following this campground
+      const followers = await prisma.userCampground.findMany({
+        where: {
+          campgroundId: thread.campgroundId,
+          userId: { not: userId }
+        },
+        select: { userId: true }
+      });
+
+      // Get users currently checked in to this campground
+      const checkedInUsers = await prisma.user.findMany({
+        where: {
+          currentCampgroundId: thread.campgroundId,
+          id: { not: userId }
+        },
+        select: { id: true }
+      });
+
+      // Combine and dedupe user IDs
+      const userIdsToNotify = [...new Set([
+        ...followers.map(f => f.userId),
+        ...checkedInUsers.map(u => u.id)
+      ])];
+
+      // Create basecamp activity for each user
+      for (const notifyUserId of userIdsToNotify) {
+        await prisma.basecampActivity.create({
+          data: {
+            userId: notifyUserId,
+            actorId: userId,
+            type: 'NEW_CAMPGROUND_THREAD',
+            entityType: 'THREAD',
+            entityId: thread.id,
+            entityName: thread.title,
+            metadata: {
+              threadId: thread.id,
+              threadTitle: thread.title,
+              campgroundId: thread.campgroundId,
+              campgroundName: thread.campground?.name
+            }
+          }
+        });
+      }
+    }
+
     res.status(201).json(thread);
   } catch (error) {
     console.error('Create thread error:', error);
@@ -668,6 +740,90 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
       }
     }
 
+    // Get the commenter's name for notifications
+    const commenter = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, username: true }
+    });
+    const commenterName = `${commenter?.firstName || ''} ${commenter?.lastName || ''}`.trim();
+
+    // Notify users who favorited this thread (except the commenter and thread author)
+    const threadFavorites = await prisma.threadFavorite.findMany({
+      where: {
+        threadId: id,
+        userId: { notIn: [userId, thread.authorId] }
+      },
+      select: { userId: true }
+    });
+
+    // Get users who are ignoring this thread
+    const ignoredByUsers = await prisma.threadIgnore.findMany({
+      where: {
+        threadId: id,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      },
+      select: { userId: true }
+    });
+    const ignoredUserIds = ignoredByUsers.map(i => i.userId);
+
+    // Create basecamp activity for followers
+    for (const favorite of threadFavorites) {
+      if (!ignoredUserIds.includes(favorite.userId)) {
+        await prisma.basecampActivity.create({
+          data: {
+            userId: favorite.userId,
+            actorId: userId,
+            type: 'THREAD_COMMENT',
+            entityType: 'THREAD',
+            entityId: id,
+            entityName: thread.title,
+            metadata: {
+              threadId: id,
+              threadTitle: thread.title,
+              commenterName
+            }
+          }
+        });
+      }
+    }
+
+    // Handle @mentions in the content
+    const mentionRegex = /@(\w+)/g;
+    const mentions = content.match(mentionRegex) || [];
+    const mentionedUsernames = mentions.map((m: string) => m.slice(1));
+
+    if (mentionedUsernames.length > 0) {
+      const mentionedUsers = await prisma.user.findMany({
+        where: {
+          username: { in: mentionedUsernames },
+          id: { notIn: [userId, ...ignoredUserIds] }
+        },
+        select: { id: true, username: true }
+      });
+
+      for (const mentionedUser of mentionedUsers) {
+        // Create basecamp activity for mention
+        await prisma.basecampActivity.create({
+          data: {
+            userId: mentionedUser.id,
+            actorId: userId,
+            type: 'THREAD_MENTION',
+            entityType: 'THREAD',
+            entityId: id,
+            entityName: thread.title,
+            metadata: {
+              threadId: id,
+              threadTitle: thread.title,
+              commenterName
+            }
+          }
+        });
+      }
+    }
+
     res.status(201).json({ ...post, isLiked: false });
   } catch (error) {
     console.error('Create post error:', error);
@@ -708,7 +864,7 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
     const userId = (req as any).userId;
 
     const existing = await prisma.threadFavorite.findUnique({
-      where: { threadId_userId: { threadId: id, userId } }
+      where: { userId_threadId: { userId, threadId: id } }
     });
 
     if (existing) {
