@@ -715,11 +715,34 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Activity not found' });
     }
 
-    // Update reaction
+    // Update reaction on the basecamp activity
     const updated = await prisma.basecampActivity.update({
       where: { id },
       data: { reaction: reaction || null }
     });
+
+    // If this is a thread-related activity, sync like to actual thread post
+    const threadTypes = ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION'];
+    if (threadTypes.includes(activity.type)) {
+      const meta = activity.metadata as any || {};
+      const postId = meta.postId || meta.replyId;
+      
+      if (postId) {
+        // If positive reaction (like or love), create ThreadPostLike
+        if (reaction === 'like' || reaction === 'love') {
+          await prisma.threadPostLike.upsert({
+            where: { postId_userId: { postId, userId } },
+            update: {},
+            create: { postId, userId }
+          });
+        } else {
+          // If removing reaction or dislike, remove ThreadPostLike
+          await prisma.threadPostLike.deleteMany({
+            where: { postId, userId }
+          });
+        }
+      }
+    }
 
     res.json({ success: true, reaction: updated.reaction });
   } catch (error) {
