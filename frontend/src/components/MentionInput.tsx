@@ -328,8 +328,8 @@ export function RenderMentions({ content }: { content: string }) {
       result.push(
         React.createElement('a', {
           key: keyCounter++,
-          href: '/hashtag/' + tag.toLowerCase(),
-          className: 'text-primary-600 hover:text-primary-700 font-medium',
+          href: '/threads?tag=' + tag.toLowerCase(),
+          className: 'text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer',
           onClick: (e: React.MouseEvent) => e.stopPropagation()
         }, '#' + tag)
       );
