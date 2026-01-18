@@ -10,6 +10,10 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   POST_CREATED: { icon: '📝', label: 'posted' },
   THREAD_CREATED: { icon: '💬', label: 'started a discussion' },
   THREAD_POST: { icon: '💭', label: 'replied to' },
+  THREAD_REPLY: { icon: '💬', label: 'replied to your thread', color: 'text-blue-600' },
+  THREAD_COMMENT: { icon: '💬', label: 'commented on', color: 'text-blue-600' },
+  THREAD_MENTION: { icon: '📣', label: 'mentioned you in', color: 'text-purple-600' },
+  NEW_CAMPGROUND_THREAD: { icon: '🏕️', label: 'started a discussion about', color: 'text-green-600' },
   PROFILE_UPDATED: { icon: '✏️', label: 'updated their profile' },
   STATUS_UPDATE: { icon: '💭', label: 'updated their status' },
   POST: { icon: '📝', label: 'posted' },
@@ -513,7 +517,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'PACK_ITEM_ASSIGNED',
               'PACK_ITEM_ASSIGNMENT_REQUEST', 'PACK_ITEM_CONFIRMED', 'PACK_ITEM_DECLINED',
               'PACK_ITEM_NEEDS_VOLUNTEER', 'PACK_ITEM_VOLUNTEERED', 'PACK_ITEM_VOLUNTEER_DECLINED',
-              'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE'
+              'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
+              'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
+              'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'
             ]
           }
         },
@@ -592,6 +598,22 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' ' + (responseMeta.status || 'responded to') + ' cooking "' + (responseMeta.recipeTitle || 'a meal') + '"';
             activityIcon = responseMeta.status === 'ACCEPTED' ? '✅' : responseMeta.status === 'DECLINED' ? '❌' : '🤔';
             break;
+          case 'THREAD_REPLY':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' replied to your thread "' + (activity.entityName || meta.threadTitle || 'a thread') + '"';
+            activityIcon = '💬';
+            break;
+          case 'THREAD_COMMENT':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' commented on "' + (activity.entityName || meta.threadTitle || 'a thread') + '"';
+            activityIcon = '💬';
+            break;
+          case 'THREAD_MENTION':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' mentioned you in "' + (activity.entityName || meta.threadTitle || 'a thread') + '"';
+            activityIcon = '📣';
+            break;
+          case 'NEW_CAMPGROUND_THREAD':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' started a discussion about ' + (meta.campgroundName || 'a campground');
+            activityIcon = '🏕️';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -604,6 +626,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/creators/' + creatorUsername + '/content/' + activity.entityId;
         } else if (activity.type === 'MEAL_ASSIGNMENT_REQUEST' || activity.type === 'MEAL_ASSIGNMENT_RESPONSE') {
           targetLink = '/trips/' + meta.eventId;
+        } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
+          targetLink = '/threads/' + (activity.entityId || meta.threadId);
         }
 
         allActivities.push({
