@@ -1050,13 +1050,15 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
               <span>{item._count?.likes || 0}</span>
             </button>
 
-            <button
-              onClick={() => toggleComments(item.id)}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 transition"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>{item._count?.comments || 0}</span>
-            </button>
+            {item.type === 'POST' && (
+              <button
+                onClick={() => toggleComments(item.id)}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 transition"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>{item._count?.comments || 0}</span>
+              </button>
+            )}
 
             <button onClick={() => handleShare(item)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition">
               <Share2 className="w-4 h-4" />
@@ -1065,8 +1067,8 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         )}
 
-        {/* Expanded Comments Section */}
-        {expandedComments.has(item.id) && (
+        {/* Expanded Comments Section - only for POST types */}
+        {item.type === 'POST' && expandedComments.has(item.id) && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             {item.comments && item.comments.length > 0 && (
               <div className="space-y-3 mb-4">
