@@ -475,7 +475,7 @@ router.post('/:id/rate', authenticateToken, async (req, res) => {
 });
 
 // GET /api/recipes/:id/comments - Get recipe comments
-router.get('/:id/comments', async (req, res) => {
+router.get('/:id/comments', optionalAuth, async (req, res) => {
   try {
     const { id: recipeId } = req.params;
 
