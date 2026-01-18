@@ -393,11 +393,7 @@ router.post('/:id/comments', authenticateToken, async (req: Request, res: Respon
     });
 
     // Create notification for post owner (if not self-comment)
-    const post = await prisma.post.findUnique({
-      where: { id },
-      select: { userId: true }
-    });
-    if (post && post.userId !== userId) {
+    if (post.userId !== userId) {
       await prisma.notification.create({
         data: {
           userId: post.userId,
