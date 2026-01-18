@@ -716,6 +716,23 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
           link: "/threads/" + id
         }
       });
+      
+      // Also create BasecampActivity so it shows in their feed
+      await prisma.basecampActivity.create({
+        data: {
+          userId: thread.authorId,
+          actorId: userId,
+          type: 'THREAD_REPLY',
+          entityType: 'THREAD',
+          entityId: id,
+          entityName: thread.title,
+          metadata: {
+            threadId: id,
+            threadTitle: thread.title,
+            replierName: `${replier?.firstName || ''} ${replier?.lastName || ''}`.trim()
+          }
+        }
+      });
     }
 
     // If replying to a specific post, notify that post author too
