@@ -84,6 +84,8 @@ interface FeedItem {
   sourceLikeCount?: number;
   sourceLikers?: { id: string; firstName: string; lastName: string; username: string }[];
   userHasLiked?: boolean;
+  replyContent?: string;
+  metadata?: any;
 }
 
 interface SocialFeedProps {
@@ -1063,6 +1065,13 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                 View Event →
               </a>
             )}
+          </div>
+        )}
+
+        {/* Reply content for thread replies */}
+        {item.isBasecampActivity && (item.replyContent || item.metadata?.replyContent || item.metadata?.commentPreview) && (
+          <div className="bg-gray-50 rounded-lg p-3 mb-3 border-l-4 border-primary-300">
+            <p className="text-sm text-gray-700 italic">"{item.replyContent || item.metadata?.replyContent || item.metadata?.commentPreview}"</p>
           </div>
         )}
 

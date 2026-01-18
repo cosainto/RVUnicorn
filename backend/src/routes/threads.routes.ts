@@ -730,7 +730,8 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
             threadId: id,
             threadTitle: thread.title,
             postId: post.id,
-            replierName: `${replier?.firstName || ''} ${replier?.lastName || ''}`.trim()
+            replierName: `${replier?.firstName || ''} ${replier?.lastName || ''}`.trim(),
+            replyContent: content.trim().substring(0, 200)
           }
         }
       });

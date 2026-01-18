@@ -659,6 +659,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           metadata: meta,
           canRespond: ['PACK_ITEM_ASSIGNMENT_REQUEST', 'PACK_ITEM_NEEDS_VOLUNTEER', 'FRIEND_REQUEST', 'MEAL_ASSIGNMENT_REQUEST'].includes(activity.type) && activity.userId === userId,
           isRead: activity.isRead,
+          replyContent: meta.replyContent || meta.commentPreview || null,
         });
       });
     } catch (error) {
