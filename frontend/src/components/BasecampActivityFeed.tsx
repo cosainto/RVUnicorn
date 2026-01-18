@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Bell, Check, Trash2, ExternalLink, RefreshCw, ThumbsUp, ThumbsDown, Heart, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import ActivityMuteMenu from './ActivityMuteMenu';
@@ -35,6 +35,7 @@ interface FeedItem {
   canRespond?: boolean;
   isRead?: boolean;
   metadata?: any;
+  reaction?: string | null;
 }
 
 interface Props {
@@ -97,6 +98,30 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
       await loadFeed();
     } catch (error) {
       console.error('Failed to respond to meal assignment:', error);
+    }
+  };
+
+  const handleReaction = async (activityId: string, reaction: string | null) => {
+    try {
+      // Extract the real ID (remove prefix like 'packing-')
+      const realId = activityId.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-)/g, '');
+      await api.post(`/basecamp/activity/${realId}/react`, { reaction });
+      // Update local state
+      setFeedItems(items => items.map(item => 
+        item.id === activityId ? { ...item, reaction } : item
+      ));
+    } catch (error) {
+      console.error('Failed to react:', error);
+    }
+  };
+
+  const handleDismiss = async (activityId: string) => {
+    try {
+      const realId = activityId.replace(/^(activity-|post-|photo-|album-|trip-|event-created-|recipe-created-|packing-)/g, '');
+      await api.delete(`/basecamp/activity/${realId}`);
+      setFeedItems(items => items.filter(item => item.id !== activityId));
+    } catch (error) {
+      console.error('Failed to dismiss:', error);
     }
   };
   const formatTime = (dateString: string) => {
@@ -293,14 +318,44 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                     </p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
-                      <ActivityMuteMenu
-                        activityId={item.id}
-                        actorId={item.actor?.id}
-                        actorName={item.actor?.firstName}
-                        eventId={item.type.includes('EVENT') ? item.targetLink?.split('/').pop() : undefined}
-                        eventTitle={item.type.includes('EVENT') ? item.targetName : undefined}
-                        onDismiss={loadFeed}
-                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleReaction(item.id, item.reaction === 'like' ? null : 'like')}
+                          className={`p-1 rounded transition ${item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500'}`}
+                          title="Like"
+                        >
+                          <ThumbsUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleReaction(item.id, item.reaction === 'love' ? null : 'love')}
+                          className={`p-1 rounded transition ${item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500'}`}
+                          title="Love"
+                        >
+                          <Heart className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
+                          className={`p-1 rounded transition ${item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500'}`}
+                          title="Dislike"
+                        >
+                          <ThumbsDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDismiss(item.id)}
+                          className="p-1 rounded text-gray-400 hover:text-gray-600 transition"
+                          title="Dismiss"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        <ActivityMuteMenu
+                          activityId={item.id}
+                          actorId={item.actor?.id}
+                          actorName={item.actor?.firstName}
+                          eventId={item.type.includes('EVENT') ? item.targetLink?.split('/').pop() : undefined}
+                          eventTitle={item.type.includes('EVENT') ? item.targetName : undefined}
+                          onDismiss={loadFeed}
+                        />
+                      </div>
                     </div>
                     {item.imageUrl && (
                       <div className="mt-2">

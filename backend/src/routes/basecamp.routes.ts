@@ -697,4 +697,60 @@ router.get('/trips/upcoming', authenticateToken, async (req, res) => {
   }
 });
 
+// React to a basecamp activity (like, love, dislike, or remove reaction)
+router.post('/activity/:id/react', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const { reaction } = req.body; // 'like', 'love', 'dislike', or null to remove
+
+    // Verify the activity belongs to this user
+    const activity = await prisma.basecampActivity.findFirst({
+      where: { id, userId }
+    });
+
+    if (!activity) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+
+    // Update reaction
+    const updated = await prisma.basecampActivity.update({
+      where: { id },
+      data: { reaction: reaction || null }
+    });
+
+    res.json({ success: true, reaction: updated.reaction });
+  } catch (error) {
+    console.error('React to activity error:', error);
+    res.status(500).json({ error: 'Failed to react to activity' });
+  }
+});
+
+// Dismiss/ignore a basecamp activity
+router.delete('/activity/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+
+    // Verify the activity belongs to this user
+    const activity = await prisma.basecampActivity.findFirst({
+      where: { id, userId }
+    });
+
+    if (!activity) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+
+    // Delete the activity
+    await prisma.basecampActivity.delete({
+      where: { id }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete activity error:', error);
+    res.status(500).json({ error: 'Failed to delete activity' });
+  }
+});
+
 export default router;

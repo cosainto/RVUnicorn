@@ -1958,6 +1958,7 @@ model BasecampActivity {
   entityName String?
   metadata   Json?
   isRead     Boolean  @default(false)
+  reaction   String?  // 'like', 'love', 'dislike', or null
   createdAt  DateTime @default(now())
 
   user  User @relation("BasecampActivityRecipient", fields: [userId], references: [id], onDelete: Cascade)
