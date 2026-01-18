@@ -1066,21 +1066,21 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
             <button
               onClick={() => handleBasecampReaction(item.id, item.reaction === 'like' ? null : 'like')}
-              className={`p-2 rounded-full transition ${item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100'}`}
+              className={"p-2 rounded-full transition " + (item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100')}
               title="Like"
             >
               <ThumbsUp className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleBasecampReaction(item.id, item.reaction === 'love' ? null : 'love')}
-              className={`p-2 rounded-full transition ${item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100'}`}
+              className={"p-2 rounded-full transition " + (item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100')}
               title="Love"
             >
               <Heart className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleBasecampReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
-              className={`p-2 rounded-full transition ${item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100'}`}
+              className={"p-2 rounded-full transition " + (item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100')}
               title="Dislike"
             >
               <ThumbsDown className="w-4 h-4" />
