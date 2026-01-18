@@ -600,6 +600,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
           entityId: recipeId,
           entityName: recipe.title,
           metadata: {
+            commentId: comment.id,
             commentPreview: content.trim().substring(0, 100),
             canMute: true,
             commenterName
@@ -641,6 +642,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
             entityId: recipeId,
             entityName: recipe.title,
             metadata: {
+              commentId: comment.id,
               commentPreview: content.trim().substring(0, 100),
               commenterName,
               canMute: true

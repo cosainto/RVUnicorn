@@ -514,7 +514,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'PACK_ITEM_NEEDS_VOLUNTEER', 'PACK_ITEM_VOLUNTEERED', 'PACK_ITEM_VOLUNTEER_DECLINED',
               'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
               'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
-              'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'
+              'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD',
+              'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'
             ]
           }
         },
@@ -609,6 +610,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' started a discussion about ' + (meta.campgroundName || 'a campground');
             activityIcon = '🏕️';
             break;
+          case 'RECIPE_COMMENT_THREAD':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' commented on "' + (activity.entityName || 'a recipe') + '"';
+            activityIcon = '🍳';
+            break;
+          case 'RECIPE_MENTION':
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' mentioned you in a comment on "' + (activity.entityName || 'a recipe') + '"';
+            activityIcon = '📣';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -623,6 +632,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/trips/' + meta.eventId;
         } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
           targetLink = '/threads/' + (activity.entityId || meta.threadId);
+        } else if (['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type)) {
+          targetLink = '/recipes/' + activity.entityId;
         }
 
         allActivities.push({
@@ -638,7 +649,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityIcon,
           activityLabel,
           isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
@@ -697,9 +708,24 @@ router.get('/feed', authenticateToken, async (req, res) => {
             sourceLikers = likes.map(l => l.user);
             userHasLiked = likes.some(l => l.userId === userId);
           }
-        } else if (entityType === 'RECIPE') {
-          const recipeId = meta.recipeId;
-          if (recipeId) {
+        } else if (entityType === 'RECIPE' || ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type)) {
+          const commentId = meta.commentId;
+          const recipeId = meta.recipeId || activity.id.replace('basecamp-', '');
+          
+          // If there's a commentId, get comment likes; otherwise get recipe likes
+          if (commentId) {
+            try {
+              const likes = await prisma.recipeCommentLike.findMany({
+                where: { commentId },
+                include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+                take: 5,
+                orderBy: { createdAt: 'desc' }
+              });
+              sourceLikeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+              sourceLikers = likes.map(l => l.user);
+              userHasLiked = likes.some(l => l.userId === userId);
+            } catch (e) { /* comment might not exist */ }
+          } else if (recipeId) {
             const likes = await prisma.recipeLike.findMany({
               where: { recipeId },
               include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
@@ -868,10 +894,25 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         }
       }
       
-      // RECIPE content
+      // RECIPE content (comments or recipe itself)
       else if (entityType === 'RECIPE') {
+        const commentId = meta.commentId;
         const recipeId = meta.recipeId || entityId;
-        if (recipeId) {
+        
+        // If there's a commentId, like the comment; otherwise like the recipe
+        if (commentId) {
+          if (isLike) {
+            await prisma.recipeCommentLike.upsert({
+              where: { commentId_userId: { commentId, userId } },
+              update: {},
+              create: { commentId, userId }
+            });
+          } else {
+            await prisma.recipeCommentLike.deleteMany({
+              where: { commentId, userId }
+            });
+          }
+        } else if (recipeId) {
           if (isLike) {
             await prisma.recipeLike.upsert({
               where: { recipeId_userId: { recipeId, userId } },
@@ -944,8 +985,20 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
           sourceLikers = likes.map(l => l.user);
         }
       } else if (entityType === 'RECIPE') {
+        const commentId = meta.commentId;
         const recipeId = meta.recipeId || entityId;
-        if (recipeId) {
+        
+        // If there's a commentId, get comment likes; otherwise get recipe likes
+        if (commentId) {
+          const likes = await prisma.recipeCommentLike.findMany({
+            where: { commentId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          });
+          sourceLikeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+          sourceLikers = likes.map(l => l.user);
+        } else if (recipeId) {
           const likes = await prisma.recipeLike.findMany({
             where: { recipeId },
             include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },

@@ -150,6 +150,7 @@ model User {
   threadPostLikes        ThreadPostLike[]
   activityLikes          ActivityLike[]
   recipeLikes            RecipeLike[]
+  recipeCommentLikes     RecipeCommentLike[]
   threadFavorites        ThreadFavorite[]
   threadIgnores          ThreadIgnore[]
   activities             Activity[]
@@ -745,6 +746,7 @@ model RecipeComment {
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes  RecipeCommentLike[]
 
   @@index([recipeId])
   @@index([userId])
@@ -2300,6 +2302,20 @@ model RecipeLike {
 
   @@unique([recipeId, userId])
   @@index([recipeId])
+  @@index([userId])
+}
+
+model RecipeCommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment RecipeComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
   @@index([userId])
 }
 
