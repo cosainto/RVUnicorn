@@ -317,6 +317,10 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                         <span className="font-medium">{item.targetName}</span>
                       )}
                     </p>
+                    {/* Show comment preview for recipe/thread comments */}
+                    {item.metadata?.commentPreview && (
+                      <p className="text-sm text-gray-600 mt-1 italic">"{item.metadata.commentPreview}"</p>
+                    )}
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
                       <div className="flex items-center gap-1">
