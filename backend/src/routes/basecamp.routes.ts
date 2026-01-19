@@ -856,12 +856,70 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
 router.post('/activity/:id/react', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    let { id } = req.params;
     const { reaction } = req.body; // 'like', 'love', 'dislike', or null to remove
 
-    // Verify the activity belongs to this user
+    const isLike = reaction === 'like';
+    let meta: any = {};
+    let entityId: string | undefined;
+    let entityType: string | undefined;
+
+    // Check if this is an Activity item (activity-xxx) or BasecampActivity (basecamp-xxx)
+    if (id.startsWith('activity-')) {
+      const activityId = id.replace('activity-', '');
+      const activity = await prisma.activity.findFirst({
+        where: { id: activityId }
+      });
+
+      if (!activity) {
+        return res.status(404).json({ error: 'Activity not found' });
+      }
+
+      // For RECIPE_COMMENTED activities, sync like to the recipe comment
+      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId) {
+        // Find the comment by matching recipe and content
+        const comment = await prisma.recipeComment.findFirst({
+          where: {
+            recipeId: activity.recipeId,
+            content: activity.content || undefined,
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        if (comment) {
+          if (isLike) {
+            await prisma.recipeCommentLike.upsert({
+              where: { commentId_userId: { commentId: comment.id, userId } },
+              update: {},
+              create: { commentId: comment.id, userId }
+            });
+          } else {
+            await prisma.recipeCommentLike.deleteMany({
+              where: { commentId: comment.id, userId }
+            });
+          }
+
+          // Get updated like count
+          const likeCount = await prisma.recipeCommentLike.count({
+            where: { commentId: comment.id }
+          });
+
+          return res.json({ 
+            success: true, 
+            reaction, 
+            sourceLikeCount: likeCount,
+            commentId: comment.id
+          });
+        }
+      }
+
+      return res.json({ success: true, reaction });
+    }
+
+    // Handle BasecampActivity items
+    const basecampId = id.startsWith('basecamp-') ? id.replace('basecamp-', '') : id;
     const activity = await prisma.basecampActivity.findFirst({
-      where: { id, userId }
+      where: { id: basecampId, userId }
     });
 
     if (!activity) {
@@ -870,14 +928,13 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
 
     // Update reaction on the basecamp activity
     const updated = await prisma.basecampActivity.update({
-      where: { id },
+      where: { id: basecampId },
       data: { reaction: reaction || null }
     });
 
-    const meta = activity.metadata as any || {};
-    const entityId = activity.entityId;
-    const entityType = activity.entityType;
-    const isLike = reaction === 'like';
+    meta = activity.metadata as any || {};
+    entityId = activity.entityId;
+    entityType = activity.entityType;
     const isDislike = reaction === 'dislike';
 
     // Sync like/dislike to the source content based on entity type
