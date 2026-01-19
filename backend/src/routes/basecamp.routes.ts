@@ -74,7 +74,7 @@ function getActivityColor(type: string): string {
 
 // GET /api/basecamp/feed
 router.get('/feed', authenticateToken, async (req, res) => {
-  console.log('===== BASECAMP FEED ROUTE HIT =====');
+  // Debug log removed
   try {
     const userId = (req as any).userId;
     const page = parseInt(req.query.page as string) || 1;
@@ -244,11 +244,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
         }
 
         // Check if user has liked the recipe comment
-        console.log('Activity check:', { type: activity.type, recipeId: activity.recipeId, content: activity.content?.substring(0, 50), hasRecipe: !!activity.recipe });
+        // Debug log removed
         let userHasLiked = false;
         let sourceLikeCount = 0;
         if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
-          console.log('Looking for comment:', { recipeId: activity.recipeId, content: activity.content });
+          // Debug log removed
           const comment = await prisma.recipeComment.findFirst({
             where: {
               recipeId: activity.recipeId,
@@ -260,9 +260,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
             },
             orderBy: { createdAt: 'desc' }
           });
-          console.log('Found comment:', comment ? { id: comment.id, likes: comment.likes.length, likeCount: comment._count.likes } : 'NOT FOUND');
+          // Debug log removed
           if (comment) {
-            console.log('Setting userHasLiked to:', comment.likes.length > 0);
+            // Debug log removed
           }
           if (comment) {
             userHasLiked = comment.likes.length > 0;
@@ -531,7 +531,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
               'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
               'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD',
-              'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'
+              'RECIPE_MENTION'
             ]
           }
         },
@@ -648,7 +648,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/trips/' + meta.eventId;
         } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
           targetLink = '/threads/' + (activity.entityId || meta.threadId);
-        } else if (['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type)) {
+        } else if (['RECIPE_MENTION'].includes(activity.type)) {
           targetLink = '/recipes/' + activity.entityId;
         }
 
@@ -664,8 +664,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityType: activity.type,
           activityIcon,
           activityLabel,
-          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type),
+          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
@@ -725,7 +725,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
             sourceLikers = likes.map(l => l.user);
             userHasLiked = likes.some(l => l.userId === userId);
           }
-        } else if (entityType === 'RECIPE' || ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION', 'RECIPE_COMMENTED'].includes(activity.type)) {
+        } else if (entityType === 'RECIPE' || ['RECIPE_MENTION', 'RECIPE_COMMENTED'].includes(activity.type)) {
           const commentId = meta.commentId;
           const recipeId = meta.recipeId || activity.recipeId || activity.id.replace('basecamp-', '').replace('activity-', '');
           
