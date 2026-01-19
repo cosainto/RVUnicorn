@@ -361,6 +361,28 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       );
     }
     
+    // Special handling for recipe comments
+    if (item.type === 'RECIPE_COMMENTED' || item.activityType === 'RECIPE_COMMENTED') {
+      return (
+        <span>
+          <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
+            {actorName}
+          </Link>
+          {' '}commented on{' '}
+          {item.targetLink ? (
+            <Link to={item.targetLink} className="font-semibold text-primary-600 hover:underline">
+              {item.targetName}
+            </Link>
+          ) : (
+            <span className="font-semibold">{item.targetName}</span>
+          )}
+          {item.content && (
+            <span className="block mt-1 text-gray-600 italic">"{item.content}"</span>
+          )}
+        </span>
+      );
+    }
+
     if (item.activityLabel && item.type !== 'CAMPGROUND_ANNOUNCEMENT') {
         return (
         <span>
