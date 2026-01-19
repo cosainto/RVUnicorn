@@ -518,9 +518,9 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       });
 
       // Check if current user has liked each comment (separate query to avoid take:5 limit)
-      console.log('[COMMENTS DEBUG] Starting userHasLiked check with userId:', userId);
       commentsWithLikes = await Promise.all(comments.map(async (comment) => {
         let userHasLiked = false;
+        let userReaction = null;
         if (userId) {
           const userLike = await prisma.recipeCommentLike.findFirst({
             where: {
@@ -528,14 +528,15 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
               userId: userId
             }
           });
-          console.log('[COMMENTS DEBUG] Comment', comment.id, 'userLike found:', !!userLike);
           userHasLiked = !!userLike;
+          userReaction = userLike?.reaction || (userLike ? 'like' : null);
         }
         return {
           ...comment,
           likeCount: comment._count.likes,
           likers: comment.likes.map(l => l.user),
-          userHasLiked
+          userHasLiked,
+          userReaction
         };
       }));
     } catch (likesError) {

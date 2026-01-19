@@ -949,8 +949,8 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         });
       }
 
-      // For RECIPE_COMMENTED activities, also sync like to the recipe comment
-      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && isLike) {
+      // For RECIPE_COMMENTED activities, sync reaction to the recipe comment
+      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId) {
         const comment = await prisma.recipeComment.findFirst({
           where: {
             recipeId: activity.recipeId,
@@ -960,28 +960,19 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         });
 
         if (comment) {
-          await prisma.recipeCommentLike.upsert({
-            where: { commentId_userId: { commentId: comment.id, userId } },
-            update: {},
-            create: { commentId: comment.id, userId }
-          });
-        }
-      }
-
-      // Remove like from recipe comment if reaction is removed or changed from 'like'
-      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && !isLike) {
-        const comment = await prisma.recipeComment.findFirst({
-          where: {
-            recipeId: activity.recipeId,
-            content: activity.content || undefined,
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-
-        if (comment) {
-          await prisma.recipeCommentLike.deleteMany({
-            where: { commentId: comment.id, userId }
-          });
+          if (reaction) {
+            // Save/update the reaction
+            await prisma.recipeCommentLike.upsert({
+              where: { commentId_userId: { commentId: comment.id, userId } },
+              update: { reaction },
+              create: { commentId: comment.id, userId, reaction }
+            });
+          } else {
+            // Remove the reaction
+            await prisma.recipeCommentLike.deleteMany({
+              where: { commentId: comment.id, userId }
+            });
+          }
         }
       }
 

@@ -2307,6 +2307,7 @@ model RecipeLike {
 }
 
 model RecipeCommentLike {
+  reaction  String?  // like, love, dislike
   id        String   @id @default(cuid())
   commentId String
   userId    String
