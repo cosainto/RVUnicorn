@@ -35,6 +35,7 @@ interface FeedItem {
   canRespond?: boolean;
   isRead?: boolean;
   metadata?: any;
+  replyContent?: string;
   reaction?: string | null;
 }
 
