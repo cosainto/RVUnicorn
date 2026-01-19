@@ -1121,4 +1121,34 @@ router.get('/comments/:commentId/likes', optionalAuth, async (req, res) => {
   }
 });
 
+// React to comment (love, dislike)
+router.post('/comments/:commentId/react', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { commentId } = req.params;
+    const { reaction } = req.body;
+
+    // Validate reaction
+    if (!['love', 'dislike'].includes(reaction)) {
+      return res.status(400).json({ error: 'Invalid reaction type' });
+    }
+
+    // Check if comment exists
+    const comment = await prisma.recipeComment.findUnique({
+      where: { id: commentId }
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // For now, just return success - reactions are stored client-side
+    // Future: add RecipeCommentReaction model for persistent storage
+    res.json({ success: true, reaction });
+  } catch (error) {
+    console.error('Comment reaction error:', error);
+    res.status(500).json({ error: 'Failed to react to comment' });
+  }
+});
+
 export default router;

@@ -228,6 +228,20 @@ export default function RecipeDetailPage() {
     }
   };
 
+  const handleCommentReaction = async (commentId: string, reaction: string) => {
+    if (!user) return;
+    try {
+      await api.post(`/recipes/comments/${commentId}/react`, { reaction });
+      setComments(comments.map(c => 
+        c.id === commentId 
+          ? { ...c, userReaction: c.userReaction === reaction ? null : reaction }
+          : c
+      ));
+    } catch (error) {
+      console.error('Comment reaction error:', error);
+    }
+  };
+
   const loadFriends = async () => {
     try {
       const { data } = await api.get('/friends');
@@ -1297,15 +1311,30 @@ export default function RecipeDetailPage() {
                   </Link>
                   <p className="text-gray-700 ml-11 mb-2">{renderCommentContent(comment.content)}</p>
                   
-                  {/* Like button */}
+                  {/* Reaction buttons */}
                   {user && (
-                    <div className="ml-11 mt-2">
+                    <div className="ml-11 mt-2 flex items-center gap-3">
                       <button
                         onClick={() => handleCommentLike(comment.id)}
-                        className={`flex items-center gap-1 text-sm ${comment.userHasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
+                        className={`flex items-center gap-1 text-sm transition ${comment.userHasLiked ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                        title="Like"
                       >
                         <ThumbsUp className={`w-4 h-4 ${comment.userHasLiked ? 'fill-current' : ''}`} />
                         {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
+                      </button>
+                      <button
+                        onClick={() => handleCommentReaction(comment.id, 'love')}
+                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                        title="Love"
+                      >
+                        <Heart className={`w-4 h-4 ${comment.userReaction === 'love' ? 'fill-current' : ''}`} />
+                      </button>
+                      <button
+                        onClick={() => handleCommentReaction(comment.id, 'dislike')}
+                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
+                        title="Dislike"
+                      >
+                        <ThumbsDown className={`w-4 h-4 ${comment.userReaction === 'dislike' ? 'fill-current' : ''}`} />
                       </button>
                     </div>
                   )}
