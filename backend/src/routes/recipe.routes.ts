@@ -518,6 +518,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       });
 
       // Check if current user has liked each comment (separate query to avoid take:5 limit)
+      console.log('[COMMENTS DEBUG] Starting userHasLiked check with userId:', userId);
       commentsWithLikes = await Promise.all(comments.map(async (comment) => {
         let userHasLiked = false;
         if (userId) {
@@ -527,6 +528,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
               userId: userId
             }
           });
+          console.log('[COMMENTS DEBUG] Comment', comment.id, 'userLike found:', !!userLike);
           userHasLiked = !!userLike;
         }
         return {
