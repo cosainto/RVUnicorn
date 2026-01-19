@@ -2278,6 +2278,7 @@ model EventSubtabPrivacy {
 }
 
 model ActivityLike {
+  reaction   String?  // like, love, dislike
   id         String   @id @default(cuid())
   activityId String
   userId     String
@@ -2334,3 +2335,4 @@ model ThreadIgnore {
   @@index([threadId])
   @@index([expiresAt])
 }
+

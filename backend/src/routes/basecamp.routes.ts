@@ -718,6 +718,18 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Enrich activities with source like counts
     const enrichedActivities = await Promise.all(paginatedActivities.map(async (activity) => {
       const meta = activity.metadata || {};
+      
+      // Check if user has reacted to this Activity item
+      let activityReaction = null;
+      if (activity.id.startsWith('activity-')) {
+        const activityId = activity.id.replace('activity-', '');
+        const activityLike = await prisma.activityLike.findUnique({
+          where: { activityId_userId: { activityId, userId } }
+        });
+        if (activityLike) {
+          activityReaction = activityLike.reaction;
+        }
+      }
 
       const entityType = meta.entityType || (activity.type?.includes('THREAD') ? 'THREAD' : null);
       let sourceLikeCount = 0;
@@ -814,7 +826,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
         ...activity,
         sourceLikeCount,
         sourceLikers,
-        userHasLiked
+        userHasLiked,
+        reaction: activityReaction || activity.reaction
       };
     }));
 
@@ -923,9 +936,21 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         return res.status(404).json({ error: 'Activity not found' });
       }
 
-      // For RECIPE_COMMENTED activities, sync like to the recipe comment
-      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId) {
-        // Find the comment by matching recipe and content
+      // Save reaction to ActivityLike table
+      if (reaction) {
+        await prisma.activityLike.upsert({
+          where: { activityId_userId: { activityId, userId } },
+          update: { reaction },
+          create: { activityId, userId, reaction }
+        });
+      } else {
+        await prisma.activityLike.deleteMany({
+          where: { activityId, userId }
+        });
+      }
+
+      // For RECIPE_COMMENTED activities, also sync like to the recipe comment
+      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && isLike) {
         const comment = await prisma.recipeComment.findFirst({
           where: {
             recipeId: activity.recipeId,
@@ -935,28 +960,27 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         });
 
         if (comment) {
-          if (isLike) {
-            await prisma.recipeCommentLike.upsert({
-              where: { commentId_userId: { commentId: comment.id, userId } },
-              update: {},
-              create: { commentId: comment.id, userId }
-            });
-          } else {
-            await prisma.recipeCommentLike.deleteMany({
-              where: { commentId: comment.id, userId }
-            });
-          }
-
-          // Get updated like count
-          const likeCount = await prisma.recipeCommentLike.count({
-            where: { commentId: comment.id }
+          await prisma.recipeCommentLike.upsert({
+            where: { commentId_userId: { commentId: comment.id, userId } },
+            update: {},
+            create: { commentId: comment.id, userId }
           });
+        }
+      }
 
-          return res.json({ 
-            success: true, 
-            reaction, 
-            sourceLikeCount: likeCount,
-            commentId: comment.id
+      // Remove like from recipe comment if reaction is removed or changed from 'like'
+      if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && !isLike) {
+        const comment = await prisma.recipeComment.findFirst({
+          where: {
+            recipeId: activity.recipeId,
+            content: activity.content || undefined,
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        if (comment) {
+          await prisma.recipeCommentLike.deleteMany({
+            where: { commentId: comment.id, userId }
           });
         }
       }
