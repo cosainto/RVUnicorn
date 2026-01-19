@@ -327,7 +327,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleReaction(item.id, item.reaction === 'like' ? null : 'like')}
-                          className={`p-1 rounded transition ${item.reaction === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500'}`}
+                          className={`p-1 rounded transition ${item.reaction === 'like' || item.userHasLiked ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500'}`}
                           title="Like"
                         >
                           <ThumbsUp className="w-3.5 h-3.5" />
