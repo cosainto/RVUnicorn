@@ -199,7 +199,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         },
       });
 
-      activities.forEach((activity) => {
+      for (const activity of activities) {
         if (blockedUserIds.has(activity.userId)) return;
         
         let targetName = '';
@@ -253,6 +253,27 @@ router.get('/feed', authenticateToken, async (req, res) => {
           }
         }
 
+        // Check if user has liked the recipe comment
+        let userHasLiked = false;
+        let sourceLikeCount = 0;
+        if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+          const comment = await prisma.recipeComment.findFirst({
+            where: {
+              recipeId: activity.recipeId,
+              content: activity.content,
+            },
+            include: {
+              _count: { select: { likes: true } },
+              likes: { where: { userId }, take: 1 }
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          if (comment) {
+            userHasLiked = comment.likes.length > 0;
+            sourceLikeCount = comment._count.likes;
+          }
+        }
+
         allActivities.push({
           id: 'activity-' + activity.id,
           type: activity.type,
@@ -272,8 +293,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
           imageUrl: (activity as any).imageUrl,
           isFriendActivity: friendIdSet.has(activity.userId),
           hasMutualFriendInteraction: !!secondaryUserInfo,
+          userHasLiked,
+          sourceLikeCount,
+          isRecipeComment: activity.type === 'RECIPE_COMMENTED',
         });
-      });
+      }
     } catch (error) {
       console.log('Activity model error:', error);
     }
