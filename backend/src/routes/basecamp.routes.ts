@@ -270,7 +270,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
             // Debug log removed
           }
           if (comment) {
-            userHasLiked = comment.likes.length > 0;
+            // Check if user has liked with separate query
+            const userLike = await prisma.recipeCommentLike.findFirst({
+              where: { commentId: comment.id, userId }
+            });
+            userHasLiked = !!userLike;
             sourceLikeCount = comment._count.likes;
           }
         }
@@ -755,7 +759,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
               if (comment) {
                 sourceLikeCount = comment._count.likes;
                 sourceLikers = comment.likes.map(l => l.user);
-                userHasLiked = comment.likes.some(l => l.userId === userId);
+                // Check if user has liked with separate query to avoid take:5 limit
+                const userLike = await prisma.recipeCommentLike.findFirst({
+                  where: { commentId: comment.id, userId }
+                });
+                userHasLiked = !!userLike;
               }
             } catch (e) { /* comment might not exist */ }
           } else if (commentId) {
