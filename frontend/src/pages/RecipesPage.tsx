@@ -131,8 +131,13 @@ export default function RecipesPage() {
   };
 
   const handleCreateRecipe = async () => {
-    if (!formData.title || !formData.ingredients || !formData.instructions) {
-      alert('Please fill in all required fields');
+    const missingFields = [];
+    if (!formData.title.trim()) missingFields.push('Recipe Title');
+    if (!formData.ingredients.trim()) missingFields.push('Ingredients');
+    if (!formData.instructions.trim()) missingFields.push('Instructions');
+    
+    if (missingFields.length > 0) {
+      alert('Please fill in the following required fields:\n\n• ' + missingFields.join('\n• '));
       return;
     }
 
