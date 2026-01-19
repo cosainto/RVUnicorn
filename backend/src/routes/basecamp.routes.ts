@@ -951,6 +951,7 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
 
       // For RECIPE_COMMENTED activities, sync reaction to the recipe comment
       if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId) {
+        console.log('[REACT DEBUG] Syncing reaction to recipe comment, recipeId:', activity.recipeId, 'content:', activity.content?.substring(0,20));
         const comment = await prisma.recipeComment.findFirst({
           where: {
             recipeId: activity.recipeId,
@@ -960,19 +961,23 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         });
 
         if (comment) {
+          console.log('[REACT DEBUG] Found comment:', comment.id, 'saving reaction:', reaction);
           if (reaction) {
             // Save/update the reaction
-            await prisma.recipeCommentLike.upsert({
+            const saved = await prisma.recipeCommentLike.upsert({
               where: { commentId_userId: { commentId: comment.id, userId } },
               update: { reaction },
               create: { commentId: comment.id, userId, reaction }
             });
+            console.log('[REACT DEBUG] Saved RecipeCommentLike:', saved);
           } else {
             // Remove the reaction
             await prisma.recipeCommentLike.deleteMany({
               where: { commentId: comment.id, userId }
             });
           }
+        } else {
+          console.log('[REACT DEBUG] Comment NOT found for content:', activity.content?.substring(0,30));
         }
       }
 
