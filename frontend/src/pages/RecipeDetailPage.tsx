@@ -23,6 +23,7 @@ import {
   Loader2,
   AtSign,
   ThumbsUp,
+  ThumbsDown,
   MessageCircle
 } from 'lucide-react';
 import api from '../services/api';
