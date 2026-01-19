@@ -481,43 +481,75 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
 
     const userId = (req as any).userId;
     
-    const comments = await prisma.recipeComment.findMany({
-      where: { recipeId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            profilePicture: true,
-          }
-        },
-        likes: {
-          include: {
-            user: {
-              select: { id: true, firstName: true, lastName: true, username: true }
+    let comments;
+    let commentsWithLikes;
+    
+    try {
+      // Try with likes
+      comments = await prisma.recipeComment.findMany({
+        where: { recipeId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              profilePicture: true,
             }
           },
-          take: 5,
-          orderBy: { createdAt: 'desc' }
+          likes: {
+            include: {
+              user: {
+                select: { id: true, firstName: true, lastName: true, username: true }
+              }
+            },
+            take: 5,
+            orderBy: { createdAt: 'desc' }
+          },
+          _count: {
+            select: { likes: true }
+          }
         },
-        _count: {
-          select: { likes: true }
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      });
 
-    // Transform to include like info
-    const commentsWithLikes = comments.map(comment => ({
-      ...comment,
-      likeCount: comment._count.likes,
-      likers: comment.likes.map(l => l.user),
-      userHasLiked: userId ? comment.likes.some(l => l.userId === userId) : false
-    }));
+      commentsWithLikes = comments.map(comment => ({
+        ...comment,
+        likeCount: comment._count.likes,
+        likers: comment.likes.map(l => l.user),
+        userHasLiked: userId ? comment.likes.some(l => l.userId === userId) : false
+      }));
+    } catch (likesError) {
+      // Fallback without likes if table doesn't exist
+      console.log('Likes query failed, falling back:', likesError);
+      comments = await prisma.recipeComment.findMany({
+        where: { recipeId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              profilePicture: true,
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      commentsWithLikes = comments.map(comment => ({
+        ...comment,
+        likeCount: 0,
+        likers: [],
+        userHasLiked: false
+      }));
+    }
 
     res.json(commentsWithLikes);
   } catch (error) {
