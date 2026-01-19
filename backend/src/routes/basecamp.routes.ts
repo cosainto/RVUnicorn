@@ -719,8 +719,16 @@ router.get('/feed', authenticateToken, async (req, res) => {
     console.log('[ENRICH DEBUG] Processing', paginatedActivities.length, 'activities');
     const enrichedActivities = await Promise.all(paginatedActivities.map(async (activity) => {
       const meta = activity.metadata || {};
-      if (activity.type === 'RECIPE_COMMENTED') {
-        console.log('[ENRICH DEBUG] RECIPE_COMMENTED - recipeId:', activity.recipeId, 'content:', activity.content?.substring(0,20), 'activityType:', activity.activityType);
+      if (activity.type === 'RECIPE_COMMENTED' || activity.activityType === 'RECIPE_COMMENTED') {
+        console.log('[ENRICH DEBUG] RECIPE_COMMENTED item:', JSON.stringify({
+          id: activity.id,
+          type: activity.type,
+          activityType: activity.activityType,
+          recipeId: activity.recipeId,
+          hasContent: !!activity.content,
+          contentPreview: activity.content?.substring(0,20),
+          meta: meta
+        }));
       }
       const entityType = meta.entityType || (activity.type?.includes('THREAD') ? 'THREAD' : null);
       let sourceLikeCount = 0;
