@@ -28,6 +28,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   RECIPE_SHARED: { icon: '🍳', label: 'shared a recipe' },
   RECIPE_LIKED: { icon: '❤️', label: 'liked', color: 'text-red-500' },
   RECIPE_COMMENTED: { icon: '💬', label: 'commented on' },
+  RECIPE_COMMENT_THREAD: { icon: '💬', label: 'commented on', color: 'text-blue-600' },
   MEAL_PLAN_CREATED: { icon: '🍽️', label: 'planned a meal' },
   PHOTO_UPLOADED: { icon: '📷', label: 'added photos to', color: 'text-purple-600' },
   PHOTO_LIKED: { icon: '❤️', label: 'liked a photo in', color: 'text-red-500' },
