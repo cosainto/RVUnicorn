@@ -716,8 +716,12 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const hasMore = deduplicatedActivities.length > limit;
 
     // Enrich activities with source like counts
+    console.log('[ENRICH DEBUG] Processing', paginatedActivities.length, 'activities');
     const enrichedActivities = await Promise.all(paginatedActivities.map(async (activity) => {
       const meta = activity.metadata || {};
+      if (activity.type === 'RECIPE_COMMENTED') {
+        console.log('[ENRICH DEBUG] RECIPE_COMMENTED - recipeId:', activity.recipeId, 'content:', activity.content?.substring(0,20), 'activityType:', activity.activityType);
+      }
       const entityType = meta.entityType || (activity.type?.includes('THREAD') ? 'THREAD' : null);
       let sourceLikeCount = 0;
       let sourceLikers: { id: string; firstName: string; lastName: string; username: string }[] = [];
