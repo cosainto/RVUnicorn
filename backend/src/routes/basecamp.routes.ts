@@ -190,6 +190,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
       });
 
       for (const activity of activities) {
+        // Skip types already handled by BasecampActivity
+        const skipTypes = ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'];
+        if (skipTypes.includes(activity.type)) continue;
         if (blockedUserIds.has(activity.userId)) return;
         
         let targetName = '';
