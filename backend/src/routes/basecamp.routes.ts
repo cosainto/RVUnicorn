@@ -168,19 +168,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
       const activities = await prisma.activity.findMany({
         where: {
           OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
-          AND: [
-            { isCreatorContent: { not: true } },
-            {
-              OR: [
-                { userId: { in: visibleUserIds }, isPublic: true },
-                { campgroundId: { in: unmutedCampgroundIds } },
-                { targetUserId: userId },
-              ],
-            },
+            { userId: { in: visibleUserIds }, isPublic: true },
+            { campgroundId: { in: unmutedCampgroundIds } },
+            { targetUserId: userId },
           ],
         },
         take: limit * 3,
@@ -296,6 +286,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           userHasLiked,
           sourceLikeCount,
           isRecipeComment: activity.type === 'RECIPE_COMMENTED',
+          isBasecampActivity: activity.type === 'RECIPE_COMMENTED',
         });
       }
     } catch (error) {
@@ -376,11 +367,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const albums = await prisma.photoAlbum.findMany({
         where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
           userId: { in: visibleUserIds },
           privacy: { in: ['PUBLIC', 'FRIENDS'] },
         },
@@ -493,11 +479,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const recipes = await prisma.recipe.findMany({
         where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
           userId: { in: visibleUserIds },
           privacy: { in: ['PUBLIC', 'FRIENDS'] },
         },
