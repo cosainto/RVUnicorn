@@ -61,7 +61,11 @@ function getActivityIcon(type: string): string {
 }
 
 function getActivityLabel(type: string): string {
-  return ACTIVITY_CONFIG[type]?.label || 'did something';
+  const label = ACTIVITY_CONFIG[type]?.label;
+  if (!label) {
+    console.log('Missing activity config for type:', type);
+  }
+  return label || 'did something';
 }
 
 function getActivityColor(type: string): string {
