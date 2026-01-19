@@ -805,6 +805,11 @@ const ACTIVITY_CONFIG: Record<string, { label: string; icon: React.ReactNode; co
   EVENT_CREATED: { label: 'created an event', icon: <CalendarPlus className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-600' },
   EVENT_JOINED: { label: 'is attending', icon: <Heart className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-600' },
   POST: { label: 'posted', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-gray-100 text-gray-600' },
+  RECIPE_COMMENT_THREAD: { label: 'commented on', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-orange-100 text-orange-600' },
+  RECIPE_MENTION: { label: 'mentioned you on', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
+  THREAD_REPLY: { label: 'replied to', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
+  THREAD_COMMENT: { label: 'commented on', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
+  THREAD_MENTION: { label: 'mentioned you in', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
 };
 
 const PACK_CATEGORIES = [
