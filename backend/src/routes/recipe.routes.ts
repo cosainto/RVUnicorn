@@ -516,11 +516,24 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         }
       });
 
-      commentsWithLikes = comments.map(comment => ({
-        ...comment,
-        likeCount: comment._count.likes,
-        likers: comment.likes.map(l => l.user),
-        userHasLiked: userId ? comment.likes.some(l => l.userId === userId) : false
+      // Check if current user has liked each comment (separate query to avoid take:5 limit)
+      commentsWithLikes = await Promise.all(comments.map(async (comment) => {
+        let userHasLiked = false;
+        if (userId) {
+          const userLike = await prisma.recipeCommentLike.findFirst({
+            where: {
+              commentId: comment.id,
+              userId: userId
+            }
+          });
+          userHasLiked = !!userLike;
+        }
+        return {
+          ...comment,
+          likeCount: comment._count.likes,
+          likers: comment.likes.map(l => l.user),
+          userHasLiked
+        };
       }));
     } catch (likesError) {
       // Fallback without likes if table doesn't exist

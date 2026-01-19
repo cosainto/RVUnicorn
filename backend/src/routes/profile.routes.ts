@@ -950,6 +950,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     try {
       activities = await prisma.activity.findMany({
         where: {
+          type: { notIn: ['RECIPE_COMMENTED', 'FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'] },
           OR: [
             { userId: user.id },
             { targetUserId: user.id, ...(mutedCampgroundIds.length > 0 ? { campgroundId: { notIn: mutedCampgroundIds } } : {}) },

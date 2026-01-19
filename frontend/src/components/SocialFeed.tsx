@@ -154,7 +154,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             try {
               const { data: packingData } = await api.get('/basecamp/feed?page=1&limit=20');
               const packingItems: FeedItem[] = (packingData.feedItems || [])
-                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION')
+                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment)
                 .map((item: any) => ({
                   id: item.id,
                   type: item.type || item.activityType,
@@ -175,6 +175,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   canRespond: item.canRespond,
                   isBasecampActivity: item.isBasecampActivity,
                   reaction: item.reaction,
+                  userHasLiked: item.userHasLiked,
                   replyContent: item.replyContent,
                 }));
               
