@@ -262,6 +262,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
           });
           console.log('Found comment:', comment ? { id: comment.id, likes: comment.likes.length, likeCount: comment._count.likes } : 'NOT FOUND');
           if (comment) {
+            console.log('Setting userHasLiked to:', comment.likes.length > 0);
+          }
+          if (comment) {
             userHasLiked = comment.likes.length > 0;
             sourceLikeCount = comment._count.likes;
           }
