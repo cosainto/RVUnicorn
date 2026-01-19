@@ -743,6 +743,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           
           // For RECIPE_COMMENTED from Activity model, find comment by content
           if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+            console.log('[BASECAMP DEBUG] Processing RECIPE_COMMENTED:', activity.recipeId, activity.content?.substring(0,20));
             try {
               const comment = await prisma.recipeComment.findFirst({
                 where: { recipeId: activity.recipeId, content: activity.content },
@@ -757,13 +758,17 @@ router.get('/feed', authenticateToken, async (req, res) => {
                 orderBy: { createdAt: 'desc' }
               });
               if (comment) {
+                console.log('[BASECAMP DEBUG] Found comment:', comment.id, 'likes count:', comment._count.likes);
                 sourceLikeCount = comment._count.likes;
                 sourceLikers = comment.likes.map(l => l.user);
                 // Check if user has liked with separate query to avoid take:5 limit
                 const userLike = await prisma.recipeCommentLike.findFirst({
                   where: { commentId: comment.id, userId }
                 });
+                console.log('[BASECAMP DEBUG] userId:', userId, 'userLike found:', !!userLike);
                 userHasLiked = !!userLike;
+              } else {
+                console.log('[BASECAMP DEBUG] Comment NOT found for:', activity.content?.substring(0,20));
               }
             } catch (e) { /* comment might not exist */ }
           } else if (commentId) {
