@@ -480,6 +480,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     const { id: recipeId } = req.params;
 
     const userId = (req as any).userId;
+    console.log('[DEBUG] Comments endpoint - userId from auth:', userId);
     
     let comments;
     let commentsWithLikes;
