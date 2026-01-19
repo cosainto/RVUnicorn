@@ -214,6 +214,20 @@ export default function RecipeDetailPage() {
     }
   };
 
+  const handleCommentLike = async (commentId: string) => {
+    if (!user) return;
+    try {
+      const { data } = await api.post(`/recipes/comments/${commentId}/like`);
+      setComments(comments.map(c => 
+        c.id === commentId 
+          ? { ...c, userHasLiked: data.liked, likeCount: c.likeCount + (data.liked ? 1 : -1) }
+          : c
+      ));
+    } catch (error) {
+      console.error('Comment like error:', error);
+    }
+  };
+
   const loadFriends = async () => {
     try {
       const { data } = await api.get('/friends');
@@ -1282,6 +1296,19 @@ export default function RecipeDetailPage() {
                     </div>
                   </Link>
                   <p className="text-gray-700 ml-11 mb-2">{renderCommentContent(comment.content)}</p>
+                  
+                  {/* Like button */}
+                  {user && (
+                    <div className="ml-11 mt-2">
+                      <button
+                        onClick={() => handleCommentLike(comment.id)}
+                        className={`flex items-center gap-1 text-sm ${comment.userHasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
+                      >
+                        <ThumbsUp className={`w-4 h-4 ${comment.userHasLiked ? 'fill-current' : ''}`} />
+                        {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
+                      </button>
+                    </div>
+                  )}
                   {comment.imageUrl && (
                     <img
                       src={`${comment.imageUrl}`}
