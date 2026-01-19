@@ -244,9 +244,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
         }
 
         // Check if user has liked the recipe comment
+        console.log('Activity check:', { type: activity.type, recipeId: activity.recipeId, content: activity.content?.substring(0, 50), hasRecipe: !!activity.recipe });
         let userHasLiked = false;
         let sourceLikeCount = 0;
         if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+          console.log('Looking for comment:', { recipeId: activity.recipeId, content: activity.content });
           const comment = await prisma.recipeComment.findFirst({
             where: {
               recipeId: activity.recipeId,
@@ -258,6 +260,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
             },
             orderBy: { createdAt: 'desc' }
           });
+          console.log('Found comment:', comment ? { id: comment.id, likes: comment.likes.length, likeCount: comment._count.likes } : 'NOT FOUND');
           if (comment) {
             userHasLiked = comment.likes.length > 0;
             sourceLikeCount = comment._count.likes;
@@ -719,12 +722,32 @@ router.get('/feed', authenticateToken, async (req, res) => {
             sourceLikers = likes.map(l => l.user);
             userHasLiked = likes.some(l => l.userId === userId);
           }
-        } else if (entityType === 'RECIPE' || ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type)) {
+        } else if (entityType === 'RECIPE' || ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION', 'RECIPE_COMMENTED'].includes(activity.type)) {
           const commentId = meta.commentId;
-          const recipeId = meta.recipeId || activity.id.replace('basecamp-', '');
+          const recipeId = meta.recipeId || activity.recipeId || activity.id.replace('basecamp-', '').replace('activity-', '');
           
-          // If there's a commentId, get comment likes; otherwise get recipe likes
-          if (commentId) {
+          // For RECIPE_COMMENTED from Activity model, find comment by content
+          if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+            try {
+              const comment = await prisma.recipeComment.findFirst({
+                where: { recipeId: activity.recipeId, content: activity.content },
+                include: { 
+                  likes: { 
+                    include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+                    take: 5,
+                    orderBy: { createdAt: 'desc' }
+                  },
+                  _count: { select: { likes: true } }
+                },
+                orderBy: { createdAt: 'desc' }
+              });
+              if (comment) {
+                sourceLikeCount = comment._count.likes;
+                sourceLikers = comment.likes.map(l => l.user);
+                userHasLiked = comment.likes.some(l => l.userId === userId);
+              }
+            } catch (e) { /* comment might not exist */ }
+          } else if (commentId) {
             try {
               const likes = await prisma.recipeCommentLike.findMany({
                 where: { commentId },
