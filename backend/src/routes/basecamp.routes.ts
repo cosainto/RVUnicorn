@@ -28,6 +28,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   RECIPE_SHARED: { icon: '🍳', label: 'shared a recipe' },
   RECIPE_LIKED: { icon: '❤️', label: 'liked', color: 'text-red-500' },
   RECIPE_COMMENTED: { icon: '💬', label: 'commented on' },
+  RECIPE_COMMENT_REPLY: { icon: '↩️', label: 'replied to your comment on' },
   RECIPE_COMMENT_THREAD: { icon: '💬', label: 'commented on', color: 'text-blue-600' },
   MEAL_PLAN_CREATED: { icon: '🍽️', label: 'planned a meal' },
   PHOTO_UPLOADED: { icon: '📷', label: 'added photos to', color: 'text-purple-600' },
@@ -263,7 +264,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         let sourceLikeCount = 0;
         let sourceLoveCount = 0;
         let sourceDislikeCount = 0;
-        if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+        if ((activity.type === 'RECIPE_COMMENTED' || activity.type === 'RECIPE_COMMENT_REPLY') && activity.recipeId && activity.content) {
           // Debug log removed
           const comment = await prisma.recipeComment.findFirst({
             where: {
@@ -777,7 +778,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           const recipeId = meta.recipeId || activity.recipeId || activity.id.replace('basecamp-', '').replace('activity-', '');
           
           // For RECIPE_COMMENTED from Activity model, find comment by content
-          if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
+          if ((activity.type === 'RECIPE_COMMENTED' || activity.type === 'RECIPE_COMMENT_REPLY') && activity.recipeId && activity.content) {
             try {
               const comment = await prisma.recipeComment.findFirst({
                 where: { recipeId: activity.recipeId, content: activity.content },

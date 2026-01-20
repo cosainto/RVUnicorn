@@ -697,6 +697,21 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
             link: `/recipes/${recipeId}`,
           }
         });
+
+        // Create Activity for parent comment author's basecamp feed
+        try {
+          await prisma.activity.create({
+            data: {
+              userId: userId,
+              targetUserId: parentComment.userId,
+              type: 'RECIPE_COMMENT_REPLY',
+              recipeId: recipeId,
+              content: content.trim(),
+              isPublic: true,
+            }
+          });
+        } catch (activityError) {}
+
         notifiedUsers.add(parentComment.userId);
       }
 
