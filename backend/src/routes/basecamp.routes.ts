@@ -26,6 +26,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   TRIP_SAVED: { icon: '❤️', label: 'saved a trip' },
   RECIPE_CREATED: { icon: '🍳', label: 'shared a new recipe', color: 'text-orange-600' },
   RECIPE_SHARED: { icon: '🍳', label: 'shared a recipe' },
+  RECIPE_SHARE_TAG: { icon: '🏷️', label: 'shared a recipe with you' },
   RECIPE_LIKED: { icon: '❤️', label: 'liked', color: 'text-red-500' },
   RECIPE_COMMENTED: { icon: '💬', label: 'commented on' },
   RECIPE_COMMENT_REPLY: { icon: '↩️', label: 'replied to your comment on' },
@@ -558,7 +559,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
               'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
               'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD',
-              'RECIPE_MENTION'
+              'RECIPE_MENTION', 'RECIPE_SHARE_TAG'
             ]
           }
         },
@@ -661,6 +662,12 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' mentioned you in a comment on "' + (activity.entityName || 'a recipe') + '"';
             activityIcon = '📣';
             break;
+          case 'RECIPE_SHARE_TAG':
+            const shareTagMeta = activity.metadata as any;
+            const shareMessage = shareTagMeta?.message ? ': "' + shareTagMeta.message + '"' : '';
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' shared "' + (activity.entityName || 'a recipe') + '" with you' + shareMessage;
+            activityIcon = '🏷️';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -675,7 +682,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/trips/' + meta.eventId;
         } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
           targetLink = '/threads/' + (activity.entityId || meta.threadId);
-        } else if (['RECIPE_MENTION'].includes(activity.type)) {
+        } else if (['RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type)) {
           targetLink = '/recipes/' + activity.entityId;
         }
 
@@ -691,8 +698,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityType: activity.type,
           activityIcon,
           activityLabel,
-          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION'].includes(activity.type),
+          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',

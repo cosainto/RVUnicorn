@@ -813,6 +813,7 @@ const ACTIVITY_CONFIG: Record<string, { label: string; icon: React.ReactNode; co
   THREAD_MENTION: { label: 'mentioned you in', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
   RECIPE_SHARED: { label: 'shared a recipe', icon: <Share2 className="w-4 h-4" />, color: 'bg-green-100 text-green-600' },
   RECIPE_TAGGED: { label: 'tagged you in a recipe', icon: <AtSign className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
+  RECIPE_SHARE_TAG: { label: 'shared a recipe with you', icon: <Share2 className="w-4 h-4" />, color: 'bg-green-100 text-green-600' },
 };
 
 const PACK_CATEGORIES = [

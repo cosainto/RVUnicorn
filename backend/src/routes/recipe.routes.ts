@@ -1073,9 +1073,11 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     });
     const sharerName = `${sharer?.firstName} ${sharer?.lastName}`;
 
-    // Build activity content - use message if provided, otherwise just store empty
-    // The feed display will show "shared a recipe" with the recipe card
+    // Build activity content - use message if provided
     const activityContent = message ? message.trim() : '';
+    
+    // Get tagged usernames for display
+    const taggedUsernames = mentions && mentions.length > 0 ? mentions : [];
 
     // Create an activity for sharer's profile feed
     await prisma.activity.create({
@@ -1085,6 +1087,10 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         recipeId,
         title: recipe.title,
         content: activityContent,
+        metadata: {
+          taggedUsers: taggedUsernames,
+          sharerName
+        },
         isPublic: true
       }
     });
@@ -1114,40 +1120,34 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           continue;
         }
 
-        // Create notification
+        // Build notification message with the actual share message
+        const notificationContent = activityContent 
+          ? `${sharerName} shared a recipe with you: "${activityContent}"`
+          : `${sharerName} shared a recipe with you: ${recipe.title}`;
+
+        // Create notification with the actual message
         await prisma.notification.create({
           data: {
             userId: mentionedUser.id,
-            type: 'RECIPE_MENTION',
-            content: `${sharerName} tagged you in a recipe share: "${recipe.title}"`,
+            type: 'RECIPE_SHARE_TAG',
+            content: notificationContent,
             link: `/recipes/${recipeId}`
           }
         });
 
-        // Create activity on mentioned user's profile feed
-        await prisma.activity.create({
-          data: {
-            userId: mentionedUser.id,
-            type: 'RECIPE_TAGGED',
-            recipeId,
-            title: recipe.title,
-            content: `${sharerName} tagged you: ${activityContent || 'Check out this recipe!'}`,
-            isPublic: true
-          }
-        });
-
-        // Create basecamp activity for mentioned user
+        // Create basecamp activity for tagged user's feed
         await prisma.basecampActivity.create({
           data: {
             userId: mentionedUser.id,
             actorId: userId,
-            type: 'RECIPE_MENTION',
+            type: 'RECIPE_SHARE_TAG',
             entityType: 'RECIPE',
             entityId: recipeId,
             entityName: recipe.title,
             metadata: {
               sharerName,
-              message: message || null
+              message: activityContent,
+              recipeTitle: recipe.title
             }
           }
         });
