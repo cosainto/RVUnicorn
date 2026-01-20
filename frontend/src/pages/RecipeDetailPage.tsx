@@ -243,7 +243,7 @@ export default function RecipeDetailPage() {
   const loadFriends = async () => {
     try {
       const { data } = await api.get('/friends');
-      setFriends(data.map((f: any) => f.friend));
+      setFriends(data);
     } catch (error) {
       console.error('Load friends error:', error);
     }
