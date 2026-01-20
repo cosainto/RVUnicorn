@@ -1092,7 +1092,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     const taggedDisplay = taggedUserNames.length > 0 ? ` with ${taggedUserNames.join(', ')}` : '';
     const messageDisplay = activityContent ? `: "${activityContent}"` : '';
 
-    // Create an activity for sharer's profile feed
+    // Create Activity for sharer's PROFILE feed
     await prisma.activity.create({
       data: {
         userId,
@@ -1108,6 +1108,25 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           recipeTitle: recipe.title
         }),
         isPublic: true
+      }
+    });
+
+    // Create BasecampActivity for sharer's BASECAMP feed
+    await prisma.basecampActivity.create({
+      data: {
+        userId,
+        actorId: userId,
+        type: 'RECIPE_SHARED',
+        entityType: 'RECIPE',
+        entityId: recipeId,
+        entityName: recipe.title,
+        metadata: {
+          taggedUsers: taggedUsernames,
+          taggedUserNames,
+          sharerName,
+          message: activityContent,
+          recipeTitle: recipe.title
+        }
       }
     });
 
@@ -1151,7 +1170,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           }
         });
 
-        // Create Activity for tagged user's PROFILE feed
+        // Create Activity for tagged user's PROFILE feed ONLY
         await prisma.activity.create({
           data: {
             userId: mentionedUser.id,
@@ -1169,7 +1188,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           }
         });
 
-        // Create basecamp activity for tagged user's BASECAMP feed
+        // Create BasecampActivity for tagged user's BASECAMP feed ONLY
         await prisma.basecampActivity.create({
           data: {
             userId: mentionedUser.id,
@@ -1180,8 +1199,10 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
             entityName: recipe.title,
             metadata: {
               sharerName,
+              sharerUsername: sharer?.username,
               message: activityContent,
-              recipeTitle: recipe.title
+              recipeTitle: recipe.title,
+              taggedUserNames
             }
           }
         });

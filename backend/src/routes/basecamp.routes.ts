@@ -171,7 +171,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const activities = await prisma.activity.findMany({
         where: {
-          type: { notIn: ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'] },
+          type: { notIn: ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST', 'RECIPE_SHARED', 'RECIPE_SHARE_TAG'] },
           OR: [
             { userId: { in: visibleUserIds }, isPublic: true },
             { campgroundId: { in: unmutedCampgroundIds } },
@@ -669,6 +669,13 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' mentioned you in a comment on "' + (activity.entityName || 'a recipe') + '"';
             activityIcon = '📣';
             break;
+          case 'RECIPE_SHARED':
+            const shareMetaSharer = activity.metadata as any;
+            const taggedNames = shareMetaSharer?.taggedUserNames?.length > 0 ? ' with ' + shareMetaSharer.taggedUserNames.join(', ') : '';
+            const shareMessageSharer = shareMetaSharer?.message ? ': "' + shareMetaSharer.message + '"' : '';
+            activityLabel = 'You shared "' + (activity.entityName || 'a recipe') + '"' + taggedNames + shareMessageSharer;
+            activityIcon = '🍳';
+            break;
           case 'RECIPE_SHARE_TAG':
             const shareTagMeta = activity.metadata as any;
             const shareMessage = shareTagMeta?.message ? ': "' + shareTagMeta.message + '"' : '';
@@ -689,7 +696,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/trips/' + meta.eventId;
         } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
           targetLink = '/threads/' + (activity.entityId || meta.threadId);
-        } else if (['RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type)) {
+        } else if (['RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED'].includes(activity.type)) {
           targetLink = '/recipes/' + activity.entityId;
         }
 
@@ -705,8 +712,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityType: activity.type,
           activityIcon,
           activityLabel,
-          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG'].includes(activity.type),
+          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
