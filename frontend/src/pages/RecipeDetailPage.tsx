@@ -281,6 +281,109 @@ export default function RecipeDetailPage() {
     commentInputRef.current?.focus();
   };
 
+  
+  // Recursive comment renderer for unlimited nesting
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const maxIndent = 10; // Max visual indentation levels
+    const indentLevel = Math.min(depth, maxIndent);
+    const isDeepReply = depth > 0;
+    const bgColor = depth === 0 ? 'bg-white' : depth === 1 ? 'bg-gray-50' : 'bg-gray-100';
+    const textSize = depth >= 2 ? 'text-xs' : depth === 1 ? 'text-sm' : 'text-base';
+    const avatarSize = depth >= 2 ? 'w-5 h-5' : depth === 1 ? 'w-6 h-6' : 'w-8 h-8';
+    const iconSize = depth >= 2 ? 'w-3 h-3' : 'w-4 h-4';
+    
+    return (
+      <div key={comment.id} className={depth > 0 ? 'mt-2' : ''}>
+        <div className={`${bgColor} rounded-lg p-3 ${depth > 0 ? 'border-l-2 border-gray-300' : ''}`}>
+          <Link to={`/profile/${comment.user.username}`} className="flex items-center gap-2 mb-2">
+            {comment.user.profilePicture ? (
+              <img src={comment.user.profilePicture} alt="" className={`${avatarSize} rounded-full object-cover`} />
+            ) : (
+              <div className={`${avatarSize} rounded-full bg-primary-600 flex items-center justify-center text-white ${depth >= 2 ? 'text-xs' : 'text-sm'} font-bold`}>
+                {comment.user.firstName?.[0] || '?'}
+              </div>
+            )}
+            <span className={`font-medium text-gray-900 ${textSize}`}>{comment.user.firstName} {comment.user.lastName}</span>
+            <span className={`${depth >= 2 ? 'text-xs' : 'text-xs'} text-gray-500`}>
+              {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </span>
+          </Link>
+          <p className={`text-gray-700 ${textSize} ${depth === 0 ? 'ml-10' : ''}`}>{renderCommentContent(comment.content)}</p>
+          
+          {user && (
+            <div className={`${depth === 0 ? 'ml-10' : ''} mt-2 flex items-center gap-3`}>
+              <button
+                onClick={() => handleCommentReaction(comment.id, 'like')}
+                className={`flex items-center gap-1 ${textSize} transition ${comment.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+              >
+                <ThumbsUp className={`${iconSize} ${comment.userReaction === 'like' ? 'fill-current' : ''}`} />
+                {(comment.likeCount ?? 0) > 0 && <span>{comment.likeCount}</span>}
+              </button>
+              <button
+                onClick={() => handleCommentReaction(comment.id, 'love')}
+                className={`flex items-center gap-1 ${textSize} transition ${comment.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+              >
+                <Heart className={`${iconSize} ${comment.userReaction === 'love' ? 'fill-current' : ''}`} />
+                {(comment.loveCount ?? 0) > 0 && <span>{comment.loveCount}</span>}
+              </button>
+              <button
+                onClick={() => handleCommentReaction(comment.id, 'dislike')}
+                className={`flex items-center gap-1 ${textSize} transition ${comment.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
+              >
+                <ThumbsDown className={`${iconSize} ${comment.userReaction === 'dislike' ? 'fill-current' : ''}`} />
+                {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
+              </button>
+              <button
+                onClick={() => setReplyingTo(replyingTo?.id === comment.id ? null : comment)}
+                className={`flex items-center gap-1 ${textSize} transition ${replyingTo?.id === comment.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
+              >
+                <MessageCircle className={iconSize} />
+                Reply {(comment._count?.replies ?? 0) > 0 && <span>({comment._count?.replies})</span>}
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Inline Reply Box */}
+        {replyingTo?.id === comment.id && (
+          <div className={`mt-2 ${depth === 0 ? 'ml-10' : 'ml-4'} bg-primary-50 p-3 rounded-lg border border-primary-200`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-primary-700">Replying to {comment.user.firstName}</span>
+              <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <textarea
+              value={newComment}
+              onChange={handleCommentInputChange}
+              placeholder={`Reply to ${comment.user.firstName}...`}
+              className="input w-full text-sm"
+              rows={2}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-2">
+              <button onClick={() => setReplyingTo(null)} className="btn btn-secondary btn-sm">Cancel</button>
+              <button
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || submittingComment}
+                className="btn btn-primary btn-sm"
+              >
+                {submittingComment ? 'Posting...' : 'Reply'}
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Nested Replies - Recursive */}
+        {comment.replies && comment.replies.length > 0 && (
+          <div className={`${depth === 0 ? 'ml-10' : 'ml-4'} mt-2 space-y-2 border-l-2 border-gray-200 pl-3`}>
+            {comment.replies.map((reply: Comment) => renderComment(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const filteredFriends = friends.filter(
     (f) => f && f.username && (f.username.toLowerCase().includes(mentionSearch) ||
            `${f.firstName || ''} ${f.lastName || ''}`.toLowerCase().includes(mentionSearch))
@@ -1284,282 +1387,7 @@ export default function RecipeDetailPage() {
                 <p className="text-gray-500">No comments yet. Be the first to comment!</p>
               </div>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="border-b border-gray-200 pb-4 last:border-0">
-                  <Link
-                    to={`/profile/${comment.user.username}`}
-                    className="flex items-center gap-3 mb-2 hover:bg-gray-50 p-2 rounded-lg transition"
-                  >
-                    {comment.user.profilePicture ? (
-                      <img
-                        src={`${comment.user.profilePicture}`}
-                        alt={comment.user.firstName}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-bold">
-                        {comment.user.firstName[0]}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {comment.user.firstName} {comment.user.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(comment.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </Link>
-                  <p className="text-gray-700 ml-11 mb-2">{renderCommentContent(comment.content)}</p>
-                  
-                  {/* Reaction buttons */}
-                  {user && (
-                    <div className="ml-11 mt-2 flex items-center gap-3">
-                      <button
-                        onClick={() => handleCommentReaction(comment.id, 'like')}
-                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
-                        title="Like"
-                      >
-                        <ThumbsUp className={`w-4 h-4 ${comment.userReaction === 'like' ? 'fill-current' : ''}`} />
-                        {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
-                      </button>
-                      <button
-                        onClick={() => handleCommentReaction(comment.id, 'love')}
-                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                        title="Love"
-                      >
-                        <Heart className={`w-4 h-4 ${comment.userReaction === 'love' ? 'fill-current' : ''}`} />
-                        {(comment.loveCount ?? 0) > 0 && <span>{comment.loveCount}</span>}
-                      </button>
-                      <button
-                        onClick={() => handleCommentReaction(comment.id, 'dislike')}
-                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
-                        title="Dislike"
-                      >
-                        <ThumbsDown className={`w-4 h-4 ${comment.userReaction === 'dislike' ? 'fill-current' : ''}`} />
-                        {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
-                      </button>
-                      <button
-                        onClick={() => setReplyingTo(replyingTo?.id === comment.id ? null : comment)}
-                        className={`flex items-center gap-1 text-sm transition ${replyingTo?.id === comment.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
-                        title="Reply"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Reply {(comment._count?.replies ?? 0) > 0 && <span>({comment._count?.replies})</span>}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Inline Reply Box */}
-                  {replyingTo?.id === comment.id && (
-                    <div className="ml-11 mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Replying to {comment.user.firstName}</span>
-                        <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <textarea
-                        value={newComment}
-                        onChange={handleCommentInputChange}
-                        placeholder={`Reply to ${comment.user.firstName}...`}
-                        className="input w-full text-sm"
-                        rows={2}
-                        autoFocus
-                      />
-                      <div className="flex justify-end gap-2 mt-2">
-                        <button
-                          onClick={() => setReplyingTo(null)}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddComment}
-                          disabled={!newComment.trim() || submittingComment}
-                          className="btn btn-primary btn-sm"
-                        >
-                          {submittingComment ? 'Posting...' : 'Reply'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {comment.imageUrl && (
-                    <img
-                      src={`${comment.imageUrl}`}
-                      alt="Comment"
-                      className="ml-11 rounded-lg max-w-md hover:scale-105 transition cursor-pointer"
-                      onClick={() => window.open(`${comment.imageUrl}`, '_blank')}
-                    />
-                  )}
-                  
-                  {/* Replies - Recursive Thread */}
-                  {comment.replies && comment.replies.length > 0 && (
-                    <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-200 pl-4">
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id}>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <Link to={`/profile/${reply.user.username}`} className="flex items-center gap-2 mb-2">
-                              {reply.user.profilePicture ? (
-                                <img src={reply.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
-                                  {reply.user.firstName[0]}
-                                </div>
-                              )}
-                              <span className="font-medium text-gray-900 text-sm">{reply.user.firstName} {reply.user.lastName}</span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                              </span>
-                            </Link>
-                            <p className="text-gray-700 text-sm">{renderCommentContent(reply.content)}</p>
-                            {user && (
-                              <div className="mt-2 flex items-center gap-3">
-                                <button
-                                  onClick={() => handleCommentReaction(reply.id, 'like')}
-                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
-                                >
-                                  <ThumbsUp className={`w-3 h-3 ${reply.userReaction === 'like' ? 'fill-current' : ''}`} />
-                                  {(reply.likeCount ?? 0) > 0 && <span>{reply.likeCount}</span>}
-                                </button>
-                                <button
-                                  onClick={() => handleCommentReaction(reply.id, 'love')}
-                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                                >
-                                  <Heart className={`w-3 h-3 ${reply.userReaction === 'love' ? 'fill-current' : ''}`} />
-                                  {(reply.loveCount ?? 0) > 0 && <span>{reply.loveCount}</span>}
-                                </button>
-                                <button
-                                  onClick={() => handleCommentReaction(reply.id, 'dislike')}
-                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
-                                >
-                                  <ThumbsDown className={`w-3 h-3 ${reply.userReaction === 'dislike' ? 'fill-current' : ''}`} />
-                                  {(reply.dislikeCount ?? 0) > 0 && <span>{reply.dislikeCount}</span>}
-                                </button>
-                                <button
-                                  onClick={() => setReplyingTo(replyingTo?.id === reply.id ? null : reply)}
-                                  className={`flex items-center gap-1 text-xs transition ${replyingTo?.id === reply.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
-                                >
-                                  <MessageCircle className="w-3 h-3" />
-                                  Reply {(reply._count?.replies ?? 0) > 0 && <span>({reply._count?.replies})</span>}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Inline Reply Box for this reply */}
-                          {replyingTo?.id === reply.id && (
-                            <div className="mt-2 bg-gray-100 p-3 rounded-lg border border-gray-200">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-gray-600">Replying to {reply.user.firstName}</span>
-                                <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                              <textarea
-                                value={newComment}
-                                onChange={handleCommentInputChange}
-                                placeholder={`Reply to ${reply.user.firstName}...`}
-                                className="input w-full text-sm"
-                                rows={2}
-                                autoFocus
-                              />
-                              <div className="flex justify-end gap-2 mt-2">
-                                <button onClick={() => setReplyingTo(null)} className="btn btn-secondary btn-sm text-xs">Cancel</button>
-                                <button
-                                  onClick={handleAddComment}
-                                  disabled={!newComment.trim() || submittingComment}
-                                  className="btn btn-primary btn-sm text-xs"
-                                >
-                                  {submittingComment ? 'Posting...' : 'Reply'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Nested replies (level 2) */}
-                          {reply.replies && reply.replies.length > 0 && (
-                            <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
-                              {reply.replies.map((nestedReply: Comment) => (
-                                <div key={nestedReply.id}>
-                                  <div className="bg-gray-100 rounded-lg p-2">
-                                    <Link to={`/profile/${nestedReply.user.username}`} className="flex items-center gap-2 mb-1">
-                                      {nestedReply.user.profilePicture ? (
-                                        <img src={nestedReply.user.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                      ) : (
-                                        <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
-                                          {nestedReply.user.firstName[0]}
-                                        </div>
-                                      )}
-                                      <span className="font-medium text-gray-900 text-xs">{nestedReply.user.firstName} {nestedReply.user.lastName}</span>
-                                      <span className="text-xs text-gray-500">
-                                        {new Date(nestedReply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                      </span>
-                                    </Link>
-                                    <p className="text-gray-700 text-xs">{renderCommentContent(nestedReply.content)}</p>
-                                    {user && (
-                                      <div className="mt-1 flex items-center gap-2">
-                                        <button
-                                          onClick={() => handleCommentReaction(nestedReply.id, 'like')}
-                                          className={`flex items-center gap-1 text-xs transition ${nestedReply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
-                                        >
-                                          <ThumbsUp className={`w-3 h-3 ${nestedReply.userReaction === 'like' ? 'fill-current' : ''}`} />
-                                        </button>
-                                        <button
-                                          onClick={() => handleCommentReaction(nestedReply.id, 'love')}
-                                          className={`flex items-center gap-1 text-xs transition ${nestedReply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                                        >
-                                          <Heart className={`w-3 h-3 ${nestedReply.userReaction === 'love' ? 'fill-current' : ''}`} />
-                                        </button>
-                                        <button
-                                          onClick={() => setReplyingTo(replyingTo?.id === nestedReply.id ? null : nestedReply)}
-                                          className={`flex items-center gap-1 text-xs transition ${replyingTo?.id === nestedReply.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
-                                        >
-                                          <MessageCircle className="w-3 h-3" />
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Inline Reply Box for nested reply */}
-                                  {replyingTo?.id === nestedReply.id && (
-                                    <div className="mt-2 bg-white p-2 rounded border border-gray-200">
-                                      <textarea
-                                        value={newComment}
-                                        onChange={handleCommentInputChange}
-                                        placeholder={`Reply to ${nestedReply.user.firstName}...`}
-                                        className="input w-full text-xs"
-                                        rows={2}
-                                        autoFocus
-                                      />
-                                      <div className="flex justify-end gap-2 mt-1">
-                                        <button onClick={() => setReplyingTo(null)} className="text-xs text-gray-500">Cancel</button>
-                                        <button
-                                          onClick={handleAddComment}
-                                          disabled={!newComment.trim() || submittingComment}
-                                          className="text-xs text-primary-600 font-medium"
-                                        >
-                                          Reply
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
+              comments.map((comment) => renderComment(comment, 0))
             )}
           </div>
         </div>

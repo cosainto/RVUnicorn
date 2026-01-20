@@ -487,8 +487,9 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     
     try {
       // Try with likes
-      comments = await prisma.recipeComment.findMany({
-        where: { recipeId, parentId: null },
+      // Fetch ALL comments flat, then build tree structure (supports unlimited nesting)
+      const allComments = await prisma.recipeComment.findMany({
+        where: { recipeId },
         include: {
           user: {
             select: {
@@ -510,81 +511,29 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
           },
           _count: {
             select: { likes: true, replies: true }
-          },
-          replies: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true,
-                  profilePicture: true,
-                }
-              },
-              likes: {
-                include: {
-                  user: {
-                    select: { id: true, firstName: true, lastName: true, username: true }
-                  }
-                },
-                take: 5,
-                orderBy: { createdAt: 'desc' }
-              },
-              _count: {
-                select: { likes: true, replies: true }
-              },
-              replies: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      username: true,
-                      firstName: true,
-                      lastName: true,
-                      profilePicture: true,
-                    }
-                  },
-                  likes: {
-                    include: {
-                      user: {
-                        select: { id: true, firstName: true, lastName: true, username: true }
-                      }
-                    },
-                    take: 5,
-                    orderBy: { createdAt: 'desc' }
-                  },
-                  _count: {
-                    select: { likes: true, replies: true }
-                  },
-                  replies: {
-                    include: {
-                      user: {
-                        select: {
-                          id: true,
-                          username: true,
-                          firstName: true,
-                          lastName: true,
-                          profilePicture: true,
-                        }
-                      },
-                      _count: {
-                        select: { likes: true, replies: true }
-                      }
-                    },
-                    orderBy: { createdAt: 'asc' }
-                  }
-                },
-                orderBy: { createdAt: 'asc' }
-              }
-            },
-            orderBy: { createdAt: 'asc' }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
+        orderBy: { createdAt: 'asc' }
+      });
+
+      // Build tree structure from flat list
+      const commentMap = new Map();
+      allComments.forEach(c => commentMap.set(c.id, { ...c, replies: [] }));
+      
+      const rootComments: any[] = [];
+      allComments.forEach(c => {
+        const comment = commentMap.get(c.id);
+        if (c.parentId && commentMap.has(c.parentId)) {
+          commentMap.get(c.parentId).replies.push(comment);
+        } else if (!c.parentId) {
+          rootComments.push(comment);
         }
       });
+
+      // Sort root comments newest first, replies oldest first (already sorted)
+      rootComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      comments = rootComments;
 
       // Check if current user has liked each comment and get counts by reaction type
       commentsWithLikes = await Promise.all(comments.map(async (comment) => {
