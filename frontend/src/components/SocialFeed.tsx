@@ -389,7 +389,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     if (item.activityType === 'RECIPE_SHARED' || item.activityType === 'RECIPE_SHARE_TAG') {
       console.log('[DEBUG] RECIPE_SHARE handler hit! content=', item.content, 'label=', item.activityLabel);
       return (
-        <span>
+        <span style={{backgroundColor: 'yellow'}}>
           <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
             {actorName}
           </Link>
