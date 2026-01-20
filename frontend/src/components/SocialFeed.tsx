@@ -1131,24 +1131,27 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleBasecampReaction(item.id, item.reaction === 'like' ? null : 'like')}
-                className={"p-2 rounded-full transition " + (item.reaction === 'like' || item.userHasLiked ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100')}
+                className={"p-2 rounded-full transition flex items-center gap-1 " + (item.reaction === 'like' || item.userHasLiked ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100')}
                 title="Like"
               >
                 <ThumbsUp className="w-4 h-4" />
+                {(item.sourceLikeCount || 0) > 0 && <span className="text-xs">{item.sourceLikeCount}</span>}
               </button>
               <button
                 onClick={() => handleBasecampReaction(item.id, item.reaction === 'love' ? null : 'love')}
-                className={"p-2 rounded-full transition " + (item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100')}
+                className={"p-2 rounded-full transition flex items-center gap-1 " + (item.reaction === 'love' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100')}
                 title="Love"
               >
                 <Heart className="w-4 h-4" />
+                {(item.sourceLoveCount || 0) > 0 && <span className="text-xs">{item.sourceLoveCount}</span>}
               </button>
               <button
                 onClick={() => handleBasecampReaction(item.id, item.reaction === 'dislike' ? null : 'dislike')}
-                className={"p-2 rounded-full transition " + (item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100')}
+                className={"p-2 rounded-full transition flex items-center gap-1 " + (item.reaction === 'dislike' ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100')}
                 title="Dislike"
               >
                 <ThumbsDown className="w-4 h-4" />
+                {(item.sourceDislikeCount || 0) > 0 && <span className="text-xs">{item.sourceDislikeCount}</span>}
               </button>
               <button
                 onClick={() => handleBasecampDismiss(item.id)}

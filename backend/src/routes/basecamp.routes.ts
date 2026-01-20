@@ -300,6 +300,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           hasMutualFriendInteraction: !!secondaryUserInfo,
           userHasLiked,
           sourceLikeCount,
+        sourceLoveCount,
+        sourceDislikeCount,
           isRecipeComment: activity.type === 'RECIPE_COMMENTED',
           isBasecampActivity: activity.type === 'RECIPE_COMMENTED',
         });
@@ -733,6 +735,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
       const entityType = meta.entityType || (activity.type?.includes('THREAD') ? 'THREAD' : null);
       let sourceLikeCount = 0;
+      let sourceLoveCount = 0;
+      let sourceDislikeCount = 0;
       let sourceLikers: { id: string; firstName: string; lastName: string; username: string }[] = [];
       let userHasLiked = false;
 
@@ -825,6 +829,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
       return {
         ...activity,
         sourceLikeCount,
+        sourceLoveCount,
+        sourceDislikeCount,
         sourceLikers,
         userHasLiked,
         reaction: activityReaction || activity.reaction
@@ -1172,6 +1178,8 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
       success: true, 
       reaction: updated.reaction,
       sourceLikeCount,
+        sourceLoveCount,
+        sourceDislikeCount,
       sourceLikers
     });
   } catch (error) {
