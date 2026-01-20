@@ -741,15 +741,19 @@ model RecipeComment {
   content   String
   imageUrl  String?
   mentions  String[] @default([])
+  parentId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes  RecipeCommentLike[]
+  recipe  Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes   RecipeCommentLike[]
+  parent  RecipeComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies RecipeComment[] @relation("CommentReplies")
 
   @@index([recipeId])
   @@index([userId])
+  @@index([parentId])
 }
 
 model SavedRecipe {

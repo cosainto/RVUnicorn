@@ -78,6 +78,7 @@ interface Comment {
   imageUrl?: string;
   mentions?: string[];
   createdAt: string;
+  parentId?: string | null;
   user: {
     id: string;
     firstName: string;
@@ -90,6 +91,10 @@ interface Comment {
   dislikeCount?: number;
   userHasLiked?: boolean;
   userReaction?: string | null;
+  replies?: Comment[];
+  _count?: {
+    replies?: number;
+  };
 }
 
 const CATEGORIES = [
@@ -136,6 +141,7 @@ export default function RecipeDetailPage() {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [newComment, setNewComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
   const [commentImage, setCommentImage] = useState<File | null>(null);
   const [commentImagePreview, setCommentImagePreview] = useState<string>('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -493,6 +499,7 @@ export default function RecipeDetailPage() {
   const removeCommentImage = () => {
     setCommentImage(null);
     setCommentImagePreview('');
+      setReplyingTo(null);
   };
 
   const handleAddComment = async () => {
@@ -530,6 +537,7 @@ export default function RecipeDetailPage() {
 
       await api.post(`/recipes/${recipeId}/comments`, { 
         content: newComment.trim(),
+        parentId: replyingTo?.id || null,
         imageUrl: imageUrl || undefined,
         mentions
       });
@@ -537,6 +545,7 @@ export default function RecipeDetailPage() {
       setNewComment('');
       setCommentImage(null);
       setCommentImagePreview('');
+      setReplyingTo(null);
       await loadComments();
       await loadRecipe();
     } catch (error) {
@@ -1171,12 +1180,25 @@ export default function RecipeDetailPage() {
 
           {user && (
             <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+              {replyingTo && (
+                <div className="mb-2 flex items-center justify-between bg-primary-50 p-2 rounded text-sm">
+                  <span className="text-primary-700">
+                    Replying to <strong>{replyingTo.user.firstName} {replyingTo.user.lastName}</strong>
+                  </span>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               <div className="relative">
                 <textarea
                   ref={commentInputRef}
                   value={newComment}
                   onChange={handleCommentInputChange}
-                  placeholder="Share your thoughts about this recipe... Use @username to mention someone"
+                  placeholder={replyingTo ? `Reply to ${replyingTo.user.firstName}...` : "Share your thoughts about this recipe... Use @username to mention someone"}
                   className="input w-full"
                   rows={3}
                   disabled={submittingComment}
@@ -1336,6 +1358,14 @@ export default function RecipeDetailPage() {
                         <ThumbsDown className={`w-4 h-4 ${comment.userReaction === 'dislike' ? 'fill-current' : ''}`} />
                         {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
                       </button>
+                      <button
+                        onClick={() => setReplyingTo(comment)}
+                        className="flex items-center gap-1 text-sm text-gray-400 hover:text-primary-600 transition"
+                        title="Reply"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Reply {(comment._count?.replies ?? 0) > 0 && <span>({comment._count?.replies})</span>}
+                      </button>
                     </div>
                   )}
                   {comment.imageUrl && (
@@ -1345,6 +1375,55 @@ export default function RecipeDetailPage() {
                       className="ml-11 rounded-lg max-w-md hover:scale-105 transition cursor-pointer"
                       onClick={() => window.open(`${comment.imageUrl}`, '_blank')}
                     />
+                  )}
+                  
+                  {/* Replies */}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-200 pl-4">
+                      {comment.replies.map((reply) => (
+                        <div key={reply.id} className="bg-gray-50 rounded-lg p-3">
+                          <Link to={`/profile/${reply.user.username}`} className="flex items-center gap-2 mb-2">
+                            {reply.user.profilePicture ? (
+                              <img src={reply.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                                {reply.user.firstName[0]}
+                              </div>
+                            )}
+                            <span className="font-medium text-gray-900 text-sm">{reply.user.firstName} {reply.user.lastName}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          </Link>
+                          <p className="text-gray-700 text-sm">{renderCommentContent(reply.content)}</p>
+                          {user && (
+                            <div className="mt-2 flex items-center gap-3">
+                              <button
+                                onClick={() => handleCommentReaction(reply.id, 'like')}
+                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                              >
+                                <ThumbsUp className={`w-3 h-3 ${reply.userReaction === 'like' ? 'fill-current' : ''}`} />
+                                {(reply.likeCount ?? 0) > 0 && <span>{reply.likeCount}</span>}
+                              </button>
+                              <button
+                                onClick={() => handleCommentReaction(reply.id, 'love')}
+                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                              >
+                                <Heart className={`w-3 h-3 ${reply.userReaction === 'love' ? 'fill-current' : ''}`} />
+                                {(reply.loveCount ?? 0) > 0 && <span>{reply.loveCount}</span>}
+                              </button>
+                              <button
+                                onClick={() => handleCommentReaction(reply.id, 'dislike')}
+                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
+                              >
+                                <ThumbsDown className={`w-3 h-3 ${reply.userReaction === 'dislike' ? 'fill-current' : ''}`} />
+                                {(reply.dislikeCount ?? 0) > 0 && <span>{reply.dislikeCount}</span>}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))

@@ -488,7 +488,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     try {
       // Try with likes
       comments = await prisma.recipeComment.findMany({
-        where: { recipeId },
+        where: { recipeId, parentId: null },
         include: {
           user: {
             select: {
@@ -509,7 +509,33 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
             orderBy: { createdAt: 'desc' }
           },
           _count: {
-            select: { likes: true }
+            select: { likes: true, replies: true }
+          },
+          replies: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  profilePicture: true,
+                }
+              },
+              likes: {
+                include: {
+                  user: {
+                    select: { id: true, firstName: true, lastName: true, username: true }
+                  }
+                },
+                take: 5,
+                orderBy: { createdAt: 'desc' }
+              },
+              _count: {
+                select: { likes: true }
+              }
+            },
+            orderBy: { createdAt: 'asc' }
           }
         },
         orderBy: {
@@ -595,7 +621,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
   try {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
-    const { content, imageUrl, mentions } = req.body;
+    const { content, imageUrl, mentions, parentId } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Comment content is required' });
@@ -622,7 +648,8 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         userId,
         content: content.trim(),
         imageUrl,
-        mentions: mentions || []
+        mentions: mentions || [],
+        parentId: parentId || null
       },
       include: {
         user: {
@@ -722,9 +749,12 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         select: { id: true }
       });
 
+      // Get list of users already notified as previous commenters
+      const previousCommenterIds = new Set(usersToNotify);
+      
       for (const mentionedUser of mentionedUsers) {
-        // Skip if it's the commenter, recipe owner (already notified), or muted
-        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId || mutedUserIds.has(mentionedUser.id)) {
+        // Skip if it's the commenter, recipe owner (already notified), muted, or already notified as previous commenter
+        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId || mutedUserIds.has(mentionedUser.id) || previousCommenterIds.has(mentionedUser.id)) {
           continue;
         }
 
