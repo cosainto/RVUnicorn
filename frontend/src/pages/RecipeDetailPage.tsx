@@ -1399,48 +1399,159 @@ export default function RecipeDetailPage() {
                     />
                   )}
                   
-                  {/* Replies */}
+                  {/* Replies - Recursive Thread */}
                   {comment.replies && comment.replies.length > 0 && (
                     <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-200 pl-4">
                       {comment.replies.map((reply) => (
-                        <div key={reply.id} className="bg-gray-50 rounded-lg p-3">
-                          <Link to={`/profile/${reply.user.username}`} className="flex items-center gap-2 mb-2">
-                            {reply.user.profilePicture ? (
-                              <img src={reply.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
-                                {reply.user.firstName[0]}
+                        <div key={reply.id}>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <Link to={`/profile/${reply.user.username}`} className="flex items-center gap-2 mb-2">
+                              {reply.user.profilePicture ? (
+                                <img src={reply.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                                  {reply.user.firstName[0]}
+                                </div>
+                              )}
+                              <span className="font-medium text-gray-900 text-sm">{reply.user.firstName} {reply.user.lastName}</span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            </Link>
+                            <p className="text-gray-700 text-sm">{renderCommentContent(reply.content)}</p>
+                            {user && (
+                              <div className="mt-2 flex items-center gap-3">
+                                <button
+                                  onClick={() => handleCommentReaction(reply.id, 'like')}
+                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                                >
+                                  <ThumbsUp className={`w-3 h-3 ${reply.userReaction === 'like' ? 'fill-current' : ''}`} />
+                                  {(reply.likeCount ?? 0) > 0 && <span>{reply.likeCount}</span>}
+                                </button>
+                                <button
+                                  onClick={() => handleCommentReaction(reply.id, 'love')}
+                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                                >
+                                  <Heart className={`w-3 h-3 ${reply.userReaction === 'love' ? 'fill-current' : ''}`} />
+                                  {(reply.loveCount ?? 0) > 0 && <span>{reply.loveCount}</span>}
+                                </button>
+                                <button
+                                  onClick={() => handleCommentReaction(reply.id, 'dislike')}
+                                  className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
+                                >
+                                  <ThumbsDown className={`w-3 h-3 ${reply.userReaction === 'dislike' ? 'fill-current' : ''}`} />
+                                  {(reply.dislikeCount ?? 0) > 0 && <span>{reply.dislikeCount}</span>}
+                                </button>
+                                <button
+                                  onClick={() => setReplyingTo(replyingTo?.id === reply.id ? null : reply)}
+                                  className={`flex items-center gap-1 text-xs transition ${replyingTo?.id === reply.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
+                                >
+                                  <MessageCircle className="w-3 h-3" />
+                                  Reply {(reply._count?.replies ?? 0) > 0 && <span>({reply._count?.replies})</span>}
+                                </button>
                               </div>
                             )}
-                            <span className="font-medium text-gray-900 text-sm">{reply.user.firstName} {reply.user.lastName}</span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                            </span>
-                          </Link>
-                          <p className="text-gray-700 text-sm">{renderCommentContent(reply.content)}</p>
-                          {user && (
-                            <div className="mt-2 flex items-center gap-3">
-                              <button
-                                onClick={() => handleCommentReaction(reply.id, 'like')}
-                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
-                              >
-                                <ThumbsUp className={`w-3 h-3 ${reply.userReaction === 'like' ? 'fill-current' : ''}`} />
-                                {(reply.likeCount ?? 0) > 0 && <span>{reply.likeCount}</span>}
-                              </button>
-                              <button
-                                onClick={() => handleCommentReaction(reply.id, 'love')}
-                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                              >
-                                <Heart className={`w-3 h-3 ${reply.userReaction === 'love' ? 'fill-current' : ''}`} />
-                                {(reply.loveCount ?? 0) > 0 && <span>{reply.loveCount}</span>}
-                              </button>
-                              <button
-                                onClick={() => handleCommentReaction(reply.id, 'dislike')}
-                                className={`flex items-center gap-1 text-xs transition ${reply.userReaction === 'dislike' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`}
-                              >
-                                <ThumbsDown className={`w-3 h-3 ${reply.userReaction === 'dislike' ? 'fill-current' : ''}`} />
-                                {(reply.dislikeCount ?? 0) > 0 && <span>{reply.dislikeCount}</span>}
-                              </button>
+                          </div>
+                          
+                          {/* Inline Reply Box for this reply */}
+                          {replyingTo?.id === reply.id && (
+                            <div className="mt-2 bg-gray-100 p-3 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-gray-600">Replying to {reply.user.firstName}</span>
+                                <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <textarea
+                                value={newComment}
+                                onChange={handleCommentInputChange}
+                                placeholder={`Reply to ${reply.user.firstName}...`}
+                                className="input w-full text-sm"
+                                rows={2}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 mt-2">
+                                <button onClick={() => setReplyingTo(null)} className="btn btn-secondary btn-sm text-xs">Cancel</button>
+                                <button
+                                  onClick={handleAddComment}
+                                  disabled={!newComment.trim() || submittingComment}
+                                  className="btn btn-primary btn-sm text-xs"
+                                >
+                                  {submittingComment ? 'Posting...' : 'Reply'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Nested replies (level 2) */}
+                          {reply.replies && reply.replies.length > 0 && (
+                            <div className="ml-4 mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
+                              {reply.replies.map((nestedReply: Comment) => (
+                                <div key={nestedReply.id}>
+                                  <div className="bg-gray-100 rounded-lg p-2">
+                                    <Link to={`/profile/${nestedReply.user.username}`} className="flex items-center gap-2 mb-1">
+                                      {nestedReply.user.profilePicture ? (
+                                        <img src={nestedReply.user.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                      ) : (
+                                        <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                                          {nestedReply.user.firstName[0]}
+                                        </div>
+                                      )}
+                                      <span className="font-medium text-gray-900 text-xs">{nestedReply.user.firstName} {nestedReply.user.lastName}</span>
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(nestedReply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </span>
+                                    </Link>
+                                    <p className="text-gray-700 text-xs">{renderCommentContent(nestedReply.content)}</p>
+                                    {user && (
+                                      <div className="mt-1 flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleCommentReaction(nestedReply.id, 'like')}
+                                          className={`flex items-center gap-1 text-xs transition ${nestedReply.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                                        >
+                                          <ThumbsUp className={`w-3 h-3 ${nestedReply.userReaction === 'like' ? 'fill-current' : ''}`} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleCommentReaction(nestedReply.id, 'love')}
+                                          className={`flex items-center gap-1 text-xs transition ${nestedReply.userReaction === 'love' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                                        >
+                                          <Heart className={`w-3 h-3 ${nestedReply.userReaction === 'love' ? 'fill-current' : ''}`} />
+                                        </button>
+                                        <button
+                                          onClick={() => setReplyingTo(replyingTo?.id === nestedReply.id ? null : nestedReply)}
+                                          className={`flex items-center gap-1 text-xs transition ${replyingTo?.id === nestedReply.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
+                                        >
+                                          <MessageCircle className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Inline Reply Box for nested reply */}
+                                  {replyingTo?.id === nestedReply.id && (
+                                    <div className="mt-2 bg-white p-2 rounded border border-gray-200">
+                                      <textarea
+                                        value={newComment}
+                                        onChange={handleCommentInputChange}
+                                        placeholder={`Reply to ${nestedReply.user.firstName}...`}
+                                        className="input w-full text-xs"
+                                        rows={2}
+                                        autoFocus
+                                      />
+                                      <div className="flex justify-end gap-2 mt-1">
+                                        <button onClick={() => setReplyingTo(null)} className="text-xs text-gray-500">Cancel</button>
+                                        <button
+                                          onClick={handleAddComment}
+                                          disabled={!newComment.trim() || submittingComment}
+                                          className="text-xs text-primary-600 font-medium"
+                                        >
+                                          Reply
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>

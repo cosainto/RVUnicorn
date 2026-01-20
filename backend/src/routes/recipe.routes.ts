@@ -532,7 +532,50 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
                 orderBy: { createdAt: 'desc' }
               },
               _count: {
-                select: { likes: true }
+                select: { likes: true, replies: true }
+              },
+              replies: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      firstName: true,
+                      lastName: true,
+                      profilePicture: true,
+                    }
+                  },
+                  likes: {
+                    include: {
+                      user: {
+                        select: { id: true, firstName: true, lastName: true, username: true }
+                      }
+                    },
+                    take: 5,
+                    orderBy: { createdAt: 'desc' }
+                  },
+                  _count: {
+                    select: { likes: true, replies: true }
+                  },
+                  replies: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          username: true,
+                          firstName: true,
+                          lastName: true,
+                          profilePicture: true,
+                        }
+                      },
+                      _count: {
+                        select: { likes: true, replies: true }
+                      }
+                    },
+                    orderBy: { createdAt: 'asc' }
+                  }
+                },
+                orderBy: { createdAt: 'asc' }
               }
             },
             orderBy: { createdAt: 'asc' }
