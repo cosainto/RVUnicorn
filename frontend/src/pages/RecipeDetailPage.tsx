@@ -1180,25 +1180,12 @@ export default function RecipeDetailPage() {
 
           {user && (
             <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-              {replyingTo && (
-                <div className="mb-2 flex items-center justify-between bg-primary-50 p-2 rounded text-sm">
-                  <span className="text-primary-700">
-                    Replying to <strong>{replyingTo.user.firstName} {replyingTo.user.lastName}</strong>
-                  </span>
-                  <button
-                    onClick={() => setReplyingTo(null)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
               <div className="relative">
                 <textarea
                   ref={commentInputRef}
-                  value={newComment}
-                  onChange={handleCommentInputChange}
-                  placeholder={replyingTo ? `Reply to ${replyingTo.user.firstName}...` : "Share your thoughts about this recipe... Use @username to mention someone"}
+                  value={replyingTo ? '' : newComment}
+                  onChange={replyingTo ? () => {} : handleCommentInputChange}
+                  placeholder="Share your thoughts about this recipe... Use @username to mention someone"
                   className="input w-full"
                   rows={3}
                   disabled={submittingComment}
@@ -1359,13 +1346,48 @@ export default function RecipeDetailPage() {
                         {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
                       </button>
                       <button
-                        onClick={() => { console.log("Reply clicked", comment.id); setReplyingTo(comment); }}
-                        className="flex items-center gap-1 text-sm text-gray-400 hover:text-primary-600 transition"
+                        onClick={() => setReplyingTo(replyingTo?.id === comment.id ? null : comment)}
+                        className={`flex items-center gap-1 text-sm transition ${replyingTo?.id === comment.id ? 'text-primary-600' : 'text-gray-400 hover:text-primary-600'}`}
                         title="Reply"
                       >
                         <MessageCircle className="w-4 h-4" />
                         Reply {(comment._count?.replies ?? 0) > 0 && <span>({comment._count?.replies})</span>}
                       </button>
+                    </div>
+                  )}
+                  
+                  {/* Inline Reply Box */}
+                  {replyingTo?.id === comment.id && (
+                    <div className="ml-11 mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Replying to {comment.user.firstName}</span>
+                        <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <textarea
+                        value={newComment}
+                        onChange={handleCommentInputChange}
+                        placeholder={`Reply to ${comment.user.firstName}...`}
+                        className="input w-full text-sm"
+                        rows={2}
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => setReplyingTo(null)}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim() || submittingComment}
+                          className="btn btn-primary btn-sm"
+                        >
+                          {submittingComment ? 'Posting...' : 'Reply'}
+                        </button>
+                      </div>
                     </div>
                   )}
                   {comment.imageUrl && (
