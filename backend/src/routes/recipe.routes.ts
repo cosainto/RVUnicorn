@@ -634,20 +634,27 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       });
 
       // Create Activity for recipe owner's basecamp feed (unless muted)
+      console.log('[RECIPE_COMMENT] Creating activity for owner. recipeId:', recipeId, 'ownerId:', recipe.userId, 'commenterId:', userId);
       const ownerMuted = await prisma.recipeCommentMute.findFirst({
         where: { recipeId, userId: recipe.userId }
       });
+      console.log('[RECIPE_COMMENT] Owner muted?', !!ownerMuted);
       if (!ownerMuted) {
-        await prisma.activity.create({
-          data: {
-            userId: userId,  // who did the action (the commenter)
-            targetUserId: recipe.userId,  // who should see it (recipe owner)
-            type: 'RECIPE_COMMENTED',
-            recipeId: recipeId,
-            content: content.trim(),
-            isPublic: true,
-          }
-        });
+        try {
+          const newActivity = await prisma.activity.create({
+            data: {
+              userId: userId,  // who did the action (the commenter)
+              targetUserId: recipe.userId,  // who should see it (recipe owner)
+              type: 'RECIPE_COMMENTED',
+              recipeId: recipeId,
+              content: content.trim(),
+              isPublic: true,
+            }
+          });
+          console.log('[RECIPE_COMMENT] Activity created:', newActivity.id);
+        } catch (activityError) {
+          console.error('[RECIPE_COMMENT] Failed to create activity:', activityError);
+        }
       }
     }
 
