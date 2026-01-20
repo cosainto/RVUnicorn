@@ -517,7 +517,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         }
       });
 
-      // Check if current user has liked each comment (separate query to avoid take:5 limit)
+      // Check if current user has liked each comment and get counts by reaction type
       commentsWithLikes = await Promise.all(comments.map(async (comment) => {
         let userHasLiked = false;
         let userReaction = null;
@@ -531,9 +531,24 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
           userHasLiked = !!userLike;
           userReaction = userLike?.reaction || (userLike ? 'like' : null);
         }
+        
+        // Get counts by reaction type
+        const reactionCounts = await prisma.recipeCommentLike.groupBy({
+          by: ['reaction'],
+          where: { commentId: comment.id },
+          _count: true
+        });
+        
+        const likeCount = reactionCounts.find(r => r.reaction === 'like' || r.reaction === null)?._count || 0;
+        const loveCount = reactionCounts.find(r => r.reaction === 'love')?._count || 0;
+        const dislikeCount = reactionCounts.find(r => r.reaction === 'dislike')?._count || 0;
+        
         return {
           ...comment,
-          likeCount: comment._count.likes,
+          likeCount,
+          loveCount,
+          dislikeCount,
+          totalReactions: likeCount + loveCount + dislikeCount,
           likers: comment.likes.map(l => l.user),
           userHasLiked,
           userReaction
@@ -1163,10 +1178,10 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
   try {
     const userId = (req as any).userId;
     const { commentId } = req.params;
-    const { reaction } = req.body;
+    const { reaction } = req.body; // 'like', 'love', 'dislike'
 
     // Validate reaction
-    if (!['love', 'dislike'].includes(reaction)) {
+    if (!['like', 'love', 'dislike'].includes(reaction)) {
       return res.status(400).json({ error: 'Invalid reaction type' });
     }
 
@@ -1179,9 +1194,52 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // For now, just return success - reactions are stored client-side
-    // Future: add RecipeCommentReaction model for persistent storage
-    res.json({ success: true, reaction });
+    // Check existing reaction
+    const existingReaction = await prisma.recipeCommentLike.findUnique({
+      where: { commentId_userId: { commentId, userId } }
+    });
+
+    let newReaction = null;
+    if (existingReaction) {
+      if (existingReaction.reaction === reaction) {
+        // Same reaction - remove it (toggle off)
+        await prisma.recipeCommentLike.delete({
+          where: { id: existingReaction.id }
+        });
+      } else {
+        // Different reaction - update it
+        await prisma.recipeCommentLike.update({
+          where: { id: existingReaction.id },
+          data: { reaction }
+        });
+        newReaction = reaction;
+      }
+    } else {
+      // No existing reaction - create new
+      await prisma.recipeCommentLike.create({
+        data: { commentId, userId, reaction }
+      });
+      newReaction = reaction;
+    }
+
+    // Get updated counts
+    const reactionCounts = await prisma.recipeCommentLike.groupBy({
+      by: ['reaction'],
+      where: { commentId },
+      _count: true
+    });
+
+    const likeCount = reactionCounts.find(r => r.reaction === 'like' || r.reaction === null)?._count || 0;
+    const loveCount = reactionCounts.find(r => r.reaction === 'love')?._count || 0;
+    const dislikeCount = reactionCounts.find(r => r.reaction === 'dislike')?._count || 0;
+
+    res.json({ 
+      success: true, 
+      userReaction: newReaction,
+      likeCount,
+      loveCount,
+      dislikeCount
+    });
   } catch (error) {
     console.error('Comment reaction error:', error);
     res.status(500).json({ error: 'Failed to react to comment' });

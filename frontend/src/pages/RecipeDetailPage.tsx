@@ -85,6 +85,11 @@ interface Comment {
     username: string;
     profilePicture?: string;
   };
+  likeCount?: number;
+  loveCount?: number;
+  dislikeCount?: number;
+  userHasLiked?: boolean;
+  userReaction?: string | null;
 }
 
 const CATEGORIES = [
@@ -232,10 +237,16 @@ export default function RecipeDetailPage() {
   const handleCommentReaction = async (commentId: string, reaction: string) => {
     if (!user) return;
     try {
-      await api.post(`/recipes/comments/${commentId}/react`, { reaction });
+      const { data } = await api.post(`/recipes/comments/${commentId}/react`, { reaction });
       setComments(comments.map(c => 
         c.id === commentId 
-          ? { ...c, userReaction: c.userReaction === reaction ? null : reaction }
+          ? { 
+              ...c, 
+              userReaction: data.userReaction,
+              likeCount: data.likeCount,
+              loveCount: data.loveCount,
+              dislikeCount: data.dislikeCount
+            }
           : c
       ));
     } catch (error) {
@@ -1329,6 +1340,7 @@ export default function RecipeDetailPage() {
                         title="Love"
                       >
                         <Heart className={`w-4 h-4 ${comment.userReaction === 'love' ? 'fill-current' : ''}`} />
+                        {(comment.loveCount ?? 0) > 0 && <span>{comment.loveCount}</span>}
                       </button>
                       <button
                         onClick={() => handleCommentReaction(comment.id, 'dislike')}
@@ -1336,6 +1348,7 @@ export default function RecipeDetailPage() {
                         title="Dislike"
                       >
                         <ThumbsDown className={`w-4 h-4 ${comment.userReaction === 'dislike' ? 'fill-current' : ''}`} />
+                        {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
                       </button>
                     </div>
                   )}
