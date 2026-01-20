@@ -164,6 +164,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const allActivities: any[] = [];
 
     // 1. Activities from Activity model
+    console.log('[FEED DEBUG] Current userId:', userId);
+    console.log('[FEED DEBUG] visibleUserIds:', visibleUserIds.slice(0, 5));
     try {
       const activities = await prisma.activity.findMany({
         where: {
@@ -190,8 +192,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
         },
       });
 
+      console.log('[FEED DEBUG] Found', activities.length, 'activities from Activity model');
       for (const activity of activities) {
-        console.log('Activity type:', activity.type);
+        console.log('Activity type:', activity.type, '| targetUserId:', activity.targetUserId);
         // Skip types already handled by BasecampActivity
         const skipTypes = ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'];
         if (skipTypes.includes(activity.type)) continue;
