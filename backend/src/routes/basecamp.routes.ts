@@ -261,6 +261,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
         // Debug log removed
         let userHasLiked = false;
         let sourceLikeCount = 0;
+        let sourceLoveCount = 0;
+        let sourceDislikeCount = 0;
         if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId && activity.content) {
           // Debug log removed
           const comment = await prisma.recipeComment.findFirst({
