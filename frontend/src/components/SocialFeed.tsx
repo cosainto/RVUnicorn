@@ -387,13 +387,13 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     // Special handling for recipe shares - show full content with message
     console.log('[DEBUG] getActivityText - type:', item.type, 'activityType:', item.activityType, 'content:', item.content?.substring(0, 50));
     if (item.activityType === 'RECIPE_SHARED' || item.activityType === 'RECIPE_SHARE_TAG') {
-      console.log('[DEBUG] RECIPE_SHARE handler hit!');
+      console.log('[DEBUG] RECIPE_SHARE handler hit! content=', item.content, 'label=', item.activityLabel);
       return (
         <span>
           <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
             {actorName}
           </Link>
-          {' '}{item.content || item.activityLabel}{' '}
+          {' '}{item.content}{' '}
           {item.targetLink && (
             <Link to={item.targetLink} className="font-semibold text-primary-600 hover:underline">
               {item.targetName}
