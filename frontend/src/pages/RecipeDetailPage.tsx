@@ -1327,11 +1327,11 @@ export default function RecipeDetailPage() {
                   {user && (
                     <div className="ml-11 mt-2 flex items-center gap-3">
                       <button
-                        onClick={() => handleCommentLike(comment.id)}
-                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'like' || comment.userHasLiked ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                        onClick={() => handleCommentReaction(comment.id, 'like')}
+                        className={`flex items-center gap-1 text-sm transition ${comment.userReaction === 'like' ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
                         title="Like"
                       >
-                        <ThumbsUp className={`w-4 h-4 ${comment.userReaction === 'like' || comment.userHasLiked ? 'fill-current' : ''}`} />
+                        <ThumbsUp className={`w-4 h-4 ${comment.userReaction === 'like' ? 'fill-current' : ''}`} />
                         {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
                       </button>
                       <button
