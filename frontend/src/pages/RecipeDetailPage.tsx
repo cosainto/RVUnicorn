@@ -220,20 +220,6 @@ export default function RecipeDetailPage() {
     }
   };
 
-  const handleCommentLike = async (commentId: string) => {
-    if (!user) return;
-    try {
-      const { data } = await api.post(`/recipes/comments/${commentId}/like`);
-      setComments(comments.map(c => 
-        c.id === commentId 
-          ? { ...c, userHasLiked: data.liked, likeCount: c.likeCount + (data.liked ? 1 : -1) }
-          : c
-      ));
-    } catch (error) {
-      console.error('Comment like error:', error);
-    }
-  };
-
   const handleCommentReaction = async (commentId: string, reaction: string) => {
     if (!user) return;
     try {
