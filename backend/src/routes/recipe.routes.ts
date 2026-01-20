@@ -668,12 +668,12 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       : commenter?.username || 'Someone';
 
     // Track who we've already notified to avoid duplicates
+    // SIMPLE RULES: Only notify (1) direct parent commenter and (2) @mentioned users
     const notifiedUsers = new Set<string>();
     notifiedUsers.add(userId); // Don't notify the commenter
 
     if (parentId) {
-      // === THIS IS A REPLY ===
-      // Get the parent comment author
+      // === THIS IS A REPLY - Notify ONLY the direct parent author ===
       const parentComment = await prisma.recipeComment.findUnique({
         where: { id: parentId },
         select: { userId: true, user: { select: { firstName: true } } }
@@ -706,104 +706,9 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 
         notifiedUsers.add(parentComment.userId);
       }
-
-      // Get other users who have replied to the same parent (thread participants)
-      const threadParticipants = await prisma.recipeComment.findMany({
-        where: {
-          parentId: parentId,
-          userId: { notIn: Array.from(notifiedUsers) }
-        },
-        select: { userId: true },
-        distinct: ['userId']
-      });
-
-      for (const participant of threadParticipants) {
-        if (!mutedUserIds.has(participant.userId) && !notifiedUsers.has(participant.userId)) {
-          await prisma.basecampActivity.create({
-            data: {
-              userId: participant.userId,
-              actorId: userId,
-              type: 'RECIPE_COMMENT_THREAD',
-              entityType: 'RECIPE',
-              entityId: recipeId,
-              entityName: recipe.title,
-              metadata: {
-                commentId: comment.id,
-                commentPreview: content.trim().substring(0, 100),
-                canMute: true,
-                commenterName,
-                isReply: true
-              }
-            }
-          });
-          notifiedUsers.add(participant.userId);
-        }
-      }
-    } else {
-      // === THIS IS A TOP-LEVEL COMMENT ===
-      // Notify recipe owner (if not commenting on own recipe)
-      if (recipe.userId !== userId && !mutedUserIds.has(recipe.userId)) {
-        await prisma.notification.create({
-          data: {
-            userId: recipe.userId,
-            type: 'COMMENT',
-            content: `commented on your recipe "${recipe.title}"`,
-            link: `/recipes/${recipeId}`,
-          }
-        });
-        notifiedUsers.add(recipe.userId);
-
-        // Create Activity for recipe owner's basecamp feed
-        try {
-          await prisma.activity.create({
-            data: {
-              userId: userId,
-              targetUserId: recipe.userId,
-              type: 'RECIPE_COMMENTED',
-              recipeId: recipeId,
-              content: content.trim(),
-              isPublic: true,
-            }
-          });
-        } catch (activityError) {}
-      }
-
-      // Notify previous top-level commenters
-      const previousCommenters = await prisma.recipeComment.findMany({
-        where: {
-          recipeId,
-          parentId: null,
-          userId: { notIn: Array.from(notifiedUsers) }
-        },
-        select: { userId: true },
-        distinct: ['userId']
-      });
-
-      for (const prevCommenter of previousCommenters) {
-        if (!mutedUserIds.has(prevCommenter.userId) && !notifiedUsers.has(prevCommenter.userId)) {
-          await prisma.basecampActivity.create({
-            data: {
-              userId: prevCommenter.userId,
-              actorId: userId,
-              type: 'RECIPE_COMMENT_THREAD',
-              entityType: 'RECIPE',
-              entityId: recipeId,
-              entityName: recipe.title,
-              metadata: {
-                commentId: comment.id,
-                commentPreview: content.trim().substring(0, 100),
-                canMute: true,
-                commenterName
-              }
-            }
-          });
-          notifiedUsers.add(prevCommenter.userId);
-        }
-      }
+      // No other thread participants notified - keeps it simple
     }
-
-    // usersToNotify is now handled above, set empty for mentions logic below
-    const usersToNotify: string[] = [];
+    // Top-level comments: No automatic notifications (only @mentions below)
 
 
     // === NOTIFY MENTIONED USERS ===
