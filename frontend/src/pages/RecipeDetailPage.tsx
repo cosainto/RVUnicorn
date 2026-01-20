@@ -130,6 +130,7 @@ export default function RecipeDetailPage() {
 
   const handleShare = () => {
     if (!user || !recipe) return;
+    if (friends.length === 0) loadFriends();
     setShowShareModal(true);
   };
 
