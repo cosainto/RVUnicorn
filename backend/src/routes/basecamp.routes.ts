@@ -197,8 +197,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
         console.log('Activity type:', activity.type, '| targetUserId:', activity.targetUserId);
         // Skip types already handled by BasecampActivity
         const skipTypes = ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'];
-        if (skipTypes.includes(activity.type)) continue;
-        if (blockedUserIds.has(activity.userId)) return;
+        if (skipTypes.includes(activity.type)) {
+          console.log('[FEED DEBUG] Skipping', activity.type, 'due to skipTypes');
+          continue;
+        }
+        if (blockedUserIds.has(activity.userId)) {
+          console.log('[FEED DEBUG] Blocked user, returning early');
+          return;
+        }
         
         let targetName = '';
         let targetLink = '';
@@ -282,6 +288,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           }
         }
 
+        console.log('[FEED DEBUG] Pushing activity:', activity.type, activity.id);
         allActivities.push({
           id: 'activity-' + activity.id,
           type: activity.type,
