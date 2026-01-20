@@ -276,8 +276,8 @@ export default function RecipeDetailPage() {
   };
 
   const filteredFriends = friends.filter(
-    (f) => f.username.toLowerCase().includes(mentionSearch) ||
-           `${f.firstName} ${f.lastName}`.toLowerCase().includes(mentionSearch)
+    (f) => f && f.username && (f.username.toLowerCase().includes(mentionSearch) ||
+           `${f.firstName || ''} ${f.lastName || ''}`.toLowerCase().includes(mentionSearch))
   );
 
   const renderCommentContent = (commentContent: string) => {
