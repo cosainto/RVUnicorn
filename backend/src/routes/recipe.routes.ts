@@ -1073,12 +1073,11 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     });
     const sharerName = `${sharer?.firstName} ${sharer?.lastName}`;
 
-    // Build activity content with user's message
-    const activityContent = message 
-      ? `${message}`
-      : `Shared ${recipe.user.firstName}'s recipe: ${recipe.title}`;
+    // Build activity content - use message if provided, otherwise just store empty
+    // The feed display will show "shared a recipe" with the recipe card
+    const activityContent = message ? message.trim() : '';
 
-    // Create an activity for sharing
+    // Create an activity for sharer's profile feed
     await prisma.activity.create({
       data: {
         userId,
@@ -1102,25 +1101,38 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
       });
     }
 
-    // Notify mentioned users
+    // Notify mentioned users and create activities on their feeds
     if (mentions && mentions.length > 0) {
       const mentionedUsers = await prisma.user.findMany({
         where: { username: { in: mentions } },
-        select: { id: true, username: true }
+        select: { id: true, username: true, firstName: true, lastName: true }
       });
 
       for (const mentionedUser of mentionedUsers) {
-        // Skip if it's the sharer or the recipe owner (already notified)
-        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId) {
+        // Skip if it's the sharer
+        if (mentionedUser.id === userId) {
           continue;
         }
 
+        // Create notification
         await prisma.notification.create({
           data: {
             userId: mentionedUser.id,
             type: 'RECIPE_MENTION',
-            content: `${sharerName} mentioned you when sharing "${recipe.title}"`,
+            content: `${sharerName} tagged you in a recipe share: "${recipe.title}"`,
             link: `/recipes/${recipeId}`
+          }
+        });
+
+        // Create activity on mentioned user's profile feed
+        await prisma.activity.create({
+          data: {
+            userId: mentionedUser.id,
+            type: 'RECIPE_TAGGED',
+            recipeId,
+            title: recipe.title,
+            content: `${sharerName} tagged you: ${activityContent || 'Check out this recipe!'}`,
+            isPublic: true
           }
         });
 

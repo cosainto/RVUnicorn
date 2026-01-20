@@ -44,6 +44,7 @@ import {
   Image,
   Smile,
   Navigation,
+  Share2,
 } from 'lucide-react';
 import api from '../services/api';
 import { User as UserType } from '../services/auth.service';
@@ -810,6 +811,8 @@ const ACTIVITY_CONFIG: Record<string, { label: string; icon: React.ReactNode; co
   THREAD_REPLY: { label: 'replied to', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
   THREAD_COMMENT: { label: 'commented on', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
   THREAD_MENTION: { label: 'mentioned you in', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
+  RECIPE_SHARED: { label: 'shared a recipe', icon: <Share2 className="w-4 h-4" />, color: 'bg-green-100 text-green-600' },
+  RECIPE_TAGGED: { label: 'tagged you in a recipe', icon: <AtSign className="w-4 h-4" />, color: 'bg-purple-100 text-purple-600' },
 };
 
 const PACK_CATEGORIES = [
