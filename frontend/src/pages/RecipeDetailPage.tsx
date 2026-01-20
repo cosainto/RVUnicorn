@@ -128,15 +128,56 @@ export default function RecipeDetailPage() {
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    if (!user || !recipe) return;
+    setShowShareModal(true);
+  };
+
+  const handleShareSubmit = async () => {
     if (!user || !recipe) return;
     try {
-      await api.post(`/recipes/${recipe.id}/share`);
+      await api.post(`/recipes/${recipe.id}/share`, {
+        message: shareMessage.trim(),
+        mentions: shareMentions
+      });
+      setShowShareModal(false);
+      setShareMessage('');
+      setShareMentions([]);
       alert('Recipe shared to your feed!');
     } catch (error) {
       console.error('Share error:', error);
       alert('Failed to share recipe');
     }
+  };
+
+  const handleShareMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setShareMessage(value);
+    
+    // Check for @ mentions
+    const lastAtIndex = value.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const textAfterAt = value.slice(lastAtIndex + 1);
+      const spaceAfterAt = textAfterAt.indexOf(' ');
+      if (spaceAfterAt === -1 && textAfterAt.length > 0) {
+        setShareMentionSearch(textAfterAt);
+        setShowShareMentions(true);
+      } else {
+        setShowShareMentions(false);
+      }
+    } else {
+      setShowShareMentions(false);
+    }
+  };
+
+  const handleShareMentionSelect = (username: string) => {
+    const lastAtIndex = shareMessage.lastIndexOf('@');
+    const newMessage = shareMessage.slice(0, lastAtIndex) + '@' + username + ' ';
+    setShareMessage(newMessage);
+    if (!shareMentions.includes(username)) {
+      setShareMentions([...shareMentions, username]);
+    }
+    setShowShareMentions(false);
   };
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -149,6 +190,11 @@ export default function RecipeDetailPage() {
   const quickImageInputRef = useRef<HTMLInputElement>(null);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+  const [shareMentions, setShareMentions] = useState<string[]>([]);
+  const [showShareMentions, setShowShareMentions] = useState(false);
+  const [shareMentionSearch, setShareMentionSearch] = useState('');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -1407,6 +1453,116 @@ export default function RecipeDetailPage() {
           isOpen={showAddToEventModal}
           onClose={() => setShowAddToEventModal(false)}
         />
+      )}
+
+      {/* Share Recipe Modal */}
+      {showShareModal && recipe && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Share Recipe</h3>
+              <button
+                onClick={() => {
+                  setShowShareModal(false);
+                  setShareMessage('');
+                  setShareMentions([]);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Recipe Preview */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
+              {recipe.primaryImage && (
+                <img src={recipe.primaryImage} alt={recipe.title} className="w-16 h-16 rounded-lg object-cover" />
+              )}
+              <div>
+                <p className="font-medium text-gray-900">{recipe.title}</p>
+                <p className="text-sm text-gray-500">by {recipe.user.firstName} {recipe.user.lastName}</p>
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div className="relative mb-4">
+              <textarea
+                value={shareMessage}
+                onChange={handleShareMessageChange}
+                placeholder="Add a comment about this recipe... Use @ to tag people"
+                className="input w-full"
+                rows={3}
+              />
+              
+              {/* Mention Autocomplete */}
+              {showShareMentions && shareMentionSearch && (
+                <div className="absolute bottom-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto z-10 mb-1">
+                  {friends
+                    .filter(f => 
+                      f.firstName.toLowerCase().includes(shareMentionSearch.toLowerCase()) ||
+                      f.lastName.toLowerCase().includes(shareMentionSearch.toLowerCase()) ||
+                      f.username.toLowerCase().includes(shareMentionSearch.toLowerCase())
+                    )
+                    .slice(0, 5)
+                    .map(friend => (
+                      <button
+                        key={friend.id}
+                        onClick={() => handleShareMentionSelect(friend.username)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        {friend.profilePicture ? (
+                          <img src={friend.profilePicture} alt="" className="w-6 h-6 rounded-full" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">
+                            {friend.firstName[0]}
+                          </div>
+                        )}
+                        <span className="text-sm">{friend.firstName} {friend.lastName}</span>
+                        <span className="text-xs text-gray-400">@{friend.username}</span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tagged Users */}
+            {shareMentions.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {shareMentions.map(username => (
+                  <span key={username} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
+                    @{username}
+                    <button
+                      onClick={() => setShareMentions(shareMentions.filter(m => m !== username))}
+                      className="hover:text-primary-900"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowShareModal(false);
+                  setShareMessage('');
+                  setShareMentions([]);
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShareSubmit}
+                className="btn btn-primary"
+              >
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

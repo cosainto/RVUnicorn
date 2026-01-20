@@ -1052,6 +1052,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
   try {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
+    const { message, mentions } = req.body;
 
     const recipe = await prisma.recipe.findUnique({
       where: { id: recipeId },
@@ -1066,6 +1067,17 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
+    const sharer = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, username: true }
+    });
+    const sharerName = `${sharer?.firstName} ${sharer?.lastName}`;
+
+    // Build activity content with user's message
+    const activityContent = message 
+      ? `${message}`
+      : `Shared ${recipe.user.firstName}'s recipe: ${recipe.title}`;
+
     // Create an activity for sharing
     await prisma.activity.create({
       data: {
@@ -1073,26 +1085,61 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         type: 'RECIPE_SHARED',
         recipeId,
         title: recipe.title,
-        content: `Shared ${recipe.user.firstName}'s recipe: ${recipe.title}`,
+        content: activityContent,
         isPublic: true
       }
     });
 
     // Notify recipe owner (if not self-share)
     if (recipe.userId !== userId) {
-      const sharer = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true }
-      });
-      
       await prisma.notification.create({
         data: {
           userId: recipe.userId,
           type: 'RECIPE_SHARE',
-          content: `${sharer?.firstName} ${sharer?.lastName} shared your recipe`,
+          content: `${sharerName} shared your recipe "${recipe.title}"`,
           link: `/recipes/${recipeId}`
         }
       });
+    }
+
+    // Notify mentioned users
+    if (mentions && mentions.length > 0) {
+      const mentionedUsers = await prisma.user.findMany({
+        where: { username: { in: mentions } },
+        select: { id: true, username: true }
+      });
+
+      for (const mentionedUser of mentionedUsers) {
+        // Skip if it's the sharer or the recipe owner (already notified)
+        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId) {
+          continue;
+        }
+
+        await prisma.notification.create({
+          data: {
+            userId: mentionedUser.id,
+            type: 'RECIPE_MENTION',
+            content: `${sharerName} mentioned you when sharing "${recipe.title}"`,
+            link: `/recipes/${recipeId}`
+          }
+        });
+
+        // Create basecamp activity for mentioned user
+        await prisma.basecampActivity.create({
+          data: {
+            userId: mentionedUser.id,
+            actorId: userId,
+            type: 'RECIPE_MENTION',
+            entityType: 'RECIPE',
+            entityId: recipeId,
+            entityName: recipe.title,
+            metadata: {
+              sharerName,
+              message: message || null
+            }
+          }
+        });
+      }
     }
 
     res.json({ shared: true, message: 'Recipe shared to your feed!' });
