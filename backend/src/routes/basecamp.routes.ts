@@ -1178,8 +1178,6 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
       success: true, 
       reaction: updated.reaction,
       sourceLikeCount,
-        sourceLoveCount,
-        sourceDislikeCount,
       sourceLikers
     });
   } catch (error) {
