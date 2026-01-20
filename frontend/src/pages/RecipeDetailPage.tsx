@@ -160,7 +160,8 @@ export default function RecipeDetailPage() {
     if (lastAtIndex !== -1) {
       const textAfterAt = value.slice(lastAtIndex + 1);
       const spaceAfterAt = textAfterAt.indexOf(' ');
-      if (spaceAfterAt === -1 && textAfterAt.length > 0) {
+      // Show dropdown if no space after @ (still typing the mention)
+      if (spaceAfterAt === -1) {
         setShareMentionSearch(textAfterAt);
         setShowShareMentions(true);
       } else {
@@ -1496,10 +1497,11 @@ export default function RecipeDetailPage() {
               />
               
               {/* Mention Autocomplete */}
-              {showShareMentions && shareMentionSearch && (
+              {showShareMentions && (
                 <div className="absolute bottom-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto z-10 mb-1">
                   {friends
                     .filter(f => 
+                      !shareMentionSearch ||
                       f.firstName.toLowerCase().includes(shareMentionSearch.toLowerCase()) ||
                       f.lastName.toLowerCase().includes(shareMentionSearch.toLowerCase()) ||
                       f.username.toLowerCase().includes(shareMentionSearch.toLowerCase())
