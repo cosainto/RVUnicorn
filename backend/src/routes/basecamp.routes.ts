@@ -1036,13 +1036,13 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         const commentId = meta.commentId;
         const recipeId = meta.recipeId || entityId;
         
-        // If there's a commentId, like the comment; otherwise like the recipe
+        // If there's a commentId, sync reaction to the comment
         if (commentId) {
-          if (isLike) {
+          if (reaction) {
             await prisma.recipeCommentLike.upsert({
               where: { commentId_userId: { commentId, userId } },
-              update: {},
-              create: { commentId, userId }
+              update: { reaction },
+              create: { commentId, userId, reaction }
             });
           } else {
             await prisma.recipeCommentLike.deleteMany({
