@@ -1078,27 +1078,13 @@ export default function RecipeDetailPage() {
 
                   {/* Like and Share - visible to all logged in users */}
                   {user && (
-                    <>
-                      <button
-                        onClick={handleLike}
-                        className={`p-2 rounded-full transition flex items-center gap-1 ${
-                          isLiked
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                        title={isLiked ? 'Unlike' : 'Like this recipe'}
-                      >
-                        <Heart className={`w-5 h-5 ${isLiked ? 'fill-white' : ''}`} />
-                        {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
-                      </button>
-                      <button
-                        onClick={handleShare}
-                        className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
-                        title="Share to your feed"
-                      >
-                        <Share2 className="w-5 h-5" />
-                      </button>
-                    </>
+                    <button
+                      onClick={handleShare}
+                      className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                      title="Share to your feed"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
                   )}
                 </div>
               </div>
