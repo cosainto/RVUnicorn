@@ -798,29 +798,6 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     // usersToNotify is now handled above, set empty for mentions logic below
     const usersToNotify: string[] = [];
 
-    // Create Basecamp activity notifications for previous commenters
-    const commenterName = commenter?.firstName && commenter?.lastName 
-      ? `${commenter.firstName} ${commenter.lastName}`
-      : commenter?.username || 'Someone';
-
-    for (const notifyUserId of usersToNotify) {
-      await prisma.basecampActivity.create({
-        data: {
-          userId: notifyUserId,
-          actorId: userId,
-          type: 'RECIPE_COMMENT_THREAD',
-          entityType: 'RECIPE',
-          entityId: recipeId,
-          entityName: recipe.title,
-          metadata: {
-            commentId: comment.id,
-            commentPreview: content.trim().substring(0, 100),
-            canMute: true,
-            commenterName
-          }
-        }
-      });
-    }
 
     // === NOTIFY MENTIONED USERS ===
     if (mentions && mentions.length > 0) {
