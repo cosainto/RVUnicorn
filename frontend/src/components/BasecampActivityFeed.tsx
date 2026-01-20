@@ -301,7 +301,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                         {item.actor?.firstName} {item.actor?.lastName}
                       </Link>
                       {' '}
-                      <span className={item.activityColor || ''}>{item.activityIcon} {item.activityLabel}</span>
+                      <span className={item.activityColor || ''}>{item.activityIcon} {(item.type === 'RECIPE_SHARED' || item.type === 'RECIPE_SHARE_TAG') ? item.content : item.activityLabel}</span>
                       {' '}
                       {item.hasMutualFriendInteraction && item.secondaryUser ? (
                         <>
@@ -322,10 +322,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                     {(item.replyContent || item.metadata?.commentPreview) && (
                       <p className="text-sm text-gray-600 mt-1 italic">"{item.replyContent || item.metadata?.commentPreview}"</p>
                     )}
-                    {/* Show share message for recipe shares */}
-                    {(item.type === 'RECIPE_SHARED' || item.type === 'RECIPE_SHARE_TAG') && item.content && (
-                      <p className="text-sm text-gray-600 mt-1">"{item.content}"</p>
-                    )}
+
                     {/* Show tagged users for recipe shares */}
                     {item.type === 'RECIPE_SHARED' && (() => {
                       const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;

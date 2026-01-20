@@ -384,6 +384,23 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       );
     }
 
+    // Special handling for recipe shares - show full content with message
+    if (item.activityType === 'RECIPE_SHARED' || item.activityType === 'RECIPE_SHARE_TAG') {
+      return (
+        <span>
+          <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
+            {actorName}
+          </Link>
+          {' '}{item.content || item.activityLabel}{' '}
+          {item.targetLink && (
+            <Link to={item.targetLink} className="font-semibold text-primary-600 hover:underline">
+              {item.targetName}
+            </Link>
+          )}
+        </span>
+      );
+    }
+
     if (item.activityLabel && item.type !== 'CAMPGROUND_ANNOUNCEMENT') {
         return (
         <span>
