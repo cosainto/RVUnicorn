@@ -1398,10 +1398,6 @@ export default function RecipeDetailPage() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Manage Recipe</h3>
           <div className="flex gap-3">
-            <button onClick={handleFavoriteToggle} className={`btn flex items-center gap-2 ${recipe.isFavorite ? "btn-danger" : "btn-secondary"}`}>
-              <Heart className={`w-4 h-4 ${recipe.isFavorite ? "fill-current" : ""}`} />
-              {recipe.isFavorite ? "Unfavorite" : "Favorite"}
-            </button>
             <button onClick={startEditing} className="btn btn-secondary flex items-center gap-2">
               <Edit className="w-4 h-4" />
               Edit Recipe
