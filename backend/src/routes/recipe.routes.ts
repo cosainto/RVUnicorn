@@ -1177,7 +1177,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
             type: 'RECIPE_SHARE_TAG',
             recipeId,
             title: recipe.title,
-            content: `${sharerName} shared "${recipe.title}" with you${messageDisplay}`,
+            content: `shared "${recipe.title}" with you${messageDisplay}`,
             metadata: JSON.stringify({
               sharerName,
               sharerUsername: sharer?.username,
