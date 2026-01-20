@@ -327,11 +327,14 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       <p className="text-sm text-gray-600 mt-1">"{item.content}"</p>
                     )}
                     {/* Show tagged users for recipe shares */}
-                    {item.type === 'RECIPE_SHARED' && item.metadata?.taggedUsers && item.metadata.taggedUsers.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Tagged: {item.metadata.taggedUsers.map((u: string) => '@' + u).join(', ')}
-                      </p>
-                    )}
+                    {item.type === 'RECIPE_SHARED' && (() => {
+                      const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+                      return meta?.taggedUsers && meta.taggedUsers.length > 0 ? (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Tagged: {meta.taggedUsers.map((u: string) => '@' + u).join(', ')}
+                        </p>
+                      ) : null;
+                    })()}
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
                       <div className="flex items-center gap-1">

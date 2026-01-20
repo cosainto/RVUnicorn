@@ -1087,10 +1087,10 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         recipeId,
         title: recipe.title,
         content: activityContent,
-        metadata: {
+        metadata: JSON.stringify({
           taggedUsers: taggedUsernames,
           sharerName
-        },
+        }),
         isPublic: true
       }
     });
