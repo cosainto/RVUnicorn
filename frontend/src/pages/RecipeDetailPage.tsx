@@ -1359,7 +1359,7 @@ export default function RecipeDetailPage() {
                         {(comment.dislikeCount ?? 0) > 0 && <span>{comment.dislikeCount}</span>}
                       </button>
                       <button
-                        onClick={() => setReplyingTo(comment)}
+                        onClick={() => { console.log("Reply clicked", comment.id); setReplyingTo(comment); }}
                         className="flex items-center gap-1 text-sm text-gray-400 hover:text-primary-600 transition"
                         title="Reply"
                       >
