@@ -1013,6 +1013,10 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       CREATOR_VIDEO_UPLOAD: { label: 'uploaded a new video', icon: '🎬', feedType: 'CREATOR_VIDEO_UPLOAD' },
       SHARED_CREATOR_VIDEO: { label: 'shared a video', icon: '🔄', feedType: 'SHARED_CREATOR_VIDEO' },
       NEW_CAMPING_BUDDY: { label: '', icon: '🏕️', feedType: 'FRIEND' },
+      RECIPE_SHARED: { label: 'shared a recipe', icon: '🍳', feedType: 'RECIPE' },
+      RECIPE_SHARE_TAG: { label: 'shared a recipe with you', icon: '🏷️', feedType: 'RECIPE' },
+      RECIPE_LIKED: { label: 'liked a recipe', icon: '❤️', feedType: 'RECIPE' },
+      RECIPE_COMMENTED: { label: 'commented on a recipe', icon: '💬', feedType: 'RECIPE' },
     };     
 
     // Transform posts into feed items
