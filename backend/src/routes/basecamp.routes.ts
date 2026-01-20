@@ -700,6 +700,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
     }
 
     // Sort and deduplicate
+    const recipeCommentsBefore = allActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
+    console.log('[FEED DEBUG] RECIPE_COMMENTED in allActivities before dedup:', recipeCommentsBefore);
     allActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Deduplicate
@@ -717,7 +719,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
       return false;
     });
 
+    const recipeCommentsAfter = deduplicatedActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
+    console.log('[FEED DEBUG] RECIPE_COMMENTED after dedup:', recipeCommentsAfter);
     const paginatedActivities = deduplicatedActivities.slice(0, limit);
+    const recipeCommentsInPage = paginatedActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
+    console.log('[FEED DEBUG] RECIPE_COMMENTED in paginated:', recipeCommentsInPage);
     const hasMore = deduplicatedActivities.length > limit;
 
     // Enrich activities with source like counts
