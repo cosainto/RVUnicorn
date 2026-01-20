@@ -664,48 +664,6 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       }
     });
 
-    // Create notification for recipe owner (if not commenting on own recipe)
-    if (recipe.userId !== userId) {
-      await prisma.notification.create({
-        data: {
-          userId: recipe.userId,
-          type: 'COMMENT',
-          content: `commented on your recipe "${recipe.title}"`,
-          link: `/recipes/${recipeId}`,
-        }
-      });
-
-      // Create Activity for recipe owner's basecamp feed (unless muted)
-      const ownerMuted = await prisma.recipeCommentMute.findFirst({
-        where: { recipeId, userId: recipe.userId }
-      });
-      if (!ownerMuted) {
-        try {
-          const newActivity = await prisma.activity.create({
-            data: {
-              userId: userId,  // who did the action (the commenter)
-              targetUserId: recipe.userId,  // who should see it (recipe owner)
-              type: 'RECIPE_COMMENTED',
-              recipeId: recipeId,
-              content: content.trim(),
-              isPublic: true,
-            }
-          });
-          } catch (activityError) {
-          }
-      }
-    }
-
-    // === NOTIFY ALL PREVIOUS COMMENTERS (except muted users) ===
-    const previousCommenters = await prisma.recipeComment.findMany({
-      where: {
-        recipeId,
-        userId: { not: userId }
-      },
-      select: { userId: true },
-      distinct: ['userId']
-    });
-
     // Get users who have muted this recipe's comment notifications
     const mutedUsers = await prisma.recipeCommentMute.findMany({
       where: { recipeId },
@@ -713,10 +671,132 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     });
     const mutedUserIds = new Set(mutedUsers.map(m => m.userId));
 
-    // Filter: exclude recipe owner, muted users, and current user
-    const usersToNotify = previousCommenters
-      .map(c => c.userId)
-      .filter(id => id !== recipe.userId && id !== userId && !mutedUserIds.has(id));
+    const commenterName = commenter?.firstName && commenter?.lastName 
+      ? `${commenter.firstName} ${commenter.lastName}`
+      : commenter?.username || 'Someone';
+
+    // Track who we've already notified to avoid duplicates
+    const notifiedUsers = new Set<string>();
+    notifiedUsers.add(userId); // Don't notify the commenter
+
+    if (parentId) {
+      // === THIS IS A REPLY ===
+      // Get the parent comment author
+      const parentComment = await prisma.recipeComment.findUnique({
+        where: { id: parentId },
+        select: { userId: true, user: { select: { firstName: true } } }
+      });
+
+      if (parentComment && parentComment.userId !== userId && !mutedUserIds.has(parentComment.userId)) {
+        // Notify the parent comment author
+        await prisma.notification.create({
+          data: {
+            userId: parentComment.userId,
+            type: 'COMMENT',
+            content: `replied to your comment on "${recipe.title}"`,
+            link: `/recipes/${recipeId}`,
+          }
+        });
+        notifiedUsers.add(parentComment.userId);
+      }
+
+      // Get other users who have replied to the same parent (thread participants)
+      const threadParticipants = await prisma.recipeComment.findMany({
+        where: {
+          parentId: parentId,
+          userId: { notIn: Array.from(notifiedUsers) }
+        },
+        select: { userId: true },
+        distinct: ['userId']
+      });
+
+      for (const participant of threadParticipants) {
+        if (!mutedUserIds.has(participant.userId) && !notifiedUsers.has(participant.userId)) {
+          await prisma.basecampActivity.create({
+            data: {
+              userId: participant.userId,
+              actorId: userId,
+              type: 'RECIPE_COMMENT_THREAD',
+              entityType: 'RECIPE',
+              entityId: recipeId,
+              entityName: recipe.title,
+              metadata: {
+                commentId: comment.id,
+                commentPreview: content.trim().substring(0, 100),
+                canMute: true,
+                commenterName,
+                isReply: true
+              }
+            }
+          });
+          notifiedUsers.add(participant.userId);
+        }
+      }
+    } else {
+      // === THIS IS A TOP-LEVEL COMMENT ===
+      // Notify recipe owner (if not commenting on own recipe)
+      if (recipe.userId !== userId && !mutedUserIds.has(recipe.userId)) {
+        await prisma.notification.create({
+          data: {
+            userId: recipe.userId,
+            type: 'COMMENT',
+            content: `commented on your recipe "${recipe.title}"`,
+            link: `/recipes/${recipeId}`,
+          }
+        });
+        notifiedUsers.add(recipe.userId);
+
+        // Create Activity for recipe owner's basecamp feed
+        try {
+          await prisma.activity.create({
+            data: {
+              userId: userId,
+              targetUserId: recipe.userId,
+              type: 'RECIPE_COMMENTED',
+              recipeId: recipeId,
+              content: content.trim(),
+              isPublic: true,
+            }
+          });
+        } catch (activityError) {}
+      }
+
+      // Notify previous top-level commenters
+      const previousCommenters = await prisma.recipeComment.findMany({
+        where: {
+          recipeId,
+          parentId: null,
+          userId: { notIn: Array.from(notifiedUsers) }
+        },
+        select: { userId: true },
+        distinct: ['userId']
+      });
+
+      for (const prevCommenter of previousCommenters) {
+        if (!mutedUserIds.has(prevCommenter.userId) && !notifiedUsers.has(prevCommenter.userId)) {
+          await prisma.basecampActivity.create({
+            data: {
+              userId: prevCommenter.userId,
+              actorId: userId,
+              type: 'RECIPE_COMMENT_THREAD',
+              entityType: 'RECIPE',
+              entityId: recipeId,
+              entityName: recipe.title,
+              metadata: {
+                commentId: comment.id,
+                commentPreview: content.trim().substring(0, 100),
+                canMute: true,
+                commenterName
+              }
+            }
+          });
+          notifiedUsers.add(prevCommenter.userId);
+        }
+      }
+    }
+
+    // usersToNotify is now handled above, set empty for mentions logic below
+    const usersToNotify: string[] = [];
 
     // Create Basecamp activity notifications for previous commenters
     const commenterName = commenter?.firstName && commenter?.lastName 
@@ -748,13 +828,10 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         where: { username: { in: mentions } },
         select: { id: true }
       });
-
-      // Get list of users already notified as previous commenters
-      const previousCommenterIds = new Set(usersToNotify);
       
       for (const mentionedUser of mentionedUsers) {
-        // Skip if it's the commenter, recipe owner (already notified), muted, or already notified as previous commenter
-        if (mentionedUser.id === userId || mentionedUser.id === recipe.userId || mutedUserIds.has(mentionedUser.id) || previousCommenterIds.has(mentionedUser.id)) {
+        // Skip if already notified or muted
+        if (notifiedUsers.has(mentionedUser.id) || mutedUserIds.has(mentionedUser.id)) {
           continue;
         }
 
@@ -785,6 +862,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
             }
           }
         });
+        notifiedUsers.add(mentionedUser.id);
       }
     }
 
