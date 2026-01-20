@@ -1076,8 +1076,21 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     // Build activity content - use message if provided
     const activityContent = message ? message.trim() : '';
     
-    // Get tagged usernames for display
+    // Get tagged usernames and look up their full names
     const taggedUsernames = mentions && mentions.length > 0 ? mentions : [];
+    let taggedUserNames: string[] = [];
+    
+    if (taggedUsernames.length > 0) {
+      const taggedUsers = await prisma.user.findMany({
+        where: { username: { in: taggedUsernames } },
+        select: { firstName: true, lastName: true, username: true }
+      });
+      taggedUserNames = taggedUsers.map(u => `${u.firstName} ${u.lastName}`);
+    }
+
+    // Build the share content for display
+    const taggedDisplay = taggedUserNames.length > 0 ? ` with ${taggedUserNames.join(', ')}` : '';
+    const messageDisplay = activityContent ? `: "${activityContent}"` : '';
 
     // Create an activity for sharer's profile feed
     await prisma.activity.create({
@@ -1086,10 +1099,13 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         type: 'RECIPE_SHARED',
         recipeId,
         title: recipe.title,
-        content: activityContent,
+        content: `shared "${recipe.title}"${taggedDisplay}${messageDisplay}`,
         metadata: JSON.stringify({
           taggedUsers: taggedUsernames,
-          sharerName
+          taggedUserNames,
+          sharerName,
+          message: activityContent,
+          recipeTitle: recipe.title
         }),
         isPublic: true
       }
@@ -1123,7 +1139,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         // Build notification message with the actual share message
         const notificationContent = activityContent 
           ? `${sharerName} shared a recipe with you: "${activityContent}"`
-          : `${sharerName} shared a recipe with you: ${recipe.title}`;
+          : `${sharerName} shared "${recipe.title}" with you`;
 
         // Create notification with the actual message
         await prisma.notification.create({
@@ -1135,7 +1151,25 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           }
         });
 
-        // Create basecamp activity for tagged user's feed
+        // Create Activity for tagged user's PROFILE feed
+        await prisma.activity.create({
+          data: {
+            userId: mentionedUser.id,
+            type: 'RECIPE_SHARE_TAG',
+            recipeId,
+            title: recipe.title,
+            content: `${sharerName} shared "${recipe.title}" with you${messageDisplay}`,
+            metadata: JSON.stringify({
+              sharerName,
+              sharerUsername: sharer?.username,
+              message: activityContent,
+              recipeTitle: recipe.title
+            }),
+            isPublic: true
+          }
+        });
+
+        // Create basecamp activity for tagged user's BASECAMP feed
         await prisma.basecampActivity.create({
           data: {
             userId: mentionedUser.id,

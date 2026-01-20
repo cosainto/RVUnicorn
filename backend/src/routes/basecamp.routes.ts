@@ -293,6 +293,13 @@ router.get('/feed', authenticateToken, async (req, res) => {
         }
 
         console.log('[FEED DEBUG] Pushing activity:', activity.type, activity.id);
+        
+        // For recipe shares, use the content field as the label (it contains the full message)
+        let activityLabel = getActivityLabel(activity.type);
+        if ((activity.type === 'RECIPE_SHARED' || activity.type === 'RECIPE_SHARE_TAG') && activity.content) {
+          activityLabel = activity.content;
+        }
+        
         allActivities.push({
           id: 'activity-' + activity.id,
           type: activity.type,
@@ -306,7 +313,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           createdAt: activity.createdAt,
           activityType: activity.type,
           activityIcon: getActivityIcon(activity.type),
-          activityLabel: getActivityLabel(activity.type),
+          activityLabel: activityLabel,
           activityColor: getActivityColor(activity.type),
           campground: activity.campground,
           imageUrl: (activity as any).imageUrl,
