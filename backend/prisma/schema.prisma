@@ -697,6 +697,7 @@ model Recipe {
   difficulty   String?
   cuisine      String?
   category     String?
+  dietaryPreferences String[] @default([])
   privacy      String   @default("PUBLIC")
   imageUrl     String?
   createdAt    DateTime @default(now())

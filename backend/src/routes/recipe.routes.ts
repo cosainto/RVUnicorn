@@ -48,9 +48,21 @@ router.get('/saved', authenticateToken, async (req, res) => {
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const currentUserId = (req as any).userId;
-    const { search, limit, category } = req.query;
+    const { 
+      search, 
+      limit, 
+      category,
+      sortBy,
+      relationship,
+      dietary,
+      prepTimeRange,
+      difficulty,
+      creatorType,
+      creatorUsername
+    } = req.query;
 
     let privacyConditions: any[] = [];
+    let friendIds: string[] = [];
 
     if (currentUserId) {
       // Get user's accepted friendships
@@ -63,45 +75,146 @@ router.get('/', optionalAuth, async (req, res) => {
         }
       });
 
-      const friendIds = friendships.map(f => 
+      friendIds = friendships.map(f => 
         f.initiatorId === currentUserId ? f.receiverId : f.initiatorId
       );
 
-      // Logged in: PUBLIC recipes, FRIENDS-only from friends, own FRIENDS-only
-      // PRIVATE recipes are NEVER shown in community box
       privacyConditions = [
-        { privacy: 'PUBLIC' }, // Public recipes from anyone
-        { AND: [{ privacy: 'FRIENDS' }, { userId: { in: friendIds } }] }, // Friends-only from friends
-        { AND: [{ privacy: 'FRIENDS' }, { userId: currentUserId }] }, // Own friends-only recipes
+        { privacy: 'PUBLIC' },
+        { AND: [{ privacy: 'FRIENDS' }, { userId: { in: friendIds } }] },
+        { AND: [{ privacy: 'FRIENDS' }, { userId: currentUserId }] },
       ];
     } else {
-      // Not logged in: only public recipes
       privacyConditions = [{ privacy: 'PUBLIC' }];
     }
 
-    // Build where clause with search and category filters
+    // Build where clause
     const whereClause: any = {
       OR: privacyConditions
     };
 
+    const andConditions: any[] = [];
+
+    // Search filter
     if (search) {
-      whereClause.AND = [
-        {
-          OR: [
-            { title: { contains: search as string, mode: 'insensitive' } },
-            { description: { contains: search as string, mode: 'insensitive' } },
-          ]
-        }
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: search as string, mode: 'insensitive' } },
+          { description: { contains: search as string, mode: 'insensitive' } },
+          { ingredients: { hasSome: [search as string] } },
+        ]
+      });
     }
 
-    if (category) {
-      whereClause.category = category as string;
+    // Category/Meal Type filter
+    if (category && category !== 'All') {
+      andConditions.push({ category: category as string });
     }
+
+    // Difficulty filter
+    if (difficulty && difficulty !== 'All') {
+      andConditions.push({ difficulty: difficulty as string });
+    }
+
+    // Dietary preferences filter (array contains any of selected)
+    if (dietary) {
+      const dietaryArray = (dietary as string).split(',');
+      andConditions.push({ dietaryPreferences: { hasSome: dietaryArray } });
+    }
+
+    // Prep time range filter
+    if (prepTimeRange) {
+      switch (prepTimeRange) {
+        case 'under_15':
+          andConditions.push({ prepTime: { lt: 15 } });
+          break;
+        case '15_30':
+          andConditions.push({ prepTime: { gte: 15, lte: 30 } });
+          break;
+        case '30_60':
+          andConditions.push({ prepTime: { gte: 30, lte: 60 } });
+          break;
+        case 'over_60':
+          andConditions.push({ prepTime: { gt: 60 } });
+          break;
+      }
+    }
+
+    // Creator type filter
+    if (creatorType && currentUserId) {
+      switch (creatorType) {
+        case 'by_me':
+          andConditions.push({ userId: currentUserId });
+          break;
+        case 'by_friends':
+          andConditions.push({ userId: { in: friendIds } });
+          break;
+        case 'by_user':
+          if (creatorUsername) {
+            const targetUser = await prisma.user.findUnique({
+              where: { username: creatorUsername as string },
+              select: { id: true }
+            });
+            if (targetUser) {
+              andConditions.push({ userId: targetUser.id });
+            }
+          }
+          break;
+      }
+    }
+
+    // Relationship filter (requires fetching IDs first)
+    let relationshipRecipeIds: string[] | null = null;
+    if (relationship && currentUserId) {
+      switch (relationship) {
+        case 'my_recipes':
+          andConditions.push({ userId: currentUserId });
+          break;
+        case 'liked':
+          const likedRecipes = await prisma.recipeLike.findMany({
+            where: { userId: currentUserId },
+            select: { recipeId: true }
+          });
+          relationshipRecipeIds = likedRecipes.map(l => l.recipeId);
+          break;
+        case 'saved':
+          const savedRecipes = await prisma.savedRecipe.findMany({
+            where: { userId: currentUserId },
+            select: { recipeId: true }
+          });
+          relationshipRecipeIds = savedRecipes.map(s => s.recipeId);
+          break;
+        case 'commented':
+          const commentedRecipes = await prisma.recipeComment.findMany({
+            where: { userId: currentUserId },
+            select: { recipeId: true },
+            distinct: ['recipeId']
+          });
+          relationshipRecipeIds = commentedRecipes.map(c => c.recipeId);
+          break;
+      }
+    }
+
+    if (relationshipRecipeIds !== null) {
+      andConditions.push({ id: { in: relationshipRecipeIds } });
+    }
+
+    if (andConditions.length > 0) {
+      whereClause.AND = andConditions;
+    }
+
+    // Determine sort order
+    let orderBy: any = { createdAt: 'desc' }; // Default: newest
+    const sortByValue = sortBy as string;
+    
+    if (sortByValue === 'oldest') {
+      orderBy = { createdAt: 'asc' };
+    }
+    // For most_liked, most_commented, most_saved, trending - we'll sort after fetching
 
     const recipes = await prisma.recipe.findMany({
       where: whereClause,
-      take: limit ? parseInt(limit as string) : undefined,
+      take: limit ? parseInt(limit as string) : 100,
       include: {
         user: {
           select: {
@@ -116,15 +229,15 @@ router.get('/', optionalAuth, async (req, res) => {
           select: {
             ratings: true,
             comments: true,
+            likes: true,
+            savedBy: true,
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy
     });
 
-    // Calculate average rating for each recipe
+    // Enrich recipes with additional data
     const recipesWithRatings = await Promise.all(
       recipes.map(async (recipe) => {
         const ratings = await prisma.recipeRating.findMany({
@@ -136,11 +249,21 @@ router.get('/', optionalAuth, async (req, res) => {
           ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
           : 0;
 
-        // Check if current user saved this recipe
         const savedRecipe = currentUserId
           ? await prisma.savedRecipe.findUnique({
               where: {
                 userId_recipeId: {
+                  userId: currentUserId,
+                  recipeId: recipe.id
+                }
+              }
+            })
+          : null;
+
+        const userLiked = currentUserId
+          ? await prisma.recipeLike.findUnique({
+              where: {
+                recipeId_userId: {
                   userId: currentUserId,
                   recipeId: recipe.id
                 }
@@ -154,11 +277,37 @@ router.get('/', optionalAuth, async (req, res) => {
           author: recipe.user,
           isSaved: !!savedRecipe,
           isFavorite: savedRecipe?.favorite || false,
+          isLiked: !!userLiked,
+          likeCount: recipe._count.likes,
+          commentCount: recipe._count.comments,
+          saveCount: recipe._count.savedBy,
         };
       })
     );
 
-    res.json({ recipes: recipesWithRatings });
+    // Sort by engagement metrics if needed
+    let sortedRecipes = recipesWithRatings;
+    if (sortByValue === 'most_liked') {
+      sortedRecipes = recipesWithRatings.sort((a, b) => b.likeCount - a.likeCount);
+    } else if (sortByValue === 'most_commented') {
+      sortedRecipes = recipesWithRatings.sort((a, b) => b.commentCount - a.commentCount);
+    } else if (sortByValue === 'most_saved') {
+      sortedRecipes = recipesWithRatings.sort((a, b) => b.saveCount - a.saveCount);
+    } else if (sortByValue === 'trending') {
+      // Trending = weighted score of likes + comments + recency
+      const now = Date.now();
+      sortedRecipes = recipesWithRatings.sort((a, b) => {
+        const ageA = (now - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24); // days
+        const ageB = (now - new Date(b.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+        const scoreA = (a.likeCount * 2 + a.commentCount * 3 + a.saveCount) / Math.max(1, Math.sqrt(ageA));
+        const scoreB = (b.likeCount * 2 + b.commentCount * 3 + b.saveCount) / Math.max(1, Math.sqrt(ageB));
+        return scoreB - scoreA;
+      });
+    } else if (sortByValue === 'top_rated') {
+      sortedRecipes = recipesWithRatings.sort((a, b) => b.averageRating - a.averageRating);
+    }
+
+    res.json({ recipes: sortedRecipes });
   } catch (error) {
     console.error('Get recipes error:', error);
     res.status(500).json({ error: 'Failed to get recipes' });
