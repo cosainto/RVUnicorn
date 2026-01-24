@@ -366,7 +366,6 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     if (item.type === 'RECIPE_COMMENTED' || item.activityType === 'RECIPE_COMMENTED') {
       const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {});
       const mentions = meta.mentions || [];
-      console.log('[DEBUG COMMENT] metadata:', item.metadata, 'parsed meta:', meta, 'mentions:', mentions);
       return (
         <span>
           <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
