@@ -391,7 +391,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             </span>
           )}
           {item.content && (
-            <span className="block mt-1 text-gray-600 italic">"{item.content}"</span>
+            <span className="block mt-1 text-gray-600 italic">"<RenderMentions content={item.content} />"</span>
           )}
         </span>
       );
