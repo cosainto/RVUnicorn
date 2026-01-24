@@ -755,14 +755,46 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       }
     }
 
-    // === PROFILE ACTIVITY (visibility only - no notification alert) ===
-    await logRecipeCommented(
-      userId,
-      recipeId,
-      recipe.title,
-      recipe.userId,
-      content.trim().substring(0, 100)
-    );
+    // === PROFILE & BASECAMP ACTIVITY (visibility only - no notification alert) ===
+    const mentionDisplay = mentions && mentions.length > 0 
+      ? ' with ' + mentions.map((m: string) => '@' + m).join(', ')
+      : '';
+    
+    // Activity for commenter's PROFILE feed
+    await prisma.activity.create({
+      data: {
+        userId,
+        type: 'RECIPE_COMMENTED',
+        recipeId,
+        targetUserId: recipe.userId,
+        title: recipe.title,
+        content: content.trim().substring(0, 200),
+        metadata: JSON.stringify({
+          mentions: mentions || [],
+          commenterName: commenterName,
+          recipeTitle: recipe.title
+        }),
+        isPublic: true
+      }
+    });
+
+    // BasecampActivity for commenter's BASECAMP feed
+    await prisma.basecampActivity.create({
+      data: {
+        userId,
+        actorId: userId,
+        type: 'RECIPE_COMMENTED',
+        entityType: 'RECIPE',
+        entityId: recipeId,
+        entityName: recipe.title,
+        metadata: {
+          mentions: mentions || [],
+          commenterName: commenterName,
+          commentPreview: content.trim().substring(0, 200),
+          recipeTitle: recipe.title
+        }
+      }
+    });
 
     res.status(201).json(comment);
   } catch (error) {

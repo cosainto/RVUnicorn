@@ -364,6 +364,8 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     
     // Special handling for recipe comments
     if (item.type === 'RECIPE_COMMENTED' || item.activityType === 'RECIPE_COMMENTED') {
+      const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {});
+      const mentions = meta.mentions || [];
       return (
         <span>
           <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">
@@ -376,6 +378,17 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             </Link>
           ) : (
             <span className="font-semibold">{item.targetName}</span>
+          )}
+          {mentions.length > 0 && (
+            <span>
+              {' '}with{' '}
+              {mentions.map((m: string, i: number) => (
+                <span key={m}>
+                  <Link to={`/profile/${m}`} className="text-primary-600 hover:underline">@{m}</Link>
+                  {i < mentions.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </span>
           )}
           {item.content && (
             <span className="block mt-1 text-gray-600 italic">"{item.content}"</span>

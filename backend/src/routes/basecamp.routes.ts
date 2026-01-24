@@ -682,6 +682,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = 'shared "' + (activity.entityName || 'a recipe') + '" with you' + shareMessage;
             activityIcon = '🏷️';
             break;
+          case 'RECIPE_COMMENTED':
+            const commentMeta = activity.metadata as any;
+            const mentionsList = commentMeta?.mentions && commentMeta.mentions.length > 0 
+              ? ' with ' + commentMeta.mentions.map((m: string) => '@' + m).join(', ')
+              : '';
+            activityLabel = 'commented on ' + (activity.entityName || 'a recipe') + mentionsList;
+            activityIcon = '💬';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
