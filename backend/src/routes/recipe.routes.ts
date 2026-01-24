@@ -308,9 +308,9 @@ router.get('/', optionalAuth, async (req, res) => {
     }
 
     res.json({ recipes: sortedRecipes });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get recipes error:', error);
-    res.status(500).json({ error: 'Failed to get recipes' });
+    res.status(500).json({ error: 'Failed to get recipes', details: error?.message || String(error) });
   }
 });
 
