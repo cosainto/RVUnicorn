@@ -116,11 +116,11 @@ router.get('/', optionalAuth, async (req, res) => {
       andConditions.push({ difficulty: difficulty as string });
     }
 
-    // Dietary preferences filter (array contains any of selected)
-    if (dietary) {
-      const dietaryArray = (dietary as string).split(',');
-      andConditions.push({ dietaryPreferences: { hasSome: dietaryArray } });
-    }
+    // Dietary preferences filter - disabled until schema migration is complete
+    // if (dietary) {
+    //   const dietaryArray = (dietary as string).split(',');
+    //   andConditions.push({ dietaryPreferences: { hasSome: dietaryArray } });
+    // }
 
     // Prep time range filter
     if (prepTimeRange) {
