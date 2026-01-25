@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChefHat, Plus, Globe, Users, Lock, Clock, Star, X, Search, Filter, Camera, Upload, Loader2, SlidersHorizontal, ChevronDown, Heart, MessageCircle, Bookmark } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,6 +97,7 @@ const DIFFICULTY_COLORS = {
 
 export default function RecipesPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -107,7 +108,7 @@ export default function RecipesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedRelationship, setSelectedRelationship] = useState('');
+  const [selectedRelationship, setSelectedRelationship] = useState(searchParams.get('tab') || '');
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedPrepTime, setSelectedPrepTime] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
