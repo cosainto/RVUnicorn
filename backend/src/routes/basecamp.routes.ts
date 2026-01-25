@@ -1148,8 +1148,137 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
       }
     }
 
+    // Fetch public albums from strangers (discoveryEnabled)
+    let publicAlbumActivities: any[] = [];
+    if (showStrangerActivity) {
+      const publicAlbums = await prisma.album.findMany({
+        where: {
+          discoveryEnabled: true,
+          userId: { notIn: excludedUserIds },
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          User: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+        },
+      });
+      
+      publicAlbumActivities = publicAlbums.map(album => ({
+        id: 'album-' + album.id,
+        type: 'PUBLIC_ALBUM',
+        user: album.User,
+        content: album.description,
+        title: album.title,
+        campground: null,
+        campgroundId: null,
+        albumId: album.id,
+        createdAt: album.createdAt,
+        userId: album.userId,
+      }));
+    }
+
+    // Fetch public videos from strangers
+    let publicVideoActivities: any[] = [];
+    if (showStrangerActivity) {
+      const publicVideos = await prisma.video.findMany({
+        where: {
+          visibility: 'PUBLIC',
+          userId: { notIn: excludedUserIds },
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+        },
+      });
+      
+      publicVideoActivities = publicVideos.map(video => ({
+        id: 'video-' + video.id,
+        type: 'PUBLIC_VIDEO',
+        user: video.user,
+        content: video.description,
+        title: video.title,
+        campground: null,
+        campgroundId: null,
+        videoId: video.id,
+        thumbnailUrl: video.thumbnailUrl,
+        createdAt: video.createdAt,
+        userId: video.userId,
+      }));
+    }
+
+    // Fetch popular threads from strangers
+    let popularThreadActivities: any[] = [];
+    if (showStrangerActivity) {
+      const popularThreads = await prisma.thread.findMany({
+        where: {
+          authorId: { notIn: excludedUserIds },
+          viewCount: { gte: 5 }, // At least 5 views
+        },
+        take: limit,
+        orderBy: { viewCount: 'desc' },
+        include: {
+          author: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        },
+      });
+      
+      popularThreadActivities = popularThreads.map(thread => ({
+        id: 'thread-' + thread.id,
+        type: 'POPULAR_THREAD',
+        user: thread.author,
+        content: thread.content,
+        title: thread.title,
+        campground: thread.campground,
+        campgroundId: thread.campgroundId,
+        threadId: thread.id,
+        threadSlug: thread.slug,
+        viewCount: thread.viewCount,
+        createdAt: thread.createdAt,
+        userId: thread.authorId,
+      }));
+    }
+
+    // Fetch campground reviews from strangers
+    let reviewActivities: any[] = [];
+    if (showStrangerActivity) {
+      const reviews = await prisma.campgroundReview.findMany({
+        where: {
+          userId: { notIn: excludedUserIds },
+          review: { not: null }, // Has review text
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        },
+      });
+      
+      reviewActivities = reviews.map(review => ({
+        id: 'review-' + review.id,
+        type: 'CAMPGROUND_REVIEW_NEW',
+        user: review.user,
+        content: review.review,
+        title: review.title,
+        campground: review.campground,
+        campgroundId: review.campgroundId,
+        rating: review.rating,
+        createdAt: review.createdAt,
+        userId: review.userId,
+      }));
+    }
+
     // Merge and sort all activities
-    const allActivities = [...activities, ...publicEventActivities, ...publicRecipeActivities, ...activeCheckInActivities, ...overlappingTripActivities].sort(
+    const allActivities = [...activities, ...publicEventActivities, ...publicRecipeActivities, ...activeCheckInActivities, ...overlappingTripActivities, ...publicAlbumActivities, ...publicVideoActivities, ...popularThreadActivities, ...reviewActivities].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     ).slice(0, limit);
 
@@ -1196,6 +1325,22 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
         activityIcon = '👋';
         activityLabel = 'will be at';
         activityColor = 'text-blue-600';
+      } else if (activity.type === 'PUBLIC_ALBUM') {
+        activityIcon = '📸';
+        activityLabel = 'shared an album';
+        activityColor = 'text-pink-600';
+      } else if (activity.type === 'PUBLIC_VIDEO') {
+        activityIcon = '🎬';
+        activityLabel = 'posted a video';
+        activityColor = 'text-red-600';
+      } else if (activity.type === 'POPULAR_THREAD') {
+        activityIcon = '🔥';
+        activityLabel = 'started a popular discussion';
+        activityColor = 'text-orange-600';
+      } else if (activity.type === 'CAMPGROUND_REVIEW_NEW') {
+        activityIcon = '⭐';
+        activityLabel = 'reviewed';
+        activityColor = 'text-yellow-600';
       }
       
       return {
@@ -1204,8 +1349,8 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
         actor: activity.user,
         content: activity.content,
         title: activity.title,
-        targetName: activity.type === 'EVENT_CREATED' ? (activity.campground?.name || activity.title || 'an event') : activity.type === 'RECIPE_CREATED' ? (activity.title || 'a recipe') : activity.type === 'ACTIVE_CHECK_IN' ? (activity.campground?.name || 'a campground') : activity.type === 'OVERLAPPING_TRIP' ? (activity.campground?.name || 'a campground') : (activity.campground?.name || ''),
-        targetLink: activity.type === 'EVENT_CREATED' ? '/events/' + (activity.eventId || activity.id) : activity.type === 'RECIPE_CREATED' ? '/recipes/' + activity.recipeId : activity.type === 'OVERLAPPING_TRIP' ? '/events/' + activity.eventId : (activity.campground ? '/campgrounds/' + activity.campground.id : undefined),
+        targetName: activity.type === 'EVENT_CREATED' ? (activity.campground?.name || activity.title || 'an event') : activity.type === 'RECIPE_CREATED' ? (activity.title || 'a recipe') : activity.type === 'ACTIVE_CHECK_IN' ? (activity.campground?.name || 'a campground') : activity.type === 'OVERLAPPING_TRIP' ? (activity.campground?.name || 'a campground') : activity.type === 'PUBLIC_ALBUM' ? (activity.title || 'an album') : activity.type === 'PUBLIC_VIDEO' ? (activity.title || 'a video') : activity.type === 'POPULAR_THREAD' ? (activity.title || 'a discussion') : activity.type === 'CAMPGROUND_REVIEW_NEW' ? (activity.campground?.name || 'a campground') : (activity.campground?.name || ''),
+        targetLink: activity.type === 'EVENT_CREATED' ? '/events/' + (activity.eventId || activity.id) : activity.type === 'RECIPE_CREATED' ? '/recipes/' + activity.recipeId : activity.type === 'OVERLAPPING_TRIP' ? '/events/' + activity.eventId : activity.type === 'PUBLIC_ALBUM' ? '/media-albums/' + activity.albumId : activity.type === 'PUBLIC_VIDEO' ? '/videos/' + activity.videoId : activity.type === 'POPULAR_THREAD' ? '/threads/' + activity.threadSlug : activity.type === 'CAMPGROUND_REVIEW_NEW' ? '/campgrounds/' + activity.campgroundId : (activity.campground ? '/campgrounds/' + activity.campground.id : undefined),
         createdAt: activity.createdAt,
         activityType: activity.type,
         activityIcon,
