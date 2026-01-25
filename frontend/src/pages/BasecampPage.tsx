@@ -24,7 +24,6 @@ import {
   RotateCcw,
   Award,
   Star,
-  Sparkles,
   Plus,
   Settings,
   GripVertical,
@@ -41,8 +40,6 @@ import {
   ExternalLink,
   Send,
   AtSign,
-  Image,
-  Smile,
   Navigation,
   Share2,
 } from 'lucide-react';
@@ -52,8 +49,8 @@ import TravelMap from '../components/TravelMap';
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import PackingAssignments from '../components/PackingAssignments';
 import BasecampActivityFeed from '../components/BasecampActivityFeed';
+import CampgroundUpdatesFeed from '../components/CampgroundUpdatesFeed';
 import Top8Friends from '../components/Top8Friends';
-import PackingList from '../components/PackingList';
 import SocialFeed from '../components/SocialFeed';
 import { TrendingHashtags } from '../components/HashtagDisplay';
 import { CreatorToggleSection } from '../components/CreatorComponents';
@@ -1534,7 +1531,7 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         </div>
 
-        {/* Feature Showcase with Images */}
+        {/* Feature Showcase with,s */}
         <div className="bg-gray-50 py-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Feature 1 */}
@@ -3226,21 +3223,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             </div>
 
             {/* Campground Updates */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
-                <Tent className="w-5 h-5 text-green-600" />
-                Campground Updates
-              </h3>
-              <p className="text-sm text-gray-500">
-                Updates from campgrounds you follow will appear in your activity wall.
-              </p>
-              <Link
-                to="/campgrounds"
-                className="text-sm text-primary-600 hover:text-primary-700 mt-2 inline-block"
-              >
-                Browse Campgrounds →
-              </Link>
-            </div>
+            <CampgroundUpdatesFeed maxItems={10} />
           </div>
         </div>
       </div>

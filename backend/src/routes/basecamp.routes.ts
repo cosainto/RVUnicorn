@@ -36,6 +36,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   PHOTO_LIKED: { icon: '❤️', label: 'liked a photo in', color: 'text-red-500' },
   PHOTO_COMMENTED: { icon: '💬', label: 'commented on a photo in' },
   ALBUM_CREATED: { icon: '📁', label: 'created a new album', color: 'text-indigo-600' },
+  PHOTO_TAG: { icon: '🏷️', label: 'tagged you in a photo', color: 'text-purple-600' },
   ALBUM_LIKED: { icon: '❤️', label: 'liked the album', color: 'text-red-500' },
   FRIEND_ADDED: { icon: '🤝', label: 'became camping buddies with', color: 'text-green-600' },
   MUTUAL_FRIEND_ADDED: { icon: '👥', label: 'is now friends with' },
@@ -227,6 +228,10 @@ router.get('/feed', authenticateToken, async (req, res) => {
         } else if (activity.targetUser) {
           targetName = activity.targetUser.firstName + "'s wall";
           targetLink = '/profile/' + activity.targetUser.username;
+        } else if (activity.albumId) {
+          // Handle new Album system
+          targetName = activity.title || 'an album';
+          targetLink = '/media-albums/' + activity.albumId;
         } else if (activity.title) {
           targetName = activity.title;
         }
@@ -566,7 +571,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
               'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
               'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD',
-              'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED'
+              'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG'
             ]
           }
         },
@@ -690,6 +695,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = 'commented on ' + (activity.entityName || 'a recipe') + mentionsList;
             activityIcon = '💬';
             break;
+          case 'PHOTO_TAG':
+            const photoTagMeta = activity.metadata as any;
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' tagged you in a photo';
+            activityIcon = '🏷️';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -704,8 +714,11 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetLink = '/trips/' + meta.eventId;
         } else if (['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type)) {
           targetLink = '/threads/' + (activity.entityId || meta.threadId);
-        } else if (['RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'RECIPE_SHARED'].includes(activity.type)) {
+        } else if (['RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED'].includes(activity.type)) {
           targetLink = '/recipes/' + activity.entityId;
+        } else if (activity.type === 'PHOTO_TAG') {
+          const tagMeta = activity.metadata as any;
+          targetLink = '/media-albums/' + (tagMeta?.albumId || activity.entityId);
         }
 
         allActivities.push({
@@ -720,8 +733,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityType: activity.type,
           activityIcon,
           activityLabel,
-          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'RECIPE_SHARED'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'RECIPE_SHARED'].includes(activity.type),
+          imageUrl: meta.imageUrl || null,
+          isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG', 'RECIPE_SHARED'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG', 'RECIPE_SHARED'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',
@@ -909,11 +923,18 @@ router.get('/trips/upcoming', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/basecamp/campground-feed - Only campground announcements and updates
+// GET /api/basecamp/campground-feed - Discovery feed: campground updates, public events, inspiration
+// Per routing rules: Relationship beats location - friend content goes to Basecamp, not here
+// This feed shows: campground updates, public content from STRANGERS, events, discovery content
 router.get('/campground-feed', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const limit = parseInt(req.query.limit as string) || 10;
+    
+    // User filter preferences
+    const showFollowedCampgrounds = req.query.showFollowed !== 'false';
+    const showPublicEvents = req.query.showPublicEvents !== 'false';
+    const showStrangerActivity = req.query.showStrangerActivity !== 'false';
 
     // Get followed campgrounds
     const followedCampgrounds = await prisma.campgroundFollow.findMany({
@@ -922,44 +943,283 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
     });
     const followedCampgroundIds = followedCampgrounds.map((f) => f.campgroundId);
 
-    if (followedCampgroundIds.length === 0) {
-      return res.json({ feedItems: [], hasMore: false });
-    }
-
-    // Get campground announcements and updates
-    const activities = await prisma.activity.findMany({
+    // Get friend IDs (to EXCLUDE from this feed - friends go to Basecamp)
+    const friendships = await prisma.friendship.findMany({
       where: {
+        status: 'ACCEPTED',
+        OR: [{ initiatorId: userId }, { receiverId: userId }],
+      },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds = friendships.map((f) => 
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+    // Include self in exclusion list
+    const excludedUserIds = [userId, ...friendIds];
+
+    // Build query conditions
+    const whereConditions: any[] = [];
+    
+    // 1. Updates from followed campgrounds (from strangers only - excludes self and friends)
+    if (showFollowedCampgrounds && followedCampgroundIds.length > 0) {
+      whereConditions.push({
         type: { in: ['CAMPGROUND_ANNOUNCEMENT', 'CAMPGROUND_UPDATE', 'NEW_CAMPGROUND_THREAD'] },
         campgroundId: { in: followedCampgroundIds },
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        userId: { notIn: excludedUserIds }, // Exclude self and friends
+      });
+    }
+    
+    // 2. Public campground-tagged activity from STRANGERS only
+    if (showStrangerActivity) {
+      whereConditions.push({
+        userId: { notIn: excludedUserIds }, // Exclude self and friends
+        campgroundId: { not: null }, // Must have campground tag
+        type: { in: ['CHECK_IN', 'CAMPGROUND_REVIEW', 'THREAD_POST', 'THREAD_CREATED', 'PHOTO_UPLOADED'] },
+        isPublic: true, // Only public content
+      });
+    }
+
+    // Get campground activities
+    let activities: any[] = [];
+    if (whereConditions.length > 0) {
+      activities = await prisma.activity.findMany({
+        where: { OR: whereConditions },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
         },
-        campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
-      },
+      });
+    }
+    
+    // Fetch public events from STRANGERS with campground links
+    let publicEventActivities: any[] = [];
+    if (showPublicEvents) {
+      const publicEvents = await prisma.event.findMany({
+        where: { 
+          privacy: 'PUBLIC',
+          startDate: { gte: new Date() },
+          organizerId: { notIn: excludedUserIds }, // Only from strangers
+          campgroundId: { not: null }, // Must be linked to a campground
+        },
+        take: limit,
+        orderBy: { startDate: 'asc' }, // Show nearest events first
+        include: {
+          organizer: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        },
+      });
+      
+      publicEventActivities = publicEvents.map(event => ({
+        id: 'event-' + event.id,
+        type: 'EVENT_CREATED',
+        user: event.organizer,
+        content: null,
+        title: event.title,
+        campground: event.campground,
+        campgroundId: event.campgroundId,
+        eventId: event.id,
+        createdAt: event.createdAt,
+        userId: event.organizerId,
+        startDate: event.startDate,
+      }));
+    }
+    
+    // Fetch public recipes from STRANGERS
+    let publicRecipeActivities: any[] = [];
+    if (showStrangerActivity) {
+      const publicRecipes = await prisma.recipe.findMany({
+        where: { 
+          privacy: 'PUBLIC',
+          userId: { notIn: excludedUserIds }, // Only from strangers
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+        },
+      });
+      
+      publicRecipeActivities = publicRecipes.map(recipe => ({
+        id: 'recipe-' + recipe.id,
+        type: 'RECIPE_CREATED',
+        user: recipe.user,
+        content: recipe.description,
+        title: recipe.title,
+        campground: null,
+        campgroundId: null,
+        recipeId: recipe.id,
+        createdAt: recipe.createdAt,
+        userId: recipe.userId,
+      }));
+    }
+
+    // Fetch strangers currently checked in at campgrounds
+    let activeCheckInActivities: any[] = [];
+    if (showStrangerActivity) {
+      const activeCheckIns = await prisma.checkIn.findMany({
+        where: {
+          isActive: true,
+          userId: { notIn: excludedUserIds }, // Only strangers
+        },
+        take: limit,
+        orderBy: { checkInDate: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        },
+      });
+      
+      activeCheckInActivities = activeCheckIns.map(checkIn => ({
+        id: 'checkin-' + checkIn.id,
+        type: 'ACTIVE_CHECK_IN',
+        user: checkIn.user,
+        content: checkIn.notes,
+        title: null,
+        campground: checkIn.campground,
+        campgroundId: checkIn.campgroundId,
+        createdAt: checkIn.checkInDate,
+        userId: checkIn.userId,
+        checkOutDate: checkIn.checkOutDate,
+        siteNumber: checkIn.siteNumber,
+      }));
+    }
+
+    // Fetch strangers scheduled at same campgrounds as user's upcoming trips
+    let overlappingTripActivities: any[] = [];
+    if (showStrangerActivity) {
+      // First get the user's upcoming events with campgrounds
+      const userUpcomingEvents = await prisma.event.findMany({
+        where: {
+          OR: [
+            { organizerId: userId },
+            { attendees: { some: { userId, status: 'ACCEPTED' } } }
+          ],
+          campgroundId: { not: null },
+          startDate: { gte: new Date() },
+        },
+        select: { campgroundId: true, startDate: true, endDate: true },
+      });
+      
+      if (userUpcomingEvents.length > 0) {
+        const userCampgroundIds = userUpcomingEvents.map(e => e.campgroundId).filter(Boolean) as string[];
+        
+        // Find strangers with overlapping trips at same campgrounds
+        const overlappingTrips = await prisma.event.findMany({
+          where: {
+            campgroundId: { in: userCampgroundIds },
+            organizerId: { notIn: excludedUserIds },
+            privacy: 'PUBLIC',
+            startDate: { gte: new Date() },
+          },
+          take: limit,
+          orderBy: { startDate: 'asc' },
+          include: {
+            organizer: {
+              select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+            },
+            campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+          },
+        });
+        
+        overlappingTripActivities = overlappingTrips.map(event => ({
+          id: 'overlap-' + event.id,
+          type: 'OVERLAPPING_TRIP',
+          user: event.organizer,
+          content: null,
+          title: event.title,
+          campground: event.campground,
+          campgroundId: event.campgroundId,
+          eventId: event.id,
+          createdAt: event.createdAt,
+          userId: event.organizerId,
+          startDate: event.startDate,
+          endDate: event.endDate,
+        }));
+      }
+    }
+
+    // Merge and sort all activities
+    const allActivities = [...activities, ...publicEventActivities, ...publicRecipeActivities, ...activeCheckInActivities, ...overlappingTripActivities].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ).slice(0, limit);
+
+    const feedItems = allActivities.map((activity) => {
+      const isFollowedCampground = followedCampgroundIds.includes(activity.campgroundId || '');
+      
+      let activityIcon = '🏕️';
+      let activityLabel = 'update from';
+      let activityColor = 'text-green-600';
+      
+      if (activity.type === 'CAMPGROUND_ANNOUNCEMENT') {
+        activityIcon = '📢';
+        activityLabel = 'announced';
+        activityColor = 'text-amber-600';
+      } else if (activity.type === 'CHECK_IN') {
+        activityIcon = '📍';
+        activityLabel = 'checked in at';
+        activityColor = 'text-blue-600';
+      } else if (activity.type === 'CAMPGROUND_REVIEW') {
+        activityIcon = '⭐';
+        activityLabel = 'reviewed';
+        activityColor = 'text-yellow-600';
+      } else if (activity.type === 'THREAD_POST' || activity.type === 'THREAD_CREATED') {
+        activityIcon = '💬';
+        activityLabel = 'posted about';
+        activityColor = 'text-purple-600';
+      } else if (activity.type === 'PHOTO_UPLOADED') {
+        activityIcon = '📷';
+        activityLabel = 'shared a photo at';
+        activityColor = 'text-pink-600';
+      } else if (activity.type === 'EVENT_CREATED') {
+        activityIcon = '📅';
+        activityLabel = 'is planning a trip to';
+        activityColor = 'text-indigo-600';
+      } else if (activity.type === 'RECIPE_CREATED') {
+        activityIcon = '🍳';
+        activityLabel = 'shared a recipe';
+        activityColor = 'text-orange-600';
+      } else if (activity.type === 'ACTIVE_CHECK_IN') {
+        activityIcon = '🏕️';
+        activityLabel = 'is currently camping at';
+        activityColor = 'text-green-600';
+      } else if (activity.type === 'OVERLAPPING_TRIP') {
+        activityIcon = '👋';
+        activityLabel = 'will be at';
+        activityColor = 'text-blue-600';
+      }
+      
+      return {
+        id: 'campground-' + activity.id,
+        type: activity.type,
+        actor: activity.user,
+        content: activity.content,
+        title: activity.title,
+        targetName: activity.type === 'EVENT_CREATED' ? (activity.campground?.name || activity.title || 'an event') : activity.type === 'RECIPE_CREATED' ? (activity.title || 'a recipe') : activity.type === 'ACTIVE_CHECK_IN' ? (activity.campground?.name || 'a campground') : activity.type === 'OVERLAPPING_TRIP' ? (activity.campground?.name || 'a campground') : (activity.campground?.name || ''),
+        targetLink: activity.type === 'EVENT_CREATED' ? '/events/' + (activity.eventId || activity.id) : activity.type === 'RECIPE_CREATED' ? '/recipes/' + activity.recipeId : activity.type === 'OVERLAPPING_TRIP' ? '/events/' + activity.eventId : (activity.campground ? '/campgrounds/' + activity.campground.id : undefined),
+        createdAt: activity.createdAt,
+        activityType: activity.type,
+        activityIcon,
+        activityLabel,
+        activityColor,
+        campground: activity.campground,
+        isCampgroundActivity: true,
+        isFollowedCampground,
+        isDiscovery: !isFollowedCampground, // Content for discovery/inspiration
+        startDate: activity.startDate, // For events
+      };
     });
 
-    const feedItems = activities.map((activity) => ({
-      id: 'campground-' + activity.id,
-      type: activity.type,
-      actor: activity.user,
-      content: activity.content,
-      title: activity.title,
-      targetName: activity.campground?.name || '',
-      targetLink: activity.campground ? '/campgrounds/' + activity.campground.id : undefined,
-      createdAt: activity.createdAt,
-      activityType: activity.type,
-      activityIcon: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? '📢' : '🏕️',
-      activityLabel: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? 'announced' : 'update from',
-      activityColor: activity.type === 'CAMPGROUND_ANNOUNCEMENT' ? 'text-amber-600' : 'text-green-600',
-      campground: activity.campground,
-      isCampgroundActivity: true,
-    }));
-
-    res.json({ feedItems, hasMore: activities.length === limit });
+    res.json({ feedItems, hasMore: allActivities.length === limit });
   } catch (error) {
     console.error('Get campground feed error:', error);
     res.status(500).json({ error: 'Failed to get campground feed' });

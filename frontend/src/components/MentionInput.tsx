@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { User, Tent, Hash } from 'lucide-react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { User, MapPin } from 'lucide-react';
 import api from '../services/api';
 
 interface MentionUser {
@@ -13,19 +13,9 @@ interface MentionUser {
 interface MentionCampground {
   id: string;
   name: string;
-  customSlug?: string;
+  slug: string;
   state: string;
   location?: string;
-  imageUrl?: string;
-}
-
-interface MentionTag {
-  id: string;
-  name: string;
-  slug: string;
-  _count?: {
-    threads: number;
-  };
 }
 
 interface MentionInputProps {
@@ -40,124 +30,116 @@ interface MentionInputProps {
 export default function MentionInput({
   value,
   onChange,
-  placeholder = "What's on your mind? Type @ to mention people or campgrounds",
+  placeholder = "What's on your mind?",
   rows = 3,
   className = '',
   disabled = false,
 }: MentionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [userSuggestions, setUserSuggestions] = useState<MentionUser[]>([]);
-  const [campgroundSuggestions, setCampgroundSuggestions] = useState<MentionCampground[]>([]);
-  const [tagSuggestions, setTagSuggestions] = useState<MentionTag[]>([]);
-  const [mentionType, setMentionType] = useState<'@' | '#' | null>(null);
+  const [suggestionType, setSuggestionType] = useState<'user' | 'campground' | null>(null);
+  const [suggestions, setSuggestions] = useState<(MentionUser | MentionCampground)[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const allSuggestions = [
-    ...userSuggestions.map(u => ({ type: 'user' as const, data: u })),
-    ...campgroundSuggestions.map(c => ({ type: 'campground' as const, data: c })),
-    ...tagSuggestions.map(t => ({ type: 'tag' as const, data: t })),
-  ];
-
+  // Detect @ or # and search
   useEffect(() => {
-    const pos = cursorPosition;
-    const textBeforeCursor = value.substring(0, pos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
-    
-    const isInAtMention = lastAtIndex !== -1 && !textBeforeCursor.substring(lastAtIndex).includes(' ');
-    const isInHashMention = lastHashIndex !== -1 && !textBeforeCursor.substring(lastHashIndex).includes(' ');
-
-    if (isInAtMention && (!isInHashMention || lastAtIndex > lastHashIndex)) {
-      const query = textBeforeCursor.substring(lastAtIndex + 1);
-      setMentionType('@');
-      searchAll(query);
-    } else if (isInHashMention && (!isInAtMention || lastHashIndex > lastAtIndex)) {
-      const query = textBeforeCursor.substring(lastHashIndex + 1);
-      setMentionType('#');
-      searchTags(query);
-    } else {
-      setShowSuggestions(false);
-      setUserSuggestions([]);
-      setCampgroundSuggestions([]);
-      setTagSuggestions([]);
-      setMentionType(null);
-    }
-  }, [value, cursorPosition]);
-
-  const searchAll = async (query: string) => {
-    if (query.length < 1) {
-      setUserSuggestions([]);
-      setCampgroundSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    try {
-      const [usersRes, campgroundsRes] = await Promise.all([
-        api.get('/mentions/search/users?q=' + encodeURIComponent(query)),
-        api.get('/mentions/search/campgrounds?q=' + encodeURIComponent(query)),
-      ]);
-
-      setUserSuggestions(usersRes.data || []);
-      setCampgroundSuggestions(campgroundsRes.data || []);
-      
-      const hasResults = (usersRes.data?.length || 0) + (campgroundsRes.data?.length || 0) > 0;
-      setShowSuggestions(hasResults);
-      setSelectedIndex(0);
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  };
-
-  const searchTags = async (query: string) => {
-    if (query.length < 1) {
-      setTagSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    try {
-      const res = await api.get('/mentions/search/tags?q=' + encodeURIComponent(query));
-      setTagSuggestions(res.data || []);
-      setUserSuggestions([]);
-      setCampgroundSuggestions([]);
-      setShowSuggestions((res.data?.length || 0) > 0);
-      setSelectedIndex(0);
-    } catch (error) {
-      console.error('Tag search error:', error);
-    }
-  };
-
-  const insertMention = (type: 'user' | 'campground' | 'tag', suggestion: MentionUser | MentionCampground | MentionTag) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const pos = cursorPosition;
     const textBeforeCursor = value.substring(0, pos);
-    const startIndex = type === 'tag' 
-      ? textBeforeCursor.lastIndexOf('#')
-      : textBeforeCursor.lastIndexOf('@');
     
-    let mentionText: string;
-    if (type === 'user') {
-      mentionText = '@' + (suggestion as MentionUser).username + ' ';
-    } else if (type === 'campground') {
-      mentionText = '@[' + (suggestion as MentionCampground).name + '] ';
+    // Find the last @ or # before cursor
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+    
+    // Check if we're in a mention context (no space after @ or #)
+    const isInUserMention = lastAtIndex !== -1 && 
+      !textBeforeCursor.substring(lastAtIndex).includes(' ') &&
+      lastAtIndex > lastHashIndex;
+    
+    const isInCampgroundMention = lastHashIndex !== -1 && 
+      !textBeforeCursor.substring(lastHashIndex).includes(' ') &&
+      lastHashIndex > lastAtIndex;
+
+    if (isInUserMention) {
+      const query = textBeforeCursor.substring(lastAtIndex + 1);
+      setSuggestionType('user');
+      searchUsers(query);
+    } else if (isInCampgroundMention) {
+      const query = textBeforeCursor.substring(lastHashIndex + 1);
+      setSuggestionType('campground');
+      searchCampgrounds(query);
     } else {
-      mentionText = '#' + (suggestion as MentionTag).slug + ' ';
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  }, [value, cursorPosition]);
+
+  const searchUsers = async (query: string) => {
+    if (query.length < 1) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
 
-    const newValue = value.substring(0, startIndex) + mentionText + value.substring(pos);
+    try {
+      const { data } = await api.get(`/mentions/search/users?q=${encodeURIComponent(query)}`);
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+      setSelectedIndex(0);
+    } catch (error) {
+      console.error('Search users error:', error);
+    }
+  };
+
+  const searchCampgrounds = async (query: string) => {
+    if (query.length < 1) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const { data } = await api.get(`/mentions/search/campgrounds?q=${encodeURIComponent(query)}`);
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+      setSelectedIndex(0);
+    } catch (error) {
+      console.error('Search campgrounds error:', error);
+    }
+  };
+
+  const insertMention = (suggestion: MentionUser | MentionCampground) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const pos = cursorPosition;
+    const textBeforeCursor = value.substring(0, pos);
+    
+    let startIndex: number;
+    let mentionText: string;
+
+    if (suggestionType === 'user') {
+      startIndex = textBeforeCursor.lastIndexOf('@');
+      mentionText = `@${(suggestion as MentionUser).username} `;
+    } else {
+      startIndex = textBeforeCursor.lastIndexOf('#');
+      mentionText = `#${(suggestion as MentionCampground).slug} `;
+    }
+
+    const newValue = 
+      value.substring(0, startIndex) + 
+      mentionText + 
+      value.substring(pos);
+
     onChange(newValue);
     setShowSuggestions(false);
-    setUserSuggestions([]);
-    setCampgroundSuggestions([]);
-    setTagSuggestions([]);
-    setMentionType(null);
+    setSuggestions([]);
 
+    // Set cursor after the mention
     setTimeout(() => {
       const newCursorPos = startIndex + mentionText.length;
       textarea.focus();
@@ -167,18 +149,17 @@ export default function MentionInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!showSuggestions || allSuggestions.length === 0) return;
+    if (!showSuggestions || suggestions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % allSuggestions.length);
+      setSelectedIndex((prev) => (prev + 1) % suggestions.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + allSuggestions.length) % allSuggestions.length);
+      setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
     } else if (e.key === 'Enter' && showSuggestions) {
       e.preventDefault();
-      const selected = allSuggestions[selectedIndex];
-      insertMention(selected.type, selected.data);
+      insertMention(suggestions[selectedIndex]);
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
     }
@@ -195,186 +176,120 @@ export default function MentionInput({
     }
   };
 
-  let currentIndex = 0;
+  return (
+    <div className="relative">
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onClick={handleClick}
+        onKeyUp={handleClick}
+        placeholder={placeholder}
+        rows={rows}
+        disabled={disabled}
+        className={`w-full resize-none border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary-500 focus:border-transparent ${className}`}
+      />
 
-  return React.createElement('div', { className: 'relative' },
-    React.createElement('textarea', {
-      ref: textareaRef,
-      value: value,
-      onChange: handleChange,
-      onKeyDown: handleKeyDown,
-      onClick: handleClick,
-      onKeyUp: handleClick,
-      placeholder: placeholder,
-      rows: rows,
-      disabled: disabled,
-      className: 'w-full resize-none border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary-500 focus:border-transparent ' + className
-    }),
-    showSuggestions && allSuggestions.length > 0 && React.createElement('div', {
-      ref: suggestionsRef,
-      className: 'absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto'
-    },
-      userSuggestions.length > 0 && React.createElement('div', null,
-        React.createElement('div', { className: 'px-3 py-2 bg-gray-50 border-b border-gray-100' },
-          React.createElement('span', { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1' },
-            React.createElement(User, { className: 'w-3 h-3' }), ' People'
-          )
-        ),
-        userSuggestions.map((user) => {
-          const idx = currentIndex++;
-          return React.createElement('button', {
-            key: 'user-' + user.id,
-            type: 'button',
-            onClick: () => insertMention('user', user),
-            className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
-          },
-            user.profilePicture
-              ? React.createElement('img', { src: user.profilePicture.startsWith('http') ? user.profilePicture : '' + user.profilePicture, alt: '', className: 'w-8 h-8 rounded-full object-cover' })
-              : React.createElement('div', { className: 'w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center' },
-                  React.createElement(User, { className: 'w-4 h-4 text-primary-600' })
-                ),
-            React.createElement('div', null,
-              React.createElement('p', { className: 'font-medium text-gray-900' }, user.firstName + ' ' + user.lastName),
-              React.createElement('p', { className: 'text-sm text-gray-500' }, '@' + user.username)
-            )
-          );
-        })
-      ),
-      campgroundSuggestions.length > 0 && React.createElement('div', null,
-        React.createElement('div', { className: 'px-3 py-2 bg-gray-50 border-b border-gray-100' },
-          React.createElement('span', { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1' },
-            React.createElement(Tent, { className: 'w-3 h-3' }), ' Campgrounds'
-          )
-        ),
-        campgroundSuggestions.map((campground) => {
-          const idx = currentIndex++;
-          return React.createElement('button', {
-            key: 'cg-' + campground.id,
-            type: 'button',
-            onClick: () => insertMention('campground', campground),
-            className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
-          },
-            campground.imageUrl
-              ? React.createElement('img', { src: campground.imageUrl.startsWith('http') ? campground.imageUrl : '' + campground.imageUrl, alt: '', className: 'w-8 h-8 rounded-lg object-cover' })
-              : React.createElement('div', { className: 'w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center' },
-                  React.createElement(Tent, { className: 'w-4 h-4 text-green-600' })
-                ),
-            React.createElement('div', null,
-              React.createElement('p', { className: 'font-medium text-gray-900' }, campground.name),
-              React.createElement('p', { className: 'text-sm text-gray-500' }, campground.location || campground.state)
-            )
-          );
-        })
-      ),
-      tagSuggestions.length > 0 && React.createElement('div', null,
-        React.createElement('div', { className: 'px-3 py-2 bg-gray-50 border-b border-gray-100' },
-          React.createElement('span', { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1' },
-            React.createElement(Hash, { className: 'w-3 h-3' }), ' Tags'
-          )
-        ),
-        tagSuggestions.map((tag) => {
-          const idx = currentIndex++;
-          return React.createElement('button', {
-            key: 'tag-' + tag.id,
-            type: 'button',
-            onClick: () => insertMention('tag', tag),
-            className: 'w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ' + (idx === selectedIndex ? 'bg-primary-50' : '')
-          },
-            React.createElement('div', { className: 'w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center' },
-              React.createElement(Hash, { className: 'w-4 h-4 text-blue-600' })
-            ),
-            React.createElement('div', null,
-              React.createElement('p', { className: 'font-medium text-gray-900' }, '#' + tag.slug),
-              React.createElement('p', { className: 'text-sm text-gray-500' }, (tag._count?.threads || 0) + ' threads')
-            )
-          );
-        })
-      )
-    ),
-    React.createElement('p', { className: 'text-xs text-gray-400 mt-1' },
-      'Type ', React.createElement('span', { className: 'font-mono bg-gray-100 px-1 rounded' }, '@'), ' to mention people or campgrounds, ', React.createElement('span', { className: 'font-mono bg-gray-100 px-1 rounded' }, '#'), ' for tags'
-    )
+      {/* Suggestions dropdown */}
+      {showSuggestions && suggestions.length > 0 && (
+        <div
+          ref={suggestionsRef}
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={'id' in suggestion ? suggestion.id : index}
+              type="button"
+              onClick={() => insertMention(suggestion)}
+              className={`w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 ${
+                index === selectedIndex ? 'bg-primary-50' : ''
+              }`}
+            >
+              {suggestionType === 'user' ? (
+                <>
+                  {(suggestion as MentionUser).profilePicture ? (
+                    <img
+                      src={(suggestion as MentionUser).profilePicture}
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary-600" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {(suggestion as MentionUser).firstName} {(suggestion as MentionUser).lastName}
+                    </p>
+                    <p className="text-sm text-gray-500">@{(suggestion as MentionUser).username}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{(suggestion as MentionCampground).name}</p>
+                    <p className="text-sm text-gray-500">
+                      {(suggestion as MentionCampground).location}, {(suggestion as MentionCampground).state}
+                    </p>
+                  </div>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Helper text */}
+      <p className="text-xs text-gray-400 mt-1">
+        Type <span className="font-mono bg-gray-100 px-1 rounded">@</span> to mention users or{' '}
+        <span className="font-mono bg-gray-100 px-1 rounded">#</span> to tag campgrounds
+      </p>
+    </div>
   );
 }
 
+// Helper component to render content with clickable mentions
 export function RenderMentions({ content }: { content: string }) {
   if (!content) return null;
   
-  const result: JSX.Element[] = [];
-  let remaining = content;
-  let keyCounter = 0;
-  
-  while (remaining.length > 0) {
-    // Check for campground mention @[Name]
-    const bracketMatch = remaining.match(/^@\[([^\]]+)\]/);
-    if (bracketMatch) {
-      const campgroundName = bracketMatch[1];
-      result.push(
-        React.createElement('a', {
-          key: keyCounter++,
-          href: '/campgrounds?search=' + encodeURIComponent(campgroundName),
-          className: 'text-green-600 hover:text-green-700 font-medium',
-          onClick: (e: React.MouseEvent) => e.stopPropagation()
-        }, '🏕️ ' + campgroundName)
-      );
-      remaining = remaining.substring(bracketMatch[0].length);
-      continue;
-    }
-    
-    // Check for hashtag #tag
-    const hashtagMatch = remaining.match(/^#(\w+)/);
-    if (hashtagMatch) {
-      const tag = hashtagMatch[1];
-      result.push(
-        React.createElement('a', {
-          key: keyCounter++,
-          href: '/threads?tag=' + tag.toLowerCase(),
-          className: 'text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer',
-          onClick: (e: React.MouseEvent) => e.stopPropagation()
-        }, '#' + tag)
-      );
-      remaining = remaining.substring(hashtagMatch[0].length);
-      continue;
-    }
-    
-    // Check for user mention @username
-    const userMatch = remaining.match(/^@(\w+)/);
-    if (userMatch) {
-      const username = userMatch[1];
-      result.push(
-        React.createElement('a', {
-          key: keyCounter++,
-          href: '/profile/' + username,
-          className: 'text-primary-600 hover:text-primary-700 font-medium',
-          onClick: (e: React.MouseEvent) => e.stopPropagation()
-        }, '@' + username)
-      );
-      remaining = remaining.substring(userMatch[0].length);
-      continue;
-    }
-    
-    // Find next special character (@ or #)
-    const nextAt = remaining.indexOf('@', 1);
-    const nextHash = remaining.indexOf('#', 1);
-    let nextSpecial = -1;
-    if (nextAt === -1 && nextHash === -1) {
-      nextSpecial = -1;
-    } else if (nextAt === -1) {
-      nextSpecial = nextHash;
-    } else if (nextHash === -1) {
-      nextSpecial = nextAt;
-    } else {
-      nextSpecial = Math.min(nextAt, nextHash);
-    }
-    
-    if (nextSpecial === -1) {
-      result.push(React.createElement('span', { key: keyCounter++ }, remaining));
-      break;
-    } else {
-      result.push(React.createElement('span', { key: keyCounter++ }, remaining.substring(0, nextSpecial)));
-      remaining = remaining.substring(nextSpecial);
-    }
-  }
-  
-  return React.createElement('span', null, result);
+  // Parse @username mentions and #campground tags
+  const parts = content.split(/(@\w+|#\w+)/g);
+
+  return (
+    <span>
+      {parts.map((part, index) => {
+        if (part.startsWith('@')) {
+          const username = part.substring(1);
+          return (
+            <a
+              key={index}
+              href={`/profile/${username}`}
+              className="text-primary-600 hover:text-primary-700 font-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        } else if (part.startsWith('#')) {
+          const slug = part.substring(1);
+          return (
+            <a
+              key={index}
+              href={`/campgrounds/${slug}`}
+              className="text-green-600 hover:text-green-700 font-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
 }

@@ -246,7 +246,7 @@ const [editForm, setEditForm] = useState({
   const loadAlbums = async (profileId?: string) => {
     try {
       setLoadingAlbums(true);
-      const { data } = await api.get(`/photo-albums?userId=${profileId}`);
+      const { data } = await api.get(`/media-albums?userId=${profileId}`);
       setAlbums(data.slice(0, 6));
     } catch (error) {
       console.error('Load albums error:', error);
@@ -379,7 +379,7 @@ const [editForm, setEditForm] = useState({
 
   const handleCreateAlbum = async () => {
     try {
-      const { data: newAlbum } = await api.post("/photo-albums", albumForm);
+      const { data: newAlbum } = await api.post("/media-albums", albumForm);
       setShowCreateAlbumModal(false);
       setAlbumForm({ title: '', description: '', privacy: 'FRIENDS' });
       loadAlbums(profile?.id)
@@ -862,7 +862,7 @@ const [editForm, setEditForm] = useState({
                   {albums.slice(0, 4).map((album) => (
                     <Link
                       key={album.id}
-                      to={`/albums/${album.id}`}
+                      to={`/media-albums/${album.id}`}
                       className="aspect-square bg-gray-100 rounded overflow-hidden hover:opacity-90 transition"
                     >
                       {album.photos && album.photos[0] ? (
@@ -880,7 +880,7 @@ const [editForm, setEditForm] = useState({
                   ))}
                 </div>
                 <Link
-                  to={`/profile/${username}/albums`}
+                  to={`/media-albums?userId=${profile?.id}`}
                   className="text-sm text-primary-600 hover:text-primary-700 block text-center"
                 >
                   View all albums →

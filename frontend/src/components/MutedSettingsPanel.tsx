@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { UserX, CalendarX, Tent, Trash2, Clock, RefreshCw } from 'lucide-react';
+import { UserX, CalendarX, Tent, Trash2, Clock, RefreshCw, EyeOff } from 'lucide-react';
 import api from '../services/api';
 
 interface MutedEntity {

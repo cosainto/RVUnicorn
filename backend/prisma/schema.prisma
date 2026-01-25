@@ -1,5 +1,3 @@
-// This is your Prisma schema file
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +5,2518 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                                              String                    @id @default(cuid())
+  email                                           String                    @unique
+  username                                        String                    @unique
+  password                                        String
+  bio                                             String?
+  location                                        String?
+  profilePicture                                  String?
+  coverPhoto                                      String?
+  createdAt                                       DateTime                  @default(now())
+  updatedAt                                       DateTime                  @updatedAt
+  firstName                                       String
+  lastName                                        String
+  rvMake                                          String?
+  rvModel                                         String?
+  rvType                                          String?
+  rvYear                                          Int?
+  website                                         String?
+  facebookUrl                                     String?
+  instagramUrl                                    String?
+  redditUrl                                       String?
+  tiktokUrl                                       String?
+  youtubeUrl                                      String?
+  currentCampsite                                 String?
+  status                                          String?
+  statusEmoji                                     String?
+  statusType                                      String?
+  blueskyUrl                                      String?
+  twitterUrl                                      String?
+  rvDescription                                   String?
+  rvFeatures                                      String[]
+  rvLength                                        Int?
+  rvSleeps                                        Int?
+  rvSlideouts                                     Int?
+  rvWeight                                        Int?
+  showCampingStatus                               Boolean                   @default(true)
+  lastActiveAt                                    DateTime?
+  creatorBio                                      String?
+  creatorCoverImage                               String?
+  creatorEnabledAt                                DateTime?
+  creatorFeatured                                 Boolean                   @default(false)
+  creatorSpecialties                              String[]
+  creatorVerified                                 Boolean                   @default(false)
+  isCreator                                       Boolean                   @default(false)
+  showSocialOnCreator                             Boolean                   @default(true)
+  showSocialOnProfile                             Boolean                   @default(true)
+  creatorDisplayName                              String?
+  creatorHandle                                   String?
+  hasPets                                         Boolean                   @default(false)
+  homeAddress                                     String?
+  homeCity                                        String?
+  homeCountry                                     String?                   @default("USA")
+  homeLatitude                                    Float?
+  homeLongitude                                   Float?
+  homeState                                       String?
+  homeZipCode                                     String?
+  onboardingCompleted                             Boolean                   @default(false)
+  onboardingStep                                  Int                       @default(0)
+  petTypes                                        String[]                  @default([])
+  preferredTripLength                             String?
+  travelPartySize                                 Int?
+  travelPartyType                                 String?
+  licensePlate                                    String?
+  licensePlateState                               String?
+  rvHeight                                        Int?
+  rvWidth                                         Int?
+  tagExpiration                                   DateTime?
+  rvOdometer                                      Int?
+  taggedMediaVisibility                           TaggedMediaVisibility     @default(SHOW_IN_FEED)
+  tagApprovalMode                                 TagApprovalMode           @default(AUTO_APPROVE)
+  allowTagsFrom                                   AllowTagsFrom             @default(EVERYONE)
+  activityLogs                                    AccountActivityLog[]
+  accountDeletion                                 AccountDeletion?
+  activitySecondary                               Activity[]                @relation("ActivitySecondaryUser")
+  activityTargets                                 Activity[]                @relation("ActivityTarget")
+  activities                                      Activity[]
+  activityLikes                                   ActivityLike[]
+  Album                                           Album[]
+  AlbumFeedCooldown                               AlbumFeedCooldown[]
+  attractions                                     Attraction[]
+  basecampActivitiesPerformed                     BasecampActivity[]        @relation("BasecampActivityActor")
+  basecampActivitiesReceived                      BasecampActivity[]        @relation("BasecampActivityRecipient")
+  BlockedTagger_BlockedTagger_blockedByIdToUser   BlockedTagger[]           @relation("BlockedTagger_blockedByIdToUser")
+  BlockedTagger_BlockedTagger_blockedUserIdToUser BlockedTagger[]           @relation("BlockedTagger_blockedUserIdToUser")
+  blockedByUsers                                  BlockedUser[]             @relation("BlockedByUsers")
+  blockedUsers                                    BlockedUser[]             @relation("UserBlocks")
+  bookingClicks                                   BookingClick[]
+  claimedCampgrounds                              Campground[]              @relation("ClaimedCampgrounds")
+  campgroundAdmins                                CampgroundAdmin[]
+  campgroundAnnouncements                         CampgroundAnnouncement[]
+  campgroundEvents                                CampgroundEvent[]
+  campgroundFollows                               CampgroundFollow[]
+  reviewedPhotos                                  CampgroundPhoto[]         @relation("PhotoReviewer")
+  campgroundPhotos                                CampgroundPhoto[]
+  campgroundPosts                                 CampgroundPost[]
+  campgroundPostComments                          CampgroundPostComment[]
+  campgroundPostLikes                             CampgroundPostLike[]
+  campgroundReviews                               CampgroundReview[]
+  checkIns                                        CheckIn[]
+  comments                                        Comment[]
+  commentReplies                                  CommentReply[]
+  contentAnalytics                                ContentAnalytics[]
+  contentShares                                   ContentShare[]
+  creatorCollaborations                           CreatorCollaboration[]
+  creatorContent                                  CreatorContent[]
+  creatorComments                                 CreatorContentComment[]
+  creatorLikes                                    CreatorContentLike[]
+  taggedInContent                                 CreatorContentTag[]       @relation("TaggedInContent")
+  creatorFollowers                                CreatorFollow[]           @relation("CreatorFollowers")
+  followingCreators                               CreatorFollow[]           @relation("FollowingCreators")
+  creatorInsight                                  CreatorInsight?
+  creatorPageCollabs                              CreatorPageCollaborator[] @relation("CreatorPageCollaborator")
+  creatorPageOwned                                CreatorPageCollaborator[] @relation("CreatorPageOwner")
+  creatorReposts                                  CreatorRepost[]
+  creatorSaves                                    CreatorSave[]
+  creatorStats                                    CreatorStats?
+  emailVerifications                              EmailVerification[]
+  events                                          Event[]
+  eventAttendees                                  EventAttendee[]
+  eventBlocksCreated                              EventBlockedUser[]        @relation("EventBlocker")
+  blockedFromEvents                               EventBlockedUser[]        @relation("BlockedFromEvents")
+  eventComments                                   EventComment[]
+  eventCommentMutes                               EventCommentMute[]
+  assignedMeals                                   EventMeal[]               @relation("MealCook")
+  friendshipsInitiated                            Friendship[]              @relation("FriendshipInitiator")
+  friendshipsReceived                             Friendship[]              @relation("FriendshipReceiver")
+  gearItems                                       GearItem[]
+  groups                                          Group[]
+  groupInvitesReceived                            GroupInvite[]             @relation("GroupInvitee")
+  groupInvitesSent                                GroupInvite[]             @relation("GroupInviter")
+  groupMemberships                                GroupMember[]
+  inventoryItems                                  InventoryItem[]
+  likes                                           Like[]
+  maintenanceRecords                              MaintenanceRecord[]
+  maintenanceReminders                            MaintenanceReminder[]
+  mealRSVPs                                       MealRSVP[]                @relation("MealRSVPs")
+  Media                                           Media[]
+  MediaComment                                    MediaComment[]
+  MediaImpression                                 MediaImpression[]
+  MediaReaction                                   MediaReaction[]
+  MediaReport                                     MediaReport[]
+  MediaTag_MediaTag_taggedByIdToUser              MediaTag[]                @relation("MediaTag_taggedByIdToUser")
+  MediaTag_MediaTag_taggedUserIdToUser            MediaTag[]                @relation("MediaTag_taggedUserIdToUser")
+  createdMentions                                 Mention[]                 @relation("CreatedMentions")
+  mentions                                        Mention[]                 @relation("UserMentions")
+  mutedByUsers                                    MutedEntity[]             @relation("MutedByUsers")
+  mutedEntities                                   MutedEntity[]             @relation("UserMutes")
+  notifications                                   Notification[]
+  packingListTemplates                            PackingListTemplate[]
+  personalPackItems                               PersonalPackItem[]
+  photos                                          Photo[]
+  photoAlbums                                     PhotoAlbum[]
+  campgroundPhotoTagsCreated                      PhotoCampgroundTag[]      @relation("CampgroundPhotoTagsCreated")
+  photoComments                                   PhotoComment[]
+  photoLikes                                      PhotoLike[]
+  photoMoments                                    PhotoMoment[]
+  photoReactions                                  PhotoReaction[]
+  photoReports                                    PhotoReport[]             @relation("PhotoReporter")
+  photoReviews                                    PhotoReport[]             @relation("PhotoReviewer")
+  photoSaves                                      PhotoSave[]
+  photoTagsCreated                                PhotoTag[]                @relation("PhotoTagsCreated")
+  photoTagsReceived                               PhotoTag[]                @relation("PhotoTagsReceived")
+  pinnedComments                                  PinnedComment[]
+  posts                                           Post[]
+  wallPosts                                       Post[]                    @relation("WallPosts")
+  profileVisits                                   ProfileVisit[]            @relation("ProfileVisits")
+  visitorVisits                                   ProfileVisit[]            @relation("VisitorVisits")
+  rvShowcase                                      RVShowcase?
+  reactions                                       Reaction[]
+  recipes                                         Recipe[]
+  recipeComments                                  RecipeComment[]
+  recipeCommentLikes                              RecipeCommentLike[]
+  recipeCommentMutes                              RecipeCommentMute[]
+  recipeLikes                                     RecipeLike[]
+  recipeRatings                                   RecipeRating[]
+  savedRecipes                                    SavedRecipe[]
+  savedTrips                                      SavedTrip[]
+  tripComments                                    SavedTripComment[]
+  stateVisits                                     StateVisit[]
+  stateVisitAttendees                             StateVisitAttendee[]
+  stays                                           Stay[]
+  stickerRequests                                 StickerRequest[]
+  tagBlockedUsers                                 TagBlockedUser[]          @relation("TagBlocked")
+  tagBlockedBy                                    TagBlockedUser[]          @relation("TagBlocker")
+  threads                                         Thread[]
+  threadFavorites                                 ThreadFavorite[]
+  threadIgnores                                   ThreadIgnore[]
+  threadPosts                                     ThreadPost[]
+  threadPostLikes                                 ThreadPostLike[]
+  inTopFriendsOf                                  TopFriend[]               @relation("FriendInTopFriends")
+  topFriends                                      TopFriend[]               @relation("UserTopFriends")
+  trips                                           Trip[]
+  assignedTripPackItems                           TripPackItem[]            @relation("AssignedTripPackItems")
+  createdTripPackItems                            TripPackItem[]            @relation("CreatedTripPackItems")
+  packedTripPackItems                             TripPackItem[]            @relation("PackedByTripPackItems")
+  ridingWithTrips                                 TripPlan[]                @relation("RidingWith")
+  tripPlans                                       TripPlan[]
+  badges                                          UserBadge[]
+  mileageLogs                                     UserMileageLog[]
+  preferences                                     UserPreferences?
+  userStickers                                    UserSticker[]
+  videos                                          Video[]
+  videoLikes                                      VideoLike[]
+  videoWatches                                    VideoWatch[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Post {
+  id             String          @id @default(cuid())
+  content        String
+  imageUrl       String?
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  wallOwnerId    String?
+  groupId        String?
+  comments       Comment[]
+  likes          Like[]
+  mentions       Mention[]
+  pinnedComments PinnedComment[]
+  group          Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallOwner      User?           @relation("WallPosts", fields: [wallOwnerId], references: [id], onDelete: Cascade)
+  hashtags       PostHashtag[]
+  reactions      Reaction[]
+
+  @@index([userId])
+  @@index([wallOwnerId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id            String         @id @default(cuid())
+  content       String
+  postId        String
+  userId        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  editHistory   Json?
+  imageUrl      String?
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies       CommentReply[] @relation("CommentReplies")
+  pinnedComment PinnedComment?
+  reactions     Reaction[]
+
+  @@index([postId])
+  @@index([userId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  status      String   @default("PENDING")
+  initiatorId String
+  receiverId  String
+  updatedAt   DateTime @updatedAt
+  initiator   User     @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([initiatorId, receiverId])
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Trip {
+  id          String   @id @default(cuid())
+  userId      String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  stays       Stay[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startDate])
+}
+
+model Campground {
+  id                     String                   @id @default(cuid())
+  name                   String
+  description            String?
+  location               String
+  state                  String?
+  latitude               Float?
+  longitude              Float?
+  amenities              String[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  campgroundMapUrl       String?
+  accentColor            String?
+  bookingUrl             String?
+  businessEmail          String?
+  businessPhone          String?
+  claimedAt              DateTime?
+  claimedById            String?
+  customSlug             String?                  @unique
+  facebookUrl            String?
+  hashtag                String?                  @unique
+  headerLayout           String?
+  imageUrl               String?
+  instagramUrl           String?
+  theme                  String?
+  tier                   CampgroundTier           @default(FREE)
+  tierEndDate            DateTime?
+  tierStartDate          DateTime?
+  tiktokUrl              String?
+  twitterUrl             String?
+  verificationDocs       String[]                 @default([])
+  verificationStatus     ClaimStatus              @default(UNCLAIMED)
+  websiteUrl             String?
+  youtubeUrl             String?
+  campspotSlug           String?
+  activities             Activity[]               @relation("ActivityCampground")
+  bookingClicks          BookingClick[]
+  claimedBy              User?                    @relation("ClaimedCampgrounds", fields: [claimedById], references: [id])
+  admins                 CampgroundAdmin[]
+  analytics              CampgroundAnalytics[]
+  announcements          CampgroundAnnouncement[]
+  campgroundEvents       CampgroundEvent[]
+  followers              CampgroundFollow[]
+  photos                 CampgroundPhoto[]
+  posts                  CampgroundPost[]
+  reviews                CampgroundReview[]
+  checkIns               CheckIn[]
+  creatorContent         CreatorContent[]
+  taggedInCreatorContent CreatorContentTag[]      @relation("TaggedCampground")
+  events                 Event[]
+  mentions               Mention[]                @relation("CampgroundMentions")
+  mutedBy                MutedEntity[]
+  photoTags              PhotoCampgroundTag[]
+  savedTrips             SavedTrip[]
+  stateVisits            StateVisit[]
+  stays                  Stay[]
+  stickers               Sticker[]
+  threads                Thread[]
+
+  @@index([state])
+  @@index([name])
+}
+
+model Stay {
+  id           String     @id @default(cuid())
+  userId       String
+  campgroundId String
+  createdAt    DateTime   @default(now())
+  endDate      DateTime
+  notes        String?
+  startDate    DateTime
+  tripId       String?
+  updatedAt    DateTime   @updatedAt
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  trip         Trip?      @relation(fields: [tripId], references: [id])
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([campgroundId])
+  @@index([startDate])
+}
+
+model Event {
+  id                String               @id @default(cuid())
+  title             String
+  description       String?
+  startDate         DateTime
+  endDate           DateTime
+  location          String?
+  campgroundId      String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  organizerId       String
+  isWishlist        Boolean              @default(false)
+  groupId           String?
+  tags              String[]             @default([])
+  privacy           String               @default("PUBLIC")
+  bannerImage       String?
+  activities        Activity[]
+  campground        Campground?          @relation(fields: [campgroundId], references: [id])
+  group             Group?               @relation(fields: [groupId], references: [id])
+  organizer         User                 @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  attendees         EventAttendee[]
+  blockedUsers      EventBlockedUser[]
+  comments          EventComment[]
+  commentMutes      EventCommentMute[]
+  meals             EventMeal[]
+  subtabPrivacy     EventSubtabPrivacy[]
+  mutedBy           MutedEntity[]
+  personalPackItems PersonalPackItem[]
+  photos            Photo[]
+  savedTrips        SavedTrip[]
+  stateVisits       StateVisit[]
+  tripPackItems     TripPackItem[]       @relation("EventTripPackItems")
+  tripPlans         TripPlan[]
+
+  @@index([organizerId])
+  @@index([campgroundId])
+  @@index([startDate])
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model EventMeal {
+  id          String     @id @default(cuid())
+  eventId     String
+  mealType    String
+  recipeId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  notes       String?
+  scheduledAt DateTime
+  cookId      String?
+  cookStatus  String?    @default("PENDING")
+  cook        User?      @relation("MealCook", fields: [cookId], references: [id])
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipe      Recipe?    @relation(fields: [recipeId], references: [id])
+  rsvps       MealRSVP[]
+
+  @@index([eventId])
+  @@index([recipeId])
+}
+
+model MealRSVP {
+  id        String    @id @default(cuid())
+  mealId    String
+  userId    String
+  status    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  meal      EventMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  user      User      @relation("MealRSVPs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mealId, userId])
+  @@index([mealId])
+  @@index([userId])
+}
+
+model GearItem {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  description String?
+  imageUrl    String?
+  groupId     String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+}
+
+model PhotoAlbum {
+  id            String            @id @default(cuid())
+  userId        String
+  title         String
+  description   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  privacy       String            @default("PUBLIC")
+  coverPhotoUrl String?
+  photos        Photo[]
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  albumComments PhotoComment[]
+  stateVisits   StateVisitAlbum[]
+  videos        Video[]           @relation("AlbumVideos")
+
+  @@index([userId])
+  @@index([privacy])
+}
+
+model Photo {
+  id             String               @id @default(cuid())
+  userId         String
+  albumId        String?
+  imageUrl       String
+  caption        String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  eventId        String?
+  visibility     String               @default("PUBLIC")
+  moments        MomentPhoto[]
+  album          PhotoAlbum?          @relation(fields: [albumId], references: [id])
+  event          Event?               @relation(fields: [eventId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campgroundTags PhotoCampgroundTag[]
+  photoComments  PhotoComment[]
+  likes          PhotoLike[]
+  reactions      PhotoReaction[]
+  reports        PhotoReport[]
+  saves          PhotoSave[]
+  userTags       PhotoTag[]
+
+  @@index([userId])
+  @@index([albumId])
+  @@index([eventId])
+  @@index([visibility])
+}
+
+model StateVisit {
+  id         String               @id @default(cuid())
+  userId     String
+  state      String
+  createdAt  DateTime             @default(now())
+  notes      String?
+  updatedAt  DateTime             @updatedAt
+  campsiteId String?
+  endDate    DateTime?
+  eventId    String?
+  startDate  DateTime
+  visibility String               @default("PUBLIC")
+  campsite   Campground?          @relation(fields: [campsiteId], references: [id])
+  event      Event?               @relation(fields: [eventId], references: [id])
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  albums     StateVisitAlbum[]
+  attendees  StateVisitAttendee[]
+
+  @@index([userId])
+  @@index([state])
+  @@index([startDate])
+  @@index([campsiteId])
+  @@index([eventId])
+}
+
+model StateVisitAlbum {
+  id           String     @id @default(cuid())
+  stateVisitId String
+  albumId      String
+  createdAt    DateTime   @default(now())
+  album        PhotoAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  stateVisit   StateVisit @relation(fields: [stateVisitId], references: [id], onDelete: Cascade)
+
+  @@unique([stateVisitId, albumId])
+  @@index([stateVisitId])
+  @@index([albumId])
+}
+
+model StateVisitAttendee {
+  id           String     @id @default(cuid())
+  stateVisitId String
+  createdAt    DateTime   @default(now())
+  attendeeId   String
+  attendee     User       @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  stateVisit   StateVisit @relation(fields: [stateVisitId], references: [id], onDelete: Cascade)
+
+  @@unique([stateVisitId, attendeeId])
+  @@index([stateVisitId])
+  @@index([attendeeId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  content   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model MutedEntity {
+  id                String      @id @default(cuid())
+  userId            String
+  mutedUserId       String?
+  mutedCampgroundId String?
+  createdAt         DateTime    @default(now())
+  mutedActivityId   String?
+  mutedEventId      String?
+  snoozeDuration    String?
+  snoozeUntil       DateTime?
+  mutedCampground   Campground? @relation(fields: [mutedCampgroundId], references: [id], onDelete: Cascade)
+  mutedEvent        Event?      @relation(fields: [mutedEventId], references: [id], onDelete: Cascade)
+  mutedUser         User?       @relation("MutedByUsers", fields: [mutedUserId], references: [id], onDelete: Cascade)
+  user              User        @relation("UserMutes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mutedUserId])
+  @@unique([userId, mutedCampgroundId])
+  @@unique([userId, mutedEventId])
+  @@unique([userId, mutedActivityId])
+  @@index([userId])
+  @@index([mutedUserId])
+  @@index([mutedCampgroundId])
+  @@index([snoozeUntil])
+}
+
+model Recipe {
+  id                 String              @id @default(cuid())
+  title              String
+  description        String?
+  ingredients        String[]
+  prepTime           Int?
+  cookTime           Int?
+  servings           Int?
+  imageUrl           String?
+  userId             String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  difficulty         String?
+  category           String?
+  cuisine            String?
+  instructions       String[]
+  privacy            String              @default("PUBLIC")
+  dietaryPreferences String[]            @default([])
+  activities         Activity[]
+  meals              EventMeal[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments           RecipeComment[]
+  commentMutes       RecipeCommentMute[]
+  likes              RecipeLike[]
+  ratings            RecipeRating[]
+  savedBy            SavedRecipe[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([cuisine])
+  @@index([privacy])
+}
+
+model RecipeRating {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String
+  rating    Int
+  createdAt DateTime @default(now())
+  review    String?
+  updatedAt DateTime @updatedAt
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId])
+  @@index([recipeId])
+  @@index([userId])
+}
+
+model RecipeComment {
+  id        String              @id @default(cuid())
+  recipeId  String
+  userId    String
+  content   String
+  imageUrl  String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  mentions  String[]            @default([])
+  parentId  String?
+  parent    RecipeComment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   RecipeComment[]     @relation("CommentReplies")
+  recipe    Recipe              @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     RecipeCommentLike[]
+
+  @@index([recipeId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model SavedRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  favorite  Boolean  @default(false)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+model CheckIn {
+  id           String     @id @default(cuid())
+  userId       String
+  campgroundId String
+  checkInDate  DateTime
+  checkOutDate DateTime?
+  siteNumber   String?
+  notes        String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([campgroundId])
+  @@index([isActive])
+}
+
+model Sticker {
+  id              String           @id @default(cuid())
+  campgroundId    String
+  name            String
+  description     String?
+  imageUrl        String?
+  emoji           String?
+  criteria        String?
+  isLimited       Boolean          @default(false)
+  maxQuantity     Int?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  campground      Campground       @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  stickerRequests StickerRequest[]
+  userStickers    UserSticker[]
+
+  @@index([campgroundId])
+}
+
+model UserSticker {
+  id        String   @id @default(cuid())
+  userId    String
+  stickerId String
+  earnedAt  DateTime @default(now())
+  sticker   Sticker  @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stickerId])
+  @@index([userId])
+  @@index([stickerId])
+}
+
+model StickerRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  stickerId String
+  evidence  String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sticker   Sticker  @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stickerId])
+  @@index([status])
+}
+
+model CampgroundFollow {
+  id           String     @id @default(cuid())
+  userId       String
+  campgroundId String
+  createdAt    DateTime   @default(now())
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campgroundId])
+  @@index([userId])
+  @@index([campgroundId])
+}
+
+model CampgroundAdmin {
+  id           String     @id @default(cuid())
+  userId       String
+  campgroundId String
+  createdAt    DateTime   @default(now())
+  addedById    String?
+  role         AdminRole  @default(MODERATOR)
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campgroundId])
+  @@index([userId])
+  @@index([campgroundId])
+}
+
+model CampgroundPost {
+  id           String                  @id @default(cuid())
+  campgroundId String
+  authorId     String
+  title        String?
+  content      String
+  imageUrl     String?
+  isPinned     Boolean                 @default(false)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  author       User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  campground   Campground              @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  comments     CampgroundPostComment[]
+  likes        CampgroundPostLike[]
+
+  @@index([campgroundId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model CampgroundPostLike {
+  id        String         @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime       @default(now())
+  post      CampgroundPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model CampgroundPostComment {
+  id        String         @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  post      CampgroundPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}
+
+model CampgroundReview {
+  id           String     @id @default(cuid())
+  campgroundId String
+  userId       String
+  rating       Int
+  title        String?
+  review       String?
+  visitDate    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campgroundId, userId])
+}
+
+model CampgroundPhoto {
+  id           String     @id @default(cuid())
+  campgroundId String
+  userId       String
+  imageUrl     String
+  caption      String?
+  status       String     @default("PENDING")
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  reviewer     User?      @relation("PhotoReviewer", fields: [reviewedBy], references: [id])
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CampgroundEvent {
+  id           String     @id @default(cuid())
+  campgroundId String
+  createdById  String
+  title        String
+  description  String?
+  imageUrl     String?
+  startDate    DateTime
+  endDate      DateTime?
+  location     String?
+  isRecurring  Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tags         String[]   @default([])
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation(fields: [createdById], references: [id])
+}
+
+model CampgroundAnnouncement {
+  id           String               @id @default(cuid())
+  campgroundId String
+  authorId     String
+  title        String
+  content      String
+  imageUrl     String?
+  isPinned     Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  expiresAt    DateTime?
+  isPublished  Boolean              @default(true)
+  priority     AnnouncementPriority @default(NORMAL)
+  publishedAt  DateTime?
+  scheduledAt  DateTime?
+  viewCount    Int                  @default(0)
+  author       User                 @relation(fields: [authorId], references: [id])
+  campground   Campground           @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+
+  @@index([campgroundId])
+  @@index([scheduledAt])
+  @@index([isPublished])
+}
+
+model TripPlan {
+  id              String             @id @default(cuid())
+  eventId         String
+  userId          String
+  startLocation   String
+  startLatitude   Float?
+  startLongitude  Float?
+  useHometown     Boolean            @default(true)
+  endLocation     String
+  endLatitude     Float?
+  endLongitude    Float?
+  distanceMiles   Float?
+  durationMinutes Int?
+  routePolyline   String?
+  status          String             @default("PLANNED")
+  completedAt     DateTime?
+  actualMiles     Float?
+  isDriving       Boolean            @default(true)
+  ridingWithId    String?
+  routePreference String             @default("FASTEST")
+  avoidTolls      Boolean            @default(false)
+  avoidHighways   Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  packItems       PersonalPackItem[]
+  pitStops        PitStop[]
+  tripPackItems   TripPackItem[]     @relation("TripPackItems")
+  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ridingWith      User?              @relation("RidingWith", fields: [ridingWithId], references: [id])
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mileageLogs     UserMileageLog[]
+
+  @@unique([eventId, userId])
+}
+
+model UserMileageLog {
+  id          String    @id @default(cuid())
+  userId      String
+  tripPlanId  String?
+  miles       Float
+  description String?
+  tripDate    DateTime
+  createdAt   DateTime  @default(now())
+  tripPlan    TripPlan? @relation(fields: [tripPlanId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PitStop {
+  id                String    @id @default(cuid())
+  tripPlanId        String
+  name              String
+  location          String?
+  latitude          Float?
+  longitude         Float?
+  stopType          String
+  notes             String?
+  orderIndex        Int
+  estimatedArrival  DateTime?
+  estimatedDuration Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tripPlan          TripPlan  @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
+}
+
+model Thread {
+  id           String           @id @default(cuid())
+  title        String
+  content      String?
+  slug         String           @unique
+  campgroundId String?
+  authorId     String
+  isPinned     Boolean          @default(false)
+  isLocked     Boolean          @default(false)
+  viewCount    Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  activities   Activity[]
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  campground   Campground?      @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  favorites    ThreadFavorite[]
+  ignores      ThreadIgnore[]
+  posts        ThreadPost[]
+  tags         ThreadTagLink[]
+}
+
+model ThreadPost {
+  id        String           @id @default(cuid())
+  content   String
+  threadId  String
+  authorId  String
+  parentId  String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  imageUrl  String?
+  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    ThreadPost?      @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ThreadPost[]     @relation("PostReplies")
+  thread    Thread           @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  likes     ThreadPostLike[]
+}
+
+model ThreadPostLike {
+  id        String     @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime   @default(now())
+  post      ThreadPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model ThreadTag {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  slug      String          @unique
+  color     String          @default("#6B7280")
+  createdAt DateTime        @default(now())
+  threads   ThreadTagLink[]
+}
+
+model ThreadTagLink {
+  id       String    @id @default(cuid())
+  threadId String
+  tagId    String
+  tag      ThreadTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  thread   Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, tagId])
+}
+
+model ThreadFavorite {
+  id        String   @id @default(cuid())
+  threadId  String
+  userId    String
+  createdAt DateTime @default(now())
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+}
+
+model Activity {
+  id               String         @id @default(cuid())
+  userId           String
+  type             String
+  threadId         String?
+  eventId          String?
+  recipeId         String?
+  campgroundId     String?
+  targetUserId     String?
+  title            String?
+  content          String?
+  metadata         String?
+  isPublic         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  albumId          String?
+  isCreatorContent Boolean        @default(false)
+  photoId          String?
+  secondaryUserId  String?
+  campground       Campground?    @relation("ActivityCampground", fields: [campgroundId], references: [id])
+  event            Event?         @relation(fields: [eventId], references: [id])
+  recipe           Recipe?        @relation(fields: [recipeId], references: [id])
+  secondaryUser    User?          @relation("ActivitySecondaryUser", fields: [secondaryUserId], references: [id])
+  targetUser       User?          @relation("ActivityTarget", fields: [targetUserId], references: [id])
+  thread           Thread?        @relation(fields: [threadId], references: [id])
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes            ActivityLike[]
+  mentions         Mention[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model PersonalPackItem {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  category  String    @default("General")
+  quantity  Int       @default(1)
+  isPacked  Boolean   @default(false)
+  tripId    String?
+  eventId   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  event     Event?    @relation(fields: [eventId], references: [id])
+  trip      TripPlan? @relation(fields: [tripId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([eventId])
+  @@index([isPacked])
+}
+
+model UserPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  quickLinks           String?
+  basecampLayout       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  allowTagging         Boolean  @default(true)
+  allowWallPosts       Boolean  @default(true)
+  friendRequestSetting String   @default("EVERYONE")
+  profileVisibility    String   @default("PUBLIC")
+  showGear             String   @default("FRIENDS")
+  showLastActive       Boolean  @default(true)
+  showOnlineStatus     Boolean  @default(true)
+  showRVDetails        String   @default("FRIENDS")
+  showRecipes          String   @default("PUBLIC")
+  showTravelMap        String   @default("FRIENDS")
+  badgePosition        String?
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Attraction {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   @default("other")
+  state       String
+  city        String?
+  address     String?
+  imageUrl    String?
+  groupId     String?
+  description String?
+  website     String?
+  isVisited   Boolean  @default(false)
+  rating      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TopFriend {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  rank      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  friend    User     @relation("FriendInTopFriends", fields: [friendId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserTopFriends", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@unique([userId, rank])
+  @@index([userId])
+}
+
+model MaintenanceRecord {
+  id              String               @id @default(cuid())
+  userId          String
+  title           String
+  category        String
+  description     String?
+  cost            Float?
+  mileage         Int?
+  location        String?
+  tags            String[]             @default([])
+  serviceDate     DateTime
+  status          String               @default("COMPLETED")
+  notes           String?
+  receiptImage    String?
+  providerName    String?
+  providerAddress String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminder        MaintenanceReminder?
+
+  @@index([userId])
+}
+
+model MaintenanceReminder {
+  id                String             @id @default(cuid())
+  userId            String
+  maintenanceId     String?            @unique
+  title             String
+  category          String
+  description       String?
+  frequency         String
+  customMiles       Int?
+  customMonths      Int?
+  nextDueDate       DateTime?
+  nextDueMileage    Int?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  maintenanceRecord MaintenanceRecord? @relation(fields: [maintenanceId], references: [id])
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RVShowcase {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  title       String?
+  description String?
+  privacy     String   @default("PUBLIC")
+  photos      String[]
+  videoUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Group {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  privacy     String        @default("PUBLIC")
+  coverPhoto  String?
+  tags        String[]      @default([])
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  events      Event[]
+  createdBy   User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  invites     GroupInvite[]
+  members     GroupMember[]
+  posts       Post[]
+
+  @@index([slug])
+  @@index([createdById])
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  role      String   @default("MEMBER")
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupInvite {
+  id        String   @id @default(cuid())
+  groupId   String
+  inviterId String
+  inviteeId String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitee   User     @relation("GroupInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  inviter   User     @relation("GroupInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, inviteeId])
+  @@index([inviteeId])
+}
+
+model EventComment {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  content   String
+  mentions  String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Mention {
+  id                    String      @id @default(cuid())
+  postId                String?
+  activityId            String?
+  mentionedUserId       String?
+  mentionedCampgroundId String?
+  createdById           String
+  createdAt             DateTime    @default(now())
+  activity              Activity?   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdBy             User        @relation("CreatedMentions", fields: [createdById], references: [id], onDelete: Cascade)
+  mentionedCampground   Campground? @relation("CampgroundMentions", fields: [mentionedCampgroundId], references: [id], onDelete: Cascade)
+  mentionedUser         User?       @relation("UserMentions", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  post                  Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([mentionedUserId])
+  @@index([mentionedCampgroundId])
+  @@index([postId])
+  @@index([activityId])
+}
+
+model StateGasPrice {
+  id            String   @id @default(cuid())
+  stateCode     String   @unique
+  stateName     String
+  regularPrice  Float
+  midgradePrice Float?
+  premiumPrice  Float?
+  dieselPrice   Float
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+model GasStation {
+  id              String   @id @default(cuid())
+  name            String
+  brand           String
+  address         String
+  city            String
+  state           String
+  zipCode         String?
+  latitude        Float
+  longitude       Float
+  interstate      String?
+  exitNumber      String?
+  hasDiesel       Boolean  @default(true)
+  hasTruckParking Boolean  @default(false)
+  hasRVParking    Boolean  @default(false)
+  hasRestrooms    Boolean  @default(true)
+  hasShowers      Boolean  @default(false)
+  hasRestaurant   Boolean  @default(false)
+  hasStore        Boolean  @default(true)
+  hasPropane      Boolean  @default(false)
+  hasDumpStation  Boolean  @default(false)
+  phone           String?
+  website         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([state])
+  @@index([interstate])
+  @@index([brand])
+  @@index([latitude, longitude])
+}
+
+model RestStop {
+  id             String   @id @default(cuid())
+  name           String
+  state          String
+  latitude       Float
+  longitude      Float
+  interstate     String
+  direction      String?
+  mileMarker     Float?
+  hasRestrooms   Boolean  @default(true)
+  hasPicnicArea  Boolean  @default(false)
+  hasPetArea     Boolean  @default(false)
+  hasVending     Boolean  @default(false)
+  hasWifi        Boolean  @default(false)
+  hasRVParking   Boolean  @default(false)
+  hasDumpStation Boolean  @default(false)
+  hasWater       Boolean  @default(false)
+  is24Hours      Boolean  @default(true)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cookId         String?
+  cookStatus     String?  @default("PENDING")
+
+  @@index([state])
+  @@index([interstate])
+  @@index([latitude, longitude])
+}
+
+model Interstate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  direction   String
+  startState  String
+  endState    String
+  totalMiles  Float?
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model SavedTrip {
+  id                   String             @id @default(cuid())
+  userId               String
+  name                 String
+  description          String?
+  originAddress        String
+  originLat            Float
+  originLng            Float
+  destinationAddress   String
+  destinationLat       Float
+  destinationLng       Float
+  campgroundId         String?
+  distanceMeters       Int
+  durationSeconds      Int
+  polyline             String
+  plannedStops         Json               @default("[]")
+  estimatedFuelGallons Float?
+  estimatedFuelCost    Float?
+  mpgUsed              Float?
+  plannedStartDate     DateTime?
+  plannedEndDate       DateTime?
+  eventId              String?
+  visibility           String             @default("PRIVATE")
+  viewCount            Int                @default(0)
+  copyCount            Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  campground           Campground?        @relation(fields: [campgroundId], references: [id])
+  event                Event?             @relation(fields: [eventId], references: [id])
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments             SavedTripComment[]
+
+  @@index([userId])
+  @@index([campgroundId])
+  @@index([visibility])
+}
+
+model SavedTripComment {
+  id        String    @id @default(cuid())
+  tripId    String
+  userId    String
+  content   String
+  createdAt DateTime  @default(now())
+  trip      SavedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model CampgroundAnalytics {
+  id           String     @id @default(cuid())
+  campgroundId String
+  date         DateTime   @default(now())
+  eventType    String
+  userId       String?
+  source       String?
+  metadata     Json?
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+
+  @@index([campgroundId, date])
+  @@index([eventType])
+}
+
+model PhotoTag {
+  id        String   @id @default(cuid())
+  photoId   String
+  userId    String
+  taggedBy  String
+  x         Float?
+  y         Float?
+  createdAt DateTime @default(now())
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  tagger    User     @relation("PhotoTagsCreated", fields: [taggedBy], references: [id], onDelete: Cascade)
+  user      User     @relation("PhotoTagsReceived", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId])
+  @@index([photoId])
+  @@index([userId])
+}
+
+model PhotoCampgroundTag {
+  id           String     @id @default(cuid())
+  photoId      String
+  campgroundId String
+  taggedBy     String
+  createdAt    DateTime   @default(now())
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  photo        Photo      @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  tagger       User       @relation("CampgroundPhotoTagsCreated", fields: [taggedBy], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, campgroundId])
+  @@index([photoId])
+  @@index([campgroundId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  type      String
+  userId    String
+  postId    String?
+  commentId String?
+  createdAt DateTime @default(now())
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, type])
+  @@unique([userId, commentId, type])
+  @@index([postId])
+  @@index([commentId])
+}
+
+model Hashtag {
+  id        String        @id @default(cuid())
+  tag       String        @unique
+  postCount Int           @default(0)
+  createdAt DateTime      @default(now())
+  posts     PostHashtag[]
+}
+
+model PostHashtag {
+  id        String   @id @default(cuid())
+  postId    String
+  hashtagId String
+  createdAt DateTime @default(now())
+  hashtag   Hashtag  @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, hashtagId])
+}
+
+model CommentReply {
+  id            String   @id @default(cuid())
+  content       String
+  userId        String
+  commentId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  editHistory   Json?
+  parentComment Comment  @relation("CommentReplies", fields: [commentId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PinnedComment {
+  id        String   @id @default(cuid())
+  postId    String
+  commentId String   @unique
+  pinnedBy  String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [pinnedBy], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, commentId])
+}
+
+model BlockedUser {
+  id            String   @id @default(cuid())
+  userId        String
+  blockedUserId String
+  reason        String?
+  createdAt     DateTime @default(now())
+  blockedUser   User     @relation("BlockedByUsers", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  user          User     @relation("UserBlocks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blockedUserId])
+  @@index([userId])
+  @@index([blockedUserId])
+}
+
+model AccountActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  ipAddress String?
+  userAgent String?
+  details   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AccountDeletion {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  reason                String?
+  feedback              String?
+  requestedAt           DateTime  @default(now())
+  scheduledDeletionDate DateTime
+  cancelledAt           DateTime?
+  status                String    @default("PENDING")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([scheduledDeletionDate])
+}
+
+model EmailVerification {
+  id         String    @id @default(cuid())
+  userId     String
+  email      String
+  token      String    @unique
+  type       String
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Badge {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  name         String
+  description  String
+  imageUrl     String
+  category     String      @default("GENERAL")
+  requirement  String?
+  triggerType  String
+  triggerValue Int?
+  isActive     Boolean     @default(true)
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userBadges   UserBadge[]
+
+  @@index([slug])
+  @@index([triggerType])
+  @@index([isActive])
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+  progress Int?
+  notified Boolean  @default(false)
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+  @@index([earnedAt])
+}
+
+model InventoryItem {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  category      String         @default("General")
+  quantity      Int            @default(1)
+  notes         String?
+  imageUrl      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  cookId        String?
+  cookStatus    String?        @default("PENDING")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripPackItems TripPackItem[]
+
+  @@index([userId])
+  @@index([category])
+}
+
+model TripPackItem {
+  id               String         @id @default(cuid())
+  tripId           String?
+  eventId          String?
+  inventoryItemId  String?
+  customName       String?
+  customCategory   String?
+  quantity         Int            @default(1)
+  isPacked         Boolean        @default(false)
+  packedAt         DateTime?
+  packedById       String?
+  assignedToId     String?
+  assignmentStatus String         @default("PENDING")
+  declinedAt       DateTime?
+  declineReason    String?
+  createdById      String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  assignedTo       User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id])
+  createdBy        User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
+  event            Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
+  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  packedBy         User?          @relation("PackedByTripPackItems", fields: [packedById], references: [id])
+  trip             TripPlan?      @relation("TripPackItems", fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([eventId])
+  @@index([assignedToId])
+  @@index([inventoryItemId])
+  @@index([isPacked])
+}
+
+model PackingListTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  privacy     String   @default("PRIVATE")
+  items       Json
+  copiedCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([privacy])
+}
+
+model BasecampActivity {
+  id         String   @id @default(cuid())
+  userId     String
+  actorId    String
+  type       String
+  entityType String
+  entityId   String
+  entityName String?
+  metadata   Json?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  reaction   String?
+  actor      User     @relation("BasecampActivityActor", fields: [actorId], references: [id], onDelete: Cascade)
+  user       User     @relation("BasecampActivityRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model CreatorContent {
+  id             String                  @id @default(cuid())
+  creatorId      String
+  contentType    String
+  title          String?
+  description    String?
+  body           String?
+  thumbnailUrl   String?
+  videoUrl       String?
+  embedUrl       String?
+  embedPlatform  String?
+  category       String?
+  tags           String[]
+  campgroundId   String?
+  eventId        String?
+  tripId         String?
+  isSponsored    Boolean                 @default(false)
+  sponsorName    String?
+  affiliateLinks Json?
+  status         String                  @default("DRAFT")
+  publishedAt    DateTime?
+  viewCount      Int                     @default(0)
+  likeCount      Int                     @default(0)
+  commentCount   Int                     @default(0)
+  repostCount    Int                     @default(0)
+  saveCount      Int                     @default(0)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  collaborators  CreatorCollaboration[]
+  campground     Campground?             @relation(fields: [campgroundId], references: [id])
+  creator        User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  comments       CreatorContentComment[]
+  gearItems      CreatorContentGear[]
+  likes          CreatorContentLike[]
+  photos         CreatorContentPhoto[]
+  taggedUsers    CreatorContentTag[]
+  reposts        CreatorRepost[]
+  saves          CreatorSave[]
+
+  @@index([creatorId])
+  @@index([category])
+  @@index([status, publishedAt])
+  @@index([campgroundId])
+}
+
+model CreatorContentPhoto {
+  id        String         @id @default(cuid())
+  contentId String
+  imageUrl  String
+  caption   String?
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  content   CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+}
+
+model CreatorContentGear {
+  id           String         @id @default(cuid())
+  contentId    String
+  gearItemId   String?
+  name         String
+  description  String?
+  imageUrl     String?
+  affiliateUrl String?
+  createdAt    DateTime       @default(now())
+  content      CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+}
+
+model CreatorContentTag {
+  id           String         @id @default(cuid())
+  contentId    String
+  tagType      String
+  userId       String?
+  campgroundId String?
+  brandName    String?
+  createdAt    DateTime       @default(now())
+  campground   Campground?    @relation("TaggedCampground", fields: [campgroundId], references: [id])
+  content      CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user         User?          @relation("TaggedInContent", fields: [userId], references: [id])
+
+  @@unique([contentId, tagType, userId])
+  @@unique([contentId, tagType, campgroundId])
+  @@index([contentId])
+  @@index([userId])
+  @@index([campgroundId])
+}
+
+model CreatorCollaboration {
+  id             String         @id @default(cuid())
+  contentId      String
+  collaboratorId String
+  role           String         @default("COLLABORATOR")
+  createdAt      DateTime       @default(now())
+  collaborator   User           @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  content        CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, collaboratorId])
+  @@index([collaboratorId])
+}
+
+model CreatorFollow {
+  id         String   @id @default(cuid())
+  creatorId  String
+  followerId String
+  createdAt  DateTime @default(now())
+  creator    User     @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
+  follower   User     @relation("FollowingCreators", fields: [followerId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, followerId])
+  @@index([creatorId])
+  @@index([followerId])
+}
+
+model CreatorContentLike {
+  id        String         @id @default(cuid())
+  contentId String
+  userId    String
+  createdAt DateTime       @default(now())
+  content   CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+  @@index([contentId])
+  @@index([userId])
+}
+
+model CreatorContentComment {
+  id             String                  @id @default(cuid())
+  contentId      String
+  userId         String
+  body           String
+  parentId       String?
+  isCreatorReply Boolean                 @default(false)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  content        CreatorContent          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  parent         CreatorContentComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        CreatorContentComment[] @relation("CommentReplies")
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CreatorRepost {
+  id        String         @id @default(cuid())
+  contentId String
+  userId    String
+  comment   String?
+  createdAt DateTime       @default(now())
+  content   CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+  @@index([contentId])
+  @@index([userId])
+}
+
+model CreatorSave {
+  id        String         @id @default(cuid())
+  contentId String
+  userId    String
+  createdAt DateTime       @default(now())
+  content   CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+  @@index([userId])
+}
+
+model CreatorStats {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  totalViews         Int      @default(0)
+  totalLikes         Int      @default(0)
+  totalComments      Int      @default(0)
+  totalReposts       Int      @default(0)
+  totalSaves         Int      @default(0)
+  followerCount      Int      @default(0)
+  viewsThisWeek      Int      @default(0)
+  viewsThisMonth     Int      @default(0)
+  followersThisWeek  Int      @default(0)
+  followersThisMonth Int      @default(0)
+  lastCalculatedAt   DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreatorPageCollaborator {
+  id                     String   @id @default(cuid())
+  creatorId              String
+  collaboratorId         String
+  role                   String   @default("COLLABORATOR")
+  canPost                Boolean  @default(true)
+  canEdit                Boolean  @default(true)
+  canDelete              Boolean  @default(false)
+  canManageCollaborators Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  collaborator           User     @relation("CreatorPageCollaborator", fields: [collaboratorId], references: [id], onDelete: Cascade)
+  creator                User     @relation("CreatorPageOwner", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, collaboratorId])
+  @@index([collaboratorId])
+  @@index([creatorId])
+}
+
+model BookingClick {
+  id             String     @id @default(cuid())
+  userId         String
+  campgroundId   String
+  clickedAt      DateTime   @default(now())
+  followUpSentAt DateTime?
+  responded      Boolean    @default(false)
+  didBook        Boolean?
+  createdEventId String?
+  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([campgroundId])
+  @@index([clickedAt])
+}
+
+model RecipeCommentMute {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+model EventCommentMute {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model EventBlockedUser {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  blockedBy String
+  reason    String?
+  createdAt DateTime @default(now())
+  blocker   User     @relation("EventBlocker", fields: [blockedBy], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation("BlockedFromEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model EventSubtabPrivacy {
+  id        String   @id @default(cuid())
+  eventId   String
+  subtab    String
+  privacy   String   @default("INHERIT")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, subtab])
+  @@index([eventId])
+}
+
+model ActivityLike {
+  id         String   @id @default(cuid())
+  activityId String
+  userId     String
+  createdAt  DateTime @default(now())
+  reaction   String?
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+  @@index([userId])
+}
+
+model RecipeLike {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId])
+  @@index([recipeId])
+  @@index([userId])
+}
+
+model RecipeCommentLike {
+  id        String        @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime      @default(now())
+  reaction  String?
+  comment   RecipeComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model ThreadIgnore {
+  id        String    @id @default(cuid())
+  userId    String
+  threadId  String
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  thread    Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@index([userId])
+  @@index([threadId])
+  @@index([expiresAt])
+}
+
+model PhotoLike {
+  id        String   @id @default(cuid())
+  photoId   String
+  userId    String
+  createdAt DateTime @default(now())
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId])
+  @@index([photoId])
+  @@index([userId])
+}
+
+model Video {
+  id           String       @id @default(cuid())
+  userId       String
+  albumId      String?
+  title        String?
+  description  String?
+  videoUrl     String
+  thumbnailUrl String?
+  duration     Int?
+  visibility   String       @default("PUBLIC")
+  viewCount    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  album        PhotoAlbum?  @relation("AlbumVideos", fields: [albumId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes        VideoLike[]
+  watches      VideoWatch[]
+
+  @@index([userId])
+  @@index([albumId])
+  @@index([visibility])
+  @@index([createdAt])
+}
+
+model VideoLike {
+  id        String   @id @default(cuid())
+  videoId   String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@index([videoId])
+  @@index([userId])
+}
+
+model PhotoReaction {
+  id        String   @id @default(cuid())
+  photoId   String
+  userId    String
+  type      String
+  createdAt DateTime @default(now())
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId, type])
+  @@index([photoId])
+  @@index([userId])
+  @@index([type])
+}
+
+model PhotoSave {
+  id        String   @id @default(cuid())
+  photoId   String
+  userId    String
+  createdAt DateTime @default(now())
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId])
+  @@index([photoId])
+  @@index([userId])
+}
+
+model PhotoReport {
+  id         String    @id @default(cuid())
+  photoId    String
+  reporterId String
+  reason     String
+  details    String?
+  status     String    @default("PENDING")
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  photo      Photo     @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  reporter   User      @relation("PhotoReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer   User?     @relation("PhotoReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([photoId])
+  @@index([reporterId])
+  @@index([status])
+}
+
+model TagBlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   User     @relation("TagBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("TagBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model PhotoMoment {
+  id         String        @id @default(cuid())
+  userId     String
+  title      String
+  type       String
+  startDate  DateTime
+  endDate    DateTime
+  coverUrl   String?
+  photoCount Int           @default(0)
+  isHidden   Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  photos     MomentPhoto[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startDate])
+  @@index([type])
+}
+
+model MomentPhoto {
+  id        String      @id @default(cuid())
+  momentId  String
+  photoId   String
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+  moment    PhotoMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  photo     Photo       @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@unique([momentId, photoId])
+  @@index([momentId])
+  @@index([photoId])
+}
+
+model VideoWatch {
+  id             String   @id @default(cuid())
+  videoId        String
+  userId         String?
+  sessionId      String
+  watchedSeconds Int      @default(0)
+  totalDuration  Int
+  completionRate Float    @default(0)
+  dropOffSecond  Int?
+  rewatchCount   Int      @default(0)
+  source         String   @default("FEED")
+  deviceType     String?
+  isFollower     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id])
+  video          Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([source])
+  @@index([completionRate])
+}
+
+model ContentAnalytics {
+  id               String   @id @default(cuid())
+  contentId        String
+  contentType      String
+  userId           String
+  date             DateTime @db.Date
+  views            Int      @default(0)
+  uniqueViews      Int      @default(0)
+  likes            Int      @default(0)
+  comments         Int      @default(0)
+  saves            Int      @default(0)
+  shares           Int      @default(0)
+  totalWatchTime   Int      @default(0)
+  avgWatchTime     Float    @default(0)
+  avgCompletion    Float    @default(0)
+  feedViews        Int      @default(0)
+  profileViews     Int      @default(0)
+  directViews      Int      @default(0)
+  shareViews       Int      @default(0)
+  discoveryViews   Int      @default(0)
+  followerViews    Int      @default(0)
+  nonFollowerViews Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, date])
+  @@index([userId])
+  @@index([contentType])
+  @@index([date])
+}
+
+model ProfileVisit {
+  id               String   @id @default(cuid())
+  profileUserId    String
+  visitorId        String?
+  source           String   @default("DIRECT")
+  sourceContentId  String?
+  resultedInFollow Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  profileUser      User     @relation("ProfileVisits", fields: [profileUserId], references: [id], onDelete: Cascade)
+  visitor          User?    @relation("VisitorVisits", fields: [visitorId], references: [id])
+
+  @@index([profileUserId])
+  @@index([visitorId])
+  @@index([createdAt])
+  @@index([source])
+}
+
+model ContentShare {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String
+  sharerId    String
+  shareType   String
+  platform    String?
+  clickCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  sharer      User     @relation(fields: [sharerId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([sharerId])
+  @@index([createdAt])
+}
+
+model CreatorInsight {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  followersTotal     Int      @default(0)
+  followers7d        Int      @default(0)
+  followers30d       Int      @default(0)
+  avgEngagementRate  Float    @default(0)
+  avgVideoCompletion Float    @default(0)
+  bestPostingHour    Int?
+  bestPostingDay     Int?
+  bestContentType    String?
+  followerViewRate   Float    @default(0)
+  topContentIds      String[]
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PhotoComment {
+  id        String      @id @default(cuid())
+  userId    String
+  photoId   String?
+  albumId   String?
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  album     PhotoAlbum? @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  photo     Photo?      @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([photoId])
+  @@index([albumId])
+  @@index([userId])
+}
+
+model Album {
+  id                              String              @id
+  userId                          String
+  title                           String
+  description                     String?
+  coverMediaId                    String?             @unique
+  defaultVisibility               Visibility          @default(FRIENDS_ONLY)
+  discoveryEnabled                Boolean             @default(false)
+  featured                        Boolean             @default(false)
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  Media_Album_coverMediaIdToMedia Media?              @relation("Album_coverMediaIdToMedia", fields: [coverMediaId], references: [id])
+  User                            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  AlbumFeedCooldown               AlbumFeedCooldown[]
+  Media_Media_albumIdToAlbum      Media[]             @relation("Media_albumIdToAlbum")
+
+  @@index([discoveryEnabled, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AlbumFeedCooldown {
+  id        String   @id
+  userId    String
+  albumId   String?
+  expiresAt DateTime
+  Album     Album?   @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, albumId])
+  @@index([userId, expiresAt])
+}
+
+model BlockedTagger {
+  id                                     String   @id
+  blockedById                            String
+  blockedUserId                          String
+  createdAt                              DateTime @default(now())
+  User_BlockedTagger_blockedByIdToUser   User     @relation("BlockedTagger_blockedByIdToUser", fields: [blockedById], references: [id], onDelete: Cascade)
+  User_BlockedTagger_blockedUserIdToUser User     @relation("BlockedTagger_blockedUserIdToUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockedById, blockedUserId])
+  @@index([blockedById])
+}
+
+model Media {
+  id                              String            @id
+  albumId                         String
+  uploaderId                      String
+  type                            MediaType
+  cloudinaryId                    String            @unique
+  url                             String
+  width                           Int?
+  height                          Int?
+  visibility                      Visibility        @default(FRIENDS_ONLY)
+  duration                        Int?
+  thumbnailUrl                    String?
+  thumbnailOffset                 Int?
+  hlsUrl                          String?
+  mp4UrlHd                        String?
+  mp4UrlSd                        String?
+  processingStatus                VideoStatus?
+  discoveryEnabled                Boolean           @default(true)
+  caption                         String?
+  locationName                    String?
+  latitude                        Float?
+  longitude                       Float?
+  takenAt                         DateTime?
+  createdAt                       DateTime          @default(now())
+  updatedAt                       DateTime
+  Album_Album_coverMediaIdToMedia Album?            @relation("Album_coverMediaIdToMedia")
+  Album_Media_albumIdToAlbum      Album             @relation("Media_albumIdToAlbum", fields: [albumId], references: [id], onDelete: Cascade)
+  User                            User              @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  MediaComment                    MediaComment[]
+  MediaImpression                 MediaImpression[]
+  MediaReaction                   MediaReaction[]
+  MediaReport                     MediaReport[]
+  MediaTag                        MediaTag[]
+
+  @@index([albumId, createdAt])
+  @@index([processingStatus])
+  @@index([uploaderId, createdAt])
+  @@index([visibility, discoveryEnabled, createdAt])
+}
+
+model MediaComment {
+  id                 String         @id
+  mediaId            String
+  userId             String
+  parentId           String?
+  content            String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime
+  Media              Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  MediaComment       MediaComment?  @relation("MediaCommentToMediaComment", fields: [parentId], references: [id], onDelete: Cascade)
+  other_MediaComment MediaComment[] @relation("MediaCommentToMediaComment")
+  User               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId, createdAt])
+  @@index([parentId])
+}
+
+model MediaImpression {
+  id        String           @id
+  mediaId   String
+  userId    String?
+  source    ImpressionSource
+  createdAt DateTime         @default(now())
+  Media     Media            @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  User      User?            @relation(fields: [userId], references: [id])
+
+  @@index([mediaId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model MediaReaction {
+  id        String       @id
+  mediaId   String
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+  Media     Media        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  User      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, userId, type])
+  @@index([mediaId])
+}
+
+model MediaReport {
+  id          String       @id
+  mediaId     String
+  reporterId  String
+  reason      ReportReason
+  description String?
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime     @default(now())
+  Media       Media        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  User        User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
+  @@index([status, createdAt])
+}
+
+model MediaTag {
+  id                               String    @id
+  mediaId                          String
+  taggedById                       String
+  taggedUserId                     String
+  status                           TagStatus @default(PENDING)
+  positionX                        Float?
+  positionY                        Float?
+  createdAt                        DateTime  @default(now())
+  respondedAt                      DateTime?
+  Media                            Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  User_MediaTag_taggedByIdToUser   User      @relation("MediaTag_taggedByIdToUser", fields: [taggedById], references: [id], onDelete: Cascade)
+  User_MediaTag_taggedUserIdToUser User      @relation("MediaTag_taggedUserIdToUser", fields: [taggedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, taggedUserId])
+  @@index([mediaId])
+  @@index([taggedUserId, status, createdAt])
 }
 
 enum CampgroundTier {
@@ -36,2309 +2546,73 @@ enum AnnouncementPriority {
   URGENT
 }
 
-
-
-
-model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  password        String
-  username        String    @unique
-  firstName       String
-  lastName        String
-  profilePicture  String?
-  coverPhoto      String?
-  bio             String?
-  location        String?
-  website         String?
-  facebookUrl     String?
-  instagramUrl    String?
-  tiktokUrl       String?
-  redditUrl       String?
-  youtubeUrl      String?
-  twitterUrl      String?
-  blueskyUrl      String?
-  showSocialOnProfile    Boolean @default(true)
-  showSocialOnCreator    Boolean @default(true)
-  rvType          String?
-  rvYear          Int?
-  rvMake          String?
-  rvModel         String?
-  rvLength        Int?
-  rvWidth         Int?
-  rvHeight        Int?
-  licensePlate    String?
-  licensePlateState String?
-  tagExpiration   DateTime?
-  rvOdometer      Int?        // Current odometer reading
-  rvSleeps        Int?
-  rvSlideouts     Int?
-  rvWeight        Int?
-  rvDescription   String?
-  rvFeatures      String[]
-  
-  // Home location for trip planning
-  homeAddress     String?
-  homeCity        String?
-  homeState       String?
-  homeZipCode     String?
-  homeCountry     String?   @default("USA")
-  homeLatitude    Float?
-  homeLongitude   Float?
-  
-  // Travel preferences
-  travelPartyType   String?   // SOLO, COUPLE, FAMILY, GROUP
-  travelPartySize   Int?
-  hasPets           Boolean   @default(false)
-  petTypes          String[]  @default([])
-  preferredTripLength String? // WEEKEND, WEEK, EXTENDED, FULLTIME
-  
-  // Onboarding
-  onboardingCompleted Boolean @default(false)
-  onboardingStep      Int     @default(0)
-  
-  status          String?
-  statusEmoji     String?
-  statusType      String?
-  currentCampsite String?
-  showCampingStatus Boolean @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  tripPlans         TripPlan[]
-  ridingWithTrips   TripPlan[]       @relation("RidingWith")
-  mileageLogs       UserMileageLog[]
-  bookingClicks     BookingClick[]
-
-  posts                Post[]
-  comments             Comment[]
-  likes                Like[]
-  trips                Trip[]
-  stays                Stay[]
-  events               Event[]
-  attractions          Attraction[]
-  topFriends           TopFriend[] @relation("UserTopFriends")
-  inTopFriendsOf       TopFriend[] @relation("FriendInTopFriends")
-  eventAttendees       EventAttendee[]
-  eventComments        EventComment[]
-  gearItems            GearItem[]
-  stateVisits          StateVisit[]
-  stateVisitAttendees  StateVisitAttendee[]
-  notifications        Notification[]
-  friendshipsInitiated Friendship[] @relation("FriendshipInitiator")
-  friendshipsReceived  Friendship[] @relation("FriendshipReceiver")
-  recipes              Recipe[]
-  recipeRatings        RecipeRating[]
-  recipeComments       RecipeComment[]
-  savedRecipes         SavedRecipe[]
-  photoAlbums          PhotoAlbum[]
-  photos               Photo[]
-  checkIns             CheckIn[]
-  userStickers         UserSticker[]
-  stickerRequests      StickerRequest[]
-  campgroundFollows    CampgroundFollow[]  
-  campgroundAdmins       CampgroundAdmin[]
-  campgroundPosts        CampgroundPost[]
-  campgroundPostLikes    CampgroundPostLike[]
-  campgroundPostComments CampgroundPostComment[]  
-  campgroundReviews      CampgroundReview[]
-  campgroundPhotos       CampgroundPhoto[]
-  reviewedPhotos         CampgroundPhoto[]    @relation("PhotoReviewer")
-  campgroundEvents       CampgroundEvent[]
-  campgroundAnnouncements CampgroundAnnouncement[]
-  threads                Thread[]
-  threadPosts            ThreadPost[]
-  threadPostLikes        ThreadPostLike[]
-  activityLikes          ActivityLike[]
-  recipeLikes            RecipeLike[]
-  recipeCommentLikes     RecipeCommentLike[]
-  threadFavorites        ThreadFavorite[]
-  threadIgnores          ThreadIgnore[]
-  activities             Activity[]
-  activityTargets        Activity[] @relation("ActivityTarget")
-  activitySecondary      Activity[] @relation("ActivitySecondaryUser")
-  wallPosts              Post[] @relation("WallPosts")  
-  inventoryItems              InventoryItem[]
-  assignedTripPackItems       TripPackItem[]     @relation("AssignedTripPackItems")
-  packedTripPackItems         TripPackItem[]     @relation("PackedByTripPackItems")
-  createdTripPackItems        TripPackItem[]     @relation("CreatedTripPackItems")
-  packingListTemplates        PackingListTemplate[]
-  basecampActivitiesReceived  BasecampActivity[] @relation("BasecampActivityRecipient")
-  basecampActivitiesPerformed BasecampActivity[] @relation("BasecampActivityActor")
-  personalPackItems      PersonalPackItem[]
-  preferences            UserPreferences?
-  maintenanceRecords     MaintenanceRecord[]
-  maintenanceReminders   MaintenanceReminder[]
-  rvShowcase             RVShowcase?
-  groups                 Group[]
-  groupMemberships       GroupMember[]
-  groupInvitesSent       GroupInvite[] @relation("GroupInviter")
-  groupInvitesReceived   GroupInvite[] @relation("GroupInvitee")
-  mentions               Mention[] @relation("UserMentions")
-  createdMentions        Mention[] @relation("CreatedMentions")
-  savedTrips             SavedTrip[]
-  tripComments           SavedTripComment[]  
-
-  claimedCampgrounds     Campground[]      @relation("ClaimedCampgrounds")
-  mutedEntities          MutedEntity[]     @relation("UserMutes")
-  mutedByUsers           MutedEntity[]     @relation("MutedByUsers")
-  
-  photoTagsReceived      PhotoTag[]        @relation("PhotoTagsReceived")
-  photoTagsCreated       PhotoTag[]        @relation("PhotoTagsCreated")
-  campgroundPhotoTagsCreated PhotoCampgroundTag[] @relation("CampgroundPhotoTagsCreated")
-  
-  // Social enhancements
-  reactions              Reaction[]
-  commentReplies         CommentReply[]
-  pinnedComments         PinnedComment[]
-
-  // Privacy & Security
-  lastActiveAt         DateTime?
-  blockedUsers         BlockedUser[] @relation("UserBlocks")
-  blockedByUsers       BlockedUser[] @relation("BlockedByUsers")
-  activityLogs         AccountActivityLog[]
-  accountDeletion      AccountDeletion?
-  emailVerifications   EmailVerification[]
-
-// Creator Page Settings
-  isCreator         Boolean   @default(false)
-  creatorEnabledAt  DateTime?
-  creatorBio        String?
-  creatorDisplayName String?
-  creatorHandle     String?
-  creatorSpecialties String[]
-  creatorCoverImage String?
-  creatorVerified   Boolean   @default(false)
-  creatorFeatured   Boolean   @default(false)
-  
-  // Creator Relations
-  creatorContent       CreatorContent[]
-  creatorFollowers     CreatorFollow[]   @relation("CreatorFollowers")
-  followingCreators    CreatorFollow[]   @relation("FollowingCreators")
-  creatorLikes         CreatorContentLike[]
-  creatorComments      CreatorContentComment[]
-  creatorReposts       CreatorRepost[]
-  creatorSaves         CreatorSave[]
-  creatorCollaborations CreatorCollaboration[]
-  creatorStats         CreatorStats?
-  taggedInContent      CreatorContentTag[] @relation("TaggedInContent")
-  creatorPageOwned     CreatorPageCollaborator[] @relation("CreatorPageOwner")
-  creatorPageCollabs   CreatorPageCollaborator[] @relation("CreatorPageCollaborator")
-
-
-// Badges for users
-
-  badges            UserBadge[]
-  assignedMeals     EventMeal[]   @relation("MealCook")
-  mealRSVPs         MealRSVP[]    @relation("MealRSVPs")
-  recipeCommentMutes RecipeCommentMute[]
-  eventCommentMutes  EventCommentMute[]
-  blockedFromEvents  EventBlockedUser[] @relation("BlockedFromEvents")
-  eventBlocksCreated EventBlockedUser[] @relation("EventBlocker")
-
-  @@index([email])
-  @@index([username])
-}
-
-model Post {
-  id          String   @id @default(cuid())
-  userId      String
-  wallOwnerId String?  // NEW: whose wall this post is on (null = own wall)
-  content     String
-  imageUrl    String?
-  groupId     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  wallOwner      User?           @relation("WallPosts", fields: [wallOwnerId], references: [id], onDelete: Cascade)
-  group          Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  comments       Comment[]
-  likes          Like[]
-  mentions       Mention[]
-  reactions      Reaction[]
-  hashtags       PostHashtag[]
-  pinnedComments PinnedComment[]
-  
-  @@index([userId])
-  @@index([wallOwnerId])
-
-  @@index([createdAt])
-}
-
-
-model Comment {
-  id          String   @id @default(cuid())
-  postId      String
-  userId      String
-  content     String
-  imageUrl    String?  // For rich media comments
-  editHistory Json?    // Array of {content, editedAt}
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  post          Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reactions     Reaction[]
-  replies       CommentReply[]  @relation("CommentReplies")
-  pinnedComment PinnedComment?
-
-  @@index([postId])
-  @@index([userId])
-}
-
-model Like {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, userId])
-  @@index([postId])
-  @@index([userId])
-}
-
-model Friendship {
-  id          String   @id @default(cuid())
-  initiatorId String
-  receiverId  String
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  initiator User @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
-  receiver  User @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-
-  @@unique([initiatorId, receiverId])
-  @@index([initiatorId])
-  @@index([receiverId])
-  @@index([status])
-}
-
-model Trip {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  startDate   DateTime
-  endDate     DateTime
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stays Stay[]
-
-  @@index([userId])
-  @@index([startDate])
-}
-
-model Campground {
-  id          String   @id @default(cuid())
-  name        String
-  location    String
-  state       String?
-  description String?
-  latitude    Float?
-  longitude   Float?
-  amenities   String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  campgroundMapUrl String?  
-  bookingClicks BookingClick[]  
-
-
-  // === Business Tier System ===
-  tier              CampgroundTier @default(FREE)
-  tierStartDate     DateTime?
-  tierEndDate       DateTime?
-
-  // === Claim & Ownership ===
-  claimedAt         DateTime?
-  claimedById       String?
-  claimedBy         User?          @relation("ClaimedCampgrounds", fields: [claimedById], references: [id])
-  verificationStatus ClaimStatus   @default(UNCLAIMED)
-  verificationDocs  String[]       @default([])
-
-  // === Branding (Class B+) ===
-  imageUrl          String?
-  accentColor       String?
-  headerLayout      String?
-  theme             String?
-  customSlug        String?        @unique
-
-  // === Business Info ===
-  hashtag           String?        @unique
-  businessEmail     String?
-  businessPhone     String?
-  bookingUrl        String?
-  campspotSlug      String?        // Campspot.com integration
-  websiteUrl        String?
-  
-  // === Social Links ===
-  facebookUrl       String?
-  instagramUrl      String?
-  twitterUrl        String?
-  youtubeUrl        String?
-  tiktokUrl         String?
-
-  stays       Stay[]
-  events      Event[]
-  stateVisits StateVisit[]
-  checkIns    CheckIn[]
-  stickers    Sticker[]
-  followers   CampgroundFollow[]  
-  admins      CampgroundAdmin[]
-  posts       CampgroundPost[]
-  reviews     CampgroundReview[]
-  photos      CampgroundPhoto[]
-  campgroundEvents  CampgroundEvent[]
-  announcements  CampgroundAnnouncement[]  
-  threads           Thread[]
-  activities        Activity[] @relation("ActivityCampground")
-  mentions    Mention[] @relation("CampgroundMentions")
-  savedTrips  SavedTrip[]
-  analytics   CampgroundAnalytics[]
-  mutedBy     MutedEntity[]
-  photoTags   PhotoCampgroundTag[]
-  creatorContent    CreatorContent[]
-  taggedInCreatorContent   CreatorContentTag[] @relation("TaggedCampground")
-
-  @@index([state])
-  @@index([name])
-}
-
-model Stay {
-  id           String    @id @default(cuid())
-  userId       String
-  tripId       String?
-  campgroundId String
-  startDate    DateTime
-  endDate      DateTime
-  notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip       Trip?      @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  campground Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tripId])
-  @@index([campgroundId])
-  @@index([startDate])
-}
-
-model Event {
-  id           String    @id @default(cuid())
-  organizerId  String
-  campgroundId String?
-  groupId      String?
-  title        String
-  description  String?
-  bannerImage  String?
-  startDate    DateTime
-  endDate      DateTime
-  location     String?
-  tags         String[]  @default([])
-  isWishlist  Boolean  @default(false)
-  privacy     String   @default("PUBLIC")  // PUBLIC, FRIENDS, PRIVATE
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  organizer   User            @relation(fields: [organizerId], references: [id], onDelete: Cascade)
-  campground  Campground?     @relation(fields: [campgroundId], references: [id], onDelete: SetNull)
-  group       Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  attendees   EventAttendee[]
-  meals       EventMeal[]
-  stateVisits StateVisit[]
-  tripPlans   TripPlan[]  
-  activities  Activity[]
-  personalPackItems PersonalPackItem[]
-  photos      Photo[]
-  comments    EventComment[]
-  savedTrips  SavedTrip[]  
-  tripPackItems TripPackItem[] @relation("EventTripPackItems")
-  mutedBy          MutedEntity[]
-  commentMutes     EventCommentMute[]
-  blockedUsers     EventBlockedUser[]
-  subtabPrivacy    EventSubtabPrivacy[]
-
-
-
-  @@index([organizerId])
-  @@index([campgroundId])
-  @@index([startDate])
-}
-
-model EventAttendee {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, userId])
-  @@index([eventId])
-  @@index([userId])
-}
-
-model EventMeal {
-  id          String   @id @default(cuid())
-  eventId     String
-  recipeId    String?
-  mealType    String
-  scheduledAt DateTime
-  notes       String?
-  cookId      String?
-  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  cook   User?   @relation("MealCook", fields: [cookId], references: [id], onDelete: SetNull)
-  rsvps  MealRSVP[]
-
-  @@index([eventId])
-  @@index([recipeId])
-}
-
-model MealRSVP {
-  id        String   @id @default(cuid())
-  mealId    String
-  userId    String
-  status    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  meal EventMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  user User      @relation("MealRSVPs", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([mealId, userId])
-  @@index([mealId])
-  @@index([userId])
-}
-
-model GearItem {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  category    String
-  description String?
-  imageUrl    String?
-  groupId     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([category])
-}
-
-model PhotoAlbum {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  privacy     String   @default("PUBLIC")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  photos      Photo[]
-  stateVisits StateVisitAlbum[]
-
-  @@index([userId])
-  @@index([privacy])
-}
-
-model Photo {
-  id        String   @id @default(cuid())
-  userId    String
-  albumId   String?
-  eventId   String?
-  imageUrl  String
-  caption   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  album PhotoAlbum? @relation(fields: [albumId], references: [id], onDelete: SetNull)
-  event Event?      @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  
-  userTags       PhotoTag[]
-  campgroundTags PhotoCampgroundTag[]
-
-  @@index([userId])
-  @@index([albumId])
-  @@index([eventId])
-}
-
-
-
-model StateVisit {
-  id         String    @id @default(cuid())
-  userId     String
-  state      String
-  startDate  DateTime
-  endDate    DateTime?
-  notes      String?
-  campsiteId String?
-  eventId    String?
-  visibility String   @default("PUBLIC")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campsite  Campground?          @relation(fields: [campsiteId], references: [id])
-  event     Event?               @relation(fields: [eventId], references: [id])
-  attendees StateVisitAttendee[]
-  albums    StateVisitAlbum[]
-
-  @@index([userId])
-  @@index([state])
-  @@index([startDate])
-  @@index([campsiteId])
-  @@index([eventId])
-}
-
-model StateVisitAlbum {
-  id           String   @id @default(cuid())
-  stateVisitId String
-  albumId      String
-  createdAt    DateTime @default(now())
-
-  stateVisit StateVisit @relation(fields: [stateVisitId], references: [id], onDelete: Cascade)
-  album      PhotoAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
-
-  @@unique([stateVisitId, albumId])
-  @@index([stateVisitId])
-  @@index([albumId])
-}
-
-model StateVisitAttendee {
-  id           String   @id @default(cuid())
-  stateVisitId String
-  attendeeId   String
-  createdAt    DateTime @default(now())
-
-  stateVisit StateVisit @relation(fields: [stateVisitId], references: [id], onDelete: Cascade)
-  attendee   User       @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
-
-  @@unique([stateVisitId, attendeeId])
-  @@index([stateVisitId])
-  @@index([attendeeId])
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  content   String
-  link      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([read])
-
-  @@index([createdAt])
-}
-
-model MutedEntity {
-  id                String      @id @default(cuid())
-  userId            String
-  mutedUserId       String?
-  mutedCampgroundId String?
-  mutedEventId      String?     // NEW: mute specific events
-  mutedActivityId   String?     // NEW: dismiss specific activities
-  
-  // Snooze duration
-  snoozeDuration    String?     // "7_DAYS", "30_DAYS", "120_DAYS", "FOREVER"
-  snoozeUntil       DateTime?   // When snooze expires (null = forever)
-  
-  createdAt         DateTime    @default(now())
-  
-  user              User        @relation("UserMutes", fields: [userId], references: [id], onDelete: Cascade)
-  mutedUser         User?       @relation("MutedByUsers", fields: [mutedUserId], references: [id], onDelete: Cascade)
-  mutedCampground   Campground? @relation(fields: [mutedCampgroundId], references: [id], onDelete: Cascade)
-  mutedEvent        Event?      @relation(fields: [mutedEventId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, mutedUserId])
-  @@unique([userId, mutedCampgroundId])
-  @@unique([userId, mutedEventId])
-  @@unique([userId, mutedActivityId])
-  @@index([userId])
-  @@index([mutedUserId])
-  @@index([mutedCampgroundId])
-  @@index([snoozeUntil])
-}
-
-// DELETE the old model below this line
-model Recipe {
-  id           String   @id @default(cuid())
-  userId       String
-  title        String
-  description  String?
-  ingredients  String[]
-  instructions String[]
-  prepTime     Int?
-  cookTime     Int?
-  servings     Int?
-  difficulty   String?
-  cuisine      String?
-  category     String?
-  dietaryPreferences String[] @default([])
-  privacy      String   @default("PUBLIC")
-  imageUrl     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ratings  RecipeRating[]
-  meals    EventMeal[]
-  comments RecipeComment[]
-  savedBy  SavedRecipe[]
-  activities Activity[]
-  likes      RecipeLike[]
-  commentMutes RecipeCommentMute[]
-
-  @@index([userId])
-  @@index([category])
-  @@index([cuisine])
-  @@index([privacy])
-}
-
-model RecipeRating {
-  id        String   @id @default(cuid())
-  recipeId  String
-  userId    String
-  rating    Int
-  review    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([recipeId, userId])
-  @@index([recipeId])
-  @@index([userId])
-}
-
-model RecipeComment {
-  id        String   @id @default(cuid())
-  recipeId  String
-  userId    String
-  content   String
-  imageUrl  String?
-  mentions  String[] @default([])
-  parentId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  recipe  Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes   RecipeCommentLike[]
-  parent  RecipeComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies RecipeComment[] @relation("CommentReplies")
-
-  @@index([recipeId])
-  @@index([userId])
-  @@index([parentId])
-}
-
-model SavedRecipe {
-  id        String   @id @default(cuid())
-  userId    String
-  recipeId  String
-  favorite  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, recipeId])
-  @@index([userId])
-  @@index([recipeId])
-}
-
-model CheckIn {
-  id           String    @id @default(cuid())
-  userId       String
-  campgroundId String
-  checkInDate  DateTime
-  checkOutDate DateTime?
-  siteNumber   String?
-  notes        String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campground Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([campgroundId])
-  @@index([isActive])
-}
-
-model Sticker {
-  id           String   @id @default(cuid())
-  campgroundId String
-  name         String
-  description  String?
-  imageUrl     String?
-  emoji        String?
-  criteria     String?
-  isLimited    Boolean  @default(false)
-  maxQuantity  Int?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  campground      Campground       @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  userStickers    UserSticker[]
-  stickerRequests StickerRequest[]
-
-  @@index([campgroundId])
-}
-
-model UserSticker {
-  id        String   @id @default(cuid())
-  userId    String
-  stickerId String
-  earnedAt  DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sticker Sticker @relation(fields: [stickerId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, stickerId])
-  @@index([userId])
-  @@index([stickerId])
-}
-
-model StickerRequest {
-  id        String   @id @default(cuid())
-  userId    String
-  stickerId String
-  evidence  String?
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sticker Sticker @relation(fields: [stickerId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([stickerId])
-  @@index([status])
-}
-
-model CampgroundFollow {
-  id           String   @id @default(cuid())
-  userId       String
-  campgroundId String
-  createdAt    DateTime @default(now())
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campground Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, campgroundId])
-  @@index([userId])
-  @@index([campgroundId])
-}
-
-model CampgroundAdmin {
-  id           String   @id @default(cuid())
-  userId       String
-  campgroundId String
-  role         AdminRole @default(MODERATOR)
-  addedById    String?
-  createdAt    DateTime @default(now())
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campground Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, campgroundId])
-  @@index([userId])
-  @@index([campgroundId])
-}
-
-model CampgroundPost {
-  id           String   @id @default(cuid())
-  campgroundId String
-  authorId     String
-  title        String?
-  content      String
-  imageUrl     String?
-  isPinned     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  campground Campground              @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  author     User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes      CampgroundPostLike[]
-  comments   CampgroundPostComment[]
-
-  @@index([campgroundId])
-  @@index([authorId])
-
-  @@index([createdAt])
-}
-
-model CampgroundPostLike {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  createdAt DateTime @default(now())
-
-  post CampgroundPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, userId])
-  @@index([postId])
-  @@index([userId])
-}
-
-model CampgroundPostComment {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  post CampgroundPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId])
-  @@index([userId])
-}
-
-// Campground Reviews (S'mores rating system)
-model CampgroundReview {
-  id           String     @id @default(cuid())
-  campgroundId String
-  userId       String
-  rating       Int        // 1-5 (s'mores)
-  title        String?
-  review       String?
-  visitDate    DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([campgroundId, userId])
-}
-
-// Campground Photos (user-submitted, admin-approved)
-model CampgroundPhoto {
-  id           String     @id @default(cuid())
-  campgroundId String
-  userId       String
-  imageUrl     String
-  caption      String?
-  status       String     @default("PENDING") // PENDING, APPROVED, REJECTED
-  reviewedBy   String?
-  reviewedAt   DateTime?
-  createdAt    DateTime   @default(now())
-
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewer     User?      @relation("PhotoReviewer", fields: [reviewedBy], references: [id])
-}
-
-// Campground Events
-model CampgroundEvent {
-  id           String     @id @default(cuid())
-  campgroundId String
-  createdById  String
-  title        String
-  description  String?
-  imageUrl     String?
-  startDate    DateTime
-  endDate      DateTime?
-  location     String?
-  tags         String[]  @default([])    // Specific location within campground
-  isRecurring  Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  createdBy    User       @relation(fields: [createdById], references: [id])
-}
-
-// Campground Announcements/News
-model CampgroundAnnouncement {
-  id           String               @id @default(cuid())
-  campgroundId String
-  authorId     String
-  title        String
-  content      String
-  imageUrl     String?
-  isPinned     Boolean              @default(false)
-  priority     AnnouncementPriority @default(NORMAL)
-  scheduledAt  DateTime?            // When to publish (null = publish immediately)
-  publishedAt  DateTime?            // When actually published
-  isPublished  Boolean              @default(true)
-  expiresAt    DateTime?            // Optional expiration date
-  viewCount    Int                  @default(0)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  author       User       @relation(fields: [authorId], references: [id])
-
-  @@index([campgroundId])
-  @@index([scheduledAt])
-  @@index([isPublished])
-}
-
-
-// Trip Planning for Events
-model TripPlan {
-  id                String    @id @default(cuid())
-  eventId           String
-  userId            String
-  pitStops          PitStop[]
-  packItems         PersonalPackItem[]  
-  tripPackItems     TripPackItem[] @relation("TripPackItems")
-
-  
-  // Starting location (defaults to user's hometown, can be overridden)
-  startLocation     String    // "City, State" or full address
-  startLatitude     Float?
-  startLongitude    Float?
-  useHometown       Boolean   @default(true)
-  
-  // Destination (from event's campground)
-  endLocation       String
-  endLatitude       Float?
-  endLongitude      Float?
-  
-  // Calculated route info
-  distanceMiles     Float?
-  durationMinutes   Int?
-  routePolyline     String?   // Encoded polyline for map display
-  
-  // Trip status
-  status            String    @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
-  completedAt       DateTime?
-  actualMiles       Float?    // User can log actual miles after trip
-  
-  // Driving arrangement
-  isDriving         Boolean   @default(true)
-  ridingWithId      String?   // If riding with another user
-  
-  // Preferences
-  routePreference   String    @default("FASTEST") // FASTEST, SHORTEST, RV_FRIENDLY
-  avoidTolls        Boolean   @default(false)
-  avoidHighways     Boolean   @default(false)
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  event             Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ridingWith        User?     @relation("RidingWith", fields: [ridingWithId], references: [id])
-  mileageLogs       UserMileageLog[]
-  
-  @@unique([eventId, userId])
-}
-
-// User's total mileage tracking
-model UserMileageLog {
-  id            String   @id @default(cuid())
-  userId        String
-  tripPlanId    String?
-  miles         Float
-  description   String?
-  tripDate      DateTime
-  createdAt     DateTime @default(now())
-  
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tripPlan      TripPlan? @relation(fields: [tripPlanId], references: [id])
-}
-
-// Pit Stops for Trip Plans
-model PitStop {
-  id            String   @id @default(cuid())
-  tripPlanId    String
-  
-  name          String          // "Rest Area", "Gas Station", etc.
-  location      String?         // Address or description
-  latitude      Float?
-  longitude     Float?
-  
-  stopType      String          // OVERNIGHT, NAP, SNACK, LUNCH, FOOD, GAS, REPAIR, WALK, PLAY, DOG, OTHER
-  notes         String?
-  
-  orderIndex    Int             // Order of stops on the trip
-  
-  estimatedArrival    DateTime?
-  estimatedDuration   Int?      // Minutes
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  tripPlan      TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
-}
-
-// Discussion Threads (Reddit-style)
-model Thread {
-  id              String    @id @default(cuid())
-  title           String
-  content         String?
-  slug            String    @unique
-  
-  // Can be linked to a campground or be general
-  campgroundId    String?
-  campground      Campground? @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  
-  // Author
-  authorId        String
-  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  // Stats
-  isPinned        Boolean   @default(false)
-  isLocked        Boolean   @default(false)
-  viewCount       Int       @default(0)
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  posts           ThreadPost[]
-  tags            ThreadTagLink[]
-  favorites       ThreadFavorite[]
-  ignores         ThreadIgnore[]
-  activities      Activity[]
-}
-
-model ThreadPost {
-  imageUrl        String?
-  id              String    @id @default(cuid())
-  content         String
-  
-  threadId        String
-  thread          Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  
-  authorId        String
-  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  // For nested replies
-  parentId        String?
-  parent          ThreadPost?  @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies         ThreadPost[] @relation("PostReplies")
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  likes           ThreadPostLike[]
-}
-
-model ThreadPostLike {
-  id              String    @id @default(cuid())
-  postId          String
-  post            ThreadPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime  @default(now())
-  
-  @@unique([postId, userId])
-}
-
-model ThreadTag {
-  id              String    @id @default(cuid())
-  name            String    @unique
-  slug            String    @unique
-  color           String    @default("#6B7280") // gray
-  createdAt       DateTime  @default(now())
-  
-  threads         ThreadTagLink[]
-}
-
-model ThreadTagLink {
-  id              String    @id @default(cuid())
-  threadId        String
-  thread          Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  tagId           String
-  tag             ThreadTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
-  @@unique([threadId, tagId])
-}
-
-model ThreadFavorite {
-  id              String    @id @default(cuid())
-  threadId        String
-  thread          Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime  @default(now())
-  
-  @@unique([threadId, userId])
-}
-
-// User Activity Feed
-model Activity {
-  id              String    @id @default(cuid())
-  
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type            String
-  
-  threadId        String?
-  thread          Thread?   @relation(fields: [threadId], references: [id], onDelete: SetNull)
-  
-  eventId         String?
-  event           Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  
-  recipeId        String?
-  recipe          Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  
-  campgroundId    String?
-  campground      Campground? @relation("ActivityCampground", fields: [campgroundId], references: [id], onDelete: SetNull)
-  
-  targetUserId    String?
-  targetUser      User?     @relation("ActivityTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
-  
-  title           String?
-  content         String?
-  metadata        String?
-
-  mentions        Mention[]
-  
-  isPublic          Boolean   @default(true)
-  
-  // Friend activity tracking
-  secondaryUserId   String?
-  secondaryUser     User?     @relation("ActivitySecondaryUser", fields: [secondaryUserId], references: [id], onDelete: SetNull)
-  
-  albumId           String?
-  photoId           String?
-  
-  isCreatorContent  Boolean   @default(false)
-
-  likes           ActivityLike[]
-  
-  createdAt       DateTime  @default(now())
-  
-  @@index([userId])
-
-  @@index([createdAt])
-}
-
-model PersonalPackItem {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  category  String   @default("General")
-  quantity  Int      @default(1)
-  isPacked  Boolean  @default(false)
-  tripId    String?
-  eventId   String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip  TripPlan? @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  event Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([tripId])
-  @@index([eventId])
-  @@index([isPacked])
-}
-
-model UserPreferences {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  quickLinks      String?
-  basecampLayout  String?
-  
-  // Privacy Settings
-  profileVisibility     String   @default("PUBLIC")
-  friendRequestSetting  String   @default("EVERYONE")
-  showOnlineStatus      Boolean  @default(true)
-  showLastActive        Boolean  @default(true)
-  allowTagging          Boolean  @default(true)
-  allowWallPosts        Boolean  @default(true)
-  showTravelMap         String   @default("FRIENDS")
-  showRecipes           String   @default("PUBLIC")
-  showGear              String   @default("FRIENDS")
-  showRVDetails         String   @default("FRIENDS")
-  badgePosition         String?  // JSON: {x: number, y: number}
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-model Attraction {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  type        String   @default("other")
-  state       String
-  city        String?
-  address     String?
-  imageUrl    String?
-  groupId     String?
-  description String?
-  website     String?
-  isVisited   Boolean  @default(false)
-  rating      Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model TopFriend {
-  id        String   @id @default(cuid())
-  userId    String
-  friendId  String
-  rank      Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User @relation("UserTopFriends", fields: [userId], references: [id], onDelete: Cascade)
-  friend User @relation("FriendInTopFriends", fields: [friendId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, friendId])
-  @@unique([userId, rank])
-  @@index([userId])
-}
-
-model MaintenanceRecord {
-  id           String   @id @default(cuid())
-  userId       String
-  title        String
-  category     String
-  description  String?
-  cost         Float?
-  mileage      Int?
-  location     String?
-  tags         String[]  @default([])
-  serviceDate  DateTime
-  status       String   @default("COMPLETED")
-  notes        String?
-  receiptImage String?
-  providerName    String?
-  providerAddress String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reminder MaintenanceReminder?
-
-  @@index([userId])
-}
-
-model MaintenanceReminder {
-  id              String   @id @default(cuid())
-  userId          String
-  maintenanceId   String?  @unique
-  title           String
-  category        String
-  description     String?
-  frequency       String
-  customMiles     Int?
-  customMonths    Int?
-  nextDueDate     DateTime?
-  nextDueMileage  Int?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  maintenanceRecord MaintenanceRecord?  @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-}
-
-model RVShowcase {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  title       String?
-  description String?
-  privacy     String   @default("PUBLIC")
-  photos      String[]
-  videoUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Group {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  privacy     String   @default("PUBLIC")
-  coverPhoto  String?
-  tags        String[]  @default([])
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  createdBy   User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  members     GroupMember[]
-  invites     GroupInvite[]
-  posts       Post[]
-  events      Event[]
-
-  @@index([slug])
-  @@index([createdById])
-}
-
-model GroupMember {
-  id        String   @id @default(cuid())
-  groupId   String
-  userId    String
-  role      String   @default("MEMBER")
-  status    String   @default("ACTIVE")
-  createdAt DateTime @default(now())
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([groupId, userId])
-  @@index([userId])
-}
-
-model GroupInvite {
-  id        String   @id @default(cuid())
-  groupId   String
-  inviterId String
-  inviteeId String
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-
-  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  inviter User  @relation("GroupInviter", fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee User  @relation("GroupInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
-
-  @@unique([groupId, inviteeId])
-  @@index([inviteeId])
-}
-
-model EventComment {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  content   String
-  mentions  String[]  @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([eventId])
-  @@index([userId])
-
-  @@index([createdAt])
-}
-
-model Mention {
-  id            String    @id @default(cuid())
-  
-  // What contains the mention
-  postId        String?
-  post          Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
-  activityId    String?
-  activity      Activity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  
-  // Who/what was mentioned
-  mentionedUserId      String?
-  mentionedUser        User?       @relation("UserMentions", fields: [mentionedUserId], references: [id], onDelete: Cascade)
-  
-  mentionedCampgroundId String?
-  mentionedCampground   Campground? @relation("CampgroundMentions", fields: [mentionedCampgroundId], references: [id], onDelete: Cascade)
-  
-  // Who created the mention
-  createdById   String
-  createdBy     User      @relation("CreatedMentions", fields: [createdById], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
-  
-  @@index([mentionedUserId])
-  @@index([mentionedCampgroundId])
-  @@index([postId])
-  @@index([activityId])
-}
-// ============================================
-// ADD THESE MODELS TO YOUR schema.prisma FILE
-// ============================================
-
-// State Gas Prices (updated daily)
-model StateGasPrice {
-  id            String   @id @default(cuid())
-  stateCode     String   @unique // e.g., "CA", "TX"
-  stateName     String
-  regularPrice  Float    // Regular unleaded price
-  midgradePrice Float?   // Midgrade price
-  premiumPrice  Float?   // Premium price
-  dieselPrice   Float    // Diesel price (important for RVs)
-  updatedAt     DateTime @updatedAt
-  createdAt     DateTime @default(now())
-}
-
-// Gas Stations (focus on major truck stops along interstates)
-model GasStation {
-  id          String   @id @default(cuid())
-  name        String
-  brand       String   // Pilot, Flying J, Love's, TA, Petro, etc.
-  address     String
-  city        String
-  state       String   // 2-letter code
-  zipCode     String?
-  latitude    Float
-  longitude   Float
-  interstate  String?  // e.g., "I-40", "I-10"
-  exitNumber  String?  // e.g., "Exit 42"
-  
-  // Amenities
-  hasDiesel       Boolean @default(true)
-  hasTruckParking Boolean @default(false)
-  hasRVParking    Boolean @default(false)
-  hasRestrooms    Boolean @default(true)
-  hasShowers      Boolean @default(false)
-  hasRestaurant   Boolean @default(false)
-  hasStore        Boolean @default(true)
-  hasPropane      Boolean @default(false)
-  hasDumpStation  Boolean @default(false)
-  
-  phone       String?
-  website     String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([state])
-  @@index([interstate])
-  @@index([brand])
-  @@index([latitude, longitude])
-}
-
-// Rest Stops (state-run rest areas)
-model RestStop {
-  id          String   @id @default(cuid())
-  name        String
-  state       String   // 2-letter code
-  latitude    Float
-  longitude   Float
-  interstate  String   // e.g., "I-40", "I-10"
-  direction   String?  // "Eastbound", "Westbound", "Northbound", "Southbound", "Both"
-  mileMarker  Float?
-  
-  // Amenities
-  hasRestrooms    Boolean @default(true)
-  hasPicnicArea   Boolean @default(false)
-  hasPetArea      Boolean @default(false)
-  hasVending      Boolean @default(false)
-  hasWifi         Boolean @default(false)
-  hasRVParking    Boolean @default(false)
-  hasDumpStation  Boolean @default(false)
-  hasWater        Boolean @default(false)
-  
-  is24Hours   Boolean @default(true)
-  notes       String?
-  cookId      String?
-  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([state])
-  @@index([interstate])
-  @@index([latitude, longitude])
-}
-
-// Major Interstate Highways (for reference/display)
-model Interstate {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "I-10", "I-40"
-  direction   String   // "East-West" or "North-South"
-  startState  String
-  endState    String
-  totalMiles  Float?
-  description String?
-  
-  createdAt   DateTime @default(now())
-}
-// Add to schema.prisma
-
-model SavedTrip {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Trip details
-  name            String
-  description     String?
-  
-  // Route info
-  originAddress   String
-  originLat       Float
-  originLng       Float
-  destinationAddress String
-  destinationLat  Float
-  destinationLng  Float
-  
-  // Optional campground destination
-  campgroundId    String?
-  campground      Campground? @relation(fields: [campgroundId], references: [id])
-  
-  // Route data
-  distanceMeters  Int
-  durationSeconds Int
-  polyline        String   @db.Text  // Encoded route polyline
-  
-  // Planned stops (JSON array of stop IDs and types)
-  plannedStops    Json     @default("[]")
-  
-  // Fuel estimates
-  estimatedFuelGallons Float?
-  estimatedFuelCost    Float?
-  mpgUsed              Float?
-  
-  // Trip dates (optional - for planned trips)
-  plannedStartDate DateTime?
-  plannedEndDate   DateTime?
-  
-  // Link to an event/trip
-  eventId         String?
-  event           Event?   @relation(fields: [eventId], references: [id])
-  
-  // Visibility
-  visibility      String   @default("PRIVATE") // PRIVATE, FRIENDS, PUBLIC
-  
-  // Stats
-  viewCount       Int      @default(0)
-  copyCount       Int      @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Comments from other users
-  comments        SavedTripComment[]
-  
-  @@index([userId])
-  @@index([campgroundId])
-  @@index([visibility])
-}
-
-model SavedTripComment {
-  id          String    @id @default(cuid())
-  tripId      String
-  trip        SavedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content     String
-  createdAt   DateTime  @default(now())
-  
-  @@index([tripId])
-}
-
-
-model CampgroundAnalytics {
-  id            String      @id @default(cuid())
-  campgroundId  String
-  campground    Campground  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  date          DateTime    @default(now())
-  eventType     String
-  userId        String?
-  source        String?
-  metadata      Json?
-
-  @@index([campgroundId, date])
-  @@index([eventType])
-}
-
-// Photo Tags - Tag users in photos
-model PhotoTag {
-  id        String   @id @default(cuid())
-  photoId   String
-  userId    String   // User being tagged
-  taggedBy  String   // User who created the tag
-  x         Float?   // Optional x position (0-100 percentage)
-  y         Float?   // Optional y position (0-100 percentage)
-  createdAt DateTime @default(now())
-
-  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  user      User     @relation("PhotoTagsReceived", fields: [userId], references: [id], onDelete: Cascade)
-  tagger    User     @relation("PhotoTagsCreated", fields: [taggedBy], references: [id], onDelete: Cascade)
-
-  @@unique([photoId, userId]) // Can only tag a user once per photo
-  @@index([photoId])
-  @@index([userId])
-}
-
-// Photo Campground Tags - Tag campgrounds in photos
-model PhotoCampgroundTag {
-  id           String   @id @default(cuid())
-  photoId      String
-  campgroundId String
-  taggedBy     String   // User who created the tag
-  createdAt    DateTime @default(now())
-
-  photo      Photo      @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  campground Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  tagger     User       @relation("CampgroundPhotoTagsCreated", fields: [taggedBy], references: [id], onDelete: Cascade)
-
-  @@unique([photoId, campgroundId]) // Can only tag a campground once per photo
-  @@index([photoId])
-  @@index([campgroundId])
-}
-
-// Emoji Reactions for posts and comments
-model Reaction {
-  id        String   @id @default(cuid())
-  type      String   // like, love, haha, wow, campy, fire
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  postId    String?
-  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  commentId String?
-  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, postId, type])
-  @@unique([userId, commentId, type])
-  @@index([postId])
-  @@index([commentId])
-}
-
-// Hashtags for topic categorization
-model Hashtag {
-  id        String        @id @default(cuid())
-  tag       String        @unique // lowercase, no #
-  postCount Int           @default(0)
-  createdAt DateTime      @default(now())
-  posts     PostHashtag[]
-}
-
-model PostHashtag {
-  id        String   @id @default(cuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  hashtagId String
-  hashtag   Hashtag  @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([postId, hashtagId])
-}
-
-// Comment replies (for threaded comments)
-model CommentReply {
-  id              String    @id @default(cuid())
-  content         String
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  commentId       String
-  parentComment   Comment   @relation("CommentReplies", fields: [commentId], references: [id], onDelete: Cascade)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  editHistory     Json?     // Array of {content, editedAt}
-}
-
-// Pinned comments
-model PinnedComment {
-  id        String   @id @default(cuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  commentId String   @unique
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  pinnedBy  String
-  user      User     @relation(fields: [pinnedBy], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([postId, commentId])
-}
-
-model BlockedUser {
-  id            String   @id @default(cuid())
-  userId        String
-  blockedUserId String
-  reason        String?
-  createdAt     DateTime @default(now())
-
-  user        User @relation("UserBlocks", fields: [userId], references: [id], onDelete: Cascade)
-  blockedUser User @relation("BlockedByUsers", fields: [blockedUserId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, blockedUserId])
-  @@index([userId])
-  @@index([blockedUserId])
-}
-
-model AccountActivityLog {
-  id          String   @id @default(cuid())
-  userId      String
-  action      String
-  ipAddress   String?
-  userAgent   String?
-  details     String?
-  createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([action])
-
-  @@index([createdAt])
-}
-
-model AccountDeletion {
-  id                    String    @id @default(cuid())
-  userId                String    @unique
-  reason                String?
-  feedback              String?
-  requestedAt           DateTime  @default(now())
-  scheduledDeletionDate DateTime
-  cancelledAt           DateTime?
-  status                String    @default("PENDING")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-  @@index([scheduledDeletionDate])
-}
-
-model EmailVerification {
-  id          String   @id @default(cuid())
-  userId      String
-  email       String
-  token       String   @unique
-  type        String
-  expiresAt   DateTime
-  verifiedAt  DateTime?
-  createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
-  @@index([expiresAt])
-}
-
-// ============================================
-// BADGE SYSTEM
-// ============================================
-
-model Badge {
-  id            String      @id @default(cuid())
-  slug          String      @unique
-  name          String
-  description   String
-  imageUrl      String
-  category      String      @default("GENERAL")
-  requirement   String?
-  triggerType   String
-  triggerValue  Int?
-  isActive      Boolean     @default(true)
-  sortOrder     Int         @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  userBadges    UserBadge[]
-
-  @@index([slug])
-  @@index([triggerType])
-  @@index([isActive])
-}
-
-model UserBadge {
-  id          String    @id @default(cuid())
-  userId      String
-  badgeId     String
-  earnedAt    DateTime  @default(now())
-  progress    Int?
-  notified    Boolean   @default(false)
-  
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge       Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, badgeId])
-  @@index([userId])
-  @@index([badgeId])
-  @@index([earnedAt])
-}
-
-// ============================================
-// EXPANDED PACKING LIST SYSTEM
-// ============================================
-
-model InventoryItem {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  category    String   @default("General")
-  quantity    Int      @default(1)
-  notes       String?
-  cookId      String?
-  cookStatus  String?   @default("PENDING")  // PENDING, ACCEPTED, DECLINED, UNDECIDED
-  imageUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tripPackItems TripPackItem[]
-
-  @@index([userId])
-  @@index([category])
-}
-
-model TripPackItem {
-  id               String    @id @default(cuid())
-  tripId           String?
-  eventId          String?
-  inventoryItemId  String?
-  customName       String?
-  customCategory   String?
-  quantity         Int       @default(1)
-  isPacked         Boolean   @default(false)
-  packedAt         DateTime?
-  packedById       String?
-  assignedToId     String?
-  assignmentStatus String    @default("PENDING")
-  declinedAt       DateTime?
-  declineReason    String?
-  createdById      String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  trip          TripPlan?      @relation("TripPackItems", fields: [tripId], references: [id], onDelete: Cascade)
-  event         Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
-  assignedTo    User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id], onDelete: SetNull)
-  packedBy      User?          @relation("PackedByTripPackItems", fields: [packedById], references: [id], onDelete: SetNull)
-  createdBy     User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([tripId])
-  @@index([eventId])
-  @@index([assignedToId])
-  @@index([inventoryItemId])
-  @@index([isPacked])
-}
-
-model PackingListTemplate {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  description String?
-  privacy     String   @default("PRIVATE")
-  items       Json
-  copiedCount Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([privacy])
-}
-
-model BasecampActivity {
-  id         String   @id @default(cuid())
-  userId     String
-  actorId    String
-  type       String
-  entityType String
-  entityId   String
-  entityName String?
-  metadata   Json?
-  isRead     Boolean  @default(false)
-  reaction   String?  // 'like', 'love', 'dislike', or null
-  createdAt  DateTime @default(now())
-
-  user  User @relation("BasecampActivityRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor User @relation("BasecampActivityActor", fields: [actorId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
-  @@index([entityType, entityId])
-}
-
-// ============================================
-// CREATOR PAGES SYSTEM
-// ============================================
-
-model CreatorContent {
-  id              String   @id @default(cuid())
-  creatorId       String
-  creator         User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  
-  contentType     String
-  title           String?
-  description     String?
-  body            String?
-  
-  thumbnailUrl    String?
-  videoUrl        String?
-  embedUrl        String?
-  embedPlatform   String?
-  
-  category        String?
-  tags            String[]
-  
-  campgroundId    String?
-  campground      Campground? @relation(fields: [campgroundId], references: [id])
-  eventId         String?
-  tripId          String?
-  
-  isSponsored     Boolean  @default(false)
-  sponsorName     String?
-  affiliateLinks  Json?
-  
-  status          String   @default("DRAFT")
-  publishedAt     DateTime?
-  
-  viewCount       Int      @default(0)
-  likeCount       Int      @default(0)
-  commentCount    Int      @default(0)
-  repostCount     Int      @default(0)
-  saveCount       Int      @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  likes           CreatorContentLike[]
-  comments        CreatorContentComment[]
-  reposts         CreatorRepost[]
-  saves           CreatorSave[]
-  photos          CreatorContentPhoto[]
-  gearItems       CreatorContentGear[]
-  taggedUsers     CreatorContentTag[]
-  collaborators   CreatorCollaboration[]
-  
-  @@index([creatorId])
-  @@index([category])
-  @@index([status, publishedAt])
-  @@index([campgroundId])
-}
-
-model CreatorContentPhoto {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  imageUrl        String
-  caption         String?
-  sortOrder       Int      @default(0)
-  createdAt       DateTime @default(now())
-  
-  @@index([contentId])
-}
-
-model CreatorContentGear {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  gearItemId      String?
-  name            String
-  description     String?
-  imageUrl        String?
-  affiliateUrl    String?
-  createdAt       DateTime @default(now())
-  
-  @@index([contentId])
-}
-
-model CreatorContentTag {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  tagType         String
-  userId          String?
-  user            User?    @relation("TaggedInContent", fields: [userId], references: [id])
-  campgroundId    String?
-  campground      Campground? @relation("TaggedCampground", fields: [campgroundId], references: [id])
-  brandName       String?
-  createdAt       DateTime @default(now())
-  
-  @@unique([contentId, tagType, userId])
-  @@unique([contentId, tagType, campgroundId])
-  @@index([contentId])
-  @@index([userId])
-  @@index([campgroundId])
-}
-
-model CreatorCollaboration {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  collaboratorId  String
-  collaborator    User     @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
-  role            String   @default("COLLABORATOR")
-  createdAt       DateTime @default(now())
-  
-  @@unique([contentId, collaboratorId])
-  @@index([collaboratorId])
-}
-
-model CreatorFollow {
-  id              String   @id @default(cuid())
-  creatorId       String
-  creator         User     @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
-  followerId      String
-  follower        User     @relation("FollowingCreators", fields: [followerId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  
-  @@unique([creatorId, followerId])
-  @@index([creatorId])
-  @@index([followerId])
-}
-
-model CreatorContentLike {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  
-  @@unique([contentId, userId])
-  @@index([contentId])
-  @@index([userId])
-}
-
-model CreatorContentComment {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  body            String
-  parentId        String?
-  parent          CreatorContentComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies         CreatorContentComment[] @relation("CommentReplies")
-  isCreatorReply  Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([contentId])
-  @@index([userId])
-  @@index([parentId])
-}
-
-model CreatorRepost {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment         String?
-  createdAt       DateTime @default(now())
-  
-  @@unique([contentId, userId])
-  @@index([contentId])
-  @@index([userId])
+enum AllowTagsFrom {
+  EVERYONE
+  FRIENDS_ONLY
+  NO_ONE
 }
 
-model CreatorSave {
-  id              String   @id @default(cuid())
-  contentId       String
-  content         CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  
-  @@unique([contentId, userId])
-  @@index([userId])
+enum ImpressionSource {
+  FEED
+  PROFILE
+  ALBUM
+  DISCOVERY
+  DIRECT_LINK
 }
 
-model CreatorStats {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalViews      Int      @default(0)
-  totalLikes      Int      @default(0)
-  totalComments   Int      @default(0)
-  totalReposts    Int      @default(0)
-  totalSaves      Int      @default(0)
-  followerCount   Int      @default(0)
-  viewsThisWeek   Int      @default(0)
-  viewsThisMonth  Int      @default(0)
-  followersThisWeek Int    @default(0)
-  followersThisMonth Int   @default(0)
-  lastCalculatedAt DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+enum MediaType {
+  PHOTO
+  VIDEO
 }
 
-// Creator Page Collaborators - allows multiple users to manage a creator page
-model CreatorPageCollaborator {
-  id              String   @id @default(cuid())
-  creatorId       String   // The creator page owner
-  creator         User     @relation("CreatorPageOwner", fields: [creatorId], references: [id], onDelete: Cascade)
-  collaboratorId  String   // The user who can also manage this page
-  collaborator    User     @relation("CreatorPageCollaborator", fields: [collaboratorId], references: [id], onDelete: Cascade)
-  role            String   @default("COLLABORATOR") // COLLABORATOR, ADMIN
-  canPost         Boolean  @default(true)
-  canEdit         Boolean  @default(true)
-  canDelete       Boolean  @default(false)
-  canManageCollaborators Boolean @default(false)
-  createdAt       DateTime @default(now())
-  
-  @@unique([creatorId, collaboratorId])
-  @@index([collaboratorId])
-  @@index([creatorId])
+enum ReactionType {
+  LIKE
+  LOVE
+  THUMBS_UP
+  THUMBS_DOWN
 }
 
-model BookingClick {
-  id             String     @id @default(cuid())
-  userId         String
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campgroundId   String
-  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  clickedAt      DateTime   @default(now())
-  followUpSentAt DateTime?
-  responded      Boolean    @default(false)
-  didBook        Boolean?
-  createdEventId String?
-  
-  @@index([userId])
-  @@index([campgroundId])
-  @@index([clickedAt])
+enum ReportReason {
+  INAPPROPRIATE
+  SPAM
+  HARASSMENT
+  COPYRIGHT
+  OTHER
 }
 
-
-// Recipe Comment Mute - Users can mute notifications for specific recipes
-model RecipeCommentMute {
-  id        String   @id @default(cuid())
-  userId    String
-  recipeId  String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, recipeId])
-  @@index([userId])
-  @@index([recipeId])
-}
-
-
-// Event Comment Mute - Users can mute notifications for specific events
-model EventCommentMute {
-  id        String   @id @default(cuid())
-  userId    String
-  eventId   String
-  createdAt DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@index([eventId])
-}
-
-// Event Blocked Users - Event creator can restrict specific users from accessing event
-model EventBlockedUser {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String   // User who is blocked
-  blockedBy String   // Event creator who blocked them
-  reason    String?
-  createdAt DateTime @default(now())
-
-  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user    User  @relation("BlockedFromEvents", fields: [userId], references: [id], onDelete: Cascade)
-  blocker User  @relation("EventBlocker", fields: [blockedBy], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, userId])
-  @@index([eventId])
-  @@index([userId])
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  REMOVED
+  DISMISSED
 }
-
-// Event Subtab Privacy - Per-subtab privacy settings
-model EventSubtabPrivacy {
-  id        String   @id @default(cuid())
-  eventId   String
-  subtab    String   // DETAILS, MEAL_PLAN, PACKING_LIST, DISCUSSIONS, PHOTOS, ATTENDEES
-  privacy   String   @default("INHERIT") // INHERIT (use event privacy), PUBLIC, FRIENDS, PRIVATE, ATTENDEES_ONLY
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, subtab])
-  @@index([eventId])
+enum TagApprovalMode {
+  AUTO_APPROVE
+  MANUAL_APPROVE
 }
 
-model ActivityLike {
-  reaction   String?  // like, love, dislike
-  id         String   @id @default(cuid())
-  activityId String
-  userId     String
-  createdAt  DateTime @default(now())
-
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([activityId, userId])
-  @@index([activityId])
-  @@index([userId])
+enum TagStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REMOVED
 }
-
-model RecipeLike {
-  id        String   @id @default(cuid())
-  recipeId  String
-  userId    String
-  createdAt DateTime @default(now())
 
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([recipeId, userId])
-  @@index([recipeId])
-  @@index([userId])
+enum TaggedMediaVisibility {
+  SHOW_IN_FEED
+  PHOTOS_TAB_ONLY
+  HIDDEN
 }
-
-model RecipeCommentLike {
-  reaction  String?  // like, love, dislike
-  id        String   @id @default(cuid())
-  commentId String
-  userId    String
-  createdAt DateTime @default(now())
-
-  comment RecipeComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([commentId, userId])
-  @@index([commentId])
-  @@index([userId])
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
 }
 
-model ThreadIgnore {
-  id        String    @id @default(cuid())
-  userId    String
-  threadId  String
-  expiresAt DateTime? // null means permanent ignore
-  createdAt DateTime  @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, threadId])
-  @@index([userId])
-  @@index([threadId])
-  @@index([expiresAt])
+enum Visibility {
+  PUBLIC
+  FRIENDS_ONLY
+  PRIVATE
 }
-

@@ -70,6 +70,7 @@ export default function AlbumDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [photoPreviews, setPhotoPreviews] = useState<PhotoPreview[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [albumCommentText, setAlbumCommentText] = useState("");
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -114,6 +115,7 @@ export default function AlbumDetailPage() {
   // Load tags when a photo is selected
   useEffect(() => {
     if (selectedPhoto) {
+      loadPhotoComments(selectedPhoto.id);
       loadPhotoTags(selectedPhoto.id);
     } else {
       setPhotoTags([]);
@@ -128,6 +130,19 @@ export default function AlbumDetailPage() {
       setCampgroundTags(data.campgroundTags || []);
     } catch (error) {
       console.error('Load photo tags error:', error);
+    }
+  };
+
+  const loadPhotoComments = async (photoId: string) => {
+    try {
+      setLoadingComments(true);
+      const { data } = await api.get(`/comments?photoId=${photoId}`);
+      setComments(data || []);
+    } catch (error) {
+      console.error("Load photo comments error:", error);
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
     }
   };
 
@@ -168,6 +183,7 @@ export default function AlbumDetailPage() {
     try {
       setLoading(true);
       const { data } = await api.get(`/photo-albums/${id}`);
+      console.log('Album data with comments:', data.comments);
       setAlbum(data);
     } catch (error: any) {
       console.error('Load album error:', error);
@@ -230,7 +246,7 @@ export default function AlbumDetailPage() {
       setShowUploadModal(false);
       
       // Reload album
-      await loadAlbum();
+      await loadPhotoComments(selectedPhoto.id);
       alert('Photos uploaded successfully! 🎉');
     } catch (error) {
       console.error('Upload error:', error);
@@ -261,7 +277,7 @@ export default function AlbumDetailPage() {
         await api.post('/likes', { photoId });
       }
 
-      await loadAlbum();
+      await loadPhotoComments(selectedPhoto.id);
     } catch (error) {
       console.error('Like error:', error);
     }
@@ -273,13 +289,29 @@ export default function AlbumDetailPage() {
 
     try {
       await api.post('/comments', {
-        albumId: id,
+        photoId: selectedPhoto.id,
         content: commentText,
       });
       setCommentText('');
-      await loadAlbum();
+      await loadPhotoComments(selectedPhoto.id);
     } catch (error) {
       console.error('Add comment error:', error);
+    }
+  };
+
+  const handleAddAlbumComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!albumCommentText.trim()) return;
+
+    try {
+      await api.post("/comments", {
+        albumId: id,
+        content: albumCommentText,
+      });
+      setAlbumCommentText("");
+      await loadAlbum();
+    } catch (error) {
+      console.error("Add album comment error:", error);
     }
   };
 
@@ -491,11 +523,26 @@ export default function AlbumDetailPage() {
       )}
 
       {/* Comments Section */}
-      {album.comments && album.comments.length > 0 && (
+      {/* Always show comments section */}
+      {album && (
         <div className="mt-8 bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4">Album Comments</h3>
+          <form onSubmit={handleAddAlbumComment} className="mb-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={albumCommentText}
+                onChange={(e) => setAlbumCommentText(e.target.value)}
+                placeholder="Add a comment to this album..."
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                Post
+              </button>
+            </div>
+          </form>
           <div className="space-y-4">
-            {album.comments.map((comment: any) => (
+            {album.comments && album.comments.length > 0 && album.comments.map((comment: any) => (
               <div key={comment.id} className="flex gap-3">
                 <div className="flex-shrink-0">
                   {comment.user.profilePicture ? (
@@ -960,6 +1007,34 @@ export default function AlbumDetailPage() {
                       </button>
                     </div>
                   </form>
+
+                  {/* Comments List */}
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {loadingComments ? (
+                      <p className="text-gray-500 text-sm">Loading comments...</p>
+                    ) : comments.length > 0 ? (
+                      comments.map((comment: any) => (
+                        <div key={comment.id} className="flex gap-2">
+                          <img
+                            src={comment.user?.profilePicture || "/default-avatar.png"}
+                            alt=""
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              <span className="font-semibold">{comment.user?.firstName} {comment.user?.lastName}</span>{" "}
+                              {comment.content}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No comments yet</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

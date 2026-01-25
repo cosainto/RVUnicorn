@@ -5,6 +5,8 @@ console.log('🔑 JWT_SECRET loaded:', process.env.JWT_SECRET);
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
+import photoRoutes from "./routes/photo.routes";
+import videoRoutes from "./routes/video.routes";
 import authRoutes from './routes/auth.routes';
 import postRoutes from './routes/post.routes';
 import friendshipRoutes from './routes/friendship.routes';
@@ -68,6 +70,11 @@ import bookingClickRoutes from './routes/bookingClick.routes';
 import onboardingRoutes from './routes/onboarding.routes';
 import preferencesRoutes from "./routes/preferences.routes";
 import personalPackRoutes from "./routes/personal-pack.routes";
+import analyticsRoutes from "./routes/analytics.routes";
+import momentsRoutes from "./routes/moments.routes";
+import crosspostRoutes from "./routes/crosspost.routes";
+import commentsRoutes from "./routes/comments.routes";
+import mediaAlbumsRoutes from "./routes/media-albums.routes";
 
 
 
@@ -115,6 +122,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/checkins', checkinRoutes);
 app.use('/api/photo-albums', photoAlbumRoutes);
+app.use('/api/media-albums', mediaAlbumsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
@@ -154,7 +162,12 @@ app.use('/api/booking-clicks', bookingClickRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use("/api/preferences", preferencesRoutes);
 app.use("/api/personal-pack", personalPackRoutes);
-
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/moments", momentsRoutes);
+app.use("/api/crosspost", crosspostRoutes);
+app.use("/api/comments", commentsRoutes);
+app.use("/api/photos", photoRoutes);
+app.use("/api/videos", videoRoutes);
 
 
 

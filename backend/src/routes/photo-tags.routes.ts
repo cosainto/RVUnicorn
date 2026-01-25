@@ -85,8 +85,7 @@ router.post('/:photoId/tag/user', authenticateToken, async (req: Request, res: R
         data: {
           userId: userId,
           type: 'PHOTO_TAG',
-          title: 'You were tagged in a photo',
-          message: `You were tagged in a photo`,
+          content: 'tagged you in a photo',
           link: `/photos/${photoId}`
         }
       });

@@ -1,563 +1,1018 @@
-import { Router } from 'express';
-import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { prisma } from '../lib/prisma';
-import multer from 'multer';
-import { uploadBufferToCloudinary } from '../utils/cloudinary';
+import express from "express";
+import { PrismaClient } from "@prisma/client";
+import { authenticateToken } from "../middleware/auth.middleware";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 
-const router = Router();
-
-// Configure multer for photo uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/photos/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+const router = express.Router();
+const prisma = new PrismaClient();
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp|heic/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = file.mimetype.startsWith('image/');
+// Reaction types
+const REACTION_TYPES = ["LIKE", "FIRE", "LAUGH", "CLAP", "HEART"];
 
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  },
-});
+// Report reasons
+const REPORT_REASONS = ["INAPPROPRIATE", "SPAM", "HARASSMENT", "COPYRIGHT", "OTHER"];
 
-// ============================================
-// STATIC ROUTES - MUST COME BEFORE /:id
-// ============================================
+// Helper: Parse mentions from caption
+function parseMentions(caption: string): string[] {
+  if (!caption) return [];
+  const mentionRegex = /@(\w+)/g;
+  const matches = caption.match(mentionRegex) || [];
+  return matches.map(m => m.slice(1)); // Remove @ symbol
+}
 
-// GET /api/photos/my - Get current user's photos
-router.get('/my', authenticateToken, async (req, res) => {
-  try {
-    const userId = (req as any).userId;
-    const { albumId, eventId, limit = 50, offset = 0 } = req.query;
-
-    const where: any = { userId };
-    if (albumId) where.albumId = albumId;
-    if (eventId) where.eventId = eventId;
-
-    const photos = await prisma.photo.findMany({
-      where,
-      include: {
-        album: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-      skip: Number(offset),
-    });
-
-    const total = await prisma.photo.count({ where });
-
-    res.json({ photos, total });
-  } catch (error) {
-    console.error('Get my photos error:', error);
-    res.status(500).json({ error: 'Failed to fetch photos' });
+// Helper: Check visibility permissions
+async function canViewPhoto(
+  photo: { userId: string; visibility: string; scheduledFor?: Date | null; publishedAt?: Date | null },
+  viewerId?: string
+): Promise<boolean> {
+  // Check if photo is scheduled but not yet published
+  if (photo.scheduledFor && !photo.publishedAt) {
+    // Only owner can see scheduled photos
+    return photo.userId === viewerId;
   }
-});
+  
+  if (photo.visibility === "PUBLIC") return true;
+  if (!viewerId) return false;
+  if (photo.userId === viewerId) return true;
 
-// GET /api/photos/event/:eventId - Get all photos for an event (collaborative gallery)
-router.get('/event/:eventId', optionalAuth, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const currentUserId = (req as any).userId;
-
-    // Check if event exists
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: {
-        attendees: true,
+  if (photo.visibility === "FRIENDS") {
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        status: "ACCEPTED",
+        OR: [
+          { initiatorId: photo.userId, receiverId: viewerId },
+          { initiatorId: viewerId, receiverId: photo.userId },
+        ],
       },
     });
+    return !!friendship;
+  }
 
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
+  return false;
+}
+
+// Helper: Check if user can tag another user
+async function canTagUser(taggerId: string, targetId: string): Promise<boolean> {
+  // Check if target has blocked tagger from tagging them
+  const blocked = await prisma.tagBlockedUser.findUnique({
+    where: {
+      blockerId_blockedId: { blockerId: targetId, blockedId: taggerId }
+    }
+  });
+  return !blocked;
+}
+
+// ============================================
+// PHOTO CRUD OPERATIONS
+// ============================================
+
+// Upload photo with visibility, mentions, scheduled publishing
+router.post("/", authenticateToken, upload.single("image"), async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { 
+      albumId, 
+      eventId, 
+      caption, 
+      visibility = "PUBLIC",
+      allowDownload = true,
+      scheduledFor
+    } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No image provided" });
     }
 
-    // Get all photos tagged with this event
-    const photos = await prisma.photo.findMany({
-      where: { eventId },
+    // Upload to Cloudinary
+    const result = await new Promise<any>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "rvunicorn/photos" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+
+    // Parse mentions from caption
+    const mentionUsernames = parseMentions(caption);
+    let mentionUserIds: string[] = [];
+    
+    if (mentionUsernames.length > 0) {
+      const mentionedUsers = await prisma.user.findMany({
+        where: { username: { in: mentionUsernames } },
+        select: { id: true }
+      });
+      mentionUserIds = mentionedUsers.map(u => u.id);
+    }
+
+    // Determine if published now or scheduled
+    const isScheduled = scheduledFor && new Date(scheduledFor) > new Date();
+    
+    const photo = await prisma.photo.create({
+      data: {
+        userId,
+        albumId: albumId || null,
+        eventId: eventId || null,
+        imageUrl: result.secure_url,
+        caption,
+        mentions: mentionUserIds,
+        visibility,
+        allowDownload: allowDownload === "true" || allowDownload === true,
+        scheduledFor: isScheduled ? new Date(scheduledFor) : null,
+        publishedAt: isScheduled ? null : new Date(),
+      },
       include: {
         user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
         },
+        album: { select: { id: true, title: true } },
       },
-      orderBy: { createdAt: 'desc' },
     });
 
-    // Group photos by user for display
-    const photosByUser = photos.reduce((acc: any, photo) => {
-      const userId = photo.userId;
-      if (!acc[userId]) {
-        acc[userId] = {
-          user: photo.user,
-          photos: [],
-        };
+    // Create activity and notifications for published photos
+    if (!isScheduled && visibility === "PUBLIC") {
+      await prisma.activity.create({
+        data: {
+          userId,
+          type: "PHOTO_UPLOAD",
+          photoId: photo.id,
+          albumId: albumId || null,
+          isPublic: true,
+        },
+      });
+
+      // Notify mentioned users
+      if (mentionUserIds.length > 0) {
+        await prisma.notification.createMany({
+          data: mentionUserIds.map(mentionedUserId => ({
+            userId: mentionedUserId,
+            type: "PHOTO_MENTION",
+            content: `mentioned you in a photo`,
+            link: `/photos/${photo.id}`,
+          })),
+        });
       }
-      acc[userId].photos.push(photo);
-      return acc;
-    }, {});
+    }
 
-    res.json({
-      photos,
-      photosByUser: Object.values(photosByUser),
-      total: photos.length,
-      isAttendee: event.attendees.some((a) => a.userId === currentUserId) || event.organizerId === currentUserId,
-    });
+    res.status(201).json(photo);
   } catch (error) {
-    console.error('Get event photos error:', error);
-    res.status(500).json({ error: 'Failed to fetch event photos' });
+    console.error("Error uploading photo:", error);
+    res.status(500).json({ error: "Failed to upload photo" });
   }
 });
 
-// GET /api/photos/album/:albumId - Get all photos in an album
-router.get('/album/:albumId', optionalAuth, async (req, res) => {
+// Get single photo with all details
+router.get("/:photoId", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user?.id;
+
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        },
+        album: { select: { id: true, title: true, privacy: true } },
+        reactions: {
+          include: {
+            user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } }
+          }
+        },
+        userTags: {
+          include: {
+            user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+          },
+        },
+        campgroundTags: {
+          include: {
+            campground: { select: { id: true, name: true } },
+          },
+        },
+        saves: { select: { userId: true } },
+      },
+    });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    if (!(await canViewPhoto(photo, userId))) {
+      return res.status(403).json({ error: "You don't have permission to view this photo" });
+    }
+
+    // Increment view count
+    if (photo.userId !== userId) {
+      await prisma.photo.update({
+        where: { id: photoId },
+        data: { viewCount: { increment: 1 } }
+      });
+    }
+
+    // Get reaction counts by type
+    const reactionCounts: Record<string, number> = {};
+    const userReactions: string[] = [];
+    
+    photo.reactions.forEach(r => {
+      reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+      if (r.userId === userId) {
+        userReactions.push(r.type);
+      }
+    });
+
+    res.json({
+      ...photo,
+      reactionCounts,
+      userReactions,
+      totalReactions: photo.reactions.length,
+      isSaved: photo.saves.some(s => s.userId === userId),
+      saveCount: photo.saves.length,
+      viewCount: photo.viewCount + (photo.userId !== userId ? 1 : 0),
+    });
+  } catch (error) {
+    console.error("Error fetching photo:", error);
+    res.status(500).json({ error: "Failed to fetch photo" });
+  }
+});
+
+// Update photo
+router.patch("/:photoId", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user.id;
+    const { caption, visibility, allowDownload, isPinned } = req.body;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    if (photo.userId !== userId) {
+      return res.status(403).json({ error: "You can only edit your own photos" });
+    }
+
+    const updateData: any = {};
+    
+    if (caption !== undefined) {
+      updateData.caption = caption;
+      // Re-parse mentions
+      const mentionUsernames = parseMentions(caption);
+      if (mentionUsernames.length > 0) {
+        const mentionedUsers = await prisma.user.findMany({
+          where: { username: { in: mentionUsernames } },
+          select: { id: true }
+        });
+        updateData.mentions = mentionedUsers.map(u => u.id);
+      } else {
+        updateData.mentions = [];
+      }
+    }
+    
+    if (visibility !== undefined) updateData.visibility = visibility;
+    if (allowDownload !== undefined) updateData.allowDownload = allowDownload;
+    
+    // Handle pinning - only one photo can be pinned at a time
+    if (isPinned === true) {
+      // Unpin all other photos first
+      await prisma.photo.updateMany({
+        where: { userId, isPinned: true },
+        data: { isPinned: false }
+      });
+      updateData.isPinned = true;
+    } else if (isPinned === false) {
+      updateData.isPinned = false;
+    }
+
+    const updatedPhoto = await prisma.photo.update({
+      where: { id: photoId },
+      data: updateData,
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        },
+        reactions: true,
+      },
+    });
+
+    res.json(updatedPhoto);
+  } catch (error) {
+    console.error("Error updating photo:", error);
+    res.status(500).json({ error: "Failed to update photo" });
+  }
+});
+
+// Delete photo
+router.delete("/:photoId", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user.id;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    if (photo.userId !== userId) {
+      return res.status(403).json({ error: "You can only delete your own photos" });
+    }
+
+    // Delete from Cloudinary
+    const urlParts = photo.imageUrl.split("/");
+    const publicId = `rvunicorn/photos/${urlParts[urlParts.length - 1].split(".")[0]}`;
+    await cloudinary.uploader.destroy(publicId).catch(console.error);
+
+    await prisma.photo.delete({ where: { id: photoId } });
+
+    res.json({ message: "Photo deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting photo:", error);
+    res.status(500).json({ error: "Failed to delete photo" });
+  }
+});
+
+// ============================================
+// REACTIONS (Multiple Types)
+// ============================================
+
+// Add/toggle reaction
+router.post("/:photoId/react", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user.id;
+    const { type } = req.body;
+
+    if (!REACTION_TYPES.includes(type)) {
+      return res.status(400).json({ error: `Invalid reaction type. Must be one of: ${REACTION_TYPES.join(", ")}` });
+    }
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    if (!(await canViewPhoto(photo, userId))) {
+      return res.status(403).json({ error: "You don't have permission to react to this photo" });
+    }
+
+    // Check for existing reaction of this type
+    const existingReaction = await prisma.photoReaction.findUnique({
+      where: { photoId_userId_type: { photoId, userId, type } },
+    });
+
+    if (existingReaction) {
+      // Remove reaction
+      await prisma.photoReaction.delete({ where: { id: existingReaction.id } });
+      
+      const counts = await getReactionCounts(photoId);
+      return res.json({ added: false, type, ...counts });
+    }
+
+    // Add reaction
+    await prisma.photoReaction.create({
+      data: { photoId, userId, type },
+    });
+
+    // Notify photo owner
+    if (photo.userId !== userId) {
+      const reactionEmojis: Record<string, string> = {
+        LIKE: "❤️",
+        FIRE: "🔥",
+        LAUGH: "😂",
+        CLAP: "👏",
+        HEART: "💖"
+      };
+      
+      await prisma.notification.create({
+        data: {
+          userId: photo.userId,
+          type: "PHOTO_REACTION",
+          content: `reacted ${reactionEmojis[type]} to your photo`,
+          link: `/photos/${photoId}`,
+        },
+      });
+    }
+
+    const counts = await getReactionCounts(photoId);
+    res.json({ added: true, type, ...counts });
+  } catch (error) {
+    console.error("Error reacting to photo:", error);
+    res.status(500).json({ error: "Failed to react to photo" });
+  }
+});
+
+// Get reaction counts helper
+async function getReactionCounts(photoId: string) {
+  const reactions = await prisma.photoReaction.findMany({
+    where: { photoId },
+  });
+  
+  const reactionCounts: Record<string, number> = {};
+  reactions.forEach(r => {
+    reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+  });
+  
+  return { reactionCounts, totalReactions: reactions.length };
+}
+
+// Get reactions for a photo
+router.get("/:photoId/reactions", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const { type } = req.query;
+
+    const where: any = { photoId };
+    if (type && REACTION_TYPES.includes(type as string)) {
+      where.type = type;
+    }
+
+    const reactions = await prisma.photoReaction.findMany({
+      where,
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.json(reactions);
+  } catch (error) {
+    console.error("Error fetching reactions:", error);
+    res.status(500).json({ error: "Failed to fetch reactions" });
+  }
+});
+
+// ============================================
+// TAGGING PEOPLE
+// ============================================
+
+// Add tag to photo
+router.post("/:photoId/tag", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user.id;
+    const { taggedUserId, xPosition, yPosition } = req.body;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    // Only owner can add tags
+    if (photo.userId !== userId) {
+      return res.status(403).json({ error: "Only the photo owner can add tags" });
+    }
+
+    // Check if can tag this user
+    if (!(await canTagUser(userId, taggedUserId))) {
+      return res.status(403).json({ error: "This user has blocked you from tagging them" });
+    }
+
+    // Check for existing tag
+    const existingTag = await prisma.photoTag.findUnique({
+      where: { photoId_userId: { photoId, userId: taggedUserId } }
+    });
+
+    if (existingTag) {
+      // Update position
+      const updatedTag = await prisma.photoTag.update({
+        where: { id: existingTag.id },
+        data: { xPosition, yPosition },
+        include: {
+          user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } }
+        }
+      });
+      return res.json(updatedTag);
+    }
+
+    // Create new tag
+    const tag = await prisma.photoTag.create({
+      data: {
+        photoId,
+        userId: taggedUserId,
+        xPosition,
+        yPosition
+      },
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } }
+      }
+    });
+
+    // Notify tagged user
+    await prisma.notification.create({
+      data: {
+        userId: taggedUserId,
+        type: "PHOTO_TAG",
+        content: `tagged you in a photo`,
+        link: `/photos/${photoId}`,
+      },
+    });
+
+    res.status(201).json(tag);
+  } catch (error) {
+    console.error("Error tagging user:", error);
+    res.status(500).json({ error: "Failed to tag user" });
+  }
+});
+
+// Remove tag from photo
+router.delete("/:photoId/tag/:taggedUserId", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId, taggedUserId } = req.params;
+    const userId = req.user.id;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    // Owner or tagged user can remove tag
+    if (photo.userId !== userId && taggedUserId !== userId) {
+      return res.status(403).json({ error: "You can only remove your own tags or tags on your photos" });
+    }
+
+    await prisma.photoTag.deleteMany({
+      where: { photoId, userId: taggedUserId }
+    });
+
+    res.json({ message: "Tag removed successfully" });
+  } catch (error) {
+    console.error("Error removing tag:", error);
+    res.status(500).json({ error: "Failed to remove tag" });
+  }
+});
+
+// Block user from tagging you
+router.post("/block-tagging/:blockedUserId", authenticateToken, async (req: any, res) => {
+  try {
+    const { blockedUserId } = req.params;
+    const blockerId = req.user.id;
+
+    if (blockerId === blockedUserId) {
+      return res.status(400).json({ error: "Cannot block yourself" });
+    }
+
+    await prisma.tagBlockedUser.upsert({
+      where: { blockerId_blockedId: { blockerId, blockedId: blockedUserId } },
+      create: { blockerId, blockedId: blockedUserId },
+      update: {}
+    });
+
+    res.json({ message: "User blocked from tagging you" });
+  } catch (error) {
+    console.error("Error blocking user:", error);
+    res.status(500).json({ error: "Failed to block user" });
+  }
+});
+
+// Unblock user from tagging
+router.delete("/block-tagging/:blockedUserId", authenticateToken, async (req: any, res) => {
+  try {
+    const { blockedUserId } = req.params;
+    const blockerId = req.user.id;
+
+    await prisma.tagBlockedUser.deleteMany({
+      where: { blockerId, blockedId: blockedUserId }
+    });
+
+    res.json({ message: "User unblocked" });
+  } catch (error) {
+    console.error("Error unblocking user:", error);
+    res.status(500).json({ error: "Failed to unblock user" });
+  }
+});
+
+// ============================================
+// SAVE / BOOKMARK
+// ============================================
+
+// Save photo
+router.post("/:photoId/save", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = req.user.id;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    if (!(await canViewPhoto(photo, userId))) {
+      return res.status(403).json({ error: "You don't have permission to save this photo" });
+    }
+
+    const existingSave = await prisma.photoSave.findUnique({
+      where: { photoId_userId: { photoId, userId } }
+    });
+
+    if (existingSave) {
+      // Unsave
+      await prisma.photoSave.delete({ where: { id: existingSave.id } });
+      const saveCount = await prisma.photoSave.count({ where: { photoId } });
+      return res.json({ saved: false, saveCount });
+    }
+
+    // Save
+    await prisma.photoSave.create({
+      data: { photoId, userId }
+    });
+
+    const saveCount = await prisma.photoSave.count({ where: { photoId } });
+    res.json({ saved: true, saveCount });
+  } catch (error) {
+    console.error("Error saving photo:", error);
+    res.status(500).json({ error: "Failed to save photo" });
+  }
+});
+
+// Get saved photos
+router.get("/saved/mine", authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { limit = 20, cursor } = req.query;
+
+    const saves = await prisma.photoSave.findMany({
+      where: { userId },
+      include: {
+        photo: {
+          include: {
+            user: {
+              select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true }
+            },
+            reactions: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: parseInt(limit as string),
+      ...(cursor && { cursor: { id: cursor as string }, skip: 1 }),
+    });
+
+    // Filter out photos user can no longer view
+    const visiblePhotos = [];
+    for (const save of saves) {
+      if (await canViewPhoto(save.photo, userId)) {
+        visiblePhotos.push({
+          ...save.photo,
+          savedAt: save.createdAt,
+          reactionCounts: save.photo.reactions.reduce((acc: any, r) => {
+            acc[r.type] = (acc[r.type] || 0) + 1;
+            return acc;
+          }, {}),
+          totalReactions: save.photo.reactions.length
+        });
+      }
+    }
+
+    res.json({
+      photos: visiblePhotos,
+      nextCursor: saves.length === parseInt(limit as string) ? saves[saves.length - 1].id : null,
+    });
+  } catch (error) {
+    console.error("Error fetching saved photos:", error);
+    res.status(500).json({ error: "Failed to fetch saved photos" });
+  }
+});
+
+// ============================================
+// REPORTING
+// ============================================
+
+// Report photo
+router.post("/:photoId/report", authenticateToken, async (req: any, res) => {
+  try {
+    const { photoId } = req.params;
+    const reporterId = req.user.id;
+    const { reason, details } = req.body;
+
+    if (!REPORT_REASONS.includes(reason)) {
+      return res.status(400).json({ error: `Invalid reason. Must be one of: ${REPORT_REASONS.join(", ")}` });
+    }
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+
+    if (!photo) {
+      return res.status(404).json({ error: "Photo not found" });
+    }
+
+    // Check for existing report
+    const existingReport = await prisma.photoReport.findFirst({
+      where: { photoId, reporterId, status: "PENDING" }
+    });
+
+    if (existingReport) {
+      return res.status(400).json({ error: "You have already reported this photo" });
+    }
+
+    await prisma.photoReport.create({
+      data: {
+        photoId,
+        reporterId,
+        reason,
+        details
+      }
+    });
+
+    res.json({ message: "Report submitted. Thank you for helping keep our community safe." });
+  } catch (error) {
+    console.error("Error reporting photo:", error);
+    res.status(500).json({ error: "Failed to report photo" });
+  }
+});
+
+// ============================================
+// FEEDS
+// ============================================
+
+// Get photo feed (with reactions)
+router.get("/feed/recent", authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { limit = 20, cursor } = req.query;
+
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        status: "ACCEPTED",
+        OR: [{ initiatorId: userId }, { receiverId: userId }],
+      },
+    });
+
+    const friendIds = friendships.map((f) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    const photos = await prisma.photo.findMany({
+      where: {
+        publishedAt: { not: null }, // Only published photos
+        OR: [
+          { visibility: "PUBLIC" },
+          { userId: { in: friendIds }, visibility: "FRIENDS" },
+          { userId },
+        ],
+      },
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        },
+        album: { select: { id: true, title: true } },
+        reactions: true,
+        userTags: {
+          include: {
+            user: { select: { id: true, username: true, firstName: true, lastName: true } },
+          },
+        },
+        saves: { where: { userId }, select: { id: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: parseInt(limit as string),
+      ...(cursor && { cursor: { id: cursor as string }, skip: 1 }),
+    });
+
+    const photosWithDetails = photos.map((photo) => {
+      const reactionCounts: Record<string, number> = {};
+      const userReactions: string[] = [];
+      
+      photo.reactions.forEach(r => {
+        reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+        if (r.userId === userId) {
+          userReactions.push(r.type);
+        }
+      });
+
+      return {
+        ...photo,
+        reactionCounts,
+        userReactions,
+        totalReactions: photo.reactions.length,
+        isSaved: photo.saves.length > 0,
+      };
+    });
+
+    res.json({
+      photos: photosWithDetails,
+      nextCursor: photos.length === parseInt(limit as string) ? photos[photos.length - 1].id : null,
+    });
+  } catch (error) {
+    console.error("Error fetching photo feed:", error);
+    res.status(500).json({ error: "Failed to fetch photo feed" });
+  }
+});
+
+// Get user's pinned photo
+router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
+  try {
+    const { userId: targetUserId } = req.params;
+    const viewerId = req.user?.id;
+
+    const pinnedPhoto = await prisma.photo.findFirst({
+      where: { userId: targetUserId, isPinned: true },
+      include: {
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+        },
+        reactions: true,
+      },
+    });
+
+    if (!pinnedPhoto) {
+      return res.json(null);
+    }
+
+    if (!(await canViewPhoto(pinnedPhoto, viewerId))) {
+      return res.json(null);
+    }
+
+    res.json(pinnedPhoto);
+  } catch (error) {
+    console.error("Error fetching pinned photo:", error);
+    res.status(500).json({ error: "Failed to fetch pinned photo" });
+  }
+});
+
+// Get album photos with visibility filtering
+router.get("/album/:albumId", authenticateToken, async (req: any, res) => {
   try {
     const { albumId } = req.params;
-    const currentUserId = (req as any).userId;
+    const userId = req.user?.id;
 
     const album = await prisma.photoAlbum.findUnique({
       where: { id: albumId },
       include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
+        photos: {
+          where: { publishedAt: { not: null } }, // Only published
+          include: {
+            user: {
+              select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+            },
+            reactions: true,
+            userTags: {
+              include: {
+                user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+              },
+            },
+            campgroundTags: {
+              include: {
+                campground: { select: { id: true, name: true } },
+              },
+            },
           },
+          orderBy: { createdAt: "desc" },
+        },
+        user: {
+          select: { id: true, username: true, firstName: true, lastName: true },
         },
       },
     });
 
     if (!album) {
-      return res.status(404).json({ error: 'Album not found' });
+      return res.status(404).json({ error: "Album not found" });
     }
 
-    // Check privacy
-    if (album.privacy === 'PRIVATE' && album.userId !== currentUserId) {
-      return res.status(403).json({ error: 'This album is private' });
-    }
-
-    const photos = await prisma.photo.findMany({
-      where: { albumId },
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
+    const isOwner = album.userId === userId;
+    if (!isOwner) {
+      if (album.privacy === "PRIVATE") {
+        return res.status(403).json({ error: "This album is private" });
+      }
+      if (album.privacy === "FRIENDS") {
+        const friendship = await prisma.friendship.findFirst({
+          where: {
+            status: "ACCEPTED",
+            OR: [
+              { initiatorId: album.userId, receiverId: userId },
+              { initiatorId: userId, receiverId: album.userId },
+            ],
           },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
+        });
+        if (!friendship) {
+          return res.status(403).json({ error: "This album is for friends only" });
+        }
+      }
+    }
+
+    const visiblePhotos = [];
+    for (const photo of album.photos) {
+      if (await canViewPhoto(photo, userId)) {
+        const reactionCounts: Record<string, number> = {};
+        photo.reactions.forEach(r => {
+          reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+        });
+        
+        visiblePhotos.push({
+          ...photo,
+          reactionCounts,
+          totalReactions: photo.reactions.length,
+          userReactions: photo.reactions.filter(r => r.userId === userId).map(r => r.type),
+        });
+      }
+    }
+
+    res.json({
+      ...album,
+      photos: visiblePhotos,
+      photoCount: visiblePhotos.length,
     });
-
-    res.json({ album, photos });
   } catch (error) {
-    console.error('Get album photos error:', error);
-    res.status(500).json({ error: 'Failed to fetch album photos' });
-  }
-});
-
-// GET /api/photos/user/:username - Get public photos for a user
-router.get('/user/:username', async (req, res) => {
-  try {
-    const { username } = req.params;
-    const { limit = 20 } = req.query;
-
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Get photos from public albums only
-    const photos = await prisma.photo.findMany({
-      where: {
-        userId: user.id,
-        OR: [
-          { album: { privacy: 'PUBLIC' } },
-          { albumId: null }, // Photos not in albums
-        ],
-      },
-      include: {
-        album: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-    });
-
-    res.json(photos);
-  } catch (error) {
-    console.error('Get user photos error:', error);
-    res.status(500).json({ error: 'Failed to fetch photos' });
-  }
-});
-
-// POST /api/photos - Upload a photo
-router.post('/', authenticateToken, upload.single('photo'), async (req, res) => {
-  try {
-    const userId = (req as any).userId;
-    const { caption, albumId, eventId } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'Photo file is required' });
-    }
-
-    // If albumId provided, verify ownership
-    if (albumId) {
-      const album = await prisma.photoAlbum.findUnique({
-        where: { id: albumId },
-      });
-
-      if (!album || album.userId !== userId) {
-        return res.status(403).json({ error: 'Album not found or access denied' });
-      }
-    }
-
-    // If eventId provided, verify user is attendee or organizer
-    if (eventId) {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        include: { attendees: true },
-      });
-
-      if (!event) {
-        return res.status(404).json({ error: 'Event not found' });
-      }
-
-      const isParticipant =
-        event.organizerId === userId || event.attendees.some((a) => a.userId === userId);
-
-      if (!isParticipant) {
-        return res.status(403).json({ error: 'Only event participants can upload photos' });
-      }
-    }
-
-    // Upload to Cloudinary
-    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/photos');
-
-    const photo = await prisma.photo.create({
-      data: {
-        userId,
-        imageUrl,
-        caption,
-        albumId: albumId || null,
-        eventId: eventId || null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-          },
-        },
-        album: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-    });
-
-    // Create activity for the feed
-    try {
-      await prisma.activity.create({
-        data: {
-          userId,
-          type: 'PHOTO_UPLOADED',
-          targetType: eventId ? 'EVENT' : albumId ? 'ALBUM' : 'PHOTO',
-          targetId: eventId || albumId || photo.id,
-        },
-      });
-    } catch (e) {
-      // Activity creation is optional
-    }
-
-    res.status(201).json(photo);
-  } catch (error) {
-    console.error('Upload photo error:', error);
-    res.status(500).json({ error: 'Failed to upload photo' });
-  }
-});
-
-// POST /api/photos/bulk - Upload multiple photos
-router.post('/bulk', authenticateToken, upload.array('photos', 20), async (req, res) => {
-  try {
-    const userId = (req as any).userId;
-    const { albumId, eventId, captions } = req.body;
-    const files = req.files as Express.Multer.File[];
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'At least one photo is required' });
-    }
-
-    // Parse captions if provided as JSON string
-    let captionsArray: string[] = [];
-    if (captions) {
-      try {
-        captionsArray = JSON.parse(captions);
-      } catch (e) {
-        captionsArray = [];
-      }
-    }
-
-    // Verify permissions (same as single upload)
-    if (albumId) {
-      const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
-      if (!album || album.userId !== userId) {
-        return res.status(403).json({ error: 'Album not found or access denied' });
-      }
-    }
-
-    if (eventId) {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        include: { attendees: true },
-      });
-
-      if (!event) {
-        return res.status(404).json({ error: 'Event not found' });
-      }
-
-      const isParticipant =
-        event.organizerId === userId || event.attendees.some((a) => a.userId === userId);
-
-      if (!isParticipant) {
-        return res.status(403).json({ error: 'Only event participants can upload photos' });
-      }
-    }
-
-    // Create all photos
-    const photos = await Promise.all(
-      files.map((file, index) =>
-        prisma.photo.create({
-          data: {
-            userId,
-            imageUrl: `/uploads/photos/${file.filename}`,
-            caption: captionsArray[index] || null,
-            albumId: albumId || null,
-            eventId: eventId || null,
-          },
-        })
-      )
-    );
-
-    res.status(201).json({ photos, count: photos.length });
-  } catch (error) {
-    console.error('Bulk upload error:', error);
-    res.status(500).json({ error: 'Failed to upload photos' });
+    console.error("Error fetching album photos:", error);
+    res.status(500).json({ error: "Failed to fetch photos" });
   }
 });
 
 // ============================================
-// PARAMETERIZED ROUTES - MUST COME AFTER STATIC
+// ALBUM COVER
 // ============================================
 
-// GET /api/photos/:id - Get single photo
-router.get('/:id', optionalAuth, async (req, res) => {
+// Set album cover
+router.patch("/album/:albumId/cover", authenticateToken, async (req: any, res) => {
   try {
-    const { id } = req.params;
-    const currentUserId = (req as any).userId;
+    const { albumId } = req.params;
+    const userId = req.user.id;
+    const { photoId, coverPhotoUrl } = req.body;
 
-    const photo = await prisma.photo.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        album: {
-          select: {
-            id: true,
-            title: true,
-            privacy: true,
-            userId: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-    });
+    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
 
-    if (!photo) {
-      return res.status(404).json({ error: 'Photo not found' });
+    if (!album) {
+      return res.status(404).json({ error: "Album not found" });
     }
 
-    // Check privacy
-    if (photo.album?.privacy === 'PRIVATE' && photo.album.userId !== currentUserId) {
-      return res.status(403).json({ error: 'This photo is private' });
+    if (album.userId !== userId) {
+      return res.status(403).json({ error: "You can only edit your own albums" });
     }
 
-    res.json(photo);
-  } catch (error) {
-    console.error('Get photo error:', error);
-    res.status(500).json({ error: 'Failed to fetch photo' });
-  }
-});
-
-// PUT /api/photos/:id - Update photo (caption, album, event)
-router.put('/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = (req as any).userId;
-    const { caption, albumId, eventId } = req.body;
-
-    const photo = await prisma.photo.findUnique({
-      where: { id },
-    });
-
-    if (!photo) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
-
-    if (photo.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    // If changing eventId, verify permissions
-    if (eventId && eventId !== photo.eventId) {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        include: { attendees: true },
+    const updateData: any = {};
+    
+    if (photoId) {
+      // Verify photo belongs to this album
+      const photo = await prisma.photo.findFirst({
+        where: { id: photoId, albumId }
       });
-
-      if (!event) {
-        return res.status(404).json({ error: 'Event not found' });
+      
+      if (!photo) {
+        return res.status(400).json({ error: "Photo not found in this album" });
       }
-
-      const isParticipant =
-        event.organizerId === userId || event.attendees.some((a) => a.userId === userId);
-
-      if (!isParticipant) {
-        return res.status(403).json({ error: 'You must be an event participant to tag this photo' });
-      }
+      
+      updateData.coverPhotoId = photoId;
+      updateData.coverPhotoUrl = photo.imageUrl;
+    } else if (coverPhotoUrl) {
+      updateData.coverPhotoUrl = coverPhotoUrl;
     }
 
-    const updated = await prisma.photo.update({
-      where: { id },
-      data: {
-        caption: caption !== undefined ? caption : undefined,
-        albumId: albumId !== undefined ? albumId : undefined,
-        eventId: eventId !== undefined ? eventId : undefined,
-      },
-      include: {
-        album: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
+    const updatedAlbum = await prisma.photoAlbum.update({
+      where: { id: albumId },
+      data: updateData
     });
 
-    res.json(updated);
+    res.json(updatedAlbum);
   } catch (error) {
-    console.error('Update photo error:', error);
-    res.status(500).json({ error: 'Failed to update photo' });
+    console.error("Error setting album cover:", error);
+    res.status(500).json({ error: "Failed to set album cover" });
   }
 });
 
-// DELETE /api/photos/:id - Delete a photo
-router.delete('/:id', authenticateToken, async (req, res) => {
+// Bulk update visibility
+router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
   try {
-    const { id } = req.params;
-    const userId = (req as any).userId;
+    const userId = req.user.id;
+    const { photoIds, visibility } = req.body;
 
-    const photo = await prisma.photo.findUnique({
-      where: { id },
+    if (!Array.isArray(photoIds) || photoIds.length === 0) {
+      return res.status(400).json({ error: "photoIds must be a non-empty array" });
+    }
+
+    if (!["PUBLIC", "FRIENDS", "PRIVATE"].includes(visibility)) {
+      return res.status(400).json({ error: "Invalid visibility value" });
+    }
+
+    const photos = await prisma.photo.findMany({
+      where: { id: { in: photoIds } },
     });
 
-    if (!photo) {
-      return res.status(404).json({ error: 'Photo not found' });
+    const notOwned = photos.filter((p) => p.userId !== userId);
+    if (notOwned.length > 0) {
+      return res.status(403).json({ error: "You can only update your own photos" });
     }
 
-    if (photo.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    // Delete the actual file
-    const filePath = path.join(process.cwd(), photo.imageUrl);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    await prisma.photo.delete({
-      where: { id },
+    await prisma.photo.updateMany({
+      where: { id: { in: photoIds }, userId },
+      data: { visibility },
     });
 
-    res.json({ message: 'Photo deleted' });
+    res.json({ message: `Updated ${photoIds.length} photos to ${visibility}` });
   } catch (error) {
-    console.error('Delete photo error:', error);
-    res.status(500).json({ error: 'Failed to delete photo' });
+    console.error("Error bulk updating photos:", error);
+    res.status(500).json({ error: "Failed to update photos" });
   }
 });
 

@@ -1101,7 +1101,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           where: {
             userId: user.id,
             type: {
-              in: ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION']
+              in: ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_COMMENT_THREAD', 'RECIPE_MENTION', 'PHOTO_TAG']
             }
           },
           take: limit,
@@ -1130,14 +1130,17 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           else if (activity.type === 'THREAD_MENTION') { activityLabel = 'mentioned you in'; activityIcon = '📣'; }
           else if (activity.type === 'RECIPE_COMMENT_THREAD') { activityLabel = 'commented on your recipe'; activityIcon = '🍳'; }
           else if (activity.type === 'RECIPE_MENTION') { activityLabel = 'mentioned you in a comment on'; activityIcon = '📣'; }
+          else if (activity.type === 'PHOTO_TAG') { activityLabel = 'tagged you in a photo'; activityIcon = '🏷️'; }
           
+          const isPhotoTag = activity.type === 'PHOTO_TAG';
           return {
             id: `basecamp-${activity.id}`,
             type: activity.type,
             actor: activity.actor,
-            content: `${activity.actor?.firstName || 'Someone'} ${activityLabel} "${activity.entityName || meta.threadTitle || (isRecipe ? 'a recipe' : 'a thread')}"`,
-            targetName: activity.entityName || meta.threadTitle,
-            targetLink: isRecipe ? `/recipes/${activity.entityId}` : `/threads/${activity.entityId || meta.threadId}`,
+            content: `${activity.actor?.firstName || 'Someone'} ${activityLabel}${isPhotoTag ? '' : ` "${activity.entityName || meta.threadTitle || (isRecipe ? 'a recipe' : 'a thread')}"`}`,
+            targetName: isPhotoTag ? 'a photo' : (activity.entityName || meta.threadTitle),
+            targetLink: isPhotoTag ? `/media-albums/${meta.albumId}` : (isRecipe ? `/recipes/${activity.entityId}` : `/threads/${activity.entityId || meta.threadId}`),
+            imageUrl: meta.imageUrl || null,
             createdAt: activity.createdAt,
             _count: { likes: 0, comments: 0 },
             canDelete: false,

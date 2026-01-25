@@ -36,6 +36,13 @@ interface FeedItem {
   id: string;
   type: string;
   isPackingActivity?: boolean;
+  isFriendRequest?: boolean;
+  isCampingBuddy?: boolean;
+  userHasLiked?: boolean;
+  likeCount?: number;
+  sourceLikeCount?: number;
+  sourceLoveCount?: number;
+  sourceDislikeCount?: number;
   packItemId?: string;
   canRespond?: boolean;
   actor: {
@@ -193,10 +200,22 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         }
       }
       
+      // Deduplicate by id
+      const seenIds = new Set<string>();
+      const uniqueItems = allItems.filter(item => {
+        if (seenIds.has(item.id)) return false;
+        seenIds.add(item.id);
+        return true;
+      });
+
       if (page === 1) {
-        setFeedItems(allItems);
+        setFeedItems(uniqueItems);
       } else {
-        setFeedItems((prev) => [...prev, ...allItems]);
+        setFeedItems((prev) => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newItems = uniqueItems.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
       }
       
       setHasMore(activityData.hasMore || false);

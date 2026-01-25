@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, MapPin, Tent, Send } from 'lucide-react';
-import api from '../api';
+import api from '../services/api';
 
 interface CampgroundPost {
   id: string;

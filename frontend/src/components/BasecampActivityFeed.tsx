@@ -37,6 +37,8 @@ interface FeedItem {
   metadata?: any;
   replyContent?: string;
   reaction?: string | null;
+  userHasLiked?: boolean;
+  sourceLikeCount?: number;
 }
 
 interface Props {
@@ -51,7 +53,14 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
 
   const loadFeed = useCallback(async () => {
     try {
-      const { data } = await api.get('/basecamp/campground-feed', { params: { limit: maxItems } });
+      const { data } = await api.get('/basecamp/campground-feed', { 
+        params: { 
+          limit: maxItems,
+          showFollowed: false,
+          showStrangerActivity: true,
+          showPublicEvents: true
+        } 
+      });
       setFeedItems(data.feedItems || []);
     } catch (error) {
       console.error('Failed to load feed:', error);
@@ -160,7 +169,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
             <Bell className="w-5 h-5 text-blue-600" />
-            Campground Updates
+            Discovery Feed
           </h3>
           <button onClick={refresh} disabled={refreshing} className="p-1.5 text-gray-400 hover:text-gray-600" title="Refresh">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -377,10 +386,10 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       <div className="mt-2">
                         {item.targetLink ? (
                           <Link to={item.targetLink}>
-                            <img src={item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200 hover:opacity-90" />
+                            <img src={item.imageUrl?.startsWith("/") ? `http://localhost:3001${item.imageUrl}` : item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200 hover:opacity-90" />
                           </Link>
                         ) : (
-                          <img src={item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200" />
+                          <img src={item.imageUrl?.startsWith("/") ? `http://localhost:3001${item.imageUrl}` : item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200" />
                         )}
                       </div>
                     )}

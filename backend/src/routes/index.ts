@@ -21,6 +21,7 @@ import checkinRoutes from './routes/checkin.routes';
 import eventAccessRoutes from './event-access.routes';
 import onboardingRoutes from './onboarding.routes';
 import tripCommentsRoutes from './trip-comments.routes';
+import mediaAlbumsRoutes from './media-albums.routes';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use('/api/stickers', stickerRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/checkin', checkinRoutes);
+app.use('/api/media-albums', mediaAlbumsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

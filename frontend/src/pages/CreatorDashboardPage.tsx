@@ -88,7 +88,7 @@ export default function CreatorDashboardPage() {
   const [addingCollaborator, setAddingCollaborator] = useState(false);
 
   useEffect(() => {
-    if (user && !user.isCreator) {
+    if (user !== undefined && user !== null && user.isCreator === false) {
       navigate('/basecamp');
       return;
     }

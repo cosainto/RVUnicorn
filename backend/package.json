@@ -23,6 +23,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@paralleldrive/cuid2": "^3.0.6",
     "@prisma/client": "^5.7.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",

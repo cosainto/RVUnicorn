@@ -64,6 +64,20 @@ router.get('/', optionalAuth, async (req, res) => {
             imageUrl: true,
           },
         },
+        albumComments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
         _count: {
           select: {
             photos: true,
@@ -111,6 +125,20 @@ router.get('/:id', optionalAuth, async (req, res) => {
             },
           },
         },
+        albumComments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
         _count: {
           select: {
             photos: true,
@@ -123,10 +151,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    // Log activity for friend feed
-    await logAlbumCreated(userId, album.id, album.title);
 
-    res.json(album);
+    res.json({ ...album, comments: album.albumComments });
   } catch (error) {
     console.error('Get album error:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
@@ -158,8 +184,6 @@ router.post('/', authenticateToken, async (req, res) => {
       },
     });
 
-    // Log activity for friend feed
-    await logAlbumCreated(userId, album.id, album.title);
 
     res.json(album);
   } catch (error) {

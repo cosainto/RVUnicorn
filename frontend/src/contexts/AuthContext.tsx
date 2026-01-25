@@ -10,6 +10,7 @@ interface User {
   profilePicture?: string;
   bio?: string;
   isCreator?: boolean;
+  role?: string;
 }
 
 interface AuthContextType {

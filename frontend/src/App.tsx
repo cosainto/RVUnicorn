@@ -50,6 +50,8 @@ import AccountActivityLogPage from './pages/AccountActivityLogPage';
 import AccountDeletionPage from './pages/AccountDeletionPage';
 import BadgesPage from './pages/BadgesPage';
 import VideoPlayerPage from './pages/VideoPlayerPage';
+import MediaAlbumsPage from './pages/MediaAlbumsPage';
+import MediaAlbumDetailPage from './pages/MediaAlbumDetailPage';
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
@@ -120,6 +122,8 @@ function AppContent() {
         <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
 
         <Route path="/groups" element={<GroupsPage />} />
+        <Route path="/media-albums" element={<PrivateRoute><MediaAlbumsPage /></PrivateRoute>} />
+        <Route path="/media-albums/:id" element={<PrivateRoute><MediaAlbumDetailPage /></PrivateRoute>} />
 
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/hashtag/:tag" element={<HashtagPage />} />

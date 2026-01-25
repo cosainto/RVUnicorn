@@ -156,7 +156,7 @@ export default function Navbar() {
   ];
 
   const myStuffItems: DropdownItem[] = [
-    { icon: <Camera className="w-4 h-4" />, label: 'Albums', to: '/albums', description: 'Your photo albums' },
+    { icon: <Camera className="w-4 h-4" />, label: 'Albums', to: '/media-albums', description: 'Your photo albums' },
     { icon: <UtensilsCrossed className="w-4 h-4" />, label: 'Recipes', to: '/recipes', description: 'Camp cooking recipes' },
     { icon: <Package className="w-4 h-4" />, label: 'Gear', to: '/gear', description: 'Gear & packing lists' },
     { icon: <Wrench className="w-4 h-4" />, label: 'My RV', to: '/my-rv', description: 'RV specs & showcase' },
@@ -388,9 +388,9 @@ export default function Navbar() {
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
                 >
-                  {user.profileImage ? (
+                  {user.profilePicture ? (
                     <img
-                      src={user.profileImage}
+                      src={user.profilePicture}
                       alt={user.firstName}
                       className="w-8 h-8 rounded-full object-cover ring-2 ring-white/20"
                     />
@@ -508,8 +508,8 @@ export default function Navbar() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-primary-900 to-primary-800">
               <div className="flex items-center gap-3">
-                {user.profileImage ? (
-                  <img src={user.profileImage} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20" />
+                {user.profilePicture ? (
+                  <img src={user.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gold-400 flex items-center justify-center">
                     <span className="text-primary-900 font-semibold">{user.firstName?.[0]}{user.lastName?.[0]}</span>
