@@ -81,18 +81,46 @@ export default function RecipeBox({ userId, isOwnProfile }: RecipeBoxProps) {
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ userId });
       
+      // Build base params
+      const baseParams: any = {};
       if (filters.category !== 'ALL') {
-        params.append('category', filters.category);
+        baseParams.category = filters.category;
       }
-      
       if (filters.difficulty !== 'ALL') {
-        params.append('difficulty', filters.difficulty);
+        baseParams.difficulty = filters.difficulty;
       }
 
-      const { data } = await api.get(`/recipes?${params.toString()}`);
-      setRecipes(data);
+      // Fetch user's created recipes
+      const createdParams = new URLSearchParams({ 
+        ...baseParams, 
+        relationship: 'my_recipes' 
+      });
+      const { data: createdRecipes } = await api.get(`/recipes?${createdParams.toString()}`);
+
+      // Fetch user's saved/favorited recipes
+      const savedParams = new URLSearchParams({ 
+        ...baseParams, 
+        relationship: 'saved' 
+      });
+      const { data: savedRecipes } = await api.get(`/recipes?${savedParams.toString()}`);
+
+      // Combine and deduplicate (in case user saved their own recipe)
+      const allRecipes = [...createdRecipes];
+      const createdIds = new Set(createdRecipes.map((r: any) => r.id));
+      
+      for (const recipe of savedRecipes) {
+        if (!createdIds.has(recipe.id)) {
+          allRecipes.push({ ...recipe, isSaved: true });
+        }
+      }
+
+      // Sort by created date
+      allRecipes.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      setRecipes(allRecipes);
     } catch (error) {
       console.error('Load recipes error:', error);
       setRecipes([]);
