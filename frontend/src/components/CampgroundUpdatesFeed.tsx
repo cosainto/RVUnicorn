@@ -56,7 +56,7 @@ export default function CampgroundUpdatesFeed({ maxItems = 10 }: CampgroundUpdat
         showStrangerActivity: showStrangerActivity.toString(),
         showPublicEvents: showPublicEvents.toString(),
       });
-      const { data } = await api.get('/basecamp/campground-feed?' + params.toString());
+      const { data } = await api.get('/basecamp/campground-official-feed?limit=' + maxItems);
       setFeedItems(data.feedItems || []);
     } catch (error) {
       console.error('Failed to load campground feed:', error);

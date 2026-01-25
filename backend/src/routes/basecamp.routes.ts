@@ -1668,3 +1668,175 @@ router.delete('/activity/:id', authenticateToken, async (req, res) => {
 
 export default router;
 
+
+// Official Campground Updates - content FROM campgrounds (not user activity)
+router.get('/campground-official-feed', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // Get followed campgrounds
+    const followedCampgrounds = await prisma.campgroundFollow.findMany({
+      where: { userId },
+      select: { campgroundId: true },
+    });
+    const followedCampgroundIds = followedCampgrounds.map((f) => f.campgroundId);
+
+    if (followedCampgroundIds.length === 0) {
+      return res.json({ feedItems: [], hasMore: false, message: 'Follow campgrounds to see their updates!' });
+    }
+
+    // Fetch campground announcements
+    const announcements = await prisma.campgroundAnnouncement.findMany({
+      where: {
+        campgroundId: { in: followedCampgroundIds },
+        isPublished: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gte: new Date() } }
+        ]
+      },
+      take: limit,
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        author: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+      },
+    });
+
+    const announcementItems = announcements.map(a => ({
+      id: 'announcement-' + a.id,
+      type: 'CAMPGROUND_ANNOUNCEMENT',
+      campground: a.campground,
+      campgroundId: a.campgroundId,
+      title: a.title,
+      content: a.content,
+      imageUrl: a.imageUrl,
+      isPinned: a.isPinned,
+      priority: a.priority,
+      createdAt: a.createdAt,
+      activityIcon: a.priority === 'URGENT' ? '🚨' : '📢',
+      activityLabel: 'announced',
+      activityColor: a.priority === 'URGENT' ? 'text-red-600' : 'text-amber-600',
+      targetName: a.title,
+      targetLink: '/campgrounds/' + a.campgroundId,
+    }));
+
+    // Fetch campground events
+    const campgroundEvents = await prisma.campgroundEvent.findMany({
+      where: {
+        campgroundId: { in: followedCampgroundIds },
+        startDate: { gte: new Date() },
+      },
+      take: limit,
+      orderBy: { startDate: 'asc' },
+      include: {
+        campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        createdBy: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+      },
+    });
+
+    const eventItems = campgroundEvents.map(e => ({
+      id: 'cg-event-' + e.id,
+      type: 'CAMPGROUND_EVENT',
+      campground: e.campground,
+      campgroundId: e.campgroundId,
+      title: e.title,
+      content: e.description,
+      imageUrl: e.imageUrl,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      createdAt: e.createdAt,
+      activityIcon: '📅',
+      activityLabel: 'is hosting',
+      activityColor: 'text-indigo-600',
+      targetName: e.title,
+      targetLink: '/campgrounds/' + e.campgroundId + '/events/' + e.id,
+    }));
+
+    // Fetch campground posts
+    const posts = await prisma.campgroundPost.findMany({
+      where: {
+        campgroundId: { in: followedCampgroundIds },
+      },
+      take: limit,
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true } },
+        author: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+      },
+    });
+
+    const postItems = posts.map(p => ({
+      id: 'cg-post-' + p.id,
+      type: 'CAMPGROUND_POST',
+      campground: p.campground,
+      campgroundId: p.campgroundId,
+      title: p.title,
+      content: p.content,
+      imageUrl: p.imageUrl,
+      isPinned: p.isPinned,
+      createdAt: p.createdAt,
+      activityIcon: '📝',
+      activityLabel: 'posted',
+      activityColor: 'text-blue-600',
+      targetName: p.title || 'an update',
+      targetLink: '/campgrounds/' + p.campgroundId,
+    }));
+
+    // Get check-in counts for followed campgrounds
+    const checkInCounts = await prisma.checkIn.groupBy({
+      by: ['campgroundId'],
+      where: {
+        campgroundId: { in: followedCampgroundIds },
+        isActive: true,
+      },
+      _count: { id: true },
+    });
+
+    // Get campground details for check-in counts
+    const campgroundsWithCheckIns = await prisma.campground.findMany({
+      where: {
+        id: { in: checkInCounts.filter(c => c._count.id > 0).map(c => c.campgroundId) },
+      },
+      select: { id: true, name: true, location: true, state: true, imageUrl: true },
+    });
+
+    const checkInItems = checkInCounts
+      .filter(c => c._count.id > 0)
+      .map(c => {
+        const campground = campgroundsWithCheckIns.find(cg => cg.id === c.campgroundId);
+        return {
+          id: 'checkin-count-' + c.campgroundId,
+          type: 'CAMPGROUND_CHECKIN_COUNT',
+          campground,
+          campgroundId: c.campgroundId,
+          title: null,
+          content: `${c._count.id} camper${c._count.id > 1 ? 's' : ''} currently here`,
+          createdAt: new Date(),
+          activityIcon: '🏕️',
+          activityLabel: `has ${c._count.id} camper${c._count.id > 1 ? 's' : ''} checked in`,
+          activityColor: 'text-green-600',
+          targetName: campground?.name || 'Campground',
+          targetLink: '/campgrounds/' + c.campgroundId,
+          checkinCount: c._count.id,
+        };
+      });
+
+    // Merge and sort all items
+    const allItems = [...announcementItems, ...eventItems, ...postItems, ...checkInItems]
+      .sort((a, b) => {
+        // Pinned items first
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        // Then by date
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, limit);
+
+    res.json({ feedItems: allItems, hasMore: allItems.length === limit });
+  } catch (error) {
+    console.error('Get campground official feed error:', error);
+    res.status(500).json({ error: 'Failed to get campground updates' });
+  }
+});
