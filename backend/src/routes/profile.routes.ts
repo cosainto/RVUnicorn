@@ -1074,12 +1074,14 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         targetName = activity.title;
       }
 
-      // Extract imageUrl from metadata for photo activities
+      // Extract imageUrl from metadata for photo activities (videoUrl added later)
       let imageUrl = null;
+      let mediaIds: string[] = [];
       if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
         try {
           const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
           imageUrl = meta?.previewUrl || null;
+          mediaIds = meta?.mediaIds || [];
         } catch (e) {}
       }
 
@@ -1106,7 +1108,35 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         campground: activity.campground,
         metadata: activity.metadata,
         imageUrl,
+        mediaIds,
       };
+    });
+
+    // Fetch video URLs for activities that have media
+    const mediaIdsToFetch = activityItems
+      .filter(item => item.mediaIds && item.mediaIds.length > 0)
+      .flatMap(item => item.mediaIds);
+    
+    let mediaMap: Record<string, { type: string; url: string; thumbnailUrl: string | null }> = {};
+    if (mediaIdsToFetch.length > 0) {
+      const mediaItems = await prisma.media.findMany({
+        where: { id: { in: mediaIdsToFetch } },
+        select: { id: true, type: true, url: true, thumbnailUrl: true }
+      });
+      mediaMap = Object.fromEntries(mediaItems.map(m => [m.id, m]));
+    }
+
+    // Add videoUrl to activity items
+    const enrichedActivityItems = activityItems.map(item => {
+      let videoUrl = null;
+      if (item.mediaIds && item.mediaIds.length > 0) {
+        const media = mediaMap[item.mediaIds[0]];
+        if (media?.type === 'VIDEO') {
+          videoUrl = media.url;
+          item.imageUrl = media.thumbnailUrl || item.imageUrl;
+        }
+      }
+      return { ...item, videoUrl };
     });
 
     // Get BasecampActivity items for own profile (thread replies, mentions, etc.)
@@ -1176,7 +1206,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     }
 
     // Merge and sort all items by date
-    const allItems = [...postItems, ...activityItems, ...basecampItems].sort(
+    const allItems = [...postItems, ...enrichedActivityItems, ...basecampItems].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 

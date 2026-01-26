@@ -305,12 +305,24 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel = activity.content;
         }
         
-        // Extract imageUrl from metadata for photo activities
+        // Extract imageUrl and videoUrl from metadata for photo/video activities
         let imageUrl = (activity as any).imageUrl;
+        let videoUrl = null;
         if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
           try {
             const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
             imageUrl = meta?.previewUrl || imageUrl;
+            // Check if this is a video upload
+            if (meta?.mediaIds && meta.mediaIds.length > 0) {
+              const media = await prisma.media.findFirst({
+                where: { id: { in: meta.mediaIds } },
+                select: { type: true, url: true, thumbnailUrl: true }
+              });
+              if (media?.type === 'VIDEO') {
+                videoUrl = media.url;
+                imageUrl = media.thumbnailUrl || imageUrl;
+              }
+            }
           } catch (e) {}
         }
 
@@ -331,6 +343,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityColor: getActivityColor(activity.type),
           campground: activity.campground,
           imageUrl,
+          videoUrl,
+          videoUrl,
           isFriendActivity: friendIdSet.has(activity.userId),
           hasMutualFriendInteraction: !!secondaryUserInfo,
           userHasLiked,

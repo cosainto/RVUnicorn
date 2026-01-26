@@ -54,6 +54,7 @@ interface FeedItem {
   };
   content?: string;
   imageUrl?: string;
+  videoUrl?: string;
   title?: string;
   targetName?: string;
   targetLink?: string;
@@ -161,7 +162,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             try {
               const { data: packingData } = await api.get('/basecamp/feed?page=1&limit=20');
               const packingItems: FeedItem[] = (packingData.feedItems || [])
-                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment)
+                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment || item.type === 'PHOTO_UPLOADED' || item.isFriendActivity)
                 .map((item: any) => ({
                   id: item.id,
                   type: item.type || item.activityType,
@@ -184,6 +185,9 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   reaction: item.reaction,
                   userHasLiked: item.userHasLiked,
                   replyContent: item.replyContent,
+                  imageUrl: item.imageUrl,
+                  videoUrl: item.videoUrl,
+                  isFriendActivity: item.isFriendActivity,
                 }));
               
               if (packingItems.length > 0) {
@@ -810,8 +814,15 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         <p className="text-gray-700 mb-3"><RenderMentions content={item.content} /></p>
       )}
 
-      {/* Show image for posts and photo uploads */}
-      {(item.imageUrl || (item.activityType === 'PHOTO_UPLOADED' && item.imageUrl)) && (
+      {/* Show video or image for posts and photo uploads */}
+      {item.videoUrl ? (
+        <video 
+          src={item.videoUrl} 
+          controls
+          poster={item.imageUrl}
+          className="mt-3 rounded-lg max-h-80 w-full object-contain border border-gray-200"
+        />
+      ) : (item.imageUrl || (item.activityType === 'PHOTO_UPLOADED' && item.imageUrl)) && (
         <img
           src={item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl.startsWith('/images/') ? item.imageUrl : `${item.imageUrl}`)}
           alt="Post"
@@ -1022,12 +1033,22 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         )}
 
-        {item.imageUrl && (
+        {/* Show video or image */}
+        {item.videoUrl ? (
+          <div className="mb-3">
+            <video 
+              src={item.videoUrl} 
+              controls
+              poster={item.imageUrl}
+              className="rounded-lg max-h-80 max-w-full object-contain border border-gray-200"
+            />
+          </div>
+        ) : item.imageUrl && (
           <div className="mb-3">
             <img
               src={item.imageUrl.startsWith("http") ? item.imageUrl : (item.imageUrl.startsWith("/images/") ? item.imageUrl : `${item.imageUrl}`)}
               alt="Post"
-              className="w-1/4 rounded-lg max-h-24 object-cover"
+              className="rounded-lg max-h-64 max-w-sm object-cover"
             />
           </div>
         )}

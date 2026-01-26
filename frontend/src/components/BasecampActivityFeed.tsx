@@ -342,18 +342,29 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       ) : null;
                     })()}
 
-                    {/* Show photo for PHOTO_UPLOADED */}
-                    {item.type === 'PHOTO_UPLOADED' && item.imageUrl && (
-                      <Link 
-                        to={item.targetLink || '#'} 
-                        className="block mt-2 rounded-lg overflow-hidden max-w-xs hover:opacity-90 transition"
-                      >
-                        <img 
-                          src={item.imageUrl} 
-                          alt="Uploaded photo" 
-                          className="w-full h-auto max-h-48 object-cover rounded-lg border border-gray-200"
-                        />
-                      </Link>
+                    {/* Show photo/video for PHOTO_UPLOADED */}
+                    {item.type === 'PHOTO_UPLOADED' && (item.imageUrl || item.videoUrl) && (
+                      <div className="mt-2 rounded-lg overflow-hidden max-w-sm">
+                        {item.videoUrl ? (
+                          <video 
+                            src={item.videoUrl} 
+                            controls
+                            className="w-full h-auto max-h-64 rounded-lg border border-gray-200"
+                            poster={item.imageUrl}
+                          />
+                        ) : (
+                          <Link 
+                            to={item.targetLink || '#'} 
+                            className="block hover:opacity-90 transition"
+                          >
+                            <img 
+                              src={item.imageUrl} 
+                              alt="Uploaded photo" 
+                              className="w-full h-auto max-h-48 object-cover rounded-lg border border-gray-200"
+                            />
+                          </Link>
+                        )}
+                      </div>
                     )}
 
                     <div className="flex items-center justify-between mt-1">
