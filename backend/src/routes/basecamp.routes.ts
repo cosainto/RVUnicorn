@@ -335,6 +335,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
                 if (media.type === 'VIDEO') {
                   videoUrl = media.url;
                   imageUrl = media.thumbnailUrl || imageUrl;
+                } else {
+                  // For photos, use the Cloudinary URL from Media record
+                  imageUrl = media.url || imageUrl;
                 }
                 // Check if user has liked
                 const userReaction = await prisma.mediaReaction.findFirst({

@@ -1163,6 +1163,9 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           if (media.type === 'VIDEO') {
             videoUrl = media.url;
             item.imageUrl = media.thumbnailUrl || item.imageUrl;
+          } else {
+            // For photos, use the Cloudinary URL from Media record
+            item.imageUrl = media.url || item.imageUrl;
           }
         }
       }
