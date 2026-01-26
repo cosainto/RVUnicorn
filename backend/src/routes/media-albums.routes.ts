@@ -625,10 +625,10 @@ router.post('/media/:mediaId/comments', authenticateToken, async (req, res) => {
   try {
     const { mediaId } = req.params;
     const userId = getUserId(req);
-    const { content, parentId } = req.body;
+    const { content, parentId, imageUrl } = req.body;
 
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    if (!content?.trim()) return res.status(400).json({ error: 'Content is required' });
+    if (!content?.trim() && !imageUrl) return res.status(400).json({ error: 'Content or image is required' });
 
     const media = await prisma.media.findUnique({ where: { id: mediaId } });
     if (!media) return res.status(404).json({ error: 'Media not found' });
@@ -639,7 +639,8 @@ router.post('/media/:mediaId/comments', authenticateToken, async (req, res) => {
         id: createId(),
         mediaId,
         userId,
-        content: content.trim(),
+        content: content?.trim() || '',
+        imageUrl: imageUrl || null,
         parentId: parentId || null,
         updatedAt: new Date(),
       },

@@ -305,22 +305,42 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel = activity.content;
         }
         
-        // Extract imageUrl and videoUrl from metadata for photo/video activities
+        // Extract imageUrl, videoUrl, mediaId, and counts from metadata for photo/video activities
         let imageUrl = (activity as any).imageUrl;
         let videoUrl = null;
+        let mediaId = null;
+        let mediaLikeCount = 0;
+        let mediaCommentCount = 0;
+        let userHasLikedMedia = false;
         if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
           try {
             const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
             imageUrl = meta?.previewUrl || imageUrl;
-            // Check if this is a video upload
+            // Check if this is a video upload and get counts
             if (meta?.mediaIds && meta.mediaIds.length > 0) {
+              mediaId = meta.mediaIds[0];
               const media = await prisma.media.findFirst({
                 where: { id: { in: meta.mediaIds } },
-                select: { type: true, url: true, thumbnailUrl: true }
+                select: { 
+                  id: true, 
+                  type: true, 
+                  url: true, 
+                  thumbnailUrl: true,
+                  _count: { select: { MediaReaction: true, MediaComment: true } }
+                }
               });
-              if (media?.type === 'VIDEO') {
-                videoUrl = media.url;
-                imageUrl = media.thumbnailUrl || imageUrl;
+              if (media) {
+                mediaLikeCount = media._count?.MediaReaction || 0;
+                mediaCommentCount = media._count?.MediaComment || 0;
+                if (media.type === 'VIDEO') {
+                  videoUrl = media.url;
+                  imageUrl = media.thumbnailUrl || imageUrl;
+                }
+                // Check if user has liked
+                const userReaction = await prisma.mediaReaction.findFirst({
+                  where: { mediaId: media.id, userId }
+                });
+                userHasLikedMedia = !!userReaction;
               }
             }
           } catch (e) {}
@@ -344,6 +364,10 @@ router.get('/feed', authenticateToken, async (req, res) => {
           campground: activity.campground,
           imageUrl,
           videoUrl,
+          mediaId,
+          mediaLikeCount,
+          mediaCommentCount,
+          userHasLikedMedia,
           videoUrl,
           isFriendActivity: friendIdSet.has(activity.userId),
           hasMutualFriendInteraction: !!secondaryUserInfo,

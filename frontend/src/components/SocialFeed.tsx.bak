@@ -59,7 +59,6 @@ interface FeedItem {
   mediaLikeCount?: number;
   mediaCommentCount?: number;
   userHasLikedMedia?: boolean;
-  mediaComments?: any[];
   title?: string;
   targetName?: string;
   targetLink?: string;
@@ -193,10 +192,6 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   imageUrl: item.imageUrl,
                   videoUrl: item.videoUrl,
                   isFriendActivity: item.isFriendActivity,
-                  mediaId: item.mediaId,
-                  mediaLikeCount: item.mediaLikeCount,
-                  mediaCommentCount: item.mediaCommentCount,
-                  userHasLikedMedia: item.userHasLikedMedia,
                 }));
               
               if (packingItems.length > 0) {
@@ -591,9 +586,9 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         // Like the actual media item
         const isCurrentlyLiked = item.userHasLikedMedia;
         if (isCurrentlyLiked) {
-          await api.delete(`/media-albums/media/${item.mediaId}/reactions/LIKE`);
+          await api.delete(\`/media-albums/media/\${item.mediaId}/reactions/LIKE\`);
         } else {
-          await api.post(`/media-albums/media/${item.mediaId}/reactions`, { type: 'LIKE' });
+          await api.post(\`/media-albums/media/\${item.mediaId}/reactions\`, { type: 'LIKE' });
         }
         setFeedItems((items) =>
           items.map((i) =>
@@ -727,23 +722,12 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     }
   };
 
-  const toggleComments = async (itemId: string, mediaId?: string) => {
+  const toggleComments = (itemId: string) => {
     const newExpanded = new Set(expandedComments);
     if (newExpanded.has(itemId)) {
       newExpanded.delete(itemId);
     } else {
       newExpanded.add(itemId);
-      // Fetch media comments if this is a media item
-      if (mediaId) {
-        try {
-          const { data } = await api.get(`/media-albums/media/${mediaId}/comments`);
-          setFeedItems(items => items.map(item => 
-            item.id === itemId ? { ...item, mediaComments: data } : item
-          ));
-        } catch (e) {
-          console.error('Failed to fetch media comments:', e);
-        }
-      }
     }
     setExpandedComments(newExpanded);
   };
@@ -771,21 +755,6 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                     likes: i._count?.likes || 0,
                     comments: (i._count?.comments || 0) + 1,
                   },
-                }
-              : i
-          )
-        );
-      } else if (item.mediaId && (item.type === 'PHOTO_UPLOADED' || item.activityType === 'PHOTO_UPLOADED' || item.type === 'PHOTO')) {
-        // Handle media comments
-        const { data } = await api.post(`/media-albums/media/${item.mediaId}/comments`, { content });
-        
-        setFeedItems((items) =>
-          items.map((i) =>
-            i.id === item.id
-              ? {
-                  ...i,
-                  mediaComments: [...(i.mediaComments || []), data],
-                  mediaCommentCount: (i.mediaCommentCount || 0) + 1,
                 }
               : i
           )
@@ -893,24 +862,23 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             item.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
           }`}
         >
-          <Heart className={`w-5 h-5 ${(item.mediaId ? item.userHasLikedMedia : item.isLiked) ? 'fill-current' : ''}`} />
-          <span>{item.mediaId ? (item.mediaLikeCount || 0) : (item._count?.likes || 0)}</span>
+          <Heart className={`w-5 h-5 ${item.isLiked ? 'fill-current' : ''}`} />
+          <span>{item._count?.likes || 0}</span>
         </button>
         <button
-          onClick={() => toggleComments(item.id, item.mediaId)}
+          onClick={() => toggleComments(item.id)}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 transition"
         >
           <MessageSquare className="w-5 h-5" />
-          <span>{item.mediaId ? (item.mediaCommentCount || 0) : (item._count?.comments || 0)}</span>
+          <span>{item._count?.comments || 0}</span>
         </button>
       </div>
 
       {expandedComments.has(item.id) && (
         <div className="mt-4 pt-4 border-t border-green-200">
-          {/* Show media comments for media items, regular comments otherwise */}
-          {((item.mediaId && item.mediaComments && item.mediaComments.length > 0) || (item.comments && item.comments.length > 0)) && (
+          {item.comments && item.comments.length > 0 && (
             <div className="space-y-3 mb-4">
-              {(item.mediaId ? item.mediaComments : item.comments)?.map((comment) => (
+              {item.comments.map((comment) => (
                 <div key={comment.id} className="flex gap-2">
                   <Link to={`/profile/${comment.user.username}`}>
                     {comment.user.profilePicture ? (
@@ -1309,13 +1277,13 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
               <span>{item.mediaId ? (item.mediaLikeCount || 0) : (item._count?.likes || 0)}</span>
             </button>
 
-            {(item.type === 'POST' || item.mediaId) && (
+            {item.type === 'POST' && (
               <button
-                onClick={() => toggleComments(item.id, item.mediaId)}
+                onClick={() => toggleComments(item.id)}
                 className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 transition"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>{item.mediaId ? (item.mediaCommentCount || 0) : (item._count?.comments || 0)}</span>
+                <span>{item._count?.comments || 0}</span>
               </button>
             )}
 
@@ -1326,12 +1294,12 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         )}
 
-        {/* Expanded Comments Section - for POST and media types */}
-        {(item.type === 'POST' || item.mediaId) && expandedComments.has(item.id) && (
+        {/* Expanded Comments Section - only for POST types */}
+        {item.type === 'POST' && expandedComments.has(item.id) && (
           <div className="mt-4 pt-4 border-t border-gray-200">
-            {((item.mediaId && item.mediaComments && item.mediaComments.length > 0) || (item.comments && item.comments.length > 0)) && (
+            {item.comments && item.comments.length > 0 && (
               <div className="space-y-3 mb-4">
-                {(item.mediaId ? item.mediaComments : item.comments)?.map((comment: any) => (
+                {item.comments.map((comment: any) => (
                   <div key={comment.id} className="flex gap-2">
                     <Link to={`/profile/${comment.user.username}`}>
                       {comment.user.profilePicture ? (

@@ -2446,6 +2446,7 @@ model MediaComment {
   userId             String
   parentId           String?
   content            String
+  imageUrl           String?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime
   Media              Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)

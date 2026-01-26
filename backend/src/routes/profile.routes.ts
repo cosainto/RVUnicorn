@@ -1117,26 +1117,56 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       .filter(item => item.mediaIds && item.mediaIds.length > 0)
       .flatMap(item => item.mediaIds);
     
-    let mediaMap: Record<string, { type: string; url: string; thumbnailUrl: string | null }> = {};
+    let mediaMap: Record<string, { type: string; url: string; thumbnailUrl: string | null; likeCount: number; commentCount: number }> = {};
     if (mediaIdsToFetch.length > 0) {
       const mediaItems = await prisma.media.findMany({
         where: { id: { in: mediaIdsToFetch } },
-        select: { id: true, type: true, url: true, thumbnailUrl: true }
+        select: { 
+          id: true, 
+          type: true, 
+          url: true, 
+          thumbnailUrl: true,
+          _count: { select: { MediaReaction: true, MediaComment: true } }
+        }
       });
-      mediaMap = Object.fromEntries(mediaItems.map(m => [m.id, m]));
+      mediaMap = Object.fromEntries(mediaItems.map(m => [m.id, { 
+        ...m, 
+        likeCount: m._count?.MediaReaction || 0, 
+        commentCount: m._count?.MediaComment || 0 
+      }]));
+    }
+    
+    // Check which media the user has liked
+    let userLikedMediaIds = new Set<string>();
+    if (currentUserId && mediaIdsToFetch.length > 0) {
+      const userReactions = await prisma.mediaReaction.findMany({
+        where: { userId: currentUserId, mediaId: { in: mediaIdsToFetch } },
+        select: { mediaId: true }
+      });
+      userLikedMediaIds = new Set(userReactions.map(r => r.mediaId));
     }
 
-    // Add videoUrl to activity items
+    // Add videoUrl and counts to activity items
     const enrichedActivityItems = activityItems.map(item => {
       let videoUrl = null;
+      let mediaId = null;
+      let mediaLikeCount = 0;
+      let mediaCommentCount = 0;
+      let userHasLikedMedia = false;
       if (item.mediaIds && item.mediaIds.length > 0) {
-        const media = mediaMap[item.mediaIds[0]];
-        if (media?.type === 'VIDEO') {
-          videoUrl = media.url;
-          item.imageUrl = media.thumbnailUrl || item.imageUrl;
+        mediaId = item.mediaIds[0];
+        const media = mediaMap[mediaId];
+        if (media) {
+          mediaLikeCount = media.likeCount || 0;
+          mediaCommentCount = media.commentCount || 0;
+          userHasLikedMedia = userLikedMediaIds.has(mediaId);
+          if (media.type === 'VIDEO') {
+            videoUrl = media.url;
+            item.imageUrl = media.thumbnailUrl || item.imageUrl;
+          }
         }
       }
-      return { ...item, videoUrl };
+      return { ...item, videoUrl, mediaId, mediaLikeCount, mediaCommentCount, userHasLikedMedia };
     });
 
     // Get BasecampActivity items for own profile (thread replies, mentions, etc.)
