@@ -810,7 +810,8 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         <p className="text-gray-700 mb-3"><RenderMentions content={item.content} /></p>
       )}
 
-      {item.imageUrl && (
+      {/* Show image for posts and photo uploads */}
+      {(item.imageUrl || (item.activityType === 'PHOTO_UPLOADED' && item.imageUrl)) && (
         <img
           src={item.imageUrl.startsWith('http') ? item.imageUrl : (item.imageUrl.startsWith('/images/') ? item.imageUrl : `${item.imageUrl}`)}
           alt="Post"

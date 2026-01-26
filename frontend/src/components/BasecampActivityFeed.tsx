@@ -341,6 +341,21 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                         </p>
                       ) : null;
                     })()}
+
+                    {/* Show photo for PHOTO_UPLOADED */}
+                    {item.type === 'PHOTO_UPLOADED' && item.imageUrl && (
+                      <Link 
+                        to={item.targetLink || '#'} 
+                        className="block mt-2 rounded-lg overflow-hidden max-w-xs hover:opacity-90 transition"
+                      >
+                        <img 
+                          src={item.imageUrl} 
+                          alt="Uploaded photo" 
+                          className="w-full h-auto max-h-48 object-cover rounded-lg border border-gray-200"
+                        />
+                      </Link>
+                    )}
+
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-500">{formatTime(item.createdAt)}</span>
                       <div className="flex items-center gap-1">

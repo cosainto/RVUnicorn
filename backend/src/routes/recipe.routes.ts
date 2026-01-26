@@ -1539,3 +1539,183 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
 });
 
 export default router;
+
+// GET /api/recipes/suggestions - Get 3 recipe suggestions based on user's saved recipes or random
+router.get('/suggestions', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Get user's saved recipes to find preferences
+    const savedRecipes = await prisma.savedRecipe.findMany({
+      where: { userId },
+      include: {
+        recipe: {
+          select: { category: true, dietaryPreferences: true },
+        },
+      },
+    });
+
+    // Get IDs of recipes user has created or saved (to exclude)
+    const userRecipes = await prisma.recipe.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    const excludeIds = [
+      ...userRecipes.map(r => r.id),
+      ...savedRecipes.map(s => s.recipeId),
+    ];
+
+    let suggestions: any[] = [];
+
+    if (savedRecipes.length > 0) {
+      // User has saved recipes - find similar ones
+      const categories = [...new Set(savedRecipes.map(s => s.recipe.category).filter(Boolean))];
+      const dietaryPrefs = [...new Set(savedRecipes.flatMap(s => s.recipe.dietaryPreferences || []))];
+
+      // Find recipes with similar traits
+      suggestions = await prisma.recipe.findMany({
+        where: {
+          id: { notIn: excludeIds },
+          privacy: 'PUBLIC',
+          OR: [
+            { category: { in: categories as string[] } },
+            { dietaryPreferences: { hasSome: dietaryPrefs } },
+          ],
+        },
+        take: 10, // Get more than needed for randomization
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          photos: { take: 1, select: { imageUrl: true } },
+          _count: { select: { comments: true, ratings: true } },
+        },
+      });
+
+      // Shuffle and take 3
+      suggestions = suggestions.sort(() => Math.random() - 0.5).slice(0, 3);
+    }
+
+    // If not enough suggestions, fill with random public recipes
+    if (suggestions.length < 3) {
+      const needed = 3 - suggestions.length;
+      const existingIds = [...excludeIds, ...suggestions.map(s => s.id)];
+
+      const randomRecipes = await prisma.recipe.findMany({
+        where: {
+          id: { notIn: existingIds },
+          privacy: 'PUBLIC',
+        },
+        take: needed * 3, // Get extras for randomization
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          photos: { take: 1, select: { imageUrl: true } },
+          _count: { select: { comments: true, ratings: true } },
+        },
+      });
+
+      // Shuffle and take what's needed
+      const shuffled = randomRecipes.sort(() => Math.random() - 0.5).slice(0, needed);
+      suggestions = [...suggestions, ...shuffled];
+    }
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('Get recipe suggestions error:', error);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});
+
+// GET /api/recipes/suggestions - Get 3 recipe suggestions based on user's saved recipes or random
+router.get('/suggestions', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Get user's saved recipes to find preferences
+    const savedRecipes = await prisma.savedRecipe.findMany({
+      where: { userId },
+      include: {
+        recipe: {
+          select: { category: true, dietaryPreferences: true },
+        },
+      },
+    });
+
+    // Get IDs of recipes user has created or saved (to exclude)
+    const userRecipes = await prisma.recipe.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    const excludeIds = [
+      ...userRecipes.map(r => r.id),
+      ...savedRecipes.map(s => s.recipeId),
+    ];
+
+    let suggestions: any[] = [];
+
+    if (savedRecipes.length > 0) {
+      // User has saved recipes - find similar ones
+      const categories = [...new Set(savedRecipes.map(s => s.recipe.category).filter(Boolean))];
+      const dietaryPrefs = [...new Set(savedRecipes.flatMap(s => s.recipe.dietaryPreferences || []))];
+
+      // Find recipes with similar traits
+      suggestions = await prisma.recipe.findMany({
+        where: {
+          id: { notIn: excludeIds },
+          privacy: 'PUBLIC',
+          OR: [
+            { category: { in: categories as string[] } },
+            { dietaryPreferences: { hasSome: dietaryPrefs } },
+          ],
+        },
+        take: 10, // Get more than needed for randomization
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          photos: { take: 1, select: { imageUrl: true } },
+          _count: { select: { comments: true, ratings: true } },
+        },
+      });
+
+      // Shuffle and take 3
+      suggestions = suggestions.sort(() => Math.random() - 0.5).slice(0, 3);
+    }
+
+    // If not enough suggestions, fill with random public recipes
+    if (suggestions.length < 3) {
+      const needed = 3 - suggestions.length;
+      const existingIds = [...excludeIds, ...suggestions.map(s => s.id)];
+
+      const randomRecipes = await prisma.recipe.findMany({
+        where: {
+          id: { notIn: existingIds },
+          privacy: 'PUBLIC',
+        },
+        take: needed * 3, // Get extras for randomization
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true },
+          },
+          photos: { take: 1, select: { imageUrl: true } },
+          _count: { select: { comments: true, ratings: true } },
+        },
+      });
+
+      // Shuffle and take what's needed
+      const shuffled = randomRecipes.sort(() => Math.random() - 0.5).slice(0, needed);
+      suggestions = [...suggestions, ...shuffled];
+    }
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('Get recipe suggestions error:', error);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});

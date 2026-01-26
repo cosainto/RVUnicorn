@@ -1074,6 +1074,21 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         targetName = activity.title;
       }
 
+      // Extract imageUrl from metadata for photo activities
+      let imageUrl = null;
+      if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
+        try {
+          const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
+          imageUrl = meta?.previewUrl || null;
+        } catch (e) {}
+      }
+
+      // For PHOTO_UPLOADED with albumId, set targetName and targetLink
+      if (activity.type === 'PHOTO_UPLOADED' && activity.albumId) {
+        targetName = activity.title || 'an album';
+        targetLink = '/media-albums/' + activity.albumId;
+      }
+
       return {
         id: `activity-${activity.id}`,
         type: config.feedType,
@@ -1087,9 +1102,10 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         canDelete: isOwnProfile,
         activityType: activity.type,
         activityIcon: config.icon,
-        activityLabel: config.label,
+        activityLabel: activity.albumId ? 'added a photo to' : config.label,
         campground: activity.campground,
         metadata: activity.metadata,
+        imageUrl,
       };
     });
 

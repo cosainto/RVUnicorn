@@ -121,12 +121,8 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
         albumId: albumId || null,
         eventId: eventId || null,
         imageUrl: result.secure_url,
-        caption,
-        mentions: mentionUserIds,
+        caption: caption || null,
         visibility,
-        allowDownload: allowDownload === "true" || allowDownload === true,
-        scheduledFor: isScheduled ? new Date(scheduledFor) : null,
-        publishedAt: isScheduled ? null : new Date(),
       },
       include: {
         user: {

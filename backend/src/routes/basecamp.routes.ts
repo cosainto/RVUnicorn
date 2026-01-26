@@ -305,6 +305,15 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel = activity.content;
         }
         
+        // Extract imageUrl from metadata for photo activities
+        let imageUrl = (activity as any).imageUrl;
+        if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
+          try {
+            const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
+            imageUrl = meta?.previewUrl || imageUrl;
+          } catch (e) {}
+        }
+
         allActivities.push({
           id: 'activity-' + activity.id,
           type: activity.type,
@@ -321,7 +330,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel: activityLabel,
           activityColor: getActivityColor(activity.type),
           campground: activity.campground,
-          imageUrl: (activity as any).imageUrl,
+          imageUrl,
           isFriendActivity: friendIdSet.has(activity.userId),
           hasMutualFriendInteraction: !!secondaryUserInfo,
           userHasLiked,
@@ -392,14 +401,15 @@ router.get('/feed', authenticateToken, async (req, res) => {
           type: 'PHOTO_UPLOADED',
           actor: photo.user,
           title: photo.album?.title || 'a photo',
-          targetName: photo.album?.title,
+          targetName: photo.album?.title || '',
           targetLink: photo.album ? '/albums/' + photo.album.id : undefined,
           createdAt: photo.createdAt,
           activityType: 'PHOTO_UPLOADED',
           activityIcon: '📷',
-          activityLabel: 'added a photo to',
+          activityLabel: photo.album ? 'added a photo to' : 'added a photo',
           activityColor: 'text-purple-600',
           imageUrl: photo.imageUrl,
+          photoId: photo.id,
           isFriendActivity: friendIdSet.has(photo.userId),
           isBasecampActivity: true,
         });

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChefHat, Plus, Globe, Users, Lock, Clock, Star, X, Search, Filter, Camera, Upload, Loader2, SlidersHorizontal, ChevronDown, Heart, MessageCircle, Bookmark } from 'lucide-react';
 import api from '../services/api';
+import RecipeSuggestions from '../components/RecipeSuggestions';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Recipe {
@@ -331,6 +332,11 @@ export default function RecipesPage() {
           <Plus className="w-5 h-5 mr-2" />
           Create Recipe
         </button>
+      </div>
+
+      {/* Recipe Suggestions */}
+      <div className="mb-6">
+        <RecipeSuggestions />
       </div>
 
       {/* Search and Sort Bar */}

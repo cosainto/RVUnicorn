@@ -48,6 +48,7 @@ import { User as UserType } from '../services/auth.service';
 import TravelMap from '../components/TravelMap';
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import PackingAssignments from '../components/PackingAssignments';
+import QuickCaptureModal from '../components/QuickCaptureModal';
 import BasecampActivityFeed from '../components/BasecampActivityFeed';
 import CampgroundUpdatesFeed from '../components/CampgroundUpdatesFeed';
 import Top8Friends from '../components/Top8Friends';
@@ -701,6 +702,15 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
                   >
                     <AtSign className="w-5 h-5" />
                   </button>
+
+                  {/* Quick Capture Button */}
+                  <button
+                    onClick={() => setShowQuickCapture(true)}
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                    title="Take photo or video"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
                 </div>
 
                 {/* Post Button */}
@@ -824,6 +834,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   const { refreshUser } = useAuth();
   
   const [showPackingModal, setShowPackingModal] = useState(false);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
   // Activity Feed State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3232,6 +3243,24 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
         isOpen={showPackingModal}
         onClose={() => setShowPackingModal(false)}
         mode="inventory"
+      />
+
+      {/* Floating Camera Button */}
+      <button
+        onClick={() => setShowQuickCapture(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all z-40 flex items-center justify-center"
+        title="Quick Capture - Take photo or video"
+      >
+        <Camera className="w-7 h-7" />
+      </button>
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal
+        isOpen={showQuickCapture}
+        onClose={() => setShowQuickCapture(false)}
+        onUploadComplete={() => {
+          // Optionally refresh feed after upload
+        }}
       />
     </div>
   );
