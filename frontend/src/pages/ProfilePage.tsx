@@ -865,9 +865,9 @@ const [editForm, setEditForm] = useState({
                       to={`/media-albums/${album.id}`}
                       className="aspect-square bg-gray-100 rounded overflow-hidden hover:opacity-90 transition"
                     >
-                      {album.photos && album.photos[0] ? (
+                      {album.previewMedia && album.previewMedia[0] ? (
                         <img
-                          src={`${album.photos[0].imageUrl}`}
+                          src={album.previewMedia[0].thumbnailUrl || album.previewMedia[0].url}
                           alt={album.title}
                           className="w-full h-full object-cover"
                         />
