@@ -92,7 +92,8 @@ export default function EventsPage() {
     try {
       setLoading(true);
       const { data } = await api.get(`/trips/my`);
-      setEvents(data);
+      // Filter out StateVisits - they're shown on Travel Map, not here
+      setEvents(data.filter((e: Event) => !e.isStateVisit));
     } catch (error) {
       console.error('Load events error:', error);
     } finally {
