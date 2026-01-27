@@ -511,22 +511,24 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    // Build update data object with only provided fields
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (ingredients !== undefined) updateData.ingredients = ingredients;
+    if (instructions !== undefined) updateData.instructions = Array.isArray(instructions) ? instructions : [instructions];
+    if (prepTime !== undefined) updateData.prepTime = prepTime ? parseInt(prepTime) : null;
+    if (cookTime !== undefined) updateData.cookTime = cookTime ? parseInt(cookTime) : null;
+    if (servings !== undefined) updateData.servings = servings ? parseInt(servings) : null;
+    if (difficulty !== undefined) updateData.difficulty = difficulty;
+    if (cuisine !== undefined) updateData.cuisine = cuisine;
+    if (category !== undefined) updateData.category = category;
+    if (privacy !== undefined) updateData.privacy = privacy;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+
     const updated = await prisma.recipe.update({
       where: { id },
-      data: {
-        title,
-        description,
-        ingredients,
-        instructions: Array.isArray(instructions) ? instructions : [instructions],
-        prepTime: prepTime ? parseInt(prepTime) : null,
-        cookTime: cookTime ? parseInt(cookTime) : null,
-        servings: servings ? parseInt(servings) : null,
-        difficulty,
-        cuisine,
-        category,
-        privacy,
-        imageUrl,
-      },
+      data: updateData,
       include: {
         user: {
           select: {
