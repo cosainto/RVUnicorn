@@ -129,7 +129,7 @@ export default function MessagesPage({ user }: MessagesPageProps) {
       const { data } = await api.get(`/campgrounds?search=${encodeURIComponent(query)}&limit=20`);
       // Filter out ones already in myCampgrounds
       const myIds = new Set(myCampgrounds.map(c => c.id));
-      setSearchedCampgrounds(data.filter((c: Campground) => !myIds.has(c.id)));
+      setSearchedCampgrounds((data.campgrounds || data).filter((c: Campground) => !myIds.has(c.id)));
     } catch (error) {
       console.error('Search campgrounds error:', error);
     } finally {
