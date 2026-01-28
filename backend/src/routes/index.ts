@@ -22,6 +22,7 @@ import eventAccessRoutes from './event-access.routes';
 import onboardingRoutes from './onboarding.routes';
 import tripCommentsRoutes from './trip-comments.routes';
 import mediaAlbumsRoutes from './media-albums.routes';
+import campgroundMessagingRoutes from "./campground-messaging.routes";
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use('/api/campsite', campsiteRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/borrow', borrowRoutes);
 app.use('/api/stickers', stickerRoutes);
+app.use("/api/campground-messaging", campgroundMessagingRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/checkin', checkinRoutes);

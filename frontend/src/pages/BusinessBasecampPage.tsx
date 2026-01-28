@@ -6,6 +6,7 @@ import {
   ChevronLeft, Check, X, Clock, Bell, Shield, Plus, Trash2, Send, Image
 } from 'lucide-react';
 import api from '../services/api';
+import CampgroundMessaging from '../components/CampgroundMessaging';
 
 interface DashboardData {
   campground: any;
@@ -39,6 +40,7 @@ const SIDEBAR_ITEMS = [
   { id: 'reviews', label: 'Reviews', icon: Star, tier: 'FREE' },
   { id: 'checkins', label: 'Check-ins', icon: Users, tier: 'FREE' },
   { id: 'threads', label: 'Threads', icon: MessageSquare, tier: 'FREE' },
+  { id: 'messaging', label: 'Message Campers', icon: Send, tier: 'FREE' },
   { id: 'stickers', label: 'Stickers', icon: Award, tier: 'CLASS_B' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, tier: 'CLASS_A' },
   { id: 'branding', label: 'Branding', icon: Palette, tier: 'CLASS_B' },
@@ -786,6 +788,13 @@ export default function BusinessBasecampPage() {
           )}
 
           {/* SETTINGS TAB */}
+          {activeTab === 'messaging' && (
+            <CampgroundMessaging
+              campgroundId={campgroundId!}
+              campgroundName={data?.campground?.name || 'Campground'}
+            />
+          )}
+
           {activeTab === 'settings' && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Business Settings</h2>

@@ -212,6 +212,9 @@ model User {
   videoLikes                                      VideoLike[]
   videoWatches                                    VideoWatch[]
 
+  sentMessages                                    Message[]                 @relation("SentMessages")
+  receivedMessages                                Message[]                 @relation("ReceivedMessages")
+
   @@index([email])
   @@index([username])
 }
@@ -2616,4 +2619,22 @@ enum Visibility {
   PUBLIC
   FRIENDS_ONLY
   PRIVATE
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  recipientId String
+  subject     String?
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sender    User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([isRead])
 }

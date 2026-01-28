@@ -6,6 +6,23 @@ import { authenticateToken } from '../middleware/auth.middleware';
 const router = Router();
 const prisma = new PrismaClient();
 
+// GET /api/messages/unread-count - Get unread message count (must be before /:messageId)
+router.get('/unread-count', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const count = await prisma.message.count({
+      where: {
+        recipientId: userId,
+        isRead: false
+      }
+    });
+    res.json({ count });
+  } catch (error) {
+    console.error('Get unread count error:', error);
+    res.status(500).json({ error: 'Failed to get unread count' });
+  }
+});
+
 // GET /api/messages - Get user's messages (inbox)
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
@@ -91,12 +108,10 @@ router.get('/:messageId', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    // Check authorization
     if (message.recipientId !== req.user.id && message.senderId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Mark as read if recipient is viewing
     if (message.recipientId === req.user.id && !message.isRead) {
       await prisma.message.update({
         where: { id: messageId },
@@ -116,7 +131,7 @@ router.post(
   '/',
   authenticateToken,
   [
-    body('recipientId').isUUID(),
+    body('recipientId').notEmpty(),
     body('subject').optional().trim().isLength({ max: 200 }),
     body('content').trim().notEmpty(),
   ],
@@ -129,7 +144,6 @@ router.post(
 
       const { recipientId, subject, content } = req.body;
 
-      // Check if recipient exists
       const recipient = await prisma.user.findUnique({
         where: { id: recipientId },
       });
@@ -138,7 +152,6 @@ router.post(
         return res.status(404).json({ error: 'Recipient not found' });
       }
 
-      // Create message
       const message = await prisma.message.create({
         data: {
           senderId: req.user.id,
@@ -168,13 +181,13 @@ router.post(
         },
       });
 
-      // Create notification for recipient
+      const sender = await prisma.user.findUnique({ where: { id: req.user.id }, select: { firstName: true, lastName: true } });
       await prisma.notification.create({
         data: {
           userId: recipientId,
           type: 'MESSAGE',
-          title: 'New Message',
-          content: `${req.user.firstName} ${req.user.lastName} sent you a message`,
+          
+          content: `${sender?.firstName || "Someone"} ${sender?.lastName || ""} sent you a message`,
           link: `/messages/${message.id}`,
         },
       });
@@ -200,7 +213,6 @@ router.delete('/:messageId', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    // Only recipient can delete
     if (message.recipientId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }

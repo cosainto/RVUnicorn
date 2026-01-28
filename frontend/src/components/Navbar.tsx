@@ -36,10 +36,11 @@ import api from '../services/api';
 interface Notification {
   id: string;
   type: string;
-  content: string;
-  link?: string;
+  title: string;
+  message: string;
   read: boolean;
   createdAt: string;
+  data?: any;
 }
 
 interface DropdownItem {
@@ -56,28 +57,39 @@ export default function Navbar() {
   const location = useLocation();
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Close dropdowns when clicking outside
+  // Fetch notifications
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-      }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+    if (user) {
+      fetchNotifications();
+      fetchUnreadMessages();
+      const interval = setInterval(() => {
+        fetchNotifications();
+        fetchUnreadMessages();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
         setNotificationsOpen(false);
       }
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setProfileOpen(false);
       }
     };
@@ -85,28 +97,22 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load notifications
-  useEffect(() => {
-    if (user) {
-      loadNotifications();
-      const interval = setInterval(loadNotifications, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-    setActiveDropdown(null);
-  }, [location.pathname]);
-
-  const loadNotifications = async () => {
+  const fetchNotifications = async () => {
     try {
-      const { data } = await api.get('/notifications');
-      setNotifications(data);
-      setUnreadCount(data.filter((n: Notification) => !n.read).length);
-    } catch (error) {
-      console.error('Load notifications error:', error);
+      const res = await api.get('/notifications');
+      setNotifications(res.data.slice(0, 10));
+      setUnreadCount(res.data.filter((n: Notification) => !n.read).length);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await api.get('/messages/unread-count');
+      setUnreadMessages(res.data.count || 0);
+    } catch (err) {
+      console.error('Error fetching unread messages:', err);
     }
   };
 
@@ -115,145 +121,133 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
-    try {
-      if (!notification.read) {
-        await api.put(`/notifications/${notification.id}/read`);
-        loadNotifications();
-      }
-      setNotificationsOpen(false);
-      // Navigate based on notification link
-      if (notification.link) {
-        navigate(notification.link);
-      }
-    } catch (error) {
-      console.error('Mark notification read error:', error);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setSearchOpen(false);
     }
   };
 
   const markAllRead = async () => {
     try {
       await api.put('/notifications/read-all');
-      loadNotifications();
-    } catch (error) {
-      console.error('Mark all read error:', error);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking notifications read:', err);
     }
   };
 
-  // Dropdown menu configurations - matched to actual App.tsx routes
+  // Dropdown items
   const exploreItems: DropdownItem[] = [
-    { icon: <MapPin className="w-4 h-4" />, label: 'Campgrounds', to: '/campgrounds', description: 'Browse 5,500+ campgrounds' },
-    { icon: <Calendar className="w-4 h-4" />, label: 'Trips & Events', to: '/trips', description: 'Group trips & rallies' },
-    { icon: <Map className="w-4 h-4" />, label: 'Travel Map', to: '/travel', description: 'Track states visited' },
-    { icon: <Compass className="w-4 h-4" />, label: 'Drive Planner', to: '/drive-planner', description: 'Plan your routes' },
-    { icon: <Briefcase className="w-4 h-4" />, label: 'Jobs', to: '/jobs', description: 'Campground jobs & gigs' },
-  ];
-
-  const campfireItems: DropdownItem[] = [
-    { icon: <Sparkles className="w-4 h-4" />, label: 'Browse Creators', to: '/creators/leaderboard', description: 'Discover RV content creators' },
-    { icon: <Heart className="w-4 h-4" />, label: 'Following', to: '/following', description: 'Creators you follow' },
-    { icon: <Play className="w-4 h-4" />, label: 'My Creator Page', to: '/creator/dashboard', description: 'Manage your content', badge: 'CREATE' },
+    { icon: <MapPin className="w-5 h-5" />, label: 'Campgrounds', to: '/campgrounds', description: '5,500+ campgrounds to explore' },
+    { icon: <Calendar className="w-5 h-5" />, label: 'Events & Trips', to: '/events', description: 'Group trips & meetups' },
+    { icon: <Play className="w-5 h-5" />, label: 'Creator Pages', to: '/creators', description: 'Videos & content creators' },
+    { icon: <Briefcase className="w-5 h-5" />, label: 'Jobs', to: '/jobs', description: 'RV & camping careers' },
+    { icon: <Map className="w-5 h-5" />, label: 'Travel Map', to: '/travel', description: 'Plan your adventures' },
   ];
 
   const myStuffItems: DropdownItem[] = [
-    { icon: <Camera className="w-4 h-4" />, label: 'Albums', to: '/media-albums', description: 'Your photo albums' },
-    { icon: <UtensilsCrossed className="w-4 h-4" />, label: 'Recipes', to: '/recipes', description: 'Camp cooking recipes' },
-    { icon: <Package className="w-4 h-4" />, label: 'Gear', to: '/gear', description: 'Gear & packing lists' },
-    { icon: <Wrench className="w-4 h-4" />, label: 'My RV', to: '/my-rv', description: 'RV specs & showcase' },
-    { icon: <Settings className="w-4 h-4" />, label: 'Maintenance', to: '/maintenance', description: 'Service records' },
+    { icon: <Camera className="w-5 h-5" />, label: 'Albums', to: '/albums', description: 'Photos & videos' },
+    { icon: <UtensilsCrossed className="w-5 h-5" />, label: 'Recipes', to: '/recipes', description: 'Camp cooking' },
+    { icon: <Package className="w-5 h-5" />, label: 'Gear', to: '/gear', description: 'Gear & marketplace' },
+    { icon: <Backpack className="w-5 h-5" />, label: 'Packing Lists', to: '/packing', description: 'Trip checklists' },
+    { icon: <Wrench className="w-5 h-5" />, label: 'RV Log', to: '/rv-log', description: 'Maintenance tracker' },
   ];
 
   const socialItems: DropdownItem[] = [
-    { icon: <Users className="w-4 h-4" />, label: 'Friends', to: '/friends', description: 'Your camping buddies' },
-    { icon: <MessageCircle className="w-4 h-4" />, label: 'Messages', to: '/messages', description: 'Direct messages' },
-    { icon: <UsersRound className="w-4 h-4" />, label: 'Groups', to: '/groups', description: 'Camping communities' },
-    { icon: <Award className="w-4 h-4" />, label: 'Badges', to: '/badges', description: 'Your achievements' },
+    { icon: <Users className="w-5 h-5" />, label: 'Friends', to: '/friends', description: 'Your camping buddies' },
+    { icon: <UsersRound className="w-5 h-5" />, label: 'Groups', to: '/groups', description: 'Community groups' },
   ];
 
-  const NavDropdown = ({ 
-    label, 
-    items, 
-    id 
-  }: { 
-    label: string; 
-    items: DropdownItem[]; 
-    id: string;
-  }) => (
-    <div className="relative" ref={activeDropdown === id ? dropdownRef : null}>
-      <button
-        onClick={() => setActiveDropdown(activeDropdown === id ? null : id)}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-          activeDropdown === id 
-            ? 'bg-primary-800 text-gold-400' 
-            : 'text-white/90 hover:text-white hover:bg-white/10'
-        }`}
+  // Dropdown component
+  const NavDropdown = ({ label, items, id }: { label: string; items: DropdownItem[]; id: string }) => {
+    const isOpen = activeDropdown === id;
+    
+    const handleMouseEnter = () => {
+      if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+      setActiveDropdown(id);
+    };
+    
+    const handleMouseLeave = () => {
+      dropdownTimeoutRef.current = setTimeout(() => setActiveDropdown(null), 150);
+    };
+
+    return (
+      <div 
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        {label}
-        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === id ? 'rotate-180' : ''}`} />
-      </button>
-      
-      {activeDropdown === id && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-          {items.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={() => setActiveDropdown(null)}
-              className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
-            >
-              <div className="p-2 rounded-lg bg-primary-50 text-primary-600 group-hover:bg-primary-100 transition-colors">
-                {item.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">{item.label}</span>
-                  {item.badge && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-campfire-500 text-white rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                {item.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+        <button
+          className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            isOpen 
+              ? 'bg-primary-800 text-gold-400' 
+              : 'text-white/90 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          {label}
+          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isOpen && (
+          <div className="absolute left-0 top-full pt-2 z-50">
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-100 py-2 min-w-[240px] animate-in fade-in slide-in-from-top-2 duration-200">
+              {items.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setActiveDropdown(null)}
+                  className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
+                >
+                  <span className="text-primary-600 group-hover:text-primary-700 mt-0.5">{item.icon}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{item.label}</span>
+                      {item.badge && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-campfire-500 text-white rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    {item.description && (
+                      <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (!user) return null;
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-primary-900 via-primary-800 to-primary-900 shadow-lg sticky top-0 z-50 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Main Navbar */}
+      <nav className="bg-gradient-to-r from-primary-700 via-primary-600 to-primary-700 shadow-lg sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             
-            {/* Logo */}
-            <Link 
-              to="/basecamp" 
-              className="flex items-center gap-2 group"
-            >
-              <img 
-                src="/images/Logo_RVUnicorn.png" 
-                alt="RVUnicorn" 
-                className="h-10 w-auto transition-transform group-hover:scale-105"
-                onError={(e) => {
-                  // Fallback if logo image doesn't exist
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-              <span className="hidden text-2xl">🦄</span>
+            {/* Left: Logo */}
+            <Link to="/basecamp" className="flex items-center gap-2 group">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-gold-400 to-gold-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <span className="text-2xl">🦄</span>
+                </div>
+                <Sparkles className="w-3 h-3 text-gold-300 absolute -top-1 -right-1 animate-pulse" />
+              </div>
               <span className="text-xl font-bold text-white hidden sm:block">
-                <span className="text-gold-400">RV</span>Unicorn
+                RV<span className="text-gold-400">Unicorn</span>
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Center: Main Nav */}
             <div className="hidden lg:flex items-center gap-1">
               {/* Basecamp */}
               <Link
@@ -283,7 +277,6 @@ export default function Navbar() {
 
               {/* Dropdowns */}
               <NavDropdown label="Explore" items={exploreItems} id="explore" />
-              <NavDropdown label="Campfire" items={campfireItems} id="campfire" />
               <NavDropdown label="My Stuff" items={myStuffItems} id="mystuff" />
               <NavDropdown label="Social" items={socialItems} id="social" />
             </div>
@@ -301,11 +294,34 @@ export default function Navbar() {
 
               {/* Badges Quick View */}
               <Link
-                to="/badges"
+                to={`/profile/${user.id}?tab=badges`}
                 className="p-2 text-white/80 hover:text-gold-400 hover:bg-white/10 rounded-lg transition-colors hidden sm:flex"
                 title="Your Badges"
               >
                 <Award className="w-5 h-5" />
+              </Link>
+
+              {/* Messages - Next to notifications with illumination */}
+              <Link
+                to="/messages"
+                className={`relative p-2 rounded-lg transition-all duration-300 ${
+                  unreadMessages > 0 
+                    ? 'text-gold-400 hover:text-gold-300 bg-white/10 hover:bg-white/15' 
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                title="Messages"
+              >
+                <MessageCircle className={`w-5 h-5 ${unreadMessages > 0 ? 'animate-pulse' : ''}`} />
+                {unreadMessages > 0 && (
+                  <>
+                    {/* Glow effect */}
+                    <span className="absolute inset-0 rounded-lg bg-gold-400/20 animate-ping" style={{ animationDuration: '2s' }} />
+                    {/* Badge */}
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-campfire-500 rounded-full shadow-lg">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  </>
+                )}
               </Link>
 
               {/* Notifications */}
@@ -324,7 +340,7 @@ export default function Navbar() {
 
                 {/* Notifications Dropdown */}
                 {notificationsOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                       <h3 className="font-semibold text-gray-900">Notifications</h3>
                       {unreadCount > 0 && (
@@ -338,51 +354,38 @@ export default function Navbar() {
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-gray-500">
-                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <div className="py-8 text-center text-gray-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                           <p className="text-sm">No notifications yet</p>
                         </div>
                       ) : (
-                        notifications.slice(0, 10).map((notification) => (
-                          <button
+                        notifications.map((notification) => (
+                          <div
                             key={notification.id}
-                            onClick={() => handleNotificationClick(notification)}
-                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                            className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${
                               !notification.read ? 'bg-primary-50/50' : ''
                             }`}
                           >
-                            <div className="flex items-start gap-3">
-                              {!notification.read && (
-                                <span className="mt-1.5 w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
-                              )}
-                              <div className={!notification.read ? '' : 'ml-5'}>
-                                <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                                  {notification.content}
-                                </p>
-                                
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                  {new Date(notification.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                          </button>
+                            <p className={`text-sm ${!notification.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                              {notification.content}
+                            </p>
+                            
+                          </div>
                         ))
                       )}
                     </div>
-                    {notifications.length > 0 && (
-                      <Link
-                        to="/notifications"
-                        onClick={() => setNotificationsOpen(false)}
-                        className="block px-4 py-3 text-center text-sm font-medium text-primary-600 hover:bg-gray-50 border-t border-gray-100"
-                      >
-                        View all notifications
-                      </Link>
-                    )}
+                    <Link
+                      to="/notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="block text-center py-3 text-sm font-medium text-primary-600 hover:bg-gray-50 border-t border-gray-100"
+                    >
+                      View All Notifications
+                    </Link>
                   </div>
                 )}
               </div>
 
-              {/* Profile Dropdown */}
+              {/* Profile */}
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
@@ -390,15 +393,13 @@ export default function Navbar() {
                 >
                   {user.profilePicture ? (
                     <img
-                      src={user.profilePicture}
+                      src={user.profilePicture.startsWith('http') ? user.profilePicture : `${import.meta.env.VITE_API_URL?.replace('/api', '')}${user.profilePicture}`}
                       alt={user.firstName}
-                      className="w-8 h-8 rounded-full object-cover ring-2 ring-white/20"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gold-400 flex items-center justify-center ring-2 ring-white/20">
-                      <span className="text-primary-900 font-semibold text-sm">
-                        {user.firstName?.[0]}{user.lastName?.[0]}
-                      </span>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-400 to-gold-500 flex items-center justify-center text-sm font-bold text-primary-900">
+                      {user.firstName?.[0]}
                     </div>
                   )}
                   <ChevronDown className={`w-4 h-4 text-white/70 hidden sm:block transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
@@ -415,7 +416,7 @@ export default function Navbar() {
 
                     <div className="py-1">
                       <Link
-                        to={`/profile/${user.username || user.id}`}
+                        to={`/profile/${user.id}`}
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -423,15 +424,15 @@ export default function Navbar() {
                         <span>My Profile</span>
                       </Link>
                       <Link
-                        to="/my-rv"
+                        to="/rv-settings"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <Settings className="w-4 h-4" />
-                        <span>My RV</span>
+                        <span>RV Settings</span>
                       </Link>
                       <Link
-                        to="/settings/privacy"
+                        to="/privacy-settings"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -464,63 +465,35 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Search Bar (when open) */}
+        {/* Search Bar (Expandable) */}
         {searchOpen && (
-          <div className="border-t border-white/10 bg-primary-900/50 backdrop-blur-sm">
-            <div className="max-w-3xl mx-auto px-4 py-3">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search campgrounds, users, events..."
-                  className="w-full pl-12 pr-4 py-3 bg-white rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-400"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-                      setSearchOpen(false);
-                      setSearchQuery('');
-                    }
-                    if (e.key === 'Escape') {
-                      setSearchOpen(false);
-                    }
-                  }}
-                />
-              </div>
-            </div>
+          <div className="border-t border-primary-600/50 px-4 py-3 bg-primary-700/50">
+            <form onSubmit={handleSearch} className="max-w-2xl mx-auto relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search campgrounds, users, events..."
+                className="w-full px-4 py-2.5 pl-10 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                autoFocus
+              />
+              <Search className="w-5 h-5 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
+            </form>
           </div>
         )}
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          {/* Backdrop */}
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          
-          {/* Menu Panel */}
-          <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto animate-in slide-in-from-right duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-primary-900 to-primary-800">
-              <div className="flex items-center gap-3">
-                {user.profilePicture ? (
-                  <img src={user.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gold-400 flex items-center justify-center">
-                    <span className="text-primary-900 font-semibold">{user.firstName?.[0]}{user.lastName?.[0]}</span>
-                  </div>
-                )}
-                <div>
-                  <p className="font-semibold text-white">{user.firstName} {user.lastName}</p>
-                  <p className="text-sm text-white/70">@{user.username || 'user'}</p>
-                </div>
-              </div>
-              <button
+            className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-xl overflow-y-auto animate-in slide-in-from-right duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Header */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-primary-600 to-primary-700">
+              <span className="text-lg font-bold text-white">Menu</span>
+              <button 
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 text-white/80 hover:text-white"
               >
@@ -529,40 +502,35 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Search */}
-            <div className="p-4 border-b border-gray-100">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="px-4 py-3 border-b border-gray-100">
+              <form onSubmit={handleSearch} className="relative">
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                      navigate(`/search?q=${encodeURIComponent((e.target as HTMLInputElement).value)}`);
-                      setMobileMenuOpen(false);
-                    }
-                  }}
+                  className="w-full px-4 py-2 pl-10 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
-              </div>
+                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              </form>
             </div>
 
-            {/* Main Nav Links */}
-            <div className="px-2 py-3">
+            {/* Mobile Nav Links */}
+            <div className="py-2">
               <MobileNavLink to="/basecamp" icon={<Home className="w-5 h-5" />} label="Basecamp" />
               <MobileNavLink to="/feed" icon={<Flame className="w-5 h-5" />} label="Feed" />
+              <MobileNavLink 
+                to="/messages" 
+                icon={<MessageCircle className="w-5 h-5" />} 
+                label="Messages" 
+                badge={unreadMessages > 0 ? (unreadMessages > 99 ? '99+' : String(unreadMessages)) : undefined}
+              />
             </div>
 
             {/* Explore Section */}
             <MobileNavSection title="Explore">
               {exploreItems.map(item => (
-                <MobileNavLink key={item.to} to={item.to} icon={item.icon} label={item.label} badge={item.badge} />
-              ))}
-            </MobileNavSection>
-
-            {/* Campfire Section */}
-            <MobileNavSection title="Campfire">
-              {campfireItems.map(item => (
-                <MobileNavLink key={item.to} to={item.to} icon={item.icon} label={item.label} badge={item.badge} />
+                <MobileNavLink key={item.to} to={item.to} icon={item.icon} label={item.label} />
               ))}
             </MobileNavSection>
 
@@ -582,9 +550,9 @@ export default function Navbar() {
 
             {/* Settings & Logout */}
             <div className="px-2 py-3 border-t border-gray-100 mt-2">
-              <MobileNavLink to={`/profile/${user.username || user.id}`} icon={<User className="w-5 h-5" />} label="My Profile" />
-              <MobileNavLink to="/my-rv" icon={<Settings className="w-5 h-5" />} label="My RV" />
-              <MobileNavLink to="/settings/privacy" icon={<Shield className="w-5 h-5" />} label="Privacy Settings" />
+              <MobileNavLink to={`/profile/${user.id}`} icon={<User className="w-5 h-5" />} label="My Profile" />
+              <MobileNavLink to="/rv-settings" icon={<Settings className="w-5 h-5" />} label="RV Settings" />
+              <MobileNavLink to="/privacy-settings" icon={<Shield className="w-5 h-5" />} label="Privacy Settings" />
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"
@@ -627,7 +595,7 @@ function MobileNavLink({
       <span className={isActive ? 'text-primary-600' : 'text-gray-400'}>{icon}</span>
       <span className="font-medium flex-1">{label}</span>
       {badge && (
-        <span className="px-2 py-0.5 text-[10px] font-bold bg-campfire-500 text-white rounded-full">
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-campfire-500 text-white rounded-full animate-pulse">
           {badge}
         </span>
       )}

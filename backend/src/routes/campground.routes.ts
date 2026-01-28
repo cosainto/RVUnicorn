@@ -80,6 +80,73 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Get user's favorite campgrounds (MUST come before /:id routes)
+
+// GET /api/campgrounds/following - Get campgrounds the user follows
+router.get("/following", authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+    const now = new Date();
+    
+    // Get followed campgrounds
+    const follows = await prisma.campgroundFollow.findMany({
+      where: { userId },
+      include: {
+        campground: {
+          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+        }
+      }
+    });
+    
+    // Get campgrounds user is currently checked in at
+    const activeCheckIns = await prisma.checkIn.findMany({
+      where: {
+        userId,
+        isActive: true,
+        checkInDate: { lte: now },
+        OR: [
+          { checkOutDate: null },
+          { checkOutDate: { gte: now } }
+        ]
+      },
+      include: {
+        campground: {
+          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+        }
+      }
+    });
+    
+    // Get campgrounds from past stays/visits
+    const stays = await prisma.stay.findMany({
+      where: { userId },
+      include: {
+        campground: {
+          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+        }
+      },
+      orderBy: { startDate: "desc" }
+    });
+    
+    // Combine and deduplicate
+    const campgroundMap = new Map();
+    activeCheckIns.forEach(c => campgroundMap.set(c.campground.id, { ...c.campground, source: "checked-in" }));
+    follows.forEach(f => {
+      if (!campgroundMap.has(f.campground.id)) {
+        campgroundMap.set(f.campground.id, { ...f.campground, source: "following" });
+      }
+    });
+    stays.forEach(s => {
+      if (!campgroundMap.has(s.campground.id)) {
+        campgroundMap.set(s.campground.id, { ...s.campground, source: "visited" });
+      }
+    });
+    
+    res.json(Array.from(campgroundMap.values()));
+  } catch (error) {
+    console.error("Get followed campgrounds error:", error);
+    res.status(500).json({ error: "Failed to get followed campgrounds" });
+  }
+});
+
 router.get('/favorites/my', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
@@ -566,3 +633,4 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
 });
 
 export default router;
+
