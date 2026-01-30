@@ -1,0 +1,289 @@
+import { useState, useEffect } from 'react';
+import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map } from 'lucide-react';
+import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+interface Recommendation {
+  placeId: string;
+  sourceUrl: string;
+  sourceName: string;
+  title: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distance: number;
+  type: 'TRAIL' | 'EVENT' | 'ATTRACTION' | 'FOOD' | 'TOUR' | 'OTHER';
+  rating?: number;
+  reviewCount?: number;
+  priceLevel?: number;
+  isOpen?: boolean;
+  imageUrl?: string;
+  existingId?: string;
+  isSaved: boolean;
+}
+
+interface SavedThing {
+  id: string;
+  type: string;
+  title: string;
+  description?: string;
+  address?: string;
+  sourceUrl: string;
+  sourceName: string;
+  imageUrl?: string;
+  tags: string[];
+  distanceMiles?: number;
+  pinned: boolean;
+  saveCount: number;
+  isSaved: boolean;
+}
+
+interface Props {
+  campgroundId: string;
+  campgroundName: string;
+}
+
+const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+  TRAIL: { icon: Mountain, color: 'text-green-600', bg: 'bg-green-100', label: 'Trail' },
+  FOOD: { icon: Utensils, color: 'text-orange-600', bg: 'bg-orange-100', label: 'Food' },
+  ATTRACTION: { icon: Camera, color: 'text-blue-600', bg: 'bg-blue-100', label: 'Attraction' },
+  EVENT: { icon: Ticket, color: 'text-purple-600', bg: 'bg-purple-100', label: 'Event' },
+  TOUR: { icon: Map, color: 'text-teal-600', bg: 'bg-teal-100', label: 'Tour' },
+  OTHER: { icon: MapPin, color: 'text-gray-600', bg: 'bg-gray-100', label: 'Other' }
+};
+
+const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'scenic', 'easy-access', 'reservation-required'];
+
+export default function ThingsToDoSection({ campgroundId, campgroundName }: Props) {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('saved');
+  const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [radiusMiles, setRadiusMiles] = useState(30);
+  const [showSaveModal, setShowSaveModal] = useState<Recommendation | null>(null);
+  const [saveNote, setSaveNote] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  useEffect(() => { loadSavedThings(); }, [campgroundId]);
+
+  const loadSavedThings = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/things-to-do/campgrounds/${campgroundId}/things-to-do`);
+      setSavedThings(data);
+    } catch (error) { console.error('Load saved things error:', error); }
+    finally { setLoading(false); }
+  };
+
+  const loadRecommendations = async () => {
+    try {
+      setDiscoverLoading(true);
+      const { data } = await api.get(`/things-to-do/campgrounds/${campgroundId}/recommendations`, { params: { radius: radiusMiles } });
+      setRecommendations(data.recommendations);
+    } catch (error) { console.error('Load recommendations error:', error); }
+    finally { setDiscoverLoading(false); }
+  };
+
+  useEffect(() => { if (activeTab === 'discover' && recommendations.length === 0) loadRecommendations(); }, [activeTab]);
+
+  const handleSave = (rec: Recommendation) => {
+    if (!user) { alert('Please log in to save things'); return; }
+    setShowSaveModal(rec);
+    setSaveNote('');
+    setSelectedTags([]);
+  };
+
+  const confirmSave = async () => {
+    if (!showSaveModal) return;
+    const rec = showSaveModal;
+    setSavingId(rec.placeId);
+    try {
+      await api.post('/things-to-do/save', {
+        campgroundId, placeId: rec.placeId, sourceUrl: rec.sourceUrl, sourceName: rec.sourceName,
+        title: rec.title, type: rec.type, lat: rec.lat, lng: rec.lng, address: rec.address,
+        imageUrl: rec.imageUrl, tags: selectedTags, note: saveNote || undefined
+      });
+      setRecommendations(prev => prev.map(r => r.placeId === rec.placeId ? { ...r, isSaved: true } : r));
+      loadSavedThings();
+      setShowSaveModal(null);
+    } catch (error) { console.error('Save error:', error); alert('Failed to save'); }
+    finally { setSavingId(null); }
+  };
+
+  const handleUnsave = async (thingId: string) => {
+    try {
+      await api.delete(`/things-to-do/save/${thingId}`);
+      setSavedThings(prev => prev.filter(t => t.id !== thingId));
+      setRecommendations(prev => prev.map(r => r.existingId === thingId ? { ...r, isSaved: false } : r));
+    } catch (error) { console.error('Unsave error:', error); }
+  };
+
+  const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
+  const filteredSaved = typeFilter === 'all' ? savedThings : savedThings.filter(t => t.type === typeFilter);
+  const filteredRecs = typeFilter === 'all' ? recommendations : recommendations.filter(r => r.type === typeFilter);
+
+  const TypeIcon = ({ type }: { type: string }) => {
+    const config = TYPE_CONFIG[type] || TYPE_CONFIG.OTHER;
+    const Icon = config.icon;
+    return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.color}`}><Icon className="w-3 h-3" />{config.label}</span>;
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900">Things to Do Nearby</h2>
+        <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
+      </div>
+
+      <div className="flex border-b border-gray-200">
+        <button onClick={() => setActiveTab('saved')} className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'saved' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>
+          <BookmarkCheck className="w-4 h-4 inline mr-2" />Saved ({savedThings.length})
+        </button>
+        <button onClick={() => setActiveTab('discover')} className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'discover' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>
+          <Map className="w-4 h-4 inline mr-2" />Discover
+        </button>
+      </div>
+
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
+            <option value="all">All Types</option>
+            <option value="TRAIL">Trails</option>
+            <option value="FOOD">Food</option>
+            <option value="ATTRACTION">Attractions</option>
+            <option value="EVENT">Events</option>
+            <option value="TOUR">Tours</option>
+          </select>
+        </div>
+        {activeTab === 'discover' && (
+          <>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-gray-500" />
+              <select value={radiusMiles} onChange={(e) => { setRadiusMiles(Number(e.target.value)); setRecommendations([]); }} className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
+                <option value={10}>10 miles</option>
+                <option value={20}>20 miles</option>
+                <option value={30}>30 miles</option>
+                <option value={50}>50 miles</option>
+              </select>
+            </div>
+            <button onClick={loadRecommendations} disabled={discoverLoading} className="ml-auto text-sm text-blue-600 hover:text-blue-700 font-medium">
+              {discoverLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="p-4 max-h-[600px] overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+        ) : activeTab === 'saved' ? (
+          filteredSaved.length === 0 ? (
+            <div className="text-center py-12">
+              <Bookmark className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-600">No saved places yet</p>
+              <button onClick={() => setActiveTab('discover')} className="mt-3 text-blue-600 hover:text-blue-700 font-medium text-sm">Discover nearby attractions →</button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {filteredSaved.map(thing => (
+                <div key={thing.id} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
+                  {thing.imageUrl && <div className="relative h-32 bg-gray-100"><img src={thing.imageUrl} alt={thing.title} className="w-full h-full object-cover" />{thing.pinned && <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded">Pinned</span>}</div>}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">{thing.title}</h3>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap"><TypeIcon type={thing.type} />{thing.distanceMiles && <span className="text-xs text-gray-500">{thing.distanceMiles.toFixed(1)} mi</span>}</div>
+                      </div>
+                      <button onClick={() => handleUnsave(thing.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Unsave"><BookmarkCheck className="w-5 h-5" /></button>
+                    </div>
+                    {thing.address && <p className="text-sm text-gray-500 mt-2 truncate">{thing.address}</p>}
+                    {thing.tags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{thing.tags.slice(0, 3).map(tag => <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>)}</div>}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                      <span className="text-xs text-gray-400">via {thing.sourceName}</span>
+                      <a href={thing.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : discoverLoading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /><span className="ml-3 text-gray-600">Finding nearby places...</span></div>
+        ) : filteredRecs.length === 0 ? (
+          <div className="text-center py-12"><Map className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-600">No recommendations found</p><p className="text-sm text-gray-400 mt-1">Try increasing the search radius</p></div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filteredRecs.map(rec => (
+              <div key={rec.placeId} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
+                {rec.imageUrl && <div className="relative h-32 bg-gray-100"><img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover" /></div>}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{rec.title}</h3>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <TypeIcon type={rec.type} />
+                        <span className="text-xs text-gray-500">{rec.distance} mi</span>
+                        {rec.isOpen !== undefined && <span className={`text-xs ${rec.isOpen ? 'text-green-600' : 'text-red-500'}`}>{rec.isOpen ? 'Open' : 'Closed'}</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => rec.isSaved ? null : handleSave(rec)} disabled={savingId === rec.placeId || rec.isSaved} className={`p-1.5 rounded-lg transition ${rec.isSaved ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`} title={rec.isSaved ? 'Saved' : 'Save to RVUnicorn'}>
+                      {savingId === rec.placeId ? <Loader2 className="w-5 h-5 animate-spin" /> : rec.isSaved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {rec.address && <p className="text-sm text-gray-500 mt-2 truncate">{rec.address}</p>}
+                  <div className="flex items-center gap-3 mt-2">
+                    {rec.rating && <span className="flex items-center gap-1 text-sm"><Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />{rec.rating}{rec.reviewCount && <span className="text-gray-400">({rec.reviewCount})</span>}</span>}
+                    {rec.priceLevel && <span className="text-green-600 text-sm">{'$'.repeat(rec.priceLevel)}<span className="text-gray-300">{'$'.repeat(4 - rec.priceLevel)}</span></span>}
+                  </div>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                    <span className="text-xs text-gray-400">via {rec.sourceName}</span>
+                    <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View details <ExternalLink className="w-3 h-3" /></a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Save to RVUnicorn</h3>
+              <button onClick={() => setShowSaveModal(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-4">
+                {showSaveModal.imageUrl ? <img src={showSaveModal.imageUrl} alt={showSaveModal.title} className="w-16 h-16 rounded-lg object-cover" /> : <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center"><MapPin className="w-6 h-6 text-gray-400" /></div>}
+                <div><h4 className="font-medium text-gray-900">{showSaveModal.title}</h4><p className="text-sm text-gray-500">{showSaveModal.distance} miles away</p></div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Add tags (optional)</label>
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_TAGS.map(tag => <button key={tag} onClick={() => toggleTag(tag)} className={`px-3 py-1 rounded-full text-sm transition ${selectedTags.includes(tag) ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:border-gray-300'}`}>{tag}</button>)}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Your tip (optional)</label>
+                <textarea value={saveNote} onChange={(e) => setSaveNote(e.target.value)} placeholder="Share a tip for other campers..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowSaveModal(null)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">Cancel</button>
+                <button onClick={confirmSave} disabled={savingId === showSaveModal.placeId} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                  {savingId === showSaveModal.placeId ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : <><BookmarkCheck className="w-4 h-4" />Save</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

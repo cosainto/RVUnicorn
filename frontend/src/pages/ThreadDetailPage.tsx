@@ -3,7 +3,7 @@ import { GifButton } from '../components/GifPicker';
 import MentionInput from '../components/MentionInput';
 import MentionText from '../components/MentionText';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Star, Eye, EyeOff, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Star, Eye, EyeOff, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X , ChevronUp, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,6 +25,9 @@ interface ThreadPost {
     replies?: number;
   };
   isLiked: boolean;
+  upvotes: number;
+  downvotes: number;
+  userVote: 'UP' | 'DOWN' | null;
   replies?: ThreadPost[];
 }
 
@@ -67,6 +70,179 @@ interface Thread {
   isFavorited: boolean;
   posts: ThreadPost[];
 }
+
+
+// Recursive Reply Component for deep nesting
+const RecursiveReply = ({ 
+  reply, 
+  depth, 
+  user, 
+  thread,
+  handleVote, 
+  handleDeletePost,
+  handleSubmitReply,
+  replyingTo,
+  setReplyingTo,
+  replyContent,
+  setReplyContent,
+  submitting,
+  formatRelativeDate 
+}: {
+  reply: ThreadPost;
+  depth: number;
+  user: any;
+  thread: any;
+  handleVote: (postId: string, voteType: 'UP' | 'DOWN') => void;
+  handleDeletePost: (postId: string) => void;
+  handleSubmitReply: (parentId: string) => void;
+  replyingTo: string | null;
+  setReplyingTo: (id: string | null) => void;
+  replyContent: string;
+  setReplyContent: (content: string) => void;
+  submitting: boolean;
+  formatRelativeDate: (date: string) => string;
+}) => {
+  const maxIndent = 8;
+  const indent = Math.min(depth, maxIndent);
+  const borderColors = ['border-gray-300', 'border-blue-300', 'border-green-300', 'border-yellow-300', 'border-purple-300', 'border-pink-300', 'border-indigo-300', 'border-orange-300'];
+  const borderColor = borderColors[depth % borderColors.length];
+  
+  return (
+    <div className={`border-l-2 ${borderColor}`} style={{ marginLeft: indent > 0 ? '12px' : '0' }}>
+      <div className="py-2 px-3 hover:bg-gray-50">
+        <div className="flex gap-2">
+          {/* Vote buttons */}
+          <div className="flex flex-col items-center gap-0">
+            <button
+              onClick={() => handleVote(reply.id, 'UP')}
+              disabled={!user}
+              className={`p-0.5 rounded hover:bg-gray-200 transition ${
+                reply.userVote === 'UP' ? 'text-orange-500' : 'text-gray-400'
+              }`}
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <span className={`text-xs font-medium ${
+              (reply.upvotes - reply.downvotes) > 0 ? 'text-orange-500' : 
+              (reply.upvotes - reply.downvotes) < 0 ? 'text-blue-500' : 'text-gray-500'
+            }`}>
+              {reply.upvotes - reply.downvotes}
+            </span>
+            <button
+              onClick={() => handleVote(reply.id, 'DOWN')}
+              disabled={!user}
+              className={`p-0.5 rounded hover:bg-gray-200 transition ${
+                reply.userVote === 'DOWN' ? 'text-blue-500' : 'text-gray-400'
+              }`}
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-xs">
+              <Link to={`/profile/${reply.author.username}`} className="flex items-center gap-1.5">
+                {reply.author.profilePicture ? (
+                  <img src={reply.author.profilePicture} alt="" className="w-5 h-5 rounded-full" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center">
+                    <span className="text-primary-700 font-semibold text-xs">{reply.author.firstName[0]}</span>
+                  </div>
+                )}
+                <span className="font-medium text-gray-900 hover:text-primary-600">
+                  {reply.author.firstName} {reply.author.lastName}
+                </span>
+              </Link>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-500">{formatRelativeDate(reply.createdAt)}</span>
+            </div>
+
+            <div className="mt-1 text-sm">
+              <MentionText content={reply.content} />
+            </div>
+
+            {reply.imageUrl && (
+              <img src={reply.imageUrl} alt="" className="mt-2 rounded max-h-48 object-cover" />
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-4 mt-2">
+              {!thread.isLocked && user && (
+                <button
+                  onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600"
+                >
+                  <Reply className="w-3 h-3" />
+                  Reply
+                </button>
+              )}
+              {user?.id === reply.author.id && (
+                <button
+                  onClick={() => handleDeletePost(reply.id)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </button>
+              )}
+              {reply._count.replies > 0 && (
+                <span className="text-xs text-gray-400">
+                  {reply._count.replies} {reply._count.replies === 1 ? 'reply' : 'replies'}
+                </span>
+              )}
+            </div>
+
+            {/* Reply Input */}
+            {replyingTo === reply.id && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  className="input flex-1 text-sm py-1"
+                  placeholder={`Reply to ${reply.author.firstName}...`}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmitReply(reply.id)}
+                />
+                <button
+                  onClick={() => handleSubmitReply(reply.id)}
+                  disabled={submitting || !replyContent.trim()}
+                  className="btn btn-primary btn-sm disabled:opacity-50 py-1 px-2"
+                >
+                  <Send className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recursive nested replies */}
+      {reply.replies && reply.replies.length > 0 && (
+        <div>
+          {reply.replies.map((nestedReply: ThreadPost) => (
+            <RecursiveReply
+              key={nestedReply.id}
+              reply={nestedReply}
+              depth={depth + 1}
+              user={user}
+              thread={thread}
+              handleVote={handleVote}
+              handleDeletePost={handleDeletePost}
+              handleSubmitReply={handleSubmitReply}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              replyContent={replyContent}
+              setReplyContent={setReplyContent}
+              submitting={submitting}
+              formatRelativeDate={formatRelativeDate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ThreadDetailPage() {
   const { id } = useParams();
@@ -186,6 +362,44 @@ export default function ThreadDetailPage() {
       }
     } catch (error) {
       console.error('Like error:', error);
+    }
+  };
+
+  const handleVote = async (postId: string, voteType: 'UP' | 'DOWN') => {
+    if (!user) return;
+    try {
+      const { data } = await api.post(`/threads/${id}/posts/${postId}/vote`, { voteType });
+      
+      const updateVotes = (posts: ThreadPost[]): ThreadPost[] => {
+        return posts.map(post => {
+          if (post.id === postId) {
+            const wasUp = post.userVote === 'UP';
+            const wasDown = post.userVote === 'DOWN';
+            const newVote = data.voteType;
+            
+            let upvotes = post.upvotes;
+            let downvotes = post.downvotes;
+            
+            // Remove old vote
+            if (wasUp) upvotes--;
+            if (wasDown) downvotes--;
+            
+            // Add new vote
+            if (newVote === 'UP') upvotes++;
+            if (newVote === 'DOWN') downvotes++;
+            
+            return { ...post, upvotes, downvotes, userVote: newVote };
+          }
+          if (post.replies) {
+            return { ...post, replies: updateVotes(post.replies) };
+          }
+          return post;
+        });
+      };
+      
+      setThread({ ...thread!, posts: updateVotes(thread!.posts) });
+    } catch (error) {
+      console.error('Vote error:', error);
     }
   };
 
@@ -602,17 +816,33 @@ export default function ThreadDetailPage() {
                     
                     {/* Actions */}
                     <div className="flex items-center gap-4 mt-3">
-                      <button
-                        onClick={() => handleLikePost(post.id)}
-                        className={`flex items-center gap-1 text-sm transition ${
-                          post.isLiked
-                            ? 'text-red-500'
-                            : 'text-gray-500 hover:text-red-500'
-                        }`}
-                      >
-                        <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} />
-                        {post._count.likes}
-                      </button>
+                      {/* Voting */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleVote(post.id, 'UP')}
+                          disabled={!user}
+                          className={`p-1 rounded hover:bg-gray-100 transition ${
+                            post.userVote === 'UP' ? 'text-orange-500' : 'text-gray-400'
+                          }`}
+                        >
+                          <ChevronUp className="w-5 h-5" />
+                        </button>
+                        <span className={`text-sm font-medium min-w-[20px] text-center ${
+                          (post.upvotes - post.downvotes) > 0 ? 'text-orange-500' : 
+                          (post.upvotes - post.downvotes) < 0 ? 'text-blue-500' : 'text-gray-500'
+                        }`}>
+                          {post.upvotes - post.downvotes}
+                        </span>
+                        <button
+                          onClick={() => handleVote(post.id, 'DOWN')}
+                          disabled={!user}
+                          className={`p-1 rounded hover:bg-gray-100 transition ${
+                            post.userVote === 'DOWN' ? 'text-blue-500' : 'text-gray-400'
+                          }`}
+                        >
+                          <ChevronDown className="w-5 h-5" />
+                        </button>
+                      </div>
                       {!thread.isLocked && user && (
                         <button
                           onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
@@ -648,67 +878,26 @@ export default function ThreadDetailPage() {
                 </div>
               </div>
 
-              {/* Nested Replies */}
+              {/* Nested Replies - Reddit-style deep nesting */}
               {post.replies && post.replies.length > 0 && (
-                <div className="border-t bg-gray-50">
-                  {post.replies.map(reply => (
-                    <div key={reply.id} className="p-4 pl-16 border-b last:border-b-0">
-                      <div className="flex gap-3">
-                        <Link to={`/profile/${reply.author.username}`}>
-                          {reply.author.profilePicture ? (
-                            <img
-                              src={`${reply.author.profilePicture}`}
-                              alt=""
-                              className="w-8 h-8 rounded-full"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                              <span className="text-primary-700 font-semibold text-sm">
-                                {reply.author.firstName[0]}
-                              </span>
-                            </div>
-                          )}
-                        </Link>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <Link
-                                to={`/profile/${reply.author.username}`}
-                                className="font-medium text-gray-900 hover:text-primary-600 text-sm"
-                              >
-                                {reply.author.firstName} {reply.author.lastName}
-                              </Link>
-                              <span className="text-xs text-gray-500 ml-2">
-                                {formatRelativeDate(reply.createdAt)}
-                              </span>
-                            </div>
-                            {user?.id === reply.author.id && (
-                              <button
-                                onClick={() => handleDeletePost(reply.id)}
-                                className="text-gray-400 hover:text-red-500 p-1"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-gray-700 text-sm mt-1 whitespace-pre-wrap"><MentionText content={reply.content} /></p>
-                          {reply.imageUrl && (
-                            <img src={reply.imageUrl} alt="" className="mt-2 rounded-lg max-h-48 object-cover" />
-                          )}
-                          <button
-                            onClick={() => handleLikePost(reply.id)}
-                            className={`flex items-center gap-1 text-xs mt-2 transition ${
-                              reply.isLiked
-                                ? 'text-red-500'
-                                : 'text-gray-500 hover:text-red-500'
-                            }`}
-                          >
-                            <Heart className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
-                            {reply._count.likes}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                <div className="border-t bg-gray-50 py-2">
+                  {post.replies.map((reply: ThreadPost) => (
+                    <RecursiveReply
+                      key={reply.id}
+                      reply={reply}
+                      depth={1}
+                      user={user}
+                      thread={thread}
+                      handleVote={handleVote}
+                      handleDeletePost={handleDeletePost}
+                      handleSubmitReply={handleSubmitReply}
+                      replyingTo={replyingTo}
+                      setReplyingTo={setReplyingTo}
+                      replyContent={replyContent}
+                      setReplyContent={setReplyContent}
+                      submitting={submitting}
+                      formatRelativeDate={formatRelativeDate}
+                    />
                   ))}
                 </div>
               )}

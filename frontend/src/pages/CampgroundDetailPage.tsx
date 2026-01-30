@@ -9,6 +9,7 @@ import api from '../services/api';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
+import ThingsToDoSection from '../components/ThingsToDoSection';
 
 
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
@@ -1057,6 +1058,9 @@ export default function CampgroundDetailPage() {
                   </div>
                 </div>
               )}
+              
+              {/* Things to Do Nearby */}
+              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} />
               
               {/* Community - Followers & Campers */}
               <CampgroundCommunity campgroundId={campground.id} campgroundName={campground.name} />

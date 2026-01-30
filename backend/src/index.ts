@@ -75,6 +75,7 @@ import momentsRoutes from "./routes/moments.routes";
 import crosspostRoutes from "./routes/crosspost.routes";
 import commentsRoutes from "./routes/comments.routes";
 import mediaAlbumsRoutes from "./routes/media-albums.routes";
+import thingsToDoRoutes from "./routes/things-to-do.routes";
 
 
 
@@ -168,6 +169,7 @@ app.use("/api/crosspost", crosspostRoutes);
 app.use("/api/comments", commentsRoutes);
 app.use("/api/photos", photoRoutes);
 app.use("/api/videos", videoRoutes);
+app.use("/api/things-to-do", thingsToDoRoutes);
 
 
 

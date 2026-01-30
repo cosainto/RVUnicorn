@@ -59,7 +59,7 @@ export default function FeedPage() {
   const [tags, setTags] = useState<ThreadTag[]>([]);
   const [showNewThreadModal, setShowNewThreadModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'feed'>('feed');
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites' | 'feed' | 'new' | 'popular'>('feed');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || '');
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'active'>('recent');
@@ -106,21 +106,29 @@ export default function FeedPage() {
   }, [pendingCampgroundId, campgrounds, user]);
 
   useEffect(() => {
-    if (activeTab === 'favorites') {
+    if (activeTab === 'new') {
+      loadThreads('new');
+    } else if (activeTab === 'popular') {
+      loadThreads('popular');
+    } else if (activeTab === 'favorites') {
       loadFavorites();
     } else if (activeTab === 'feed') {
       loadFeed();
+    } else if (activeTab === 'new') {
+      loadThreads('new');
+    } else if (activeTab === 'popular') {
+      loadThreads('popular');
     } else {
       loadThreads();
     }
   }, [activeTab, selectedTag, sortBy, searchQuery]);
 
-  const loadThreads = async () => {
+  const loadThreads = async (sortOverride?: string) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (selectedTag) params.append('tag', selectedTag);
-      if (sortBy) params.append('sort', sortBy);
+      if (sortOverride) params.append('sort', sortOverride); else if (sortOverride) params.append('sort', sortOverride); else if (sortBy) params.append('sort', sortBy);
       if (searchQuery) params.append('search', searchQuery);
       
       const { data } = await api.get(`/threads?${params.toString()}`);
@@ -296,6 +304,28 @@ export default function FeedPage() {
           }`}
         >
           All Threads
+        </button>
+        <button
+          onClick={() => setActiveTab('new')}
+          className={`px-4 py-2 font-medium border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'new'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          New
+        </button>
+        <button
+          onClick={() => setActiveTab('popular')}
+          className={`px-4 py-2 font-medium border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'popular'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          Popular
         </button>
         {user && (
           <button

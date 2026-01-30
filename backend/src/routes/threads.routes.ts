@@ -78,10 +78,14 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
     }
 
     let orderBy: any = { createdAt: 'desc' };
+    let usePopularityScore = false;
+    
     if (sort === 'popular') {
-      orderBy = { viewCount: 'desc' };
+      usePopularityScore = true; // We'll sort in memory with custom formula
     } else if (sort === 'active') {
       orderBy = { updatedAt: 'desc' };
+    } else if (sort === 'new') {
+      orderBy = { createdAt: 'desc' };
     }
 
     const threads = await prisma.thread.findMany({
@@ -112,11 +116,39 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
       take: 50
     });
 
-    const formattedThreads = threads.map(t => ({
-      ...t,
-      isFavorited: userId ? t.favorites && t.favorites.length > 0 : false,
-      favorites: undefined
-    }));
+    // Calculate popularity score for each thread
+    const now = new Date();
+    const formattedThreads = threads.map(t => {
+      // Time decay: hours since last activity
+      const lastActivity = new Date(t.updatedAt);
+      const hoursSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
+      
+      // Popularity formula: (views + likes*3 + comments*5) / (hours + 2)^1.5
+      // Higher engagement = higher score, but decays over time without activity
+      const views = t.viewCount || 0;
+      const likes = t._count?.favorites || 0;
+      const comments = t._count?.posts || 0;
+      const engagement = views + (likes * 3) + (comments * 5);
+      const timeFactor = Math.pow(hoursSinceActivity + 2, 1.5);
+      const popularityScore = engagement / timeFactor;
+      
+      return {
+        ...t,
+        isFavorited: userId ? t.favorites && t.favorites.length > 0 : false,
+        favorites: undefined,
+        popularityScore
+      };
+    });
+    
+    // Sort by popularity if requested
+    if (usePopularityScore) {
+      formattedThreads.sort((a, b) => {
+        // Pinned threads always first
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.popularityScore - a.popularityScore;
+      });
+    }
 
     res.json(formattedThreads);
   } catch (error) {
@@ -479,36 +511,17 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
         _count: {
           select: { posts: true, favorites: true }
         },
-        favorites: userId ? {
-          where: { userId }
-        } : false,
+        favorites: userId ? { where: { userId } } : false,
         posts: {
-          where: { parentId: null },
           orderBy: { createdAt: 'asc' },
           include: {
             author: {
               select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
             },
             _count: {
-              select: { likes: true, replies: true }
+              select: { replies: true }
             },
-            likes: userId ? {
-              where: { userId }
-            } : false,
-            replies: {
-              orderBy: { createdAt: 'asc' },
-              include: {
-                author: {
-                  select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
-                },
-                _count: {
-                  select: { likes: true }
-                },
-                likes: userId ? {
-                  where: { userId }
-                } : false
-              }
-            }
+            likes: { select: { userId: true, voteType: true } }
           }
         }
       }
@@ -518,20 +531,41 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Thread not found' });
     }
 
+    // Helper to format posts with vote counts
+    const formatPost = (p: any): any => {
+      const upvotes = p.likes?.filter((l: any) => l.voteType === 'UP').length || 0;
+      const downvotes = p.likes?.filter((l: any) => l.voteType === 'DOWN').length || 0;
+      const userVote = userId && p.likes?.find((l: any) => l.userId === userId)?.voteType || null;
+      
+      return {
+        ...p,
+        upvotes,
+        downvotes,
+        userVote,
+        isLiked: userId ? p.likes && p.likes.length > 0 : false,
+        likes: undefined
+      };
+    };
+
+    // Build tree from flat posts
+    const formattedPosts = thread.posts.map(formatPost);
+    const postMap = new Map(formattedPosts.map((p: any) => [p.id, { ...p, replies: [] }]));
+    const rootPosts: any[] = [];
+    
+    formattedPosts.forEach((post: any) => {
+      const postWithReplies = postMap.get(post.id);
+      if (post.parentId && postMap.has(post.parentId)) {
+        postMap.get(post.parentId).replies.push(postWithReplies);
+      } else if (!post.parentId) {
+        rootPosts.push(postWithReplies);
+      }
+    });
+
     const formattedThread = {
       ...thread,
       isFavorited: userId ? thread.favorites && thread.favorites.length > 0 : false,
       favorites: undefined,
-      posts: thread.posts.map(p => ({
-        ...p,
-        isLiked: userId ? p.likes && p.likes.length > 0 : false,
-        likes: undefined,
-        replies: p.replies.map(r => ({
-          ...r,
-          isLiked: userId ? r.likes && r.likes.length > 0 : false,
-          likes: undefined
-        }))
-      }))
+      posts: rootPosts
     };
 
     res.json(formattedThread);
@@ -578,14 +612,69 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       }
     });
 
-    // Create activity for thread creation
+    // Create activity for thread creation - shows in Profile activity feed
+    // "{user name} started a thread. Share your thoughts [Thread Title]"
+    const creator = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, username: true }
+    });
+    
     await createActivity({
       userId,
       type: 'THREAD_CREATED',
       threadId: thread.id,
       title: thread.title,
-      campgroundId: thread.campgroundId || undefined
+      content: `started a thread. Share your thoughts!`,
+      campgroundId: thread.campgroundId || undefined,
+      isPublic: true
     });
+    
+    // Also create BasecampActivity for the user's own basecamp
+    await prisma.basecampActivity.create({
+      data: {
+        userId: userId,
+        actorId: userId,
+        type: 'THREAD_CREATED',
+        entityType: 'THREAD',
+        entityId: thread.id,
+        entityName: thread.title,
+        metadata: {
+          threadId: thread.id,
+          threadTitle: thread.title,
+          action: 'created'
+        }
+      }
+    });
+    
+    // Notify friends about the new thread (for their Basecamp feeds)
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { initiatorId: userId, status: 'ACCEPTED' },
+          { receiverId: userId, status: 'ACCEPTED' }
+        ]
+      }
+    });
+    
+    const friendIds = friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    
+    for (const friendId of friendIds) {
+      await prisma.basecampActivity.create({
+        data: {
+          userId: friendId,
+          actorId: userId,
+          type: 'FRIEND_THREAD_CREATED',
+          entityType: 'THREAD',
+          entityId: thread.id,
+          entityName: thread.title,
+          metadata: {
+            threadId: thread.id,
+            threadTitle: thread.title,
+            creatorName: `${creator?.firstName || ''} ${creator?.lastName || ''}`.trim()
+          }
+        }
+      });
+    }
 
     // Notify campground followers and checked-in users about new thread
     if (thread.campgroundId) {
@@ -681,8 +770,8 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
           select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
         },
         _count: {
-          select: { likes: true, replies: true }
-        }
+              select: { replies: true }
+            }
       }
     });
 
@@ -702,12 +791,14 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
       campgroundId: thread.campgroundId || undefined
     });
 
+    // Get replier info for notifications
+    const replier = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true }
+    });
+
     // Notify thread creator if someone else replied
     if (thread.authorId !== userId) {
-      const replier = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true }
-      });
       await prisma.notification.create({
         data: {
           userId: thread.authorId,
@@ -735,6 +826,69 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
           }
         }
       });
+    }
+    
+    // 2. Commenter's own Basecamp feed - "You're talking in [Thread Title]"
+    await prisma.basecampActivity.create({
+      data: {
+        userId: userId,
+        actorId: userId,
+        type: 'THREAD_COMMENT',
+        entityType: 'THREAD',
+        entityId: id,
+        entityName: thread.title,
+        metadata: {
+          threadId: id,
+          threadTitle: thread.title,
+          postId: post.id,
+          action: 'commented'
+        }
+      }
+    });
+    
+    // 3. Commenter's Profile activity feed - "You're talking in [Thread Title]"
+    await createActivity({
+      userId: userId,
+      type: 'THREAD_COMMENT',
+      threadId: id,
+      title: thread.title,
+      content: `You're talking in`,
+      isPublic: true
+    });
+    
+    // 4. Notify commenter's friends (for their Basecamp feeds)
+    const friendshipsForComment = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { initiatorId: userId, status: 'ACCEPTED' },
+          { receiverId: userId, status: 'ACCEPTED' }
+        ]
+      }
+    });
+    
+    const friendIdsForComment = friendshipsForComment.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    
+    for (const friendId of friendIdsForComment) {
+      // Don't notify if they're the thread author (already notified above)
+      if (friendId !== thread.authorId) {
+        await prisma.basecampActivity.create({
+          data: {
+            userId: friendId,
+            actorId: userId,
+            type: 'FRIEND_THREAD_COMMENT',
+            entityType: 'THREAD',
+            entityId: id,
+            entityName: thread.title,
+            metadata: {
+              threadId: id,
+              threadTitle: thread.title,
+              postId: post.id,
+              commenterName: `${replier?.firstName || ''} ${replier?.lastName || ''}`.trim(),
+              commentPreview: content.trim().substring(0, 100)
+            }
+          }
+        });
+      }
     }
 
     // If replying to a specific post, notify that post author too
@@ -984,3 +1138,46 @@ router.delete('/posts/:postId', authenticateToken, async (req: Request, res: Res
 });
 
 export default router;
+
+// Vote on a post (upvote/downvote) - Reddit style
+router.post('/:threadId/posts/:postId/vote', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { postId } = req.params;
+    const { voteType } = req.body;
+    const userId = (req as any).userId;
+
+    if (!['UP', 'DOWN'].includes(voteType)) {
+      return res.status(400).json({ error: 'Invalid vote type. Must be UP or DOWN' });
+    }
+
+    const existing = await prisma.threadPostLike.findUnique({
+      where: { postId_userId: { postId, userId } }
+    });
+
+    if (existing) {
+      if (existing.voteType === voteType) {
+        // Remove vote if clicking same button
+        await prisma.threadPostLike.delete({
+          where: { id: existing.id }
+        });
+        return res.json({ voteType: null });
+      } else {
+        // Change vote type
+        const updated = await prisma.threadPostLike.update({
+          where: { id: existing.id },
+          data: { voteType }
+        });
+        return res.json({ voteType: updated.voteType });
+      }
+    } else {
+      // Create new vote
+      const created = await prisma.threadPostLike.create({
+        data: { postId, userId, voteType }
+      });
+      return res.json({ voteType: created.voteType });
+    }
+  } catch (error) {
+    console.error('Vote post error:', error);
+    res.status(500).json({ error: 'Failed to vote on post' });
+  }
+});
