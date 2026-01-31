@@ -33,8 +33,13 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const { username } = req.params;
     const currentUserId = (req as any).userId;
 
-    const profile = await prisma.user.findUnique({
-      where: { username },
+    const profile = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { id: username }
+        ]
+      },
       select: {
         id: true,
         username: true,
@@ -168,6 +173,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
     // Verify the user is updating their own profile
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -191,7 +197,8 @@ router.put('/:username', authenticateToken, async (req, res) => {
     }
 
     const updatedProfile = await prisma.user.update({
-      where: { username },
+      where: { id: user.id },
+      
       data: {
         firstName: firstName || undefined,
         lastName: lastName || undefined,
@@ -434,6 +441,7 @@ router.get('/:username/states', async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -463,6 +471,7 @@ router.get('/:username/stats', async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true, location: true },
     });
 
@@ -540,6 +549,7 @@ router.get('/:username/friends', optionalAuth, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -599,6 +609,7 @@ router.get('/:username/feed', optionalAuth, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -644,6 +655,7 @@ router.get('/:username/gear', optionalAuth, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -676,7 +688,7 @@ router.post('/:username/wall-post', authenticateToken, async (req, res) => {
 
     // Get the profile owner
     const profileOwner = await prisma.user.findUnique({
-      where: { username },
+      
       select: { id: true },
     });
 
@@ -738,6 +750,7 @@ router.put('/:username/status', authenticateToken, async (req, res) => {
     // Verify the user is updating their own status
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -747,7 +760,7 @@ router.put('/:username/status', authenticateToken, async (req, res) => {
 
     // Update status
     const updatedUser = await prisma.user.update({
-      where: { username },
+      
       data: {
         status: status || null,
         statusEmoji: statusEmoji || null,
@@ -794,6 +807,7 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
     // Verify the user is updating their own status
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -843,7 +857,7 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
 
     // Update status
     const updatedUser = await prisma.user.update({
-      where: { username },
+      
       data: {
         status: newStatus,
         statusEmoji: newEmoji,
@@ -894,6 +908,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -1302,6 +1317,7 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
     // Get user
     const user = await prisma.user.findUnique({
       where: { username },
+      
       select: { id: true },
     });
 
@@ -1364,6 +1380,7 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     
     const user = await prisma.user.findUnique({
+      where: { username },
       where: { id: userId },
       select: {
         rvMake: true,
@@ -1528,6 +1545,7 @@ router.get('/:userId/home-location', async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
+      where: { username },
       where: { id: userId },
       select: {
         id: true,

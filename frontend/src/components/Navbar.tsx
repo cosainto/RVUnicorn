@@ -424,7 +424,7 @@ export default function Navbar() {
                         <span>My Profile</span>
                       </Link>
                       <Link
-                        to="/rv-settings"
+                        to="/my-rv"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -432,7 +432,7 @@ export default function Navbar() {
                         <span>RV Settings</span>
                       </Link>
                       <Link
-                        to="/privacy-settings"
+                        to="/settings/privacy"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -551,8 +551,8 @@ export default function Navbar() {
             {/* Settings & Logout */}
             <div className="px-2 py-3 border-t border-gray-100 mt-2">
               <MobileNavLink to={`/profile/${user.id}`} icon={<User className="w-5 h-5" />} label="My Profile" />
-              <MobileNavLink to="/rv-settings" icon={<Settings className="w-5 h-5" />} label="RV Settings" />
-              <MobileNavLink to="/privacy-settings" icon={<Shield className="w-5 h-5" />} label="Privacy Settings" />
+              <MobileNavLink to="/my-rv" icon={<Settings className="w-5 h-5" />} label="RV Settings" />
+              <MobileNavLink to="/settings/privacy" icon={<Shield className="w-5 h-5" />} label="Privacy Settings" />
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-2"

@@ -39,6 +39,7 @@ interface SavedThing {
 }
 
 interface Props {
+  isAdmin?: boolean;
   campgroundId: string;
   campgroundName: string;
 }
@@ -54,9 +55,9 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; label:
 
 const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'scenic', 'easy-access', 'reservation-required'];
 
-export default function ThingsToDoSection({ campgroundId, campgroundName }: Props) {
+export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmin = false }: Props) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('saved');
+  const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('discover');
   const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +68,20 @@ export default function ThingsToDoSection({ campgroundId, campgroundName }: Prop
   const [showSaveModal, setShowSaveModal] = useState<Recommendation | null>(null);
   const [saveNote, setSaveNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [featuredItems, setFeaturedItems] = useState<SavedThing[]>([]);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [featuringId, setFeaturingId] = useState<string | null>(null);
 
-  useEffect(() => { loadSavedThings(); }, [campgroundId]);
+  useEffect(() => { loadSavedThings(); loadFeatured(); }, [campgroundId]);
+
+  // Auto-rotate featured carousel
+  useEffect(() => {
+    if (featuredItems.length <= 1) return;
+    const timer = setInterval(() => {
+      setFeaturedIndex(i => (i + 1) % featuredItems.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [featuredItems.length]);
 
   const loadSavedThings = async () => {
     try {
@@ -77,6 +90,34 @@ export default function ThingsToDoSection({ campgroundId, campgroundName }: Prop
       setSavedThings(data);
     } catch (error) { console.error('Load saved things error:', error); }
     finally { setLoading(false); }
+  };
+
+  const loadFeatured = async () => {
+    try {
+      const { data } = await api.get(`/things-to-do/campgrounds/${campgroundId}/featured`);
+      setFeaturedItems(data);
+    } catch (error) { console.error('Load featured error:', error); }
+  };
+
+  const handleFeature = async (thingId: string, pinned: boolean) => {
+    if (!isAdmin) return;
+    try {
+      setFeaturingId(thingId);
+      await api.put(`/things-to-do/campgrounds/${campgroundId}/discovery/${thingId}/feature`, { pinned });
+      loadSavedThings();
+      loadFeatured();
+    } catch (error) { console.error('Feature error:', error); }
+    finally { setFeaturingId(null); }
+  };
+
+  const handleRemoveFromDiscovery = async (thingId: string) => {
+    if (!isAdmin) return;
+    if (!confirm('Remove this item from discovery?')) return;
+    try {
+      await api.delete(`/things-to-do/campgrounds/${campgroundId}/discovery/${thingId}`);
+      loadSavedThings();
+      loadFeatured();
+    } catch (error) { console.error('Remove error:', error); }
   };
 
   const loadRecommendations = async () => {
@@ -140,6 +181,40 @@ export default function ThingsToDoSection({ campgroundId, campgroundName }: Prop
         <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
       </div>
 
+      {/* Featured Events & Activities Carousel */}
+      {featuredItems.length > 0 && (
+        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-400" />
+                Featured Events & Activities
+              </h3>
+              <div className="flex gap-1">
+                {featuredItems.map((_, i) => (
+                  <button key={i} onClick={() => setFeaturedIndex(i)} className={`w-2 h-2 rounded-full transition ${i === featuredIndex ? 'bg-white' : 'bg-white/40'}`} />
+                ))}
+              </div>
+            </div>
+            {featuredItems[featuredIndex] && (
+              <a href={featuredItems[featuredIndex].sourceUrl} target="_blank" rel="noopener noreferrer" className="flex gap-4 group">
+                {featuredItems[featuredIndex].imageUrl && (
+                  <img src={featuredItems[featuredIndex].imageUrl} alt="" className="w-24 h-24 rounded-lg object-cover flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-lg group-hover:underline truncate">{featuredItems[featuredIndex].title}</p>
+                  <p className="text-white/80 text-sm line-clamp-2">{featuredItems[featuredIndex].description || featuredItems[featuredIndex].address}</p>
+                  {featuredItems[featuredIndex].distanceMiles && (
+                    <p className="text-white/70 text-xs mt-1">{featuredItems[featuredIndex].distanceMiles.toFixed(1)} miles away</p>
+                  )}
+                </div>
+                <ExternalLink className="w-5 h-5 text-white/60 flex-shrink-0" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex border-b border-gray-200">
         <button onClick={() => setActiveTab('saved')} className={`flex-1 px-4 py-3 text-sm font-medium transition ${activeTab === 'saved' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>
           <BookmarkCheck className="w-4 h-4 inline mr-2" />Saved ({savedThings.length})
@@ -201,6 +276,12 @@ export default function ThingsToDoSection({ campgroundId, campgroundName }: Prop
                         <div className="flex items-center gap-2 mt-1 flex-wrap"><TypeIcon type={thing.type} />{thing.distanceMiles && <span className="text-xs text-gray-500">{thing.distanceMiles.toFixed(1)} mi</span>}</div>
                       </div>
                       <button onClick={() => handleUnsave(thing.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Unsave"><BookmarkCheck className="w-5 h-5" /></button>
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <button onClick={() => handleFeature(thing.id, !thing.pinned)} disabled={featuringId === thing.id} className={`p-1.5 rounded-lg transition ${thing.pinned ? 'text-yellow-600 bg-yellow-50' : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50'}`} title={thing.pinned ? 'Unfeature' : 'Feature'}>★</button>
+                          <button onClick={() => handleRemoveFromDiscovery(thing.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Remove"><X className="w-4 h-4" /></button>
+                        </div>
+                      )}
                     </div>
                     {thing.address && <p className="text-sm text-gray-500 mt-2 truncate">{thing.address}</p>}
                     {thing.tags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{thing.tags.slice(0, 3).map(tag => <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>)}</div>}

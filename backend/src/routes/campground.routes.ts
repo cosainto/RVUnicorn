@@ -55,6 +55,28 @@ router.get('/', async (req: Request, res: Response) => {
       skip: page ? (parseInt(page as string) - 1) * (limit ? parseInt(limit as string) : 50) : (offset ? parseInt(offset as string) : 0),
       orderBy: { name: 'asc' },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             reviews: true,
@@ -91,6 +113,28 @@ router.get("/following", authenticateToken, async (req: any, res) => {
     const follows = await prisma.campgroundFollow.findMany({
       where: { userId },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         campground: {
           select: { id: true, name: true, location: true, imageUrl: true, state: true }
         }
@@ -109,6 +153,28 @@ router.get("/following", authenticateToken, async (req: any, res) => {
         ]
       },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         campground: {
           select: { id: true, name: true, location: true, imageUrl: true, state: true }
         }
@@ -119,6 +185,28 @@ router.get("/following", authenticateToken, async (req: any, res) => {
     const stays = await prisma.stay.findMany({
       where: { userId },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         campground: {
           select: { id: true, name: true, location: true, imageUrl: true, state: true }
         }
@@ -154,6 +242,28 @@ router.get('/favorites/my', authenticateToken, async (req: Request, res: Respons
     const favorites = await prisma.campgroundFollow.findMany({
       where: { userId },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         campground: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -253,6 +363,28 @@ router.get('/:id/followers', optionalAuth, async (req: Request, res: Response) =
       skip: parseInt(offset as string),
       orderBy: { createdAt: 'desc' },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,
@@ -381,6 +513,8 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
 });
 
 // Get campground by ID (MUST come last among GET routes)
+
+// Get campground by ID (MUST come last among GET routes)
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -388,10 +522,30 @@ router.get('/:id', async (req: Request, res: Response) => {
     const campground = await prisma.campground.findUnique({
       where: { id },
       include: {
-        checkIns: {
-          where: {
-            isActive: true,
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
           },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        checkIns: {
+          where: { isActive: true },
           include: {
             user: {
               select: {
@@ -433,8 +587,6 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to get campground' });
   }
 });
-
-
 // Get who's camping at this campground (current and upcoming)
 router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => {
   try {
@@ -454,6 +606,28 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         isWishlist: false,
       },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         organizer: {
           select: {
             id: true,
@@ -467,6 +641,28 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         attendees: {
           where: { status: 'GOING' },
           include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
             user: {
               select: {
                 id: true,
@@ -530,6 +726,28 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         startDate: { lte: twoWeeksFromNow },
       },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,
@@ -578,6 +796,28 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         startDate: { lte: twoWeeksFromNow },
       },
       include: {
+        claimedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,

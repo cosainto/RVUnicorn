@@ -298,4 +298,151 @@ router.post('/:id/vote', authenticateToken, async (req: Request, res: Response) 
   } catch (error) { console.error('Vote error:', error); res.status(500).json({ error: 'Failed to vote' }); }
 });
 
+
+// ============ CAMPGROUND DISCOVERY MANAGEMENT ============
+
+// GET featured items for campground (with timer logic)
+router.get('/campgrounds/:id/featured', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const now = new Date();
+    
+    // Get featured items where pinned=true and within time window (or no time set)
+    const featured = await prisma.campgroundThingToDo.findMany({
+      where: {
+        campgroundId: id,
+        pinned: true,
+        OR: [
+          { pinnedUntil: null },
+          { pinnedUntil: { gte: now } }
+        ],
+        AND: [
+          { OR: [{ pinnedAt: null }, { pinnedAt: { lte: now } }] }
+        ]
+      },
+      include: {
+        thingToDo: true
+      },
+      orderBy: { displayOrder: 'asc' },
+      take: 10
+    });
+    
+    res.json(featured.map(f => ({ ...f.thingToDo, distanceMiles: f.distanceMiles, displayOrder: f.displayOrder, pinnedUntil: f.pinnedUntil })));
+  } catch (error) {
+    console.error('Get featured error:', error);
+    res.status(500).json({ error: 'Failed to get featured items' });
+  }
+});
+
+// POST add discovery item to campground
+router.post('/campgrounds/:id/discovery', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).userId;
+    const { thingToDoId, distanceMiles } = req.body;
+    
+    // Verify user is campground admin
+    const isAdmin = await prisma.campgroundAdmin.findFirst({ where: { campgroundId: id, userId } });
+    const campground = await prisma.campground.findUnique({ where: { id }, select: { claimedById: true } });
+    if (!isAdmin && campground?.claimedById !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const link = await prisma.campgroundThingToDo.upsert({
+      where: { campgroundId_thingToDoId: { campgroundId: id, thingToDoId } },
+      create: { campgroundId: id, thingToDoId, distanceMiles },
+      update: { distanceMiles },
+      include: { thingToDo: true }
+    });
+    
+    res.json(link);
+  } catch (error) {
+    console.error('Add discovery error:', error);
+    res.status(500).json({ error: 'Failed to add discovery item' });
+  }
+});
+
+// PUT feature/unfeature with timer
+router.put('/campgrounds/:id/discovery/:thingId/feature', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id, thingId } = req.params;
+    const userId = (req as any).userId;
+    const { pinned, pinnedAt, pinnedUntil, displayOrder } = req.body;
+    
+    // Verify user is campground admin
+    const isAdmin = await prisma.campgroundAdmin.findFirst({ where: { campgroundId: id, userId } });
+    const campground = await prisma.campground.findUnique({ where: { id }, select: { claimedById: true } });
+    if (!isAdmin && campground?.claimedById !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const updated = await prisma.campgroundThingToDo.update({
+      where: { campgroundId_thingToDoId: { campgroundId: id, thingToDoId: thingId } },
+      data: {
+        pinned: pinned ?? true,
+        pinnedAt: pinnedAt ? new Date(pinnedAt) : new Date(),
+        pinnedUntil: pinnedUntil ? new Date(pinnedUntil) : null,
+        pinnedById: userId,
+        displayOrder: displayOrder ?? 0
+      },
+      include: { thingToDo: true }
+    });
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Feature error:', error);
+    res.status(500).json({ error: 'Failed to feature item' });
+  }
+});
+
+// DELETE remove discovery item from campground
+router.delete('/campgrounds/:id/discovery/:thingId', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id, thingId } = req.params;
+    const userId = (req as any).userId;
+    
+    // Verify user is campground admin
+    const isAdmin = await prisma.campgroundAdmin.findFirst({ where: { campgroundId: id, userId } });
+    const campground = await prisma.campground.findUnique({ where: { id }, select: { claimedById: true } });
+    if (!isAdmin && campground?.claimedById !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    await prisma.campgroundThingToDo.delete({
+      where: { campgroundId_thingToDoId: { campgroundId: id, thingToDoId: thingId } }
+    });
+    
+    res.json({ message: 'Removed successfully' });
+  } catch (error) {
+    console.error('Remove discovery error:', error);
+    res.status(500).json({ error: 'Failed to remove item' });
+  }
+});
+
+// GET all discovery items for campground (admin view)
+router.get('/campgrounds/:id/discovery/manage', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).userId;
+    
+    // Verify user is campground admin
+    const isAdmin = await prisma.campgroundAdmin.findFirst({ where: { campgroundId: id, userId } });
+    const campground = await prisma.campground.findUnique({ where: { id }, select: { claimedById: true } });
+    if (!isAdmin && campground?.claimedById !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    const items = await prisma.campgroundThingToDo.findMany({
+      where: { campgroundId: id },
+      include: { thingToDo: true },
+      orderBy: [{ pinned: 'desc' }, { displayOrder: 'asc' }, { createdAt: 'desc' }]
+    });
+    
+    res.json(items);
+  } catch (error) {
+    console.error('Get manage items error:', error);
+    res.status(500).json({ error: 'Failed to get items' });
+  }
+});
+
 export default router;

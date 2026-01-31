@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { 
+import { Camera, 
   MapPin, Navigation, Fuel, Coffee, Clock, DollarSign, 
   Plus, X, Route, Truck, ChevronDown, ChevronUp,
   AlertCircle, Check, Loader2, Save, Share2, Eye, EyeOff,
@@ -134,10 +134,15 @@ export default function DrivePlanner() {
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'stops' | 'directions' | 'save'>('stops');
+  const [activeTab, setActiveTab] = useState<'stops' | 'directions' | 'attractions' | 'save'>('stops');
   const [showStops, setShowStops] = useState(true);
   const [stopFilter, setStopFilter] = useState<'all' | 'gas' | 'rest'>('all');
   const [maxDistance, setMaxDistance] = useState(5);
+  
+  // Route provider toggle
+  const [routeProvider, setRouteProvider] = useState<'here' | 'google'>('google');
+  const [attractionsAlongRoute, setAttractionsAlongRoute] = useState<any>({ attractions: [], restaurants: [], gasStations: [], hotels: [] });
+  const [loadingAttractions, setLoadingAttractions] = useState(false);
   const [mpg, setMpg] = useState(10);
   
   // Save trip state
@@ -426,93 +431,114 @@ export default function DrivePlanner() {
 
     setLoading(true);
     setError(null);
+    setAttractionsAlongRoute({ attractions: [], restaurants: [], gasStations: [], hotels: [] });
 
     try {
-      const { data: routeData } = await api.post('/drive-planner/route', {
-        origin: { lat: origin.lat, lng: origin.lng },
-        destination: { lat: destination.lat, lng: destination.lng },
-        waypoints: waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng })),
-        transportMode: 'truck',
-      });
+      let routeData: any;
+      let points: {lat: number; lng: number}[] = [];
 
-      // Parse instructions from actions
-      const instructions: RouteInstruction[] = (routeData.route.actions || []).map((action: any) => ({
-        instruction: action.instruction || action.action || 'Continue',
-        distance: action.length || 0,
-        duration: action.duration || 0,
-        action: action.action || 'continue',
-      }));
+      if (routeProvider === 'google') {
+        // Use Google Directions API
+        const { data } = await api.post('/drive-planner/google-route', {
+          origin: { lat: origin.lat, lng: origin.lng },
+          destination: { lat: destination.lat, lng: destination.lng },
+          waypoints: waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng })),
+        });
 
-      setRoute({
-        distance: routeData.route.summary.distance,
-        duration: routeData.route.summary.duration,
-        polyline: routeData.route.polyline,
-        instructions,
-      });
+        setRoute({
+          distance: parseFloat(data.distance.miles) * 1609.34,
+          duration: data.duration.seconds,
+          polyline: data.polyline,
+          instructions: data.steps,
+        });
+        points = data.routePoints;
+        setRoutePoints(points);
 
-      // Decode polyline
-      const points = decodePolyline(routeData.route.polyline);
-      setRoutePoints(points);
+        // Get fuel estimate
+        const { data: fuelData } = await api.post('/drive-planner/fuel-estimate', {
+          distanceMeters: parseFloat(data.distance.miles) * 1609.34,
+          mpg,
+        });
+        setFuelEstimate(fuelData);
 
-      // Find stops along route
+      } else {
+        // Use HERE Maps API (existing)
+        const { data } = await api.post('/drive-planner/route', {
+          origin: { lat: origin.lat, lng: origin.lng },
+          destination: { lat: destination.lat, lng: destination.lng },
+          waypoints: waypoints.map(wp => ({ lat: wp.lat, lng: wp.lng })),
+          transportMode: 'truck',
+        });
+
+        const instructions: RouteInstruction[] = (data.route.actions || []).map((action: any) => ({
+          instruction: action.instruction || action.action || 'Continue',
+          distance: action.length || 0,
+          duration: action.duration || 0,
+          action: action.action || 'continue',
+        }));
+
+        setRoute({
+          distance: data.route.summary.distance,
+          duration: data.route.summary.duration,
+          polyline: data.route.polyline,
+          instructions,
+        });
+
+        points = decodePolyline(data.route.polyline);
+        setRoutePoints(points);
+
+        const { data: fuelData } = await api.post('/drive-planner/fuel-estimate', {
+          distanceMeters: data.route.summary.distance,
+          mpg,
+        });
+        setFuelEstimate(fuelData);
+      }
+
+      // Find truck stops and rest areas along route (existing)
       const { data: stopsData } = await api.post('/drive-planner/stops-along-route', {
         routePoints: points,
         maxDistance,
       });
 
-      // Combine and sort stops
       const allStops: RouteStop[] = [
         ...stopsData.gasStations.map((s: any) => ({
-          id: s.id,
-          type: 'gas' as const,
-          name: s.name,
-          lat: s.latitude,
-          lng: s.longitude,
+          id: s.id, type: 'gas' as const, name: s.name, lat: s.latitude, lng: s.longitude,
           address: `${s.city || ''}, ${s.state}`.trim().replace(/^,\s*/, ''),
-          brand: s.brand,
-          amenities: [
-            s.hasRVParking && 'RV Parking',
-            s.hasShowers && 'Showers',
-            s.hasDumpStation && 'Dump Station',
-            s.hasPropane && 'Propane',
-            s.hasRestaurant && 'Restaurant',
-          ].filter(Boolean),
+          brand: s.brand, amenities: [s.hasRVParking && 'RV Parking', s.hasShowers && 'Showers',
+            s.hasDumpStation && 'Dump Station', s.hasPropane && 'Propane', s.hasRestaurant && 'Restaurant'].filter(Boolean),
           addedToRoute: false,
         })),
         ...stopsData.restStops.map((s: any) => ({
-          id: s.id,
-          type: 'rest' as const,
-          name: s.name,
-          lat: s.latitude,
-          lng: s.longitude,
+          id: s.id, type: 'rest' as const, name: s.name, lat: s.latitude, lng: s.longitude,
           address: `${s.interstate || ''} - ${s.state}`,
-          amenities: [
-            s.hasRVParking && 'RV Parking',
-            s.hasPetArea && 'Pet Area',
-            s.hasWifi && 'WiFi',
-            s.hasDumpStation && 'Dump Station',
-          ].filter(Boolean),
+          amenities: [s.hasRVParking && 'RV Parking', s.hasPetArea && 'Pet Area',
+            s.hasWifi && 'WiFi', s.hasDumpStation && 'Dump Station'].filter(Boolean),
           addedToRoute: false,
         })),
       ];
 
-      // Calculate distance from start
       allStops.forEach(stop => {
         const distToOrigin = haversineDistance(origin.lat, origin.lng, stop.lat, stop.lng);
         stop.distanceFromStart = Math.round(distToOrigin * 0.621371);
       });
-
       allStops.sort((a, b) => (a.distanceFromStart || 0) - (b.distanceFromStart || 0));
       setStopsAlongRoute(allStops);
 
-      // Get fuel estimate
-      const { data: fuelData } = await api.post('/drive-planner/fuel-estimate', {
-        distanceMeters: routeData.route.summary.distance,
-        mpg,
-      });
-      setFuelEstimate(fuelData);
+      // Fetch attractions along route (NEW!)
+      setLoadingAttractions(true);
+      try {
+        const { data: attractionsData } = await api.post('/drive-planner/attractions-along-route', {
+          routePoints: points,
+          maxDistanceMiles: maxDistance,
+          types: ['tourist_attraction', 'park', 'restaurant', 'lodging'],
+        });
+        setAttractionsAlongRoute(attractionsData);
+      } catch (attErr) {
+        console.error('Failed to load attractions:', attErr);
+      } finally {
+        setLoadingAttractions(false);
+      }
 
-      // Auto-generate trip name
       if (!tripName) {
         const destName = selectedCampground?.name || destination.address.split(',')[0];
         setTripName(`Trip to ${destName}`);
@@ -1137,6 +1163,17 @@ export default function DrivePlanner() {
                   <List className="w-4 h-4" />
                   Directions
                 </button>
+                <button
+                  onClick={() => setActiveTab('attractions')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 ${
+                    activeTab === 'attractions' 
+                      ? 'text-primary-600 border-b-2 border-primary-600' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  Attractions {loadingAttractions ? '...' : `(${attractionsAlongRoute.attractions.length + attractionsAlongRoute.restaurants.length})`}
+                </button>
               </div>
 
               {activeTab === 'stops' && (
@@ -1300,6 +1337,119 @@ export default function DrivePlanner() {
                   ) : (
                     <div className="p-8 text-center text-gray-500">
                       Turn-by-turn directions not available
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Attractions Tab */}
+              {activeTab === 'attractions' && (
+                <div className="max-h-[500px] overflow-y-auto p-4">
+                  {loadingAttractions ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+                      <span className="ml-2 text-gray-600">Finding attractions along your route...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Attractions */}
+                      {attractionsAlongRoute.attractions.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Camera className="w-4 h-4" /> Attractions ({attractionsAlongRoute.attractions.length})
+                          </h4>
+                          <div className="grid gap-3">
+                            {attractionsAlongRoute.attractions.slice(0, 10).map((place: any) => (
+                              <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                                {place.photo ? (
+                                  <img src={place.photo} alt={place.name} className="w-16 h-16 rounded-lg object-cover" />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <Camera className="w-6 h-6 text-blue-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 truncate">{place.name}</p>
+                                  <p className="text-sm text-gray-500 truncate">{place.address}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                                    <span className="text-xs text-gray-400">{place.distanceFromRoute} mi from route</span>
+                                  </div>
+                                </div>
+                                <a href={place.sourceUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg">
+                                  <Navigation className="w-4 h-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Restaurants */}
+                      {attractionsAlongRoute.restaurants.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Coffee className="w-4 h-4" /> Restaurants ({attractionsAlongRoute.restaurants.length})
+                          </h4>
+                          <div className="grid gap-3">
+                            {attractionsAlongRoute.restaurants.slice(0, 10).map((place: any) => (
+                              <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                                {place.photo ? (
+                                  <img src={place.photo} alt={place.name} className="w-16 h-16 rounded-lg object-cover" />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-lg bg-orange-100 flex items-center justify-center">
+                                    <Coffee className="w-6 h-6 text-orange-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 truncate">{place.name}</p>
+                                  <p className="text-sm text-gray-500 truncate">{place.address}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                                    {place.priceLevel && <span className="text-xs text-green-600">{'$'.repeat(place.priceLevel)}</span>}
+                                    <span className="text-xs text-gray-400">{place.distanceFromRoute} mi</span>
+                                  </div>
+                                </div>
+                                <a href={place.sourceUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg">
+                                  <Navigation className="w-4 h-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hotels/Campgrounds */}
+                      {attractionsAlongRoute.hotels.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Tent className="w-4 h-4" /> Lodging ({attractionsAlongRoute.hotels.length})
+                          </h4>
+                          <div className="grid gap-3">
+                            {attractionsAlongRoute.hotels.slice(0, 5).map((place: any) => (
+                              <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                                  <Tent className="w-5 h-5 text-green-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 truncate">{place.name}</p>
+                                  <p className="text-sm text-gray-500">{place.distanceFromRoute} mi from route</p>
+                                </div>
+                                <a href={place.sourceUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg">
+                                  <Navigation className="w-4 h-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {attractionsAlongRoute.attractions.length === 0 && attractionsAlongRoute.restaurants.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                          <p>No attractions found along this route</p>
+                          <p className="text-sm">Try increasing the search distance</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

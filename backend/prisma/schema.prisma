@@ -2679,7 +2679,8 @@ model ThingToDo {
   tags            String[]
   qualityScore    Int         @default(50)
   status          ThingStatus @default(ACTIVE)
-  createdByUserId String?
+  createdByUserId       String?
+  createdByCampgroundId String?
   createdBy       User?       @relation("ThingsCreated", fields: [createdByUserId], references: [id], onDelete: SetNull)
   campgrounds     CampgroundThingToDo[]
   saves           ThingToDoSave[]
@@ -2704,6 +2705,10 @@ model CampgroundThingToDo {
   distanceMiles   Float?
   relevanceScore  Int        @default(50)
   pinned          Boolean    @default(false)
+  pinnedAt        DateTime?
+  pinnedUntil     DateTime?
+  pinnedById      String?
+  displayOrder    Int        @default(0)
   createdAt       DateTime   @default(now())
 
   @@unique([campgroundId, thingToDoId])

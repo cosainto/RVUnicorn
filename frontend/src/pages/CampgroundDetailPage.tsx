@@ -51,6 +51,24 @@ interface Campground {
   _count?: { followers: number; checkIns: number; stickers: number };
   verificationStatus?: string;
   claimedById?: string;
+  claimedBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    profilePicture?: string;
+  };
+  admins?: {
+    id: string;
+    role: string;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      profilePicture?: string;
+    };
+  }[];
   tier?: string;
   hashtag?: string;
   theme?: string;
@@ -376,9 +394,42 @@ export default function CampgroundDetailPage() {
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="modern" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full bg-green-600 text-white font-medium transition hover:bg-green-700 flex items-center gap-2"><Calendar className="w-5 h-5" />Book Now<ExternalLink className="w-3 h-3 opacity-70" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-3 rounded-full font-medium transition ${isMuted ? 'bg-gray-200 text-gray-700' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-3 rounded-full bg-gray-900 text-white font-medium transition hover:bg-gray-800"><Settings className="w-5 h-5 inline mr-2" />Manage</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-3 rounded-full bg-gray-900 text-white font-medium transition hover:bg-gray-800"><Settings className="w-5 h-5 inline mr-2" />Manage</Link>}
               </div>
             </div>
+
+          {/* Managed by indicator */}
+          {(campground.claimedBy || (campground.admins && campground.admins.length > 0)) && (
+            <div className="max-w-6xl mx-auto px-4 mb-6">
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <span className="font-medium">Managed by:</span>
+                <div className="flex items-center gap-2">
+                  {campground.claimedBy && (
+                    <Link to={`/profile/${campground.claimedBy.username}`} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition">
+                      {campground.claimedBy.profilePicture ? (
+                        <img src={campground.claimedBy.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs">{campground.claimedBy.firstName?.[0]}</div>
+                      )}
+                      <span>{campground.claimedBy.firstName} {campground.claimedBy.lastName}</span>
+                      <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Owner</span>
+                    </Link>
+                  )}
+                  {campground.admins?.filter(a => a.user.id !== campground.claimedBy?.id).slice(0, 3).map(admin => (
+                    <Link key={admin.id} to={`/profile/${admin.user.username}`} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition">
+                      {admin.user.profilePicture ? (
+                        <img src={admin.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">{admin.user.firstName?.[0]}</div>
+                      )}
+                      <span>{admin.user.firstName}</span>
+                      <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{admin.role}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}
@@ -392,7 +443,7 @@ export default function CampgroundDetailPage() {
               <button onClick={() => navigate('/campgrounds')} className="flex items-center hover:text-white"><ChevronLeft className="w-5 h-5" /><span>Back to Campgrounds</span></button>
               <div className="flex gap-3">
                 {isAdmin && <span className="bg-amber-600 px-3 py-1 rounded text-sm">⭐ Admin</span>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="bg-amber-600 hover:bg-amber-500 px-4 py-1 rounded flex items-center gap-2"><Settings className="w-4 h-4" />Manage</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="bg-amber-600 hover:bg-amber-500 px-4 py-1 rounded flex items-center gap-2"><Settings className="w-4 h-4" />Manage</Link>}
               </div>
             </div>
           </div>
@@ -481,7 +532,7 @@ export default function CampgroundDetailPage() {
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="coastal" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="flex-1 px-4 py-2 bg-green-500 text-white rounded-full text-sm font-medium hover:bg-green-600 transition flex items-center justify-center gap-1">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-3 py-2 rounded-full text-sm font-medium transition ${isMuted ? 'bg-sky-200 text-sky-700' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-4 py-2 bg-sky-700 text-white rounded-full text-sm font-medium hover:bg-sky-800 transition"><Settings className="w-4 h-4 inline mr-1" />Manage</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="px-4 py-2 bg-sky-700 text-white rounded-full text-sm font-medium hover:bg-sky-800 transition"><Settings className="w-4 h-4 inline mr-1" />Manage</Link>}
               </div>
             </div>
             
@@ -537,7 +588,7 @@ export default function CampgroundDetailPage() {
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="adventure" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded font-bold transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-300 hover:text-orange-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-2 bg-gray-700 text-white font-bold rounded hover:bg-gray-600 transition"><Settings className="w-4 h-4 inline mr-2" />MANAGE</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-2 bg-gray-700 text-white font-bold rounded hover:bg-gray-600 transition"><Settings className="w-4 h-4 inline mr-2" />MANAGE</Link>}
               </div>
             </div>
           </div>
@@ -562,7 +613,7 @@ export default function CampgroundDetailPage() {
               <button onClick={() => navigate('/campgrounds')} className="text-gray-400 hover:text-gray-900 transition font-light">← Back</button>
               <div className="flex gap-4">
                 {isAdmin && <span className="text-gray-400 text-sm">Admin</span>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="text-gray-400 hover:text-gray-900 text-sm">Manage →</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="text-gray-400 hover:text-gray-900 text-sm">Manage →</Link>}
               </div>
             </div>
           </div>
@@ -640,7 +691,7 @@ export default function CampgroundDetailPage() {
                 {user && <button onClick={toggleMute} className={`px-4 py-4 border font-bold transition ${isMuted ? 'border-white bg-white/20 text-white' : 'border-gray-600 text-white hover:border-white'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-6 py-4 border border-gray-600 text-white hover:border-white transition">Call</a>}
                 {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-6 py-4 border border-gray-600 text-white hover:border-white transition">Website</a>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-4 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black transition">Manage</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-4 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black transition">Manage</Link>}
               </div>
             </div>
           </div>
@@ -733,7 +784,7 @@ export default function CampgroundDetailPage() {
                     {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Phone className="w-4 h-4 inline mr-2" />Call</a>}
                     {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Globe className="w-4 h-4 inline mr-2" />Website</a>}
                     {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Navigation className="w-4 h-4 inline mr-2" />Directions</a>}
-                    {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
+                    {isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
                   </div>
                 </div>
               </div>
@@ -799,7 +850,7 @@ export default function CampgroundDetailPage() {
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="neon" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 transition shadow-lg shadow-green-500/25 flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded border font-bold transition ${isMuted ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-gray-800 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
-                {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-2 bg-gray-800 text-cyan-400 border border-cyan-500/50 rounded hover:border-cyan-400 transition"><Settings className="w-4 h-4 inline mr-2" />MANAGE</Link>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-2 bg-gray-800 text-cyan-400 border border-cyan-500/50 rounded hover:border-cyan-400 transition"><Settings className="w-4 h-4 inline mr-2" />MANAGE</Link>}
               </div>
             </div>
           </div>
@@ -827,7 +878,7 @@ export default function CampgroundDetailPage() {
           {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
-          {campground.verificationStatus === "VERIFIED" && isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
+          {isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
           {isSiteAdmin && <button onClick={handleDeleteCampground} className="absolute top-28 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Trash2 className="w-5 h-5" />Delete Campground</button>}
           {campground.verificationStatus === "PENDING" && <div className="absolute top-16 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⏳ Claim Pending</div>}
           {user && (!campground.verificationStatus || campground.verificationStatus === "UNCLAIMED") && <button onClick={() => setShowClaimModal(true)} className="absolute bottom-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Award className="w-5 h-5" />Own this campground? Claim it</button>}
@@ -865,6 +916,37 @@ export default function CampgroundDetailPage() {
         </div>
       </div>
 
+
+          {/* Managed by indicator */}
+          {(campground.claimedBy || (campground.admins && campground.admins.length > 0)) && (
+            <div className="mt-6 flex items-center gap-3 text-sm text-gray-600">
+              <span className="font-medium">Managed by:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {campground.claimedBy && (
+                  <Link to={`/profile/${campground.claimedBy.username}`} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition">
+                    {campground.claimedBy.profilePicture ? (
+                      <img src={campground.claimedBy.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs">{campground.claimedBy.firstName?.[0]}</div>
+                    )}
+                    <span>{campground.claimedBy.firstName} {campground.claimedBy.lastName}</span>
+                    <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Owner</span>
+                  </Link>
+                )}
+                {campground.admins?.filter(a => a.user.id !== campground.claimedBy?.id).slice(0, 3).map(admin => (
+                  <Link key={admin.id} to={`/profile/${admin.user.username}`} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition">
+                    {admin.user.profilePicture ? (
+                      <img src={admin.user.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">{admin.user.firstName?.[0]}</div>
+                    )}
+                    <span>{admin.user.firstName}</span>
+                    <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{admin.role}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1060,7 +1142,7 @@ export default function CampgroundDetailPage() {
               )}
               
               {/* Things to Do Nearby */}
-              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} />
+              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
               
               {/* Community - Followers & Campers */}
               <CampgroundCommunity campgroundId={campground.id} campgroundName={campground.name} />

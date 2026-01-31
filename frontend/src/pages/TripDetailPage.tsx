@@ -104,6 +104,10 @@ export default function EventDetailPage() {
     estimatedDuration: 15,
   });
 
+
+  const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
+  const [discoveredStops, setDiscoveredStops] = useState<any>({ attractions: [], restaurants: [], gasStations: [] });
+  const [discoverLoading, setDiscoverLoading] = useState(false);
   const [copyForm, setCopyForm] = useState({
     startDate: '',
     endDate: '',
@@ -173,6 +177,46 @@ export default function EventDetailPage() {
     }
   };
 
+
+  const handleDiscoverStops = async () => {
+    if (!tripPlan?.startLatitude || !tripPlan?.endLatitude) {
+      alert('Trip must have start and end locations with coordinates');
+      return;
+    }
+    setDiscoverLoading(true);
+    setShowDiscoverStopsModal(true);
+    try {
+      const { data: routeData } = await api.post('/drive-planner/google-route', {
+        origin: { lat: tripPlan.startLatitude, lng: tripPlan.startLongitude },
+        destination: { lat: tripPlan.endLatitude, lng: tripPlan.endLongitude },
+      });
+      const { data: attractions } = await api.post('/drive-planner/attractions-along-route', {
+        routePoints: routeData.routePoints,
+        maxDistanceMiles: 10,
+      });
+      setDiscoveredStops(attractions);
+    } catch (err) {
+      console.error('Discover stops error:', err);
+    } finally {
+      setDiscoverLoading(false);
+    }
+  };
+
+  const handleAddDiscoveredStop = async (place: any, stopType: string) => {
+    if (!tripPlan) return;
+    try {
+      await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, {
+        name: place.name,
+        location: place.address,
+        stopType,
+        notes: place.rating ? `Rating: ${place.rating}` : '',
+        estimatedDuration: stopType === 'FOOD' ? 45 : 15,
+      });
+      loadTripPlan();
+    } catch (err) {
+      console.error('Add discovered stop error:', err);
+    }
+  };
   const handleAddPitStop = async () => {
     if (!tripPlan) return;
     try {
@@ -679,6 +723,9 @@ export default function EventDetailPage() {
                         <button onClick={() => setShowPitStopModal(true)} className="btn btn-secondary btn-sm flex items-center gap-1">
                           <Plus className="w-4 h-4" />Add Stop
                         </button>
+                        <button onClick={handleDiscoverStops} className="btn btn-primary btn-sm flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />Discover Stops
+                        </button>
                       </div>
 
                       {tripPlan.pitStops && tripPlan.pitStops.length > 0 ? (
@@ -951,6 +998,91 @@ export default function EventDetailPage() {
             </div>
             <div className="flex gap-3 mt-6"><button onClick={() => setShowPitStopModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleAddPitStop} disabled={!pitStopForm.name} className="btn btn-primary flex-1 disabled:opacity-50">Add Pit Stop</button></div>
           </div>
+
+      {/* Discover Stops Modal */}
+      {showDiscoverStopsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-xl font-bold">Discover Stops Along Your Route</h3>
+              <button onClick={() => setShowDiscoverStopsModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {discoverLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                  <span className="ml-3 text-gray-600">Finding stops along your route...</span>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {discoveredStops.gasStations?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2"><Fuel className="w-4 h-4" /> Gas Stations ({discoveredStops.gasStations.length})</h4>
+                      <div className="space-y-2">
+                        {discoveredStops.gasStations.slice(0, 8).map((place: any) => (
+                          <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <div className="flex-1">
+                              <p className="font-medium">{place.name}</p>
+                              <p className="text-sm text-gray-500">{place.address}</p>
+                              {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                            </div>
+                            <button onClick={() => handleAddDiscoveredStop(place, 'GAS')} className="btn btn-sm btn-primary">+ Add</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {discoveredStops.restaurants?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2"><Utensils className="w-4 h-4" /> Restaurants ({discoveredStops.restaurants.length})</h4>
+                      <div className="space-y-2">
+                        {discoveredStops.restaurants.slice(0, 8).map((place: any) => (
+                          <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            {place.photo && <img src={place.photo} alt={place.name} className="w-12 h-12 rounded object-cover" />}
+                            <div className="flex-1">
+                              <p className="font-medium">{place.name}</p>
+                              <p className="text-sm text-gray-500">{place.address}</p>
+                              <div className="flex gap-2">
+                                {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                                {place.priceLevel && <span className="text-xs text-green-600">{'$'.repeat(place.priceLevel)}</span>}
+                              </div>
+                            </div>
+                            <button onClick={() => handleAddDiscoveredStop(place, 'FOOD')} className="btn btn-sm btn-primary">+ Add</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {discoveredStops.attractions?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2"><Camera className="w-4 h-4" /> Attractions ({discoveredStops.attractions.length})</h4>
+                      <div className="space-y-2">
+                        {discoveredStops.attractions.slice(0, 8).map((place: any) => (
+                          <div key={place.placeId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            {place.photo && <img src={place.photo} alt={place.name} className="w-12 h-12 rounded object-cover" />}
+                            <div className="flex-1">
+                              <p className="font-medium">{place.name}</p>
+                              <p className="text-sm text-gray-500">{place.address}</p>
+                              {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                            </div>
+                            <button onClick={() => handleAddDiscoveredStop(place, 'ATTRACTION')} className="btn btn-sm btn-primary">+ Add</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!discoveredStops.gasStations?.length && !discoveredStops.restaurants?.length && !discoveredStops.attractions?.length && (
+                    <div className="text-center py-8 text-gray-500">
+                      <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>No stops found along your route</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
         </div>
       )}
     </div>
