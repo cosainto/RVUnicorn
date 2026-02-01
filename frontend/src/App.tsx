@@ -135,6 +135,7 @@ function AppContent() {
         <Route path="/settings/activity" element={<AccountActivityLogPage />} />
         <Route path="/settings/delete-account" element={<AccountDeletionPage />} />
         <Route path="/badges" element={<BadgesPage />} />
+        <Route path="/creators" element={<PrivateRoute><CreatorLeaderboardPage /></PrivateRoute>} />
         <Route path="/creators/leaderboard" element={<PrivateRoute><CreatorLeaderboardPage /></PrivateRoute>} />
         <Route path="/creators/:username" element={<PrivateRoute><CreatorPage /></PrivateRoute>} />
         <Route path="/creators/:creatorUsername/content/:contentId" element={<PrivateRoute><VideoPlayerPage /></PrivateRoute>} />
