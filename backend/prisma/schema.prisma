@@ -371,6 +371,32 @@ model Campground {
   threads                Thread[]
   thingsToDo             CampgroundThingToDo[]
 
+  // RV Accommodation Details
+  maxRvLength            Int?
+  maxAmpService          Int?
+  hasFullHookups         Boolean?
+  hasWaterHookup         Boolean?
+  hasElectricHookup      Boolean?
+  hasSewerHookup         Boolean?
+  hasPullThrough         Boolean?
+  hasBackIn              Boolean?
+  hasDumpStation         Boolean?
+  hasWifi                Boolean?
+  hasCableTV             Boolean?
+  hasShowers             Boolean?
+  hasRestrooms           Boolean?
+  hasLaundry             Boolean?
+  hasPool                Boolean?
+  hasStore               Boolean?
+  hasPropane             Boolean?
+  isPetFriendly          Boolean?
+  isBigRigFriendly       Boolean?
+  isWaterfront           Boolean?
+  siteType               String?
+  pricePerNight          Float?
+  seasonStart            String?
+  seasonEnd              String?
+
   @@index([state])
   @@index([name])
 }
