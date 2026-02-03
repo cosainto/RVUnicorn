@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  MapPin, Phone, Globe, Mail, Calendar, Users, ChevronLeft, Navigation,
+  MapPin, Phone, Globe, Mail, Calendar, Heart, Users, ChevronLeft, Navigation,
   Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -214,13 +214,18 @@ export default function CampgroundDetailPage() {
   const [showEventModal, setShowEventModal] = useState(false);
 
   const [checkInData, setCheckInData] = useState({ checkInDate: new Date().toISOString().split('T')[0], checkOutDate: '', siteNumber: '' });
+  const [inWishlist, setInWishlist] = useState(false);
   const [reviewData, setReviewData] = useState({ rating: 0, title: '', review: '', visitDate: '' });
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [announcementData, setAnnouncementData] = useState({ title: '', content: '', isPinned: false, priority: 'NORMAL' as const, scheduledAt: '' });
   const [eventData, setEventData] = useState({ title: '', description: '', startDate: '', endDate: '', location: '' });
 
-  useEffect(() => { if (id) { loadCampground(); if (user) { checkIfFavorited(); checkIfAdmin();
+  useEffect(() => { if (id) { loadCampground();
+    // Check wishlist status
+    if (user) {
+      api.get(`/wishlist/check/${id}`).then(res => setInWishlist(res.data.inWishlist)).catch(() => {});
+    } if (user) { checkIfFavorited(); checkIfAdmin();
     loadFeaturedAnnouncements(); checkIfMuted(); } } }, [id, user]);
   useEffect(() => { if (campground) loadTabData(); }, [campground, activeTab]);
 
@@ -253,6 +258,16 @@ export default function CampgroundDetailPage() {
   const checkIfMuted = async () => { if (!id || !user) return; try { const { data } = await api.get(`/mute/check/campground/${id}`); setIsMuted(data.isMuted); } catch {} };
   const toggleMute = async () => { if (!id || !user) return; try { if (isMuted) { await api.delete(`/mute/campground/${id}`); setIsMuted(false); } else { await api.post(`/mute/campground/${id}`); setIsMuted(true); } } catch (e: any) { alert(e.response?.data?.error || "Failed"); } };
   const handleToggleFavorite = async () => { if (!user) return; try { if (isFavorited) { await api.delete(`/campgrounds/${id}/favorite`); setIsFavorited(false); } else { await api.post(`/campgrounds/${id}/favorite`); setIsFavorited(true); } } catch {} };
+
+  const toggleWishlist = async () => {
+    if (!user || !campground) return;
+    try {
+      const { data } = await api.post(`/wishlist/${campground.id}/toggle`);
+      setInWishlist(data.inWishlist);
+    } catch (e) {
+      console.error('Toggle wishlist error:', e);
+    }
+  };
 
   const handleCheckIn = async () => {
     if (!user || !campground) return;
@@ -392,7 +407,11 @@ export default function CampgroundDetailPage() {
                 {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Navigation className="w-4 h-4" />Directions</a>}
               </div>
               <div className="flex gap-2">
-                {user && <button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 rounded-full text-white font-medium transition hover:opacity-90" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button>}
+                {user && <>
+                  <button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 rounded-full text-white font-medium transition hover:opacity-90" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button>
+                  <button onClick={toggleWishlist} className={`px-4 py-3 rounded-full font-medium transition ${inWishlist ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Heart className={`w-5 h-5 ${inWishlist ? 'fill-red-500' : ''}`} />{inWishlist ? ' Saved' : ' Save'}</button>
+                </>
+              }
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="modern" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full bg-green-600 text-white font-medium transition hover:bg-green-700 flex items-center gap-2"><Calendar className="w-5 h-5" />Book Now<ExternalLink className="w-3 h-3 opacity-70" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-3 rounded-full font-medium transition ${isMuted ? 'bg-gray-200 text-gray-700' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}

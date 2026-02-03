@@ -52,6 +52,7 @@ import QuickCaptureModal from '../components/QuickCaptureModal';
 import BasecampActivityFeed from '../components/BasecampActivityFeed';
 import CampgroundUpdatesFeed from '../components/CampgroundUpdatesFeed';
 import PackUpTasksWidget from "../components/PackUpTasksWidget";
+import WishlistWidget from "../components/WishlistWidget";
 import Top8Friends from '../components/Top8Friends';
 import SocialFeed from '../components/SocialFeed';
 import { TrendingHashtags } from '../components/HashtagDisplay';
@@ -3201,6 +3202,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
 
             {/* Basecamp Activity */}
             <PackUpTasksWidget />
+            <WishlistWidget />
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
             {/* Quick Actions */}
