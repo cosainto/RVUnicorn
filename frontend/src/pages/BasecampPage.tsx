@@ -51,6 +51,7 @@ import PackingAssignments from '../components/PackingAssignments';
 import QuickCaptureModal from '../components/QuickCaptureModal';
 import BasecampActivityFeed from '../components/BasecampActivityFeed';
 import CampgroundUpdatesFeed from '../components/CampgroundUpdatesFeed';
+import PackUpTasksWidget from "../components/PackUpTasksWidget";
 import Top8Friends from '../components/Top8Friends';
 import SocialFeed from '../components/SocialFeed';
 import { TrendingHashtags } from '../components/HashtagDisplay';
@@ -3199,6 +3200,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <PackingAssignments />
 
             {/* Basecamp Activity */}
+            <PackUpTasksWidget />
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
             {/* Quick Actions */}
