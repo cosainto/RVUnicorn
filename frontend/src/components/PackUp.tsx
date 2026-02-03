@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Check, MapPin, Package, AlertTriangle, RotateCcw, ChevronDown, ChevronUp, Save, X, CheckCircle2, Clock, Info } from 'lucide-react';
+import { Check, MapPin, Package, AlertTriangle, RotateCcw, ChevronDown, ChevronUp, Save, X, CheckCircle2, Clock, Info, User, Users, UserPlus } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PackUpItem {
   id: string;
@@ -26,6 +27,22 @@ interface PackUpItem {
     lastName: string;
     profilePicture: string | null;
   };
+  packUpAssignedTo?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+  };
+  packUpAssignedToId?: string | null;
+  createdById?: string;
+}
+
+interface Attendee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  profilePicture: string | null;
 }
 
 interface PackUpStats {
@@ -43,14 +60,19 @@ interface PackUpProps {
 }
 
 export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpProps) {
+  const { user } = useAuth();
   const [items, setItems] = useState<PackUpItem[]>([]);
   const [stats, setStats] = useState<PackUpStats>({ total: 0, packed: 0, leftBehind: 0, notStarted: 0 });
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [isOrganizer, setIsOrganizer] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [assigningItem, setAssigningItem] = useState<string | null>(null);
   const [customLocation, setCustomLocation] = useState('');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [groupByCategory, setGroupByCategory] = useState(true);
+  const [filterBy, setFilterBy] = useState<'all' | 'mine' | string>('all');
 
   useEffect(() => {
     loadPackUpList();
@@ -64,10 +86,32 @@ export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpP
       setItems(data.items);
       setStats(data.stats);
       setStorageLocations(data.storageLocations || []);
+      setAttendees(data.attendees || []);
+      setIsOrganizer(data.isOrganizer || false);
     } catch (error) {
       console.error('Load pack-up list error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const assignToUser = async (itemId: string, userId: string | null) => {
+    try {
+      await api.put(`/packup/item/${itemId}/assign`, { userId });
+      
+      // Update local state
+      setItems(prev => prev.map(item => 
+        item.id === itemId 
+          ? { 
+              ...item, 
+              packUpAssignedToId: userId,
+              packUpAssignedTo: userId ? attendees.find(a => a.id === userId) : null
+            }
+          : item
+      ));
+      setAssigningItem(null);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to assign');
     }
   };
 
@@ -160,14 +204,26 @@ export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpP
     }
   };
 
+  // Filter items first
+  const filteredItems = items.filter(item => {
+    if (filterBy === 'all') return true;
+    if (filterBy === 'mine') {
+      return item.packUpAssignedToId === user?.id || 
+             item.assignedTo?.id === user?.id ||
+             item.createdById === user?.id;
+    }
+    // Filter by specific user ID
+    return item.packUpAssignedToId === filterBy || item.assignedTo?.id === filterBy;
+  });
+
   const groupedItems = groupByCategory
-    ? items.reduce((acc, item) => {
+    ? filteredItems.reduce((acc, item) => {
         const category = item.customCategory || 'Other';
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
         return acc;
       }, {} as Record<string, PackUpItem[]>)
-    : { 'All Items': items };
+    : { 'All Items': filteredItems };
 
   const progress = stats.total > 0 ? Math.round((stats.packed / stats.total) * 100) : 0;
   const isComplete = stats.packed === stats.total && stats.total > 0;
@@ -264,8 +320,31 @@ export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpP
         )}
       </div>
 
-      {/* Group toggle */}
-      <div className="flex justify-end">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          {/* Filter by person */}
+          <select
+            value={filterBy}
+            onChange={(e) => setFilterBy(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="all">All items</option>
+            <option value="mine">My items</option>
+            {attendees.map(a => (
+              <option key={a.id} value={a.id}>
+                {a.firstName}'s items
+              </option>
+            ))}
+          </select>
+          
+          {filterBy !== 'all' && (
+            <span className="text-sm text-gray-500">
+              Showing {filteredItems.length} of {items.length} items
+            </span>
+          )}
+        </div>
+
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -307,9 +386,28 @@ export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpP
 
                   {/* Item info */}
                   <div className="flex-1 min-w-0">
-                    <div className={`font-medium ${item.packUpStatus === 'PACKED' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                      {item.customName}
-                      {item.quantity > 1 && <span className="text-gray-500 ml-1">×{item.quantity}</span>}
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${item.packUpStatus === 'PACKED' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                        {item.customName}
+                        {item.quantity > 1 && <span className="text-gray-500 ml-1">×{item.quantity}</span>}
+                      </span>
+                      
+                      {/* Assigned person avatar */}
+                      {(item.packUpAssignedTo || item.assignedTo) && (
+                        <div className="flex items-center gap-1" title={`Assigned to ${(item.packUpAssignedTo || item.assignedTo)?.firstName}`}>
+                          {(item.packUpAssignedTo || item.assignedTo)?.profilePicture ? (
+                            <img 
+                              src={(item.packUpAssignedTo || item.assignedTo)?.profilePicture || ''} 
+                              alt="" 
+                              className="w-5 h-5 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center text-xs text-primary-700">
+                              {(item.packUpAssignedTo || item.assignedTo)?.firstName?.[0]}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     {/* Location info */}
@@ -330,7 +428,50 @@ export default function PackUp({ eventId, tripId, eventTitle, endDate }: PackUpP
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {/* Assign button (organizer only) */}
+                    {isOrganizer && attendees.length > 0 && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setAssigningItem(assigningItem === item.id ? null : item.id)}
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                          title="Assign to someone"
+                        >
+                          <UserPlus className="w-5 h-5" />
+                        </button>
+                        
+                        {/* Assignment dropdown */}
+                        {assigningItem === item.id && (
+                          <div className="absolute right-0 top-10 z-10 w-48 bg-white border rounded-lg shadow-lg py-1">
+                            <button
+                              onClick={() => assignToUser(item.id, null)}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4 text-gray-400" />
+                              Unassign
+                            </button>
+                            {attendees.map(attendee => (
+                              <button
+                                key={attendee.id}
+                                onClick={() => assignToUser(item.id, attendee.id)}
+                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${
+                                  item.packUpAssignedToId === attendee.id ? 'bg-primary-50' : ''
+                                }`}
+                              >
+                                {attendee.profilePicture ? (
+                                  <img src={attendee.profilePicture} alt="" className="w-5 h-5 rounded-full" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                                    {attendee.firstName[0]}
+                                  </div>
+                                )}
+                                {attendee.firstName}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {/* Location button */}
                     <button
                       onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
