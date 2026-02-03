@@ -1,4 +1,3 @@
-
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import api from '../services/api';
@@ -44,6 +43,19 @@ const AMENITY_ICONS: Record<string, string> = {
   CAMPING: '⛺',
 };
 
+// Helper to get amenity icon with case-insensitive lookup
+const getAmenityIcon = (amenity: string) => {
+  return AMENITY_ICONS[amenity] || AMENITY_ICONS[amenity.toUpperCase()] || null;
+};
+
+// Helper to format amenity name for display
+const formatAmenityName = (amenity: string) => {
+  return amenity
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
+};
+
 export default function CampgroundsPage() {
   const [campgrounds, setCampgrounds] = useState<Campground[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,8 +98,6 @@ export default function CampgroundsPage() {
     () => Array.from(new Set(campgrounds.map(c => c.state).filter(Boolean))).sort(),
     [campgrounds]
   );
-
-  const getAmenityIcon = (amenity: string) => AMENITY_ICONS[amenity] ?? '✓';
 
   if (loading && campgrounds.length === 0) {
     return (
@@ -187,18 +197,22 @@ export default function CampgroundsPage() {
 
               {c.amenities && c.amenities.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {c.amenities.slice(0, 6).map(a => (
-                    <span
-                      key={a}
-                      title={a.replace(/_/g, ' ').toLowerCase()}
-                      className="text-xs bg-gray-100 px-2 py-1 rounded"
-                    >
-                      {getAmenityIcon(a)}
-                    </span>
-                  ))}
-                  {c.amenities.length > 6 && (
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                      +{c.amenities.length - 6} more
+                  {c.amenities.slice(0, 4).map(a => {
+                    const icon = getAmenityIcon(a);
+                    return (
+                      <span
+                        key={a}
+                        title={formatAmenityName(a)}
+                        className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full flex items-center gap-1"
+                      >
+                        {icon && <span>{icon}</span>}
+                        <span className="max-w-[80px] truncate">{formatAmenityName(a)}</span>
+                      </span>
+                    );
+                  })}
+                  {c.amenities.length > 4 && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      +{c.amenities.length - 4} more
                     </span>
                   )}
                 </div>
