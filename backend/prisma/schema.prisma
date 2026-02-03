@@ -535,6 +535,8 @@ model GearItem {
   quantity        Int?             @default(1)
   condition       String?          @default("GOOD")
   notes           String?
+  storageLocation String?
+  storageNotes    String?
   AffiliateClick  AffiliateClick[]
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1753,6 +1755,12 @@ model TripPackItem {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   gearItemId       String?
+  packUpStatus     String?        @default("NOT_STARTED")
+  packedToLocation String?
+  packUpNote       String?
+  packedUpAt       DateTime?      @db.Timestamp(6)
+  packedUpById     String?
+  leftBehind       Boolean?       @default(false)
   assignedTo       User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id])
   createdBy        User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
   event            Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
