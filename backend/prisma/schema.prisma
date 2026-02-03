@@ -2757,6 +2757,19 @@ model GearAdEvent {
   @@index([adId])
 }
 
+model CampgroundWishlist {
+  id           String   @id
+  userId       String
+  campgroundId String
+  notes        String?
+  priority     Int?     @default(0)
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, campgroundId])
+  @@index([campgroundId])
+  @@index([userId])
+}
+
 enum ThingType {
   TRAIL
   EVENT
