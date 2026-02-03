@@ -12,6 +12,8 @@ import {
   ChevronRight,
   UserPlus,
   Loader2,
+  Sparkles,
+  Compass,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -51,6 +53,7 @@ interface CreatorContentItem {
   };
   isLiked?: boolean;
   isSaved?: boolean;
+  isDiscovery?: boolean;
 }
 
 interface CreatorFeedProps {
@@ -90,10 +93,42 @@ export default function CreatorFeed({
 
       const { data } = await api.get(`/basecamp/creator-feed?${params}`);
       
+      let mainContent: CreatorContentItem[] = data.content || [];
+      
+      // On first load, mix in 1-2 discovery items from unfollowed creators
+      if (!loadMore && mainContent.length > 0) {
+        try {
+          const discoveryRes = await api.get('/creators/discovery/content?limit=2');
+          const discoveryItems: CreatorContentItem[] = (discoveryRes.data || []).map((item: any) => ({
+            ...item,
+            isDiscovery: true,
+          }));
+          
+          // Filter out any duplicates
+          const mainIds = new Set(mainContent.map(c => c.id));
+          const uniqueDiscovery = discoveryItems.filter(d => !mainIds.has(d.id));
+          
+          // Insert discovery items at positions 2 and 5 (or wherever they fit)
+          if (uniqueDiscovery.length > 0 && mainContent.length >= 2) {
+            mainContent = [...mainContent];
+            // Insert first discovery item after position 2
+            mainContent.splice(2, 0, uniqueDiscovery[0]);
+            // Insert second discovery item after position 5 if available
+            if (uniqueDiscovery.length > 1 && mainContent.length >= 5) {
+              mainContent.splice(5, 0, uniqueDiscovery[1]);
+            }
+          } else if (uniqueDiscovery.length > 0) {
+            mainContent = [...mainContent, ...uniqueDiscovery];
+          }
+        } catch {
+          // Discovery fetch failed, just show main content
+        }
+      }
+      
       if (loadMore) {
-        setContent(prev => [...prev, ...data.content]);
+        setContent(prev => [...prev, ...mainContent]);
       } else {
-        setContent(data.content);
+        setContent(mainContent);
       }
       
       setSource(data.source);
@@ -208,7 +243,9 @@ export default function CreatorFeed({
           <Link
             key={item.id}
             to={`/creators/${item.creator.username}/content/${item.id}`}
-            className="group bg-gray-50 rounded-xl overflow-hidden hover:shadow-lg transition-all"
+            className={`group bg-gray-50 rounded-xl overflow-hidden hover:shadow-lg transition-all ${
+              item.isDiscovery ? 'ring-1 ring-purple-200' : ''
+            }`}
           >
             <div className="relative aspect-video bg-gray-200">
               {item.thumbnailUrl ? (
@@ -228,6 +265,14 @@ export default function CreatorFeed({
                   <Play className="w-6 h-6 text-purple-600 ml-1" fill="currentColor" />
                 </div>
               </div>
+
+              {/* Discovery Badge */}
+              {item.isDiscovery && (
+                <span className="absolute top-2 left-2 px-2 py-0.5 bg-purple-600 text-white text-xs font-medium rounded-full flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Suggested for you
+                </span>
+              )}
 
               {item.contentType === 'SHORT' && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded">
@@ -264,6 +309,13 @@ export default function CreatorFeed({
                     <BadgeCheck className="w-3.5 h-3.5 text-blue-500" />
                   )}
                 </span>
+                {/* Discovery hint on creator name */}
+                {item.isDiscovery && (
+                  <span className="ml-auto text-[10px] text-purple-500 font-medium flex items-center gap-0.5">
+                    <Compass className="w-3 h-3" />
+                    New
+                  </span>
+                )}
               </div>
 
               {item.campground && (
