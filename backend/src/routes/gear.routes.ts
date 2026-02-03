@@ -362,4 +362,277 @@ router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
   }
 });
 
+
+// GET /api/gear/:id/history - Get usage history for a gear item
+router.get('/:id/history', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const gearItem = await prisma.gearItem.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true }
+        }
+      }
+    });
+
+    if (!gearItem) {
+      return res.status(404).json({ error: 'Gear item not found' });
+    }
+
+    if (gearItem.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Find all TripPackItems that reference this gear item
+    const usageHistory = await prisma.tripPackItem.findMany({
+      where: {
+        gearItemId: id,
+        isPacked: true
+      },
+      include: {
+        trip: {
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true
+          }
+        },
+        event: {
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true,
+            campground: {
+              select: {
+                id: true,
+                name: true,
+                state: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { packedAt: 'desc' }
+    });
+
+    res.json({
+      gearItem,
+      usageHistory: usageHistory.map(item => ({
+        id: item.id,
+        packedAt: item.packedAt,
+        trip: item.trip,
+        event: item.event,
+        tripName: item.trip?.title || item.event?.title || 'Unknown Trip',
+        campground: item.event?.campground?.name || null,
+        state: item.event?.campground?.state || null,
+        date: item.trip?.startDate || item.event?.startDate
+      }))
+    });
+  } catch (error) {
+    console.error('Get gear history error:', error);
+    res.status(500).json({ error: 'Failed to get gear history' });
+  }
+});
+
+// GET /api/gear/upcoming-trips - Get user's upcoming trips for "Add to Trip" feature
+router.get('/trips/upcoming', authenticateToken, async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Get upcoming events
+    const events = await prisma.event.findMany({
+      where: {
+        organizerId: req.user!.id,
+        startDate: { gte: now }
+      },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true,
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            state: true
+          }
+        }
+      },
+      orderBy: { startDate: 'asc' },
+      take: 20
+    });
+
+    // Get upcoming trip plans
+    const trips = await prisma.tripPlan.findMany({
+      where: {
+        userId: req.user!.id,
+        startDate: { gte: now }
+      },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true
+      },
+      orderBy: { startDate: 'asc' },
+      take: 20
+    });
+
+    res.json({ events, trips });
+  } catch (error) {
+    console.error('Get upcoming trips error:', error);
+    res.status(500).json({ error: 'Failed to get upcoming trips' });
+  }
+});
+
+// POST /api/gear/:id/add-to-trip - Add gear item to a trip's pack list
+router.post('/:id/add-to-trip', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tripId, eventId, quantity = 1 } = req.body;
+
+    if (!tripId && !eventId) {
+      return res.status(400).json({ error: 'Must specify tripId or eventId' });
+    }
+
+    const gearItem = await prisma.gearItem.findUnique({
+      where: { id }
+    });
+
+    if (!gearItem) {
+      return res.status(404).json({ error: 'Gear item not found' });
+    }
+
+    if (gearItem.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Check if already added to this trip
+    const existing = await prisma.tripPackItem.findFirst({
+      where: {
+        gearItemId: id,
+        ...(tripId ? { tripId } : {}),
+        ...(eventId ? { eventId } : {})
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Item already added to this trip' });
+    }
+
+    // Create the pack item
+    const packItem = await prisma.tripPackItem.create({
+      data: {
+        gearItemId: id,
+        tripId: tripId || null,
+        eventId: eventId || null,
+        customName: gearItem.name,
+        customCategory: gearItem.category,
+        quantity,
+        isPacked: false,
+        createdById: req.user!.id
+      },
+      include: {
+        trip: { select: { title: true } },
+        event: { select: { title: true } }
+      }
+    });
+
+    res.json({
+      message: 'Added to pack list',
+      packItem,
+      tripName: packItem.trip?.title || packItem.event?.title
+    });
+  } catch (error) {
+    console.error('Add to trip error:', error);
+    res.status(500).json({ error: 'Failed to add to trip' });
+  }
+});
+
+// POST /api/gear/:id/mark-used - Mark gear as used (updates lastUsedAt)
+router.post('/:id/mark-used', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tripId, eventId } = req.body;
+
+    const gearItem = await prisma.gearItem.findUnique({
+      where: { id }
+    });
+
+    if (!gearItem) {
+      return res.status(404).json({ error: 'Gear item not found' });
+    }
+
+    if (gearItem.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updated = await prisma.gearItem.update({
+      where: { id },
+      data: {
+        lastUsedAt: new Date(),
+        lastUsedTripId: tripId || null,
+        lastUsedEventId: eventId || null
+      }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Mark used error:', error);
+    res.status(500).json({ error: 'Failed to mark as used' });
+  }
+});
+
+// GET /api/gear/stats - Get gear statistics
+router.get('/stats/summary', authenticateToken, async (req, res) => {
+  try {
+    const totalItems = await prisma.gearItem.count({
+      where: { userId: req.user!.id }
+    });
+
+    const byCategory = await prisma.gearItem.groupBy({
+      by: ['category'],
+      where: { userId: req.user!.id },
+      _count: { id: true }
+    });
+
+    const borrowable = await prisma.gearItem.count({
+      where: { userId: req.user!.id, borrowable: true }
+    });
+
+    const forSale = await prisma.gearItem.count({
+      where: { userId: req.user!.id, forSale: true }
+    });
+
+    // Items not used in 6+ months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const notRecentlyUsed = await prisma.gearItem.count({
+      where: {
+        userId: req.user!.id,
+        OR: [
+          { lastUsedAt: null },
+          { lastUsedAt: { lt: sixMonthsAgo } }
+        ]
+      }
+    });
+
+    res.json({
+      totalItems,
+      byCategory: byCategory.map(c => ({ category: c.category, count: c._count.id })),
+      borrowable,
+      forSale,
+      notRecentlyUsed
+    });
+  } catch (error) {
+    console.error('Get gear stats error:', error);
+    res.status(500).json({ error: 'Failed to get gear stats' });
+  }
+});
+
 export default router;

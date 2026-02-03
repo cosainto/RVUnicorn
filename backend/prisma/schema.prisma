@@ -513,16 +513,27 @@ model MealRSVP {
 }
 
 model GearItem {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  category    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  description String?
-  imageUrl    String?
-  groupId     String?
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  category        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  description     String?
+  imageUrl        String?
+  groupId         String?
+  lastUsedAt      DateTime? @db.Timestamp(6)
+  lastUsedEventId String?
+  lastUsedTripId  String?
+  purchaseDate    DateTime? @db.Timestamp(6)
+  purchasePrice   Decimal?  @db.Decimal(10, 2)
+  brand           String?
+  model           String?
+  weight          Decimal?  @db.Decimal(10, 2)
+  quantity        Int?      @default(1)
+  condition       String?   @default("GOOD")
+  notes           String?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([category])
@@ -1738,6 +1749,7 @@ model TripPackItem {
   createdById      String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  gearItemId       String?
   assignedTo       User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id])
   createdBy        User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
   event            Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
