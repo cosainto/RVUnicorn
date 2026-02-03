@@ -121,11 +121,12 @@ router.put('/hometown', authenticateToken, async (req, res) => {
 router.put('/rv', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { rvType, rvYear, rvMake, rvModel, rvLength, rvSleeps, hasRV } = req.body;
+    const { rvType, rvYear, rvMake, rvModel, rvLength, rvSleeps, hasRV, campingStyles } = req.body;
 
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
+        campingStyles: campingStyles || [],
         rvType: hasRV ? rvType : null,
         rvYear: hasRV ? rvYear : null,
         rvMake: hasRV ? rvMake : null,

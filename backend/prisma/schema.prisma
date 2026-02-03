@@ -78,6 +78,8 @@ model User {
   taggedMediaVisibility                           TaggedMediaVisibility     @default(SHOW_IN_FEED)
   tagApprovalMode                                 TagApprovalMode           @default(AUTO_APPROVE)
   allowTagsFrom                                   AllowTagsFrom             @default(EVERYONE)
+  contentInterests                                String[]
+  campingStyles                                   String[]                  @default([])
   activityLogs                                    AccountActivityLog[]
   accountDeletion                                 AccountDeletion?
   activitySecondary                               Activity[]                @relation("ActivitySecondaryUser")
@@ -152,6 +154,8 @@ model User {
   MediaTag_MediaTag_taggedUserIdToUser            MediaTag[]                @relation("MediaTag_taggedUserIdToUser")
   createdMentions                                 Mention[]                 @relation("CreatedMentions")
   mentions                                        Mention[]                 @relation("UserMentions")
+  receivedMessages                                Message[]                 @relation("ReceivedMessages")
+  sentMessages                                    Message[]                 @relation("SentMessages")
   mutedByUsers                                    MutedEntity[]             @relation("MutedByUsers")
   mutedEntities                                   MutedEntity[]             @relation("UserMutes")
   notifications                                   Notification[]
@@ -191,6 +195,9 @@ model User {
   stickerRequests                                 StickerRequest[]
   tagBlockedUsers                                 TagBlockedUser[]          @relation("TagBlocked")
   tagBlockedBy                                    TagBlockedUser[]          @relation("TagBlocker")
+  thingsCreated                                   ThingToDo[]               @relation("ThingsCreated")
+  savedThings                                     ThingToDoSave[]           @relation("SavedThings")
+  thingVotes                                      ThingToDoVote[]           @relation("ThingVotes")
   threads                                         Thread[]
   threadFavorites                                 ThreadFavorite[]
   threadIgnores                                   ThreadIgnore[]
@@ -211,13 +218,6 @@ model User {
   videos                                          Video[]
   videoLikes                                      VideoLike[]
   videoWatches                                    VideoWatch[]
-
-  sentMessages                                    Message[]                 @relation("SentMessages")
-  receivedMessages                                Message[]                 @relation("ReceivedMessages")
-
-  thingsCreated                                   ThingToDo[]               @relation("ThingsCreated")
-  savedThings                                     ThingToDoSave[]           @relation("SavedThings")
-  thingVotes                                      ThingToDoVote[]           @relation("ThingVotes")
 
   @@index([email])
   @@index([username])
@@ -346,6 +346,34 @@ model Campground {
   websiteUrl             String?
   youtubeUrl             String?
   campspotSlug           String?
+  hasBackIn              Boolean?
+  hasCableTV             Boolean?
+  hasDumpStation         Boolean?
+  hasElectricHookup      Boolean?
+  hasFullHookups         Boolean?
+  hasLaundry             Boolean?
+  hasPool                Boolean?
+  hasPropane             Boolean?
+  hasPullThrough         Boolean?
+  hasRestrooms           Boolean?
+  hasSewerHookup         Boolean?
+  hasShowers             Boolean?
+  hasStore               Boolean?
+  hasWaterHookup         Boolean?
+  hasWifi                Boolean?
+  isBigRigFriendly       Boolean?
+  isPetFriendly          Boolean?
+  isWaterfront           Boolean?
+  maxAmpService          Int?
+  maxRvLength            Int?
+  pricePerNight          Float?
+  seasonEnd              String?
+  seasonStart            String?
+  siteType               String?
+  googlePlaceId          String?
+  googleRating           Float?
+  googleReviewCount      Int?
+  phone                  String?
   activities             Activity[]               @relation("ActivityCampground")
   bookingClicks          BookingClick[]
   claimedBy              User?                    @relation("ClaimedCampgrounds", fields: [claimedById], references: [id])
@@ -357,6 +385,7 @@ model Campground {
   photos                 CampgroundPhoto[]
   posts                  CampgroundPost[]
   reviews                CampgroundReview[]
+  thingsToDo             CampgroundThingToDo[]
   checkIns               CheckIn[]
   creatorContent         CreatorContent[]
   taggedInCreatorContent CreatorContentTag[]      @relation("TaggedCampground")
@@ -369,33 +398,6 @@ model Campground {
   stays                  Stay[]
   stickers               Sticker[]
   threads                Thread[]
-  thingsToDo             CampgroundThingToDo[]
-
-  // RV Accommodation Details
-  maxRvLength            Int?
-  maxAmpService          Int?
-  hasFullHookups         Boolean?
-  hasWaterHookup         Boolean?
-  hasElectricHookup      Boolean?
-  hasSewerHookup         Boolean?
-  hasPullThrough         Boolean?
-  hasBackIn              Boolean?
-  hasDumpStation         Boolean?
-  hasWifi                Boolean?
-  hasCableTV             Boolean?
-  hasShowers             Boolean?
-  hasRestrooms           Boolean?
-  hasLaundry             Boolean?
-  hasPool                Boolean?
-  hasStore               Boolean?
-  hasPropane             Boolean?
-  isPetFriendly          Boolean?
-  isBigRigFriendly       Boolean?
-  isWaterfront           Boolean?
-  siteType               String?
-  pricePerNight          Float?
-  seasonStart            String?
-  seasonEnd              String?
 
   @@index([state])
   @@index([name])
@@ -1066,11 +1068,11 @@ model ThreadPost {
 }
 
 model ThreadPostLike {
-  voteType  String     @default("UP") // UP or DOWN
   id        String     @id @default(cuid())
   postId    String
   userId    String
   createdAt DateTime   @default(now())
+  voteType  String     @default("UP")
   post      ThreadPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2481,9 +2483,9 @@ model MediaComment {
   userId             String
   parentId           String?
   content            String
-  imageUrl           String?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime
+  imageUrl           String?
   Media              Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   MediaComment       MediaComment?  @relation("MediaCommentToMediaComment", fields: [parentId], references: [id], onDelete: Cascade)
   other_MediaComment MediaComment[] @relation("MediaCommentToMediaComment")
@@ -2553,6 +2555,104 @@ model MediaTag {
   @@unique([mediaId, taggedUserId])
   @@index([mediaId])
   @@index([taggedUserId, status, createdAt])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  recipientId String
+  subject     String?
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([isRead])
+}
+
+model ThingToDo {
+  id                    String                @id @default(cuid())
+  type                  ThingType             @default(OTHER)
+  title                 String
+  description           String?
+  lat                   Float?
+  lng                   Float?
+  address               String?
+  startAt               DateTime?
+  endAt                 DateTime?
+  priceMin              Float?
+  priceMax              Float?
+  sourceUrl             String                @unique
+  sourceName            String
+  placeId               String?
+  imageUrl              String?
+  tags                  String[]
+  qualityScore          Int                   @default(50)
+  status                ThingStatus           @default(ACTIVE)
+  createdByUserId       String?
+  capturedAt            DateTime              @default(now())
+  lastVerifiedAt        DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  createdByCampgroundId String?
+  campgrounds           CampgroundThingToDo[]
+  createdBy             User?                 @relation("ThingsCreated", fields: [createdByUserId], references: [id])
+  saves                 ThingToDoSave[]
+  votes                 ThingToDoVote[]
+
+  @@index([type])
+  @@index([status])
+  @@index([lat, lng])
+  @@index([placeId])
+}
+
+model CampgroundThingToDo {
+  id             String     @id @default(cuid())
+  campgroundId   String
+  thingToDoId    String
+  distanceMiles  Float?
+  relevanceScore Int        @default(50)
+  pinned         Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  displayOrder   Int        @default(0)
+  pinnedAt       DateTime?
+  pinnedById     String?
+  pinnedUntil    DateTime?
+  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  thingToDo      ThingToDo  @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
+
+  @@unique([campgroundId, thingToDoId])
+  @@index([campgroundId])
+  @@index([thingToDoId])
+}
+
+model ThingToDoSave {
+  id          String    @id @default(cuid())
+  userId      String
+  thingToDoId String
+  note        String?
+  createdAt   DateTime  @default(now())
+  thingToDo   ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
+  user        User      @relation("SavedThings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, thingToDoId])
+  @@index([userId])
+}
+
+model ThingToDoVote {
+  id          String    @id @default(cuid())
+  userId      String
+  thingToDoId String
+  value       Int
+  createdAt   DateTime  @default(now())
+  thingToDo   ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
+  user        User      @relation("ThingVotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, thingToDoId])
 }
 
 enum ThingType {
@@ -2666,103 +2766,4 @@ enum Visibility {
   PUBLIC
   FRIENDS_ONLY
   PRIVATE
-}
-
-model Message {
-  id          String   @id @default(uuid())
-  senderId    String
-  recipientId String
-  subject     String?
-  content     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  sender    User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
-
-  @@index([senderId])
-  @@index([recipientId])
-  @@index([isRead])
-}
-
-model ThingToDo {
-  id              String      @id @default(cuid())
-  type            ThingType   @default(OTHER)
-  title           String
-  description     String?     @db.Text
-  lat             Float?
-  lng             Float?
-  address         String?
-  startAt         DateTime?
-  endAt           DateTime?
-  priceMin        Float?
-  priceMax        Float?
-  sourceUrl       String      @unique
-  sourceName      String
-  placeId         String?
-  imageUrl        String?
-  tags            String[]
-  qualityScore    Int         @default(50)
-  status          ThingStatus @default(ACTIVE)
-  createdByUserId       String?
-  createdByCampgroundId String?
-  createdBy       User?       @relation("ThingsCreated", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  campgrounds     CampgroundThingToDo[]
-  saves           ThingToDoSave[]
-  votes           ThingToDoVote[]
-  capturedAt      DateTime    @default(now())
-  lastVerifiedAt  DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  @@index([type])
-  @@index([status])
-  @@index([lat, lng])
-  @@index([placeId])
-}
-
-model CampgroundThingToDo {
-  id              String     @id @default(cuid())
-  campgroundId    String
-  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  thingToDoId     String
-  thingToDo       ThingToDo  @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
-  distanceMiles   Float?
-  relevanceScore  Int        @default(50)
-  pinned          Boolean    @default(false)
-  pinnedAt        DateTime?
-  pinnedUntil     DateTime?
-  pinnedById      String?
-  displayOrder    Int        @default(0)
-  createdAt       DateTime   @default(now())
-
-  @@unique([campgroundId, thingToDoId])
-  @@index([campgroundId])
-  @@index([thingToDoId])
-}
-
-model ThingToDoSave {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation("SavedThings", fields: [userId], references: [id], onDelete: Cascade)
-  thingToDoId String
-  thingToDo   ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
-  note        String?
-  createdAt   DateTime  @default(now())
-
-  @@unique([userId, thingToDoId])
-  @@index([userId])
-}
-
-model ThingToDoVote {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation("ThingVotes", fields: [userId], references: [id], onDelete: Cascade)
-  thingToDoId String
-  thingToDo   ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
-  value       Int
-  createdAt   DateTime  @default(now())
-
-  @@unique([userId, thingToDoId])
 }

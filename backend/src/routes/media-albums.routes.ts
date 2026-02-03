@@ -3,7 +3,8 @@ import { PrismaClient, Visibility, MediaType, VideoStatus, TagStatus } from "@pr
 import { authenticateToken, optionalAuth } from "../middleware/auth.middleware";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
-import { createId } from '@paralleldrive/cuid2';
+const { randomUUID } = require('crypto');
+const createId = () => randomUUID().replace(/-/g, '').slice(0, 25);
 
 const router = express.Router();
 const prisma = new PrismaClient();
