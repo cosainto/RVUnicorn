@@ -5,6 +5,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
 import EventPackList from '../components/EventPackList';
+import PackUp from "../components/PackUp";
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import EventSchedule from '../components/EventSchedule';
 import EventAlbum from '../components/EventAlbum';
@@ -452,6 +453,7 @@ export default function EventDetailPage() {
     { id: 'photos', label: 'Photos', icon: Image },
     { id: 'meals', label: 'Meal Plan', icon: ChefHat },
     { id: 'pack', label: 'Pack List', icon: Package },
+    { id: 'packup', label: 'Pack Up', icon: Check },
   ];
 
   return (
@@ -867,6 +869,9 @@ export default function EventDetailPage() {
           {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} />}
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
+          )}
+          {activeTab === 'packup' && (
+            <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
           )}
         </div>
       </div>
