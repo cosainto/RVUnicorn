@@ -1737,36 +1737,37 @@ model InventoryItem {
 }
 
 model TripPackItem {
-  id               String         @id @default(cuid())
-  tripId           String?
-  eventId          String?
-  inventoryItemId  String?
-  customName       String?
-  customCategory   String?
-  quantity         Int            @default(1)
-  isPacked         Boolean        @default(false)
-  packedAt         DateTime?
-  packedById       String?
-  assignedToId     String?
-  assignmentStatus String         @default("PENDING")
-  declinedAt       DateTime?
-  declineReason    String?
-  createdById      String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  gearItemId       String?
-  packUpStatus     String?        @default("NOT_STARTED")
-  packedToLocation String?
-  packUpNote       String?
-  packedUpAt       DateTime?      @db.Timestamp(6)
-  packedUpById     String?
-  leftBehind       Boolean?       @default(false)
-  assignedTo       User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id])
-  createdBy        User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
-  event            Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
-  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id])
-  packedBy         User?          @relation("PackedByTripPackItems", fields: [packedById], references: [id])
-  trip             TripPlan?      @relation("TripPackItems", fields: [tripId], references: [id], onDelete: Cascade)
+  id                 String         @id @default(cuid())
+  tripId             String?
+  eventId            String?
+  inventoryItemId    String?
+  customName         String?
+  customCategory     String?
+  quantity           Int            @default(1)
+  isPacked           Boolean        @default(false)
+  packedAt           DateTime?
+  packedById         String?
+  assignedToId       String?
+  assignmentStatus   String         @default("PENDING")
+  declinedAt         DateTime?
+  declineReason      String?
+  createdById        String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  gearItemId         String?
+  packUpStatus       String?        @default("NOT_STARTED")
+  packedToLocation   String?
+  packUpNote         String?
+  packedUpAt         DateTime?      @db.Timestamp(6)
+  packedUpById       String?
+  leftBehind         Boolean?       @default(false)
+  packUpAssignedToId String?
+  assignedTo         User?          @relation("AssignedTripPackItems", fields: [assignedToId], references: [id])
+  createdBy          User           @relation("CreatedTripPackItems", fields: [createdById], references: [id], onDelete: Cascade)
+  event              Event?         @relation("EventTripPackItems", fields: [eventId], references: [id], onDelete: Cascade)
+  inventoryItem      InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  packedBy           User?          @relation("PackedByTripPackItems", fields: [packedById], references: [id])
+  trip               TripPlan?      @relation("TripPackItems", fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([tripId])
   @@index([eventId])
