@@ -113,7 +113,10 @@ function getIcon(type: string): string {
 }
 
 function getLink(activity: any): string {
-  if (activity.entityType === 'EVENT') return `/events/${activity.entityId}`;
+  if (activity.entityType === 'EVENT') {
+    if (activity.type?.includes('PACK')) return `/events/${activity.entityId}?tab=packup`;
+    return `/events/${activity.entityId}`;
+  }
   if (activity.entityType === 'TRIP') return `/travel?trip=${activity.entityId}`;
   if (activity.entityType === 'CREATOR_CONTENT') return `/creators/${(activity.metadata as any)?.creatorUsername || 'unknown'}/content/${activity.entityId}`;
   return '/basecamp';
