@@ -86,6 +86,7 @@ model User {
   activityTargets                                 Activity[]                @relation("ActivityTarget")
   activities                                      Activity[]
   activityLikes                                   ActivityLike[]
+  AffiliateClick                                  AffiliateClick[]
   Album                                           Album[]
   AlbumFeedCooldown                               AlbumFeedCooldown[]
   attractions                                     Attraction[]
@@ -135,6 +136,7 @@ model User {
   assignedMeals                                   EventMeal[]               @relation("MealCook")
   friendshipsInitiated                            Friendship[]              @relation("FriendshipInitiator")
   friendshipsReceived                             Friendship[]              @relation("FriendshipReceiver")
+  GearAdEvent                                     GearAdEvent[]
   gearItems                                       GearItem[]
   groups                                          Group[]
   groupInvitesReceived                            GroupInvite[]             @relation("GroupInvitee")
@@ -513,27 +515,28 @@ model MealRSVP {
 }
 
 model GearItem {
-  id              String    @id @default(cuid())
+  id              String           @id @default(cuid())
   userId          String
   name            String
   category        String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   description     String?
   imageUrl        String?
   groupId         String?
-  lastUsedAt      DateTime? @db.Timestamp(6)
+  lastUsedAt      DateTime?        @db.Timestamp(6)
   lastUsedEventId String?
   lastUsedTripId  String?
-  purchaseDate    DateTime? @db.Timestamp(6)
-  purchasePrice   Decimal?  @db.Decimal(10, 2)
+  purchaseDate    DateTime?        @db.Timestamp(6)
+  purchasePrice   Decimal?         @db.Decimal(10, 2)
   brand           String?
   model           String?
-  weight          Decimal?  @db.Decimal(10, 2)
-  quantity        Int?      @default(1)
-  condition       String?   @default("GOOD")
+  weight          Decimal?         @db.Decimal(10, 2)
+  quantity        Int?             @default(1)
+  condition       String?          @default("GOOD")
   notes           String?
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  AffiliateClick  AffiliateClick[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([category])
@@ -2665,6 +2668,84 @@ model ThingToDoVote {
   user        User      @relation("ThingVotes", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, thingToDoId])
+}
+
+model Advertiser {
+  id         String    @id
+  name       String
+  email      String    @unique
+  company    String
+  logoUrl    String?
+  websiteUrl String?
+  balance    Decimal?  @default(0) @db.Decimal(10, 2)
+  isActive   Boolean?  @default(true)
+  createdAt  DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime? @default(now()) @db.Timestamp(6)
+  GearAd     GearAd[]
+}
+
+model AffiliateClick {
+  id               String    @id
+  userId           String?
+  gearItemId       String?
+  gearAdId         String?
+  retailer         String
+  productUrl       String
+  affiliateUrl     String
+  sessionId        String?
+  createdAt        DateTime? @default(now()) @db.Timestamp(6)
+  convertedAt      DateTime? @db.Timestamp(6)
+  conversionAmount Decimal?  @db.Decimal(10, 2)
+  GearAd           GearAd?   @relation(fields: [gearAdId], references: [id], onUpdate: NoAction)
+  GearItem         GearItem? @relation(fields: [gearItemId], references: [id], onUpdate: NoAction)
+  User             User?     @relation(fields: [userId], references: [id], onUpdate: NoAction)
+
+  @@index([userId])
+}
+
+model GearAd {
+  id                  String           @id
+  advertiserId        String
+  name                String
+  brand               String
+  description         String?
+  imageUrl            String
+  linkUrl             String
+  affiliateUrl        String?
+  category            String
+  targetCampingStyles String[]         @default([])
+  bidAmount           Decimal          @db.Decimal(10, 4)
+  dailyBudget         Decimal?         @db.Decimal(10, 2)
+  totalBudget         Decimal?         @db.Decimal(10, 2)
+  spent               Decimal?         @default(0) @db.Decimal(10, 2)
+  impressions         Int?             @default(0)
+  clicks              Int?             @default(0)
+  isActive            Boolean?         @default(true)
+  startDate           DateTime         @db.Timestamp(6)
+  endDate             DateTime?        @db.Timestamp(6)
+  createdAt           DateTime?        @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime?        @default(now()) @db.Timestamp(6)
+  AffiliateClick      AffiliateClick[]
+  Advertiser          Advertiser       @relation(fields: [advertiserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  GearAdEvent         GearAdEvent[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model GearAdEvent {
+  id        String    @id
+  adId      String
+  userId    String?
+  eventType String
+  sessionId String?
+  ipHash    String?
+  userAgent String?
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  GearAd    GearAd    @relation(fields: [adId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  User      User?     @relation(fields: [userId], references: [id], onUpdate: NoAction)
+
+  @@index([adId])
 }
 
 enum ThingType {
