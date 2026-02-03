@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Truck, Users, PawPrint, ChevronRight, ChevronLeft, Check, Sparkles, Link as LinkIcon, Globe } from 'lucide-react';
+import { X, MapPin, Truck, Users, PawPrint, ChevronRight, ChevronLeft, Check, Sparkles, Link as LinkIcon, Globe, Tent, Home, Car } from 'lucide-react';
 import api from '../services/api';
 
 interface OnboardingWizardProps {
@@ -17,8 +17,16 @@ const RV_TYPES = [
   { id: 'TRUCK_CAMPER', label: 'Truck Camper', emoji: '🛻' },
   { id: 'TEARDROP', label: 'Teardrop', emoji: '💧' },
   { id: 'TOY_HAULER', label: 'Toy Hauler', emoji: '🏍️' },
-  { id: 'TENT', label: 'Tent Camping', emoji: '⛺' },
   { id: 'OTHER', label: 'Other', emoji: '🏕️' },
+];
+
+const CAMPING_STYLES = [
+  { id: 'RV', label: 'RV / Motorhome', emoji: '🚐', description: 'Class A, B, C motorhomes' },
+  { id: 'TRAILER', label: 'Travel Trailer', emoji: '🏕️', description: 'Fifth wheel, travel trailer, pop-up' },
+  { id: 'VAN', label: 'Van Life', emoji: '🚐', description: 'Camper van, converted van' },
+  { id: 'TENT', label: 'Tent Camping', emoji: '⛺', description: 'Traditional tent camping' },
+  { id: 'CABIN', label: 'Cabin / Glamping', emoji: '🏠', description: 'Cabins, yurts, glamping' },
+  { id: 'BACKPACKING', label: 'Backpacking', emoji: '🎒', description: 'Backcountry, hiking trips' },
 ];
 
 const TRAVEL_PARTY_TYPES = [
@@ -54,6 +62,9 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
   const [homeCity, setHomeCity] = useState('');
   const [homeState, setHomeState] = useState('');
   const [homeZipCode, setHomeZipCode] = useState('');
+  
+  // Camping Styles
+  const [campingStyles, setCampingStyles] = useState<string[]>([]);
   
   // RV
   const [hasRV, setHasRV] = useState<boolean | null>(null);
@@ -98,7 +109,8 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
     setLoading(true);
     try {
       await api.put('/onboarding/rv', {
-        hasRV,
+        campingStyles,
+        hasRV: campingStyles.includes('RV') || campingStyles.includes('TRAILER') || campingStyles.includes('VAN'),
         rvType: hasRV ? rvType : null,
         rvYear: hasRV && rvYear ? parseInt(rvYear) : null,
         rvMake: hasRV ? rvMake : null,
@@ -196,9 +208,31 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
     }
   };
 
+  const toggleCampingStyle = (style: string) => {
+    if (campingStyles.includes(style)) {
+      setCampingStyles(campingStyles.filter(s => s !== style));
+      // If removing RV/TRAILER/VAN, also clear hasRV
+      if (['RV', 'TRAILER', 'VAN'].includes(style)) {
+        const remaining = campingStyles.filter(s => s !== style);
+        if (!remaining.some(s => ['RV', 'TRAILER', 'VAN'].includes(s))) {
+          setHasRV(false);
+        }
+      }
+    } else {
+      setCampingStyles([...campingStyles, style]);
+      // If adding RV/TRAILER/VAN, set hasRV
+      if (['RV', 'TRAILER', 'VAN'].includes(style)) {
+        setHasRV(true);
+      }
+    }
+  };
+
+  // Check if any RV-related style is selected
+  const showRVDetails = campingStyles.some(s => ['RV', 'TRAILER', 'VAN'].includes(s));
+
   const canProceed = () => {
     if (step === 1) return homeCity && homeState;
-    if (step === 2) return hasRV !== null && (hasRV === false || rvType);
+    if (step === 2) return campingStyles.length > 0;
     if (step === 3) return travelPartyType;
     if (step === 4) return true; // Social links are optional
     return true;
@@ -223,7 +257,7 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
             </button>
           </div>
           <p className="text-primary-100 text-sm">
-            Let's personalize your experience. This helps us plan better trips for you!
+            Let's personalize your experience. This helps us connect you with like-minded campers!
           </p>
           
           {/* Progress */}
@@ -293,64 +327,62 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
             </div>
           )}
 
-          {/* Step 2: RV */}
+          {/* Step 2: Camping Style */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Truck className="w-6 h-6 text-green-600" />
+                  <Tent className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Tell us about your rig</h3>
-                  <p className="text-sm text-gray-500">This helps match you with compatible campgrounds</p>
+                  <h3 className="text-lg font-semibold text-gray-900">How do you camp?</h3>
+                  <p className="text-sm text-gray-500">Select all that apply - we all camp differently!</p>
                 </div>
               </div>
 
-              <div className="flex gap-4 mb-4">
-                <button
-                  onClick={() => setHasRV(true)}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-                    hasRV === true
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-2xl mb-2 block">🚐</span>
-                  <span className="font-medium">Yes, I have an RV</span>
-                </button>
-                <button
-                  onClick={() => setHasRV(false)}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-                    hasRV === false
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-2xl mb-2 block">⛺</span>
-                  <span className="font-medium">No / Tent Camping</span>
-                </button>
+              <div className="grid grid-cols-2 gap-3">
+                {CAMPING_STYLES.map((style) => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => toggleCampingStyle(style.id)}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                      campingStyles.includes(style.id)
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">{style.emoji}</span>
+                      {campingStyles.includes(style.id) && (
+                        <Check className="w-5 h-5 text-primary-600 ml-auto" />
+                      )}
+                    </div>
+                    <div className="font-medium text-gray-900 text-sm">{style.label}</div>
+                    <div className="text-xs text-gray-500">{style.description}</div>
+                  </button>
+                ))}
               </div>
 
-              {hasRV && (
-                <>
+              {/* RV Details - only show if RV/TRAILER/VAN selected */}
+              {showRVDetails && (
+                <div className="mt-6 pt-6 border-t space-y-4">
+                  <h4 className="font-medium text-gray-900">Tell us about your rig (optional)</h4>
+                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type of RV</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {RV_TYPES.filter(rv => rv.id !== 'TENT').map((rv) => (
-                        <button
-                          key={rv.id}
-                          onClick={() => setRvType(rv.id)}
-                          className={`p-3 rounded-lg border text-left transition-all ${
-                            rvType === rv.id
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <span className="mr-2">{rv.emoji}</span>
-                          <span className="text-sm">{rv.label}</span>
-                        </button>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      value={rvType}
+                      onChange={(e) => setRvType(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="">Select type...</option>
+                      {RV_TYPES.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.emoji} {type.label}
+                        </option>
                       ))}
-                    </div>
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
@@ -360,8 +392,10 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                         type="number"
                         value={rvYear}
                         onChange={(e) => setRvYear(e.target.value)}
-                        placeholder="2020"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        placeholder="2022"
+                        min="1950"
+                        max={new Date().getFullYear() + 1}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
@@ -370,8 +404,8 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                         type="text"
                         value={rvMake}
                         onChange={(e) => setRvMake(e.target.value)}
-                        placeholder="Airstream"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        placeholder="Winnebago"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                     <div>
@@ -380,12 +414,12 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                         type="text"
                         value={rvModel}
                         onChange={(e) => setRvModel(e.target.value)}
-                        placeholder="Basecamp"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        placeholder="View"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
@@ -399,74 +433,83 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Who do you travel with?</h3>
-                  <p className="text-sm text-gray-500">Help us suggest the right campgrounds and activities</p>
+                  <p className="text-sm text-gray-500">This helps us suggest the right spots</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                {TRAVEL_PARTY_TYPES.map((party) => (
+                {TRAVEL_PARTY_TYPES.map((type) => (
                   <button
-                    key={party.id}
-                    onClick={() => setTravelPartyType(party.id)}
-                    className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                      travelPartyType === party.id
-                        ? 'border-purple-500 bg-purple-50'
+                    key={type.id}
+                    type="button"
+                    onClick={() => setTravelPartyType(type.id)}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
+                      travelPartyType === type.id
+                        ? 'border-primary-500 bg-primary-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{party.emoji}</span>
-                      <div>
-                        <div className="font-medium">{party.label}</div>
-                        <div className="text-sm text-gray-500">{party.description}</div>
-                      </div>
+                    <span className="text-3xl">{type.emoji}</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{type.label}</div>
+                      <div className="text-sm text-gray-500">{type.description}</div>
                     </div>
+                    {travelPartyType === type.id && (
+                      <Check className="w-6 h-6 text-primary-600" />
+                    )}
                   </button>
                 ))}
               </div>
 
-              {(travelPartyType === 'FAMILY' || travelPartyType === 'GROUP') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    How many people typically travel with you?
-                  </label>
-                  <input
-                    type="number"
-                    value={travelPartySize}
-                    onChange={(e) => setTravelPartySize(e.target.value)}
-                    min="1"
-                    max="20"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
+              {/* Pets Section */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center gap-3 mb-4">
+                  <PawPrint className="w-5 h-5 text-orange-500" />
+                  <span className="font-medium text-gray-900">Do you travel with pets?</span>
                 </div>
-              )}
 
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasPets}
-                    onChange={(e) => setHasPets(e.target.checked)}
-                    className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                  />
-                  <PawPrint className="w-5 h-5 text-amber-600" />
-                  <span className="font-medium">I travel with pets</span>
-                </label>
+                <div className="flex gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setHasPets(true)}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      hasPets === true
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    Yes 🐕
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasPets(false);
+                      setPetTypes([]);
+                    }}
+                    className={`flex-1 py-3 rounded-lg border-2 font-medium transition-all ${
+                      hasPets === false
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
 
                 {hasPets && (
-                  <div className="mt-3 ml-8 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {PET_TYPES.map((pet) => (
                       <button
                         key={pet.id}
+                        type="button"
                         onClick={() => togglePetType(pet.id)}
-                        className={`px-4 py-2 rounded-full border transition-all ${
+                        className={`px-4 py-2 rounded-full border-2 text-sm font-medium transition-all ${
                           petTypes.includes(pet.id)
-                            ? 'border-amber-500 bg-amber-50 text-amber-700'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
                         }`}
                       >
-                        <span className="mr-1">{pet.emoji}</span>
-                        {pet.label}
+                        {pet.emoji} {pet.label}
                       </button>
                     ))}
                   </div>
@@ -483,150 +526,140 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                   <LinkIcon className="w-6 h-6 text-indigo-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Connect your socials</h3>
-                  <p className="text-sm text-gray-500">Optional - Share your social links with the community</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Connect with the community</h3>
+                  <p className="text-sm text-gray-500">Add your social links so others can follow your adventures</p>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <Globe className="w-4 h-4 inline mr-1" />
-                  Website / Blog
-                </label>
-                <input
-                  type="url"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://yoursite.com"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Globe className="w-4 h-4 inline mr-1" /> Website
+                  </label>
+                  <input
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://yourblog.com"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📘 Facebook
+                  </label>
+                  <input
+                    type="url"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="https://facebook.com/username"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📸 Instagram
+                  </label>
+                  <input
+                    type="url"
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    placeholder="https://instagram.com/username"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🐦 Twitter / X
+                  </label>
+                  <input
+                    type="url"
+                    value={twitterUrl}
+                    onChange={(e) => setTwitterUrl(e.target.value)}
+                    placeholder="https://twitter.com/username"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    📺 YouTube
+                  </label>
+                  <input
+                    type="url"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://youtube.com/@channel"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    🎵 TikTok
+                  </label>
+                  <input
+                    type="url"
+                    value={tiktokUrl}
+                    onChange={(e) => setTiktokUrl(e.target.value)}
+                    placeholder="https://tiktok.com/@username"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                  Facebook
-                </label>
-                <input
-                  type="url"
-                  value={facebookUrl}
-                  onChange={(e) => setFacebookUrl(e.target.value)}
-                  placeholder="https://facebook.com/yourpage"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                  Instagram
-                </label>
-                <input
-                  type="url"
-                  value={instagramUrl}
-                  onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="https://instagram.com/yourhandle"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
-                  Twitter / X
-                </label>
-                <input
-                  type="url"
-                  value={twitterUrl}
-                  onChange={(e) => setTwitterUrl(e.target.value)}
-                  placeholder="https://twitter.com/yourhandle"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                  YouTube
-                </label>
-                <input
-                  type="url"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://youtube.com/@yourchannel"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                  TikTok
-                </label>
-                <input
-                  type="url"
-                  value={tiktokUrl}
-                  onChange={(e) => setTiktokUrl(e.target.value)}
-                  placeholder="https://tiktok.com/@yourhandle"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              <p className="text-xs text-gray-500 text-center mt-4">
-                You can always add or update these later in your Basecamp settings
+              <p className="text-xs text-gray-500 mt-4">
+                All fields are optional. You can always add these later in your profile settings.
               </p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
+        <div className="p-6 border-t bg-gray-50 flex items-center justify-between">
+          {step > 1 ? (
             <button
               onClick={handleBack}
-              disabled={step === 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                step === 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-200'
-              }`}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
               Back
             </button>
+          ) : (
+            <button
+              onClick={handleSkip}
+              className="text-gray-500 hover:text-gray-700 transition-colors text-sm"
+            >
+              Skip for now
+            </button>
+          )}
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSkip}
-                className="text-gray-500 hover:text-gray-700 text-sm"
-              >
-                Skip for now
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={!canProceed() || loading}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
-                  canProceed() && !loading
-                    ? 'bg-primary-600 text-white hover:bg-primary-700'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : step === totalSteps ? (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Finish
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <ChevronRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={handleNext}
+            disabled={!canProceed() || loading}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
+              canProceed() && !loading
+                ? 'bg-primary-600 text-white hover:bg-primary-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : step === totalSteps ? (
+              <>
+                <Check className="w-5 h-5" />
+                Complete
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
