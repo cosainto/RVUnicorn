@@ -943,6 +943,7 @@ export default function CampgroundDetailPage() {
                       <img src={campground.claimedBy.profilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs">{campground.claimedBy.firstName?.[0]}</div>
+                    )}
                     <span>{campground.claimedBy.firstName} {campground.claimedBy.lastName}</span>
                     <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Owner</span>
                   </Link>
