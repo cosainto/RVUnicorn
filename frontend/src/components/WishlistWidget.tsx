@@ -202,6 +202,13 @@ export default function WishlistWidget() {
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+                <Link
+                  to={`/trips/create?campgroundId=${item.campgroundId}&campgroundName=${encodeURIComponent(item.campground.name)}`}
+                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
+                  title="Plan a trip"
+                >
+                  <Calendar className="w-4 h-4" />
+                </Link>
               </div>
             </div>
 
