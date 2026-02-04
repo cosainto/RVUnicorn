@@ -9,19 +9,24 @@ const router = Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user!.id;
+    console.log('Getting wishlist for user:', userId);
 
     const wishlist = await prisma.campgroundWishlist.findMany({
-      where: { userId },
-      include: {
-        campground: true
-      },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'desc' }
-      ]
+      where: { userId }
     });
+    
+    console.log('Found wishlist items:', wishlist.length);
 
-    res.json(wishlist);
+    // Get campground details separately
+    const results = [];
+    for (const item of wishlist) {
+      const campground = await prisma.campground.findUnique({
+        where: { id: item.campgroundId }
+      });
+      results.push({ ...item, campground });
+    }
+
+    res.json(results);
   } catch (error) {
     console.error('Get wishlist error:', error);
     res.status(500).json({ error: 'Failed to get wishlist' });
