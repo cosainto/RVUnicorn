@@ -189,7 +189,7 @@ export default function CampgroundDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const isSiteAdmin = user?.email?.toLowerCase() === 'wroberts82@yahoo.com';
+  const isSiteAdmin = ['wroberts82@yahoo.com', 'will@kindletribe.com'].includes(user?.email?.toLowerCase() || '');
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [avgRating, setAvgRating] = useState(0);
@@ -379,7 +379,11 @@ export default function CampgroundDetailPage() {
             <button onClick={() => navigate('/campgrounds')} className="absolute top-6 left-6 flex items-center text-white/80 hover:text-white bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full transition"><ChevronLeft className="w-5 h-5" /><span>Back</span></button>
             
             {/* Favorite button */}
-            {user && <button onClick={toggleWishlist} className={`absolute top-6 right-6 p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+            {user && <div className="absolute top-6 right-6 flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded-full backdrop-blur-sm transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded-full backdrop-blur-sm transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
             
             {/* Hero content overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
@@ -474,7 +478,11 @@ export default function CampgroundDetailPage() {
             <div className="border-4 border-amber-700 rounded-lg overflow-hidden shadow-lg">
               <div className={themeStyles.heroHeight + " relative"}>
                 {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-amber-200 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-600" /></div>}
-                {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+                {user && <div className="absolute top-4 right-4 flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-purple-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded-full shadow-lg transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
               </div>
             </div>
             
@@ -516,7 +524,11 @@ export default function CampgroundDetailPage() {
             {/* Favorite & Admin buttons */}
             <div className="absolute top-6 right-6 flex gap-2">
               {isAdmin && <span className="bg-sky-500 text-white px-3 py-2 rounded-full text-sm font-medium">⭐ Admin</span>}
-              {user && <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+              {user && <div className="flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded-full backdrop-blur-sm transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded-full backdrop-blur-sm transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
             </div>
             
             {/* Wave decoration at bottom */}
@@ -584,7 +596,11 @@ export default function CampgroundDetailPage() {
             {/* Top right buttons */}
             <div className="absolute top-6 right-6 flex gap-2">
               {isAdmin && <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded text-sm font-bold tracking-wide">⭐ ADMIN</span>}
-              {user && <button onClick={toggleWishlist} className={`p-3 rounded transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-gray-800/80 text-white hover:bg-orange-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+              {user && <div className="flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-gray-800/80 text-white hover:bg-orange-500'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-gray-800/80 text-white hover:bg-purple-500'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-gray-800/80 text-white hover:bg-gray-600'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
             </div>
             
             {/* Hero content */}
@@ -642,7 +658,11 @@ export default function CampgroundDetailPage() {
           {/* Compact hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
             {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><MapPin className="w-16 h-16 text-gray-300" /></div>}
-            {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-2 transition ${inWishlist ? 'text-red-500' : 'text-white/70 hover:text-white'}`}><Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+            {user && <div className="absolute top-4 right-4 flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-2 transition ${isFavorited ? 'text-red-500' : 'text-white/70 hover:text-white'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-2 transition ${inWishlist ? 'text-purple-500' : 'text-white/70 hover:text-white'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span>🧞</span></button>
+              <button onClick={toggleMute} className={`p-2 transition ${isMuted ? 'text-gray-500' : 'text-white/70 hover:text-white'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>
+            </div>}
           </div>
           
           {/* Content */}
@@ -681,7 +701,11 @@ export default function CampgroundDetailPage() {
               ) : (
                 <div className="w-full h-full bg-gray-900 flex items-center justify-center"><MapPin className="w-24 h-24 text-gray-700" /></div>
               )}
-              {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+              {user && <div className="absolute top-4 right-4 flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded-full transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:text-red-500'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded-full transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/90 text-gray-600 hover:text-purple-500'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded-full transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/90 text-gray-600 hover:text-gray-700'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
             </div>
             
             {/* Content section */}
@@ -756,7 +780,11 @@ export default function CampgroundDetailPage() {
                       <div className="w-full h-full bg-amber-100 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-400" /></div>
                     )}
                   </div>
-                  {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+                  {user && <div className="absolute top-4 right-4 flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-purple-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded-full shadow-lg transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
+            </div>}
                 </div>
                 
                 {/* Content */}
@@ -841,7 +869,11 @@ export default function CampgroundDetailPage() {
             {/* Top right controls */}
             <div className="absolute top-6 right-6 flex gap-3">
               {isAdmin && <span className="px-3 py-1 bg-pink-500/20 border border-pink-500 text-pink-400 text-xs font-bold tracking-wider rounded">ADMIN</span>}
-              {user && <button onClick={toggleWishlist} className={`p-3 rounded border transition ${inWishlist ? 'bg-pink-500 border-pink-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`}><Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} /></button>}
+              {user && <div className="flex gap-2">
+              <button onClick={handleToggleFavorite} className={`p-3 rounded border transition ${isFavorited ? 'bg-red-500 border-red-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>
+              <button onClick={toggleWishlist} className={`p-3 rounded border transition ${inWishlist ? 'bg-purple-500 border-purple-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span>🧞</span></button>
+              <button onClick={toggleMute} className={`p-3 rounded border transition ${isMuted ? 'bg-gray-500 border-gray-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>
+            </div>}
             </div>
             
             {/* Hero content */}
