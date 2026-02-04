@@ -947,6 +947,7 @@ export default function CampgroundDetailPage() {
                     <span>{campground.claimedBy.firstName} {campground.claimedBy.lastName}</span>
                     <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Owner</span>
                   </Link>
+                )}
                 {campground.admins?.filter(a => a.user.id !== campground.claimedBy?.id).slice(0, 3).map(admin => (
                   <Link key={admin.id} to={`/profile/${admin.user.username}`} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition">
                     {admin.user.profilePicture ? (
