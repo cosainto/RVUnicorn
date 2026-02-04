@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,6 +78,26 @@ export default function EventsPage() {
     attendeeIds: [] as string[],
     privacy: 'PUBLIC',
   });
+
+  // Handle wishlist create params
+  useEffect(() => {
+    const createFromWishlist = searchParams.get('createFromWishlist');
+    const campgroundId = searchParams.get('campgroundId');
+    const campgroundName = searchParams.get('campgroundName');
+    
+    if (createFromWishlist === 'true' && campgroundId) {
+      setSelectedCampgroundId(campgroundId);
+      setSelectedCampgroundName(campgroundName || '');
+      setNewEvent(prev => ({
+        ...prev,
+        campgroundId,
+        title: `From ${user?.firstName || 'My'}'s Wishlist`
+      }));
+      setShowCreateModal(true);
+      // Clear the params
+      setSearchParams({});
+    }
+  }, [searchParams, user]);
 
   useEffect(() => {
     loadEvents();
