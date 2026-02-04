@@ -403,7 +403,7 @@ export default function CampgroundDetailPage() {
             <div className="bg-white rounded-2xl shadow-2xl p-4 flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap gap-3">
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Phone className="w-4 h-4" />Call</a>}
-                {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Globe className="w-4 h-4" />Website</a>}
+                {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Globe className="w-4 h-4" />Website</a>}
                 {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Navigation className="w-4 h-4" />Directions</a>}
               </div>
               <div className="flex gap-2">
@@ -495,7 +495,7 @@ export default function CampgroundDetailPage() {
                 {getBookingUrl(campground) && <a href={getBookingUrl(campground)!} target="_blank" rel="noopener noreferrer" className="px-5 py-2 rounded-lg bg-green-700 text-white font-medium hover:bg-green-800 flex items-center gap-2">{getBookingLabel(campground)}<ExternalLink className="w-3 h-3"/></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? 'bg-amber-300 text-amber-800' : 'bg-amber-200 text-amber-800 hover:bg-amber-300'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 flex items-center gap-2"><Phone className="w-4 h-4" />Call</a>}
-                {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 flex items-center gap-2"><Globe className="w-4 h-4" />Website</a>}
+                {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 flex items-center gap-2"><Globe className="w-4 h-4" />Website</a>}
               </div>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function CampgroundDetailPage() {
             {/* Quick actions */}
             <div className="flex flex-wrap gap-3 mb-8">
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Phone className="w-4 h-4" />Call</a>}
-              {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Globe className="w-4 h-4" />Website</a>}
+              {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Navigation className="w-4 h-4" />Directions</a>}
             </div>
           </div>
@@ -618,7 +618,7 @@ export default function CampgroundDetailPage() {
           <div className="max-w-5xl mx-auto px-4 py-3">
             <div className="flex flex-wrap gap-3">
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Phone className="w-4 h-4" />Call</a>}
-              {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Globe className="w-4 h-4" />Website</a>}
+              {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
             </div>
           </div>
@@ -662,7 +662,7 @@ export default function CampgroundDetailPage() {
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-8 py-3 bg-green-700 text-white font-light tracking-wide hover:bg-green-800 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
               {user && <button onClick={toggleMute} className={`px-4 py-3 border font-light transition ${isMuted ? 'border-gray-900 bg-gray-100 text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Call</a>}
-              {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Website</a>}
+              {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Directions</a>}
             </div>
           </div>
@@ -711,7 +711,7 @@ export default function CampgroundDetailPage() {
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-8 py-4 bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-4 border font-bold transition ${isMuted ? 'border-white bg-white/20 text-white' : 'border-gray-600 text-white hover:border-white'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-6 py-4 border border-gray-600 text-white hover:border-white transition">Call</a>}
-                {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-6 py-4 border border-gray-600 text-white hover:border-white transition">Website</a>}
+                {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-6 py-4 border border-gray-600 text-white hover:border-white transition">Website</a>}
                 {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-4 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black transition">Manage</Link>}
               </div>
             </div>
@@ -803,7 +803,7 @@ export default function CampgroundDetailPage() {
                     {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-green-700 text-white font-bold rounded hover:bg-green-800 transition shadow-lg flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                     {user && <button onClick={toggleMute} className={`px-4 py-3 rounded font-medium transition border border-amber-300 ${isMuted ? 'bg-amber-200 text-amber-800' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4 inline" /> : <Bell className="w-4 h-4 inline" />}</button>}
                     {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Phone className="w-4 h-4 inline mr-2" />Call</a>}
-                    {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Globe className="w-4 h-4 inline mr-2" />Website</a>}
+                    {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Globe className="w-4 h-4 inline mr-2" />Website</a>}
                     {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Navigation className="w-4 h-4 inline mr-2" />Directions</a>}
                     {isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
                   </div>
@@ -880,7 +880,7 @@ export default function CampgroundDetailPage() {
           <div className="max-w-5xl mx-auto px-4 py-4">
             <div className="flex flex-wrap gap-3">
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-pink-500/30 hover:border-pink-500 hover:text-pink-400 transition"><Phone className="w-4 h-4" />Call</a>}
-              {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-purple-500/30 hover:border-purple-500 hover:text-purple-400 transition"><Globe className="w-4 h-4" />Website</a>}
+              {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-purple-500/30 hover:border-purple-500 hover:text-purple-400 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-cyan-500/30 hover:border-cyan-500 hover:text-cyan-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
             </div>
           </div>
@@ -911,9 +911,9 @@ export default function CampgroundDetailPage() {
               {avgRating > 0 && <div className="flex items-center gap-2 mb-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-2"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                {campground.phone && <a href={`tel:${campground.phone}`} className="flex items-center gap-1 hover:text-primary-600"><Phone className="w-4 h-4" />{campground.phone}</a>}
-                {campground.email && <a href={`mailto:${campground.email}`} className="flex items-center gap-1 hover:text-primary-600"><Mail className="w-4 h-4" />{campground.email}</a>}
-                {campground.website && <a href={campground.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary-600"><Globe className="w-4 h-4" />Website</a>}
+                {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-1 hover:text-primary-600"><Phone className="w-4 h-4" />{campground.businessPhone}</a>}
+                {campground.businessEmail && <a href={`mailto:${campground.businessEmail}`} className="flex items-center gap-1 hover:text-primary-600"><Mail className="w-4 h-4" />{campground.businessEmail}</a>}
+                {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary-600"><Globe className="w-4 h-4" />Website</a>}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
