@@ -907,7 +907,12 @@ export default function CampgroundDetailPage() {
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{campground.name}</h1>
-              <div className="flex items-center text-gray-600 text-lg mb-3"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
+              <div className="flex items-center text-gray-600 text-lg mb-2"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
+                {campground.phone && <a href={`tel:${campground.phone}`} className="flex items-center gap-1 hover:text-primary-600"><Phone className="w-4 h-4" />{campground.phone}</a>}
+                {campground.email && <a href={`mailto:${campground.email}`} className="flex items-center gap-1 hover:text-primary-600"><Mail className="w-4 h-4" />{campground.email}</a>}
+                {campground.website && <a href={campground.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary-600"><Globe className="w-4 h-4" />Website</a>}
+              </div>
               {avgRating > 0 && <div className="flex items-center gap-2 mb-3">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
             </div>
@@ -919,9 +924,6 @@ export default function CampgroundDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-            {campground.phone && <a href={`tel:${campground.phone}`} className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Phone className="w-4 h-4" />{campground.phone}</a>}
-            {campground.website && <a href={campground.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Globe className="w-4 h-4" />Website</a>}
-            {campground.email && <a href={`mailto:${campground.email}`} className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Mail className="w-4 h-4" />Email</a>}
             {campground.latitude && campground.longitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Navigation className="w-4 h-4" />Directions</a>}
           </div>
         </div>
