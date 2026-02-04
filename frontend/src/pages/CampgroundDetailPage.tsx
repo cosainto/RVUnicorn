@@ -896,7 +896,6 @@ export default function CampgroundDetailPage() {
           <div className={themeStyles.header}>
             <div className={"h-72 md:h-96 bg-gradient-to-br from-green-400 to-blue-500 relative"}>
           {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><MapPin className="w-32 h-32 text-white/50" /></div>}
-          {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
           {isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
