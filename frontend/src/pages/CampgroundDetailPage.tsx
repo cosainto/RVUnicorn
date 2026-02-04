@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation,
-  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, 
+  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -917,7 +917,7 @@ export default function CampgroundDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {user && <><button onClick={toggleWishlist} className={`px-4 py-2 rounded-lg font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Heart className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} /></button><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><BellOff className="w-5 h-5" />{isMuted ? " Muted" : " Mute"}</button></>}
+              {user && <><button onClick={handleToggleFavorite} className={`px-4 py-2 rounded-lg font-medium transition ${isFavorited ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`} title={isFavorited ? "Unfollow" : "Follow"}><UserPlus className={`w-5 h-5 ${isFavorited ? "fill-current" : ""}`} />{isFavorited ? " Following" : " Follow"}</button><button onClick={toggleWishlist} className={`px-4 py-2 rounded-lg font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Heart className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} /></button><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><BellOff className="w-5 h-5" />{isMuted ? " Muted" : " Mute"}</button></>}
               {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="classic" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="btn flex items-center gap-2 bg-green-600 text-white hover:bg-green-700">Book Now<ExternalLink className="w-4 h-4" /></a>}
 
