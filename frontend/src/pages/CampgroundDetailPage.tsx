@@ -908,13 +908,13 @@ export default function CampgroundDetailPage() {
             <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{campground.name}</h1>
               <div className="flex items-center text-gray-600 text-lg mb-2"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
+              {avgRating > 0 && <div className="flex items-center gap-2 mb-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
+              {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-2"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                 {campground.phone && <a href={`tel:${campground.phone}`} className="flex items-center gap-1 hover:text-primary-600"><Phone className="w-4 h-4" />{campground.phone}</a>}
                 {campground.email && <a href={`mailto:${campground.email}`} className="flex items-center gap-1 hover:text-primary-600"><Mail className="w-4 h-4" />{campground.email}</a>}
                 {campground.website && <a href={campground.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary-600"><Globe className="w-4 h-4" />Website</a>}
               </div>
-              {avgRating > 0 && <div className="flex items-center gap-2 mb-3">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
-              {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
             </div>
             <div className="flex flex-wrap gap-2">
               {user && <><button onClick={toggleWishlist} className={`px-4 py-2 rounded-lg font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Heart className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} /></button><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><BellOff className="w-5 h-5" />{isMuted ? " Muted" : " Mute"}</button></>}
