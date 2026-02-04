@@ -87,8 +87,6 @@ export default function EventsPage() {
     const campgroundName = searchParams.get('campgroundName');
     
     if (createFromWishlist === 'true' && campgroundId) {
-      setSelectedCampgroundId(campgroundId);
-      setSelectedCampgroundName(campgroundName || '');
       setFormData(prev => ({
         ...prev,
         campgroundId,
