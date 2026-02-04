@@ -21,7 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
             state: true,
             latitude: true,
             longitude: true,
-            photos: { take: 1 }
+            photos: { take: 1, select: { id: true, imageUrl: true } }
           }
         }
       },
