@@ -3038,63 +3038,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               )}
             </div>
 
-            {/* Wishlist Box - NEW SECTION */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Bookmark className="w-5 h-5 text-pink-500" />
-                  My Wishlist
-                </h3>
-                <span className="text-sm text-gray-500">{wishlistEvents.length} trips</span>
-              </div>
-
-              {wishlistEvents.length === 0 ? (
-                <div className="text-center py-6">
-                  <Bookmark className="w-12 h-12 mx-auto mb-2 text-gray-200" />
-                  <p className="text-sm text-gray-400">No wishlist trips yet</p>
-                  <p className="text-xs text-gray-300 mt-1">Save trips you'd love to take!</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {wishlistEvents.slice(0, 5).map((event) => (
-                    <Link
-                      key={event.id}
-                      to={`/trips/${event.id}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-pink-50 transition-colors group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center flex-shrink-0">
-                        <Heart className="w-5 h-5 text-pink-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 truncate group-hover:text-pink-600 transition-colors">
-                          {event.title || event.name}
-                        </p>
-                        {event.campground ? (
-                          <p className="text-xs text-gray-400 truncate">
-                            {event.campground.name}
-                          </p>
-                        ) : event.location ? (
-                          <p className="text-xs text-gray-400 truncate">
-                            {event.location}
-                          </p>
-                        ) : null}
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-pink-500" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {wishlistEvents.length > 5 && (
-                <Link
-                  to="/trips?filter=wishlist"
-                  className="block text-center text-sm text-pink-600 hover:text-pink-700 mt-3"
-                >
-                  View all {wishlistEvents.length} wishlist trips →
-                </Link>
-              )}
-            </div>
-
             {/* My Groups */}
             <div className="bg-white rounded-lg shadow-md p-4">
               <div className="flex items-center justify-between mb-4">
