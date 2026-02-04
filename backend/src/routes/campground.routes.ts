@@ -252,7 +252,14 @@ router.get('/favorites/my', authenticateToken, async (req: Request, res: Respons
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(favorites.map(f => f.campground));
+    // Deduplicate by campground id
+    const seen = new Set();
+    const unique = favorites.filter(f => {
+      if (seen.has(f.campground.id)) return false;
+      seen.add(f.campground.id);
+      return true;
+    });
+    res.json(unique.map(f => f.campground));
   } catch (error) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to get favorites' });
