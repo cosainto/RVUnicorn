@@ -14,14 +14,8 @@ router.get('/', authenticateToken, async (req, res) => {
       where: { userId },
       include: {
         campground: {
-          select: {
-            id: true,
-            name: true,
-            city: true,
-            state: true,
-            latitude: true,
-            longitude: true,
-            photos: { take: 1, select: { id: true, imageUrl: true } }
+          include: {
+            photos: { take: 1 }
           }
         }
       },
