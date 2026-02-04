@@ -242,29 +242,12 @@ router.get('/favorites/my', authenticateToken, async (req: Request, res: Respons
     const favorites = await prisma.campgroundFollow.findMany({
       where: { userId },
       include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
+        campground: {
           include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
-        campground: true,
+            photos: { take: 1 },
+            _count: { select: { followers: true, checkIns: true } }
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
     });
