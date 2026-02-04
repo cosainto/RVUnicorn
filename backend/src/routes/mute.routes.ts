@@ -224,3 +224,74 @@ router.delete('/event/:mutedEventId', authenticateToken, async (req, res) => {
 });
 
 export default router;
+
+// POST /api/mute/campground/:campgroundId - Mute a campground
+router.post('/campground/:campgroundId', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { campgroundId } = req.params;
+    const { duration } = req.body;
+
+    const snoozeUntil = duration ? getSnoozeExpiration(duration) : null;
+
+    const mute = await prisma.mutedEntity.upsert({
+      where: {
+        userId_mutedCampgroundId: { userId, mutedCampgroundId: campgroundId }
+      },
+      create: {
+        userId,
+        mutedCampgroundId: campgroundId,
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
+      update: {
+        snoozeDuration: duration || 'FOREVER',
+        snoozeUntil,
+      },
+    });
+
+    res.json({ message: 'Campground muted', mute, isMuted: true });
+  } catch (error) {
+    console.error('Mute campground error:', error);
+    res.status(500).json({ error: 'Failed to mute campground' });
+  }
+});
+
+// DELETE /api/mute/campground/:campgroundId - Unmute a campground
+router.delete('/campground/:campgroundId', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { campgroundId } = req.params;
+
+    await prisma.mutedEntity.deleteMany({
+      where: {
+        userId,
+        mutedCampgroundId: campgroundId,
+      },
+    });
+
+    res.json({ message: 'Campground unmuted', isMuted: false });
+  } catch (error) {
+    console.error('Unmute campground error:', error);
+    res.status(500).json({ error: 'Failed to unmute campground' });
+  }
+});
+
+// GET /api/mute/check/campground/:campgroundId - Check if campground is muted
+router.get('/check/campground/:campgroundId', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { campgroundId } = req.params;
+
+    const mute = await prisma.mutedEntity.findUnique({
+      where: {
+        userId_mutedCampgroundId: { userId, mutedCampgroundId: campgroundId }
+      },
+    });
+
+    res.json({ isMuted: !!mute });
+  } catch (error) {
+    console.error('Check mute error:', error);
+    res.status(500).json({ error: 'Failed to check mute status' });
+  }
+});
