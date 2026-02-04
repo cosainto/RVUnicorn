@@ -13,11 +13,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const wishlist = await prisma.campgroundWishlist.findMany({
       where: { userId },
       include: {
-        campground: {
-          include: {
-            photos: { take: 1 }
-          }
-        }
+        campground: true
       },
       orderBy: [
         { priority: 'desc' },
