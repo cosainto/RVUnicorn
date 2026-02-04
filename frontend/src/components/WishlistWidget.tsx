@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, MapPin, ChevronRight, Star, Trash2, StickyNote, X } from 'lucide-react';
+import { Heart, MapPin, ChevronRight, Star, Trash2, StickyNote, X, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 
