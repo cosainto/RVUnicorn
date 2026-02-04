@@ -379,7 +379,7 @@ export default function CampgroundDetailPage() {
             <button onClick={() => navigate('/campgrounds')} className="absolute top-6 left-6 flex items-center text-white/80 hover:text-white bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full transition"><ChevronLeft className="w-5 h-5" /><span>Back</span></button>
             
             {/* Favorite button */}
-            {user && <button onClick={handleToggleFavorite} className={`absolute top-6 right-6 p-3 rounded-full backdrop-blur-sm transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+            {user && <button onClick={toggleWishlist} className={`absolute top-6 right-6 p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
             
             {/* Hero content overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
@@ -409,7 +409,7 @@ export default function CampgroundDetailPage() {
               <div className="flex gap-2">
                 {user && <>
                   <button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 rounded-full text-white font-medium transition hover:opacity-90" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button>
-                  <button onClick={toggleWishlist} className={`px-4 py-3 rounded-full font-medium transition ${inWishlist ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Bookmark className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />{inWishlist ? ' Saved' : ' Wishlist'}</button>
+                  
                 </>
               }
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="modern" />}
@@ -474,7 +474,7 @@ export default function CampgroundDetailPage() {
             <div className="border-4 border-amber-700 rounded-lg overflow-hidden shadow-lg">
               <div className={themeStyles.heroHeight + " relative"}>
                 {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-amber-200 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-600" /></div>}
-                {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+                {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
               </div>
             </div>
             
@@ -489,7 +489,7 @@ export default function CampgroundDetailPage() {
               </div>
               
               <div className="flex flex-wrap gap-3 pt-4 border-t border-amber-300">
-                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-5 py-2 rounded-lg text-white font-medium" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-2 rounded-lg font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}{campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="rustic" />}
+                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-5 py-2 rounded-lg text-white font-medium" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button></>}{campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="rustic" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-5 py-2 rounded-lg bg-green-700 text-white font-medium hover:bg-green-800 flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
 
                 {getBookingUrl(campground) && <a href={getBookingUrl(campground)!} target="_blank" rel="noopener noreferrer" className="px-5 py-2 rounded-lg bg-green-700 text-white font-medium hover:bg-green-800 flex items-center gap-2">{getBookingLabel(campground)}<ExternalLink className="w-3 h-3"/></a>}
@@ -516,7 +516,7 @@ export default function CampgroundDetailPage() {
             {/* Favorite & Admin buttons */}
             <div className="absolute top-6 right-6 flex gap-2">
               {isAdmin && <span className="bg-sky-500 text-white px-3 py-2 rounded-full text-sm font-medium">⭐ Admin</span>}
-              {user && <button onClick={handleToggleFavorite} className={`p-3 rounded-full backdrop-blur-sm transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+              {user && <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
             </div>
             
             {/* Wave decoration at bottom */}
@@ -549,7 +549,7 @@ export default function CampgroundDetailPage() {
                 <p className="text-sky-700 text-sm mt-1">{campground._count?.checkIns || 0} check-ins</p>
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-sky-100 flex flex-wrap gap-2">
-                {user && <><button onClick={() => setShowCheckInModal(true)} className="flex-1 px-4 py-2 bg-sky-500 text-white rounded-full text-sm font-medium hover:bg-sky-600 transition">I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-2 rounded-full text-sm font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-4 h-4 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+                {user && <><button onClick={() => setShowCheckInModal(true)} className="flex-1 px-4 py-2 bg-sky-500 text-white rounded-full text-sm font-medium hover:bg-sky-600 transition">I'm Here! 📍</button></>}
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="coastal" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="flex-1 px-4 py-2 bg-green-500 text-white rounded-full text-sm font-medium hover:bg-green-600 transition flex items-center justify-center gap-1">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-3 py-2 rounded-full text-sm font-medium transition ${isMuted ? 'bg-sky-200 text-sky-700' : 'bg-sky-100 text-sky-600 hover:bg-sky-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
@@ -584,7 +584,7 @@ export default function CampgroundDetailPage() {
             {/* Top right buttons */}
             <div className="absolute top-6 right-6 flex gap-2">
               {isAdmin && <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded text-sm font-bold tracking-wide">⭐ ADMIN</span>}
-              {user && <button onClick={handleToggleFavorite} className={`p-3 rounded transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-gray-800/80 text-white hover:bg-orange-500'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+              {user && <button onClick={toggleWishlist} className={`p-3 rounded transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-gray-800/80 text-white hover:bg-orange-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
             </div>
             
             {/* Hero content */}
@@ -605,7 +605,7 @@ export default function CampgroundDetailPage() {
                 {campground._count && <><span className="flex items-center gap-2 text-gray-300"><Heart className="w-5 h-5 text-orange-500" />{campground._count.followers}</span><span className="flex items-center gap-2 text-gray-300"><Users className="w-5 h-5 text-orange-500" />{campground._count.checkIns}</span></>}
               </div>
               <div className="flex gap-3">
-                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded hover:from-orange-600 hover:to-red-600 transition">I'M HERE! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-2 rounded font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded hover:from-orange-600 hover:to-red-600 transition">I'M HERE! 📍</button></>}
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="adventure" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded font-bold transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-300 hover:text-orange-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
@@ -642,7 +642,7 @@ export default function CampgroundDetailPage() {
           {/* Compact hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
             {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center"><MapPin className="w-16 h-16 text-gray-300" /></div>}
-            {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-2 transition ${isFavorited ? 'text-red-500' : 'text-white/70 hover:text-white'}`}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+            {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-2 transition ${inWishlist ? 'text-red-500' : 'text-white/70 hover:text-white'}`}><Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} /></button>}
           </div>
           
           {/* Content */}
@@ -657,7 +657,7 @@ export default function CampgroundDetailPage() {
             
             {/* Minimal actions */}
             <div className="flex flex-wrap gap-4 mb-4">
-              {user && <><button onClick={() => setShowCheckInModal(true)} className="px-8 py-3 bg-gray-900 text-white font-light tracking-wide hover:bg-gray-800 transition">I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-3 font-light tracking-wide transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+              {user && <><button onClick={() => setShowCheckInModal(true)} className="px-8 py-3 bg-gray-900 text-white font-light tracking-wide hover:bg-gray-800 transition">I'm Here! 📍</button></>}
               {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="minimal" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-8 py-3 bg-green-700 text-white font-light tracking-wide hover:bg-green-800 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
               {user && <button onClick={toggleMute} className={`px-4 py-3 border font-light transition ${isMuted ? 'border-gray-900 bg-gray-100 text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-900 hover:text-gray-900'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
@@ -681,7 +681,7 @@ export default function CampgroundDetailPage() {
               ) : (
                 <div className="w-full h-full bg-gray-900 flex items-center justify-center"><MapPin className="w-24 h-24 text-gray-700" /></div>
               )}
-              {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+              {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
             </div>
             
             {/* Content section */}
@@ -706,7 +706,7 @@ export default function CampgroundDetailPage() {
               
               {/* Actions */}
               <div className="flex flex-wrap gap-4">
-                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-8 py-4 bg-white text-gray-900 font-bold hover:bg-gray-100 transition">I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-6 py-4 font-bold transition ${inWishlist ? "bg-red-500 text-white" : "bg-gray-200 text-gray-900 hover:bg-gray-300"}`}><Bookmark className={`w-6 h-6 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-8 py-4 bg-white text-gray-900 font-bold hover:bg-gray-100 transition">I'm Here! 📍</button></>}
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="magazine" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-8 py-4 bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-4 border font-bold transition ${isMuted ? 'border-white bg-white/20 text-white' : 'border-gray-600 text-white hover:border-white'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
@@ -756,7 +756,7 @@ export default function CampgroundDetailPage() {
                       <div className="w-full h-full bg-amber-100 flex items-center justify-center"><MapPin className="w-24 h-24 text-amber-400" /></div>
                     )}
                   </div>
-                  {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+                  {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
                 </div>
                 
                 {/* Content */}
@@ -798,7 +798,7 @@ export default function CampgroundDetailPage() {
                   
                   {/* Actions */}
                   <div className="flex flex-wrap justify-center gap-3">
-                    {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 bg-amber-800 text-white font-bold rounded hover:bg-amber-900 transition shadow-lg">I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-3 rounded font-bold transition shadow-lg ${inWishlist ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-800 hover:bg-amber-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+                    {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 bg-amber-800 text-white font-bold rounded hover:bg-amber-900 transition shadow-lg">I'm Here! 📍</button></>}
                     {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="retro" />}
                     {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-green-700 text-white font-bold rounded hover:bg-green-800 transition shadow-lg flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                     {user && <button onClick={toggleMute} className={`px-4 py-3 rounded font-medium transition border border-amber-300 ${isMuted ? 'bg-amber-200 text-amber-800' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4 inline" /> : <Bell className="w-4 h-4 inline" />}</button>}
@@ -841,7 +841,7 @@ export default function CampgroundDetailPage() {
             {/* Top right controls */}
             <div className="absolute top-6 right-6 flex gap-3">
               {isAdmin && <span className="px-3 py-1 bg-pink-500/20 border border-pink-500 text-pink-400 text-xs font-bold tracking-wider rounded">ADMIN</span>}
-              {user && <button onClick={handleToggleFavorite} className={`p-3 rounded border transition ${isFavorited ? 'bg-pink-500 border-pink-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+              {user && <button onClick={toggleWishlist} className={`p-3 rounded border transition ${inWishlist ? 'bg-pink-500 border-pink-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`}><Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} /></button>}
             </div>
             
             {/* Hero content */}
@@ -867,7 +867,7 @@ export default function CampgroundDetailPage() {
                 )}
               </div>
               <div className="flex gap-3">
-                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded hover:from-pink-600 hover:to-purple-600 transition shadow-lg shadow-pink-500/25">I'M HERE! 📍</button><button onClick={toggleWishlist} className={`ml-2 px-4 py-2 rounded font-bold transition ${inWishlist ? "bg-red-500 text-white shadow-lg shadow-red-500/25" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
+                {user && <><button onClick={() => setShowCheckInModal(true)} className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded hover:from-pink-600 hover:to-purple-600 transition shadow-lg shadow-pink-500/25">I'M HERE! 📍</button></>}
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="neon" />}
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 transition shadow-lg shadow-green-500/25 flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded border font-bold transition ${isMuted ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-gray-800 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
@@ -896,7 +896,7 @@ export default function CampgroundDetailPage() {
           <div className={themeStyles.header}>
             <div className={"h-72 md:h-96 bg-gradient-to-br from-green-400 to-blue-500 relative"}>
           {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><MapPin className="w-32 h-32 text-white/50" /></div>}
-          {user && <button onClick={handleToggleFavorite} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>}
+          {user && <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}><Heart className={`w-6 h-6 ${inWishlist ? 'fill-current' : ''}`} /></button>}
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
           {isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
@@ -913,7 +913,7 @@ export default function CampgroundDetailPage() {
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
             </div>
             <div className="flex flex-wrap gap-2">
-              {user && <><button onClick={handleToggleFavorite} className={`px-4 py-2 rounded-lg font-medium transition ${isFavorited ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Heart className={`w-5 h-5 ${isFavorited ? "fill-current" : ""}`} /></button><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleWishlist} className={`btn ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button><button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><BellOff className="w-5 h-5" />{isMuted ? " Muted" : " Mute"}</button></>}
+              {user && <><button onClick={toggleWishlist} className={`px-4 py-2 rounded-lg font-medium transition ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Heart className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} /></button><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><BellOff className="w-5 h-5" />{isMuted ? " Muted" : " Mute"}</button></>}
               {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="classic" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="btn flex items-center gap-2 bg-green-600 text-white hover:bg-green-700">Book Now<ExternalLink className="w-4 h-4" /></a>}
 
