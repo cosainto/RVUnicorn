@@ -102,6 +102,7 @@ model User {
   campgroundAnnouncements                         CampgroundAnnouncement[]
   campgroundEvents                                CampgroundEvent[]
   campgroundFollows                               CampgroundFollow[]
+  campgroundWishlists                             CampgroundWishlist[]
   reviewedPhotos                                  CampgroundPhoto[]         @relation("PhotoReviewer")
   campgroundPhotos                                CampgroundPhoto[]
   campgroundPosts                                 CampgroundPost[]
@@ -384,6 +385,7 @@ model Campground {
   announcements          CampgroundAnnouncement[]
   campgroundEvents       CampgroundEvent[]
   followers              CampgroundFollow[]
+  wishlists              CampgroundWishlist[]
   photos                 CampgroundPhoto[]
   posts                  CampgroundPost[]
   reviews                CampgroundReview[]
@@ -2758,12 +2760,14 @@ model GearAdEvent {
 }
 
 model CampgroundWishlist {
-  id           String   @id
+  id           String     @id
   userId       String
   campgroundId String
   notes        String?
-  priority     Int?     @default(0)
-  createdAt    DateTime @default(now())
+  priority     Int?       @default(0)
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
 
   @@unique([userId, campgroundId])
   @@index([campgroundId])
