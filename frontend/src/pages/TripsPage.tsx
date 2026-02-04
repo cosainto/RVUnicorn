@@ -88,7 +88,7 @@ export default function EventsPage() {
     if (createFromWishlist === 'true' && campgroundId) {
       setSelectedCampgroundId(campgroundId);
       setSelectedCampgroundName(campgroundName || '');
-      setNewEvent(prev => ({
+      setFormData(prev => ({
         ...prev,
         campgroundId,
         title: `From ${user?.firstName || 'My'}'s Wishlist`
