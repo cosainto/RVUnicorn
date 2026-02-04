@@ -359,7 +359,7 @@ router.get('/activity-log', async (req: Request, res: Response) => {
 
 
 // PUT /api/privacy/badge-position - Save badge positions on profile
-router.put('/badge-position', async (req: Request, res: Response) => {
+router.put('/badge-position', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     const { positions } = req.body;
