@@ -916,16 +916,7 @@ export default function CampgroundDetailPage() {
               {user && <><button onClick={() => setShowCheckInModal(true)} className="btn flex items-center gap-2 text-white" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5" />I'm Here! 📍</button><button onClick={toggleWishlist} className={`ml-2 btn ${inWishlist ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}><Bookmark className={`w-5 h-5 ${inWishlist ? "fill-current" : ""}`} />{inWishlist ? " Saved" : " Wishlist"}</button></>}
               {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="classic" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="btn flex items-center gap-2 bg-green-600 text-white hover:bg-green-700">Book Now<ExternalLink className="w-4 h-4" /></a>}
-              {user && (
-                <button
-                  onClick={toggleMute}
-                  className={`btn flex items-center gap-2 ${isMuted ? "btn-secondary" : "btn-outline"}`}
-                  title={isMuted ? "Unmute notifications" : "Mute notifications"}
-                >
-                  {isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-                  {isMuted ? "Muted" : "Mute"}
-                </button>
-              )}
+
             </div>
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
