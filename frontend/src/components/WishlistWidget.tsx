@@ -130,7 +130,7 @@ export default function WishlistWidget() {
               <Link to={`/campgrounds/${item.campgroundId}`} className="flex-shrink-0">
                 {item.campground.photos?.[0]?.url ? (
                   <img 
-                    src={item.campground.photos[0].url} 
+                    src={item.campground.photos[0].imageUrl} 
                     alt={item.campground.name}
                     className="w-16 h-16 rounded-lg object-cover"
                   />
