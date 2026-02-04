@@ -175,7 +175,7 @@ const TABS = [
   { id: 'events', label: 'Events', icon: Calendar },
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
-  { id: 'contact', label: 'Contact', icon: Phone },
+  
   { id: 'reviews', label: 'Reviews', icon: Star },
 ];
 
@@ -1337,98 +1337,6 @@ export default function CampgroundDetailPage() {
                   </div>
                 </div>
               )) : <div className="text-center py-12 text-gray-500"><Star className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No reviews yet</p></div>}
-            </div>
-          )}
-
-          {/* Contact Tab */}
-          {activeTab === 'contact' && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold">Contact Information</h3>
-              
-              {/* Hashtag */}
-              {campground.hashtag && (
-                <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
-                  <p className="text-sm text-primary-600 font-medium">Mention this campground</p>
-                  <p className="text-2xl font-bold text-primary-700">#{campground.hashtag}</p>
-                </div>
-              )}
-
-              {/* Contact Details */}
-              <div className="bg-white rounded-lg shadow p-6 space-y-4">
-                <h4 className="font-bold text-gray-900 mb-4">📞 Contact Details</h4>
-                {campground.businessPhone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <a href={`tel:${campground.businessPhone}`} className="text-primary-600 hover:underline">{campground.businessPhone}</a>
-                  </div>
-                )}
-                {campground.businessEmail && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <a href={`mailto:${campground.businessEmail}`} className="text-primary-600 hover:underline">{campground.businessEmail}</a>
-                  </div>
-                )}
-                {campground.websiteUrl && (
-                  <div className="flex items-center gap-3">
-                    <Globe className="w-5 h-5 text-gray-400" />
-                    <a href={campground.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{campground.websiteUrl}</a>
-                  </div>
-                )}
-                {(campground.campspotSlug || campground.bookingUrl) && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-gray-400" />
-                    <a href={getBookingUrl(campground)!} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline flex items-center gap-1">{getBookingLabel(campground)}<ExternalLink className="w-3 h-3" /></a>
-                  </div>
-                )}
-                {campground.latitude && campground.longitude && (
-                  <div className="flex items-center gap-3">
-                    <Navigation className="w-5 h-5 text-gray-400" />
-                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">Get Directions</a>
-                  </div>
-                )}
-              </div>
-
-              {/* Social Links */}
-              {(campground.facebookUrl || campground.instagramUrl || campground.twitterUrl || campground.youtubeUrl || campground.tiktokUrl) && (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h4 className="font-bold text-gray-900 mb-4">🔗 Social Media</h4>
-                  <div className="flex flex-wrap gap-4">
-                    {campground.facebookUrl && (
-                      <a href={campground.facebookUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        <span>Facebook</span>
-                      </a>
-                    )}
-                    {campground.instagramUrl && (
-                      <a href={campground.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600">
-                        <span>Instagram</span>
-                      </a>
-                    )}
-                    {campground.twitterUrl && (
-                      <a href={campground.twitterUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
-                        <span>X / Twitter</span>
-                      </a>
-                    )}
-                    {campground.youtubeUrl && (
-                      <a href={campground.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        <span>YouTube</span>
-                      </a>
-                    )}
-                    {campground.tiktokUrl && (
-                      <a href={campground.tiktokUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
-                        <span>TikTok</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* No contact info message */}
-              {!campground.businessPhone && !campground.businessEmail && !campground.websiteUrl && !campground.bookingUrl && !campground.facebookUrl && !campground.instagramUrl && (
-                <div className="text-center py-12 text-gray-500">
-                  <Phone className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p>No contact information available</p>
-                </div>
-              )}
             </div>
           )}
 
