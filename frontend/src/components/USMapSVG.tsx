@@ -5,10 +5,18 @@ interface MapMarker {
   name: string;
   latitude: number;
   longitude: number;
-  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home';
+  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home' | 'favorite' | 'upcomingTrip' | 'friendCheckin';
   isCurrentlyCamping?: boolean;
   isVisited?: boolean;
   brand?: string;
+  user?: {
+    id: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+  };
+  tripId?: string;
 }
 
 interface HighwayLine {
@@ -69,6 +77,15 @@ const getMarkerColor = (marker: MapMarker) => {
   }
   if (marker.type === 'attraction') {
     return marker.isVisited ? '#f97316' : '#eab308'; // orange if visited, yellow if want to visit
+  }
+  if (marker.type === 'favorite') {
+    return '#ef4444'; // red for favorites
+  }
+  if (marker.type === 'upcomingTrip') {
+    return '#6366f1'; // indigo for upcoming trips
+  }
+  if (marker.type === 'friendCheckin') {
+    return '#10b981'; // emerald for friends' check-ins
   }
   return '#6b7280'; // gray default
 };
@@ -242,6 +259,43 @@ export default function USMapSVG({
                       <circle cx="12" cy="-4" r="6" fill="#f97316" stroke="#fff" strokeWidth={1} />
                     )}
                   </g>
+                </>
+              ) : marker.type === 'friendCheckin' && marker.user ? (
+                <>
+                  {/* Friend check-in - profile picture */}
+                  <defs>
+                    <clipPath id={`clip-${marker.id}`}>
+                      <circle cx={0} cy={-6} r={10} />
+                    </clipPath>
+                  </defs>
+                  {/* White background circle */}
+                  <circle
+                    cx={0}
+                    cy={-6}
+                    r={12}
+                    fill="#fff"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                  />
+                  {/* Profile image */}
+                  <image
+                    href={marker.user.profilePicture || '/default-avatar.png'}
+                    x={-10}
+                    y={-16}
+                    width={20}
+                    height={20}
+                    clipPath={`url(#clip-${marker.id})`}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                  {/* Small location pin at bottom */}
+                  <circle
+                    cx={0}
+                    cy={8}
+                    r={3}
+                    fill="#10b981"
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
                 </>
               ) : (
                 <>

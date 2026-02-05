@@ -43,6 +43,7 @@ import BasecampPage from './pages/BasecampPage';
 import BusinessBasecampPage from "./pages/BusinessBasecampPage";
 import SettingsPage from "./pages/SettingsPage";
 import DrivePlanner from './components/DrivePlanner';
+import EnhancedDrivePlanner from './components/EnhancedDrivePlanner';
 import PrivacySettingsPage from './pages/PrivacySettingsPage';
 import BlockedUsersPage from './pages/BlockedUsersPage';
 import MutedSettingsPage from './pages/MutedSettingsPage';
@@ -206,7 +207,7 @@ function AppContent() {
         <Route 
           path="/drive-planner" 
             element={
-             <DrivePlanner />} 
+             <EnhancedDrivePlanner />} 
            />
 
 

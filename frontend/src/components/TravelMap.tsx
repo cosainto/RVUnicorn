@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-  MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, 
+  MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, Heart, Navigation, Tent, 
   Eye, EyeOff, UserCheck, Lock, Copy, ExternalLink,
   Fuel, Coffee, ParkingCircle, Layers, DollarSign, Route,
   ShowerHead, Store, Truck, Dog, Wifi, Droplet, RefreshCw
@@ -182,7 +182,7 @@ const VISIBILITY_OPTIONS = [
   { value: 'PRIVATE', label: 'Private', icon: Lock, color: 'text-gray-600', bg: 'bg-gray-100', description: 'Only you can see' },
 ];
 
-type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways';
+type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins';
 
 const getGasPriceColor = (price: number): string => {
   if (price < 2.90) return '#22c55e';
@@ -211,6 +211,12 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [isFriend, setIsFriend] = useState(true);
   const [copyingTrip, setCopyingTrip] = useState<string | null>(null);
+  const navigate = useNavigate();
+  
+  // Basecamp map state - favorites, trips, friends' check-ins
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [upcomingTrips, setUpcomingTrips] = useState<any[]>([]);
+  const [friendsCheckins, setFriendsCheckins] = useState<any[]>([]);
   
   // Home location state
   const [homeLocation, setHomeLocation] = useState<{
@@ -261,6 +267,15 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
     if (activeLayers.includes('gasPrices') && gasPrices.length === 0) {
       loadGasPrices();
     }
+    if (activeLayers.includes('favorites') && favorites.length === 0) {
+      loadFavorites();
+    }
+    if (activeLayers.includes('upcomingTrips') && upcomingTrips.length === 0) {
+      loadUpcomingTrips();
+    }
+    if (activeLayers.includes('friendsCheckins') && friendsCheckins.length === 0) {
+      loadFriendsCheckins();
+    }
   }, [activeLayers, selectedInterstate]);
 
   useEffect(() => {
@@ -268,6 +283,54 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
       loadRoadtripResources();
     }
   }, [selectedInterstate, activeLayers]);
+
+  const loadFavorites = async () => {
+    try {
+      const { data } = await api.get(`/drive-planner/users/${userId}/favorites`);
+      setFavorites(data.favorites || data || []);
+    } catch (error) {
+      console.error('Load favorites error:', error);
+    }
+  };
+
+  const loadUpcomingTrips = async () => {
+    try {
+      const { data } = await api.get('/trips/my');
+      const events = Array.isArray(data) ? data : [];
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const upcoming = events.filter((e: any) => {
+        if (e.isWishlist) return false;
+        const startDate = new Date(e.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        return startDate >= today;
+      });
+      
+      const transformed = upcoming.map((e: any) => ({
+        id: e.id,
+        name: e.title,
+        title: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        campground: e.campground,
+      }));
+      
+      setUpcomingTrips(transformed);
+    } catch (error) {
+      console.error('Load upcoming trips error:', error);
+    }
+  };
+
+  const loadFriendsCheckins = async () => {
+    try {
+      const { data } = await api.get(`/drive-planner/users/${userId}/friends/checkins?limit=50`);
+      setFriendsCheckins(data.checkIns || data || []);
+    } catch (error) {
+      console.error('Load friends checkins error:', error);
+    }
+  };
 
   const loadTravelMap = async () => {
     try {
@@ -535,7 +598,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
 
   // Build map markers
   const mapMarkers = [
-    ...stateVisits
+    ...(activeLayers.includes('visits') ? stateVisits
       .filter(v => v.campsite?.latitude && v.campsite?.longitude)
       .map(v => ({
         id: `visit-${v.id}`,
@@ -544,7 +607,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
         longitude: v.campsite!.longitude!,
         type: "campground" as const,
         isVisited: !isPlannedVisit(v.startDate),
-      })),
+      })) : []),
     ...(activeLayers.includes('gasStations') ? gasStations.map(s => ({
       id: `gas-${s.id}`,
       name: s.name,
@@ -560,6 +623,38 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
       longitude: s.longitude,
       type: "restStop" as const,
     })) : []),
+    // Favorites markers
+    ...(activeLayers.includes('favorites') ? favorites
+      .filter(f => f.latitude && f.longitude)
+      .map(f => ({
+        id: `fav-${f.id}`,
+        name: f.name,
+        latitude: f.latitude,
+        longitude: f.longitude,
+        type: "favorite" as const,
+      })) : []),
+    // Upcoming trips markers
+    ...(activeLayers.includes('upcomingTrips') ? upcomingTrips
+      .filter(t => t.campground?.latitude && t.campground?.longitude)
+      .map(t => ({
+        id: `trip-${t.id}`,
+        name: `${t.name || t.title} at ${t.campground.name}`,
+        latitude: t.campground.latitude,
+        longitude: t.campground.longitude,
+        type: "upcomingTrip" as const,
+        tripId: t.id,
+      })) : []),
+    // Friends' check-ins markers
+    ...(activeLayers.includes('friendsCheckins') ? friendsCheckins
+      .filter(c => c.campground?.latitude && c.campground?.longitude)
+      .map(c => ({
+        id: `checkin-${c.id}`,
+        name: `${c.user?.firstName || "Friend"} at ${c.campground.name}`,
+        latitude: c.campground.latitude,
+        longitude: c.campground.longitude,
+        type: "friendCheckin" as const,
+        user: c.user,
+      })) : []),
     // Home location marker
     ...(homeLocation ? [{
       id: 'home-location',
@@ -603,7 +698,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
             Map Layers
           </h4>
           
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             <button
               onClick={() => toggleLayer('visits')}
               className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
@@ -652,6 +747,36 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
             >
               <Coffee className="w-6 h-6" />
               <span className="text-sm font-medium">Rest Stops</span>
+            </button>
+
+            <button
+              onClick={() => toggleLayer('favorites')}
+              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                activeLayers.includes('favorites') ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <Heart className="w-6 h-6" />
+              <span className="text-sm font-medium">Favorites</span>
+            </button>
+
+            <button
+              onClick={() => toggleLayer('upcomingTrips')}
+              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                activeLayers.includes('upcomingTrips') ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <Tent className="w-6 h-6" />
+              <span className="text-sm font-medium">Upcoming Trips</span>
+            </button>
+
+            <button
+              onClick={() => toggleLayer('friendsCheckins')}
+              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                activeLayers.includes('friendsCheckins') ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-6 h-6" />
+              <span className="text-sm font-medium">Friends</span>
             </button>
           </div>
 
@@ -792,6 +917,24 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
             <span className="text-gray-600">Rest Stops ({restStops.length})</span>
           </div>
         )}
+        {activeLayers.includes('favorites') && (
+          <div className="flex items-center gap-2">
+            <Heart className="w-4 h-4 text-red-500" />
+            <span className="text-gray-600">Favorites ({favorites.length})</span>
+          </div>
+        )}
+        {activeLayers.includes('upcomingTrips') && (
+          <div className="flex items-center gap-2">
+            <Tent className="w-4 h-4 text-indigo-500" />
+            <span className="text-gray-600">Upcoming ({upcomingTrips.length})</span>
+          </div>
+        )}
+        {activeLayers.includes('friendsCheckins') && (
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-emerald-500" />
+            <span className="text-gray-600">Friends ({friendsCheckins.length})</span>
+          </div>
+        )}
       </div>
 
       {/* US Map */}
@@ -805,13 +948,15 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
           showHighways={activeLayers.includes('highways')}
           onStateClick={handleStateClick}
           onStateHover={setHoveredState}
-          onMarkerClick={(marker) => {
+          onMarkerClick={(marker: any) => {
             if (marker.type === 'gasStation') {
               const station = gasStations.find(s => s.id === marker.id.replace('gas-', ''));
               if (station) setSelectedGasStation(station);
             } else if (marker.type === 'restStop') {
               const stop = restStops.find(s => s.id === marker.id.replace('rest-', ''));
               if (stop) setSelectedRestStop(stop);
+            } else if (marker.type === 'friendCheckin' && marker.user?.username) {
+              navigate(`/profile/${marker.user.username}`);
             }
           }}
           isInteractive={true}

@@ -373,7 +373,7 @@ async function scrapeCampgroundPhotos(options = {}) {
         select: { photos: true }
       }
     },
-    orderBy: { id: 'asc' },
+    orderBy: { name: 'desc' },
     take: limit
   });
   

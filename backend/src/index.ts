@@ -77,6 +77,8 @@ import mediaAlbumsRoutes from "./routes/media-albums.routes";
 import thingsToDoRoutes from "./routes/things-to-do.routes";
 import packupRoutes from "./routes/packup.routes";
 import gearAdsRoutes from "./routes/gear-ads.routes";
+import enhancedDrivePlannerRoutes from './routes/enhanced-drive-planner.routes';
+import profileMapRoutes from './routes/profile-map.routes';
 
 
 
@@ -89,6 +91,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: [
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
     'https://www.rvunicorn.com',
     'https://rvunicorn.com',
     'https://ideal-renewal-production.up.railway.app'
@@ -173,6 +177,8 @@ app.use("/api/comments", commentsRoutes);
 app.use("/api/things-to-do", thingsToDoRoutes);
 app.use("/api/packup", packupRoutes);
 app.use("/api/gear-ads", gearAdsRoutes);
+app.use('/api/drive-planner', enhancedDrivePlannerRoutes);
+app.use('/api', profileMapRoutes);
 
 
 

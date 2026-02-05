@@ -9,8 +9,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@googlemaps/markerclusterer": "^2.6.2",
     "@here/flexpolyline": "^0.1.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@types/google.maps": "^3.58.1",
     "@types/uuid": "^11.0.0",
     "axios": "^1.6.2",
     "d3-geo": "^3.1.1",
