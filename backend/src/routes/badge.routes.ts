@@ -11,25 +11,7 @@ import {
 
 const router = Router();
 
-// DEBUG - test route
-router.get("/test", async (req, res) => {
-  try {
-    const count = await prisma.badge.count();
-    res.json({ ok: true, badgeCount: count });
-  } catch (err: any) {
-    res.json({ ok: false, error: err.message, stack: err.stack });
-  }
-});
 
-// DEBUG - test route
-router.get("/test", async (req, res) => {
-  try {
-    const count = await prisma.badge.count();
-    res.json({ ok: true, badgeCount: count });
-  } catch (err: any) {
-    res.json({ ok: false, error: err.message, stack: err.stack });
-  }
-});
 
 // GET /api/badges - Get all available badges
 router.get('/', async (req: Request, res: Response) => {
