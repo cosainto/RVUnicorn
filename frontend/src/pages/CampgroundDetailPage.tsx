@@ -216,6 +216,7 @@ export default function CampgroundDetailPage() {
 
   const [checkInData, setCheckInData] = useState({ checkInDate: new Date().toISOString().split('T')[0], checkOutDate: '', siteNumber: '' });
   const [inWishlist, setInWishlist] = useState(false);
+  const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
   const [reviewData, setReviewData] = useState({ rating: 0, title: '', review: '', visitDate: '' });
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -231,7 +232,8 @@ export default function CampgroundDetailPage() {
   useEffect(() => { if (campground) loadTabData(); }, [campground, activeTab]);
 
   const loadCampground = async () => {
-    try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data); }
+    try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
+      try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
   };
 
@@ -333,6 +335,21 @@ export default function CampgroundDetailPage() {
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+
+  const BadgeIcons = () => {
+    if (campgroundBadges.totalBadges === 0) return null;
+    const allBadges = [...campgroundBadges.locationBadges, ...campgroundBadges.regionBadges];
+    return (
+      <span className="inline-flex items-center gap-1 ml-2 align-middle">
+        {allBadges.map(b => (
+          <Link key={b.slug} to="/badges" title={`Stay here to earn: ${b.name}`}>
+            <img src={b.imageUrl} alt={b.name} className="w-8 h-8 rounded-full inline-block border-2 border-yellow-400 shadow-sm hover:scale-125 transition-transform cursor-pointer" />
+          </Link>
+        ))}
+      </span>
+    );
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" /><p className="text-gray-600">Loading...</p></div></div>;
   if (!campground) return <div className="flex items-center justify-center min-h-screen"><div className="text-center"><p className="text-gray-600">Campground not found</p><button onClick={() => navigate('/campgrounds')} className="btn btn-primary mt-4">Back</button></div></div>;
 
@@ -393,7 +410,7 @@ export default function CampgroundDetailPage() {
                   {isAdmin && <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</span>}
                   {campground.verificationStatus === "VERIFIED" && <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified</span>}
                 </div>
-                <h1 className="text-4xl md:text-6xl font-bold text-white mb-3">{campground.name}</h1>
+                <h1 className="text-4xl md:text-6xl font-bold text-white mb-3">{campground.name}<BadgeIcons /></h1>
                 <div className="flex items-center text-white/80 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
                 <div className="flex flex-wrap items-center gap-6 text-white/70">
                   {avgRating > 0 && <div className="flex items-center gap-2">{renderSmores(Math.round(avgRating))}<span>({reviews.length})</span></div>}
@@ -489,7 +506,7 @@ export default function CampgroundDetailPage() {
             
             {/* Campground info card */}
             <div className="bg-amber-100 border-2 border-amber-400 rounded-lg p-6 -mt-6 mx-4 relative z-10 shadow-md">
-              <h1 className="text-3xl md:text-4xl font-bold text-amber-900 mb-2 font-serif">{campground.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-amber-900 mb-2 font-serif">{campground.name}<BadgeIcons /></h1>
               <div className="flex items-center text-amber-700 text-lg mb-3"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
               
               <div className="flex flex-wrap gap-4 mb-4">
@@ -542,7 +559,7 @@ export default function CampgroundDetailPage() {
             {/* Hero content */}
             <div className="absolute bottom-20 left-0 right-0 px-8">
               <div className="max-w-5xl mx-auto">
-                <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">{campground.name}</h1>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">{campground.name}<BadgeIcons /></h1>
                 <div className="flex items-center text-white/90 text-lg"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
               </div>
             </div>
@@ -608,7 +625,7 @@ export default function CampgroundDetailPage() {
             <div className="absolute bottom-0 left-0 right-0 p-8">
               <div className="max-w-5xl mx-auto">
                 <div className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1 rounded text-sm font-bold tracking-wider mb-4">CAMPGROUND</div>
-                <h1 className="text-4xl md:text-6xl font-black text-white mb-3 tracking-tight">{campground.name}</h1>
+                <h1 className="text-4xl md:text-6xl font-black text-white mb-3 tracking-tight">{campground.name}<BadgeIcons /></h1>
                 <div className="flex items-center text-gray-300 text-lg"><MapPin className="w-5 h-5 mr-2 text-orange-500" /><span>{campground.location}, {campground.state}</span></div>
               </div>
             </div>
@@ -668,7 +685,7 @@ export default function CampgroundDetailPage() {
           
           {/* Content */}
           <div className="max-w-4xl mx-auto px-8 py-6">
-            <h1 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide mb-2">{campground.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide mb-2">{campground.name}<BadgeIcons /></h1>
             <p className="text-gray-400 font-light mb-8">{campground.location}, {campground.state}</p>
             
             <div className="flex flex-wrap items-center gap-8 mb-6 pb-6 border-b border-gray-100">
@@ -718,7 +735,7 @@ export default function CampgroundDetailPage() {
                 {campground.verificationStatus === "VERIFIED" && <span className="inline-block bg-green-500 text-white px-3 py-1 text-xs font-bold tracking-widest uppercase mb-4 ml-2">Verified</span>}
               </div>
               
-              <h1 className="text-4xl lg:text-6xl font-black mb-4 leading-tight">{campground.name}</h1>
+              <h1 className="text-4xl lg:text-6xl font-black mb-4 leading-tight">{campground.name}<BadgeIcons /></h1>
               <p className="text-xl text-gray-400 mb-8 font-light">{campground.location}, {campground.state}</p>
               
               {/* Pull quote style stats */}
@@ -795,7 +812,7 @@ export default function CampgroundDetailPage() {
                     {campground.verificationStatus === "VERIFIED" && <span className="bg-green-700 text-white px-3 py-1 rounded-full text-xs font-bold">✓ VERIFIED</span>}
                   </div>
                   
-                  <h1 className="text-3xl md:text-5xl font-black text-amber-900 mb-2" style={{ fontFamily: 'Georgia, serif' }}>{campground.name}</h1>
+                  <h1 className="text-3xl md:text-5xl font-black text-amber-900 mb-2" style={{ fontFamily: 'Georgia, serif' }}>{campground.name}<BadgeIcons /></h1>
                   <div className="flex items-center justify-center text-amber-700 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" />{campground.location}, {campground.state}</div>
                   
                   {/* Decorative divider */}
@@ -881,7 +898,7 @@ export default function CampgroundDetailPage() {
             <div className="absolute bottom-0 left-0 right-0 p-8">
               <div className="max-w-5xl mx-auto">
                 {campground.verificationStatus === "VERIFIED" && <span className="inline-block px-3 py-1 bg-green-500/20 border border-green-500 text-green-400 text-xs font-bold tracking-wider rounded mb-4">VERIFIED</span>}
-                <h1 className="text-4xl md:text-6xl font-black mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">{campground.name}</h1>
+                <h1 className="text-4xl md:text-6xl font-black mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">{campground.name}<BadgeIcons /></h1>
                 <div className="flex items-center text-gray-400 text-lg"><MapPin className="w-5 h-5 mr-2 text-cyan-500" />{campground.location}, {campground.state}</div>
               </div>
             </div>
@@ -939,7 +956,7 @@ export default function CampgroundDetailPage() {
         <div className="p-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{campground.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{campground.name}<BadgeIcons /></h1>
               <div className="flex items-center text-gray-600 text-lg mb-2"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location}, {campground.state}</span></div>
               {avgRating > 0 && <div className="flex items-center gap-2 mb-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-2"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
