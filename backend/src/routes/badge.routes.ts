@@ -235,3 +235,36 @@ router.post('/award', authenticateToken, async (req: any, res) => {
 
 export default router;
 
+// Add these routes to badge.routes.ts BEFORE the export
+
+// GET /api/badges/campground/:campgroundId - Get badges a campground contributes to
+router.get('/campground/:campgroundId', async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { getBadgesForCampground } = require('../services/badge.service');
+    const badges = await getBadgesForCampground(campgroundId);
+    res.json(badges);
+  } catch (error) {
+    console.error('Get campground badges error:', error);
+    res.status(500).json({ error: 'Failed to get campground badges' });
+  }
+});
+
+// GET /api/badges/location-progress/:badgeSlug - Get user's progress on a location/region badge
+router.get('/location-progress/:badgeSlug', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { badgeSlug } = req.params;
+    const { getLocationBadgeProgress } = require('../services/badge.service');
+    const progress = await getLocationBadgeProgress(userId, badgeSlug);
+    
+    if (!progress) {
+      return res.status(404).json({ error: 'Badge not found or not a location badge' });
+    }
+    
+    res.json(progress);
+  } catch (error) {
+    console.error('Get location badge progress error:', error);
+    res.status(500).json({ error: 'Failed to get badge progress' });
+  }
+});

@@ -403,6 +403,8 @@ model Campground {
   stays                  Stay[]
   stickers               Sticker[]
   threads                Thread[]
+  badges                 BadgeCampground[]
+
 
   @@index([state])
   @@index([name])
@@ -1700,6 +1702,10 @@ model Badge {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   userBadges   UserBadge[]
+  campgrounds  BadgeCampground[]
+  regionStates String?
+
+
 
   @@index([slug])
   @@index([triggerType])
@@ -2911,4 +2917,18 @@ model EventActivity {
   @@unique([eventId, thingToDoId])
   @@index([eventId])
   @@index([thingToDoId])
+}
+
+
+model BadgeCampground {
+  id           String     @id @default(cuid())
+  badgeId      String
+  campgroundId String
+  badge        Badge      @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([badgeId, campgroundId])
+  @@index([badgeId])
+  @@index([campgroundId])
 }
