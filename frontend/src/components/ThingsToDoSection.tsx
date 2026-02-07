@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map } from 'lucide-react';
+import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import AddToEventModal from './AddToEventModal';
 
 interface Recommendation {
   placeId: string;
@@ -63,6 +64,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmi
   const [loading, setLoading] = useState(true);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [addToEventModal, setAddToEventModal] = useState<{ isOpen: boolean; thingId: string; thingTitle: string } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [radiusMiles, setRadiusMiles] = useState(30);
   const [showSaveModal, setShowSaveModal] = useState<Recommendation | null>(null);
@@ -275,6 +277,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmi
                         <h3 className="font-semibold text-gray-900 truncate">{thing.title}</h3>
                         <div className="flex items-center gap-2 mt-1 flex-wrap"><TypeIcon type={thing.type} />{thing.distanceMiles && <span className="text-xs text-gray-500">{thing.distanceMiles.toFixed(1)} mi</span>}</div>
                       </div>
+                      <button onClick={() => setAddToEventModal({ isOpen: true, thingId: thing.id, thingTitle: thing.title })} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Add to trip"><Calendar className="w-5 h-5" /></button>
                       <button onClick={() => handleUnsave(thing.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Unsave"><BookmarkCheck className="w-5 h-5" /></button>
                       {isAdmin && (
                         <div className="flex gap-1">
@@ -364,6 +367,16 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmi
             </div>
           </div>
         </div>
+      )}
+      {/* Add to Event Modal */}
+      {addToEventModal && (
+        <AddToEventModal
+          isOpen={addToEventModal.isOpen}
+          onClose={() => setAddToEventModal(null)}
+          thingToDoId={addToEventModal.thingId}
+          thingTitle={addToEventModal.thingTitle}
+          campgroundId={campgroundId}
+        />
       )}
     </div>
   );

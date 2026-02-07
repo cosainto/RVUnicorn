@@ -228,7 +228,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
   const [isCurrentlyCamping, setIsCurrentlyCamping] = useState(false);
 
   // Roadtrip state
-  const [activeLayers, setActiveLayers] = useState<MapLayer[]>(['visits']);
+  const [activeLayers, setActiveLayers] = useState<MapLayer[]>(['visits', 'friendsCheckins']);
   const [gasPrices, setGasPrices] = useState<GasPrice[]>([]);
   const [gasStations, setGasStations] = useState<GasStation[]>([]);
   const [restStops, setRestStops] = useState<RestStop[]>([]);

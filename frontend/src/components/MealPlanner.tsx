@@ -45,6 +45,7 @@ interface EventMeal {
   id: string;
   date: string;
   mealType: string;
+  scheduledTime?: string;
   menuItems: string[];
   ingredients: string[];
   notes?: string;
@@ -106,6 +107,7 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
   const [editingMeal, setEditingMeal] = useState<EventMeal | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('BREAKFAST');
+  const [selectedTime, setSelectedTime] = useState('');
   const [recipeSource, setRecipeSource] = useState<RecipeSource>('manual');
   const [selectedRecipe, setSelectedRecipe] = useState<string>('');
   const [recipeSearch, setRecipeSearch] = useState('');
@@ -225,6 +227,7 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
     setEditingMeal(meal);
     setSelectedDate(meal.date.split('T')[0]);
     setSelectedMealType(meal.mealType);
+    setSelectedTime(meal.scheduledTime || '');
     setRecipeSource('manual');
     setSelectedRecipe('');
     setNotifyAttendees(false);
@@ -270,6 +273,7 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
         ingredients: formData.ingredients.split(',').map(item => item.trim()).filter(Boolean),
         assignedTo: formData.assignedTo || null,
         notes: formData.notes || null,
+        scheduledTime: selectedTime || null,
         notifyAttendees,
       };
 
@@ -717,6 +721,21 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                     </option>
                   ))}
                 </select>
+              </div>
+              
+              {/* Scheduled Time */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  🕐 Time (optional)
+                </label>
+                <input
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="input w-full"
+                  placeholder="e.g., 8:00 AM"
+                />
+                <p className="text-xs text-gray-500 mt-1">When will this meal be served?</p>
               </div>
 
               {recipeSource !== 'manual' ? (

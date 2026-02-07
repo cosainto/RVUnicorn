@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import CampgroundCommunity from '../components/CampgroundCommunity';
+import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -189,7 +190,7 @@ export default function CampgroundDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const isSiteAdmin = ['wroberts82@yahoo.com', 'will@kindletribe.com'].includes(user?.email?.toLowerCase() || '');
+  const isSiteAdmin = ['wroberts82@yahoo.com'].includes(user?.email?.toLowerCase() || '');
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [avgRating, setAvgRating] = useState(0);
@@ -1106,6 +1107,13 @@ export default function CampgroundDetailPage() {
           isNeon ? "bg-gray-900 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl shadow-purple-500/10" :
           "bg-white rounded-lg shadow-lg overflow-hidden"
         }>
+          {/* Weather Section - Above Tabs */}
+          {campground.latitude && campground.longitude && (
+            <div className="p-4 border-b border-gray-200">
+              <CampgroundWeather latitude={campground.latitude} longitude={campground.longitude} />
+            </div>
+          )}
+          
           <div className={themeStyles.tabs + " overflow-x-auto"}>
             <div className="flex">{TABS.map(tab => { 
               const Icon = tab.icon; 
@@ -1204,15 +1212,32 @@ export default function CampgroundDetailPage() {
               {(campgroundMapUrl || campground.campgroundMapUrl) ? (
                 <div>
                   <div className={`rounded-lg overflow-hidden border ${isAdventure ? "border-gray-700" : isNeon ? "border-purple-500/30" : "border-gray-200"}`}>
-                    {(campgroundMapUrl || campground.campgroundMapUrl)?.toLowerCase().endsWith('.pdf') ? (
-                      <div className="p-8 text-center bg-gray-50">
-                        <Map className="w-16 h-16 mx-auto mb-4 text-primary-500" />
-                        <p className="text-gray-700 mb-4">This campground has a PDF site map available</p>
-                        <a href={campgroundMapUrl || campground.campgroundMapUrl || ''} target="_blank" rel="noopener noreferrer" className="btn btn-primary inline-flex items-center gap-2"><ExternalLink className="w-4 h-4" />View PDF Map</a>
-                      </div>
-                    ) : (
-                      <img src={campgroundMapUrl || campground.campgroundMapUrl || ''} alt={`${campground.name} Map`} className="w-full h-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    )}
+                    {(() => {
+                      const mapUrl = campgroundMapUrl || campground.campgroundMapUrl || '';
+                      const lower = mapUrl.toLowerCase();
+                      const isImage = lower.includes('cloudinary') && (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp'));
+                      const isPdf = lower.endsWith('.pdf');
+                      
+                      if (isImage) {
+                        return <img src={mapUrl} alt={`${campground.name} Map`} className="w-full h-auto cursor-pointer" onClick={() => window.open(mapUrl, '_blank')} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />;
+                      } else if (isPdf) {
+                        return (
+                          <div className="p-8 text-center bg-gray-50">
+                            <Map className="w-16 h-16 mx-auto mb-4 text-primary-500" />
+                            <p className="text-gray-700 mb-4">This campground has a PDF site map available</p>
+                            <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary inline-flex items-center gap-2"><ExternalLink className="w-4 h-4" />View PDF Map</a>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="p-8 text-center bg-gray-50">
+                            <Map className="w-16 h-16 mx-auto mb-4 text-primary-500" />
+                            <p className="text-gray-700 mb-4">This campground has a site map available on their website</p>
+                            <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary inline-flex items-center gap-2"><ExternalLink className="w-4 h-4" />View Map on Website</a>
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                   {campground.campgroundMapUrl && !campgroundMapUrl && (
                     <p className={`text-sm mt-2 ${isAdventure || isNeon ? 'text-gray-500' : 'text-gray-400'}`}>

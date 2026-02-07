@@ -67,6 +67,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       id: meal.id,
       eventId: meal.eventId,
       date: meal.scheduledAt.toISOString().split('T')[0],
+      scheduledTime: meal.scheduledTime,
       mealType: meal.mealType,
       menuItems: meal.recipe ? [meal.recipe.title] : [],
       ingredients: meal.recipe?.ingredients || [],
@@ -88,7 +89,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { eventId, date, mealType, menuItems, recipeId, notes, assignedTo } = req.body;
+    const { eventId, date, mealType, menuItems, recipeId, notes, assignedTo, scheduledTime } = req.body;
 
     if (!eventId || !date || !mealType) {
       return res.status(400).json({ error: 'Event, date, and meal type are required' });
@@ -121,6 +122,7 @@ router.post('/', authenticateToken, async (req, res) => {
       data: {
         eventId,
         scheduledAt: new Date(date),
+        scheduledTime: scheduledTime || null,
         mealType,
         recipeId: recipeId || null,
         notes: menuItems ? (Array.isArray(menuItems) ? menuItems.join(', ') : menuItems) : notes,
@@ -169,6 +171,7 @@ router.post('/', authenticateToken, async (req, res) => {
       id: meal.id,
       eventId: meal.eventId,
       date: meal.scheduledAt.toISOString().split('T')[0],
+      scheduledTime: meal.scheduledTime,
       mealType: meal.mealType,
       menuItems: meal.recipe ? [meal.recipe.title] : (meal.notes ? meal.notes.split(', ') : []),
       ingredients: meal.recipe?.ingredients || [],
@@ -191,7 +194,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { date, mealType, menuItems, recipeId, notes, assignedTo } = req.body;
+    const { date, mealType, menuItems, recipeId, notes, assignedTo, scheduledTime } = req.body;
 
     const meal = await prisma.eventMeal.findUnique({
       where: { id },
@@ -223,6 +226,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       where: { id },
       data: {
         scheduledAt: date ? new Date(date) : undefined,
+        scheduledTime: scheduledTime !== undefined ? scheduledTime : undefined,
         mealType: mealType || undefined,
         recipeId: recipeId !== undefined ? recipeId : undefined,
         notes: menuItems ? (Array.isArray(menuItems) ? menuItems.join(', ') : menuItems) : (notes !== undefined ? notes : undefined),

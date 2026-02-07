@@ -98,11 +98,15 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [profileBadges, setProfileBadges] = useState<any[]>([]);
   const [displayedBadges, setDisplayedBadges] = useState<any[]>([]);
   const [badgePositions, setBadgePositions] = useState<{[key: string]: {x: number, y: number}}>({});
+  const [draggingBadge, setDraggingBadge] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Save badge positions when they change
   const saveBadgePositions = async (positions: {[key: string]: {x: number, y: number}}) => {
+    console.log('[Badge] Saving positions:', positions);
     try {
-      await api.put('/privacy/badge-position', { positions });
+      const res = await api.put('/privacy/badge-position', { positions });
+      console.log('[Badge] Save response:', res.data);
     } catch (err) {
       console.error('Failed to save badge positions:', err);
     }
@@ -170,7 +174,7 @@ const [editForm, setEditForm] = useState({
     privacy: 'FRIENDS',
   });
 
-  const isOwnProfile = user?.username === username;
+  const isOwnProfile = user?.username === username || user?.id === username;
 
   useEffect(() => {
     loadProfile();
@@ -409,7 +413,9 @@ const [editForm, setEditForm] = useState({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Cover Image */}
-      <div className="h-48 sm:h-64 md:h-80 bg-gradient-to-br from-green-400 to-blue-500 relative">
+      <div 
+        className="badge-container h-48 sm:h-64 md:h-80 bg-gradient-to-br from-green-400 to-blue-500 relative"
+      >
         {profile.coverPhoto && (
           <img
             src={`${profile.coverPhoto}`}
@@ -429,23 +435,44 @@ const [editForm, setEditForm] = useState({
         {displayedBadges.map((badge, index) => (
           <div
             key={badge.id}
-            className="absolute group z-10"
+            className="absolute group z-10 select-none"
             style={{ 
               bottom: badgePositions[badge.id]?.y ?? (12 + index * 10),
               right: badgePositions[badge.id]?.x ?? (12 + index * 100),
-              cursor: isOwnProfile ? 'move' : 'default'
+              cursor: isOwnProfile ? (draggingBadge === badge.id ? 'grabbing' : 'grab') : 'default'
             }}
-            draggable={isOwnProfile}
-            onDragEnd={(e) => {
+            onMouseDown={(e) => {
+              console.log('[Badge] MouseDown on badge', badge.id, 'isOwnProfile:', isOwnProfile);
               if (!isOwnProfile) return;
-              const parent = e.currentTarget.parentElement;
-              if (!parent) return;
-              const parentRect = parent.getBoundingClientRect();
-              const newX = Math.max(10, parentRect.right - e.clientX - 40);
-              const newY = Math.max(10, parentRect.bottom - e.clientY - 40);
-              const newPositions = { ...badgePositions, [badge.id]: { x: newX, y: newY } };
-              setBadgePositions(newPositions);
-              saveBadgePositions(newPositions);
+              e.preventDefault();
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+              setDraggingBadge(badge.id);
+              
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const parent = document.querySelector('.badge-container');
+                console.log('[Badge] MouseMove, parent found:', !!parent);
+                if (!parent) return;
+                const parentRect = parent.getBoundingClientRect();
+                const newX = Math.max(10, Math.min(parentRect.width - 100, parentRect.right - moveEvent.clientX - 40));
+                const newY = Math.max(10, Math.min(parentRect.height - 100, parentRect.bottom - moveEvent.clientY - 40));
+                setBadgePositions(prev => ({ ...prev, [badge.id]: { x: newX, y: newY } }));
+              };
+              
+              const handleMouseUp = () => {
+                setDraggingBadge(null);
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                // Save after drag ends
+                setBadgePositions(prev => {
+                  saveBadgePositions(prev);
+                  return prev;
+                });
+              };
+              
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
             }}
             title={badge.name}
           >

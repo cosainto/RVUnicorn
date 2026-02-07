@@ -10,6 +10,8 @@ import InventoryPackingModal from '../components/InventoryPackingModal';
 import EventSchedule from '../components/EventSchedule';
 import EventAlbum from '../components/EventAlbum';
 import EventCommentWall from '../components/EventCommentWall';
+import EventActivities from '../components/EventActivities';
+import ThingsToDoSection from '../components/ThingsToDoSection';
 import EventSettingsPanel from '../components/EventSettingsPanel';
 
 interface Event {
@@ -864,7 +866,23 @@ export default function EventDetailPage() {
             </div>
           )}
 
-          {activeTab === 'schedule' && <EventSchedule eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate} />}
+          {activeTab === 'schedule' && (
+            <div className="space-y-8">
+              {/* Calendar with integrated activities */}
+              <EventSchedule eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
+              
+              {/* Things to Do Nearby - only show if event has a campground */}
+              {event.campground && (
+                <div className="border-t pt-8">
+                  <ThingsToDoSection 
+                    campgroundId={event.campground.id} 
+                    campgroundName={event.campground.name}
+                    isAdmin={isOrganizer}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {activeTab === 'photos' && <EventAlbum eventId={event.id} />}
           {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} />}
           {activeTab === 'pack' && (

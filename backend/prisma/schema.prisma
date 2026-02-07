@@ -86,6 +86,7 @@ model User {
   activityTargets                                 Activity[]                @relation("ActivityTarget")
   activities                                      Activity[]
   activityLikes                                   ActivityLike[]
+  eventActivities                                 EventActivity[]
   AffiliateClick                                  AffiliateClick[]
   Album                                           Album[]
   AlbumFeedCooldown                               AlbumFeedCooldown[]
@@ -460,6 +461,7 @@ model Event {
   stateVisits       StateVisit[]
   tripPackItems     TripPackItem[]       @relation("EventTripPackItems")
   tripPlans         TripPlan[]
+  eventActivities   EventActivity[]
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -490,6 +492,7 @@ model EventMeal {
   updatedAt   DateTime   @updatedAt
   notes       String?
   scheduledAt DateTime
+  scheduledTime String?
   cookId      String?
   cookStatus  String?    @default("PENDING")
   cook        User?      @relation("MealCook", fields: [cookId], references: [id])
@@ -2629,6 +2632,7 @@ model ThingToDo {
   createdBy             User?                 @relation("ThingsCreated", fields: [createdByUserId], references: [id])
   saves                 ThingToDoSave[]
   votes                 ThingToDoVote[]
+  eventActivities       EventActivity[]
 
   @@index([type])
   @@index([status])
@@ -2885,4 +2889,26 @@ enum Visibility {
   PUBLIC
   FRIENDS_ONLY
   PRIVATE
+}
+
+model EventActivity {
+  id            String    @id @default(cuid())
+  eventId       String
+  thingToDoId   String
+  scheduledDate DateTime?
+  scheduledTime String?
+  duration      Int?      // minutes
+  notes         String?
+  status        String    @default("PLANNED") // PLANNED, COMPLETED, SKIPPED
+  addedById     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  event         Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  thingToDo     ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
+  addedBy       User      @relation(fields: [addedById], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, thingToDoId])
+  @@index([eventId])
+  @@index([thingToDoId])
 }

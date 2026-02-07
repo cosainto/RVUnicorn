@@ -276,7 +276,7 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
     const dateStr = date.toISOString().split('T')[0];
     const daySubevents = subevents.filter(se => se.date.split('T')[0] === dateStr);
     const dayActivities = activities.filter(a => a.scheduledDate && a.scheduledDate.split('T')[0] === dateStr);
-    const dayMeals = showMeals ? meals.filter(m => m.scheduledAt || m.date && m.scheduledAt || m.date.split('T')[0] === dateStr) : [];
+    const dayMeals = showMeals ? meals.filter(m => m.scheduledAt.split('T')[0] === dateStr) : [];
     return { subevents: daySubevents, activities: dayActivities, meals: dayMeals };
   };
 

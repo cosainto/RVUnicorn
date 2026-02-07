@@ -78,6 +78,8 @@ import thingsToDoRoutes from "./routes/things-to-do.routes";
 import packupRoutes from "./routes/packup.routes";
 import gearAdsRoutes from "./routes/gear-ads.routes";
 import enhancedDrivePlannerRoutes from './routes/enhanced-drive-planner.routes';
+import weatherRoutes from './routes/weather.routes';
+import eventActivitiesRoutes from './routes/event-activities.routes';
 import profileMapRoutes from './routes/profile-map.routes';
 
 
@@ -178,6 +180,8 @@ app.use("/api/things-to-do", thingsToDoRoutes);
 app.use("/api/packup", packupRoutes);
 app.use("/api/gear-ads", gearAdsRoutes);
 app.use('/api/drive-planner', enhancedDrivePlannerRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api', eventActivitiesRoutes);
 app.use('/api', profileMapRoutes);
 
 

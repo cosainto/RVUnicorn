@@ -353,28 +353,6 @@ router.get('/:id/followers', optionalAuth, async (req: Request, res: Response) =
       skip: parseInt(offset as string),
       orderBy: { createdAt: 'desc' },
       include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
         user: {
           select: {
             id: true,
@@ -596,28 +574,6 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         isWishlist: false,
       },
       include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
         organizer: {
           select: {
             id: true,
@@ -631,28 +587,6 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         attendees: {
           where: { status: 'GOING' },
           include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
             user: {
               select: {
                 id: true,

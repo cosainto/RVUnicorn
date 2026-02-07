@@ -294,7 +294,7 @@ export default function Navbar() {
 
               {/* Badges Quick View */}
               <Link
-                to={`/profile/${user.id}?tab=badges`}
+                to="/badges"
                 className="p-2 text-white/80 hover:text-gold-400 hover:bg-white/10 rounded-lg transition-colors hidden sm:flex"
                 title="Your Badges"
               >

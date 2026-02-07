@@ -2,3 +2,8 @@ node_modules
 dist
 .env
 .DS_Store
+backend/uploads/
+backend/campground-maps/
+backend/discovered-campgrounds/
+*.pdf
+backend/campground-maps-compressed/
