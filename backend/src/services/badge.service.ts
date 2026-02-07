@@ -21,6 +21,7 @@ export enum BadgeTrigger {
   MAINTENANCE_LOGGED = 'MAINTENANCE_LOGGED',
   FOUNDING_MEMBER = 'FOUNDING_MEMBER',
   UPVOTES_RECEIVED = 'UPVOTES_RECEIVED',
+  POPULAR_RECIPES = 'POPULAR_RECIPES',
   LOCATION_BASED = 'LOCATION_BASED',
   REGION_BASED = 'REGION_BASED',
 }
@@ -265,6 +266,15 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
         return upvoteCount >= triggerValue;
       }
 
+      case BadgeTrigger.POPULAR_RECIPES: {
+        const popularRecipes = await prisma.recipe.findMany({
+          where: { userId, privacy: 'PUBLIC' },
+          include: { _count: { select: { likes: true } } }
+        });
+        const qualifyingCount = popularRecipes.filter(r => r._count.likes >= 10).length;
+        return qualifyingCount >= triggerValue;
+      }
+
       case BadgeTrigger.LOCATION_BASED: {
         const badgeCampgrounds = await prisma.badgeCampground.findMany({
           where: { badgeId: badge.id },
@@ -485,6 +495,14 @@ export async function getBadgeProgress(userId: string, badgeSlug: string): Promi
         current = await prisma.maintenanceLog.count({ where: { userId } }); break;
       case BadgeTrigger.UPVOTES_RECEIVED:
         current = await prisma.vote.count({ where: { post: { userId }, value: 1 } }); break;
+      case BadgeTrigger.POPULAR_RECIPES: {
+        const popRecipes = await prisma.recipe.findMany({
+          where: { userId, privacy: 'PUBLIC' },
+          include: { _count: { select: { likes: true } } }
+        });
+        current = popRecipes.filter(r => r._count.likes >= 10).length;
+        break;
+      }
       case BadgeTrigger.GROUP_JOINED:
         current = await prisma.groupMember.count({ where: { userId, status: 'ACTIVE' } }); break;
       case BadgeTrigger.GEAR_ITEMS:
