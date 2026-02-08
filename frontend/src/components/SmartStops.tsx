@@ -205,8 +205,8 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     return (
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <Route className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <Route className="w-4 h-4 text-white" />
           </div>
           <div>
             <h4 className="font-bold text-gray-900">Smart Route Planner</h4>
@@ -216,7 +216,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Trip Style */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">What kind of trip is this?</label>
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">What kind of trip is this?</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { value: 'direct', emoji: '🏎️', title: 'Get There Fast', desc: 'Minimal stops, max driving' },
@@ -224,12 +224,12 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: 'explorer', emoji: '🗺️', title: 'Scenic Explorer', desc: 'Enjoy the journey' },
             ].map(({ value, emoji, title, desc }) => (
               <button key={value} onClick={() => setPrefs(p => ({ ...p, tripStyle: value as any }))}
-                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                className={`p-2.5 rounded-xl border-2 text-left transition-all duration-200 ${
                   prefs.tripStyle === value 
                     ? 'border-blue-500 bg-blue-50 shadow-sm' 
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}>
-                <span className="text-2xl">{emoji}</span>
+                <span className="text-lg">{emoji}</span>
                 <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
               </button>
@@ -239,7 +239,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Food Stops */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">How often do you want to stop for food?</label>
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">How often do you want to stop for food?</label>
           <div className="grid grid-cols-4 gap-2">
             {[
               { value: 0, label: 'Pack meals', emoji: '🧊' },
@@ -248,13 +248,13 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: 3, label: '3+ stops', emoji: '🍽️' },
             ].map(({ value, label, emoji }) => (
               <button key={value} onClick={() => setPrefs(p => ({ ...p, foodStops: value }))}
-                className={`p-2.5 rounded-xl border-2 text-center transition-all duration-200 ${
+                className={`p-2 rounded-xl border-2 text-center transition-all duration-200 ${
                   prefs.foodStops === value 
                     ? 'border-blue-500 bg-blue-50 shadow-sm' 
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}>
-                <span className="text-xl">{emoji}</span>
-                <p className="text-xs font-semibold text-gray-700 mt-1">{label}</p>
+                <span className="text-lg">{emoji}</span>
+                <p className="text-[11px] font-semibold text-gray-700 mt-0.5">{label}</p>
               </button>
             ))}
           </div>
@@ -262,7 +262,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Overnight Preference */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Overnight stops</label>
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Overnight stops</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { value: 'minimal', emoji: '💪', title: 'Push through', desc: 'Drive as far as possible' },
@@ -270,14 +270,14 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: 'comfortable', emoji: '😴', title: 'Relaxed pace', desc: 'Shorter driving days' },
             ].map(({ value, emoji, title, desc }) => (
               <button key={value} onClick={() => setPrefs(p => ({ ...p, overnightStops: value as any }))}
-                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                className={`p-2.5 rounded-xl border-2 text-left transition-all duration-200 ${
                   prefs.overnightStops === value 
                     ? 'border-blue-500 bg-blue-50 shadow-sm' 
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}>
-                <span className="text-xl">{emoji}</span>
-                <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
+                <span className="text-lg">{emoji}</span>
+                <p className="font-bold text-gray-900 text-xs mt-0.5">{title}</p>
+                <p className="text-[10px] text-gray-400">{desc}</p>
               </button>
             ))}
           </div>
@@ -285,7 +285,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Toggle Options */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">What else should we find?</label>
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">What else should we find?</label>
           <div className="space-y-2">
             {[
               { key: 'wantAttractions', emoji: '⭐', label: 'Attractions & sightseeing', desc: 'Parks, museums, landmarks along the way' },
@@ -293,14 +293,14 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { key: 'wantDumpStations', emoji: '🚿', label: 'Dump stations', desc: 'RV waste disposal locations' },
             ].map(({ key, emoji, label, desc }) => (
               <button key={key} onClick={() => setPrefs(p => ({ ...p, [key]: !(p as any)[key] }))}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl border-2 text-left transition-all duration-200 ${
                   (prefs as any)[key] 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}>
-                <span className="text-xl">{emoji}</span>
+                <span className="text-lg">{emoji}</span>
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900 text-sm">{label}</p>
+                  <p className="font-semibold text-gray-900 text-xs">{label}</p>
                   <p className="text-[10px] text-gray-400">{desc}</p>
                 </div>
                 <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
@@ -315,7 +315,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Budget */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Budget priority</label>
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Budget priority</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { value: 'budget', emoji: '💰', title: 'Save money', desc: 'Free parking, cheap eats' },
@@ -323,14 +323,14 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: 'comfort', emoji: '✨', title: 'Comfort first', desc: 'Best rated spots' },
             ].map(({ value, emoji, title, desc }) => (
               <button key={value} onClick={() => setPrefs(p => ({ ...p, budgetPriority: value as any }))}
-                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                className={`p-2.5 rounded-xl border-2 text-left transition-all duration-200 ${
                   prefs.budgetPriority === value 
                     ? 'border-blue-500 bg-blue-50 shadow-sm' 
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}>
-                <span className="text-xl">{emoji}</span>
-                <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
+                <span className="text-lg">{emoji}</span>
+                <p className="font-bold text-gray-900 text-xs mt-0.5">{title}</p>
+                <p className="text-[10px] text-gray-400">{desc}</p>
               </button>
             ))}
           </div>
@@ -345,7 +345,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         </button>
 
         {showSettings && (
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+          <div className="bg-gray-50 rounded-xl p-3 space-y-2.5 border border-gray-100">
             <div className="grid grid-cols-3 gap-3">
               {[
                 { key: 'mpg', label: 'Fuel Economy', unit: 'mpg', hint: 'Class A: 6-10 · C: 10-14', min: 3, max: 30, step: 0.5 },
@@ -357,7 +357,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
                   <div className="relative mt-1">
                     <input type="number" value={(rvSettings as any)[key]}
                       onChange={(e) => setRvSettings(prev => ({ ...prev, [key]: Number(e.target.value) }))}
-                      className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
                       min={min} max={max} step={step} />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">{unit}</span>
                   </div>
@@ -370,7 +370,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
         {/* Find Stops Button */}
         <button onClick={handleFindStops} disabled={loading}
-          className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-bold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30">
+          className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-bold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30">
           {loading ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing your route...</>
           ) : (
@@ -386,7 +386,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
   return (
     <div className="space-y-5">
       {/* Summary Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white p-5">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white p-4">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-32 h-32 rounded-full bg-white blur-3xl" />
           <div className="absolute bottom-0 right-0 w-40 h-40 rounded-full bg-blue-300 blur-3xl" />
@@ -422,7 +422,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         </div>
       </div>
 
-      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
         {smartStops.stops.length} stop{smartStops.stops.length !== 1 ? 's' : ''} along your route
       </p>
 
