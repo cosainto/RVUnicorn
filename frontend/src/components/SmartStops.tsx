@@ -421,6 +421,15 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
             <><Navigation className="w-4 h-4" /> Plan My Route <ArrowRight className="w-4 h-4" /></>
           )}
         </button>
+
+        {/* Skip option */}
+        <button onClick={() => {
+          setPrefs(p => ({ ...p, tripStyle: 'direct', restStopInterval: 0, wantAttractions: false, wantDumpStations: false }));
+          handleFindStops();
+        }} disabled={loading}
+          className="w-full py-2 text-sm text-gray-400 hover:text-blue-600 font-medium transition flex items-center justify-center gap-1">
+          Skip the questions — just get me there 🚀
+        </button>
       </div>
     );
   }
