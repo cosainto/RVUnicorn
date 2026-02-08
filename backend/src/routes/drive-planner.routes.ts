@@ -322,7 +322,8 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
       mpg = 10,
       tankGallons = 50,
       drivingHoursPerDay = 8,
-      stopTypes = ['gas', 'overnight', 'food']
+      stopTypes = ['gas', 'overnight', 'food'],
+      foodIntervalMiles = 150
     } = req.body;
 
     if (!polyline || !totalMiles) {
@@ -342,7 +343,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
 
     const gasStopPoints = sampleRoutePoints(routePoints, totalMiles, gasRange);
     const overnightStopPoints = tripDays > 1 ? sampleRoutePoints(routePoints, totalMiles, dailyMiles) : [];
-    const foodStopPoints = sampleRoutePoints(routePoints, totalMiles, 150);
+    const foodStopPoints = foodIntervalMiles > 0 ? sampleRoutePoints(routePoints, totalMiles, foodIntervalMiles) : [];
 
     const allStops: any[] = [];
 

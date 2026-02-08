@@ -26,7 +26,8 @@ interface StopPlace {
 
 interface TripPreferences {
   tripStyle: 'direct' | 'balanced' | 'explorer';
-  foodStops: number;
+  restStopMode: 'hours' | 'miles';
+  restStopInterval: number;
   overnightStops: 'auto' | 'minimal' | 'comfortable';
   wantAttractions: boolean;
   wantDumpStations: boolean;
@@ -53,7 +54,8 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
   const [rvSettings, setRvSettings] = useState({ mpg: 10, tankGallons: 50, drivingHoursPerDay: 8 });
   const [prefs, setPrefs] = useState<TripPreferences>({
     tripStyle: 'balanced',
-    foodStops: 2,
+    restStopMode: 'hours',
+    restStopInterval: 3,
     overnightStops: 'auto',
     wantAttractions: true,
     wantDumpStations: false,
@@ -104,7 +106,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
       // Build stop types from preferences
       const stopTypes: string[] = ['gas'];
-      if (prefs.tripStyle !== 'direct' || prefs.foodStops > 0) stopTypes.push('food');
+      stopTypes.push('food');
       if (prefs.overnightStops !== 'minimal') stopTypes.push('overnight');
       if (prefs.wantAttractions) stopTypes.push('attractions');
       if (prefs.wantDumpStations) stopTypes.push('dump');
@@ -119,6 +121,9 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         mpg: rvSettings.mpg, tankGallons: rvSettings.tankGallons,
         drivingHoursPerDay: drivingHours,
         stopTypes,
+        foodIntervalMiles: prefs.restStopInterval === 0 ? 0 
+          : prefs.restStopMode === 'miles' ? prefs.restStopInterval 
+          : Math.round(prefs.restStopInterval * (totalMiles / totalMinutes) * 60),
       });
       setSmartStops(data);
       setStep('results');
@@ -237,27 +242,66 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           </div>
         </div>
 
-        {/* Food Stops */}
+        {/* Rest & Food Stop Frequency */}
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">How often do you want to stop for food?</label>
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { value: 0, label: 'Pack meals', emoji: '🧊' },
-              { value: 1, label: '1 stop', emoji: '🥪' },
-              { value: 2, label: '2 stops', emoji: '🍔' },
-              { value: 3, label: '3+ stops', emoji: '🍽️' },
-            ].map(({ value, label, emoji }) => (
-              <button key={value} onClick={() => setPrefs(p => ({ ...p, foodStops: value }))}
-                className={`p-2 rounded-xl border-2 text-center transition-all duration-200 ${
-                  prefs.foodStops === value 
-                    ? 'border-blue-500 bg-blue-50 shadow-sm' 
-                    : 'border-gray-100 bg-white hover:border-gray-200'
-                }`}>
-                <span className="text-lg">{emoji}</span>
-                <p className="text-[11px] font-semibold text-gray-700 mt-0.5">{label}</p>
-              </button>
-            ))}
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">How often do you want to stop?</label>
+          
+          {/* Mode toggle: hours vs miles */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5 w-fit">
+            <button onClick={() => setPrefs(p => ({ ...p, restStopMode: 'hours', restStopInterval: 3 }))}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                prefs.restStopMode === 'hours' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+              }`}>
+              ⏰ By Hours
+            </button>
+            <button onClick={() => setPrefs(p => ({ ...p, restStopMode: 'miles', restStopInterval: 150 }))}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                prefs.restStopMode === 'miles' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+              }`}>
+              📏 By Miles
+            </button>
           </div>
+
+          {/* Interval options */}
+          {prefs.restStopMode === 'hours' ? (
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: 2, label: 'Every 2 hrs', desc: 'Frequent breaks' },
+                { value: 3, label: 'Every 3 hrs', desc: 'Recommended' },
+                { value: 4, label: 'Every 4 hrs', desc: 'Less stops' },
+                { value: 0, label: 'No stops', desc: 'Pack snacks' },
+              ].map(({ value, label, desc }) => (
+                <button key={value} onClick={() => setPrefs(p => ({ ...p, restStopInterval: value }))}
+                  className={`p-2 rounded-xl border-2 text-center transition-all duration-200 ${
+                    prefs.restStopInterval === value 
+                      ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                      : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}>
+                  <p className="text-xs font-bold text-gray-900">{label}</p>
+                  <p className="text-[10px] text-gray-400">{desc}</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: 100, label: 'Every 100 mi', desc: 'Frequent breaks' },
+                { value: 150, label: 'Every 150 mi', desc: 'Recommended' },
+                { value: 200, label: 'Every 200 mi', desc: 'Less stops' },
+                { value: 0, label: 'No stops', desc: 'Pack snacks' },
+              ].map(({ value, label, desc }) => (
+                <button key={value} onClick={() => setPrefs(p => ({ ...p, restStopInterval: value }))}
+                  className={`p-2 rounded-xl border-2 text-center transition-all duration-200 ${
+                    prefs.restStopInterval === value 
+                      ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                      : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}>
+                  <p className="text-xs font-bold text-gray-900">{label}</p>
+                  <p className="text-[10px] text-gray-400">{desc}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Overnight Preference */}
