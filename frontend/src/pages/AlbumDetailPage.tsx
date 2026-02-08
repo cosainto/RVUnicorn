@@ -15,7 +15,7 @@ import {
   Send,
   Tag,
   UserPlus,
-} from 'lucide-react';
+, Link2, CheckSquare} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -70,6 +70,12 @@ export default function AlbumDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [photoPreviews, setPhotoPreviews] = useState<PhotoPreview[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [showLinkEventModal, setShowLinkEventModal] = useState(false);
+  const [linkMode, setLinkMode] = useState<'album' | 'selected'>('album');
+  const [selectedForLink, setSelectedForLink] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [userEvents, setUserEvents] = useState<any[]>([]);
+  const [linkingEvent, setLinkingEvent] = useState(false);
   const [albumCommentText, setAlbumCommentText] = useState("");
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
@@ -222,6 +228,49 @@ export default function AlbumDetailPage() {
     URL.revokeObjectURL(newPreviews[index].preview);
     newPreviews.splice(index, 1);
     setPhotoPreviews(newPreviews);
+  };
+
+  const loadUserEvents = async () => {
+    try {
+      const { data } = await api.get('/trips/my-events');
+      setUserEvents(data);
+    } catch (error) {
+      console.error('Load events error:', error);
+      setUserEvents([]);
+    }
+  };
+
+  const handleLinkAlbumToEvent = async (eventId: string) => {
+    try {
+      setLinkingEvent(true);
+      if (linkMode === 'album') {
+        await api.post(`/photo-albums/${id}/link-event`, { eventId });
+        alert('✅ Album linked to trip!');
+      } else {
+        await api.post('/photo-albums/photos/bulk-link-event', { 
+          photoIds: Array.from(selectedForLink), 
+          eventId 
+        });
+        alert(`✅ ${selectedForLink.size} photo${selectedForLink.size > 1 ? 's' : ''} linked to trip!`);
+      }
+      setShowLinkEventModal(false);
+      setSelectMode(false);
+      setSelectedForLink(new Set());
+    } catch (error) {
+      console.error('Link error:', error);
+      alert('Failed to link to trip');
+    } finally {
+      setLinkingEvent(false);
+    }
+  };
+
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedForLink(prev => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
   };
 
   const handleUpload = async () => {
@@ -1067,6 +1116,53 @@ export default function AlbumDetailPage() {
           </div>
         </div>
       )}
+    
+      {/* Link to Trip Modal */}
+      {showLinkEventModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-semibold text-lg">
+                {linkMode === 'album' ? 'Link Album to Trip' : `Link ${selectedForLink.size} Photos to Trip`}
+              </h3>
+              <button onClick={() => { setShowLinkEventModal(false); setSelectMode(false); setSelectedForLink(new Set()); }} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              {userEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Camera className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-600">No trips found</p>
+                  <p className="text-sm text-gray-400 mt-1">Create a trip first</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-3">Select a trip</p>
+                  {userEvents.map((event: any) => (
+                    <button
+                      key={event.id}
+                      onClick={() => handleLinkAlbumToEvent(event.id)}
+                      disabled={linkingEvent}
+                      className="w-full flex items-center justify-between p-3 border rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition text-left disabled:opacity-50"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{event.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(event.startDate).toLocaleDateString()} {event.endDate ? `- ${new Date(event.endDate).toLocaleDateString()}` : ''}
+                        </p>
+                        {event.campground && <p className="text-xs text-green-600 mt-0.5">📍 {event.campground.name}</p>}
+                      </div>
+                      <Link2 className="w-5 h-5 text-gray-400" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

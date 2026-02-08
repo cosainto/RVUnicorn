@@ -353,4 +353,79 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
   }
 });
 
+
+// POST /api/photo-albums/photos/:photoId/link-event - Link a single photo to an event
+router.post('/photos/:photoId/link-event', authenticateToken, async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    const userId = (req as any).userId;
+    const { eventId } = req.body;
+
+    const photo = await prisma.photo.findUnique({ where: { id: photoId } });
+    if (!photo || photo.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updated = await prisma.photo.update({
+      where: { id: photoId },
+      data: { eventId: eventId || null },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Link photo to event error:', error);
+    res.status(500).json({ error: 'Failed to link photo' });
+  }
+});
+
+// POST /api/photo-albums/:id/link-event - Link all photos in an album to an event
+router.post('/:id/link-event', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).userId;
+    const { eventId } = req.body;
+
+    const album = await prisma.photoAlbum.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!album || album.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await prisma.photo.updateMany({
+      where: { albumId: id, userId },
+      data: { eventId: eventId || null },
+    });
+
+    res.json({ linked: result.count, eventId });
+  } catch (error) {
+    console.error('Link album to event error:', error);
+    res.status(500).json({ error: 'Failed to link album' });
+  }
+});
+
+// POST /api/photo-albums/photos/bulk-link-event - Link selected photos to an event
+router.post('/photos/bulk-link-event', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { photoIds, eventId } = req.body;
+
+    if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+      return res.status(400).json({ error: 'No photos selected' });
+    }
+
+    const result = await prisma.photo.updateMany({
+      where: { id: { in: photoIds }, userId },
+      data: { eventId: eventId || null },
+    });
+
+    res.json({ linked: result.count, eventId });
+  } catch (error) {
+    console.error('Bulk link photos error:', error);
+    res.status(500).json({ error: 'Failed to link photos' });
+  }
+});
+
 export default router;
