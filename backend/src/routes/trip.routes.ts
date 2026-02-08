@@ -264,6 +264,33 @@ router.get('/upcoming', authenticateToken, async (req, res) => {
 });
 
 // GET /api/events/:id - Get single event
+router.get('/my-events', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const events = await prisma.event.findMany({
+      where: {
+        OR: [
+          { organizerId: userId },
+          { attendees: { some: { userId, status: 'GOING' } } }
+        ]
+      },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true,
+        campground: { select: { id: true, name: true } },
+      },
+      orderBy: { startDate: 'desc' },
+      take: 20,
+    });
+    res.json(events);
+  } catch (error) {
+    console.error('Get my events error:', error);
+    res.status(500).json({ error: 'Failed to get events' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1082,31 +1109,5 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
 });
 
 // GET /api/trips/my-events - Get user's events for linking
-router.get('/my-events', authenticateToken, async (req, res) => {
-  try {
-    const userId = (req as any).userId;
-    const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          { organizerId: userId },
-          { attendees: { some: { userId, status: 'GOING' } } }
-        ]
-      },
-      select: {
-        id: true,
-        title: true,
-        startDate: true,
-        endDate: true,
-        campground: { select: { id: true, name: true } },
-      },
-      orderBy: { startDate: 'desc' },
-      take: 20,
-    });
-    res.json(events);
-  } catch (error) {
-    console.error('Get my events error:', error);
-    res.status(500).json({ error: 'Failed to get events' });
-  }
-});
 
 export default router;
