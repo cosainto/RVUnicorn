@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation,
-  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, 
-, MapPinned} from 'lucide-react';
+  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import CampgroundCommunity from '../components/CampgroundCommunity';
