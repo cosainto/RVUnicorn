@@ -5,6 +5,7 @@ import api from '../services/api';
 interface SmartStopsProps {
   tripPlan: any;
   eventId: string;
+  event?: any;
   onAddPitStop: (stop: any) => void;
 }
 
@@ -23,7 +24,7 @@ interface StopPlace {
   photoRef?: string;
 }
 
-export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartStopsProps) {
+export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: SmartStopsProps) {
   const [loading, setLoading] = useState(false);
   const [smartStops, setSmartStops] = useState<any>(null);
   const [expandedStop, setExpandedStop] = useState<number | null>(null);
@@ -50,15 +51,43 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
       let totalMiles = tripPlan?.distanceMiles;
       let totalMinutes = tripPlan?.durationMinutes;
 
-      // Auto-calculate route if no polyline but we have coordinates
+      // Auto-calculate route if no polyline
       if (!polyline) {
-        const startLat = tripPlan?.startLatitude;
-        const startLng = tripPlan?.startLongitude;
-        const endLat = tripPlan?.endLatitude;
-        const endLng = tripPlan?.endLongitude;
+        let startLat = tripPlan?.startLatitude;
+        let startLng = tripPlan?.startLongitude;
+        let endLat = tripPlan?.endLatitude;
+        let endLng = tripPlan?.endLongitude;
+
+        // Fallback: use campground coords for destination
+        if (!endLat && event?.campground?.latitude) {
+          endLat = event.campground.latitude;
+          endLng = event.campground.longitude;
+        }
+
+        // Geocode start location if no coordinates but has address
+        if (!startLat && tripPlan?.startLocation) {
+          try {
+            const { data: geoData } = await api.get('/drive-planner/geocode?q=' + encodeURIComponent(tripPlan.startLocation));
+            if (geoData.items && geoData.items.length > 0) {
+              startLat = geoData.items[0].position.lat;
+              startLng = geoData.items[0].position.lng;
+            }
+          } catch (e) { console.error('Geocode start error:', e); }
+        }
+
+        // Geocode end location if still no coordinates
+        if (!endLat && tripPlan?.endLocation) {
+          try {
+            const { data: geoData } = await api.get('/drive-planner/geocode?q=' + encodeURIComponent(tripPlan.endLocation));
+            if (geoData.items && geoData.items.length > 0) {
+              endLat = geoData.items[0].position.lat;
+              endLng = geoData.items[0].position.lng;
+            }
+          } catch (e) { console.error('Geocode end error:', e); }
+        }
 
         if (!startLat || !endLat) {
-          alert('Trip needs start and end locations. Set up your trip plan first.');
+          alert('Could not determine start and end locations. Please update your trip plan with valid addresses.');
           setLoading(false);
           return;
         }

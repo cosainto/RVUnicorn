@@ -733,7 +733,7 @@ export default function EventDetailPage() {
 
                     {/* Smart RV Stops */}
                     <div className="pt-4 border-t">
-                      <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
+                      <SmartStops tripPlan={tripPlan} eventId={event.id} event={event} onAddPitStop={() => loadTripPlan()} />
                     </div>
 
 
