@@ -2934,3 +2934,4 @@ model BadgeCampground {
   @@index([badgeId])
   @@index([campgroundId])
 }
+// cache bust
