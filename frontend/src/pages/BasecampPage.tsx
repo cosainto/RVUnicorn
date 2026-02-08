@@ -810,7 +810,6 @@ const ACTIVITY_CONFIG: Record<string, { label: string; icon: React.ReactNode; co
   ALBUM_CREATED: { label: 'created an album', icon: <FolderPlus className="w-4 h-4" />, color: 'bg-indigo-100 text-indigo-600' },
   CAMPGROUND_POST: { label: 'posted about', icon: <Tent className="w-4 h-4" />, color: 'bg-orange-100 text-orange-600' },
   CAMPGROUND_UPDATE: { label: 'update from', icon: <MapPin className="w-4 h-4" />, color: 'bg-emerald-100 text-emerald-600' },
-  THREAD_CREATED: { label: 'started a discussion', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
   THREAD_POST: { label: 'replied to', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-cyan-100 text-cyan-600' },
   EVENT_CREATED: { label: 'created an event', icon: <CalendarPlus className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-600' },
   EVENT_JOINED: { label: 'is attending', icon: <Heart className="w-4 h-4" />, color: 'bg-yellow-100 text-yellow-600' },
