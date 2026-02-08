@@ -340,10 +340,17 @@ export default function CampgroundDetailPage() {
     if (campgroundBadges.totalBadges === 0) return null;
     const allBadges = [...campgroundBadges.locationBadges, ...campgroundBadges.regionBadges];
     return (
-      <span className="inline-flex items-center gap-1 ml-2 align-middle">
+      <span className="inline-flex items-center gap-2 ml-3 align-middle">
         {allBadges.map(b => (
-          <Link key={b.slug} to="/badges" title={`Stay here to earn: ${b.name}`}>
-            <img src={b.imageUrl} alt={b.name} className="w-8 h-8 rounded-full inline-block border-2 border-yellow-400 shadow-sm hover:scale-125 transition-transform cursor-pointer" />
+          <Link key={b.slug} to="/badges" className="relative group inline-flex items-center">
+            <span className="relative">
+              <img src={b.imageUrl} alt={b.name} className="w-10 h-10 rounded-full border-2 border-yellow-400 shadow-md group-hover:scale-110 transition-transform cursor-pointer" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-[8px] font-bold text-yellow-900">★</span>
+            </span>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50">
+              🏆 Stay here to earn: {b.name}
+              <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></span>
+            </span>
           </Link>
         ))}
       </span>
