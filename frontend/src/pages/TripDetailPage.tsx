@@ -9,6 +9,7 @@ import PackUp from "../components/PackUp";
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import EventSchedule from '../components/EventSchedule';
 import EventAlbum from '../components/EventAlbum';
+import SmartStops from '../components/SmartStops';
 import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -226,6 +227,7 @@ export default function EventDetailPage() {
     try {
       await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, pitStopForm);
       setShowPitStopModal(false);
+      loadTripPlan();
       setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
       loadTripPlan();
       alert('✅ Pit stop added!');
@@ -729,7 +731,7 @@ export default function EventDetailPage() {
                           <Plus className="w-4 h-4" />Add Stop
                         </button>
                         <button onClick={handleDiscoverStops} className="btn btn-primary btn-sm flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />Discover Stops
+                          <MapPin className="w-4 h-4" />Smart RV Stops
                         </button>
                       </div>
 
@@ -766,6 +768,13 @@ export default function EventDetailPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Smart RV Stops */}
+                    {tripPlan.routePolyline && (
+                      <div className="pt-4 border-t">
+                        <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
+                      </div>
+                    )}
 
                     <div className="flex gap-2 pt-4 border-t">
                       {tripPlan.endLatitude && tripPlan.endLongitude && (
@@ -1024,12 +1033,12 @@ export default function EventDetailPage() {
             <div className="flex gap-3 mt-6"><button onClick={() => setShowPitStopModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleAddPitStop} disabled={!pitStopForm.name} className="btn btn-primary flex-1 disabled:opacity-50">Add Pit Stop</button></div>
           </div>
 
-      {/* Discover Stops Modal */}
+      {/* Smart RV Stops Modal */}
       {showDiscoverStopsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-xl font-bold">Discover Stops Along Your Route</h3>
+              <h3 className="text-xl font-bold">Smart RV Stops Along Your Route</h3>
               <button onClick={() => setShowDiscoverStopsModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">

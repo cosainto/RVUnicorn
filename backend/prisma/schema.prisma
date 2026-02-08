@@ -39,6 +39,10 @@ model User {
   rvDescription                                   String?
   rvFeatures                                      String[]
   rvLength                                        Int?
+  rvMpg                                           Float?
+  rvTankGallons                                   Float?
+  rvHeight                                        Int?
+  rvWeight                                        Int?
   rvSleeps                                        Int?
   rvSlideouts                                     Int?
   rvWeight                                        Int?

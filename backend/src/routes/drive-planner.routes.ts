@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { authenticateToken } from '../middleware/auth.middleware';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
@@ -308,6 +309,220 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
 }
+
+
+
+// POST /api/drive-planner/smart-stops - Get intelligent stop suggestions along a route
+router.post('/smart-stops', async (req: Request, res: Response) => {
+  try {
+    const { 
+      polyline,
+      totalMiles,
+      totalMinutes,
+      mpg = 10,
+      tankGallons = 50,
+      drivingHoursPerDay = 8,
+      stopTypes = ['gas', 'overnight', 'food']
+    } = req.body;
+
+    if (!polyline || !totalMiles) {
+      return res.status(400).json({ error: 'Polyline and totalMiles required' });
+    }
+
+    const routePoints = decodePolyline(polyline);
+    if (routePoints.length === 0) {
+      return res.status(400).json({ error: 'Could not decode polyline' });
+    }
+
+    // Calculate stop intervals
+    const gasRange = Math.floor(mpg * tankGallons * 0.70); // Stop at 30% remaining
+    const avgSpeedMph = totalMiles / (totalMinutes / 60);
+    const dailyMiles = avgSpeedMph * drivingHoursPerDay;
+    const tripDays = Math.ceil(totalMiles / dailyMiles);
+
+    const gasStopPoints = sampleRoutePoints(routePoints, totalMiles, gasRange);
+    const overnightStopPoints = tripDays > 1 ? sampleRoutePoints(routePoints, totalMiles, dailyMiles) : [];
+    const foodStopPoints = sampleRoutePoints(routePoints, totalMiles, 150);
+
+    const allStops: any[] = [];
+
+    // Gas stations
+    if (stopTypes.includes('gas')) {
+      for (let i = 0; i < gasStopPoints.length; i++) {
+        const point = gasStopPoints[i];
+        try {
+          const stations = await searchNearbyPlaces(point.lat, point.lng, 'gas_station', 8000, 3);
+          allStops.push({
+            type: 'GAS',
+            milesFromStart: point.milesFromStart,
+            suggestedStopNumber: i + 1,
+            reason: `Refuel (~${Math.round(point.milesFromStart)} mi, every ${gasRange} mi)`,
+            places: stations.map(formatPlace)
+          });
+        } catch (e) { console.error('Gas search error:', e); }
+      }
+    }
+
+    // Overnight campgrounds + free parking
+    if (stopTypes.includes('overnight') && overnightStopPoints.length > 0) {
+      for (let i = 0; i < overnightStopPoints.length; i++) {
+        const point = overnightStopPoints[i];
+        try {
+          const campgrounds = await searchNearbyPlaces(point.lat, point.lng, 'campground', 30000, 5, 'rv park campground');
+          const walmarts = await searchNearbyPlaces(point.lat, point.lng, 'department_store', 15000, 3, 'walmart supercenter');
+          const crackerBarrels = await searchNearbyPlaces(point.lat, point.lng, 'restaurant', 15000, 2, 'cracker barrel');
+          const cabelas = await searchNearbyPlaces(point.lat, point.lng, 'store', 15000, 2, 'cabelas bass pro');
+
+          allStops.push({
+            type: 'OVERNIGHT',
+            milesFromStart: point.milesFromStart,
+            day: i + 1,
+            reason: `Night ${i + 1} stop (~${Math.round(drivingHoursPerDay)}hrs driving)`,
+            campgrounds: campgrounds.map(formatPlace),
+            freeParking: [
+              ...walmarts.map((s: any) => ({ ...formatPlace(s), parkingType: 'Walmart', note: 'Call ahead - not all locations allow overnight RV parking' })),
+              ...crackerBarrels.map((s: any) => ({ ...formatPlace(s), parkingType: 'Cracker Barrel', note: 'Known for allowing overnight RV parking - ask inside' })),
+              ...cabelas.map((s: any) => ({ ...formatPlace(s), parkingType: 'Cabelas/Bass Pro', note: 'Most locations welcome overnight RV parking' })),
+            ]
+          });
+        } catch (e) { console.error('Overnight search error:', e); }
+      }
+    }
+
+    // Food & rest stops
+    if (stopTypes.includes('food')) {
+      for (let i = 0; i < foodStopPoints.length; i++) {
+        const point = foodStopPoints[i];
+        try {
+          const restaurants = await searchNearbyPlaces(point.lat, point.lng, 'restaurant', 8000, 3);
+          const restAreas = await searchNearbyPlaces(point.lat, point.lng, 'parking', 15000, 2, 'rest area rest stop');
+          allStops.push({
+            type: 'FOOD_REST',
+            milesFromStart: point.milesFromStart,
+            reason: `Rest/food stop (~${Math.round(point.milesFromStart)} mi)`,
+            restaurants: restaurants.slice(0, 3).map(formatPlace),
+            restAreas: restAreas.map(formatPlace)
+          });
+        } catch (e) { console.error('Food search error:', e); }
+      }
+    }
+
+    // Dump stations
+    if (stopTypes.includes('dump')) {
+      const dumpPoints = sampleRoutePoints(routePoints, totalMiles, 200);
+      for (const point of dumpPoints) {
+        try {
+          const dumps = await searchNearbyPlaces(point.lat, point.lng, 'point_of_interest', 30000, 3, 'rv dump station sanitary');
+          if (dumps.length > 0) {
+            allStops.push({
+              type: 'DUMP_STATION',
+              milesFromStart: point.milesFromStart,
+              reason: `Dump station (~${Math.round(point.milesFromStart)} mi)`,
+              places: dumps.map(formatPlace)
+            });
+          }
+        } catch (e) { console.error('Dump search error:', e); }
+      }
+    }
+
+    allStops.sort((a: any, b: any) => a.milesFromStart - b.milesFromStart);
+
+    res.json({
+      summary: {
+        totalMiles: Math.round(totalMiles),
+        totalDays: tripDays,
+        gasRange,
+        gasStopsNeeded: gasStopPoints.length,
+        overnightStopsNeeded: overnightStopPoints.length,
+        estimatedFuelCost: Math.round((totalMiles / mpg) * 3.50),
+        estimatedGallons: Math.round(totalMiles / mpg),
+      },
+      stops: allStops,
+    });
+  } catch (error) {
+    console.error('Smart stops error:', error);
+    res.status(500).json({ error: 'Failed to calculate smart stops' });
+  }
+});
+
+// Helper: Format a Google Places result
+function formatPlace(place: any) {
+  return {
+    name: place.name,
+    address: place.vicinity || place.formatted_address || '',
+    lat: place.geometry?.location?.lat,
+    lng: place.geometry?.location?.lng,
+    rating: place.rating,
+    totalRatings: place.user_ratings_total,
+    isOpen: place.opening_hours?.open_now,
+    placeId: place.place_id,
+    priceLevel: place.price_level,
+    photoRef: place.photos?.[0]?.photo_reference,
+  };
+}
+
+// Helper: Sample points along a decoded polyline at mile intervals
+function sampleRoutePoints(
+  routePoints: Array<{lat: number, lng: number}>, 
+  totalMiles: number, 
+  intervalMiles: number
+): Array<{lat: number, lng: number, milesFromStart: number}> {
+  const samples: Array<{lat: number, lng: number, milesFromStart: number}> = [];
+  let nextStopMiles = intervalMiles;
+  let accumulatedMiles = 0;
+  
+  for (let i = 1; i < routePoints.length; i++) {
+    const segmentMiles = haversineDistance(
+      routePoints[i-1].lat, routePoints[i-1].lng,
+      routePoints[i].lat, routePoints[i].lng
+    );
+    accumulatedMiles += segmentMiles;
+    
+    if (accumulatedMiles >= nextStopMiles && nextStopMiles < totalMiles - 30) {
+      samples.push({
+        lat: routePoints[i].lat,
+        lng: routePoints[i].lng,
+        milesFromStart: Math.round(accumulatedMiles)
+      });
+      nextStopMiles += intervalMiles;
+    }
+  }
+  return samples;
+}
+
+// Helper: Haversine distance in miles
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Helper: Search Google Places nearby
+async function searchNearbyPlaces(
+  lat: number, lng: number, type: string, 
+  radius: number = 8000, maxResults: number = 5, keyword?: string
+): Promise<any[]> {
+  const params = new URLSearchParams({
+    location: `${lat},${lng}`,
+    radius: radius.toString(),
+    type,
+    key: GOOGLE_MAPS_API_KEY || ''
+  });
+  if (keyword) params.append('keyword', keyword);
+  try {
+    const response = await fetch(`${GOOGLE_PLACES_URL}?${params}`);
+    const data = await response.json();
+    return (data.results || []).slice(0, maxResults);
+  } catch (e) {
+    console.error('Places search error:', e);
+    return [];
+  }
+}
+
 
 export default router;
 
