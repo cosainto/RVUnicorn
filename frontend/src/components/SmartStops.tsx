@@ -44,16 +44,45 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
   });
 
   const handleFindStops = async () => {
-    if (!tripPlan?.routePolyline) {
-      alert('Plan your route first to find smart stops');
-      return;
-    }
     setLoading(true);
     try {
+      let polyline = tripPlan?.routePolyline;
+      let totalMiles = tripPlan?.distanceMiles;
+      let totalMinutes = tripPlan?.durationMinutes;
+
+      // Auto-calculate route if no polyline but we have coordinates
+      if (!polyline) {
+        const startLat = tripPlan?.startLatitude;
+        const startLng = tripPlan?.startLongitude;
+        const endLat = tripPlan?.endLatitude;
+        const endLng = tripPlan?.endLongitude;
+
+        if (!startLat || !endLat) {
+          alert('Trip needs start and end locations. Set up your trip plan first.');
+          setLoading(false);
+          return;
+        }
+
+        const { data: routeData } = await api.post('/drive-planner/google-route', {
+          origin: { lat: startLat, lng: startLng },
+          destination: { lat: endLat, lng: endLng },
+        });
+
+        polyline = routeData.polyline;
+        totalMiles = parseFloat(routeData.distance.miles);
+        totalMinutes = routeData.duration.minutes;
+      }
+
+      if (!polyline || !totalMiles) {
+        alert('Could not calculate route. Please check your trip locations.');
+        setLoading(false);
+        return;
+      }
+
       const { data } = await api.post('/drive-planner/smart-stops', {
-        polyline: tripPlan.routePolyline,
-        totalMiles: tripPlan.distanceMiles,
-        totalMinutes: tripPlan.durationMinutes,
+        polyline,
+        totalMiles,
+        totalMinutes,
         mpg: rvSettings.mpg,
         tankGallons: rvSettings.tankGallons,
         drivingHoursPerDay: rvSettings.drivingHoursPerDay,
@@ -213,7 +242,7 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
         </div>
       )}
 
-      <button onClick={handleFindStops} disabled={loading || !tripPlan?.routePolyline}
+      <button onClick={handleFindStops} disabled={loading}
         className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
         {loading ? (
           <><Loader2 className="w-5 h-5 animate-spin" /> Finding RV-friendly stops...</>

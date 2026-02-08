@@ -770,11 +770,9 @@ export default function EventDetailPage() {
                     </div>
 
                     {/* Smart RV Stops */}
-                    {tripPlan.routePolyline && (
-                      <div className="pt-4 border-t">
-                        <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
-                      </div>
-                    )}
+                    <div className="pt-4 border-t">
+                      <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
+                    </div>
 
                     <div className="flex gap-2 pt-4 border-t">
                       {tripPlan.endLatitude && tripPlan.endLongitude && (
