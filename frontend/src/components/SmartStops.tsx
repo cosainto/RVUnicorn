@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders, X, RefreshCw } from 'lucide-react';
+import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders, X, RefreshCw, Clock } from 'lucide-react';
 import api from '../services/api';
 
 interface SmartStopsProps {
@@ -477,6 +477,92 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     });
   };
 
+  const getStopDuration = (type: string) => {
+    switch(type) {
+      case 'GAS': return 20;
+      case 'OVERNIGHT': return 600; // 10 hours
+      case 'FOOD_REST': return 45;
+      case 'DUMP_STATION': return 30;
+      case 'ATTRACTION': return 60;
+      default: return 30;
+    }
+  };
+
+  const getStopDurationLabel = (type: string) => {
+    switch(type) {
+      case 'GAS': return '~20 min';
+      case 'OVERNIGHT': return 'Overnight';
+      case 'FOOD_REST': return '~45 min';
+      case 'DUMP_STATION': return '~30 min';
+      case 'ATTRACTION': return '~1 hr';
+      default: return '~30 min';
+    }
+  };
+
+  // Calculate ETAs for each stop
+  const calculateETAs = () => {
+    if (!smartStops?.stops || !smartStops?.summary) return [];
+    
+    const totalMiles = smartStops.summary.totalMiles;
+    const totalMinutes = smartStops.summary.totalMinutes || (totalMiles / 55 * 60); // fallback avg 55mph
+    const avgMph = totalMiles / (totalMinutes / 60);
+    
+    // Determine departure time: work backwards from arrival or use 8am today
+    let departureTime: Date;
+    if (prefs.arrivalDate && prefs.arrivalTime) {
+      const arrivalMs = new Date(prefs.arrivalDate + 'T' + prefs.arrivalTime).getTime();
+      // Calculate total trip time including stops
+      let totalStopMinutes = 0;
+      smartStops.stops.forEach((stop: any, idx: number) => {
+        if (!dismissedStops.has(idx)) {
+          totalStopMinutes += getStopDuration(stop.type);
+        }
+      });
+      const drivingMinutes = (totalMiles / avgMph) * 60;
+      departureTime = new Date(arrivalMs - (drivingMinutes + totalStopMinutes) * 60000);
+    } else {
+      departureTime = new Date();
+      departureTime.setHours(8, 0, 0, 0);
+    }
+
+    let currentTime = departureTime.getTime();
+    const etas: { arrival: Date; departure: Date; durationMin: number }[] = [];
+
+    smartStops.stops.forEach((stop: any, idx: number) => {
+      const driveMinutes = (stop.milesFromStart / avgMph) * 60;
+      const prevMiles = idx > 0 ? smartStops.stops[idx - 1].milesFromStart : 0;
+      const legMiles = stop.milesFromStart - prevMiles;
+      const legMinutes = (legMiles / avgMph) * 60;
+
+      if (idx === 0) {
+        currentTime = departureTime.getTime() + driveMinutes * 60000;
+      } else {
+        currentTime += legMinutes * 60000;
+      }
+
+      const arrivalAtStop = new Date(currentTime);
+      const durationMin = dismissedStops.has(idx) ? 0 : getStopDuration(stop.type);
+      const departureFromStop = new Date(currentTime + durationMin * 60000);
+      
+      etas.push({ arrival: arrivalAtStop, departure: departureFromStop, durationMin });
+      currentTime += durationMin * 60000;
+    });
+
+    return etas;
+  };
+
+  const stopETAs = smartStops ? calculateETAs() : [];
+
+  const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const formatDayTime = (d: Date) => {
+    const today = new Date();
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const isToday = d.toDateString() === today.toDateString();
+    const isTomorrow = d.toDateString() === tomorrow.toDateString();
+    const prefix = isToday ? '' : isTomorrow ? 'Tomorrow ' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' ';
+    return prefix + formatTime(d);
+  };
+
   const filteredStops = smartStops?.stops?.filter((_: any, idx: number) => !dismissedStops.has(idx)) || [];
 
   // ===== RESULTS VIEW =====
@@ -576,8 +662,15 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 text-sm">{stop.reason}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">
-                      Mile {stop.milesFromStart} · {count} option{count !== 1 ? 's' : ''}
+                      Mile {stop.milesFromStart} · {count} option{count !== 1 ? 's' : ''} · {getStopDurationLabel(stop.type)}
                     </p>
+                    {stopETAs[idx] && (
+                      <p className="text-[11px] text-blue-600 font-medium mt-0.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Arrive {formatDayTime(stopETAs[idx].arrival)}
+                        {stop.type !== 'OVERNIGHT' && <span className="text-gray-400">· Leave {formatTime(stopETAs[idx].departure)}</span>}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-blue-500 text-white rotate-180' : 'bg-gray-100 text-gray-400'}`}>
@@ -621,6 +714,26 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           <div>
             <p className="text-xs font-bold text-gray-900">{tripPlan?.endLocation || event?.campground?.name || 'Destination'}</p>
             <p className="text-[10px] text-gray-400">Mile {s.totalMiles}</p>
+            {stopETAs.length > 0 && (() => {
+              const lastETA = stopETAs[stopETAs.length - 1];
+              const lastStop = smartStops.stops[smartStops.stops.length - 1];
+              const remainingMiles = s.totalMiles - lastStop.milesFromStart;
+              const totalMinutes = s.totalMinutes || (s.totalMiles / 55 * 60);
+              const avgMph = s.totalMiles / (totalMinutes / 60);
+              const arrivalTime = new Date(lastETA.departure.getTime() + (remainingMiles / avgMph) * 60 * 60000);
+              return (
+                <p className="text-[11px] text-green-600 font-semibold mt-0.5 flex items-center gap-1">
+                  🏁 ETA: {formatDayTime(arrivalTime)}
+                  {prefs.arrivalDate && prefs.arrivalTime && (() => {
+                    const target = new Date(prefs.arrivalDate + 'T' + prefs.arrivalTime);
+                    const diff = Math.round((target.getTime() - arrivalTime.getTime()) / 60000);
+                    if (diff > 0) return <span className="text-green-500">({Math.floor(diff / 60)}h {diff % 60}m early)</span>;
+                    if (diff < 0) return <span className="text-red-500">({Math.floor(-diff / 60)}h {-diff % 60}m late!)</span>;
+                    return <span className="text-green-500">(right on time!)</span>;
+                  })()}
+                </p>
+              );
+            })()}
           </div>
         </div>
       </div>
