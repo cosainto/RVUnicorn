@@ -129,7 +129,10 @@ export default function UserRecipesPage() {
           {isOwnProfile ? 'My Recipe Box' : `${profileName}'s Recipe Box`}
         </h1>
         <p className="text-gray-600 mt-2">
-          {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+          {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'} · <Link to="/recipes" className="text-primary-600 hover:text-primary-700 font-medium">Browse Community Recipes →</Link>
+        </p>
+        <p className="mt-1">
+          <Link to="/recipes" className="text-primary-600 hover:text-primary-700 text-sm font-medium">Browse Community Recipes →</Link>
         </p>
 
         {/* Filter Tabs */}
