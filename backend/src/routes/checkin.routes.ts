@@ -223,6 +223,35 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       }).catch(() => {}); // Ignore if already exists
     }
 
+    // Auto-complete trip plans for this campground
+    try {
+      const userEvents = await prisma.event.findMany({
+        where: {
+          OR: [
+            { organizerId: userId },
+            { attendees: { some: { userId } } }
+          ],
+          campgroundId,
+        },
+        select: { id: true }
+      });
+
+      if (userEvents.length > 0) {
+        const eventIds = userEvents.map(e => e.id);
+        await prisma.tripPlan.updateMany({
+          where: {
+            userId,
+            eventId: { in: eventIds },
+            status: 'PLANNED',
+          },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+          }
+        });
+      }
+    } catch (e) { console.error('Auto-complete trip error:', e); }
+
     // Notify friends about check-in
     const friendships = await prisma.friendship.findMany({
       where: {

@@ -728,7 +728,7 @@ export default function EventDetailPage() {
                         </a>
                       )}
                       <button onClick={() => setShowTripModal(true)} className="btn btn-secondary btn-sm">Edit Trip</button>
-                      {tripPlan.status === 'PLANNED' && <button onClick={handleCompleteTrip} className="btn btn-sm bg-green-500 text-white hover:bg-green-600">✅ Mark Complete</button>}
+                      
                     </div>
 
                     {/* Smart RV Stops */}
