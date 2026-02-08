@@ -25,6 +25,21 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+
+  const getDefaultEndTime = (startTime: string) => {
+    if (!startTime) return '';
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endHours = (hours + 2) % 24;
+    return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const handleStartTimeChange = (time: string) => {
+    setSelectedTime(time);
+    if (time) {
+      setEndTime(getDefaultEndTime(time));
+    }
+  };
   const [notes, setNotes] = useState('');
   const [success, setSuccess] = useState(false);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -35,6 +50,7 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
       setSelectedEvent(null);
       setSelectedDate('');
       setSelectedTime('');
+      setEndTime('');
       setNotes('');
       setSuccess(false);
     }
@@ -91,6 +107,12 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
         thingToDoId,
         scheduledDate: selectedDate || null,
         scheduledTime: selectedTime || null,
+        duration: selectedTime && endTime ? (() => {
+          const [sh, sm] = selectedTime.split(':').map(Number);
+          const [eh, em] = endTime.split(':').map(Number);
+          const diff = (eh * 60 + em) - (sh * 60 + sm);
+          return diff > 0 ? diff : null;
+        })() : null,
         notes: notes || null,
       });
       setSuccess(true);
@@ -204,15 +226,40 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500">Time (optional)</label>
+                        <label className="text-xs text-gray-500">Start Time</label>
                         <input
                           type="time"
                           value={selectedTime}
-                          onChange={(e) => setSelectedTime(e.target.value)}
+                          onChange={(e) => handleStartTimeChange(e.target.value)}
                           className="w-full text-sm border rounded-lg px-3 py-2 mt-1"
                         />
                       </div>
                     </div>
+                    {selectedTime && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-gray-500">End Time</label>
+                          <input
+                            type="time"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                            className="w-full text-sm border rounded-lg px-3 py-2 mt-1"
+                          />
+                        </div>
+                        <div className="flex items-end pb-1">
+                          <p className="text-xs text-gray-400">
+                            {selectedTime && endTime ? (() => {
+                              const [sh, sm] = selectedTime.split(':').map(Number);
+                              const [eh, em] = endTime.split(':').map(Number);
+                              const diff = (eh * 60 + em) - (sh * 60 + sm);
+                              const hrs = Math.floor(diff / 60);
+                              const mins = diff % 60;
+                              return diff > 0 ? `${hrs > 0 ? hrs + 'h ' : ''}${mins > 0 ? mins + 'm' : ''}` : '';
+                            })() : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="text-xs text-gray-500">Notes (optional)</label>
                       <input
