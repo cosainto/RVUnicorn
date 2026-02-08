@@ -159,6 +159,23 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
       console.log('[Schedule] Loaded activities:', activitiesRes.data);
       setActivities(activitiesRes.data);
       
+      // Auto-complete activities that are 1 hour past their end time
+      const now = new Date();
+      for (const act of activitiesRes.data) {
+        if (act.status !== 'PLANNED' || !act.scheduledDate || !act.scheduledTime) continue;
+        const dateStr = act.scheduledDate.split('T')[0];
+        const duration = act.duration || 120;
+        const endTime = new Date(`${dateStr}T${act.scheduledTime}:00`);
+        endTime.setMinutes(endTime.getMinutes() + duration + 60);
+        if (now > endTime) {
+          try {
+            await api.patch(`/events/${eventId}/activities/${act.id}`, { status: 'COMPLETED' });
+            setActivities(prev => prev.map(a => a.id === act.id ? { ...a, status: 'COMPLETED' } : a));
+            console.log('[Schedule] Auto-completed activity:', act.id);
+          } catch (e) { console.log('[Schedule] Could not auto-complete', act.id); }
+        }
+      }
+      
       // Try to load subevents
       try {
         const subeventsRes = await api.get(`/events/${eventId}/subevents`);
