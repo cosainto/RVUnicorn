@@ -209,8 +209,8 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
             <Route className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h4 className="font-bold text-gray-900">Smart Route Planner</h4>
-            <p className="text-xs text-gray-400">Tell us about your trip preferences</p>
+            <h4 className="font-bold text-gray-900">Plan Your Drive, Your Way</h4>
+            <p className="text-xs text-gray-400">Customize your route based on how you like to travel</p>
           </div>
         </div>
 
@@ -372,9 +372,9 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         <button onClick={handleFindStops} disabled={loading}
           className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-bold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30">
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing your route...</>
+            <><Loader2 className="w-4 h-4 animate-spin" /> Planning your perfect route...</>
           ) : (
-            <><Navigation className="w-4 h-4" /> Find My Perfect Stops <ArrowRight className="w-4 h-4" /></>
+            <><Navigation className="w-4 h-4" /> Plan My Route <ArrowRight className="w-4 h-4" /></>
           )}
         </button>
       </div>
