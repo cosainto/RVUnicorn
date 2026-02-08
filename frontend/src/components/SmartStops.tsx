@@ -32,7 +32,7 @@ interface TripPreferences {
   wantAttractions: boolean;
   wantDumpStations: boolean;
   freeOvernightOk: boolean;
-  budgetPriority: 'budget' | 'moderate' | 'comfort';
+  budgetPriority: 'budget' | 'moderate' | 'comfort' | 'asap';
 }
 
 const STOP_CONFIG: Record<string, { icon: string; label: string; dot: string; bg: string; text: string }> = {
@@ -365,6 +365,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: 'budget', emoji: '💰', title: 'Save money', desc: 'Free parking, cheap eats' },
               { value: 'moderate', emoji: '⚖️', title: 'Moderate', desc: 'Good value options' },
               { value: 'comfort', emoji: '✨', title: 'Comfort first', desc: 'Best rated spots' },
+              { value: 'asap', emoji: '🚀', title: 'Just get me there', desc: 'Speed over savings' },
             ].map(({ value, emoji, title, desc }) => (
               <button key={value} onClick={() => setPrefs(p => ({ ...p, budgetPriority: value as any }))}
                 className={`p-2.5 rounded-xl border-2 text-left transition-all duration-200 ${
