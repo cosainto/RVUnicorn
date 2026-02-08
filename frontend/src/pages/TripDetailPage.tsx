@@ -87,10 +87,11 @@ export default function EventDetailPage() {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
   const [tripPlan, setTripPlan] = useState<any>(null);
-  const [allTripPlans, setAllTripPlans] = useState<any[]>([]);
   const [tripLoading, setTripLoading] = useState(false);
   const [showTripModal, setShowTripModal] = useState(false);
   const [showPitStopModal, setShowPitStopModal] = useState(false);
+  const [editingFrom, setEditingFrom] = useState(false);
+  const [editFromValue, setEditFromValue] = useState('');
   const [tripForm, setTripForm] = useState({
     startLocation: '',
     useHometown: true,
@@ -99,6 +100,7 @@ export default function EventDetailPage() {
     routePreference: 'FASTEST',
     avoidTolls: false,
     avoidHighways: false,
+    arrivalDate: '',
   });
   const [pitStopForm, setPitStopForm] = useState({
     name: '',
@@ -107,7 +109,6 @@ export default function EventDetailPage() {
     notes: '',
     estimatedDuration: 15,
   });
-
 
   const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
@@ -122,12 +123,22 @@ export default function EventDetailPage() {
 
   const [userHomeLocation, setUserHomeLocation] = useState<string | null>(null);
 
+  // Helper to build default arrival datetime string (event start date at 2pm)
+  const getDefaultArrivalDate = () => {
+    if (!event?.startDate) return '';
+    const d = new Date(event.startDate);
+    // Format as YYYY-MM-DDT14:00 for datetime-local input
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}T14:00`;
+  };
+
   useEffect(() => {
     loadEvent();
     loadFriends();
     if (user) {
       loadTripPlan();
-      loadAllTripPlans();
       loadHomeLocation();
     }
   }, [id, user]);
@@ -156,25 +167,18 @@ export default function EventDetailPage() {
     }
   };
 
-  const loadAllTripPlans = async () => {
-    if (!id) return;
-    try {
-      const { data } = await api.get(`/trip-planner/event/${id}/all-trips`);
-      setAllTripPlans(data);
-    } catch (error) {
-      console.error('Load all trip plans error:', error);
-    }
-  };
-
   const handleCreateTripPlan = async () => {
     if (!id) return;
     try {
       setTripLoading(true);
-      const { data } = await api.post(`/trip-planner/event/${id}/plan`, tripForm);
+      const payload = {
+        ...tripForm,
+        arrivalDate: tripForm.arrivalDate || getDefaultArrivalDate(),
+      };
+      const { data } = await api.post(`/trip-planner/event/${id}/plan`, payload);
       setTripPlan(data);
       setShowTripModal(false);
-      loadAllTripPlans();
-      alert('✅ Trip plan created!');
+      alert('✅ Trip plan saved!');
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to create trip plan');
     } finally {
@@ -182,6 +186,65 @@ export default function EventDetailPage() {
     }
   };
 
+  // Open trip modal with current values pre-filled
+  const openTripModal = () => {
+    if (tripPlan) {
+      // Pre-fill form with existing trip plan values
+      const arrivalStr = tripPlan.arrivalDate
+        ? new Date(tripPlan.arrivalDate).toISOString().slice(0, 16)
+        : getDefaultArrivalDate();
+      setTripForm({
+        startLocation: tripPlan.startLocation || '',
+        useHometown: tripPlan.useHometown ?? true,
+        isDriving: tripPlan.isDriving ?? true,
+        ridingWithId: tripPlan.ridingWithId || '',
+        routePreference: tripPlan.routePreference || 'FASTEST',
+        avoidTolls: tripPlan.avoidTolls ?? false,
+        avoidHighways: tripPlan.avoidHighways ?? false,
+        arrivalDate: arrivalStr,
+      });
+    } else {
+      // Default for new trip
+      setTripForm({
+        startLocation: '',
+        useHometown: true,
+        isDriving: true,
+        ridingWithId: '',
+        routePreference: 'FASTEST',
+        avoidTolls: false,
+        avoidHighways: false,
+        arrivalDate: getDefaultArrivalDate(),
+      });
+    }
+    setShowTripModal(true);
+  };
+
+  // Inline edit "From" — save immediately
+  const handleSaveFrom = async () => {
+    if (!id || !editFromValue.trim()) {
+      setEditingFrom(false);
+      return;
+    }
+    try {
+      setTripLoading(true);
+      const { data } = await api.post(`/trip-planner/event/${id}/plan`, {
+        startLocation: editFromValue.trim(),
+        useHometown: false,
+        isDriving: tripPlan?.isDriving ?? true,
+        ridingWithId: tripPlan?.ridingWithId || '',
+        routePreference: tripPlan?.routePreference || 'FASTEST',
+        avoidTolls: tripPlan?.avoidTolls ?? false,
+        avoidHighways: tripPlan?.avoidHighways ?? false,
+        arrivalDate: tripPlan?.arrivalDate || getDefaultArrivalDate(),
+      });
+      setTripPlan(data);
+      setEditingFrom(false);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to update start location');
+    } finally {
+      setTripLoading(false);
+    }
+  };
 
   const handleDiscoverStops = async () => {
     if (!tripPlan?.startLatitude || !tripPlan?.endLatitude) {
@@ -222,12 +285,12 @@ export default function EventDetailPage() {
       console.error('Add discovered stop error:', err);
     }
   };
+
   const handleAddPitStop = async () => {
     if (!tripPlan) return;
     try {
       await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, pitStopForm);
       setShowPitStopModal(false);
-      loadTripPlan();
       setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
       loadTripPlan();
       alert('✅ Pit stop added!');
@@ -283,6 +346,22 @@ export default function EventDetailPage() {
 
   const getStopTypeInfo = (type: string) => {
     return STOP_TYPES.find(s => s.id === type) || STOP_TYPES[STOP_TYPES.length - 1];
+  };
+
+  const getEventDestination = () => {
+    if (event?.campground) {
+      const parts = [event.campground.name];
+      if (event.campground.location) parts.push(event.campground.location);
+      if (event.campground.state) parts.push(event.campground.state);
+      return parts.join(', ');
+    }
+    return event?.location || 'Not set';
+  };
+
+  const formatArrivalDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+      ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
   const loadEvent = async () => {
@@ -493,13 +572,7 @@ export default function EventDetailPage() {
                 <Camera className="w-5 h-5" />
               )}
               <span className="font-medium">{event.bannerImage ? 'Change Banner' : 'Add Banner Image'}</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleBannerUpload}
-                className="hidden"
-                disabled={uploadingBanner}
-              />
+              <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" disabled={uploadingBanner} />
             </label>
           )}
           {daysUntil && (
@@ -592,7 +665,6 @@ export default function EventDetailPage() {
         <div className="p-6">
           {activeTab === 'details' && (
             <div className="space-y-6">
-              {/* Event Settings - Moved to top for organizers */}
               {isOrganizer && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                   <div className="flex items-center justify-between">
@@ -602,7 +674,6 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {/* Advanced Event Settings - Privacy & Blocked Users */}
               <EventSettingsPanel eventId={event.id} isOrganizer={isOrganizer} />
 
               {event.description && (
@@ -650,7 +721,6 @@ export default function EventDetailPage() {
                 </div>
               </div>
 
-              {/* Comment Wall */}
               {event.attendees && user && (
                 <EventCommentWall
                   eventId={event.id}
@@ -690,23 +760,79 @@ export default function EventDetailPage() {
               <div className="bg-white rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold flex items-center gap-2"><Car className="w-6 h-6" />My Trip</h3>
-                  {!tripPlan && <button onClick={() => setShowTripModal(true)} className="btn btn-primary btn-sm">Plan My Trip</button>}
+                  <div className="flex gap-2">
+                    {tripPlan && !tripPlan.status?.includes('COMPLETED') && (
+                      <button onClick={openTripModal} className="btn btn-secondary btn-sm flex items-center gap-1"><Edit className="w-4 h-4" />Edit Trip</button>
+                    )}
+                    {!tripPlan && <button onClick={openTripModal} className="btn btn-primary btn-sm">Plan My Trip</button>}
+                  </div>
                 </div>
 
                 {tripLoading ? (
                   <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" /></div>
                 ) : tripPlan ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-500">From</p>
-                        <p className="font-semibold">{tripPlan.startLocation || 'Not set'}</p>
-                        {tripPlan.useHometown && <span className="text-xs text-gray-400">(Using hometown)</span>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* FROM - clickable to edit */}
+                      <div className="bg-gray-50 rounded-lg p-4 group relative">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-500">From</p>
+                          {!editingFrom && (
+                            <button
+                              onClick={() => { setEditFromValue(tripPlan.startLocation || ''); setEditingFrom(true); }}
+                              className="text-gray-400 hover:text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Edit starting location"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        {editingFrom ? (
+                          <div className="mt-1">
+                            <input
+                              type="text"
+                              value={editFromValue}
+                              onChange={(e) => setEditFromValue(e.target.value)}
+                              className="input w-full text-sm"
+                              placeholder="City, State or Address"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveFrom();
+                                if (e.key === 'Escape') setEditingFrom(false);
+                              }}
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button onClick={handleSaveFrom} className="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700">Save</button>
+                              <button onClick={() => setEditingFrom(false)} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="font-semibold">{tripPlan.startLocation || 'Not set'}</p>
+                            {tripPlan.useHometown && <span className="text-xs text-gray-400">(Using hometown)</span>}
+                          </>
+                        )}
                       </div>
+
+                      {/* TO */}
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="text-sm text-gray-500">To</p>
-                        <p className="font-semibold">{tripPlan.endLocation}</p>
+                        <p className="font-semibold">{tripPlan.endLocation || getEventDestination()}</p>
                       </div>
+
+                      {/* ARRIVAL DATE */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-500">Arrival</p>
+                        <p className="font-semibold">
+                          {tripPlan.arrivalDate
+                            ? formatArrivalDate(tripPlan.arrivalDate)
+                            : event.startDate
+                              ? formatArrivalDate(new Date(new Date(event.startDate).setHours(14, 0, 0, 0)).toISOString())
+                              : 'Not set'}
+                        </p>
+                      </div>
+
+                      {/* DISTANCE */}
                       <div className="bg-primary-50 rounded-lg p-4">
                         <p className="text-sm text-primary-600">Estimated Distance</p>
                         <p className="text-2xl font-bold text-primary-700">{tripPlan.distanceMiles ? `${tripPlan.distanceMiles} mi` : 'Calculating...'}</p>
@@ -734,7 +860,6 @@ export default function EventDetailPage() {
                       <SmartStops tripPlan={tripPlan} eventId={event.id} event={event} onAddPitStop={() => loadTripPlan()} />
                     </div>
 
-
                     {/* Pit Stops Section */}
                     <div className="border-t pt-4">
                       <div className="flex items-center justify-between mb-3">
@@ -745,7 +870,6 @@ export default function EventDetailPage() {
                         <button onClick={() => setShowPitStopModal(true)} className="btn btn-secondary btn-sm flex items-center gap-1">
                           <Plus className="w-4 h-4" />Add Stop
                         </button>
-
                       </div>
 
                       {tripPlan.pitStops && tripPlan.pitStops.length > 0 ? (
@@ -782,8 +906,6 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
-
-
                     {tripPlan.status === 'COMPLETED' && tripPlan.actualMiles && (
                       <div className="bg-green-50 rounded-lg p-4 mt-4">
                         <p className="text-green-700 font-medium">🎉 Trip Completed!</p>
@@ -794,92 +916,23 @@ export default function EventDetailPage() {
                 ) : (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500 mb-4">No trip planned yet</p>
-                    <button onClick={() => setShowTripModal(true)} className="btn btn-primary">Plan My Trip</button>
+                    <p className="text-gray-600 mb-2">Plan your personal route to this event</p>
+                    {(event.campground || event.location) && (
+                      <p className="text-sm text-gray-500 mb-4">
+                        <MapPin className="w-4 h-4 inline mr-1" />
+                        Destination: {getEventDestination()}
+                      </p>
+                    )}
+                    <button onClick={openTripModal} className="btn btn-primary">Plan My Trip</button>
                   </div>
                 )}
               </div>
-
-              {/* Group Trip Plans */}
-              {event.attendees && event.attendees.length > 0 && (
-                <div className="bg-white rounded-lg border p-6">
-                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Users className="w-6 h-6" />
-                    Group Travelers ({event.attendees.filter(a => a.status === 'going').length})
-                  </h3>
-                  <div className="space-y-3">
-                    {event.attendees.filter(a => a.status === 'going').map((attendee) => {
-                      const plan = allTripPlans.find(p => p.userId === attendee.userId);
-                      const isCurrentUser = attendee.userId === user?.id;
-                      const ridingWithUser = plan?.ridingWithId ? event.attendees?.find(a => a.userId === plan.ridingWithId) : null;
-                      const ridersWithThisPerson = allTripPlans.filter(p => p.ridingWithId === attendee.userId);
-                      
-                      return (
-                        <div key={attendee.id} className={`flex items-center justify-between p-3 rounded-lg ${isCurrentUser ? 'bg-primary-50 border-2 border-primary-200' : 'bg-gray-50'}`}>
-                          <div className="flex items-center gap-3">
-                            {attendee.user.profilePicture ? (
-                              <img src={`${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                                <span className="text-primary-600 font-bold text-sm">{attendee.user.firstName[0]}{attendee.user.lastName[0]}</span>
-                              </div>
-                            )}
-                            <div>
-                              <Link to={`/profile/${attendee.user.username}`} className="font-medium hover:text-primary-600">
-                                {attendee.user.firstName} {attendee.user.lastName}
-                                {isCurrentUser && <span className="ml-2 text-xs bg-primary-500 text-white px-2 py-0.5 rounded-full">You</span>}
-                                {attendee.userId === event.organizerId && <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Organizer</span>}
-                              </Link>
-                              {plan && plan.startLocation && (
-                                <p className="text-sm text-gray-500">{plan.startLocation}</p>
-                              )}
-                              {ridersWithThisPerson.length > 0 && (
-                                <p className="text-xs text-green-600 mt-1">
-                                  🚐 Riding along: {ridersWithThisPerson.map(r => {
-                                    const riderAttendee = event.attendees?.find(a => a.userId === r.userId);
-                                    return riderAttendee?.user.firstName;
-                                  }).join(', ')}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right flex items-center gap-3">
-                            {plan && (
-                              <div>
-                                <p className="font-semibold text-primary-600">
-                                  {plan.distanceMiles ? `${plan.distanceMiles} mi` : '—'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {plan.isDriving ? '🚗 Driving' : `🚐 w/ ${ridingWithUser?.user.firstName || '?'}`}
-                                </p>
-                                {plan.pitStops?.length > 0 && (
-                                  <p className="text-xs text-gray-400">
-                                    {plan.pitStops.length} stop{plan.pitStops.length !== 1 ? 's' : ''}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                            {isOrganizer && attendee.userId !== event.organizerId && (
-                              <button onClick={() => handleRemoveAttendee(attendee.id)} className="text-red-500 hover:text-red-700 p-1">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           {activeTab === 'schedule' && (
             <div className="space-y-8">
-              {/* Calendar with integrated activities */}
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
-              
-              {/* Things to Do Nearby - only show if event has a campground */}
               {event.campground && (
                 <div className="border-t pt-8">
                   <ThingsToDoSection 
@@ -971,9 +1024,30 @@ export default function EventDetailPage() {
       {/* Trip Plan Modal */}
       {showTripModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Plan Your Trip</h3><button onClick={() => setShowTripModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button></div>
             <div className="space-y-4">
+              {/* Destination Preview */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Destination</p>
+                {event.campground ? (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-green-800">{event.campground.name}</p>
+                      <p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p>
+                    </div>
+                  </div>
+                ) : event.location ? (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <p className="font-semibold text-green-800">{event.location}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No destination set for this event</p>
+                )}
+              </div>
+
               <div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="useHometown" checked={tripForm.useHometown} onChange={(e) => setTripForm({ ...tripForm, useHometown: e.target.checked })} />
@@ -987,6 +1061,22 @@ export default function EventDetailPage() {
                 )}
               </div>
               {!tripForm.useHometown && <div><label className="block text-sm font-medium text-gray-700 mb-1">Starting Location</label><input type="text" value={tripForm.startLocation} onChange={(e) => setTripForm({ ...tripForm, startLocation: e.target.value })} className="input w-full" placeholder="City, State or Address" /></div>}
+
+              {/* Arrival Date & Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Planned Arrival
+                </label>
+                <input
+                  type="datetime-local"
+                  value={tripForm.arrivalDate}
+                  onChange={(e) => setTripForm({ ...tripForm, arrivalDate: e.target.value })}
+                  className="input w-full"
+                />
+                <p className="text-xs text-gray-400 mt-1">Defaults to event start date at 2:00 PM</p>
+              </div>
+
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Route Preference</label><select value={tripForm.routePreference} onChange={(e) => setTripForm({ ...tripForm, routePreference: e.target.value })} className="input w-full"><option value="FASTEST">Fastest Route</option><option value="SHORTEST">Shortest Distance</option><option value="RV_FRIENDLY">RV-Friendly</option></select></div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2"><input type="checkbox" checked={tripForm.avoidTolls} onChange={(e) => setTripForm({ ...tripForm, avoidTolls: e.target.checked })} /><span className="text-sm">Avoid Tolls</span></label>
@@ -1001,7 +1091,7 @@ export default function EventDetailPage() {
               </div>
               {!tripForm.isDriving && <div><label className="block text-sm font-medium text-gray-700 mb-1">Riding With</label><select value={tripForm.ridingWithId} onChange={(e) => setTripForm({ ...tripForm, ridingWithId: e.target.value })} className="input w-full"><option value="">Select traveler...</option>{event.attendees?.filter(a => a.userId !== user?.id && a.status === 'going').map((attendee) => <option key={attendee.userId} value={attendee.userId}>{attendee.user.firstName} {attendee.user.lastName}</option>)}</select></div>}
             </div>
-            <div className="flex gap-3 mt-6"><button onClick={() => setShowTripModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleCreateTripPlan} disabled={tripLoading} className="btn btn-primary flex-1">{tripLoading ? 'Saving...' : 'Save Trip Plan'}</button></div>
+            <div className="flex gap-3 mt-6"><button onClick={() => setShowTripModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleCreateTripPlan} disabled={tripLoading} className="btn btn-primary flex-1">{tripLoading ? 'Saving...' : tripPlan ? 'Update Trip Plan' : 'Save Trip Plan'}</button></div>
           </div>
         </div>
       )}
@@ -1120,4 +1210,3 @@ export default function EventDetailPage() {
     </div>
   );
 }
-

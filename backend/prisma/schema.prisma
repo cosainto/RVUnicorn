@@ -1013,6 +1013,7 @@ model TripPlan {
   routePreference String             @default("FASTEST")
   avoidTolls      Boolean            @default(false)
   avoidHighways   Boolean            @default(false)
+  arrivalDate     DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   packItems       PersonalPackItem[]

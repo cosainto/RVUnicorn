@@ -236,8 +236,8 @@ async function importCampground(element: OSMElement, regionState: string): Promi
 
     const slug = createSlug(name, state, element.id);
 
-    const existing = await prisma.campground.findUnique({
-      where: { slug },
+    const existing = await prisma.campground.findFirst({
+      where: { name, state: state || undefined },
     });
 
     if (existing) return false;
@@ -247,16 +247,15 @@ async function importCampground(element: OSMElement, regionState: string): Promi
     await prisma.campground.create({
       data: {
         name,
-        slug,
         location,
         state: state || undefined,
         description: tags.description || `Campground in ${location}`,
         latitude: lat,
         longitude: lon,
         amenities,
-        website: tags.website,
-        phone: tags.phone,
-        email: tags.email,
+        websiteUrl: tags.website,
+        businessPhone: tags.phone,
+        businessEmail: tags.email,
       },
     });
 

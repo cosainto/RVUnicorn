@@ -70,7 +70,8 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
       ridingWithId,
       routePreference,
       avoidTolls,
-      avoidHighways
+      avoidHighways,
+      arrivalDate
     } = req.body;
 
     const user = await prisma.user.findUnique({
@@ -113,6 +114,16 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
       ? `${event.campground.name}, ${event.campground.location}, ${event.campground.state}`
       : event.location || '';
 
+    // Default arrival date to event start date at 2pm if not provided
+    let finalArrivalDate: Date | null = null;
+    if (arrivalDate) {
+      finalArrivalDate = new Date(arrivalDate);
+    } else if (event.startDate) {
+      const defaultArrival = new Date(event.startDate);
+      defaultArrival.setHours(14, 0, 0, 0);
+      finalArrivalDate = defaultArrival;
+    }
+
     let distanceMiles: number | null = null;
     let durationMinutes: number | null = null;
 
@@ -140,6 +151,7 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
         routePreference: routePreference || 'FASTEST',
         avoidTolls: avoidTolls ?? false,
         avoidHighways: avoidHighways ?? false,
+        arrivalDate: finalArrivalDate,
       },
       create: {
         eventId,
@@ -156,6 +168,7 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
         routePreference: routePreference || 'FASTEST',
         avoidTolls: avoidTolls ?? false,
         avoidHighways: avoidHighways ?? false,
+        arrivalDate: finalArrivalDate,
       },
       include: {
         ridingWith: {
