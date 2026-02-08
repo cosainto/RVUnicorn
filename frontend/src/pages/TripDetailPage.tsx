@@ -736,8 +736,6 @@ export default function EventDetailPage() {
                       <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-2 border-t pt-4">
 
                     {/* Pit Stops Section */}
                     <div className="border-t pt-4">
