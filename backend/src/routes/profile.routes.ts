@@ -1032,6 +1032,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       RECIPE_SHARE_TAG: { label: 'shared a recipe with you', icon: '🏷️', feedType: 'RECIPE' },
       RECIPE_LIKED: { label: 'liked a recipe', icon: '❤️', feedType: 'RECIPE' },
       RECIPE_COMMENTED: { label: 'commented on a recipe', icon: '💬', feedType: 'RECIPE' },
+      BADGE_EARNED: { label: 'earned a badge', icon: '🏆', feedType: 'BADGE' },
     };     
 
     // Transform posts into feed items
@@ -1092,6 +1093,14 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       // Extract imageUrl from metadata for photo activities (videoUrl added later)
       let imageUrl = null;
       let mediaIds: string[] = [];
+      if (activity.type === 'BADGE_EARNED' && activity.metadata) {
+        try {
+          const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
+          imageUrl = meta?.badgeImage || null;
+          targetName = meta?.badgeName || 'a badge';
+          targetLink = '/badges';
+        } catch (e) {}
+      }
       if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
         try {
           const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
