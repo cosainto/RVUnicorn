@@ -458,7 +458,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               { value: `${s.totalMiles}`, label: 'miles' },
               { value: s.totalDays === 1 ? 'Day Trip' : `${s.totalDays} Days`, label: s.totalDays === 1 ? '' : 'driving' },
               { value: `${s.gasStopsNeeded}`, label: 'fuel stops' },
-              { value: `$${s.estimatedFuelCost}`, label: `~${s.estimatedGallons} gal` },
+              { value: `$${s.estimatedFuelCost}`, label: `~${s.estimatedGallons} gal${s.avgGasPrice ? ` @ $${s.avgGasPrice}/gal` : ''}` },
             ].map(({ value, label }, i) => (
               <div key={i} className="text-center">
                 <p className="text-xl font-black text-white">{value}</p>

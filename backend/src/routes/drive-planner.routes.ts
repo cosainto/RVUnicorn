@@ -455,6 +455,23 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
     }
     allStops.sort((a: any, b: any) => a.milesFromStart - b.milesFromStart);
 
+    // Look up average gas price from states along route
+    let avgGasPrice = 3.50; // fallback
+    try {
+      const allPrices = await prisma.stateGasPrice.findMany();
+      if (allPrices.length > 0) {
+        // Get states the route passes through using sample points
+        const samplePoints = [routePoints[0], ...gasStopPoints.map(p => ({ lat: p.lat, lng: p.lng })), routePoints[routePoints.length - 1]];
+        // Use average of all state prices as approximation (route may cross multiple states)
+        const totalRegular = allPrices.reduce((sum: number, p: any) => sum + p.regularPrice, 0);
+        avgGasPrice = totalRegular / allPrices.length;
+        // If budget priority, find cheapest states; if comfort, use avg
+      }
+    } catch (e) { console.error('Gas price lookup error:', e); }
+
+    const estimatedGallons = Math.round(totalMiles / mpg);
+    const estimatedFuelCost = Math.round(estimatedGallons * avgGasPrice);
+
     res.json({
       summary: {
         totalMiles: Math.round(totalMiles),
@@ -462,8 +479,9 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
         gasRange,
         gasStopsNeeded: gasStopPoints.length,
         overnightStopsNeeded: overnightStopPoints.length,
-        estimatedFuelCost: Math.round((totalMiles / mpg) * 3.50),
-        estimatedGallons: Math.round(totalMiles / mpg),
+        estimatedFuelCost,
+        estimatedGallons,
+        avgGasPrice: parseFloat(avgGasPrice.toFixed(2)),
       },
       stops: allStops,
     });
