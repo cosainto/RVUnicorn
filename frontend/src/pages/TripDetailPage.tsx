@@ -720,6 +720,22 @@ export default function EventDetailPage() {
                       <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">Route: {tripPlan.routePreference}</span>
                     </div>
 
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 border-t pt-4">
+                      {tripPlan.endLatitude && tripPlan.endLongitude && (
+                        <a href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(tripPlan.startLocation)}&destination=${tripPlan.endLatitude},${tripPlan.endLongitude}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm flex items-center gap-1">
+                          <Navigation className="w-4 h-4" />Open in Google Maps
+                        </a>
+                      )}
+                      <button onClick={() => setShowTripModal(true)} className="btn btn-secondary btn-sm">Edit Trip</button>
+                      {tripPlan.status === 'PLANNED' && <button onClick={handleCompleteTrip} className="btn btn-sm bg-green-500 text-white hover:bg-green-600">✅ Mark Complete</button>}
+                    </div>
+
+                    {/* Smart RV Stops */}
+                    <div className="pt-4 border-t">
+                      <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
+                    </div>
+
                     {/* Pit Stops Section */}
                     <div className="border-t pt-4">
                       <div className="flex items-center justify-between mb-3">
@@ -730,9 +746,7 @@ export default function EventDetailPage() {
                         <button onClick={() => setShowPitStopModal(true)} className="btn btn-secondary btn-sm flex items-center gap-1">
                           <Plus className="w-4 h-4" />Add Stop
                         </button>
-                        <button onClick={handleDiscoverStops} className="btn btn-primary btn-sm flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />Smart RV Stops
-                        </button>
+
                       </div>
 
                       {tripPlan.pitStops && tripPlan.pitStops.length > 0 ? (
@@ -769,20 +783,7 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
-                    {/* Smart RV Stops */}
-                    <div className="pt-4 border-t">
-                      <SmartStops tripPlan={tripPlan} eventId={event.id} onAddPitStop={() => loadTripPlan()} />
-                    </div>
 
-                    <div className="flex gap-2 pt-4 border-t">
-                      {tripPlan.endLatitude && tripPlan.endLongitude && (
-                        <a href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(tripPlan.startLocation)}&destination=${tripPlan.endLatitude},${tripPlan.endLongitude}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm flex items-center gap-1">
-                          <Navigation className="w-4 h-4" />Open in Google Maps
-                        </a>
-                      )}
-                      <button onClick={() => setShowTripModal(true)} className="btn btn-secondary btn-sm">Edit Trip</button>
-                      {tripPlan.status === 'PLANNED' && <button onClick={handleCompleteTrip} className="btn btn-sm bg-green-500 text-white hover:bg-green-600">✅ Mark Complete</button>}
-                    </div>
 
                     {tripPlan.status === 'COMPLETED' && tripPlan.actualMiles && (
                       <div className="bg-green-50 rounded-lg p-4 mt-4">
