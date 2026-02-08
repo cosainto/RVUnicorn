@@ -56,7 +56,7 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; label:
 
 const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'scenic', 'easy-access', 'reservation-required'];
 
-export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmin = false }: Props) {
+export default function ThingsToDoSection({ campgroundId, campgroundName, onActivityAdded, isAdmin = false }: Props) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('discover');
   const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
@@ -376,6 +376,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, isAdmi
           thingToDoId={addToEventModal.thingId}
           thingTitle={addToEventModal.thingTitle}
           campgroundId={campgroundId}
+          onActivityAdded={onActivityAdded}
         />
       )}
     </div>

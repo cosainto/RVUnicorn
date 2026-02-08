@@ -109,6 +109,7 @@ export default function EventDetailPage() {
 
 
   const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
+  const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
   const [discoveredStops, setDiscoveredStops] = useState<any>({ attractions: [], restaurants: [], gasStations: [] });
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [copyForm, setCopyForm] = useState({
@@ -869,7 +870,7 @@ export default function EventDetailPage() {
           {activeTab === 'schedule' && (
             <div className="space-y-8">
               {/* Calendar with integrated activities */}
-              <EventSchedule eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
+              <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
               
               {/* Things to Do Nearby - only show if event has a campground */}
               {event.campground && (
@@ -878,6 +879,7 @@ export default function EventDetailPage() {
                     campgroundId={event.campground.id} 
                     campgroundName={event.campground.name}
                     isAdmin={isOrganizer}
+                    onActivityAdded={() => setScheduleRefreshKey(k => k + 1)}
                   />
                 </div>
               )}

@@ -15,9 +15,10 @@ interface AddToEventModalProps {
   thingToDoId: string;
   thingTitle: string;
   campgroundId: string;
+  onActivityAdded?: () => void;
 }
 
-export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTitle, campgroundId }: AddToEventModalProps) {
+export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTitle, campgroundId, onActivityAdded }: AddToEventModalProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -93,6 +94,7 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
         notes: notes || null,
       });
       setSuccess(true);
+      if (onActivityAdded) onActivityAdded();
       setTimeout(() => {
         onClose();
       }, 1500);
