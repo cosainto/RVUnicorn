@@ -727,7 +727,6 @@ export default function EventDetailPage() {
                           <Navigation className="w-4 h-4" />Open in Google Maps
                         </a>
                       )}
-                      
                     </div>
 
                     {/* Smart RV Stops */}
