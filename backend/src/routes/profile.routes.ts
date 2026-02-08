@@ -1323,8 +1323,8 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
     const { username } = req.params;
     const currentUserId = (req as any).userId;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ username }, { id: username }] },
       select: { id: true, firstName: true, lastName: true },
     });
 
