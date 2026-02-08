@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fuel, Moon, Utensils, MapPin, Star, Trash2, Plus, ChevronDown, ChevronUp, Loader2, DollarSign, Clock, Navigation, Truck, AlertTriangle, Compass } from 'lucide-react';
+import { Fuel, Moon, Utensils, MapPin, Star, Trash2, Plus, ChevronDown, ChevronUp, Loader2, DollarSign, Clock, Navigation, Truck, AlertTriangle, Compass, Compass } from 'lucide-react';
 import api from '../services/api';
 
 interface SmartStopsProps {
@@ -93,6 +93,7 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
       case 'FOOD_REST': return <Utensils className="w-5 h-5 text-orange-500" />;
       case 'DUMP_STATION': return <Trash2 className="w-5 h-5 text-green-600" />;
       case 'ATTRACTION': return <Compass className="w-5 h-5 text-purple-500" />;
+      case 'ATTRACTION': return <Compass className="w-5 h-5 text-purple-500" />;
       default: return <MapPin className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -103,6 +104,7 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
       case 'OVERNIGHT': return 'border-indigo-200 bg-indigo-50';
       case 'FOOD_REST': return 'border-orange-200 bg-orange-50';
       case 'DUMP_STATION': return 'border-green-200 bg-green-50';
+      case 'ATTRACTION': return 'border-purple-200 bg-purple-50';
       case 'ATTRACTION': return 'border-purple-200 bg-purple-50';
       default: return 'border-gray-200 bg-gray-50';
     }
@@ -306,6 +308,9 @@ export default function SmartStops({ tripPlan, eventId, onAddPitStop }: SmartSto
                     )}
                     {stop.type === 'DUMP_STATION' && stop.places?.map((place: StopPlace) => 
                       renderPlaceCard(place, 'DUMP')
+                    )}
+                    {stop.type === 'ATTRACTION' && stop.places?.map((place: StopPlace) => 
+                      renderPlaceCard(place, 'ATTRACTION', 'Recommended detour along your route')
                     )}
                     {stop.type === 'ATTRACTION' && stop.places?.map((place: StopPlace) => 
                       renderPlaceCard(place, 'ATTRACTION', 'Recommended detour along your route')
