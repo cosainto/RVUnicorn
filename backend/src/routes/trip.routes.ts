@@ -374,7 +374,7 @@ router.post('/', authenticateToken, async (req, res) => {
         organizerId: userId,
         title,
         description,
-        bannerImage: bannerImage || null,
+        bannerImage: bannerImage || '/images/Event_default.png',
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         location,
