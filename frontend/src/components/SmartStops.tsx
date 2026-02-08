@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders } from 'lucide-react';
+import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders, X, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 
 interface SmartStopsProps {
@@ -50,6 +50,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
   const [smartStops, setSmartStops] = useState<any>(null);
   const [expandedStop, setExpandedStop] = useState<number | null>(null);
   const [addedStops, setAddedStops] = useState<Set<string>>(new Set());
+  const [dismissedStops, setDismissedStops] = useState<Set<number>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState<'preferences' | 'results'>('preferences');
   
@@ -464,6 +465,20 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     );
   }
 
+  const handleDismissStop = (idx: number) => {
+    setDismissedStops(prev => new Set([...prev, idx]));
+  };
+
+  const handleUndismiss = (idx: number) => {
+    setDismissedStops(prev => {
+      const next = new Set(prev);
+      next.delete(idx);
+      return next;
+    });
+  };
+
+  const filteredStops = smartStops?.stops?.filter((_: any, idx: number) => !dismissedStops.has(idx)) || [];
+
   // ===== RESULTS VIEW =====
   const s = smartStops.summary;
   return (
@@ -525,7 +540,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
       </div>
 
       <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-        {smartStops.stops.length} stop{smartStops.stops.length !== 1 ? 's' : ''} along your route
+        {filteredStops.length} stop{filteredStops.length !== 1 ? 's' : ''} along your route
       </p>
 
       {/* Timeline */}
@@ -542,6 +557,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         </div>
 
         {smartStops.stops.map((stop: any, idx: number) => {
+          if (dismissedStops.has(idx)) return null;
           const config = STOP_CONFIG[stop.type] || STOP_CONFIG.GAS;
           const isExpanded = expandedStop === idx;
           const { places, sections } = getPlacesForStop(stop);
@@ -563,8 +579,10 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
                       Mile {stop.milesFromStart} · {count} option{count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-blue-500 text-white rotate-180' : 'bg-gray-100 text-gray-400'}`}>
-                    <ChevronDown className="w-4 h-4" />
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-blue-500 text-white rotate-180' : 'bg-gray-100 text-gray-400'}`}>
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
                   </div>
                 </button>
 
@@ -584,6 +602,10 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
                         </div>
                       </div>
                     ))}
+                    <button onClick={(e) => { e.stopPropagation(); handleDismissStop(idx); }}
+                      className="w-full mt-2 py-1.5 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition font-medium flex items-center justify-center gap-1">
+                      <X className="w-3 h-3" /> Remove this stop from my route
+                    </button>
                   </div>
                 )}
               </div>
@@ -603,7 +625,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
         </div>
       </div>
 
-      {smartStops.stops.length === 0 && (
+      {filteredStops.length === 0 && (
         <div className="text-center py-8 bg-gray-50 rounded-2xl">
           <p className="text-3xl mb-2">🎉</p>
           <p className="font-bold text-gray-900">Short trip — no stops needed!</p>
