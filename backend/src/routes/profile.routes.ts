@@ -1317,64 +1317,94 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
   }
 });
 
-// GET /api/profile/:username/recipes - Get user's saved recipes (Recipe Box)
+// GET /api/profile/:username/recipes - Get user's Recipe Box (uploaded, saved, liked)
 router.get('/:username/recipes', optionalAuth, async (req, res) => {
   try {
     const { username } = req.params;
     const currentUserId = (req as any).userId;
 
-    // Get user
     const user = await prisma.user.findUnique({
       where: { username },
-      
-      select: { id: true },
+      select: { id: true, firstName: true, lastName: true },
     });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Only show saved recipes if viewing own profile
-    if (currentUserId !== user.id) {
-      return res.json({ recipes: [] });
-    }
+    const isOwnProfile = currentUserId === user.id;
 
-    // Get user's saved recipes from SavedRecipe table
-    const savedRecipes = await prisma.savedRecipe.findMany({
-      where: { userId: user.id },
-      include: {
-        recipe: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                profilePicture: true,
-              }
-            },
-            _count: {
-              select: {
-                ratings: true,
-              }
-            }
-          }
-        }
+    const recipeInclude = {
+      user: {
+        select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true }
       },
+      _count: { select: { ratings: true, likes: true } }
+    };
+
+    // 1. Uploaded recipes (visible to everyone)
+    const uploadedRecipes = await prisma.recipe.findMany({
+      where: { userId: user.id },
+      include: recipeInclude,
       orderBy: { createdAt: 'desc' }
     });
 
-    // Transform to match expected format
-    const transformedRecipes = savedRecipes.map(savedRecipe => ({
-      ...savedRecipe.recipe,
-      author: savedRecipe.recipe.user,
-      isFavorite: savedRecipe.favorite,
-      favorite: savedRecipe.favorite,
-      savedRecipeId: savedRecipe.id,
+    const uploadedItems = uploadedRecipes.map(r => ({
+      ...r,
+      author: r.user,
+      source: 'uploaded',
     }));
 
-    res.json({ recipes: transformedRecipes });
+    // 2. Saved/bookmarked recipes (own profile only)
+    let savedItems: any[] = [];
+    if (isOwnProfile) {
+      const savedRecipes = await prisma.savedRecipe.findMany({
+        where: { userId: user.id },
+        include: { recipe: { include: recipeInclude } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      savedItems = savedRecipes
+        .filter(sr => sr.recipe.userId !== user.id)
+        .map(sr => ({
+          ...sr.recipe,
+          author: sr.recipe.user,
+          isFavorite: sr.favorite,
+          favorite: sr.favorite,
+          savedRecipeId: sr.id,
+          source: 'saved',
+        }));
+    }
+
+    // 3. Liked/hearted recipes (own profile only)
+    let likedItems: any[] = [];
+    if (isOwnProfile) {
+      const likedRecipes = await prisma.recipeLike.findMany({
+        where: { userId: user.id },
+        include: { recipe: { include: recipeInclude } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const uploadedIds = new Set(uploadedItems.map((r: any) => r.id));
+      const savedIds = new Set(savedItems.map((r: any) => r.id));
+
+      likedItems = likedRecipes
+        .filter(lr => !uploadedIds.has(lr.recipe.id) && !savedIds.has(lr.recipe.id))
+        .map(lr => ({
+          ...lr.recipe,
+          author: lr.recipe.user,
+          source: 'liked',
+        }));
+    }
+
+    res.json({
+      recipes: [...uploadedItems, ...savedItems, ...likedItems],
+      counts: {
+        uploaded: uploadedItems.length,
+        saved: savedItems.length,
+        liked: likedItems.length,
+      },
+      profileName: `${user.firstName} ${user.lastName}`,
+    });
   } catch (error) {
     console.error('Get user recipes error:', error);
     res.status(500).json({ error: 'Failed to get user recipes' });

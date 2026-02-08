@@ -18,6 +18,7 @@ interface Recipe {
   isFavorite?: boolean;
   favorite?: boolean;
   savedRecipeId?: string;
+  source?: 'uploaded' | 'saved' | 'liked';
   author: {
     id: string;
     username: string;
@@ -38,6 +39,8 @@ export default function UserRecipesPage() {
   const [profileName, setProfileName] = useState('');
   const [showAddToEventModal, setShowAddToEventModal] = useState(false);
   const [selectedRecipeForEvent, setSelectedRecipeForEvent] = useState<Recipe | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'uploaded' | 'saved' | 'liked'>('all');
+  const [counts, setCounts] = useState({ uploaded: 0, saved: 0, liked: 0 });
 
   const isOwnProfile = user?.username === username;
 
@@ -49,11 +52,10 @@ export default function UserRecipesPage() {
     try {
       setLoading(true);
       const { data } = await api.get(`/profile/${username}/recipes`);
-      console.log('Loaded recipes:', data.recipes);
       setRecipes(data.recipes || []);
-      
-      if (data.recipes && data.recipes.length > 0) {
-        setProfileName(`${data.recipes[0].author.firstName} ${data.recipes[0].author.lastName}`);
+      setCounts(data.counts || { uploaded: 0, saved: 0, liked: 0 });
+      if (data.profileName) {
+        setProfileName(data.profileName);
       } else if (user?.username === username) {
         setProfileName(`${user.firstName} ${user.lastName}`);
       }
@@ -129,12 +131,42 @@ export default function UserRecipesPage() {
         <p className="text-gray-600 mt-2">
           {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
         </p>
+
+        {/* Filter Tabs */}
+        {isOwnProfile && recipes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button
+              onClick={() => setActiveFilter('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${activeFilter === 'all' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              All ({recipes.length})
+            </button>
+            <button
+              onClick={() => setActiveFilter('uploaded')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${activeFilter === 'uploaded' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              📝 My Recipes ({counts.uploaded})
+            </button>
+            <button
+              onClick={() => setActiveFilter('saved')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${activeFilter === 'saved' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              🔖 Saved ({counts.saved})
+            </button>
+            <button
+              onClick={() => setActiveFilter('liked')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${activeFilter === 'liked' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              ❤️ Liked ({counts.liked})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recipes Grid */}
-      {recipes.length > 0 ? (
+      {recipes.filter(r => activeFilter === 'all' || r.source === activeFilter).length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recipes.map((recipe) => {
+          {recipes.filter(r => activeFilter === 'all' || r.source === activeFilter).map((recipe) => {
             const isFavorited = recipe.isFavorite || recipe.favorite || false;
             
             return (
@@ -157,6 +189,17 @@ export default function UserRecipesPage() {
                       </div>
                     )}
                     
+                    {/* Source Badge */}
+                    {recipe.source === 'uploaded' && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full shadow">📝 My Recipe</div>
+                    )}
+                    {recipe.source === 'saved' && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full shadow">🔖 Saved</div>
+                    )}
+                    {recipe.source === 'liked' && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow">❤️ Liked</div>
+                    )}
+
                     {/* Favorite Badge */}
                     {isFavorited && (
                       <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 shadow-lg">
