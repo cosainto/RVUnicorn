@@ -45,7 +45,6 @@ model User {
   rvWeight                                        Int?
   rvSleeps                                        Int?
   rvSlideouts                                     Int?
-  rvWeight                                        Int?
   showCampingStatus                               Boolean                   @default(true)
   lastActiveAt                                    DateTime?
   creatorBio                                      String?
@@ -75,7 +74,6 @@ model User {
   travelPartyType                                 String?
   licensePlate                                    String?
   licensePlateState                               String?
-  rvHeight                                        Int?
   rvWidth                                         Int?
   tagExpiration                                   DateTime?
   rvOdometer                                      Int?
