@@ -36,6 +36,7 @@ interface Thread {
   title: string;
   content?: string;
   slug: string;
+  imageUrl?: string;
   viewCount: number;
   isPinned: boolean;
   isLocked: boolean;
@@ -52,6 +53,7 @@ interface Thread {
     id: string;
     name: string;
     slug: string;
+  imageUrl?: string;
     location?: string;
     state?: string;
   };
@@ -60,6 +62,7 @@ interface Thread {
       id: string;
       name: string;
       slug: string;
+  imageUrl?: string;
       color: string;
     };
   }>;
@@ -662,6 +665,17 @@ export default function ThreadDetailPage() {
           </div>
 
           {/* Content */}
+          {thread.imageUrl && (
+            <div className="mb-3 inline-flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <img src={thread.imageUrl} alt="" className="h-14 w-14 rounded-full object-cover border-2 border-amber-400 shadow" />
+              {thread.title?.includes("badge") && (
+                <div>
+                  <p className="text-sm font-bold text-amber-800">Badge Earned!</p>
+                  <p className="text-xs text-amber-600">A new addition to the collection</p>
+                </div>
+              )}
+            </div>
+          )}
           {thread.content && (
             <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
               {thread.content}

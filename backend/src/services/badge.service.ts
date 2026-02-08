@@ -76,15 +76,17 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
     });
 
     try {
-      await prisma.post.create({
+      await prisma.thread.create({
         data: {
-          userId,
-          content: `🏆 Just earned the "${badge.name}" badge! ${badge.description || ''}`,
+          title: `🏆 Just earned the "${badge.name}" badge!`,
+          content: badge.description || '',
+          slug: `badge-${badge.slug}-${userId.slice(-6)}-${Date.now()}`,
+          authorId: userId,
           imageUrl: badge.imageUrl,
         }
       });
     } catch (postError) {
-      console.error('Failed to create badge post:', postError);
+      console.error('Failed to create badge thread:', postError);
     }
 
     console.log(`Badge "${badge.name}" awarded to user ${userId}`);

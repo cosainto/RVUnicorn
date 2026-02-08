@@ -1059,6 +1059,7 @@ model Thread {
   id           String           @id @default(cuid())
   title        String
   content      String?
+  imageUrl     String?
   slug         String           @unique
   campgroundId String?
   authorId     String

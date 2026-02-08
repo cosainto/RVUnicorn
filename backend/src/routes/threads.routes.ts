@@ -593,6 +593,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
         slug,
         authorId: userId,
         campgroundId: campgroundId || null,
+        imageUrl: imageUrl || null,
         tags: tagIds?.length ? {
           create: tagIds.map((tagId: string) => ({
             tagId

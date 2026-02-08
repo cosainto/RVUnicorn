@@ -8,6 +8,7 @@ interface Thread {
   id: string;
   title: string;
   content?: string;
+  imageUrl?: string;
   slug: string;
   viewCount: number;
   isPinned: boolean;
@@ -538,6 +539,14 @@ export default function FeedPage() {
                       <p className="text-gray-600 text-sm mt-2 line-clamp-2">
                         {thread.content}
                       </p>
+                    )}
+                    {thread.imageUrl && (
+                      <div className="mt-2 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <img src={thread.imageUrl} alt="" className="h-10 w-10 rounded-full object-cover border-2 border-amber-300" />
+                        {thread.title?.includes('badge') && (
+                          <span className="text-xs font-semibold text-amber-700">New Badge Earned!</span>
+                        )}
+                      </div>
                     )}
 
                     {/* Tags & Stats */}

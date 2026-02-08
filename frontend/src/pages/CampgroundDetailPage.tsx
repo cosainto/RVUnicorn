@@ -152,6 +152,7 @@ interface CampThread {
   id: string;
   title: string;
   content: string | null;
+  imageUrl?: string;
   slug: string;
   createdAt: string;
   author: { id: string; firstName: string; lastName: string; username: string; profilePicture: string | null };
@@ -1342,6 +1343,12 @@ export default function CampgroundDetailPage() {
                       <div className="flex-1">
                         <h4 className="font-bold text-lg text-gray-900 hover:text-primary-600">{t.title}</h4>
                         {t.content && <p className="text-gray-600 mt-1 line-clamp-2">{t.content}</p>}
+                        {t.imageUrl && (
+                          <div className="mt-1 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                            <img src={t.imageUrl} alt="" className="h-8 w-8 rounded-full object-cover border-2 border-amber-300" />
+                            <span className="text-xs font-semibold text-amber-700">Badge</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                           <span>{t.author.firstName} {t.author.lastName}</span>
                           <span>{formatDate(t.createdAt)}</span>
