@@ -15,6 +15,7 @@ import {
   Send,
   Tag,
   UserPlus, Link2, CheckSquare
+} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
