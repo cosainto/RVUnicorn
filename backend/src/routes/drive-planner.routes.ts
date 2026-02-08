@@ -425,6 +425,33 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
       }
     }
 
+
+    // Attractions & points of interest along route
+    if (stopTypes.includes('attractions')) {
+      const attractionPoints = sampleRoutePoints(routePoints, totalMiles, 100);
+      for (const point of attractionPoints) {
+        try {
+          const attractions = await searchNearbyPlaces(point.lat, point.lng, 'tourist_attraction', 15000, 3);
+          const parks = await searchNearbyPlaces(point.lat, point.lng, 'park', 15000, 2, 'state park national park');
+          const museums = await searchNearbyPlaces(point.lat, point.lng, 'museum', 15000, 2);
+          const allAttractions = [...attractions, ...parks, ...museums];
+          const seen = new Set<string>();
+          const unique = allAttractions.filter((a: any) => {
+            if (seen.has(a.place_id)) return false;
+            seen.add(a.place_id);
+            return true;
+          });
+          if (unique.length > 0) {
+            allStops.push({
+              type: 'ATTRACTION',
+              milesFromStart: point.milesFromStart,
+              reason: `Worth a stop (~${Math.round(point.milesFromStart)} mi)`,
+              places: unique.slice(0, 5).map(formatPlace)
+            });
+          }
+        } catch (e) { console.error('Attraction search error:', e); }
+      }
+    }
     allStops.sort((a: any, b: any) => a.milesFromStart - b.milesFromStart);
 
     res.json({
