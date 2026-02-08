@@ -14,8 +14,7 @@ import {
   Image as ImageIcon,
   Send,
   Tag,
-  UserPlus,
-, Link2, CheckSquare} from 'lucide-react';
+  UserPlus, Link2, CheckSquare
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
