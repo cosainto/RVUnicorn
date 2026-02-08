@@ -33,6 +33,8 @@ interface TripPreferences {
   wantDumpStations: boolean;
   freeOvernightOk: boolean;
   budgetPriority: 'budget' | 'moderate' | 'comfort' | 'asap';
+  arrivalDate: string;
+  arrivalTime: string;
 }
 
 const STOP_CONFIG: Record<string, { icon: string; label: string; dot: string; bg: string; text: string }> = {
@@ -61,6 +63,8 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     wantDumpStations: false,
     freeOvernightOk: true,
     budgetPriority: 'moderate',
+    arrivalDate: '',
+    arrivalTime: '14:00',
   });
 
   const handleFindStops = async () => {
@@ -381,6 +385,31 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           </div>
         </div>
 
+        {/* Arrival Date & Time */}
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">When do you want to arrive?</label>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-semibold text-gray-500 uppercase">Date</label>
+              <input type="date" value={prefs.arrivalDate}
+                onChange={(e) => setPrefs(p => ({ ...p, arrivalDate: e.target.value }))}
+                className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min={new Date().toISOString().split('T')[0]} />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-gray-500 uppercase">Check-in Time</label>
+              <input type="time" value={prefs.arrivalTime}
+                onChange={(e) => setPrefs(p => ({ ...p, arrivalTime: e.target.value }))}
+                className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+          </div>
+          {prefs.arrivalDate && prefs.arrivalTime && (
+            <p className="text-[10px] text-blue-600 font-medium">
+              🗓️ Arriving {new Date(prefs.arrivalDate + 'T' + prefs.arrivalTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at {new Date('2000-01-01T' + prefs.arrivalTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </p>
+          )}
+        </div>
+
         {/* RV Settings */}
         <button onClick={() => setShowSettings(!showSettings)} 
           className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
@@ -454,6 +483,25 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
               <Sliders className="w-3 h-3" /> Adjust preferences
             </button>
           </div>
+          {prefs.arrivalDate && prefs.arrivalTime && (
+            <div className="mb-3 flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+              <span className="text-sm">🗓️</span>
+              <div>
+                <p className="text-xs font-semibold text-white">
+                  Arrive {new Date(prefs.arrivalDate + 'T' + prefs.arrivalTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {new Date('2000-01-01T' + prefs.arrivalTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                </p>
+                {s.totalDays > 0 && (
+                  <p className="text-[10px] text-blue-200">
+                    Depart by {(() => {
+                      const arrival = new Date(prefs.arrivalDate + 'T' + prefs.arrivalTime);
+                      const depart = new Date(arrival.getTime() - (s.totalDays * 24 * 60 * 60 * 1000) + ((s.totalDays - 1) * (24 - rvSettings.drivingHoursPerDay) * 60 * 60 * 1000));
+                      return depart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    })()} to arrive on time
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-3">
             {[
               { value: `${s.totalMiles}`, label: 'miles' },
