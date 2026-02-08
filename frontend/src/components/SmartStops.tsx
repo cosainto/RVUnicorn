@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route } from 'lucide-react';
+import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders } from 'lucide-react';
 import api from '../services/api';
 
 interface SmartStopsProps {
@@ -24,12 +24,22 @@ interface StopPlace {
   photoRef?: string;
 }
 
-const STOP_CONFIG: Record<string, { icon: string; label: string; gradient: string; dot: string; bg: string; text: string }> = {
-  GAS: { icon: '⛽', label: 'Fuel Stop', gradient: 'from-red-500 to-orange-500', dot: 'bg-red-500', bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
-  OVERNIGHT: { icon: '🏕️', label: 'Overnight', gradient: 'from-indigo-500 to-purple-500', dot: 'bg-indigo-500', bg: 'bg-indigo-50 border-indigo-200', text: 'text-indigo-700' },
-  FOOD_REST: { icon: '🍽️', label: 'Food & Rest', gradient: 'from-amber-500 to-orange-500', dot: 'bg-amber-500', bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
-  DUMP_STATION: { icon: '🚿', label: 'Dump Station', gradient: 'from-emerald-500 to-green-500', dot: 'bg-emerald-500', bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
-  ATTRACTION: { icon: '⭐', label: 'Attraction', gradient: 'from-violet-500 to-fuchsia-500', dot: 'bg-violet-500', bg: 'bg-violet-50 border-violet-200', text: 'text-violet-700' },
+interface TripPreferences {
+  tripStyle: 'direct' | 'balanced' | 'explorer';
+  foodStops: number;
+  overnightStops: 'auto' | 'minimal' | 'comfortable';
+  wantAttractions: boolean;
+  wantDumpStations: boolean;
+  freeOvernightOk: boolean;
+  budgetPriority: 'budget' | 'moderate' | 'comfort';
+}
+
+const STOP_CONFIG: Record<string, { icon: string; label: string; dot: string; bg: string; text: string }> = {
+  GAS: { icon: '⛽', label: 'Fuel Stop', dot: 'bg-red-500', bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
+  OVERNIGHT: { icon: '🏕️', label: 'Overnight', dot: 'bg-indigo-500', bg: 'bg-indigo-50 border-indigo-200', text: 'text-indigo-700' },
+  FOOD_REST: { icon: '🍽️', label: 'Food & Rest', dot: 'bg-amber-500', bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
+  DUMP_STATION: { icon: '🚿', label: 'Dump Station', dot: 'bg-emerald-500', bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+  ATTRACTION: { icon: '⭐', label: 'Attraction', dot: 'bg-violet-500', bg: 'bg-violet-50 border-violet-200', text: 'text-violet-700' },
 };
 
 export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: SmartStopsProps) {
@@ -38,10 +48,17 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
   const [expandedStop, setExpandedStop] = useState<number | null>(null);
   const [addedStops, setAddedStops] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
+  const [step, setStep] = useState<'preferences' | 'results'>('preferences');
   
   const [rvSettings, setRvSettings] = useState({ mpg: 10, tankGallons: 50, drivingHoursPerDay: 8 });
-  const [stopTypes, setStopTypes] = useState({
-    gas: true, overnight: true, food: true, dump: false, attractions: true,
+  const [prefs, setPrefs] = useState<TripPreferences>({
+    tripStyle: 'balanced',
+    foodStops: 2,
+    overnightStops: 'auto',
+    wantAttractions: true,
+    wantDumpStations: false,
+    freeOvernightOk: true,
+    budgetPriority: 'moderate',
   });
 
   const handleFindStops = async () => {
@@ -85,13 +102,26 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
       if (!polyline || !totalMiles) { alert('Could not calculate route.'); setLoading(false); return; }
 
+      // Build stop types from preferences
+      const stopTypes: string[] = ['gas'];
+      if (prefs.tripStyle !== 'direct' || prefs.foodStops > 0) stopTypes.push('food');
+      if (prefs.overnightStops !== 'minimal') stopTypes.push('overnight');
+      if (prefs.wantAttractions) stopTypes.push('attractions');
+      if (prefs.wantDumpStations) stopTypes.push('dump');
+
+      // Adjust driving hours based on style
+      let drivingHours = rvSettings.drivingHoursPerDay;
+      if (prefs.tripStyle === 'direct') drivingHours = Math.min(drivingHours + 2, 14);
+      if (prefs.tripStyle === 'explorer') drivingHours = Math.max(drivingHours - 2, 4);
+
       const { data } = await api.post('/drive-planner/smart-stops', {
         polyline, totalMiles, totalMinutes,
         mpg: rvSettings.mpg, tankGallons: rvSettings.tankGallons,
-        drivingHoursPerDay: rvSettings.drivingHoursPerDay,
-        stopTypes: Object.entries(stopTypes).filter(([_, v]) => v).map(([k]) => k),
+        drivingHoursPerDay: drivingHours,
+        stopTypes,
       });
       setSmartStops(data);
+      setStep('results');
     } catch (error) {
       console.error('Smart stops error:', error);
       alert('Failed to find stops along route');
@@ -146,7 +176,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           className={`shrink-0 mt-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
             isAdded 
               ? 'bg-green-50 text-green-600 border border-green-200' 
-              : 'bg-gray-900 text-white hover:bg-gray-700 shadow-sm hover:shadow'
+              : 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm hover:shadow'
           }`}
         >
           {isAdded ? '✓ Added' : '+ Add Stop'}
@@ -159,7 +189,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     if (stop.places) return { places: stop.places, sections: null };
     const sections: { title: string; places: StopPlace[]; note?: string }[] = [];
     if (stop.campgrounds?.length) sections.push({ title: '🏕️ RV Parks & Campgrounds', places: stop.campgrounds });
-    if (stop.freeParking?.length) sections.push({ title: '🅿️ Free Overnight Parking', places: stop.freeParking, note: 'note' });
+    if (stop.freeParking?.length && prefs.freeOvernightOk) sections.push({ title: '🅿️ Free Overnight Parking', places: stop.freeParking, note: 'note' });
     if (stop.restaurants?.length) sections.push({ title: '🍽️ Restaurants', places: stop.restaurants });
     if (stop.restAreas?.length) sections.push({ title: '🅿️ Rest Areas', places: stop.restAreas });
     return { places: null, sections };
@@ -170,165 +200,231 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
     return (stop.campgrounds?.length || 0) + (stop.freeParking?.length || 0) + (stop.restaurants?.length || 0) + (stop.restAreas?.length || 0);
   };
 
-  // Pre-results view
-  if (!smartStops) {
+  // ===== PREFERENCES QUESTIONNAIRE =====
+  if (step === 'preferences') {
     return (
-      <div className="space-y-4">
-        {/* Settings Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Route className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h4 className="font-bold text-gray-900 text-sm">Smart Route Planner</h4>
-              <p className="text-[11px] text-gray-400">AI-powered stops for your RV journey</p>
-            </div>
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <Route className="w-5 h-5 text-white" />
           </div>
-          <button onClick={() => setShowSettings(!showSettings)} 
-            className={`p-2 rounded-lg transition-all ${showSettings ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-            <Settings className="w-4 h-4" />
-          </button>
+          <div>
+            <h4 className="font-bold text-gray-900">Smart Route Planner</h4>
+            <p className="text-xs text-gray-400">Tell us about your trip preferences</p>
+          </div>
         </div>
 
+        {/* Trip Style */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">What kind of trip is this?</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'direct', emoji: '🏎️', title: 'Get There Fast', desc: 'Minimal stops, max driving' },
+              { value: 'balanced', emoji: '🚐', title: 'Balanced', desc: 'Good mix of driving & stops' },
+              { value: 'explorer', emoji: '🗺️', title: 'Scenic Explorer', desc: 'Enjoy the journey' },
+            ].map(({ value, emoji, title, desc }) => (
+              <button key={value} onClick={() => setPrefs(p => ({ ...p, tripStyle: value as any }))}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  prefs.tripStyle === value 
+                    ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                }`}>
+                <span className="text-2xl">{emoji}</span>
+                <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Food Stops */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">How often do you want to stop for food?</label>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { value: 0, label: 'Pack meals', emoji: '🧊' },
+              { value: 1, label: '1 stop', emoji: '🥪' },
+              { value: 2, label: '2 stops', emoji: '🍔' },
+              { value: 3, label: '3+ stops', emoji: '🍽️' },
+            ].map(({ value, label, emoji }) => (
+              <button key={value} onClick={() => setPrefs(p => ({ ...p, foodStops: value }))}
+                className={`p-2.5 rounded-xl border-2 text-center transition-all duration-200 ${
+                  prefs.foodStops === value 
+                    ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                }`}>
+                <span className="text-xl">{emoji}</span>
+                <p className="text-xs font-semibold text-gray-700 mt-1">{label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Overnight Preference */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Overnight stops</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'minimal', emoji: '💪', title: 'Push through', desc: 'Drive as far as possible' },
+              { value: 'auto', emoji: '⏰', title: 'Auto-plan', desc: 'Based on drive time' },
+              { value: 'comfortable', emoji: '😴', title: 'Relaxed pace', desc: 'Shorter driving days' },
+            ].map(({ value, emoji, title, desc }) => (
+              <button key={value} onClick={() => setPrefs(p => ({ ...p, overnightStops: value as any }))}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  prefs.overnightStops === value 
+                    ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                }`}>
+                <span className="text-xl">{emoji}</span>
+                <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Toggle Options */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">What else should we find?</label>
+          <div className="space-y-2">
+            {[
+              { key: 'wantAttractions', emoji: '⭐', label: 'Attractions & sightseeing', desc: 'Parks, museums, landmarks along the way' },
+              { key: 'freeOvernightOk', emoji: '🅿️', label: 'Free overnight parking', desc: 'Walmart, Cracker Barrel, Cabela\'s' },
+              { key: 'wantDumpStations', emoji: '🚿', label: 'Dump stations', desc: 'RV waste disposal locations' },
+            ].map(({ key, emoji, label, desc }) => (
+              <button key={key} onClick={() => setPrefs(p => ({ ...p, [key]: !(p as any)[key] }))}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  (prefs as any)[key] 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                }`}>
+                <span className="text-xl">{emoji}</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 text-sm">{label}</p>
+                  <p className="text-[10px] text-gray-400">{desc}</p>
+                </div>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                  (prefs as any)[key] ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                }`}>
+                  {(prefs as any)[key] && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Budget */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Budget priority</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'budget', emoji: '💰', title: 'Save money', desc: 'Free parking, cheap eats' },
+              { value: 'moderate', emoji: '⚖️', title: 'Moderate', desc: 'Good value options' },
+              { value: 'comfort', emoji: '✨', title: 'Comfort first', desc: 'Best rated spots' },
+            ].map(({ value, emoji, title, desc }) => (
+              <button key={value} onClick={() => setPrefs(p => ({ ...p, budgetPriority: value as any }))}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  prefs.budgetPriority === value 
+                    ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                }`}>
+                <span className="text-xl">{emoji}</span>
+                <p className="font-bold text-gray-900 text-sm mt-1">{title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* RV Settings */}
+        <button onClick={() => setShowSettings(!showSettings)} 
+          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+          <Settings className="w-4 h-4" />
+          {showSettings ? 'Hide' : 'Adjust'} RV settings
+          <ChevronDown className={`w-4 h-4 transition-transform ${showSettings ? 'rotate-180' : ''}`} />
+        </button>
+
         {showSettings && (
-          <div className="bg-gray-50 rounded-2xl p-4 space-y-4 border border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">RV Profile</p>
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
             <div className="grid grid-cols-3 gap-3">
               {[
-                { key: 'mpg', label: 'Fuel Economy', unit: 'mpg', hint: 'Class A: 6-10 · Class C: 10-14', min: 3, max: 30, step: 0.5 },
-                { key: 'tankGallons', label: 'Tank Size', unit: 'gal', hint: `Range: ~${Math.round(rvSettings.mpg * rvSettings.tankGallons)} miles`, min: 10, max: 150, step: 5 },
-                { key: 'drivingHoursPerDay', label: 'Drive Time', unit: 'hrs/day', hint: 'Recommended: 6-8 hrs', min: 4, max: 14, step: 1 },
+                { key: 'mpg', label: 'Fuel Economy', unit: 'mpg', hint: 'Class A: 6-10 · C: 10-14', min: 3, max: 30, step: 0.5 },
+                { key: 'tankGallons', label: 'Tank Size', unit: 'gal', hint: `Range: ~${Math.round(rvSettings.mpg * rvSettings.tankGallons)} mi`, min: 10, max: 150, step: 5 },
+                { key: 'drivingHoursPerDay', label: 'Max Drive/Day', unit: 'hrs', hint: 'Recommended: 6-8', min: 4, max: 14, step: 1 },
               ].map(({ key, label, unit, hint, min, max, step }) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
-                  <div className="relative">
+                <div key={key}>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+                  <div className="relative mt-1">
                     <input type="number" value={(rvSettings as any)[key]}
                       onChange={(e) => setRvSettings(prev => ({ ...prev, [key]: Number(e.target.value) }))}
                       className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
                       min={min} max={max} step={step} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-medium">{unit}</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">{unit}</span>
                   </div>
-                  <p className="text-[10px] text-gray-400">{hint}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{hint}</p>
                 </div>
-              ))}
-            </div>
-            
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider pt-1">Find Along Route</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'gas', icon: '⛽', label: 'Gas' },
-                { key: 'overnight', icon: '🏕️', label: 'Overnight' },
-                { key: 'food', icon: '🍽️', label: 'Food' },
-                { key: 'attractions', icon: '⭐', label: 'Attractions' },
-                { key: 'dump', icon: '🚿', label: 'Dump' },
-              ].map(({ key, icon, label }) => (
-                <button key={key}
-                  onClick={() => setStopTypes(prev => ({ ...prev, [key]: !(prev as any)[key] }))}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 border ${
-                    (stopTypes as any)[key] 
-                      ? 'bg-white text-gray-900 border-gray-300 shadow-sm' 
-                      : 'bg-transparent text-gray-400 border-gray-100 hover:border-gray-200'
-                  }`}>
-                  <span>{icon}</span>{label}
-                </button>
               ))}
             </div>
           </div>
         )}
 
+        {/* Find Stops Button */}
         <button onClick={handleFindStops} disabled={loading}
-          className="w-full py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-2xl font-bold text-sm hover:from-gray-800 hover:to-gray-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 shadow-lg shadow-gray-900/20 hover:shadow-xl hover:shadow-gray-900/25">
+          className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-bold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30">
           {loading ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing your route...</>
           ) : (
-            <><Navigation className="w-4 h-4" /> Find Smart Stops Along Route</>
+            <><Navigation className="w-4 h-4" /> Find My Perfect Stops <ArrowRight className="w-4 h-4" /></>
           )}
         </button>
       </div>
     );
   }
 
-  // Results view
+  // ===== RESULTS VIEW =====
   const s = smartStops.summary;
   return (
     <div className="space-y-5">
       {/* Summary Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-5">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white p-5">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-32 h-32 rounded-full bg-blue-400 blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-40 h-40 rounded-full bg-indigo-400 blur-3xl" />
+          <div className="absolute top-0 left-0 w-32 h-32 rounded-full bg-white blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-40 h-40 rounded-full bg-blue-300 blur-3xl" />
         </div>
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-sm tracking-wide flex items-center gap-2">
-              <Route className="w-4 h-4 text-blue-400" /> Trip Overview
+              <Route className="w-4 h-4 text-blue-200" /> Your Trip Plan
             </h4>
-            <button onClick={() => { setSmartStops(null); }} className="text-xs text-gray-400 hover:text-white transition">← New search</button>
+            <button onClick={() => { setStep('preferences'); setSmartStops(null); }} className="text-xs text-blue-200 hover:text-white transition flex items-center gap-1">
+              <Sliders className="w-3 h-3" /> Adjust preferences
+            </button>
           </div>
           <div className="grid grid-cols-4 gap-3">
             {[
-              { value: `${s.totalMiles}`, label: 'miles', color: 'text-blue-300' },
-              { value: s.totalDays === 1 ? 'Day Trip' : `${s.totalDays} Days`, label: s.totalDays === 1 ? '' : 'driving', color: 'text-indigo-300' },
-              { value: `${s.gasStopsNeeded}`, label: 'fuel stops', color: 'text-red-300' },
-              { value: `$${s.estimatedFuelCost}`, label: `~${s.estimatedGallons} gal`, color: 'text-emerald-300' },
-            ].map(({ value, label, color }, i) => (
+              { value: `${s.totalMiles}`, label: 'miles' },
+              { value: s.totalDays === 1 ? 'Day Trip' : `${s.totalDays} Days`, label: s.totalDays === 1 ? '' : 'driving' },
+              { value: `${s.gasStopsNeeded}`, label: 'fuel stops' },
+              { value: `$${s.estimatedFuelCost}`, label: `~${s.estimatedGallons} gal` },
+            ].map(({ value, label }, i) => (
               <div key={i} className="text-center">
-                <p className={`text-xl font-black ${color}`}>{value}</p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{label}</p>
+                <p className="text-xl font-black text-white">{value}</p>
+                <p className="text-[10px] text-blue-200 uppercase tracking-wider mt-0.5">{label}</p>
               </div>
             ))}
           </div>
           {s.overnightStopsNeeded > 0 && (
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
-              <Moon className="w-4 h-4 text-indigo-400" />
-              <p className="text-xs text-gray-300">{s.overnightStopsNeeded} overnight stop{s.overnightStopsNeeded > 1 ? 's' : ''} recommended</p>
+            <div className="mt-4 pt-3 border-t border-white/20 flex items-center gap-2">
+              <Moon className="w-4 h-4 text-blue-200" />
+              <p className="text-xs text-blue-100">{s.overnightStopsNeeded} overnight stop{s.overnightStopsNeeded > 1 ? 's' : ''} recommended</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Settings & search again */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-          {smartStops.stops.length} stop{smartStops.stops.length !== 1 ? 's' : ''} along your route
-        </p>
-        <button onClick={() => setShowSettings(!showSettings)} 
-          className={`p-1.5 rounded-lg transition-all ${showSettings ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-          <Settings className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {showSettings && (
-        <div className="bg-gray-50 rounded-2xl p-4 space-y-3 border border-gray-100">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { key: 'mpg', label: 'MPG', min: 3, max: 30, step: 0.5 },
-              { key: 'tankGallons', label: 'Tank (gal)', min: 10, max: 150, step: 5 },
-              { key: 'drivingHoursPerDay', label: 'Hrs/day', min: 4, max: 14, step: 1 },
-            ].map(({ key, label, min, max, step }) => (
-              <div key={key}>
-                <label className="text-[10px] font-semibold text-gray-500 uppercase">{label}</label>
-                <input type="number" value={(rvSettings as any)[key]}
-                  onChange={(e) => setRvSettings(prev => ({ ...prev, [key]: Number(e.target.value) }))}
-                  className="w-full text-sm font-semibold border rounded-xl px-3 py-2 mt-1" min={min} max={max} step={step} />
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries({ gas: '⛽ Gas', overnight: '🏕️ Night', food: '🍽️ Food', attractions: '⭐ Sights', dump: '🚿 Dump' }).map(([key, label]) => (
-              <button key={key} onClick={() => setStopTypes(prev => ({ ...prev, [key]: !(prev as any)[key] }))}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${(stopTypes as any)[key] ? 'bg-white border-gray-300 shadow-sm text-gray-900' : 'text-gray-400 border-gray-100'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <button onClick={handleFindStops} disabled={loading}
-            className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold disabled:opacity-50">
-            {loading ? 'Searching...' : 'Update Results'}
-          </button>
-        </div>
-      )}
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+        {smartStops.stops.length} stop{smartStops.stops.length !== 1 ? 's' : ''} along your route
+      </p>
 
       {/* Timeline */}
       <div className="relative">
@@ -343,7 +439,6 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           </div>
         </div>
 
-        {/* Stops */}
         {smartStops.stops.map((stop: any, idx: number) => {
           const config = STOP_CONFIG[stop.type] || STOP_CONFIG.GAS;
           const isExpanded = expandedStop === idx;
@@ -353,14 +448,10 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
 
           return (
             <div key={idx} className="relative pl-11 pb-4">
-              {/* Timeline line */}
               <div className="absolute left-[15px] top-0 bottom-0 w-px bg-gradient-to-b from-gray-200 to-gray-100" />
-              
-              {/* Timeline dot */}
               <div className={`absolute left-[8px] top-1 w-4 h-4 rounded-full ${config.dot} ring-4 ring-white shadow z-10`} />
               
-              {/* Stop card */}
-              <div className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isExpanded ? 'shadow-lg ' + config.bg : 'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'}`}>
+              <div className={`rounded-xl border overflow-hidden transition-all duration-300 ${isExpanded ? 'shadow-lg ' + config.bg : 'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'}`}>
                 <button onClick={() => setExpandedStop(isExpanded ? null : idx)}
                   className="w-full flex items-center gap-3 p-3 text-left">
                   <span className="text-xl">{config.icon}</span>
@@ -370,22 +461,19 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
                       Mile {stop.milesFromStart} · {count} option{count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-gray-900 text-white rotate-180' : 'bg-gray-100 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-blue-500 text-white rotate-180' : 'bg-gray-100 text-gray-400'}`}>
                     <ChevronDown className="w-4 h-4" />
                   </div>
                 </button>
 
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2">
-                    {/* Single places array (gas, dump, attractions) */}
                     {places?.map((place: StopPlace) => 
                       renderPlaceCard(place, stopType, 
                         stop.type === 'GAS' ? 'Look for truck lanes for easier RV access' :
                         stop.type === 'ATTRACTION' ? 'Recommended detour along your route' : undefined
                       )
                     )}
-                    
-                    {/* Sectioned places (overnight, food_rest) */}
                     {sections?.map((section, sIdx) => (
                       <div key={sIdx} className={sIdx > 0 ? 'pt-2' : ''}>
                         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{section.title}</p>
