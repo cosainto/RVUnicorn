@@ -1696,21 +1696,49 @@ router.delete('/activity/:id', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     const { id } = req.params;
 
-    // Verify the activity belongs to this user
-    const activity = await prisma.basecampActivity.findFirst({
+    // Try BasecampActivity first
+    const basecampActivity = await prisma.basecampActivity.findFirst({
       where: { id, userId }
     });
 
-    if (!activity) {
-      return res.status(404).json({ error: 'Activity not found' });
+    if (basecampActivity) {
+      await prisma.basecampActivity.delete({ where: { id } });
+      return res.json({ success: true });
     }
 
-    // Delete the activity
-    await prisma.basecampActivity.delete({
-      where: { id }
+    // Try Activity model (photo uploads, etc.)
+    const activity = await prisma.activity.findFirst({
+      where: { id, userId }
     });
 
-    res.json({ success: true });
+    if (activity) {
+      // If it's a photo upload with media, clean up the media too
+      if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
+        try {
+          const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
+          if (meta.mediaId) {
+            // Delete associated likes and comments first
+            await prisma.mediaComment.deleteMany({ where: { mediaId: meta.mediaId } }).catch(() => {});
+            await prisma.mediaReaction.deleteMany({ where: { mediaId: meta.mediaId } }).catch(() => {});
+            // Delete the media item
+            await prisma.media.delete({ where: { id: meta.mediaId } }).catch(() => {});
+          }
+        } catch (e) {
+          console.log('Media cleanup skipped:', e);
+        }
+      }
+
+      // Delete related notifications
+      await prisma.notification.deleteMany({
+        where: { relatedId: id }
+      }).catch(() => {});
+
+      // Delete the activity
+      await prisma.activity.delete({ where: { id } });
+      return res.json({ success: true });
+    }
+
+    return res.status(404).json({ error: 'Activity not found' });
   } catch (error) {
     console.error('Delete activity error:', error);
     res.status(500).json({ error: 'Failed to delete activity' });

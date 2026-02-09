@@ -726,15 +726,25 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       alert('Failed to share video');
     }
   };
-  const handleDelete = async (itemId: string) => {
-    if (confirm('Are you sure you want to delete this post?')) {
+  const handleDelete = async (item: FeedItem) => {
+    if (confirm('Are you sure you want to delete this?')) {
       try {
-        await api.delete(`/posts/${itemId}`);
-        setFeedItems((items) => items.filter((item) => item.id !== itemId));
-        alert('Post deleted successfully');
+        const realId = item.id.replace(/^(basecamp-|activity-|post-|photo-|album-)/, '');
+        if (item.isBasecampActivity || item.id.startsWith('basecamp-') || item.id.startsWith('activity-')) {
+          await api.delete(`/basecamp/activity/${realId}`);
+        } else if (item.type === 'PHOTO_UPLOADED' || item.activityType === 'PHOTO_UPLOADED') {
+          await api.delete(`/basecamp/activity/${realId}`);
+          if (item.mediaId) { try { await api.delete(`/media-albums/media/${item.mediaId}`); } catch {} }
+        } else if (item.type === 'ALBUM_CREATED' || item.activityType === 'ALBUM_CREATED') {
+          await api.delete(`/basecamp/activity/${realId}`);
+        } else {
+          await api.delete(`/posts/${realId}`);
+        }
+        setFeedItems((items) => items.filter((i) => i.id !== item.id));
+        alert('Deleted successfully');
       } catch (error) {
         console.error('Delete error:', error);
-        alert('Failed to delete post');
+        alert('Failed to delete');
       }
     }
   };
@@ -1086,7 +1096,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
                   <button
                     onClick={() => {
-                      handleDelete(item.id);
+                      handleDelete(item);
                       setShowMoreActions(null);
                     }}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
