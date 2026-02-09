@@ -92,7 +92,7 @@ router.post('/scan', authenticateToken, async (req: Request, res: Response) => {
     // 4. Wishlist suggestions (every 2 weeks)
     if (!(await isIgnored(userId, 'WISHLIST_SUGGESTION')) && !(await hasRecent(userId, 'WISHLIST_SUGGESTION', 14))) {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } });
-      const wlIds = (await prisma.wishlistItem.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => [])).map(w => w.campgroundId).filter(Boolean);
+      const wlIds = (await prisma.campgroundWishlist.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => [])).map(w => w.campgroundId).filter(Boolean);
       const suggestions = await prisma.campground.findMany({ where: { id: { notIn: wlIds }, googleRating: { gte: 4.0 } }, select: { id:true,name:true,location:true,state:true,googleRating:true }, take: 3, orderBy: { googleRating: 'desc' } });
       if (suggestions.length > 0) {
         await prisma.hitchReminder.create({ data: {
@@ -333,8 +333,8 @@ router.post('/update', authenticateToken, async (req: Request, res: Response) =>
       }
       case 'CAMPGROUND': {
         if (field === 'wishlist') {
-          const existing = await prisma.wishlistItem.findFirst({ where: { userId, campgroundId: eid } }).catch(() => null);
-          if (!existing) { await prisma.wishlistItem.create({ data: { userId, campgroundId: eid } }).catch(() => {}); updated = true; }
+          const existing = await prisma.campgroundWishlist.findFirst({ where: { userId, campgroundId: eid } }).catch(() => null);
+          if (!existing) { await prisma.campgroundWishlist.create({ data: { userId, campgroundId: eid } }).catch(() => {}); updated = true; }
         }
         break;
       }

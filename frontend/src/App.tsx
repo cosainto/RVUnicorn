@@ -55,6 +55,30 @@ import MediaAlbumsPage from './pages/MediaAlbumsPage';
 import MediaAlbumDetailPage from './pages/MediaAlbumDetailPage';
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
 import HitchChat from './components/HitchChat';
+import QuickCaptureModal from './components/QuickCaptureModal';
+import React from 'react';
+import { Camera } from 'lucide-react';
+
+function GlobalCameraButton() {
+  const [showCapture, setShowCapture] = React.useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setShowCapture(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all z-40 flex items-center justify-center"
+        title="Quick Capture - Take photo or video"
+      >
+        <Camera className="w-7 h-7" />
+      </button>
+      <QuickCaptureModal
+        isOpen={showCapture}
+        onClose={() => setShowCapture(false)}
+        onUploadComplete={() => setShowCapture(false)}
+      />
+    </>
+  );
+}
+
 import SearchPage from './pages/SearchPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
@@ -334,7 +358,12 @@ function AppContent() {
       
       {/* Booking follow-up notification - asks if user booked after clicking Campspot */}
       {user && <BookingFollowUpNotification />}
-      {user && <HitchChat />}
+      {user && (
+        <>
+          <GlobalCameraButton />
+          <HitchChat />
+        </>
+      )}
     </div>
   );
 }

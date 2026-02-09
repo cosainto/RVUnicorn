@@ -33,7 +33,7 @@ async function buildSystemPrompt(userId: string): Promise<string> {
 
   const recentTrips = await prisma.trip.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 5, select: { name: true, destination: true } }).catch(() => []);
   const visitedStates = await prisma.stateVisit.findMany({ where: { userId }, select: { state: true } }).catch(() => []);
-  const wishlist = await prisma.wishlistItem.findMany({ where: { userId }, include: { campground: { select: { name: true, location: true } } }, take: 10 }).catch(() => []);
+  const wishlist = await prisma.campgroundWishlist.findMany({ where: { userId }, include: { campground: { select: { name: true, location: true } } }, take: 10 }).catch(() => []);
   const recentConvos = await prisma.hitchConversation.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' }, take: 5, select: { title: true, summary: true, updatedAt: true } }).catch(() => []);
 
   let rvProfile = '';

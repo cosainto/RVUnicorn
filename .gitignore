@@ -7,3 +7,4 @@ backend/campground-maps/
 backend/discovered-campgrounds/
 *.pdf
 backend/campground-maps-compressed/
+backend/.env

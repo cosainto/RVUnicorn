@@ -3195,23 +3195,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
         mode="inventory"
       />
 
-      {/* Floating Camera Button */}
-      <button
-        onClick={() => setShowQuickCapture(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all z-40 flex items-center justify-center"
-        title="Quick Capture - Take photo or video"
-      >
-        <Camera className="w-7 h-7" />
-      </button>
 
-      {/* Quick Capture Modal */}
-      <QuickCaptureModal
-        isOpen={showQuickCapture}
-        onClose={() => setShowQuickCapture(false)}
-        onUploadComplete={() => {
-          // Optionally refresh feed after upload
-        }}
-      />
     </div>
   );
 }
