@@ -840,10 +840,10 @@ export default function RecipeDetailPage() {
         {/* Recipe Image */}
         {isEditing ? (
           <div className="relative">
-            {imagePreview || recipe.imageUrl ? (
+            {(imagePreview || recipe.imageUrl || true) ? (
               <div className="relative">
                 <img
-                  src={imagePreview || `${recipe.imageUrl}`}
+                  src={imagePreview || (recipe.imageUrl ? `${recipe.imageUrl}` : '/Recipe_default.png')}
                   alt={recipe.title}
                   className="w-full h-64 object-cover"
                 />
@@ -893,9 +893,11 @@ export default function RecipeDetailPage() {
                 className="w-full h-64 object-cover"
               />
             ) : (
-              <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
-                <ChefHat className="w-24 h-24 text-red-300" />
-              </div>
+              <img
+                src="/Recipe_default.png"
+                alt={recipe.title}
+                className="w-full h-80 object-contain bg-gradient-to-br from-orange-50 to-red-50"
+              />
             )}
             {isOwner && (
               <label className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${recipe.imageUrl ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100' : 'bg-white shadow-lg text-gray-700 hover:bg-gray-50'}`}>

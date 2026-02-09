@@ -187,9 +187,11 @@ export default function UserRecipesPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ChefHat className="w-16 h-16 text-red-300" />
-                      </div>
+                      <img
+                        src="/Recipe_default.png"
+                        alt={recipe.title}
+                        className="w-full h-full object-cover"
+                      />
                     )}
                     
                     {/* Source Badge */}

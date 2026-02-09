@@ -265,9 +265,11 @@ export default function RecipeBox({ userId, isOwnProfile }: RecipeBoxProps) {
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ChefHat className="w-16 h-16 text-gray-400" />
-                  </div>
+                  <img
+                    src="/Recipe_default.png"
+                    alt={recipe.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
+                  />
                 )}
                 
                 {/* Privacy Badge */}

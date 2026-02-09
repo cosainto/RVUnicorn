@@ -81,9 +81,9 @@ export default function RecipeSuggestions() {
             className="group block rounded-lg overflow-hidden border border-gray-100 hover:border-orange-300 hover:shadow-md transition"
           >
             <div className="aspect-video bg-gray-100 relative overflow-hidden">
-              {(recipe.imageUrl || recipe.photos?.[0]?.imageUrl) ? (
+              {true ? (
                 <img
-                  src={recipe.imageUrl || recipe.photos?.[0]?.imageUrl}
+                  src={recipe.imageUrl || recipe.photos?.[0]?.imageUrl || '/Recipe_default.png'}
                   alt={recipe.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition"
                 />

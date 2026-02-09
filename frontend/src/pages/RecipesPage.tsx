@@ -546,9 +546,11 @@ export default function RecipesPage() {
                     className="w-full h-full object-cover group-hover:scale-110 transition"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ChefHat className="w-16 h-16 text-orange-300" />
-                  </div>
+                  <img
+                    src="/Recipe_default.png"
+                    alt={recipe.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition"
+                  />
                 )}
                 {recipe.difficulty && (
                   <span className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-semibold ${DIFFICULTY_COLORS[recipe.difficulty as keyof typeof DIFFICULTY_COLORS]}`}>
