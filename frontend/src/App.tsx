@@ -54,6 +54,8 @@ import VideoPlayerPage from './pages/VideoPlayerPage';
 import MediaAlbumsPage from './pages/MediaAlbumsPage';
 import MediaAlbumDetailPage from './pages/MediaAlbumDetailPage';
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
+import HitchChat from './components/HitchChat';
+import SearchPage from './pages/SearchPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -326,11 +328,13 @@ function AppContent() {
             </PrivateRoute>
           }
         />
+        <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
         <Route path="/" element={<Navigate to="/basecamp" />} />
       </Routes>
       
       {/* Booking follow-up notification - asks if user booked after clicking Campspot */}
       {user && <BookingFollowUpNotification />}
+      {user && <HitchChat />}
     </div>
   );
 }

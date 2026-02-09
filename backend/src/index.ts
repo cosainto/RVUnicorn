@@ -79,8 +79,11 @@ import packupRoutes from "./routes/packup.routes";
 import gearAdsRoutes from "./routes/gear-ads.routes";
 import enhancedDrivePlannerRoutes from './routes/enhanced-drive-planner.routes';
 import weatherRoutes from './routes/weather.routes';
+import hitchRoutes from './routes/hitch.routes';
 import eventActivitiesRoutes from './routes/event-activities.routes';
 import profileMapRoutes from './routes/profile-map.routes';
+import searchRoutes from './routes/search.routes';
+import hitchRemindersRoutes from './routes/hitch-reminders.routes';
 
 
 
@@ -183,6 +186,9 @@ app.use('/api/drive-planner', enhancedDrivePlannerRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api', eventActivitiesRoutes);
 app.use('/api', profileMapRoutes);
+app.use('/api/hitch', hitchRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/hitch/reminders', hitchRemindersRoutes);
 
 
 
