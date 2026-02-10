@@ -36,25 +36,8 @@ router.post('/scan', authenticateToken, async (req: Request, res: Response) => {
     const now = new Date();
     const created: string[] = [];
 
-    // 1. Missing site numbers on upcoming stays
-    if (!(await isIgnored(userId, 'MISSING_SITE_NUMBER'))) {
-      const stays = await prisma.stay.findMany({
-        where: { userId, startDate: { gt: now }, siteNumber: null },
-        include: { campground: { select: { name: true } }, trip: { select: { name: true, startDate: true } } },
-      });
-      for (const stay of stays) {
-        if (!(await prisma.hitchReminder.findFirst({ where: { userId, entityId: stay.id, type: 'MISSING_SITE_NUMBER', status: 'PENDING' } }))) {
-          await prisma.hitchReminder.create({ data: {
-            userId, type: 'MISSING_SITE_NUMBER', entityType: 'STAY', entityId: stay.id,
-            message: `Your stay at ${stay.campground.name}${stay.trip ? ` (${stay.trip.name})` : ''} doesn't have a site number yet. Got your reservation details?`,
-            priority: daysUntil(stay.startDate) <= 7 ? 'HIGH' : 'NORMAL',
-            nextRemindAt: getTripRemindTime(stay.trip?.startDate || stay.startDate),
-            metadata: { campgroundName: stay.campground.name, startDate: stay.startDate.toISOString(), field: 'siteNumber' },
-          }});
-          created.push(`Site # for ${stay.campground.name}`);
-        }
-      }
-    }
+
+    // 1. Site numbers check removed (siteNumber not in Stay model)
 
     // 2. Missing trip descriptions
     if (!(await isIgnored(userId, 'MISSING_TRIP_DESCRIPTION'))) {
