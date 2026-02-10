@@ -1,3 +1,4 @@
+import ShareButton from '../components/ShareButton';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload } from 'lucide-react';
@@ -585,10 +586,18 @@ export default function EventDetailPage() {
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
+              <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {event.title}
                 {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
               </h1>
+              <ShareButton
+                title={`${event.title} - RVUnicorn`}
+                text={`Check out this trip/event: ${event.title}${event.campground ? ` at ${event.campground.name}` : ""}!`}
+                url={`/events/${event.id}`}
+                variant="icon"
+              />
+              </div>
               {event.organizer && (
                 <Link to={`/profile/${event.organizer.username}`} className="text-sm text-gray-600 hover:text-primary-600 mb-2 inline-block">
                   Organized by {event.organizer.firstName} {event.organizer.lastName}

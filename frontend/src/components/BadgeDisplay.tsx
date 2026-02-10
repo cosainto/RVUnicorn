@@ -1,4 +1,5 @@
 // BadgeDisplay.tsx
+import ShareButton from './ShareButton';
 import { useState, useEffect } from 'react';
 import { Award, Lock, ChevronRight, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -249,6 +250,16 @@ function BadgeModal({ badge, earned = true, onClose }: { badge: Badge; earned?: 
               <Award className="w-4 h-4 inline mr-2" />
               Earned on {new Date(badge.earnedAt).toLocaleDateString()}
             </div>
+          )}
+
+          {earned && (
+            <ShareButton
+              title={`I earned the ${badge.name} badge on RVUnicorn!`}
+              text={`Just unlocked the "${badge.name}" badge on RVUnicorn! ${badge.description}`}
+              url="/badges"
+              variant="button"
+              className="mt-3 w-full justify-center"
+            />
           )}
 
           {!earned && (

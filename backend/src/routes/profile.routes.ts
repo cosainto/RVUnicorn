@@ -1419,7 +1419,6 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     
     const user = await prisma.user.findUnique({
-      where: { username },
       where: { id: userId },
       select: {
         rvMake: true,
@@ -1584,7 +1583,6 @@ router.get('/:userId/home-location', async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { username },
       where: { id: userId },
       select: {
         id: true,

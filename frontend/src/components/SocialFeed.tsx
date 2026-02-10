@@ -9,6 +9,7 @@ import { X, ThumbsUp, ThumbsDown,
   Heart,
   MessageSquare,
   Share2,
+  Copy,
   Trash2,
   Flag,
   MapPin,
@@ -117,6 +118,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   const [submittingComment, setSubmittingComment] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [shareModalItem, setShareModalItem] = useState<FeedItem | null>(null);
   
   // New post form state
   const [newPostContent, setNewPostContent] = useState('');
@@ -683,20 +685,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   };
 
   const handleShare = async (item: FeedItem) => {
-    const url = window.location.origin + `/post/${item.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: item.content?.substring(0, 50) || "Check out this post",
-          url: url,
-        });
-      } catch (err) {
-        console.log("Share cancelled");
-      }
-    } else {
-      navigator.clipboard.writeText(url);
-      alert("Link copied to clipboard!");
-    }
+    setShareModalItem(item);
   };
 
 
@@ -1564,6 +1553,53 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           )}
         </div>
       )}
+
+      {shareModalItem && (() => {
+        const sUrl = 'https://rvunicorn-production.up.railway.app/post/' + shareModalItem.id;
+        const sText = shareModalItem.content?.substring(0, 100) || 'Check out this post on RVUnicorn!';
+        const eu = encodeURIComponent(sUrl);
+        const et = encodeURIComponent(sText);
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }} onClick={() => setShareModalItem(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Share</h3>
+                <button onClick={() => setShareModalItem(null)} className="p-1 hover:bg-gray-100 rounded-full transition"><X className="w-5 h-5 text-gray-400" /></button>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 mb-4">
+                <p className="text-sm text-gray-800 line-clamp-2">{sText}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <a href={'https://www.facebook.com/sharer/sharer.php?u=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#1877F2' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">&#x1F4D8;</span><span style={{ fontSize: '10px' }} className="font-medium">Facebook</span>
+                </a>
+                <a href={'https://twitter.com/intent/tweet?text=' + et + '&url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#000' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">X</span><span style={{ fontSize: '10px' }} className="font-medium">X / Twitter</span>
+                </a>
+                <a href={'https://www.reddit.com/submit?url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#FF4500' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">&#x1F916;</span><span style={{ fontSize: '10px' }} className="font-medium">Reddit</span>
+                </a>
+                <a href={'https://wa.me/?text=' + et + '%20' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#25D366' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">&#x1F4AC;</span><span style={{ fontSize: '10px' }} className="font-medium">WhatsApp</span>
+                </a>
+                <a href={'https://www.threads.net/intent/post?text=' + et + '%20' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#000' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">&#x1F9F5;</span><span style={{ fontSize: '10px' }} className="font-medium">Threads</span>
+                </a>
+                <a href={'mailto:?subject=Check%20this%20out&body=' + et + '%0A%0A' + eu} onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#666' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                  <span className="text-lg">&#x2709;&#xFE0F;</span><span style={{ fontSize: '10px' }} className="font-medium">Email</span>
+                </a>
+              </div>
+              <button onClick={() => { navigator.clipboard.writeText(sUrl); setShareModalItem(null); }} className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-sm text-gray-700">
+                <Copy className="w-4 h-4" /> Copy Link
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
+
+
+
   );
 }
