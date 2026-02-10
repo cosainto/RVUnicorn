@@ -33,6 +33,7 @@ import Top8Friends from '../components/Top8Friends';
 import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
 import { UserActionsMenu } from '../components/BlockUserButton';
 import FollowingSection from '../components/FollowingSection';
+import FollowersSection from '../components/FollowersSection';
 
 
 
@@ -1009,6 +1010,15 @@ const [editForm, setEditForm] = useState({
             {profile && (
               <FollowingSection
                 userId={profile.id}
+                isOwnProfile={isOwnProfile}
+                className="flex-1"
+              />
+            )}
+
+            {/* Creator Followers */}
+            {profile?.isCreator && (
+              <FollowersSection
+                creatorId={profile.id}
                 isOwnProfile={isOwnProfile}
                 className="flex-1"
               />

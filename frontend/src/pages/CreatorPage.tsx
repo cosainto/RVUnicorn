@@ -1,3 +1,4 @@
+import FollowersSection from '../components/FollowersSection';
 // ============================================
 // CREATOR PAGE - Main Component
 // Save as: frontend/src/pages/CreatorPage.tsx
@@ -430,7 +431,8 @@ export default function CreatorPage() {
       </div>
 
       {/* Content Area */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
+        <div className="flex-1 min-w-0">
         {activeTab === 'content' && (
           <div>
             {/* Category Filter */}
@@ -479,6 +481,16 @@ export default function CreatorPage() {
           <GearSection creatorId={creator.id} />
         )}
       </div>
+        </div>
+        {/* Followers Sidebar */}
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          {creator && (
+            <FollowersSection
+              creatorId={creator.id}
+              isOwnProfile={false}
+            />
+          )}
+        </div>
     </div>
   );
 }
