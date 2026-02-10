@@ -3088,9 +3088,9 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                       to={`/groups/${group.slug || group.id}`}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors group"
                     >
-                      {group.imageUrl ? (
+                      {(group.coverPhoto || group.imageUrl) ? (
                         <img
-                          src={group.imageUrl.startsWith('http') ? group.imageUrl : `${group.imageUrl}`}
+                          src={(group.coverPhoto || group.imageUrl)?.startsWith('http') ? (group.coverPhoto || group.imageUrl) : `${group.coverPhoto || group.imageUrl}`}
                           alt={group.name}
                           className="w-10 h-10 rounded-lg object-cover"
                         />

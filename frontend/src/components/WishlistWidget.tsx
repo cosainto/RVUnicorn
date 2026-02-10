@@ -16,7 +16,8 @@ interface WishlistItem {
     state: string | null;
     latitude: number | null;
     longitude: number | null;
-    photos: { url: string }[];
+    imageUrl: string | null;
+    photos: { url: string; imageUrl?: string }[];
   };
 }
 
@@ -128,9 +129,9 @@ export default function WishlistWidget() {
             <div className="flex gap-3">
               {/* Photo */}
               <Link to={`/campgrounds/${item.campgroundId}`} className="flex-shrink-0">
-                {item.campground.photos?.[0]?.url ? (
+                {(item.campground.imageUrl || item.campground.photos?.[0]?.imageUrl || item.campground.photos?.[0]?.url) ? (
                   <img 
-                    src={item.campground.photos[0].imageUrl} 
+                    src={item.campground.imageUrl || item.campground.photos?.[0]?.imageUrl || item.campground.photos?.[0]?.url} 
                     alt={item.campground.name}
                     className="w-16 h-16 rounded-lg object-cover"
                   />
