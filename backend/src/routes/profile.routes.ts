@@ -912,11 +912,16 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     const skip = (page - 1) * limit;
     const currentUserId = (req as any).userId;
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { username },
-      
       select: { id: true },
     });
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: usernameOrId },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
