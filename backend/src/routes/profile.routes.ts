@@ -547,11 +547,16 @@ router.get('/:username/friends', optionalAuth, async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { username },
-      
       select: { id: true },
     });
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: username },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -900,7 +905,8 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
 // GET /api/profile/:username/activity-feed - Get comprehensive activity feed
 router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const { username: usernameOrId } = req.params;
+    let username = usernameOrId;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;

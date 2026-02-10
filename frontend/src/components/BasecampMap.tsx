@@ -518,7 +518,7 @@ const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
                   <Tent size={16} />
                   View Campground
                 </Link>
-                <Link to={`/profile/${selectedItem.data.user.id}`} className="action-btn secondary">
+                <Link to={`/profile/${selectedItem.data.user.username || selectedItem.data.user.id}`} className="action-btn secondary">
                   <Users size={16} />
                   View Profile
                 </Link>

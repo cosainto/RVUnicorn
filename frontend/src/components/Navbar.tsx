@@ -416,7 +416,7 @@ export default function Navbar() {
 
                     <div className="py-1">
                       <Link
-                        to={`/profile/${user.id}`}
+                        to={`/profile/${user.username}`}
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -550,7 +550,7 @@ export default function Navbar() {
 
             {/* Settings & Logout */}
             <div className="px-2 py-3 border-t border-gray-100 mt-2">
-              <MobileNavLink to={`/profile/${user.id}`} icon={<User className="w-5 h-5" />} label="My Profile" />
+              <MobileNavLink to={`/profile/${user.username}`} icon={<User className="w-5 h-5" />} label="My Profile" />
               <MobileNavLink to="/my-rv" icon={<Settings className="w-5 h-5" />} label="RV Settings" />
               <MobileNavLink to="/settings/privacy" icon={<Shield className="w-5 h-5" />} label="Privacy Settings" />
               <button
