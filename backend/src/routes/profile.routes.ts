@@ -1411,6 +1411,28 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
   }
 });
 
+
+// PUT /api/profile/social-links - Update social links
+router.put('/social-links', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { facebookUrl, instagramUrl, twitterUrl, redditUrl, tiktokUrl, youtubeUrl, blueskyUrl } = req.body;
+    const data: any = {};
+    if (facebookUrl !== undefined) data.facebookUrl = facebookUrl;
+    if (instagramUrl !== undefined) data.instagramUrl = instagramUrl;
+    if (twitterUrl !== undefined) data.twitterUrl = twitterUrl;
+    if (redditUrl !== undefined) data.redditUrl = redditUrl;
+    if (tiktokUrl !== undefined) data.tiktokUrl = tiktokUrl;
+    if (youtubeUrl !== undefined) data.youtubeUrl = youtubeUrl;
+    if (blueskyUrl !== undefined) data.blueskyUrl = blueskyUrl;
+    const user = await prisma.user.update({ where: { id: userId }, data });
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Update social links error:', error);
+    res.status(500).json({ error: 'Failed to update social links' });
+  }
+});
+
 export default router;
 
 // GET /api/profile/suggested-tags - Get suggested tags based on user's RV profile and packing list

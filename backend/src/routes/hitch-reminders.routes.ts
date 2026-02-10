@@ -186,6 +186,34 @@ router.post('/scan', authenticateToken, async (req: Request, res: Response) => {
       }
     }
 
+    // Social handle nudge after sharing
+    if (!(await isIgnored(userId, 'SOCIAL_SHARE_NUDGE'))) {
+      const shareUser = await prisma.user.findUnique({ where: { id: userId }, select: { facebookUrl: true, instagramUrl: true, twitterUrl: true, redditUrl: true, tiktokUrl: true, youtubeUrl: true, blueskyUrl: true } });
+      if (shareUser) {
+        const missing: string[] = [];
+        if (!shareUser.instagramUrl) missing.push('Instagram');
+        if (!shareUser.facebookUrl) missing.push('Facebook');
+        if (!shareUser.twitterUrl) missing.push('X/Twitter');
+        if (!shareUser.redditUrl) missing.push('Reddit');
+        if (!shareUser.tiktokUrl) missing.push('TikTok');
+        if (!shareUser.youtubeUrl) missing.push('YouTube');
+        if (missing.length > 0 && missing.length < 7) {
+          const existing = await prisma.hitchReminder.findFirst({ where: { userId, type: 'SOCIAL_SHARE_NUDGE', status: 'PENDING' } });
+          if (!existing) {
+            const top3 = missing.slice(0, 3).join(', ');
+            await prisma.hitchReminder.create({ data: {
+              userId, type: 'SOCIAL_SHARE_NUDGE', entityType: 'USER', entityId: userId,
+              message: `I noticed you\'re sharing content but haven\'t linked your ${top3} yet. Add your social handles so friends can find you!`,
+              priority: 'LOW',
+              nextRemindAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              metadata: { missingSocials: missing },
+            }});
+            created.push('Social share nudge');
+          }
+        }
+      }
+    }
+
     res.json({ created, count: created.length });
   } catch (error) { console.error('Scan error:', error); res.status(500).json({ error: 'Scan failed' }); }
 });

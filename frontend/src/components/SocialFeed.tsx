@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import MentionInput, { RenderMentions } from './MentionInput';
 import { RenderHashtags } from './HashtagDisplay';
 import ReactionPicker from './ReactionPicker';
@@ -119,6 +120,9 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [shareModalItem, setShareModalItem] = useState<FeedItem | null>(null);
+  const [handlePrompt, setHandlePrompt] = useState<{ platform: string; field: string } | null>(null);
+  const [handleInput, setHandleInput] = useState('');
+  const { user: authUser, refreshUser } = useAuth();
   
   // New post form state
   const [newPostContent, setNewPostContent] = useState('');
@@ -684,8 +688,41 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     }
   };
 
+  const platformToField: Record<string, string> = {
+    Facebook: 'facebookUrl',
+    'X / Twitter': 'twitterUrl',
+    Reddit: 'redditUrl',
+    WhatsApp: '',
+    Threads: '',
+    Email: '',
+  };
+
   const handleShare = async (item: FeedItem) => {
     setShareModalItem(item);
+  };
+
+  const handleSocialClick = (platformName: string) => {
+    const field = platformToField[platformName];
+    if (field && authUser && !(authUser as any)[field]) {
+      setHandlePrompt({ platform: platformName, field });
+    }
+    setShareModalItem(null);
+  };
+
+  const saveHandle = async () => {
+    if (!handlePrompt || !handleInput.trim()) {
+      setHandlePrompt(null);
+      setHandleInput('');
+      return;
+    }
+    try {
+      await api.put('/profile/social-links', { [handlePrompt.field]: handleInput.trim() });
+      if (refreshUser) await refreshUser();
+    } catch (e) {
+      console.error('Failed to save handle:', e);
+    }
+    setHandlePrompt(null);
+    setHandleInput('');
   };
 
 
@@ -1570,16 +1607,16 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                 <p className="text-sm text-gray-800 line-clamp-2">{sText}</p>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-4">
-                <a href={'https://www.facebook.com/sharer/sharer.php?u=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#1877F2' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                <a href={'https://www.facebook.com/sharer/sharer.php?u=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('Facebook')} style={{ backgroundColor: '#1877F2' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
                   <span className="text-lg">&#x1F4D8;</span><span style={{ fontSize: '10px' }} className="font-medium">Facebook</span>
                 </a>
-                <a href={'https://twitter.com/intent/tweet?text=' + et + '&url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#000' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                <a href={'https://twitter.com/intent/tweet?text=' + et + '&url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('X / Twitter')} style={{ backgroundColor: '#000' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
                   <span className="text-lg">X</span><span style={{ fontSize: '10px' }} className="font-medium">X / Twitter</span>
                 </a>
-                <a href={'https://www.reddit.com/submit?url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#FF4500' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                <a href={'https://www.reddit.com/submit?url=' + eu} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('Reddit')} style={{ backgroundColor: '#FF4500' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
                   <span className="text-lg">&#x1F916;</span><span style={{ fontSize: '10px' }} className="font-medium">Reddit</span>
                 </a>
-                <a href={'https://wa.me/?text=' + et + '%20' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#25D366' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                <a href={'https://wa.me/?text=' + et + '%20' + eu} target="_blank" rel="noopener noreferrer" onClick={() => { setShareModalItem(null); }} style={{ backgroundColor: '#25D366' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
                   <span className="text-lg">&#x1F4AC;</span><span style={{ fontSize: '10px' }} className="font-medium">WhatsApp</span>
                 </a>
                 <a href={'https://www.threads.net/intent/post?text=' + et + '%20' + eu} target="_blank" rel="noopener noreferrer" onClick={() => setShareModalItem(null)} style={{ backgroundColor: '#000' }} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
@@ -1596,6 +1633,27 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           </div>
         );
       })()}
+
+      {handlePrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 10000 }} onClick={() => { setHandlePrompt(null); setHandleInput(''); }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Save your {handlePrompt.platform} handle?</h3>
+            <p className="text-sm text-gray-600 mb-4">Add your {handlePrompt.platform} username to your RVUnicorn profile so friends can find you!</p>
+            <input
+              type="text"
+              value={handleInput}
+              onChange={e => setHandleInput(e.target.value)}
+              placeholder={handlePrompt.platform === 'Facebook' ? 'facebook.com/yourpage' : handlePrompt.platform === 'X / Twitter' ? '@yourhandle' : 'your username'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setHandlePrompt(null); setHandleInput(''); }} className="flex-1 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">Skip</button>
+              <button onClick={saveHandle} className="flex-1 py-2 text-sm bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:opacity-90 transition font-medium">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
 

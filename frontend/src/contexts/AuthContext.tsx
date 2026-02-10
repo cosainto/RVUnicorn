@@ -11,6 +11,13 @@ interface User {
   bio?: string;
   isCreator?: boolean;
   role?: string;
+  instagramUrl?: string;
+  facebookUrl?: string;
+  twitterUrl?: string;
+  redditUrl?: string;
+  tiktokUrl?: string;
+  youtubeUrl?: string;
+  blueskyUrl?: string;
 }
 
 interface AuthContextType {
