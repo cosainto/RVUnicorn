@@ -376,3 +376,4 @@ router.post('/update', authenticateToken, async (req: Request, res: Response) =>
 });
 
 export default router;
+// Updated scan

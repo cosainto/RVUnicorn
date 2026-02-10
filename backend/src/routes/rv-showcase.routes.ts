@@ -12,11 +12,17 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const { username } = req.params;
     const currentUserId = (req as any).userId;
 
-    // Find user
-    const user = await prisma.user.findUnique({
+    // Find user by username or id
+    let user = await prisma.user.findUnique({
       where: { username },
       select: { id: true },
     });
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: username },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

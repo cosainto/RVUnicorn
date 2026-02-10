@@ -59,9 +59,9 @@ router.get('/profile/:username', async (req, res) => {
     const { username } = req.params;
     const currentUserId = (req as any).user?.id;
 
-    const creator = await prisma.user.findFirst({
+    let creator = await prisma.user.findFirst({
       where: {
-        username,
+        OR: [{ username }, { id: username }],
         isCreator: true,
       },
       select: {
