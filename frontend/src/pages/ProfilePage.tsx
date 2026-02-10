@@ -959,7 +959,17 @@ const [editForm, setEditForm] = useState({
                       className="border border-gray-200 rounded-lg p-3 hover:shadow-lg transition group block"
                     >
                       <div className="flex items-start gap-3">
-                        <MapPin className="w-4 h-4 text-primary-600 flex-shrink-0 mt-1" />
+                        {(campground.imageUrl || campground.photos?.[0]?.imageUrl) ? (
+                          <img
+                            src={campground.imageUrl || campground.photos[0].imageUrl}
+                            alt={campground.name}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-5 h-5 text-green-600" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-sm text-gray-900 group-hover:text-primary-600 truncate">
                             {campground.name}
