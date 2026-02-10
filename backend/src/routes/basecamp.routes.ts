@@ -167,8 +167,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
     const allActivities: any[] = [];
 
     // 1. Activities from Activity model
-    console.log('[FEED DEBUG] Current userId:', userId);
-    console.log('[FEED DEBUG] visibleUserIds:', visibleUserIds.slice(0, 5));
     try {
       const activities = await prisma.activity.findMany({
         where: {
@@ -195,17 +193,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
         },
       });
 
-      console.log('[FEED DEBUG] Found', activities.length, 'activities from Activity model');
       for (const activity of activities) {
         console.log('Activity type:', activity.type, '| targetUserId:', activity.targetUserId);
         // Skip types already handled by BasecampActivity
         const skipTypes = ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'];
         if (skipTypes.includes(activity.type)) {
-          console.log('[FEED DEBUG] Skipping', activity.type, 'due to skipTypes');
           continue;
         }
         if (blockedUserIds.has(activity.userId)) {
-          console.log('[FEED DEBUG] Blocked user, returning early');
           return;
         }
         
@@ -297,7 +292,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
           }
         }
 
-        console.log('[FEED DEBUG] Pushing activity:', activity.type, activity.id);
         
         // For recipe shares, use the content field as the label (it contains the full message)
         let activityLabel = getActivityLabel(activity.type);
@@ -805,7 +799,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
     // Sort and deduplicate
     const recipeCommentsBefore = allActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
-    console.log('[FEED DEBUG] RECIPE_COMMENTED in allActivities before dedup:', recipeCommentsBefore);
     allActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Deduplicate
@@ -824,10 +817,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
     });
 
     const recipeCommentsAfter = deduplicatedActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
-    console.log('[FEED DEBUG] RECIPE_COMMENTED after dedup:', recipeCommentsAfter);
     const paginatedActivities = deduplicatedActivities.slice(0, limit);
     const recipeCommentsInPage = paginatedActivities.filter(a => a.type === 'RECIPE_COMMENTED').length;
-    console.log('[FEED DEBUG] RECIPE_COMMENTED in paginated:', recipeCommentsInPage);
     const hasMore = deduplicatedActivities.length > limit;
 
     // Enrich activities with source like counts
@@ -1461,7 +1452,6 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
 
       // For RECIPE_COMMENTED activities, sync reaction to the recipe comment
       if (activity.type === 'RECIPE_COMMENTED' && activity.recipeId) {
-        console.log('[REACT DEBUG] Syncing reaction to recipe comment, recipeId:', activity.recipeId, 'content:', activity.content?.substring(0,20));
         const comment = await prisma.recipeComment.findFirst({
           where: {
             recipeId: activity.recipeId,
@@ -1471,7 +1461,6 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
         });
 
         if (comment) {
-          console.log('[REACT DEBUG] Found comment:', comment.id, 'saving reaction:', reaction);
           if (reaction) {
             // Save/update the reaction
             const saved = await prisma.recipeCommentLike.upsert({
@@ -1479,7 +1468,6 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
               update: { reaction },
               create: { commentId: comment.id, userId, reaction }
             });
-            console.log('[REACT DEBUG] Saved RecipeCommentLike:', saved);
           } else {
             // Remove the reaction
             await prisma.recipeCommentLike.deleteMany({
@@ -1487,7 +1475,6 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
             });
           }
         } else {
-          console.log('[REACT DEBUG] Comment NOT found for content:', activity.content?.substring(0,30));
         }
       }
 

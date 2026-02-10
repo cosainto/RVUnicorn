@@ -76,7 +76,6 @@ export default function MediaAlbumDetailPage() {
   }, [user, album, isOwner]);
 
   const canTag = isOwner || isFriend;
-  console.log('[DEBUG] canTag:', canTag, 'isOwner:', isOwner, 'isFriend:', isFriend);
 
   useEffect(() => {
     if (id) fetchAlbum();

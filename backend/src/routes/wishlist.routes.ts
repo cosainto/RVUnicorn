@@ -15,7 +15,6 @@ router.get('/', authenticateToken, async (req, res) => {
       where: { userId }
     });
     
-    console.log('Found wishlist items:', wishlist.length);
 
     // Get campground details separately
     const results = [];

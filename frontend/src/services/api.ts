@@ -10,7 +10,7 @@ const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  console.log('API Request:', config.url, 'Token exists:', !!token, 'Token:', token?.substring(0, 20) + '...');
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -26,13 +26,13 @@ api.interceptors.request.use((config) => {
 // Handle 401 errors
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.config.url, 'Status:', response.status);
+
     return response;
   },
   (error) => {
-    console.log('API Error:', error.config?.url, 'Status:', error.response?.status);
+    console.error('API Error:', error.config?.url, error.response?.status);
     if (error.response?.status === 401 && error.config?.url !== '/auth/me') {
-      console.log('401 Error - clearing auth and redirecting');
+
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
