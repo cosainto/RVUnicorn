@@ -692,10 +692,16 @@ router.post('/:username/wall-post', authenticateToken, async (req, res) => {
     }
 
     // Get the profile owner
-    const profileOwner = await prisma.user.findUnique({
-      
+    let profileOwner = await prisma.user.findUnique({
+      where: { username },
       select: { id: true },
     });
+    if (!profileOwner) {
+      profileOwner = await prisma.user.findUnique({
+        where: { id: username },
+        select: { id: true },
+      });
+    }
 
     if (!profileOwner) {
       return res.status(404).json({ error: 'User not found' });
