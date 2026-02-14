@@ -111,7 +111,7 @@ function LinkedVideoCard({ recipeId }: { recipeId: string }) {
   React.useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await api.get(\`/creators/content/by-recipe/\${recipeId}\`);
+        const { data } = await api.get(\`/creators/content/by-recipe/${recipeId}`);
         if (data && data.length > 0) setVideo(data[0]);
       } catch (e) {}
     };
@@ -124,7 +124,7 @@ function LinkedVideoCard({ recipeId }: { recipeId: string }) {
         <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         Watch the Cooking Video
       </h3>
-      <a href={\`/creators/\${video.creator?.username}/content/\${video.id}\`} className="block group">
+      <a href={\`/creators/${video.creator?.username}/content/${video.id}`} className="block group">
         <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
           {video.thumbnailUrl ? (
             <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
