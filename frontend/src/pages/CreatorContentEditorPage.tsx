@@ -241,7 +241,7 @@ export default function CreatorContentEditorPage() {
       return;
     }
     try {
-      const response = await api.get(`/recipes?search=${encodeURIComponent(query)}&limit=5`);
+      const response = await api.get("/recipes?search=" + encodeURIComponent(query) + "&limit=5");
       setRecipeResults(response.data.recipes || response.data || []);
     } catch (error) {
       console.error('Error searching recipes:', error);
