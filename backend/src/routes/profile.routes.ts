@@ -363,6 +363,36 @@ router.put('/:friendshipId/accept-friend', authenticateToken, async (req, res) =
       }
     });
 
+    // Get both users' details for the activity
+    const acceptor = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, username: true } });
+    const initiator = await prisma.user.findUnique({ where: { id: friendship.initiatorId }, select: { firstName: true, lastName: true, username: true } });
+    const acceptorName = acceptor?.firstName ? `${acceptor.firstName} ${acceptor.lastName || ''}`.trim() : acceptor?.username || 'Someone';
+    const initiatorName = initiator?.firstName ? `${initiator.firstName} ${initiator.lastName || ''}`.trim() : initiator?.username || 'Someone';
+
+    // Create activity for the acceptor's feed
+    await prisma.activity.create({
+      data: {
+        userId,
+        type: 'FRIEND_ADDED',
+        targetUserId: friendship.initiatorId,
+        title: `${acceptorName} and ${initiatorName} are now friends!`,
+        content: `${acceptorName} became camping buddies with ${initiatorName}`,
+        isPublic: true,
+      }
+    });
+
+    // Create activity for the initiator's feed
+    await prisma.activity.create({
+      data: {
+        userId: friendship.initiatorId,
+        type: 'FRIEND_ADDED',
+        targetUserId: userId,
+        title: `${initiatorName} and ${acceptorName} are now friends!`,
+        content: `${initiatorName} became camping buddies with ${acceptorName}`,
+        isPublic: true,
+      }
+    });
+
     res.json({ success: true, message: 'Friend request accepted' });
   } catch (error) {
     console.error('Accept friend request error:', error);
@@ -982,7 +1012,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     try {
       activities = await prisma.activity.findMany({
         where: {
-          type: { notIn: ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'] },
+          type: { notIn: ['MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST'] },
           OR: [
             { userId: user.id },
             { targetUserId: user.id, ...(mutedCampgroundIds.length > 0 ? { campgroundId: { notIn: mutedCampgroundIds } } : {}) },
