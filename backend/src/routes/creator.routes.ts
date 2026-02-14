@@ -212,6 +212,7 @@ router.post('/content', authenticateToken, async (req, res) => {
       taggedUsers,
       taggedCampgrounds,
       collaboratorIds,
+      linkedRecipeId,
     } = req.body;
 
     // Verify user is a creator
@@ -240,6 +241,7 @@ router.post('/content', authenticateToken, async (req, res) => {
         campgroundId: campgroundId || null,
         eventId: eventId || null,
         tripId: tripId || null,
+        recipeId: linkedRecipeId || null,
         isSponsored: isSponsored || false,
         sponsorName,
         affiliateLinks,
@@ -686,6 +688,7 @@ router.put('/content/:contentId', authenticateToken, async (req, res) => {
       sponsorName,
       affiliateLinks,
       status,
+      linkedRecipeId,
     } = req.body;
 
     const content = await prisma.creatorContent.update({
@@ -697,6 +700,7 @@ router.put('/content/:contentId', authenticateToken, async (req, res) => {
         thumbnailUrl,
         category,
         tags,
+        recipeId: linkedRecipeId !== undefined ? (linkedRecipeId || null) : undefined,
         isSponsored,
         sponsorName,
         affiliateLinks,
@@ -1407,6 +1411,29 @@ router.get('/stats', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+
+// GET /api/creators/content/by-recipe/:recipeId - Get creator content linked to a recipe
+router.get('/content/by-recipe/:recipeId', async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+    const content = await prisma.creatorContent.findMany({
+      where: { recipeId, status: 'PUBLISHED' },
+      orderBy: { viewCount: 'desc' },
+      take: 5,
+      include: {
+        creator: {
+          select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true, creatorVerified: true },
+        },
+        _count: { select: { likes: true, comments: true } },
+      },
+    });
+    res.json(content);
+  } catch (error) {
+    console.error('Error fetching content by recipe:', error);
+    res.status(500).json({ error: 'Failed to fetch content' });
   }
 });
 

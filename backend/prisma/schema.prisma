@@ -720,6 +720,7 @@ model Recipe {
   likes              RecipeLike[]
   ratings            RecipeRating[]
   savedBy            SavedRecipe[]
+  creatorContent     CreatorContent[]
 
   @@index([userId])
   @@index([category])
@@ -1846,6 +1847,7 @@ model CreatorContent {
   campgroundId   String?
   eventId        String?
   tripId         String?
+  recipeId       String?
   isSponsored    Boolean                 @default(false)
   sponsorName    String?
   affiliateLinks Json?
@@ -1860,6 +1862,7 @@ model CreatorContent {
   updatedAt      DateTime                @updatedAt
   collaborators  CreatorCollaboration[]
   campground     Campground?             @relation(fields: [campgroundId], references: [id])
+  recipe         Recipe?                 @relation(fields: [recipeId], references: [id])
   creator        User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   comments       CreatorContentComment[]
   gearItems      CreatorContentGear[]
@@ -1873,6 +1876,7 @@ model CreatorContent {
   @@index([category])
   @@index([status, publishedAt])
   @@index([campgroundId])
+  @@index([recipeId])
 }
 
 model CreatorContentPhoto {

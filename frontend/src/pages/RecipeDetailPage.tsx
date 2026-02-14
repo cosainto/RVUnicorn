@@ -106,6 +106,54 @@ const CATEGORIES = [
   'DRINK',
 ];
 
+function LinkedVideoCard({ recipeId }: { recipeId: string }) {
+  const [video, setVideo] = React.useState<any>(null);
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get(\`/creators/content/by-recipe/\${recipeId}\`);
+        if (data && data.length > 0) setVideo(data[0]);
+      } catch (e) {}
+    };
+    load();
+  }, [recipeId]);
+  if (!video) return null;
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-4">
+      <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
+        <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        Watch the Cooking Video
+      </h3>
+      <a href={\`/creators/\${video.creator?.username}/content/\${video.id}\`} className="block group">
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
+          {video.thumbnailUrl ? (
+            <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+              <svg className="w-12 h-12 text-amber-300" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition flex items-center justify-center">
+            <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+              <svg className="w-6 h-6 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2">
+          <p className="font-semibold text-gray-900 group-hover:text-amber-600 transition text-sm">{video.title}</p>
+          {video.creator && (
+            <p className="text-xs text-gray-500 mt-0.5">by {video.creator.firstName} {video.creator.lastName}</p>
+          )}
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+            <span>{video.viewCount?.toLocaleString()} views</span>
+            <span>{video._count?.likes || 0} likes</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  );
+}
+
 export default function RecipeDetailPage() {
   const { recipeId } = useParams<{ recipeId: string }>();
   const { user } = useAuth();
@@ -1306,6 +1354,8 @@ export default function RecipeDetailPage() {
           </ol>
         )}
       </div>
+
+      <LinkedVideoCard recipeId={recipe.id} />
 
       {/* Comments Section - Hide when editing */}
       {!isEditing && (

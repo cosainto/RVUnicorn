@@ -95,6 +95,11 @@ interface ContentItem {
     name: string;
     state: string;
   };
+  recipe?: {
+    id: string;
+    title: string;
+    imageUrl?: string;
+  };
   photos?: { imageUrl: string }[];
   _count: {
     likes: number;
@@ -689,6 +694,11 @@ function ContentCard({
         {item.campground && (
           <Link to={`/campgrounds/${item.campground.id}`} className="mt-2 flex items-center gap-1 text-xs text-amber-600 hover:underline">
             <MapPin className="w-3.5 h-3.5" /> {item.campground.name}, {item.campground.state}
+          </Link>
+        )}
+        {item.recipe && (
+          <Link to={`/recipes/${item.recipe.id}`} className="mt-1 flex items-center gap-1 text-xs text-orange-600 hover:underline">
+            🍳 {item.recipe.title}
           </Link>
         )}
         <div className="mt-3 flex items-center justify-between pt-3 border-t border-gray-50">
