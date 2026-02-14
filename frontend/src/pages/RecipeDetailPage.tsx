@@ -111,20 +111,21 @@ function LinkedVideoCard({ recipeId }: { recipeId: string }) {
   React.useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await api.get(\`/creators/content/by-recipe/${recipeId}`);
-        if (data && data.length > 0) setVideo(data[0]);
+        const response = await api.get("/creators/content/by-recipe/" + recipeId);
+        if (response.data && response.data.length > 0) setVideo(response.data[0]);
       } catch (e) {}
     };
     load();
   }, [recipeId]);
   if (!video) return null;
+  const videoUrl = "/creators/" + (video.creator?.username || "") + "/content/" + video.id;
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-4">
       <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
         <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         Watch the Cooking Video
       </h3>
-      <a href={\`/creators/${video.creator?.username}/content/${video.id}`} className="block group">
+      <a href={videoUrl} className="block group">
         <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
           {video.thumbnailUrl ? (
             <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -153,6 +154,7 @@ function LinkedVideoCard({ recipeId }: { recipeId: string }) {
     </div>
   );
 }
+
 
 export default function RecipeDetailPage() {
   const { recipeId } = useParams<{ recipeId: string }>();
