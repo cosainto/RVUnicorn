@@ -1,10 +1,5 @@
 import FollowersSection from '../components/FollowersSection';
-// ============================================
-// CREATOR PAGE - Main Component
-// Save as: frontend/src/pages/CreatorPage.tsx
-// ============================================
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -18,6 +13,19 @@ import {
   MapPin,
   Globe,
   ChevronRight,
+  Camera,
+  Award,
+  TrendingUp,
+  Calendar,
+  Share2,
+  MoreHorizontal,
+  Flame,
+  Zap,
+  Mountain,
+  Tent,
+  Truck,
+  Copy,
+  X,
 } from 'lucide-react';
 import {
   Heart,
@@ -26,7 +34,6 @@ import {
   Share,
   Eye,
 } from 'lucide-react';
-import { Heart as HeartSolidIcon, Bookmark as BookmarkSolidIcon } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -50,6 +57,10 @@ interface Creator {
   creatorDisplayName?: string;
   creatorHandle?: string;
   tiktokUrl?: string;
+  facebookUrl?: string;
+  twitterUrl?: string;
+  blueskyUrl?: string;
+  redditUrl?: string;
   rvType?: string;
   rvMake?: string;
   rvModel?: string;
@@ -61,6 +72,8 @@ interface Creator {
     totalViews: number;
     totalLikes: number;
   };
+  creatorJoinedAt?: string;
+  creatorEnabledAt?: string;
 }
 
 interface ContentItem {
@@ -76,6 +89,7 @@ interface ContentItem {
   isSponsored: boolean;
   isLiked?: boolean;
   isSaved?: boolean;
+  isPinned?: boolean;
   campground?: {
     id: string;
     name: string;
@@ -91,13 +105,13 @@ interface ContentItem {
 }
 
 const CATEGORIES = [
-  { id: 'ALL', label: 'All Content' },
-  { id: 'GEAR_REVIEWS', label: 'Gear Reviews' },
-  { id: 'CAMPGROUND_REVIEWS', label: 'Campground Reviews' },
-  { id: 'TRAVEL_DAYS', label: 'Travel Days' },
-  { id: 'TIPS_HACKS', label: 'Tips & Hacks' },
-  { id: 'FULL_TIME_RV', label: 'Full-Time RV Life' },
-  { id: 'WEEKEND_TRIPS', label: 'Weekend Trips' },
+  { id: 'ALL', label: 'All', icon: <Zap className="w-3.5 h-3.5" /> },
+  { id: 'GEAR_REVIEWS', label: 'Gear Reviews', icon: <Star className="w-3.5 h-3.5" /> },
+  { id: 'CAMPGROUND_REVIEWS', label: 'Campground Reviews', icon: <Tent className="w-3.5 h-3.5" /> },
+  { id: 'TRAVEL_DAYS', label: 'Travel Days', icon: <Truck className="w-3.5 h-3.5" /> },
+  { id: 'TIPS_HACKS', label: 'Tips & Hacks', icon: <Flame className="w-3.5 h-3.5" /> },
+  { id: 'FULL_TIME_RV', label: 'Full-Time Life', icon: <Mountain className="w-3.5 h-3.5" /> },
+  { id: 'WEEKEND_TRIPS', label: 'Weekenders', icon: <Calendar className="w-3.5 h-3.5" /> },
 ];
 
 const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -106,17 +120,38 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
   BLOG: <FileText className="w-4 h-4" />,
   PHOTO_GALLERY: <Image className="w-4 h-4" />,
   EMBED: <LinkIcon className="w-4 h-4" />,
+  GUIDE: <FileText className="w-4 h-4" />,
 };
+
+function formatCount(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+}
+
+function timeAgo(date: string): string {
+  const now = new Date();
+  const d = new Date(date);
+  const seconds = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+}
 
 export default function CreatorPage() {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [content, setContent] = useState<ContentItem[]>([]);
+  const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('ALL');
-  const [activeTab, setActiveTab] = useState<'content' | 'about' | 'gear'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'about' | 'gear' | 'collabs'>('content');
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const isOwner = user?.id === creator?.id;
 
@@ -145,11 +180,15 @@ export default function CreatorPage() {
     if (!creator) return;
     try {
       const params = new URLSearchParams();
-      if (activeCategory !== 'ALL') {
-        params.append('category', activeCategory);
-      }
+      if (activeCategory !== 'ALL') params.append('category', activeCategory);
       const response = await api.get(`/creators/content/${creator.id}?${params}`);
-      setContent(response.data);
+      const items = response.data || [];
+      setContent(items);
+      // First 3 most viewed as featured
+      if (activeCategory === 'ALL' && items.length > 0) {
+        const sorted = [...items].sort((a: ContentItem, b: ContentItem) => b.viewCount - a.viewCount);
+        setFeaturedContent(sorted.slice(0, 3));
+      }
     } catch (error) {
       console.error('Error fetching content:', error);
     }
@@ -175,16 +214,9 @@ export default function CreatorPage() {
   const handleLike = async (contentId: string) => {
     try {
       const response = await api.post(`/creators/content/${contentId}/like`);
-      setContent(content.map(c => 
+      setContent(content.map(c =>
         c.id === contentId
-          ? {
-              ...c,
-              isLiked: response.data.isLiked,
-              _count: {
-                ...c._count,
-                likes: c._count.likes + (response.data.isLiked ? 1 : -1),
-              },
-            }
+          ? { ...c, isLiked: response.data.isLiked, _count: { ...c._count, likes: c._count.likes + (response.data.isLiked ? 1 : -1) } }
           : c
       ));
     } catch (error) {
@@ -195,16 +227,9 @@ export default function CreatorPage() {
   const handleSave = async (contentId: string) => {
     try {
       const response = await api.post(`/creators/content/${contentId}/save`);
-      setContent(content.map(c => 
+      setContent(content.map(c =>
         c.id === contentId
-          ? {
-              ...c,
-              isSaved: response.data.isSaved,
-              _count: {
-                ...c._count,
-                saves: c._count.saves + (response.data.isSaved ? 1 : -1),
-              },
-            }
+          ? { ...c, isSaved: response.data.isSaved, _count: { ...c._count, saves: c._count.saves + (response.data.isSaved ? 1 : -1) } }
           : c
       ));
     } catch (error) {
@@ -212,10 +237,15 @@ export default function CreatorPage() {
     }
   };
 
+  const creatorUrl = `https://rvunicorn-production.up.railway.app/creators/${creator?.username}`;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-500 text-sm">Loading creator...</p>
+        </div>
       </div>
     );
   }
@@ -224,8 +254,12 @@ export default function CreatorPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
+          <Mountain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900">Creator not found</h2>
           <p className="text-gray-600 mt-2">This creator page doesn't exist.</p>
+          <Link to="/creators" className="inline-block mt-4 px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition">
+            Browse Creators
+          </Link>
         </div>
       </div>
     );
@@ -233,169 +267,181 @@ export default function CreatorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
+      {/* ===== HERO SECTION ===== */}
       <div className="relative">
-        {/* Cover Image */}
-        <div className="h-64 md:h-80 bg-gradient-to-r from-primary-600 to-primary-800 overflow-hidden">
-          {(creator.creatorCoverImage || creator.coverPhoto) && (
+        {/* Cover Image with Gradient Overlay */}
+        <div className="h-56 sm:h-64 md:h-80 relative overflow-hidden">
+          {(creator.creatorCoverImage || creator.coverPhoto) ? (
             <img
               src={creator.creatorCoverImage || creator.coverPhoto}
               alt="Cover"
               className="w-full h-full object-cover"
             />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-amber-600 via-orange-500 to-rose-600" />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         </div>
 
-        {/* Profile Info Overlay */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative -mt-24 pb-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex flex-col md:flex-row gap-6">
+        {/* Profile Card - Overlapping Cover */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="relative -mt-32 sm:-mt-28">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 sm:p-6">
+              <div className="flex flex-col sm:flex-row gap-5">
                 {/* Profile Photo */}
-                <div className="flex-shrink-0">
-                  <img
-                    src={creator.profilePicture || '/default-avatar.png'}
-                    alt={`${creator.firstName} ${creator.lastName}`}
-                    className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
-                  />
+                <div className="flex-shrink-0 -mt-16 sm:-mt-20">
+                  <div className="relative">
+                    <img
+                      src={creator.profilePicture || '/default-avatar.png'}
+                      alt={creator.firstName}
+                      className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl border-4 border-white shadow-lg object-cover"
+                    />
+                    {creator.creatorVerified && (
+                      <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1.5 shadow-md">
+                        <BadgeCheck className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Info */}
-                <div className="flex-grow">
-                  <div className="flex items-start justify-between">
+                <div className="flex-grow min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold text-gray-900">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                           {creator.creatorDisplayName || `${creator.firstName} ${creator.lastName}` || creator.username}
                         </h1>
-                        {creator.creatorVerified && (
-                          <BadgeCheck className="w-6 h-6 text-blue-500" title="Verified Creator" />
-                        )}
                         {creator.creatorFeatured && (
-                          <Star className="w-6 h-6 text-yellow-500" title="Featured Creator" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-semibold rounded-full">
+                            <Star className="w-3 h-3" /> Featured
+                          </span>
                         )}
                       </div>
-                      <p className="text-gray-500">@{creator.creatorHandle || creator.username}</p>
+                      <p className="text-gray-500 text-sm mt-0.5">@{creator.creatorHandle || creator.username}</p>
                     </div>
 
-                    {/* Follow Button */}
-                    {!isOwner && user && (
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {!isOwner && user && (
+                        <button
+                          onClick={handleFollow}
+                          disabled={followLoading}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                            creator.isFollowing
+                              ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600'
+                              : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                          }`}
+                        >
+                          {creator.isFollowing ? <><UserMinus className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
+                        </button>
+                      )}
                       <button
-                        onClick={handleFollow}
-                        disabled={followLoading}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium transition-colors ${
-                          creator.isFollowing
-                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            : 'bg-primary-600 text-white hover:bg-primary-700'
-                        }`}
+                        onClick={() => setShowShareModal(true)}
+                        className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition text-gray-600"
+                        title="Share"
                       >
-                        {creator.isFollowing ? (
-                          <>
-                            <UserMinus className="w-5 h-5" />
-                            Following
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="w-5 h-5" />
-                            Follow
-                          </>
-                        )}
+                        <Share2 className="w-4 h-4" />
                       </button>
-                    )}
-
-                    {isOwner && (
-                      <Link
-                        to="/creator/dashboard"
-                        className="px-6 py-2 bg-primary-600 text-white rounded-full font-medium hover:bg-primary-700 transition-colors"
-                      >
-                        Creator Dashboard
-                      </Link>
-                    )}
+                      {isOwner && (
+                        <Link
+                          to="/creator/dashboard"
+                          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium text-sm shadow-md hover:shadow-lg transition"
+                        >
+                          Dashboard
+                        </Link>
+                      )}
+                    </div>
                   </div>
 
                   {/* Bio */}
-                  <p className="mt-3 text-gray-700">{creator.creatorBio}</p>
+                  {creator.creatorBio && (
+                    <p className="mt-3 text-gray-700 text-sm leading-relaxed line-clamp-3">{creator.creatorBio}</p>
+                  )}
 
                   {/* Specialties */}
                   {creator.creatorSpecialties?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {creator.creatorSpecialties.map((specialty) => (
-                        <span
-                          key={specialty}
-                          className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm"
-                        >
-                          {specialty}
-                        </span>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {creator.creatorSpecialties.map((s) => (
+                        <span key={s} className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium border border-amber-100">{s}</span>
                       ))}
                     </div>
                   )}
 
-                  {/* Stats */}
-                  <div className="mt-4 flex items-center gap-6 text-sm">
-                    <div>
-                      <span className="font-bold text-gray-900">{creator.followerCount.toLocaleString()}</span>
-                      <span className="text-gray-500 ml-1">Followers</span>
+                  {/* Stats Row */}
+                  <div className="mt-4 flex items-center gap-5 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <span className="font-bold text-gray-900">{formatCount(creator.followerCount)}</span>
+                      <span className="text-gray-500">followers</span>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-gray-400" />
                       <span className="font-bold text-gray-900">{creator.contentCount}</span>
-                      <span className="text-gray-500 ml-1">Posts</span>
+                      <span className="text-gray-500">posts</span>
                     </div>
                     {creator.creatorStats && (
                       <>
-                        <div>
-                          <span className="font-bold text-gray-900">
-                            {creator.creatorStats.totalViews.toLocaleString()}
-                          </span>
-                          <span className="text-gray-500 ml-1">Views</span>
+                        <div className="flex items-center gap-1.5">
+                          <Eye className="w-4 h-4 text-gray-400" />
+                          <span className="font-bold text-gray-900">{formatCount(creator.creatorStats.totalViews)}</span>
+                          <span className="text-gray-500">views</span>
                         </div>
-                        <div>
-                          <span className="font-bold text-gray-900">
-                            {creator.creatorStats.totalLikes.toLocaleString()}
-                          </span>
-                          <span className="text-gray-500 ml-1">Likes</span>
+                        <div className="flex items-center gap-1.5">
+                          <Heart className="w-4 h-4 text-gray-400" />
+                          <span className="font-bold text-gray-900">{formatCount(creator.creatorStats.totalLikes)}</span>
+                          <span className="text-gray-500">likes</span>
                         </div>
                       </>
                     )}
                   </div>
 
-                  {/* Location & Links */}
-                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+                  {/* Location & Social Links Row */}
+                  <div className="mt-3 flex items-center gap-3 flex-wrap text-sm">
                     {creator.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {creator.location}
-                      </div>
+                      <span className="flex items-center gap-1 text-gray-500">
+                        <MapPin className="w-3.5 h-3.5" /> {creator.location}
+                      </span>
                     )}
-                    {creator.showSocialOnCreator !== false && creator.website && (
-                      <a
-                        href={creator.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary-600 hover:underline"
-                      >
-                        <Globe className="w-4 h-4" />
-                        Website
-                      </a>
-                    )}
-                    {creator.youtubeUrl && (
-                      <a
-                        href={creator.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-red-600 hover:underline"
-                      >
-                        YouTube
-                      </a>
-                    )}
-                    {creator.instagramUrl && (
-                      <a
-                        href={creator.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-pink-600 hover:underline"
-                      >
-                        Instagram
-                      </a>
+                    {creator.showSocialOnCreator !== false && (
+                      <>
+                        {creator.youtubeUrl && (
+                          <a href={creator.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-xs font-medium">
+                            YouTube
+                          </a>
+                        )}
+                        {creator.instagramUrl && (
+                          <a href={creator.instagramUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 transition text-xs font-medium">
+                            Instagram
+                          </a>
+                        )}
+                        {creator.tiktokUrl && (
+                          <a href={creator.tiktokUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-xs font-medium">
+                            TikTok
+                          </a>
+                        )}
+                        {creator.facebookUrl && (
+                          <a href={creator.facebookUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-xs font-medium">
+                            Facebook
+                          </a>
+                        )}
+                        {creator.twitterUrl && (
+                          <a href={creator.twitterUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition text-xs font-medium">
+                            X
+                          </a>
+                        )}
+                        {creator.website && (
+                          <a href={creator.website} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition text-xs font-medium">
+                            <Globe className="w-3 h-3" /> Website
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -405,97 +451,196 @@ export default function CreatorPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ===== FEATURED CONTENT (Top 3 most viewed) ===== */}
+      {featuredContent.length > 0 && activeTab === 'content' && activeCategory === 'ALL' && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="w-5 h-5 text-orange-500" />
+            <h2 className="font-bold text-gray-900">Popular Content</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {featuredContent.map((item, i) => (
+              <Link
+                key={item.id}
+                to={`/creators/${creator.username}/content/${item.id}`}
+                className="group relative rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:scale-[1.01]"
+              >
+                <div className="aspect-video bg-gray-200">
+                  {(item.thumbnailUrl || item.photos?.[0]?.imageUrl) ? (
+                    <img src={item.thumbnailUrl || item.photos![0].imageUrl} alt={item.title || ''} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                      {CONTENT_TYPE_ICONS[item.contentType] || <FileText className="w-10 h-10 text-amber-300" />}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded text-white text-[10px] font-semibold uppercase tracking-wider">
+                      {item.contentType.replace('_', ' ')}
+                    </span>
+                    {item.isSponsored && (
+                      <span className="px-1.5 py-0.5 bg-amber-500/80 rounded text-white text-[10px] font-semibold">Sponsored</span>
+                    )}
+                  </div>
+                  <h3 className="text-white font-semibold text-sm line-clamp-2 group-hover:underline">{item.title || 'Untitled'}</h3>
+                  <div className="flex items-center gap-3 mt-1 text-white/70 text-xs">
+                    <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{formatCount(item.viewCount)}</span>
+                    <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{item._count.likes}</span>
+                    <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{item._count.comments}</span>
+                  </div>
+                </div>
+                {i === 0 && (
+                  <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow">
+                    Most Viewed
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== TABS ===== */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div className="border-b border-gray-200">
-          <nav className="flex gap-8">
+          <nav className="flex gap-1">
             {[
-              { id: 'content', label: 'Content' },
-              { id: 'about', label: 'About' },
-              { id: 'gear', label: 'Gear & Setup' },
+              { id: 'content', label: 'Content', icon: <Play className="w-4 h-4" /> },
+              { id: 'about', label: 'About', icon: <FileText className="w-4 h-4" /> },
+              { id: 'gear', label: 'Gear & Setup', icon: <Star className="w-4 h-4" /> },
+              { id: 'collabs', label: 'Collabs', icon: <Users className="w-4 h-4" /> },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-all ${
                   activeTab === tab.id
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
                 }`}
               >
-                {tab.label}
+                {tab.icon} {tab.label}
               </button>
             ))}
           </nav>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
-        <div className="flex-1 min-w-0">
-        {activeTab === 'content' && (
-          <div>
-            {/* Category Filter */}
-            <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeCategory === cat.id
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+      {/* ===== CONTENT AREA ===== */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex gap-6">
+          {/* Main Column */}
+          <div className="flex-1 min-w-0">
+            {activeTab === 'content' && (
+              <div>
+                {/* Category Pills */}
+                <div className="mb-5 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                        activeCategory === cat.id
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                          : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-amber-200'
+                      }`}
+                    >
+                      {cat.icon} {cat.label}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Content Grid */}
-            {content.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No content yet</p>
+                {/* Content Grid */}
+                {content.length === 0 ? (
+                  <div className="text-center py-16">
+                    <FileText className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">No content yet</p>
+                    <p className="text-gray-400 text-sm mt-1">Check back soon for new posts!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {content.map((item) => (
+                      <ContentCard
+                        key={item.id}
+                        item={item}
+                        creatorUsername={creator.username}
+                        onLike={() => handleLike(item.id)}
+                        onSave={() => handleSave(item.id)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {content.map((item) => (
-                  <ContentCard
-                    key={item.id}
-                    item={item}
-                    creatorUsername={creator.username}
-                    onLike={() => handleLike(item.id)}
-                    onSave={() => handleSave(item.id)}
-                  />
-                ))}
+            )}
+
+            {activeTab === 'about' && <AboutSection creator={creator} />}
+            {activeTab === 'gear' && <GearSection creatorId={creator.id} />}
+            {activeTab === 'collabs' && <CollabsSection creatorId={creator.id} creatorName={creator.firstName} isOwner={isOwner} />}
+          </div>
+
+          {/* Sidebar */}
+          <div className="hidden lg:block w-80 flex-shrink-0 space-y-4">
+            <FollowersSection creatorId={creator.id} isOwnProfile={isOwner} />
+
+            {/* RV Info Card */}
+            {(creator.rvType || creator.rvMake) && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-3">
+                  <Truck className="w-5 h-5 text-amber-500" /> My Rig
+                </h3>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-100">
+                  {creator.rvYear && creator.rvMake && creator.rvModel ? (
+                    <p className="font-bold text-gray-900">{creator.rvYear} {creator.rvMake} {creator.rvModel}</p>
+                  ) : null}
+                  {creator.rvType && <p className="text-sm text-amber-700 mt-1">{creator.rvType}</p>}
+                </div>
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === 'about' && (
-          <AboutSection creator={creator} />
-        )}
-
-        {activeTab === 'gear' && (
-          <GearSection creatorId={creator.id} />
-        )}
+        </div>
       </div>
+
+      {/* ===== SHARE MODAL ===== */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]" onClick={() => setShowShareModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Share Creator</h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1 hover:bg-gray-100 rounded-full transition">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 mb-4">
+              <p className="text-sm text-gray-800 font-medium">{creator.creatorDisplayName || `${creator.firstName} ${creator.lastName}`}</p>
+              <p className="text-xs text-gray-500">@{creator.username} on RVUnicorn</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(creatorUrl)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareModal(false)} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#1877F2' }}>
+                <span className="text-lg">f</span><span className="text-[10px] font-medium">Facebook</span>
+              </a>
+              <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(creatorUrl)}&text=${encodeURIComponent(`Check out ${creator.firstName} on RVUnicorn!`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareModal(false)} className="bg-black text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90">
+                <span className="text-lg">X</span><span className="text-[10px] font-medium">X / Twitter</span>
+              </a>
+              <a href={`https://www.reddit.com/submit?url=${encodeURIComponent(creatorUrl)}&title=${encodeURIComponent(`${creator.firstName} on RVUnicorn`)}`} target="_blank" rel="noopener noreferrer" onClick={() => setShowShareModal(false)} className="text-white rounded-xl py-3 flex flex-col items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#FF4500' }}>
+                <span className="text-lg">r/</span><span className="text-[10px] font-medium">Reddit</span>
+              </a>
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(creatorUrl); setShowShareModal(false); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-sm text-gray-700"
+            >
+              <Copy className="w-4 h-4" /> Copy Link
+            </button>
+          </div>
         </div>
-        {/* Followers Sidebar */}
-        <div className="hidden lg:block w-80 flex-shrink-0">
-          {creator && (
-            <FollowersSection
-              creatorId={creator.id}
-              isOwnProfile={false}
-            />
-          )}
-        </div>
+      )}
     </div>
   );
 }
 
-// Content Card Component
+// ===== CONTENT CARD COMPONENT =====
 function ContentCard({
   item,
   creatorUsername,
@@ -510,179 +655,127 @@ function ContentCard({
   const thumbnail = item.thumbnailUrl || item.photos?.[0]?.imageUrl;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-amber-100 transition-all group">
       {/* Thumbnail */}
       <Link to={`/creators/${creatorUsername}/content/${item.id}`}>
-        <div className="relative aspect-video bg-gray-100">
+        <div className="relative aspect-video bg-gray-100 overflow-hidden">
           {thumbnail ? (
-            <img
-              src={thumbnail}
-              alt={item.title || 'Content'}
-              className="w-full h-full object-cover"
-            />
+            <img src={thumbnail} alt={item.title || 'Content'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 text-gray-300">
               {CONTENT_TYPE_ICONS[item.contentType] || <FileText className="w-12 h-12" />}
             </div>
           )}
-
-          {/* Type Badge */}
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/60 rounded-full text-white text-xs">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-xs font-medium">
             {CONTENT_TYPE_ICONS[item.contentType]}
             <span>{item.contentType.replace('_', ' ')}</span>
           </div>
-
-          {/* Sponsored Badge */}
           {item.isSponsored && (
-            <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500 rounded-full text-white text-xs font-medium">
-              Sponsored
-            </div>
+            <div className="absolute top-2 right-2 px-2 py-1 bg-amber-500 rounded-lg text-white text-xs font-semibold shadow">Sponsored</div>
           )}
-
-          {/* View Count */}
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 rounded text-white text-xs">
-            <Eye className="w-3 h-3" />
-            {item.viewCount.toLocaleString()}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-xs">
+            <Eye className="w-3 h-3" /> {formatCount(item.viewCount)}
           </div>
         </div>
       </Link>
 
-      {/* Info */}
       <div className="p-4">
         <Link to={`/creators/${creatorUsername}/content/${item.id}`}>
-          <h3 className="font-semibold text-gray-900 line-clamp-2 hover:text-primary-600">
-            {item.title || 'Untitled'}
-          </h3>
+          <h3 className="font-semibold text-gray-900 line-clamp-2 hover:text-amber-600 transition">{item.title || 'Untitled'}</h3>
         </Link>
-
         {item.description && (
           <p className="mt-1 text-sm text-gray-500 line-clamp-2">{item.description}</p>
         )}
-
-        {/* Campground Link */}
         {item.campground && (
-          <Link
-            to={`/campgrounds/${item.campground.id}`}
-            className="mt-2 flex items-center gap-1 text-sm text-primary-600 hover:underline"
-          >
-            <MapPin className="w-4 h-4" />
-            {item.campground.name}, {item.campground.state}
+          <Link to={`/campgrounds/${item.campground.id}`} className="mt-2 flex items-center gap-1 text-xs text-amber-600 hover:underline">
+            <MapPin className="w-3.5 h-3.5" /> {item.campground.name}, {item.campground.state}
           </Link>
         )}
-
-        {/* Actions */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onLike}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500"
-            >
-              {item.isLiked ? (
-                <HeartSolidIcon className="w-5 h-5 text-red-500" />
-              ) : (
-                <Heart className="w-5 h-5" />
-              )}
-              {item._count.likes}
+        <div className="mt-3 flex items-center justify-between pt-3 border-t border-gray-50">
+          <div className="flex items-center gap-3">
+            <button onClick={onLike} className={`flex items-center gap-1 text-sm transition ${item.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
+              <Heart className={`w-4 h-4 ${item.isLiked ? 'fill-red-500' : ''}`} /> {item._count.likes}
             </button>
-
-            <Link
-              to={`/creators/${creatorUsername}/content/${item.id}`}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600"
-            >
-              <MessageCircle className="w-5 h-5" />
-              {item._count.comments}
+            <Link to={`/creators/${creatorUsername}/content/${item.id}`} className="flex items-center gap-1 text-sm text-gray-400 hover:text-amber-600 transition">
+              <MessageCircle className="w-4 h-4" /> {item._count.comments}
             </Link>
           </div>
-
-          <button
-            onClick={onSave}
-            className="text-gray-500 hover:text-primary-600"
-          >
-            {item.isSaved ? (
-              <BookmarkSolidIcon className="w-5 h-5 text-primary-600" />
-            ) : (
-              <Bookmark className="w-5 h-5" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">{timeAgo(item.publishedAt)}</span>
+            <button onClick={onSave} className={`transition ${item.isSaved ? 'text-amber-600' : 'text-gray-400 hover:text-amber-600'}`}>
+              <Bookmark className={`w-4 h-4 ${item.isSaved ? 'fill-amber-500' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// About Section Component
+// ===== ABOUT SECTION =====
 function AboutSection({ creator }: { creator: Creator }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">About {`${creator.firstName} ${creator.lastName}` || creator.username}</h2>
-      
-      {creator.creatorBio && (
-        <p className="text-gray-700 mb-6">{creator.creatorBio}</p>
-      )}
+    <div className="space-y-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">About {creator.firstName}</h2>
+        {creator.creatorBio && <p className="text-gray-700 leading-relaxed">{creator.creatorBio}</p>}
 
-      {/* RV Info */}
-      {(creator.rvType || creator.rvMake) && (
-        <div className="mb-6">
-          <h3 className="font-semibold text-gray-900 mb-2">My Rig</h3>
-          <div className="bg-gray-50 rounded-lg p-4">
-            {creator.rvYear && creator.rvMake && creator.rvModel && (
-              <p className="text-lg font-medium">
-                {creator.rvYear} {creator.rvMake} {creator.rvModel}
-              </p>
-            )}
-            {creator.rvType && (
-              <p className="text-gray-500">{creator.rvType}</p>
-            )}
+        {(creator.rvType || creator.rvMake) && (
+          <div className="mt-6">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-amber-500" /> My Rig
+            </h3>
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
+              {creator.rvYear && creator.rvMake && creator.rvModel && (
+                <p className="text-lg font-bold text-gray-900">{creator.rvYear} {creator.rvMake} {creator.rvModel}</p>
+              )}
+              {creator.rvType && <p className="text-amber-700 mt-1">{creator.rvType}</p>}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Social Links */}
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Connect</h3>
-        <div className="flex flex-wrap gap-3">
+        {creator.creatorSpecialties?.length > 0 && (
+          <div className="mt-6">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-500" /> Specialties
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {creator.creatorSpecialties.map((s) => (
+                <span key={s} className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium border border-amber-100">{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Social Connect Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Globe className="w-5 h-5 text-amber-500" /> Connect with {creator.firstName}
+        </h3>
+        <div className="grid grid-cols-2 gap-2">
           {creator.showSocialOnCreator !== false && creator.youtubeUrl && (
-            <a
-              href={creator.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-            >
-              YouTube
-              <ChevronRight className="w-4 h-4" />
+            <a href={creator.youtubeUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition font-medium text-sm">
+              YouTube <ChevronRight className="w-4 h-4 ml-auto" />
             </a>
           )}
           {creator.showSocialOnCreator !== false && creator.instagramUrl && (
-            <a
-              href={creator.instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200"
-            >
-              Instagram
-              <ChevronRight className="w-4 h-4" />
+            <a href={creator.instagramUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-pink-50 text-pink-700 rounded-xl hover:bg-pink-100 transition font-medium text-sm">
+              Instagram <ChevronRight className="w-4 h-4 ml-auto" />
             </a>
           )}
           {creator.showSocialOnCreator !== false && creator.tiktokUrl && (
-            <a
-              href={creator.tiktokUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            >
-              TikTok
-              <ChevronRight className="w-4 h-4" />
+            <a href={creator.tiktokUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition font-medium text-sm">
+              TikTok <ChevronRight className="w-4 h-4 ml-auto" />
             </a>
           )}
           {creator.website && (
-            <a
-              href={creator.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200"
-            >
-              Website
-              <ChevronRight className="w-4 h-4" />
+            <a href={creator.website} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition font-medium text-sm">
+              <Globe className="w-4 h-4" /> Website <ChevronRight className="w-4 h-4 ml-auto" />
             </a>
           )}
         </div>
@@ -691,14 +784,12 @@ function AboutSection({ creator }: { creator: Creator }) {
   );
 }
 
-// Gear Section Component
+// ===== GEAR SECTION =====
 function GearSection({ creatorId }: { creatorId: string }) {
   const [gearItems, setGearItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchGear();
-  }, [creatorId]);
+  useEffect(() => { fetchGear(); }, [creatorId]);
 
   const fetchGear = async () => {
     try {
@@ -714,15 +805,17 @@ function GearSection({ creatorId }: { creatorId: string }) {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (gearItems.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-        <p className="text-gray-500">No gear listed yet</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <Star className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+        <p className="text-gray-500 font-medium">No gear listed yet</p>
+        <p className="text-gray-400 text-sm mt-1">This creator hasn't added their gear setup.</p>
       </div>
     );
   }
@@ -730,21 +823,96 @@ function GearSection({ creatorId }: { creatorId: string }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {gearItems.map((item) => (
-        <div key={item.id} className="bg-white rounded-xl shadow-sm p-4">
+        <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
           {item.imageUrl && (
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              className="w-full h-32 object-cover rounded-lg mb-3"
-            />
+            <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            </div>
           )}
-          <h3 className="font-medium text-gray-900">{item.name}</h3>
-          {item.category && (
-            <span className="text-sm text-gray-500">{item.category}</span>
-          )}
-          {item.description && (
-            <p className="mt-2 text-sm text-gray-600 line-clamp-2">{item.description}</p>
-          )}
+          <div className="p-4">
+            <h3 className="font-semibold text-gray-900">{item.name}</h3>
+            {item.category && (
+              <span className="inline-block mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-medium">{item.category}</span>
+            )}
+            {item.description && <p className="mt-2 text-sm text-gray-600 line-clamp-2">{item.description}</p>}
+            {item.affiliateUrl && (
+              <a href={item.affiliateUrl} target="_blank" rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-sm text-amber-600 hover:underline font-medium">
+                View Product <ChevronRight className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ===== COLLABS SECTION =====
+function CollabsSection({ creatorId, creatorName, isOwner }: { creatorId: string; creatorName: string; isOwner: boolean }) {
+  const [collabs, setCollabs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchCollabs(); }, [creatorId]);
+
+  const fetchCollabs = async () => {
+    try {
+      const response = await api.get(`/creators/${creatorId}/collaborations`);
+      setCollabs(response.data || []);
+    } catch (error) {
+      // Endpoint might not exist yet, that's ok
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (collabs.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+        <p className="text-gray-500 font-medium">No collaborations yet</p>
+        <p className="text-gray-400 text-sm mt-1">
+          {isOwner ? 'Team up with other creators to grow your audience!' : `${creatorName} hasn't posted any collaborations yet.`}
+        </p>
+        {isOwner && (
+          <Link to="/creator/dashboard" className="inline-block mt-4 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl text-sm font-medium hover:shadow-md transition">
+            Manage Collaborators
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {collabs.map((collab) => (
+        <div key={collab.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+          <img
+            src={collab.collaborator?.profilePicture || '/default-avatar.png'}
+            alt={collab.collaborator?.username}
+            className="w-14 h-14 rounded-xl object-cover"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 truncate">
+              {collab.collaborator?.firstName} {collab.collaborator?.lastName}
+            </p>
+            <p className="text-sm text-gray-500">@{collab.collaborator?.username}</p>
+            <div className="flex gap-1 mt-1">
+              {collab.canPost && <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Post</span>}
+              {collab.canEdit && <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">Edit</span>}
+            </div>
+          </div>
+          <Link to={`/creators/${collab.collaborator?.username}`} className="text-amber-500 hover:text-amber-600">
+            <ChevronRight className="w-5 h-5" />
+          </Link>
         </div>
       ))}
     </div>
