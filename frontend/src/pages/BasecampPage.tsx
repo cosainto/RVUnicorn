@@ -42,7 +42,7 @@ import {
   AtSign,
   Navigation,
   Share2,
-} from 'lucide-react';
+  Smile} from 'lucide-react';
 import api from '../services/api';
 import { User as UserType } from '../services/auth.service';
 import TravelMap from '../components/TravelMap';
@@ -860,6 +860,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // Planned Events State (non-wishlist upcoming events + future state visits)
   const [plannedTrips, setPlannedTrips] = useState<PlannedTrip[]>([]);
+  const [visitedStatesCount, setVisitedStatesCount] = useState(0);
   const [plannedTripsExpanded, setPlannedTripsExpanded] = useState(false);
 
   // Wishlist Events State
@@ -905,6 +906,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Quick Links State
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
   const [editingLinks, setEditingLinks] = useState(false);
+  const [composerExpanded, setComposerExpanded] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Stickers/Badges State
@@ -1036,6 +1038,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         if (user?.id) {
           const { data: travelData } = await api.get(`/travel-map/${user.id}`);
           const stateVisits = travelData.stateVisits || [];
+          setVisitedStatesCount(stateVisits.length);
           
           // Filter future state visits
           const futureVisits = stateVisits.filter((visit: any) => {
@@ -1762,114 +1765,114 @@ export default function BasecampPage({ user }: BasecampProps) {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* User Status */}
+        {/* User Status - Collapsed Composer */}
         {userProfile && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-8">
-            <EnhancedStatusBar 
-              user={user}
-              profile={userProfile}
-              onUpdate={loadRVInfo}
-              onPost={loadFeed}
-            />
+          <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
+            {!composerExpanded ? (
+              <button
+                onClick={() => setComposerExpanded(true)}
+                className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+              >
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-200" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <span className="text-gray-400 text-sm flex-1">What's on your mind, {user?.firstName || 'camper'}?</span>
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Camera className="w-4 h-4" />
+                  <MapPin className="w-4 h-4" />
+                  <Smile className="w-4 h-4" />
+                </div>
+              </button>
+            ) : (
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-500">Create a post</span>
+                  <button onClick={() => setComposerExpanded(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <EnhancedStatusBar 
+                  user={user}
+                  profile={userProfile}
+                  onUpdate={loadRVInfo}
+                  onPost={() => { loadFeed(); setComposerExpanded(false); }}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* Customizable Quick Links */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Quick Links</h2>
-            <button
-              onClick={() => setEditingLinks(!editingLinks)}
-              className={`p-2 rounded-lg transition-colors ${editingLinks ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-              title={editingLinks ? 'Done editing' : 'Edit quick links'}
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Edit Mode Panel */}
-          {editingLinks && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-gray-600">
-                  <GripVertical className="w-4 h-4 inline mr-1" />
-                  Drag to reorder • Click ✕ to remove
-                </p>
-                <button
-                  onClick={resetQuickLinks}
-                  className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset to Default
-                </button>
+        {/* Smart Action Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {/* Upcoming Trip Card */}
+          {nextEvent ? (
+            <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-blue-100 rounded-lg"><Calendar className="w-4 h-4 text-blue-600" /></div>
+                <span className="text-xs font-medium text-blue-600">Next Trip</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-500 mr-2">Add:</span>
-                {AVAILABLE_LINKS
-                  .filter((l) => !quickLinks.find((q) => q.id === l.id))
-                  .map((link) => (
-                    <button
-                      key={link.id}
-                      onClick={() => addQuickLink(link)}
-                      className="text-xs bg-white border border-gray-300 px-2 py-1 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"
-                    >
-                      + {link.label}
-                    </button>
-                  ))}
+              <p className="font-semibold text-gray-900 text-sm truncate">{nextEvent.title || nextEvent.name}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{countdown.days}d {countdown.hours}h away</p>
+            </Link>
+          ) : (
+            <Link to="/trips" className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 border-dashed rounded-xl p-4 hover:shadow-md transition group">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-blue-100 rounded-lg"><CalendarPlus className="w-4 h-4 text-blue-600" /></div>
+                <span className="text-xs font-medium text-blue-600">No Trips</span>
               </div>
-            </div>
+              <p className="font-semibold text-gray-900 text-sm">Plan your next adventure</p>
+              <p className="text-xs text-blue-500 mt-0.5 group-hover:underline">Get started →</p>
+            </Link>
           )}
 
-          {/* Quick Links Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {quickLinks.map((link, index) => {
-              const IconComponent = iconMap[link.icon] || Home;
-              const colorClasses = colorMap[link.color] || colorMap.blue;
-              
-              return (
-                <div
-                  key={link.id}
-                  draggable={editingLinks}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className={`relative ${editingLinks ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                >
-                  {/* Remove Button (Edit Mode) */}
-                  {editingLinks && (
-                    <button
-                      onClick={() => removeQuickLink(link.id)}
-                      className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                  
-                  {/* Drag Handle (Edit Mode) */}
-                  {editingLinks && (
-                    <div className="absolute top-1/2 left-1 -translate-y-1/2 text-gray-400 z-10">
-                      <GripVertical className="w-4 h-4" />
-                    </div>
-                  )}
+          {/* Unread Messages Card */}
+          <Link to="/messages" className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 hover:shadow-md transition group">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-purple-100 rounded-lg"><MessageSquare className="w-4 h-4 text-purple-600" /></div>
+              <span className="text-xs font-medium text-purple-600">Messages</span>
+            </div>
+            <p className="font-semibold text-gray-900 text-sm">Check conversations</p>
+            <p className="text-xs text-purple-500 mt-0.5 group-hover:underline">Open inbox →</p>
+          </Link>
 
-                  <Link
-                    to={editingLinks ? '#' : getQuickLinkPath(link.path)}
-                    onClick={(e) => editingLinks && e.preventDefault()}
-                    className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition flex items-center gap-3 ${editingLinks ? 'opacity-90 ring-2 ring-dashed ring-gray-300' : ''}`}
-                  >
-                    <div className={`p-3 rounded-full ${colorClasses}`}>
-                      <IconComponent className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{link.label}</h3>
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
+          {/* RV Health Card */}
+          <Link to="/travel?tab=rv-log" className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 hover:shadow-md transition group">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-amber-100 rounded-lg"><Truck className="w-4 h-4 text-amber-600" /></div>
+              <span className="text-xs font-medium text-amber-600">RV Health</span>
+            </div>
+            {maintenanceStats?.overdue > 0 ? (
+              <>
+                <p className="font-semibold text-amber-700 text-sm">{maintenanceStats.overdue} items overdue</p>
+                <p className="text-xs text-amber-500 mt-0.5">Needs attention ⚠️</p>
+              </>
+            ) : maintenanceStats?.upcoming > 0 ? (
+              <>
+                <p className="font-semibold text-gray-900 text-sm">{maintenanceStats.upcoming} upcoming</p>
+                <p className="text-xs text-amber-500 mt-0.5 group-hover:underline">View log →</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-gray-900 text-sm">All good ✓</p>
+                <p className="text-xs text-green-500 mt-0.5">No maintenance due</p>
+              </>
+            )}
+          </Link>
+
+          {/* Explore Card */}
+          <Link to="/campgrounds" className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 hover:shadow-md transition group">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 bg-green-100 rounded-lg"><Tent className="w-4 h-4 text-green-600" /></div>
+              <span className="text-xs font-medium text-green-600">Explore</span>
+            </div>
+            <p className="font-semibold text-gray-900 text-sm">Find campgrounds</p>
+            <p className="text-xs text-green-500 mt-0.5 group-hover:underline">Browse 31,000+ →</p>
+          </Link>
         </div>
-
 
         {/* Creator Mode Section */}
         <div className="mb-8">
@@ -1882,6 +1885,10 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left 2 Columns */}
           <div className="lg:col-span-2 space-y-6">
+            {/* What's New — Activity Feeds (moved above map) */}
+            <CreatorFeed limit={6} showHeader={true} />
+            <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
+
             {/* Map Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-4">
@@ -1895,6 +1902,58 @@ export default function BasecampPage({ user }: BasecampProps) {
                 >
                   <Home className="w-4 h-4" />
                   Full Map
+                </Link>
+              </div>
+              
+              {/* Travel Stats Strip */}
+              <div className="flex items-center gap-4 mb-4 py-3 px-4 bg-gradient-to-r from-primary-50 via-blue-50 to-indigo-50 rounded-lg border border-primary-100">
+                <div className="flex items-center gap-6 flex-1 overflow-x-auto">
+                  { visitedStatesCount >= 0 && (
+                    <>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-primary-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-primary-700 leading-none">{visitedStatesCount}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">States</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <Tent className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-emerald-700 leading-none">{50 - visitedStatesCount}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">To Go</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                          <Calendar className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-amber-700 leading-none">{plannedTrips.length}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Trips Planned</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <Award className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-purple-700 leading-none">{Math.round((visitedStatesCount / 50) * 100)}%</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Complete</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 hidden sm:block">
+                  Full Map →
                 </Link>
               </div>
               <TravelMap userId={user.id} isOwnProfile={true} />
@@ -2048,11 +2107,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
 
 
-            {/* Activity Wall */}
-            {/* Creator Videos from people you follow */}
-            <CreatorFeed limit={6} showHeader={true} />
 
-            <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
 
           {/* Sidebar */}
@@ -3161,40 +3216,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <WishlistWidget />
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="font-bold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-2">
-                <Link
-                  to="/trips"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <CalendarPlus className="w-5 h-5 text-blue-600" />
-                  <span className="text-sm text-gray-700">Plan a Trip</span>
-                </Link>
-                <Link
-                  to="/campgrounds"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <Tent className="w-5 h-5 text-green-600" />
-                  <span className="text-sm text-gray-700">Find Campgrounds</span>
-                </Link>
-                <Link
-                  to="/feed"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <MessageSquare className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-gray-700">View Discussions</span>
-                </Link>
-                <Link
-                  to="/trips"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <CalendarPlus className="w-5 h-5 text-yellow-600" />
-                  <span className="text-sm text-gray-700">Browse Trips</span>
-                </Link>
-              </div>
-            </div>
+
 
             {/* Campground Updates */}
             <CampgroundUpdatesFeed maxItems={10} />
