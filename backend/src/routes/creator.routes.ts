@@ -360,7 +360,7 @@ router.post('/content', authenticateToken, async (req, res) => {
 
       // Get all followers of this creator
       const followers = await prisma.creatorFollow.findMany({
-        where: { userId: userId },
+        where: { creatorId: userId },
         select: { followerId: true },
       });
 
