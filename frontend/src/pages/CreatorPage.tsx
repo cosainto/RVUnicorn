@@ -33,6 +33,20 @@ import {
   Bookmark,
   Share,
   Eye,
+  Coffee,
+  ShoppingBag,
+  BarChart3,
+  List,
+  Plus,
+  Clock,
+  ChevronLeft,
+  ChevronDown,
+  ThumbsUp,
+  Sparkles,
+  Trophy,
+  Gift,
+  Megaphone,
+  Pin,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -74,6 +88,12 @@ interface Creator {
   };
   creatorJoinedAt?: string;
   creatorEnabledAt?: string;
+  creatorTipJarUrl?: string;
+  creatorTipJarType?: string;
+  creatorMerchUrl?: string;
+  creatorMerchLabel?: string;
+  creatorThemeColor?: string;
+  creatorPinnedContentIds?: string[];
 }
 
 interface ContentItem {
@@ -108,6 +128,63 @@ interface ContentItem {
     saves: number;
   };
 }
+
+interface PollItem {
+  id: string;
+  question: string;
+  description?: string;
+  endsAt?: string;
+  totalVotes: number;
+  options: { id: string; text: string; voteCount: number }[];
+  votes?: { optionId: string }[];
+}
+
+interface SeriesItem {
+  id: string;
+  title: string;
+  description?: string;
+  coverImage?: string;
+  _count: { items: number };
+  items: ContentItem[];
+}
+
+interface StoryItem {
+  id: string;
+  imageUrl?: string;
+  text?: string;
+  bgColor?: string;
+  linkUrl?: string;
+  linkLabel?: string;
+  viewCount: number;
+  expiresAt: string;
+  createdAt: string;
+}
+
+interface ShoutoutItem {
+  id: string;
+  message?: string;
+  giver: { id: string; username: string; firstName: string; lastName: string; profilePicture?: string; creatorVerified?: boolean };
+  receiver: { id: string; username: string; firstName: string; lastName: string; profilePicture?: string; creatorVerified?: boolean };
+}
+
+interface MilestoneItem {
+  id: string;
+  type: string;
+  threshold: number;
+  achievedAt: string;
+  celebrated: boolean;
+}
+
+const MILESTONE_LABELS: Record<string, Record<number, string>> = {
+  FOLLOWERS: { 10: 'First 10 Followers', 50: '50 Followers', 100: 'Century Club', 500: 'Rising Star', 1000: '1K Followers', 5000: '5K Followers', 10000: '10K Followers' },
+  CONTENT: { 1: 'First Post', 5: '5 Posts', 10: 'Content Machine', 25: 'Prolific Creator', 50: '50 Posts', 100: 'Content Legend' },
+  VIEWS: { 100: '100 Views', 500: '500 Views', 1000: '1K Views', 5000: '5K Views', 10000: '10K Views', 50000: '50K Views', 100000: '100K Views' },
+  LIKES: { 10: 'First 10 Likes', 50: '50 Likes', 100: '100 Likes', 500: '500 Likes', 1000: '1K Likes', 5000: '5K Likes' },
+};
+
+const MILESTONE_ICONS: Record<string, string> = {
+  FOLLOWERS: '👥', CONTENT: '📝', VIEWS: '👀', LIKES: '❤️',
+};
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All', icon: <Zap className="w-3.5 h-3.5" /> },
@@ -153,16 +230,78 @@ export default function CreatorPage() {
   const [content, setContent] = useState<ContentItem[]>([]);
   const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('ALL');
-  const [activeTab, setActiveTab] = useState<'content' | 'about' | 'gear' | 'collabs'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'about' | 'gear' | 'collabs' | 'series'>('content');
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [polls, setPolls] = useState<PollItem[]>([]);
+  const [series, setSeries] = useState<SeriesItem[]>([]);
+  const [stories, setStories] = useState<StoryItem[]>([]);
+  const [shoutouts, setShoutouts] = useState<ShoutoutItem[]>([]);
+  const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
+  const [suggestedCreators, setSuggestedCreators] = useState<any[]>([]);
+  const [activeStory, setActiveStory] = useState<number | null>(null);
+  const [votingPoll, setVotingPoll] = useState<string | null>(null);
 
   const isOwner = user?.id === creator?.id;
 
   useEffect(() => {
     fetchCreator();
   }, [username]);
+
+  useEffect(() => {
+    if (creator?.id) {
+      fetchExtras(creator.id);
+    }
+  }, [creator?.id]);
+
+  const fetchExtras = async (creatorId: string) => {
+    try {
+      const [pollsRes, seriesRes, storiesRes, shoutoutsRes, milestonesRes, suggestedRes] = await Promise.allSettled([
+        api.get("/creator-features/polls/" + creatorId),
+        api.get("/creator-features/series/" + creatorId),
+        api.get("/creator-features/stories/" + creatorId),
+        api.get("/creator-features/shoutouts/" + creatorId),
+        api.get("/creator-features/milestones/" + creatorId),
+        api.get("/creator-features/suggested"),
+      ]);
+      if (pollsRes.status === 'fulfilled') setPolls(pollsRes.value.data);
+      if (seriesRes.status === 'fulfilled') setSeries(seriesRes.value.data);
+      if (storiesRes.status === 'fulfilled') setStories(storiesRes.value.data);
+      if (shoutoutsRes.status === 'fulfilled') setShoutouts(shoutoutsRes.value.data);
+      if (milestonesRes.status === 'fulfilled') setMilestones(milestonesRes.value.data);
+      if (suggestedRes.status === 'fulfilled') setSuggestedCreators(suggestedRes.value.data.filter((c: any) => c.id !== creatorId).slice(0, 4));
+    } catch (e) {}
+  };
+
+  const handleVote = async (pollId: string, optionId: string) => {
+    if (votingPoll) return;
+    setVotingPoll(pollId);
+    try {
+      await api.post("/creator-features/polls/" + pollId + "/vote", { optionId });
+      if (creator?.id) {
+        const { data } = await api.get("/creator-features/polls/" + creator.id);
+        setPolls(data);
+      }
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to vote');
+    } finally {
+      setVotingPoll(null);
+    }
+  };
+
+  const handlePinContent = async (contentId: string, isPinned: boolean) => {
+    try {
+      if (isPinned) {
+        await api.delete("/creator-features/pin/" + contentId);
+      } else {
+        await api.post("/creator-features/pin/" + contentId);
+      }
+      fetchContent(creator?.id || '');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to pin');
+    }
+  };
 
   useEffect(() => {
     if (creator) {
@@ -485,7 +624,13 @@ export default function CreatorPage() {
                     <span className="px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded text-white text-[10px] font-semibold uppercase tracking-wider">
                       {item.contentType.replace('_', ' ')}
                     </span>
-                    {item.isSponsored && (
+                    {isOwner && (
+                  <button onClick={(e) => { e.preventDefault(); handlePinContent(item.id, !!item.isPinned); }}
+                    className={"absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-sm transition z-10 " + (item.isPinned ? "bg-amber-500 text-white" : "bg-black/30 text-white/70 hover:text-white")}>
+                    <Pin className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {item.isSponsored && (
                       <span className="px-1.5 py-0.5 bg-amber-500/80 rounded text-white text-[10px] font-semibold">Sponsored</span>
                     )}
                   </div>
@@ -587,7 +732,113 @@ export default function CreatorPage() {
 
           {/* Sidebar */}
           <div className="hidden lg:block w-80 flex-shrink-0 space-y-4">
-            <FollowersSection creatorId={creator.id} isOwnProfile={isOwner} />
+            {/* Tip Jar */}
+          {creator.creatorTipJarUrl && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
+              <a href={creator.creatorTipJarUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl hover:shadow-md transition group">
+                <div className="p-2 bg-amber-100 rounded-lg group-hover:scale-110 transition">
+                  <Coffee className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">Support this Creator</p>
+                  <p className="text-xs text-gray-500">{creator.creatorTipJarType === 'buymeacoffee' ? 'Buy Me a Coffee' : creator.creatorTipJarType === 'venmo' ? 'Venmo' : creator.creatorTipJarType === 'paypal' ? 'PayPal' : 'Send a tip'}</p>
+                </div>
+              </a>
+            </div>
+          )}
+
+          {/* Merch */}
+          {creator.creatorMerchUrl && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
+              <a href={creator.creatorMerchUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl hover:shadow-md transition group">
+                <div className="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition">
+                  <ShoppingBag className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">{creator.creatorMerchLabel || 'Shop Merch'}</p>
+                  <p className="text-xs text-gray-500">Check out the store</p>
+                </div>
+              </a>
+            </div>
+          )}
+
+          {/* Milestones */}
+          {milestones.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5 mb-3">
+                <Trophy className="w-4 h-4 text-amber-500" /> Milestones
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {milestones.slice(0, 8).map(m => (
+                  <div key={m.id} className="px-2.5 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-100" title={MILESTONE_LABELS[m.type]?.[m.threshold] || m.type + ' ' + m.threshold}>
+                    <span className="text-sm">{MILESTONE_ICONS[m.type] || '🏆'}</span>
+                    <span className="text-[10px] font-bold text-amber-700 ml-1">{MILESTONE_LABELS[m.type]?.[m.threshold] || m.threshold}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Shoutouts */}
+          {shoutouts.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5 mb-3">
+                <Megaphone className="w-4 h-4 text-blue-500" /> Creator Shoutouts
+              </h3>
+              <div className="space-y-2">
+                {shoutouts.slice(0, 4).map(s => {
+                  const other = s.giver.id === creator?.id ? s.receiver : s.giver;
+                  return (
+                    <Link key={s.id} to={"/creators/" + other.username} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
+                      {other.profilePicture ? (
+                        <img src={other.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-xs">
+                          {(other.firstName?.[0] || '').toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-xs truncate">{other.firstName} {other.lastName}</p>
+                        {s.message && <p className="text-[10px] text-gray-400 truncate">{s.message}</p>}
+                      </div>
+                      {other.creatorVerified && <BadgeCheck className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested Creators */}
+          {suggestedCreators.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5 mb-3">
+                <Sparkles className="w-4 h-4 text-purple-500" /> Creators You Might Like
+              </h3>
+              <div className="space-y-2">
+                {suggestedCreators.map(sc => (
+                  <Link key={sc.id} to={"/creators/" + sc.username} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
+                    {sc.profilePicture ? (
+                      <img src={sc.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-white font-bold text-sm">
+                        {(sc.firstName?.[0] || sc.username[0]).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-xs truncate">{sc.creatorDisplayName || sc.firstName + ' ' + sc.lastName}</p>
+                      <p className="text-[10px] text-gray-400">{sc._count?.creatorFollowers || 0} followers</p>
+                    </div>
+                    {sc.creatorVerified && <BadgeCheck className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <FollowersSection creatorId={creator.id} isOwnProfile={isOwner} />
 
             {/* RV Info Card */}
             {(creator.rvType || creator.rvMake) && (

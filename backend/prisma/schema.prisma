@@ -61,6 +61,12 @@ model User {
   hitchReminders                                    HitchReminder[]
   creatorDisplayName                              String?
   creatorHandle                                   String?
+  creatorTipJarUrl                                String?
+  creatorTipJarType                               String?
+  creatorMerchUrl                                 String?
+  creatorMerchLabel                               String?
+  creatorThemeColor                               String?            @default("#f59e0b")
+  creatorPinnedContentIds                         String[]           @default([])
   hasPets                                         Boolean                   @default(false)
   homeAddress                                     String?
   homeCity                                        String?
@@ -132,6 +138,13 @@ model User {
   creatorPageOwned                                CreatorPageCollaborator[] @relation("CreatorPageOwner")
   creatorReposts                                  CreatorRepost[]
   creatorSaves                                    CreatorSave[]
+  creatorSeries                                   CreatorSeries[]
+  creatorPolls                                    CreatorPoll[]
+  creatorPollVotes                                CreatorPollVote[]
+  creatorShoutoutsGiven                           CreatorShoutout[]  @relation("ShoutoutGiver")
+  creatorShoutoutsReceived                        CreatorShoutout[]  @relation("ShoutoutReceiver")
+  creatorMilestones                               CreatorMilestone[]
+  creatorStories                                  CreatorStory[]
   creatorStats                                    CreatorStats?
   emailVerifications                              EmailVerification[]
   events                                          Event[]
@@ -1858,6 +1871,9 @@ model CreatorContent {
   commentCount   Int                     @default(0)
   repostCount    Int                     @default(0)
   saveCount      Int                     @default(0)
+  isPinned       Boolean                 @default(false)
+  seriesId       String?
+  seriesOrder    Int?
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
   collaborators  CreatorCollaboration[]
@@ -1871,12 +1887,14 @@ model CreatorContent {
   taggedUsers    CreatorContentTag[]
   reposts        CreatorRepost[]
   saves          CreatorSave[]
+  series         CreatorSeries?          @relation(fields: [seriesId], references: [id])
 
   @@index([creatorId])
   @@index([category])
   @@index([status, publishedAt])
   @@index([campgroundId])
   @@index([recipeId])
+  @@index([seriesId])
 }
 
 model CreatorContentPhoto {
@@ -2987,4 +3005,126 @@ model HitchReminder {
   @@index([userId, status])
   @@index([nextRemindAt])
   @@index([entityType, entityId])
+}
+
+
+// ============================================
+// CREATOR SERIES (Playlists / Content Groups)
+// ============================================
+model CreatorSeries {
+  id          String           @id @default(cuid())
+  creatorId   String
+  title       String
+  description String?
+  coverImage  String?
+  isPublished Boolean          @default(true)
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  creator     User             @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  items       CreatorContent[]
+
+  @@index([creatorId])
+}
+
+// ============================================
+// CREATOR POLLS
+// ============================================
+model CreatorPoll {
+  id          String             @id @default(cuid())
+  creatorId   String
+  question    String
+  description String?
+  endsAt      DateTime?
+  isActive    Boolean            @default(true)
+  totalVotes  Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  creator     User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  options     CreatorPollOption[]
+  votes       CreatorPollVote[]
+
+  @@index([creatorId])
+  @@index([isActive])
+}
+
+model CreatorPollOption {
+  id        String            @id @default(cuid())
+  pollId    String
+  text      String
+  voteCount Int               @default(0)
+  sortOrder Int               @default(0)
+  poll      CreatorPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     CreatorPollVote[]
+
+  @@index([pollId])
+}
+
+model CreatorPollVote {
+  id        String           @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime         @default(now())
+  poll      CreatorPoll      @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    CreatorPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@index([userId])
+}
+
+// ============================================
+// CREATOR SHOUTOUTS
+// ============================================
+model CreatorShoutout {
+  id          String   @id @default(cuid())
+  giverId     String
+  receiverId  String
+  message     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  giver       User     @relation("ShoutoutGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("ShoutoutReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([giverId, receiverId])
+  @@index([giverId])
+  @@index([receiverId])
+}
+
+// ============================================
+// CREATOR MILESTONES
+// ============================================
+model CreatorMilestone {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  threshold   Int
+  achievedAt  DateTime @default(now())
+  celebrated  Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, threshold])
+  @@index([userId])
+}
+
+// ============================================
+// CREATOR STORIES (24hr ephemeral posts)
+// ============================================
+model CreatorStory {
+  id        String   @id @default(cuid())
+  creatorId String
+  imageUrl  String?
+  text      String?
+  bgColor   String?  @default("#1e293b")
+  linkUrl   String?
+  linkLabel String?
+  viewCount Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  creator   User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@index([expiresAt])
 }

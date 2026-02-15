@@ -41,6 +41,16 @@ import {
   ChevronDown,
   Share2,
   Copy,
+  Coffee,
+  ShoppingBag,
+  Palette,
+  BarChart3 as PollIcon,
+  List,
+  Clock as StoryIcon,
+  Megaphone,
+  Trophy,
+  Pin,
+  Plus,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -963,6 +973,22 @@ function SettingsTab() {
         </div>
       </div>
 
+      {/* Monetization Settings */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <Coffee className="w-5 h-5 text-amber-500" /> Monetization
+        </h2>
+        <MonetizationSettings />
+      </div>
+
+      {/* Theme Settings */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <Palette className="w-5 h-5 text-purple-500" /> Page Theme
+        </h2>
+        <ThemeSettings />
+      </div>
+
       <div className="bg-white rounded-xl border border-red-100 shadow-sm p-6">
         <h3 className="text-sm font-bold text-red-600 mb-2">Danger Zone</h3>
         <p className="text-sm text-gray-500 mb-4">Disabling creator mode will hide your page. You can re-enable anytime.</p>
@@ -970,6 +996,146 @@ function SettingsTab() {
           Disable Creator Mode
         </button>
       </div>
+    </div>
+  );
+}
+
+// ===== MONETIZATION SETTINGS =====
+function MonetizationSettings() {
+  const [tipJarUrl, setTipJarUrl] = useState('');
+  const [tipJarType, setTipJarType] = useState('');
+  const [merchUrl, setMerchUrl] = useState('');
+  const [merchLabel, setMerchLabel] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get('/auth/me');
+        setTipJarUrl(data.creatorTipJarUrl || '');
+        setTipJarType(data.creatorTipJarType || '');
+        setMerchUrl(data.creatorMerchUrl || '');
+        setMerchLabel(data.creatorMerchLabel || '');
+      } catch (e) {}
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/creator-features/monetization', { tipJarUrl, tipJarType, merchUrl, merchLabel });
+      setMessage('Saved!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (e) {
+      setMessage('Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Tip Jar Type</label>
+        <select value={tipJarType} onChange={(e) => setTipJarType(e.target.value)}
+          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500">
+          <option value="">None</option>
+          <option value="buymeacoffee">Buy Me a Coffee</option>
+          <option value="venmo">Venmo</option>
+          <option value="paypal">PayPal</option>
+          <option value="cashapp">Cash App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      {tipJarType && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Tip Jar URL</label>
+          <input type="url" value={tipJarUrl} onChange={(e) => setTipJarUrl(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500"
+            placeholder="https://buymeacoffee.com/yourname" />
+        </div>
+      )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Merch Store URL</label>
+        <input type="url" value={merchUrl} onChange={(e) => setMerchUrl(e.target.value)}
+          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500"
+          placeholder="https://your-store.com" />
+      </div>
+      {merchUrl && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Merch Button Label</label>
+          <input type="text" value={merchLabel} onChange={(e) => setMerchLabel(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500"
+            placeholder="Shop My Gear" />
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <button onClick={handleSave} disabled={saving}
+          className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition disabled:opacity-50">
+          {saving ? 'Saving...' : 'Save Monetization'}
+        </button>
+        {message && <span className={"text-sm " + (message.includes('Failed') ? "text-red-600" : "text-emerald-600")}>{message}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ===== THEME SETTINGS =====
+function ThemeSettings() {
+  const [themeColor, setThemeColor] = useState('#f59e0b');
+  const [saving, setSaving] = useState(false);
+
+  const presets = [
+    { color: '#f59e0b', label: 'Amber' },
+    { color: '#ef4444', label: 'Red' },
+    { color: '#3b82f6', label: 'Blue' },
+    { color: '#10b981', label: 'Emerald' },
+    { color: '#8b5cf6', label: 'Purple' },
+    { color: '#ec4899', label: 'Pink' },
+    { color: '#f97316', label: 'Orange' },
+    { color: '#14b8a6', label: 'Teal' },
+    { color: '#1e293b', label: 'Slate' },
+  ];
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get('/auth/me');
+        setThemeColor(data.creatorThemeColor || '#f59e0b');
+      } catch (e) {}
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/creator-features/theme', { themeColor });
+    } catch (e) {}
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500">Choose a color theme for your creator page</p>
+      <div className="flex flex-wrap gap-3">
+        {presets.map(p => (
+          <button key={p.color} onClick={() => setThemeColor(p.color)}
+            className={"w-10 h-10 rounded-xl transition-all " + (themeColor === p.color ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : "hover:scale-105")}
+            style={{ backgroundColor: p.color }} title={p.label} />
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-gray-500">Custom:</label>
+        <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-10 h-10 rounded cursor-pointer" />
+        <span className="text-sm text-gray-400 font-mono">{themeColor}</span>
+      </div>
+      <button onClick={handleSave} disabled={saving}
+        className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save Theme'}
+      </button>
     </div>
   );
 }
