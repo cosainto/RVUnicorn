@@ -238,7 +238,7 @@ export default function Navbar() {
             <Link to="/basecamp" className="flex items-center gap-2 group">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-gold-400 to-gold-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                  <span className="text-2xl">🦄</span>
+                  <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="h-9 w-auto" />
                 </div>
                 <Sparkles className="w-3 h-3 text-gold-300 absolute -top-1 -right-1 animate-pulse" />
               </div>
