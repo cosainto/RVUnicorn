@@ -49,6 +49,33 @@ const createActivity = async (data: {
   }
 };
 
+
+// Helper: Calculate thread score and user vote
+const getThreadScore = async (threadId: string, userId?: string) => {
+  try {
+    const votes = await prisma.threadVote.findMany({
+      where: { threadId },
+      select: { voteType: true, userId: true }
+    });
+    const upvotes = votes.filter(v => v.voteType === 'UP').length;
+    const downvotes = votes.filter(v => v.voteType === 'DOWN').length;
+    const score = upvotes - downvotes;
+    const userVote = userId ? votes.find(v => v.userId === userId)?.voteType || null : null;
+    return { score, userVote };
+  } catch {
+    return { score: 0, userVote: null };
+  }
+};
+
+// Helper: Enrich threads with scores
+const enrichThreadsWithScores = async (threads: any[], userId?: string) => {
+  return Promise.all(threads.map(async (t: any) => {
+    const { score, userVote } = await getThreadScore(t.id, userId);
+    return { ...t, score, userVote };
+  }));
+};
+
+
 router.get('/', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { campgroundId, tag, search, sort = 'recent' } = req.query;
@@ -150,7 +177,9 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
       });
     }
 
-    res.json(formattedThreads);
+    // Enrich with vote scores
+    const enrichedThreads = await enrichThreadsWithScores(formattedThreads, userId);
+    res.json(enrichedThreads);
   } catch (error) {
     console.error('Get threads error:', error);
     res.status(500).json({ error: 'Failed to get threads' });
@@ -1137,6 +1166,96 @@ router.delete('/posts/:postId', authenticateToken, async (req: Request, res: Res
     res.status(500).json({ error: 'Failed to delete post' });
   }
 });
+
+
+// ─── Thread-level voting (upvote/downvote on the thread itself) ─────────────
+router.post('/:id/vote', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { voteType } = req.body; // 'UP' or 'DOWN'
+    const userId = (req as any).userId;
+
+    if (!['UP', 'DOWN'].includes(voteType)) {
+      return res.status(400).json({ error: 'Invalid vote type. Must be UP or DOWN' });
+    }
+
+    // Check if thread exists
+    const thread = await prisma.thread.findUnique({ where: { id } });
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Try to find existing vote
+    const existing = await prisma.threadVote.findUnique({
+      where: { threadId_userId: { threadId: id, userId } }
+    });
+
+    if (existing) {
+      if (existing.voteType === voteType) {
+        // Remove vote if clicking same button
+        await prisma.threadVote.delete({ where: { id: existing.id } });
+        return res.json({ voteType: null });
+      } else {
+        // Change vote type
+        const updated = await prisma.threadVote.update({
+          where: { id: existing.id },
+          data: { voteType }
+        });
+        return res.json({ voteType: updated.voteType });
+      }
+    } else {
+      // Create new vote
+      const created = await prisma.threadVote.create({
+        data: { threadId: id, userId, voteType }
+      });
+      return res.json({ voteType: created.voteType });
+    }
+  } catch (error: any) {
+    // If ThreadVote model doesn't exist yet, handle gracefully
+    if (error.code === 'P2021' || error.message?.includes('does not exist')) {
+      return res.status(501).json({ error: 'Thread voting not yet enabled. Run: npx prisma db push' });
+    }
+    console.error('Thread vote error:', error);
+    res.status(500).json({ error: 'Failed to vote on thread' });
+  }
+});
+
+// ─── Get active trip campground ─────────────────────────────────────────────
+router.get('/active-trip', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const activeTrip = await prisma.stateVisit.findFirst({
+      where: {
+        userId,
+        campsiteId: { not: null },
+        startDate: { lte: today },
+        OR: [
+          { endDate: { gte: today } },
+          { endDate: null },
+        ],
+      },
+      include: {
+        campsite: {
+          select: { id: true, name: true, slug: true, state: true }
+        }
+      },
+      orderBy: { startDate: 'desc' }
+    });
+
+    if (activeTrip?.campsite) {
+      res.json({ campground: activeTrip.campsite });
+    } else {
+      res.json({ campground: null });
+    }
+  } catch (error) {
+    console.error('Active trip error:', error);
+    res.json({ campground: null });
+  }
+});
+
 
 export default router;
 

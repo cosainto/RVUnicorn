@@ -243,6 +243,7 @@ model User {
 
   @@index([email])
   @@index([username])
+  threadVotes                                    ThreadVote[]
 }
 
 model Post {
@@ -1093,6 +1094,7 @@ model Thread {
   ignores      ThreadIgnore[]
   posts        ThreadPost[]
   tags         ThreadTagLink[]
+  votes       ThreadVote[]
 }
 
 model ThreadPost {
@@ -3127,4 +3129,19 @@ model CreatorStory {
 
   @@index([creatorId])
   @@index([expiresAt])
+}
+
+
+// Thread-level voting (upvote/downvote on threads themselves)
+model ThreadVote {
+  id        String   @id @default(cuid())
+  threadId  String
+  userId    String
+  voteType  String   @default("UP") // UP or DOWN
+  createdAt DateTime @default(now())
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@index([threadId])
 }
