@@ -405,9 +405,10 @@ router.post('/content', authenticateToken, async (req, res) => {
 
     res.status(201).json(content);
 
-  } catch (error) {
-    console.error('Error creating content:', error);
-    res.status(500).json({ error: 'Failed to create content' });
+  } catch (error: any) {
+    console.error('Error creating content:', error?.message || error);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: 'Failed to create content', details: error?.message });
   }
 });
 
