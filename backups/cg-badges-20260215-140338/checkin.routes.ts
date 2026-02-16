@@ -35,13 +35,6 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       orderBy: { checkInDate: 'desc' }
     });
 
-    
-    // Auto-award campground badges on check-in
-    try {
-      const fetch = (await import('node-fetch')).default;
-      fetch(`http://localhost:${process.env.PORT || 3001}/api/campground-badges/auto-award/${checkIn.campgroundId}/${checkIn.userId}`, { method: 'POST' }).catch(() => {});
-    } catch (e) { /* badge auto-award is non-critical */ }
-
     res.json(checkIns);
   } catch (error) {
     console.error('Get check-ins error:', error);

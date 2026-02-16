@@ -110,8 +110,6 @@ model User {
   blockedUsers                                    BlockedUser[]             @relation("UserBlocks")
   bookingClicks                                   BookingClick[]
   claimedCampgrounds                              Campground[]              @relation("ClaimedCampgrounds")
-  createdCampgroundBadges CampgroundBadge[]       @relation("CreatedCampgroundBadges")
-  campgroundBadgeAwards  CampgroundBadgeAward[]
   campgroundAdmins                                CampgroundAdmin[]
   campgroundAnnouncements                         CampgroundAnnouncement[]
   campgroundEvents                                CampgroundEvent[]
@@ -245,7 +243,6 @@ model User {
 
   @@index([email])
   @@index([username])
-  threadVotes                                    ThreadVote[]
 }
 
 model Post {
@@ -402,7 +399,6 @@ model Campground {
   activities             Activity[]               @relation("ActivityCampground")
   bookingClicks          BookingClick[]
   claimedBy              User?                    @relation("ClaimedCampgrounds", fields: [claimedById], references: [id])
-  customBadges           CampgroundBadge[]        @relation("CampgroundCustomBadges")
   admins                 CampgroundAdmin[]
   analytics              CampgroundAnalytics[]
   announcements          CampgroundAnnouncement[]
@@ -1097,7 +1093,6 @@ model Thread {
   ignores      ThreadIgnore[]
   posts        ThreadPost[]
   tags         ThreadTagLink[]
-  votes       ThreadVote[]
 }
 
 model ThreadPost {
@@ -3132,97 +3127,4 @@ model CreatorStory {
 
   @@index([creatorId])
   @@index([expiresAt])
-}
-
-
-// Thread-level voting (upvote/downvote on threads themselves)
-model ThreadVote {
-  id        String   @id @default(cuid())
-  threadId  String
-  userId    String
-  voteType  String   @default("UP") // UP or DOWN
-  createdAt DateTime @default(now())
-  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([threadId, userId])
-  @@index([threadId])
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-// Campground Custom Badges
-// ═══════════════════════════════════════════════════════════════
-
-model CampgroundBadge {
-  id               String                  @id @default(cuid())
-  campgroundId     String
-  createdById      String
-  name             String
-  description      String
-  imageUrl         String?
-  iconEmoji        String?
-  backgroundColor  String                  @default("#10b981")
-  borderColor      String                  @default("#059669")
-  
-  // Badge type & criteria
-  badgeType        CampgroundBadgeType      @default(CHECK_IN)
-  triggerValue     Int                      @default(1)          // e.g. 1 check-in, 3 nights, 5 visits
-  
-  // Limited edition (Class A only)
-  isLimitedEdition Boolean                  @default(false)
-  maxIssues        Int?                                          // 100-5000
-  issuedCount      Int                      @default(0)
-  expiresAt        DateTime?
-  
-  // Approval workflow
-  status           CampgroundBadgeStatus    @default(PENDING_REVIEW)
-  reviewedAt       DateTime?
-  reviewedBy       String?
-  rejectionReason  String?
-  
-  // Tier requirement
-  requiredTier     CampgroundTier           @default(FREE)
-  
-  isActive         Boolean                  @default(true)
-  sortOrder        Int                      @default(0)
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-
-  campground       Campground               @relation("CampgroundCustomBadges", fields: [campgroundId], references: [id], onDelete: Cascade)
-  createdBy        User                     @relation("CreatedCampgroundBadges", fields: [createdById], references: [id])
-  awards           CampgroundBadgeAward[]
-
-  @@index([campgroundId])
-  @@index([status])
-  @@index([createdById])
-}
-
-model CampgroundBadgeAward {
-  id                String           @id @default(cuid())
-  campgroundBadgeId String
-  userId            String
-  awardedAt         DateTime         @default(now())
-  isNotified        Boolean          @default(false)
-  
-  campgroundBadge   CampgroundBadge  @relation(fields: [campgroundBadgeId], references: [id], onDelete: Cascade)
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([campgroundBadgeId, userId])
-  @@index([userId])
-  @@index([campgroundBadgeId])
-}
-
-enum CampgroundBadgeType {
-  CHECK_IN           // Auto-award on check-in
-  NIGHTS_STAYED      // Stayed X+ nights total at this campground
-  REPEAT_VISITOR     // Checked in X+ separate times
-  EVENT_ATTENDED     // Attended an event at this campground
-  CUSTOM             // Owner manually awards
-}
-
-enum CampgroundBadgeStatus {
-  PENDING_REVIEW
-  APPROVED
-  REJECTED
 }

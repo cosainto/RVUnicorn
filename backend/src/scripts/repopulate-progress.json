@@ -1,0 +1,77 @@
+{
+  "stage1_ridb": {
+    "completed": true,
+    "offset": 5950,
+    "imported": 5510
+  },
+  "stage2_google_discover": {
+    "completed": true,
+    "statesCompleted": [
+      "AL",
+      "AK",
+      "AZ",
+      "AR",
+      "CA",
+      "CO",
+      "CT",
+      "DE",
+      "FL",
+      "GA",
+      "HI",
+      "ID",
+      "IL",
+      "IN",
+      "IA",
+      "KS",
+      "KY",
+      "LA",
+      "ME",
+      "MD",
+      "MA",
+      "MI",
+      "MN",
+      "MS",
+      "MO",
+      "MT",
+      "NE",
+      "NV",
+      "NH",
+      "NJ",
+      "NM",
+      "NY",
+      "NC",
+      "ND",
+      "OH",
+      "OK",
+      "OR",
+      "PA",
+      "RI",
+      "SC",
+      "SD",
+      "TN",
+      "TX",
+      "UT",
+      "VT",
+      "VA",
+      "WA",
+      "WV",
+      "WI",
+      "WY"
+    ],
+    "imported": 10552
+  },
+  "stage3_enrich": {
+    "completed": true,
+    "lastId": "cmlohjw070ce579gch5r6ly70",
+    "enriched": 15987
+  },
+  "stage4_photos": {
+    "completed": false,
+    "lastId": "cmlo9p1a2037o79gc5kb4mgwy",
+    "uploaded": 3925
+  },
+  "stage5_states": {
+    "completed": false,
+    "fixed": 0
+  }
+}

@@ -265,25 +265,25 @@ export default function USMapSVG({
                   {/* Friend check-in - profile picture */}
                   <defs>
                     <clipPath id={`clip-${marker.id}`}>
-                      <circle cx={0} cy={-6} r={10} />
+                      <circle cx={0} cy={-10} r={18} />
                     </clipPath>
                   </defs>
                   {/* White background circle */}
                   <circle
                     cx={0}
-                    cy={-6}
-                    r={12}
+                    cy={-10}
+                    r={20}
                     fill="#fff"
                     stroke="#10b981"
-                    strokeWidth={3}
+                    strokeWidth={4}
                   />
                   {/* Profile image */}
                   <image
                     href={marker.user.profilePicture || '/default-avatar.png'}
-                    x={-10}
-                    y={-16}
-                    width={20}
-                    height={20}
+                    x={-18}
+                    y={-26}
+                    width={36}
+                    height={36}
                     clipPath={`url(#clip-${marker.id})`}
                     preserveAspectRatio="xMidYMid slice"
                   />

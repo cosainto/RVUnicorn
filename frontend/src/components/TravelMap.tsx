@@ -11,6 +11,7 @@ import USMapSVG from './USMapSVG';
 import interstateRoutes, { InterstateRoute } from '../data/interstateRoutes';
 
 interface TravelMapProps {
+  compact?: boolean;
   userId: string;
   isOwnProfile: boolean;
 }
@@ -193,7 +194,7 @@ const getGasPriceColor = (price: number): string => {
   return '#dc2626';
 };
 
-export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
+export default function TravelMap({ userId, isOwnProfile, compact = false }: TravelMapProps) {
   // Original state
   const [visitedStates, setVisitedStates] = useState<string[]>([]);
   const [plannedStates, setPlannedStates] = useState<string[]>([]);
@@ -691,7 +692,7 @@ export default function TravelMap({ userId, isOwnProfile }: TravelMapProps) {
       </div>
 
       {/* Layer Control Panel */}
-      {showLayerPanel && (
+      {showLayerPanel && !compact && (
         <div className="mb-4 bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Layers className="w-4 h-4" />

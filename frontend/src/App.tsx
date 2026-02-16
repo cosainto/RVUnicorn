@@ -80,6 +80,7 @@ function GlobalCameraButton() {
 }
 
 import SearchPage from './pages/SearchPage';
+import AdminBadgeApprovalPage from "./components/AdminBadgeApproval";
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -353,6 +354,7 @@ function AppContent() {
           }
         />
         <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
+        <Route path="/admin/badges" element={<PrivateRoute><AdminBadgeApprovalPage /></PrivateRoute>} />
         <Route path="/" element={<Navigate to="/basecamp" />} />
       </Routes>
       

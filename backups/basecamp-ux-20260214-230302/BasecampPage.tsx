@@ -42,7 +42,7 @@ import {
   AtSign,
   Navigation,
   Share2,
-  Smile} from 'lucide-react';
+} from 'lucide-react';
 import api from '../services/api';
 import { User as UserType } from '../services/auth.service';
 import TravelMap from '../components/TravelMap';
@@ -860,7 +860,6 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // Planned Events State (non-wishlist upcoming events + future state visits)
   const [plannedTrips, setPlannedTrips] = useState<PlannedTrip[]>([]);
-  const [visitedStatesCount, setVisitedStatesCount] = useState(0);
   const [plannedTripsExpanded, setPlannedTripsExpanded] = useState(false);
 
   // Wishlist Events State
@@ -906,7 +905,6 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Quick Links State
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
   const [editingLinks, setEditingLinks] = useState(false);
-  const [composerExpanded, setComposerExpanded] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Stickers/Badges State
@@ -1038,7 +1036,6 @@ export default function BasecampPage({ user }: BasecampProps) {
         if (user?.id) {
           const { data: travelData } = await api.get(`/travel-map/${user.id}`);
           const stateVisits = travelData.stateVisits || [];
-          setVisitedStatesCount(stateVisits.length);
           
           // Filter future state visits
           const futureVisits = stateVisits.filter((visit: any) => {
@@ -1765,114 +1762,114 @@ export default function BasecampPage({ user }: BasecampProps) {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* User Status - Collapsed Composer */}
+        {/* User Status */}
         {userProfile && (
-          <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
-            {!composerExpanded ? (
-              <button
-                onClick={() => setComposerExpanded(true)}
-                className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-              >
-                {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-200" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                )}
-                <span className="text-gray-400 text-sm flex-1">What's on your mind, {user?.firstName || 'camper'}?</span>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <Camera className="w-4 h-4" />
-                  <MapPin className="w-4 h-4" />
-                  <Smile className="w-4 h-4" />
-                </div>
-              </button>
-            ) : (
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-500">Create a post</span>
-                  <button onClick={() => setComposerExpanded(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <EnhancedStatusBar 
-                  user={user}
-                  profile={userProfile}
-                  onUpdate={loadRVInfo}
-                  onPost={() => { loadFeed(); setComposerExpanded(false); }}
-                />
-              </div>
-            )}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-8">
+            <EnhancedStatusBar 
+              user={user}
+              profile={userProfile}
+              onUpdate={loadRVInfo}
+              onPost={loadFeed}
+            />
           </div>
         )}
 
-        {/* Smart Action Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {/* Upcoming Trip Card */}
-          {nextEvent ? (
-            <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 bg-blue-100 rounded-lg"><Calendar className="w-4 h-4 text-blue-600" /></div>
-                <span className="text-xs font-medium text-blue-600">Next Trip</span>
+        {/* Customizable Quick Links */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Quick Links</h2>
+            <button
+              onClick={() => setEditingLinks(!editingLinks)}
+              className={`p-2 rounded-lg transition-colors ${editingLinks ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+              title={editingLinks ? 'Done editing' : 'Edit quick links'}
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Edit Mode Panel */}
+          {editingLinks && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-gray-600">
+                  <GripVertical className="w-4 h-4 inline mr-1" />
+                  Drag to reorder • Click ✕ to remove
+                </p>
+                <button
+                  onClick={resetQuickLinks}
+                  className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset to Default
+                </button>
               </div>
-              <p className="font-semibold text-gray-900 text-sm truncate">{nextEvent.title || nextEvent.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{countdown.days}d {countdown.hours}h away</p>
-            </Link>
-          ) : (
-            <Link to="/trips" className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 border-dashed rounded-xl p-4 hover:shadow-md transition group">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 bg-blue-100 rounded-lg"><CalendarPlus className="w-4 h-4 text-blue-600" /></div>
-                <span className="text-xs font-medium text-blue-600">No Trips</span>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500 mr-2">Add:</span>
+                {AVAILABLE_LINKS
+                  .filter((l) => !quickLinks.find((q) => q.id === l.id))
+                  .map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => addQuickLink(link)}
+                      className="text-xs bg-white border border-gray-300 px-2 py-1 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors"
+                    >
+                      + {link.label}
+                    </button>
+                  ))}
               </div>
-              <p className="font-semibold text-gray-900 text-sm">Plan your next adventure</p>
-              <p className="text-xs text-blue-500 mt-0.5 group-hover:underline">Get started →</p>
-            </Link>
+            </div>
           )}
 
-          {/* Unread Messages Card */}
-          <Link to="/messages" className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 hover:shadow-md transition group">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-purple-100 rounded-lg"><MessageSquare className="w-4 h-4 text-purple-600" /></div>
-              <span className="text-xs font-medium text-purple-600">Messages</span>
-            </div>
-            <p className="font-semibold text-gray-900 text-sm">Check conversations</p>
-            <p className="text-xs text-purple-500 mt-0.5 group-hover:underline">Open inbox →</p>
-          </Link>
+          {/* Quick Links Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {quickLinks.map((link, index) => {
+              const IconComponent = iconMap[link.icon] || Home;
+              const colorClasses = colorMap[link.color] || colorMap.blue;
+              
+              return (
+                <div
+                  key={link.id}
+                  draggable={editingLinks}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`relative ${editingLinks ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                >
+                  {/* Remove Button (Edit Mode) */}
+                  {editingLinks && (
+                    <button
+                      onClick={() => removeQuickLink(link.id)}
+                      className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                  
+                  {/* Drag Handle (Edit Mode) */}
+                  {editingLinks && (
+                    <div className="absolute top-1/2 left-1 -translate-y-1/2 text-gray-400 z-10">
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+                  )}
 
-          {/* RV Health Card */}
-          <Link to="/travel?tab=rv-log" className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 hover:shadow-md transition group">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-amber-100 rounded-lg"><Truck className="w-4 h-4 text-amber-600" /></div>
-              <span className="text-xs font-medium text-amber-600">RV Health</span>
-            </div>
-            {maintenanceStats?.overdue > 0 ? (
-              <>
-                <p className="font-semibold text-amber-700 text-sm">{maintenanceStats.overdue} items overdue</p>
-                <p className="text-xs text-amber-500 mt-0.5">Needs attention ⚠️</p>
-              </>
-            ) : maintenanceStats?.upcoming > 0 ? (
-              <>
-                <p className="font-semibold text-gray-900 text-sm">{maintenanceStats.upcoming} upcoming</p>
-                <p className="text-xs text-amber-500 mt-0.5 group-hover:underline">View log →</p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-gray-900 text-sm">All good ✓</p>
-                <p className="text-xs text-green-500 mt-0.5">No maintenance due</p>
-              </>
-            )}
-          </Link>
-
-          {/* Explore Card */}
-          <Link to="/campgrounds" className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 hover:shadow-md transition group">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-green-100 rounded-lg"><Tent className="w-4 h-4 text-green-600" /></div>
-              <span className="text-xs font-medium text-green-600">Explore</span>
-            </div>
-            <p className="font-semibold text-gray-900 text-sm">Find campgrounds</p>
-            <p className="text-xs text-green-500 mt-0.5 group-hover:underline">Browse 31,000+ →</p>
-          </Link>
+                  <Link
+                    to={editingLinks ? '#' : getQuickLinkPath(link.path)}
+                    onClick={(e) => editingLinks && e.preventDefault()}
+                    className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition flex items-center gap-3 ${editingLinks ? 'opacity-90 ring-2 ring-dashed ring-gray-300' : ''}`}
+                  >
+                    <div className={`p-3 rounded-full ${colorClasses}`}>
+                      <IconComponent className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{link.label}</h3>
+                    </div>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
 
         {/* Creator Mode Section */}
         <div className="mb-8">
@@ -1885,11 +1882,178 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left 2 Columns */}
           <div className="lg:col-span-2 space-y-6">
-            {/* What's New — Activity Feeds (moved above map) */}
+            {/* Map Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <MapPin className="w-6 h-6 text-primary-600" />
+                  Your Travel Map
+                </h2>
+                <Link
+                  to="/travel"
+                  className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                >
+                  <Home className="w-4 h-4" />
+                  Full Map
+                </Link>
+              </div>
+              <TravelMap userId={user.id} isOwnProfile={true} />
+            </div>
+
+             {/* Planned Events List - NEW SECTION */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <button
+                onClick={() => setPlannedTripsExpanded(!plannedTripsExpanded)}
+                className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                  Planned Camping Trips
+                  {plannedTrips.length > 0 && (
+                    <span className="text-sm font-normal text-gray-500">({plannedTrips.length})</span>
+                  )}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/trips"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    View All
+                  </Link>
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${plannedTripsExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {plannedTripsExpanded && (
+              <div className="px-6 pb-6">           
+
+              {plannedTrips.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500 mb-2">No upcoming trips planned</p>
+                  <Link
+                    to="/trips"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Plan a Trip
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {plannedTrips.map((trip) => (
+                    <div
+                      key={`${trip.type}-${trip.id}`}
+                      className="flex items-center gap-4 p-4 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group"
+                    >
+                      {/* Trip Info - Clickable Link */}
+                      <Link
+                        to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
+                        className="flex items-center gap-4 flex-1 min-w-0"
+                      >
+                        {/* Date Badge */}
+                        <div className={`flex-shrink-0 w-14 h-14 rounded-lg flex flex-col items-center justify-center text-white shadow-sm ${
+                          trip.type === 'event' 
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                            : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                        }`}>
+                          <span className="text-xs font-medium uppercase">
+                            {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-xl font-bold leading-none">
+                            {new Date(trip.startDate).getDate()}
+                          </span>
+                        </div>
+
+                        {/* Trip Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                                                         {trip.title} <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                              {trip.title}
+                            </h3>
+                            
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                            {trip.campground ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">
+                                  {trip.campground.name}
+                                  {trip.campground.state && `, ${trip.campground.state}`}
+                                </span>
+                              </>
+                            ) : trip.location ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">{trip.location}</span>
+                              </>
+                            ) : trip.state ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">{trip.state}</span>
+                              </>
+                            ) : (
+                              <span className="text-gray-400 italic">No location set</span>
+                            )}
+                          </div>
+                          {trip.endDate && trip.endDate !== trip.startDate && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+
+                      {/* Plan Route Button */}
+                      {(trip.campground || trip.location) && (
+                        <button
+                          onClick={() => {
+                            const params = new URLSearchParams();
+                            params.set('eventId', trip.id);
+                            params.set('eventTitle', trip.title);
+                            if (trip.campground) {
+                              params.set('campgroundId', trip.campground.id);
+                              params.set('campgroundName', trip.campground.name);
+                              if (trip.campground.state) params.set('campgroundState', trip.campground.state);
+                            } else if (trip.location) {
+                              params.set('destination', trip.location);
+                            }
+                            if (trip.startDate) params.set('startDate', trip.startDate);
+                            navigate(`/travel?tab=drive-planner&${params.toString()}`);
+                          }}
+                          className="flex-shrink-0 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                          title="Plan route to this destination"
+                        >
+                          <Navigation className="w-4 h-4" />
+                          <span className="hidden sm:inline">Plan Route</span>
+                        </button>
+                      )}
+
+                      {/* Arrow */}
+                      <Link to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}>
+                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                      </Link>
+                    </div>
+                  ))}
+             
+
+
+                    </div>
+                   )}
+                   </div>
+                    )}
+                   </div>
+
+
+
+
+            {/* Activity Wall */}
+            {/* Creator Videos from people you follow */}
             <CreatorFeed limit={6} showHeader={true} />
+
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
-
 
           {/* Sidebar */}
           <div className="space-y-6">
@@ -2414,71 +2578,6 @@ export default function BasecampPage({ user }: BasecampProps) {
               )}
             </div>
               
-            {/* Travel Map - Compact */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-4 pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-primary-600" />
-                    Travel Map
-                  </h3>
-                  <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                    Full Map →
-                  </Link>
-                </div>
-                {/* Compact Stats */}
-                <div className="flex items-center gap-3 mb-3 text-xs">
-                  <span className="flex items-center gap-1 text-primary-600 font-semibold">
-                    <MapPin className="w-3 h-3" /> {visitedStatesCount} states
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-gray-500">{50 - visitedStatesCount} to go</span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-emerald-600 font-medium">{Math.round((visitedStatesCount / 50) * 100)}%</span>
-                </div>
-              </div>
-              <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
-                <TravelMap userId={user.id} isOwnProfile={true} compact={true} />
-              </div>
-            </div>
-
-            {/* Upcoming Trips - Compact */}
-            {plannedTrips.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4 pb-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      Upcoming Trips
-                      <span className="text-xs font-normal text-gray-400">({plannedTrips.length})</span>
-                    </h3>
-                    <Link to="/trips" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All</Link>
-                  </div>
-                </div>
-                <div className="px-4 pb-4 space-y-2">
-                  {plannedTrips.slice(0, 3).map((trip) => (
-                    <Link
-                      key={`${trip.type}-${trip.id}`}
-                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{trip.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {trip.campground?.name && ` · ${trip.campground.name}`}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
              <Top8Friends username={user?.username} />
 
             {/* Trending Topics */}
@@ -3062,6 +3161,40 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <WishlistWidget />
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="font-bold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="space-y-2">
+                <Link
+                  to="/trips"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <CalendarPlus className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm text-gray-700">Plan a Trip</span>
+                </Link>
+                <Link
+                  to="/campgrounds"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <Tent className="w-5 h-5 text-green-600" />
+                  <span className="text-sm text-gray-700">Find Campgrounds</span>
+                </Link>
+                <Link
+                  to="/feed"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <MessageSquare className="w-5 h-5 text-purple-600" />
+                  <span className="text-sm text-gray-700">View Discussions</span>
+                </Link>
+                <Link
+                  to="/trips"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <CalendarPlus className="w-5 h-5 text-yellow-600" />
+                  <span className="text-sm text-gray-700">Browse Trips</span>
+                </Link>
+              </div>
+            </div>
 
             {/* Campground Updates */}
             <CampgroundUpdatesFeed maxItems={10} />

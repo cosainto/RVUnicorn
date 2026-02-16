@@ -11,6 +11,8 @@ import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
+import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
+import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 
 
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
@@ -1141,6 +1143,7 @@ export default function CampgroundDetailPage() {
           {campground.latitude && campground.longitude && (
             <div className="p-4 border-b border-gray-200">
               <CampgroundWeather latitude={campground.latitude} longitude={campground.longitude} />
+              <CampgroundBadgeDisplay campgroundId={campground.id} userId={user?.id} />
             </div>
           )}
           
@@ -1225,6 +1228,7 @@ export default function CampgroundDetailPage() {
               
               {/* Things to Do Nearby */}
               <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
+              {isAdmin && <CampgroundBadgeCreator campgroundId={campground.id} />}
               
               {/* Community - Followers & Campers */}
               <CampgroundCommunity campgroundId={campground.id} campgroundName={campground.name} />

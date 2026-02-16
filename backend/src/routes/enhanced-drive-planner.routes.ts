@@ -522,9 +522,10 @@ router.get('/users/:userId/friends/checkins', async (req, res) => {
     // Get user's friends
     const friendships = await prisma.friendship.findMany({
       where: {
-        isActive: true,
-          { initiatorId: userId, status: 'ACCEPTED' },
-          { receiverId: userId, status: 'ACCEPTED' },
+        OR: [
+          { initiatorId: userId, status: "ACCEPTED" },
+          { receiverId: userId, status: "ACCEPTED" },
+        ],
       },
       select: {
         initiatorId: true,

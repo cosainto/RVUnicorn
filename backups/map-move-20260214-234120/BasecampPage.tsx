@@ -1888,8 +1888,227 @@ export default function BasecampPage({ user }: BasecampProps) {
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
-          </div>
 
+            {/* Map Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <MapPin className="w-6 h-6 text-primary-600" />
+                  Your Travel Map
+                </h2>
+                <Link
+                  to="/travel"
+                  className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                >
+                  <Home className="w-4 h-4" />
+                  Full Map
+                </Link>
+              </div>
+              
+              {/* Travel Stats Strip */}
+              <div className="flex items-center gap-4 mb-4 py-3 px-4 bg-gradient-to-r from-primary-50 via-blue-50 to-indigo-50 rounded-lg border border-primary-100">
+                <div className="flex items-center gap-6 flex-1 overflow-x-auto">
+                  { visitedStatesCount >= 0 && (
+                    <>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-primary-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-primary-700 leading-none">{visitedStatesCount}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">States</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <Tent className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-emerald-700 leading-none">{50 - visitedStatesCount}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">To Go</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                          <Calendar className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-amber-700 leading-none">{plannedTrips.length}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Trips Planned</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200 flex-shrink-0" />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <Award className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-purple-700 leading-none">{Math.round((visitedStatesCount / 50) * 100)}%</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Complete</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium flex-shrink-0 hidden sm:block">
+                  Full Map →
+                </Link>
+              </div>
+              <TravelMap userId={user.id} isOwnProfile={true} />
+            </div>
+
+             {/* Planned Events List - NEW SECTION */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <button
+                onClick={() => setPlannedTripsExpanded(!plannedTripsExpanded)}
+                className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                  Planned Camping Trips
+                  {plannedTrips.length > 0 && (
+                    <span className="text-sm font-normal text-gray-500">({plannedTrips.length})</span>
+                  )}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/trips"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    View All
+                  </Link>
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${plannedTripsExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {plannedTripsExpanded && (
+              <div className="px-6 pb-6">           
+
+              {plannedTrips.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500 mb-2">No upcoming trips planned</p>
+                  <Link
+                    to="/trips"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Plan a Trip
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {plannedTrips.map((trip) => (
+                    <div
+                      key={`${trip.type}-${trip.id}`}
+                      className="flex items-center gap-4 p-4 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group"
+                    >
+                      {/* Trip Info - Clickable Link */}
+                      <Link
+                        to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
+                        className="flex items-center gap-4 flex-1 min-w-0"
+                      >
+                        {/* Date Badge */}
+                        <div className={`flex-shrink-0 w-14 h-14 rounded-lg flex flex-col items-center justify-center text-white shadow-sm ${
+                          trip.type === 'event' 
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                            : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                        }`}>
+                          <span className="text-xs font-medium uppercase">
+                            {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-xl font-bold leading-none">
+                            {new Date(trip.startDate).getDate()}
+                          </span>
+                        </div>
+
+                        {/* Trip Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                                                         {trip.title} <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                              {trip.title}
+                            </h3>
+                            
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                            {trip.campground ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">
+                                  {trip.campground.name}
+                                  {trip.campground.state && `, ${trip.campground.state}`}
+                                </span>
+                              </>
+                            ) : trip.location ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">{trip.location}</span>
+                              </>
+                            ) : trip.state ? (
+                              <>
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="truncate">{trip.state}</span>
+                              </>
+                            ) : (
+                              <span className="text-gray-400 italic">No location set</span>
+                            )}
+                          </div>
+                          {trip.endDate && trip.endDate !== trip.startDate && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+
+                      {/* Plan Route Button */}
+                      {(trip.campground || trip.location) && (
+                        <button
+                          onClick={() => {
+                            const params = new URLSearchParams();
+                            params.set('eventId', trip.id);
+                            params.set('eventTitle', trip.title);
+                            if (trip.campground) {
+                              params.set('campgroundId', trip.campground.id);
+                              params.set('campgroundName', trip.campground.name);
+                              if (trip.campground.state) params.set('campgroundState', trip.campground.state);
+                            } else if (trip.location) {
+                              params.set('destination', trip.location);
+                            }
+                            if (trip.startDate) params.set('startDate', trip.startDate);
+                            navigate(`/travel?tab=drive-planner&${params.toString()}`);
+                          }}
+                          className="flex-shrink-0 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                          title="Plan route to this destination"
+                        >
+                          <Navigation className="w-4 h-4" />
+                          <span className="hidden sm:inline">Plan Route</span>
+                        </button>
+                      )}
+
+                      {/* Arrow */}
+                      <Link to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}>
+                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                      </Link>
+                    </div>
+                  ))}
+             
+
+
+                    </div>
+                   )}
+                   </div>
+                    )}
+                   </div>
+
+
+
+
+
+          </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
@@ -2414,71 +2633,6 @@ export default function BasecampPage({ user }: BasecampProps) {
               )}
             </div>
               
-            {/* Travel Map - Compact */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-4 pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-primary-600" />
-                    Travel Map
-                  </h3>
-                  <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                    Full Map →
-                  </Link>
-                </div>
-                {/* Compact Stats */}
-                <div className="flex items-center gap-3 mb-3 text-xs">
-                  <span className="flex items-center gap-1 text-primary-600 font-semibold">
-                    <MapPin className="w-3 h-3" /> {visitedStatesCount} states
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-gray-500">{50 - visitedStatesCount} to go</span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-emerald-600 font-medium">{Math.round((visitedStatesCount / 50) * 100)}%</span>
-                </div>
-              </div>
-              <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
-                <TravelMap userId={user.id} isOwnProfile={true} compact={true} />
-              </div>
-            </div>
-
-            {/* Upcoming Trips - Compact */}
-            {plannedTrips.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4 pb-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      Upcoming Trips
-                      <span className="text-xs font-normal text-gray-400">({plannedTrips.length})</span>
-                    </h3>
-                    <Link to="/trips" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All</Link>
-                  </div>
-                </div>
-                <div className="px-4 pb-4 space-y-2">
-                  {plannedTrips.slice(0, 3).map((trip) => (
-                    <Link
-                      key={`${trip.type}-${trip.id}`}
-                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{trip.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {trip.campground?.name && ` · ${trip.campground.name}`}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
              <Top8Friends username={user?.username} />
 
             {/* Trending Topics */}
@@ -3061,6 +3215,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <PackUpTasksWidget />
             <WishlistWidget />
             <BasecampActivityFeed maxItems={10} showHeader={true} />
+
 
 
             {/* Campground Updates */}
