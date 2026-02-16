@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import NotificationDropdown from './NotificationDropdown';
 
 interface Notification {
   id: string;
@@ -30,6 +31,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifCounts, setNotifCounts] = useState({ count: 0, messages: 0, friends: 0, campground: 0, system: 0 });
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -281,51 +283,17 @@ export default function Navbar() {
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-red-500 rounded-full flex items-center justify-center animate-pulse">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
 
-                {showNotifications && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                      <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <button onClick={markAllRead} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <p className="text-center py-8 text-gray-400 text-sm">No notifications yet</p>
-                      ) : (
-                        notifications.map(notif => (
-                          <Link
-                            key={notif.id}
-                            to={notif.data?.link || '#'}
-                            onClick={() => setShowNotifications(false)}
-                            className={`block px-4 py-3 hover:bg-gray-50 transition border-b border-gray-50 ${!notif.read ? 'bg-blue-50/50' : ''}`}
-                          >
-                            <p className="text-sm text-gray-900 font-medium">{notif.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">
-                              {new Date(notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                            </p>
-                          </Link>
-                        ))
-                      )}
-                    </div>
-                    <Link
-                      to="/notifications"
-                      onClick={() => setShowNotifications(false)}
-                      className="block text-center py-2.5 text-sm text-primary-600 hover:bg-gray-50 border-t border-gray-100 font-medium"
-                    >
-                      View all notifications
-                    </Link>
-                  </div>
-                )}
+                <NotificationDropdown
+                  isOpen={showNotifications}
+                  onClose={() => setShowNotifications(false)}
+                  onUnreadUpdate={(counts) => { setUnreadCount(counts.count); setNotifCounts(counts); }}
+                />
               </div>
 
               {/* Profile Avatar Dropdown */}

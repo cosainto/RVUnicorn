@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'rea
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import api from './services/api';
+import ToastProvider from './components/ToastProvider';
+import NotificationCenterPage from './pages/NotificationCenterPage';
 import Navbar from './components/Navbar';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
 import LoginPage from './pages/LoginPage';
@@ -342,7 +344,8 @@ function AppContent() {
           element={
             <PrivateRoute>
               <MessagesPage />
-            </PrivateRoute>
+            
+              <Route path="/notifications" element={<NotificationCenterPage />} /></PrivateRoute>
           }
         />
         <Route
