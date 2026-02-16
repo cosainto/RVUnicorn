@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, MapPin, Truck, Users, PawPrint, ChevronRight, ChevronLeft, Check, Sparkles, Link as LinkIcon, Globe, Tent, Home, Car } from 'lucide-react';
 import api from '../services/api';
 
@@ -72,6 +72,60 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
   const [rvYear, setRvYear] = useState('');
   const [rvMake, setRvMake] = useState('');
   const [rvModel, setRvModel] = useState('');
+  
+  // RV Database Search
+  const [rvSearchQuery, setRvSearchQuery] = useState('');
+  const [rvSearchResults, setRvSearchResults] = useState<any[]>([]);
+  const [rvMakes, setRvMakes] = useState<any[]>([]);
+  const [rvModels, setRvModels] = useState<any[]>([]);
+  const [selectedMakeId, setSelectedMakeId] = useState('');
+  const [selectedModel, setSelectedModel] = useState<any>(null);
+  const [rvAutofilled, setRvAutofilled] = useState(false);
+  const rvSearchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Load makes when RV type is selected
+  useEffect(() => {
+    if (rvType) {
+      api.get(\`/rv/makes?type=\${encodeURIComponent(rvType)}\`).then(({ data }) => {
+        setRvMakes(data);
+      }).catch(() => {});
+    }
+  }, [rvType]);
+
+  // Load models when make is selected
+  useEffect(() => {
+    if (selectedMakeId) {
+      api.get(\`/rv/makes/\${selectedMakeId}/models\`).then(({ data }) => {
+        setRvModels(data);
+      }).catch(() => {});
+    }
+  }, [selectedMakeId]);
+
+  // Search RV database
+  const handleRvSearch = (query: string) => {
+    setRvSearchQuery(query);
+    if (rvSearchTimeout.current) clearTimeout(rvSearchTimeout.current);
+    if (query.length < 2) { setRvSearchResults([]); return; }
+    rvSearchTimeout.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get(\`/rv/search?q=\${encodeURIComponent(query)}\`);
+        setRvSearchResults(data.models || []);
+      } catch {}
+    }, 300);
+  };
+
+  // Autofill from selected model
+  const handleRvAutofill = async (model: any) => {
+    setSelectedModel(model);
+    setRvMake(model.make?.name || '');
+    setRvModel(model.name || '');
+    setRvSearchQuery('');
+    setRvSearchResults([]);
+    try {
+      await api.post('/rv/autofill', { modelId: model.id });
+      setRvAutofilled(true);
+    } catch {}
+  };
   
   // Travel Party
   const [travelPartyType, setTravelPartyType] = useState('');
@@ -367,58 +421,161 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
               {/* RV Details - only show if RV/TRAILER/VAN selected */}
               {showRVDetails && (
                 <div className="mt-6 pt-6 border-t space-y-4">
-                  <h4 className="font-medium text-gray-900">Tell us about your rig (optional)</h4>
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary-500" />
+                    Tell us about your rig
+                  </h4>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                    <select
-                      value={rvType}
-                      onChange={(e) => setRvType(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="">Select type...</option>
-                      {RV_TYPES.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.emoji} {type.label}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Smart Search */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={rvSearchQuery}
+                      onChange={(e) => handleRvSearch(e.target.value)}
+                      placeholder="Search any make or model (e.g. Winnebago Revel)..."
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pl-10"
+                    />
+                    <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {rvSearchResults.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-white rounded-lg border border-gray-200 shadow-xl max-h-48 overflow-y-auto">
+                        {rvSearchResults.map((model: any) => (
+                          <button
+                            key={model.id}
+                            onClick={() => handleRvAutofill(model)}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-primary-50 text-left border-b border-gray-50"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 text-sm">{model.make?.name} {model.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {model.type}{model.lengthFt ? ` · ${model.lengthFt}ft` : ''}{model.sleeps ? ` · Sleeps ${model.sleeps}` : ''}
+                              </p>
+                            </div>
+                            <Sparkles className="w-4 h-4 text-primary-400" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                      <input
-                        type="number"
-                        value={rvYear}
-                        onChange={(e) => setRvYear(e.target.value)}
-                        placeholder="2022"
-                        min="1950"
-                        max={new Date().getFullYear() + 1}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
+                  {/* Autofill Success */}
+                  {rvAutofilled && selectedModel && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-3">
+                      <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-emerald-900">
+                          {selectedModel.make?.name} {selectedModel.name} specs applied!
+                        </p>
+                        <p className="text-xs text-emerald-700">
+                          {selectedModel.lengthFt && `${selectedModel.lengthFt}ft`}
+                          {selectedModel.weightLbs && ` · ${(selectedModel.weightLbs/1000).toFixed(1)}k lbs`}
+                          {selectedModel.sleeps && ` · Sleeps ${selectedModel.sleeps}`}
+                          {selectedModel.mpg && ` · ${selectedModel.mpg} MPG`}
+                        </p>
+                      </div>
+                      <button onClick={() => { setRvAutofilled(false); setSelectedModel(null); setRvMake(''); setRvModel(''); }} className="text-xs text-emerald-600 hover:underline">Change</button>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Make</label>
-                      <input
-                        type="text"
-                        value={rvMake}
-                        onChange={(e) => setRvMake(e.target.value)}
-                        placeholder="Winnebago"
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                      <input
-                        type="text"
-                        value={rvModel}
-                        onChange={(e) => setRvModel(e.target.value)}
-                        placeholder="View"
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                  </div>
+                  )}
+
+                  {/* Manual fallback fields */}
+                  {!rvAutofilled && (
+                    <>
+                      <p className="text-xs text-gray-400">Or enter manually:</p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select
+                          value={rvType}
+                          onChange={(e) => setRvType(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                          <option value="">Select type...</option>
+                          {RV_TYPES.map((type) => (
+                            <option key={type.id} value={type.id}>
+                              {type.emoji} {type.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Make dropdown from database */}
+                      {rvType && rvMakes.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Make</label>
+                          <select
+                            value={selectedMakeId}
+                            onChange={(e) => {
+                              setSelectedMakeId(e.target.value);
+                              const make = rvMakes.find((m: any) => m.id === e.target.value);
+                              if (make) setRvMake(make.name);
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          >
+                            <option value="">Select make...</option>
+                            {rvMakes.map((make: any) => (
+                              <option key={make.id} value={make.id}>{make.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Model dropdown from database */}
+                      {selectedMakeId && rvModels.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                          <select
+                            value={rvModel}
+                            onChange={(e) => {
+                              setRvModel(e.target.value);
+                              const model = rvModels.find((m: any) => m.name === e.target.value);
+                              if (model) handleRvAutofill(model);
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          >
+                            <option value="">Select model...</option>
+                            {rvModels.map((model: any) => (
+                              <option key={model.id} value={model.name}>
+                                {model.name}{model.lengthFt ? ` (${model.lengthFt}ft)` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                          <input
+                            type="number"
+                            value={rvYear}
+                            onChange={(e) => setRvYear(e.target.value)}
+                            placeholder="2022"
+                            min="1950"
+                            max={new Date().getFullYear() + 1}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Make</label>
+                          <input
+                            type="text"
+                            value={rvMake}
+                            onChange={(e) => setRvMake(e.target.value)}
+                            placeholder="Winnebago"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                          <input
+                            type="text"
+                            value={rvModel}
+                            onChange={(e) => setRvModel(e.target.value)}
+                            placeholder="View"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
