@@ -86,7 +86,7 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
   // Load makes when RV type is selected
   useEffect(() => {
     if (rvType) {
-      api.get(\`/rv/makes?type=\${encodeURIComponent(rvType)}\`).then(({ data }) => {
+      api.get(`/rv/makes?type=${encodeURIComponent(rvType)}`).then(({ data }) => {
         setRvMakes(data);
       }).catch(() => {});
     }
@@ -95,7 +95,7 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
   // Load models when make is selected
   useEffect(() => {
     if (selectedMakeId) {
-      api.get(\`/rv/makes/\${selectedMakeId}/models\`).then(({ data }) => {
+      api.get(`/rv/makes/${selectedMakeId}/models`).then(({ data }) => {
         setRvModels(data);
       }).catch(() => {});
     }
@@ -108,7 +108,7 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
     if (query.length < 2) { setRvSearchResults([]); return; }
     rvSearchTimeout.current = setTimeout(async () => {
       try {
-        const { data } = await api.get(\`/rv/search?q=\${encodeURIComponent(query)}\`);
+        const { data } = await api.get(`/rv/search?q=${encodeURIComponent(query)}`);
         setRvSearchResults(data.models || []);
       } catch {}
     }, 300);
