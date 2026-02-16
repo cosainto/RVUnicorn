@@ -344,8 +344,8 @@ function AppContent() {
           element={
             <PrivateRoute>
               <MessagesPage />
+            </PrivateRoute>
             
-              <Route path="/notifications" element={<NotificationCenterPage />} /></PrivateRoute>
           }
         />
         <Route
@@ -357,6 +357,7 @@ function AppContent() {
           }
         />
         <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
+        <Route path="/notifications" element={<PrivateRoute><NotificationCenterPage /></PrivateRoute>} />
         <Route path="/admin/badges" element={<PrivateRoute><AdminBadgeApprovalPage /></PrivateRoute>} />
         <Route path="/" element={<Navigate to="/basecamp" />} />
       </Routes>
@@ -377,7 +378,9 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ToastProvider>
         <AppContent />
+      </ToastProvider>
       </Router>
     </AuthProvider>
   );
