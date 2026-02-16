@@ -96,12 +96,14 @@ export default function WishlistWidget() {
             <h3 className="font-semibold text-gray-900">My Wishlist</h3>
           </div>
         </div>
-        <div className="p-6 text-center">
-          <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600 text-sm">No campgrounds saved yet</p>
-          <Link to="/campgrounds" className="text-primary-600 text-sm hover:underline">
-            Explore campgrounds →
-          </Link>
+        <div className="relative">
+          <img src="/images/Daydreaming.png" alt="Daydreaming about camping" className="w-full h-40 object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/90 to-transparent flex flex-col items-center justify-end pb-3">
+            <p className="text-gray-600 text-sm font-medium">Start daydreaming...</p>
+            <Link to="/campgrounds" className="text-primary-600 text-sm hover:underline">
+              Explore campgrounds →
+            </Link>
+          </div>
         </div>
       </div>
     );
