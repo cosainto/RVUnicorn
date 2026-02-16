@@ -85,7 +85,7 @@ import eventActivitiesRoutes from './routes/event-activities.routes';
 import profileMapRoutes from './routes/profile-map.routes';
 import searchRoutes from './routes/search.routes';
 import hitchRemindersRoutes from './routes/hitch-reminders.routes';
-import campgroundBadgesRoutes from './routes/campground-badges.routes';
+// import campgroundBadgesRoutes from './routes/campground-badges.routes';
 
 
 
@@ -192,7 +192,7 @@ app.use('/api', profileMapRoutes);
 app.use('/api/hitch', hitchRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/hitch/reminders', hitchRemindersRoutes);
-app.use('/api/campground-badges', campgroundBadgesRoutes);
+// app.use('/api/campground-badges', campgroundBadgesRoutes);
 
 
 
