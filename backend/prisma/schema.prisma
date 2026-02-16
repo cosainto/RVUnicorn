@@ -246,6 +246,10 @@ model User {
   @@index([email])
   @@index([username])
   threadVotes                                    ThreadVote[]
+  sharedVehiclesOwned   SharedVehicle[]  @relation("VehicleOwner")
+  sharedVehiclesPartner SharedVehicle[]  @relation("VehiclePartner")
+  vehicleInvitesCreated VehicleInvite[]  @relation("VehicleInviteCreator")
+  vehicleInvitesUsed    VehicleInvite[]  @relation("VehicleInviteUsed")
 }
 
 model Post {
@@ -3232,3 +3236,84 @@ enum CampgroundBadgeStatus {
   APPROVED
   REJECTED
 }
+
+// ═══════════════════════════════════════════════════════════════
+// RV DATABASE LOOKUP TABLES
+// ═══════════════════════════════════════════════════════════════
+
+model RVType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+}
+
+model RVMake {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  logo      String?
+  website   String?
+  types     String[]
+  models    RVModel[]
+  createdAt DateTime  @default(now())
+}
+
+model RVModel {
+  id          String   @id @default(cuid())
+  makeId      String
+  name        String
+  type        String
+  lengthFt    Int?
+  heightFt    Int?
+  weightLbs   Int?
+  sleeps      Int?
+  slideouts   Int?
+  mpg         Float?
+  tankGallons Float?
+  features    String[]
+  stockImage  String?
+  msrp        String?
+  createdAt   DateTime @default(now())
+  make        RVMake   @relation(fields: [makeId], references: [id], onDelete: Cascade)
+
+  @@unique([makeId, name])
+  @@index([makeId])
+  @@index([type])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CO-TRAVELER / SHARED VEHICLE
+// ═══════════════════════════════════════════════════════════════
+
+model SharedVehicle {
+  id        String   @id @default(cuid())
+  ownerId   String
+  partnerId String
+  status    String   @default("PENDING")  // PENDING, ACTIVE, DECLINED
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner     User     @relation("VehicleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  partner   User     @relation("VehiclePartner", fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, partnerId])
+  @@index([ownerId])
+  @@index([partnerId])
+}
+
+model VehicleInvite {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  creatorId String
+  usedById  String?
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  creator   User      @relation("VehicleInviteCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  usedBy    User?     @relation("VehicleInviteUsed", fields: [usedById], references: [id])
+
+  @@index([creatorId])
+  @@index([code])
+}
+

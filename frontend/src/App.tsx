@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import api from './services/api';
 import ToastProvider from './components/ToastProvider';
+import RVOnboardingFlow from './components/RVOnboardingFlow';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import Navbar from './components/Navbar';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
@@ -357,6 +358,7 @@ function AppContent() {
           }
         />
         <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
+        <Route path="/rv-setup" element={<PrivateRoute><div className="min-h-screen bg-gray-50 py-8 px-4"><RVOnboardingFlow /></div></PrivateRoute>} />
         <Route path="/notifications" element={<PrivateRoute><NotificationCenterPage /></PrivateRoute>} />
         <Route path="/admin/badges" element={<PrivateRoute><AdminBadgeApprovalPage /></PrivateRoute>} />
         <Route path="/" element={<Navigate to="/basecamp" />} />
