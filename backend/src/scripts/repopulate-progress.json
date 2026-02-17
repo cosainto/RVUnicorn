@@ -66,12 +66,12 @@
     "enriched": 16089
   },
   "stage4_photos": {
-    "completed": false,
-    "lastId": "cmlp0w1hu0c4tnalsl2kss9on",
-    "uploaded": 15225
+    "completed": true,
+    "lastId": "cmlp16k6u0cgvnalsn327j784",
+    "uploaded": 15652
   },
   "stage5_states": {
-    "completed": false,
-    "fixed": 0
+    "completed": true,
+    "fixed": 5508
   }
 }
