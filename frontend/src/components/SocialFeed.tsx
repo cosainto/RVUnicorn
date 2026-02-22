@@ -556,8 +556,24 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             {' by '}{shareMeta?.originalCreatorName || 'a creator'}{' 🔄'}
           </span>
         );
-      default:      
-        return `${actorName} shared an update`;
+      default:
+        return (
+          <span>
+            <Link to={`/profile/${item.actor?.username}`} className="font-semibold hover:underline">
+              {actorName}
+            </Link>
+            {item.content ? (
+              <> {item.content}</>
+            ) : item.activityLabel && item.activityLabel !== 'did something' ? (
+              <> {item.activityLabel}</>
+            ) : (
+              <> posted an update</>
+            )}
+            {item.targetLink && item.targetName && (
+              <> — <Link to={item.targetLink} className="font-semibold text-primary-600 hover:underline">{item.targetName}</Link></>
+            )}
+          </span>
+        );
     }
   };
 
