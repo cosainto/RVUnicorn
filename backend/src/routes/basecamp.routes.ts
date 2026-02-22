@@ -293,9 +293,13 @@ router.get('/feed', authenticateToken, async (req, res) => {
         }
 
         
-        // For recipe shares, use the content field as the label (it contains the full message)
+        // Build activity label - use content as fallback for unrecognized types
         let activityLabel = getActivityLabel(activity.type);
         if ((activity.type === 'RECIPE_SHARED' || activity.type === 'RECIPE_SHARE_TAG') && activity.content) {
+          activityLabel = activity.content;
+        }
+        // If type is unknown and we have content, use that instead of generic fallback
+        if (activityLabel === 'did something' && activity.content) {
           activityLabel = activity.content;
         }
         

@@ -454,7 +454,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       );
     }
 
-    if (item.activityLabel && item.type !== 'CAMPGROUND_ANNOUNCEMENT') {
+    if (item.activityLabel && item.activityLabel !== 'did something' && item.type !== 'CAMPGROUND_ANNOUNCEMENT') {
         return (
         <span>
           <Link to={`/profile/${item.actor.username}`} className="font-semibold hover:underline">

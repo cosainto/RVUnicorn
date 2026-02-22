@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cmlp0sgaj0c1analsrmr0gmis",
+    "name": "119 Rivers Edge Campground",
+    "url": "https://119campground.com/",
+    "error": "net::ERR_CERT_AUTHORITY_INVALID at https://119campground.com/"
+  },
+  {
+    "id": "cmloxmwf108linalsyqbso5ll",
+    "name": "2BEACHES RV PARK",
+    "url": "http://www.2beachesrv.com/",
+    "error": "net::ERR_BLOCKED_BY_CLIENT at http://www.2beachesrv.com/"
+  },
+  {
+    "id": "cmlp0108w0b9rnalski1l9cap",
+    "name": "3 G RV Park",
+    "url": "http://3grvparktx.com/",
+    "error": "net::ERR_BLOCKED_BY_CLIENT at http://3grvparktx.com/"
+  }
+]

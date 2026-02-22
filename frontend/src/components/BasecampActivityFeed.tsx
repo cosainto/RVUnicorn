@@ -310,7 +310,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                         {item.actor?.firstName} {item.actor?.lastName}
                       </Link>
                       {' '}
-                      <span className={item.activityColor || ''}>{item.activityIcon} {(item.type === 'RECIPE_SHARED' || item.type === 'RECIPE_SHARE_TAG') ? item.content : item.activityLabel}</span>
+                      <span className={item.activityColor || ''}>{item.activityIcon} {(item.type === 'RECIPE_SHARED' || item.type === 'RECIPE_SHARE_TAG' || item.activityLabel === 'did something') ? (item.content || item.activityLabel) : item.activityLabel}</span>
                       {' '}
                       {item.hasMutualFriendInteraction && item.secondaryUser ? (
                         <>

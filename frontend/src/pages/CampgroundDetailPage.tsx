@@ -443,6 +443,7 @@ export default function CampgroundDetailPage() {
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Phone className="w-4 h-4" />Call</a>}
                 {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Globe className="w-4 h-4" />Website</a>}
                 {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Navigation className="w-4 h-4" />Directions</a>}
+                {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
               </div>
               <div className="flex gap-2">
                 {user && <>
@@ -608,6 +609,7 @@ export default function CampgroundDetailPage() {
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Phone className="w-4 h-4" />Call</a>}
               {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Navigation className="w-4 h-4" />Directions</a>}
+              {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
           </div>
         </div>
@@ -670,6 +672,7 @@ export default function CampgroundDetailPage() {
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Phone className="w-4 h-4" />Call</a>}
               {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
+              {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
           </div>
         </div>
@@ -718,6 +721,7 @@ export default function CampgroundDetailPage() {
               {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Call</a>}
               {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Directions</a>}
+              {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
           </div>
         </div>
@@ -867,6 +871,7 @@ export default function CampgroundDetailPage() {
                     {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Phone className="w-4 h-4 inline mr-2" />Call</a>}
                     {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Globe className="w-4 h-4 inline mr-2" />Website</a>}
                     {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300"><Navigation className="w-4 h-4 inline mr-2" />Directions</a>}
+                    {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
                     {isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
                   </div>
                 </div>
