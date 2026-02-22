@@ -1,0 +1,79 @@
+{
+  "stage1_clean": {
+    "completed": true,
+    "removed": 25
+  },
+  "stage2_discover": {
+    "completed": true,
+    "statesCompleted": [
+      "AL",
+      "AK",
+      "AZ",
+      "AR",
+      "CA",
+      "CO",
+      "CT",
+      "DE",
+      "FL",
+      "GA",
+      "HI",
+      "ID",
+      "IL",
+      "IN",
+      "IA",
+      "KS",
+      "KY",
+      "LA",
+      "ME",
+      "MD",
+      "MA",
+      "MI",
+      "MN",
+      "MS",
+      "MO",
+      "MT",
+      "NE",
+      "NV",
+      "NH",
+      "NJ",
+      "NM",
+      "NY",
+      "NC",
+      "ND",
+      "OH",
+      "OK",
+      "OR",
+      "PA",
+      "RI",
+      "SC",
+      "SD",
+      "TN",
+      "TX",
+      "UT",
+      "VT",
+      "VA",
+      "WA",
+      "WV",
+      "WI",
+      "WY"
+    ],
+    "added": 0
+  },
+  "stage3_amenities": {
+    "completed": true,
+    "lastId": "cmlp12pqm0ce5nalsweowj87x",
+    "enriched": 57
+  },
+  "stage4_photos": {
+    "completed": true,
+    "lastId": "cmlp14xh60cg2nals462n7kl1",
+    "scraped": 137,
+    "uploaded": 544
+  },
+  "stage5_maps": {
+    "completed": true,
+    "lastId": "cmlotnwfa04ggnalsl15zo64p",
+    "found": 117
+  },
+  "systemUserId": "cmlq1oay20000vu0dzojou39b"
+}

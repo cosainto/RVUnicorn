@@ -15,7 +15,7 @@ const { URL } = require('url');
 const prisma = new PrismaClient();
 
 // Configuration
-const HITCH_USER_ID = 'cml6s30550000fag2xddg4oxa';
+const HITCH_USER_ID = 'cmlq1oay20000vu0dzojou39b';
 const MIN_IMAGE_WIDTH = 400;  // Minimum width to consider
 const MIN_IMAGE_HEIGHT = 300; // Minimum height to consider
 const MAX_PHOTOS_PER_CAMPGROUND = 8;
@@ -398,16 +398,7 @@ async function scrapeCampgroundPhotos(options = {}) {
   }
   
   // Launch browser
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu'
-    ]
-  });
+  const browser = await puppeteer.launch({ headless: 'new', protocolTimeout: 120000, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
   
   let totalPhotosAdded = 0;
   let campgroundsProcessed = 0;

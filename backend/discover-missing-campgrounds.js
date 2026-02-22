@@ -51,6 +51,63 @@ function normalizeName(name) {
     .trim();
 }
 
+// Filter out non-campgrounds
+const EXCLUDE_PATTERNS = [
+  /\bsummer camp\b/i,
+  /\bsleep.?away\b/i,
+  /\bday camp\b/i,
+  /\bcamp .*(kids|children|youth|teen|boys|girls)\b/i,
+  /\b(kids|children|youth|teen|boys|girls) camp\b/i,
+  /\bchurch camp\b/i,
+  /\bbible camp\b/i,
+  /\bscout camp\b/i,
+  /\bband camp\b/i,
+  /\bcheer camp\b/i,
+  /\bsports camp\b/i,
+  /\bbasketball camp\b/i,
+  /\bsoccer camp\b/i,
+  /\bfootball camp\b/i,
+  /\bswim camp\b/i,
+  /\bart camp\b/i,
+  /\bmusic camp\b/i,
+  /\btheater camp\b/i,
+  /\btheatre camp\b/i,
+  /\bdance camp\b/i,
+  /\bcoding camp\b/i,
+  /\bSTEM camp\b/i,
+  /\bweight loss camp\b/i,
+  /\bfitness camp\b/i,
+  /\bboot camp\b/i,
+  /\bcamp .*academy\b/i,
+  /\bcamp .*school\b/i,
+  /\bovernight camp\b/i,
+  /\bresident(ial)? camp\b/i,
+  /\bJCC camp\b/i,
+  /\bYMCA camp\b/i,
+  /\b4-?H camp\b/i,
+  /\bpicnic\b.*\b(area|grounds?|only|shelter|pavilion)\b/i,
+  /\b(area|grounds?|only|shelter|pavilion)\b.*\bpicnic\b/i,
+  /\bday.?use only\b/i,
+  /\bno overnight\b/i,
+  /\bno camping\b/i,
+  /\btrailhead\b/i,
+  /\bparking lot\b/i,
+  /\bboat launch\b/i,
+  /\bboat ramp\b/i,
+  /\bfishing pier\b/i,
+  /\bswimming (area|beach)\b/i,
+  /\bdog park\b/i,
+  /\bskate park\b/i,
+  /\bplayground\b/i,
+  /\bcommunity center\b/i,
+  /\brecreation center\b/i,
+];
+
+function isNotCampground(name) {
+  return EXCLUDE_PATTERNS.some(re => re.test(name));
+}
+
+
 // Check if a campground name is similar enough to consider a match
 function isSimilar(name1, name2) {
   const n1 = normalizeName(name1);
@@ -567,7 +624,7 @@ async function main() {
   const seenNames = new Set();
   for (const camp of allDiscovered) {
     const key = `${camp.state}-${normalizeName(camp.name)}`;
-    if (!seenNames.has(key) && camp.websiteUrl) {
+    if (!seenNames.has(key) && camp.websiteUrl && !isNotCampground(camp.name)) {
       seenNames.add(key);
       deduped.push(camp);
     }

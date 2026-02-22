@@ -20,7 +20,7 @@ cloudinary.config({
 });
 
 // Helper to upload to Cloudinary
-const uploadToCloudinary = (buffer: Buffer, folder: string = 'kindletribe'): Promise<any> => {
+const uploadToCloudinary = (buffer: Buffer, folder: string = 'rvunicorn'): Promise<any> => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { 

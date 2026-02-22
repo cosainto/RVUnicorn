@@ -170,7 +170,9 @@ const AMENITY_LABELS: Record<string, string> = {
   TRAILS: '🥾 Trails', CAMPING: '⛺ Camping',
 };
 
-const TABS = [
+const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews'];
+
+const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
   { id: 'map', label: 'Map', icon: Map },
   { id: 'amenities', label: 'Amenities', icon: Check },
@@ -179,7 +181,6 @@ const TABS = [
   { id: 'events', label: 'Events', icon: Calendar },
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
-  
   { id: 'reviews', label: 'Reviews', icon: Star },
 ];
 
@@ -1148,13 +1149,20 @@ export default function CampgroundDetailPage() {
           )}
           
           <div className={themeStyles.tabs + " overflow-x-auto"}>
-            <div className="flex">{TABS.map(tab => { 
-              const Icon = tab.icon; 
+            <div className="flex">{ALL_TABS.map(tab => { 
+              const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const isLocked = !user && !PUBLIC_TABS.includes(tab.id);
               return (
                 <button 
                   key={tab.id} 
-                  onClick={() => setActiveTab(tab.id)} 
+                  onClick={() => {
+                    if (!user && !PUBLIC_TABS.includes(tab.id)) {
+                      navigate('/login', { state: { from: `/campgrounds/${id}` } });
+                      return;
+                    }
+                    setActiveTab(tab.id);
+                  }} 
                   className={`flex items-center gap-2 px-4 md:px-6 py-4 font-medium whitespace-nowrap transition ` + 
                     (isModern 
                       ? (isActive ? 'bg-gray-900 text-white rounded-full m-1' : 'text-gray-600 hover:bg-gray-100 rounded-full m-1') 
@@ -1179,6 +1187,7 @@ export default function CampgroundDetailPage() {
                 >
                   <Icon className="w-5 h-5" />
                   <span className="hidden sm:inline">{tab.label}</span>
+                    {isLocked && <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 ml-1 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
                 </button>
               ); 
             })}</div>

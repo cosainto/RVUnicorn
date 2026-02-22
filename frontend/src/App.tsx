@@ -255,17 +255,13 @@ function AppContent() {
         <Route
           path="/campgrounds"
           element={
-            <PrivateRoute>
               <CampgroundsPage />
-            </PrivateRoute>
           }
         />
         <Route
           path="/campgrounds/:id"
           element={
-            <PrivateRoute>
               <CampgroundDetailPage />
-            </PrivateRoute>
           }
         />
         <Route
