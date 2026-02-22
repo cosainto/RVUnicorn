@@ -136,7 +136,7 @@ router.get("/following", authenticateToken, async (req: any, res) => {
           },
         },
         campground: {
-          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
         }
       }
     });
@@ -176,7 +176,7 @@ router.get("/following", authenticateToken, async (req: any, res) => {
           },
         },
         campground: {
-          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
         }
       }
     });
@@ -208,7 +208,7 @@ router.get("/following", authenticateToken, async (req: any, res) => {
           },
         },
         campground: {
-          select: { id: true, name: true, location: true, imageUrl: true, state: true }
+          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
         }
       },
       orderBy: { startDate: "desc" }

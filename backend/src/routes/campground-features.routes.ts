@@ -552,7 +552,7 @@ router.post('/:campgroundId/announcements', authenticateToken, async (req: Reque
     // Get campground with tier info
     const campground = await prisma.campground.findUnique({
       where: { id: campgroundId },
-      select: { id: true, name: true, tier: true, location: true }
+      select: { id: true, name: true, tier: true, location: true, city: true, state: true }
     });
 
     const tier = campground?.tier || 'FREE';

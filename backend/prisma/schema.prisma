@@ -373,6 +373,7 @@ model Campground {
   accentColor            String?
   bookingUrl             String?
   storeUrl               String?
+  city                   String?
   businessEmail          String?
   businessPhone          String?
   claimedAt              DateTime?

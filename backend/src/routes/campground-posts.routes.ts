@@ -31,7 +31,7 @@ router.get('/my-feed', authenticateToken, async (req: AuthRequest, res: Response
         where: { campgroundId: { in: campgroundIds } },
         include: {
           campground: {
-            select: { id: true, name: true, location: true, state: true }
+            select: { id: true, name: true, location: true, city: true, state: true }
           },
           author: {
             select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
@@ -95,7 +95,7 @@ router.get('/campground/:campgroundId', async (req: AuthRequest, res: Response) 
         where: { campgroundId },
         include: {
           campground: {
-            select: { id: true, name: true, location: true, state: true }
+            select: { id: true, name: true, location: true, city: true, state: true }
           },
           author: {
             select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
@@ -169,7 +169,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       },
       include: {
         campground: {
-          select: { id: true, name: true, location: true, state: true }
+          select: { id: true, name: true, location: true, city: true, state: true }
         },
         author: {
           select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
