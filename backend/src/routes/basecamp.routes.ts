@@ -231,6 +231,12 @@ router.get('/feed', authenticateToken, async (req, res) => {
           targetName = activity.title;
         }
 
+        // Fallback: if still no link but we have content, link to the actor's profile
+        if (!targetLink && activity.user?.username) {
+          targetName = targetName || activity.user.firstName + "'s profile";
+          targetLink = '/profile/' + activity.user.username;
+        }
+
         // Handle mutual friend interactions
         if (activity.type === 'WALL_COMMENT' && activity.targetUser) {
           const isMutualFriend = friendIdSet.has(activity.targetUserId || '');
