@@ -834,6 +834,70 @@ const PACK_CATEGORIES = [
   'Documents', 'Entertainment', 'Pet Supplies', 'Kids', 'Other',
 ];
 
+
+// ─── RV Owner Manual URL Generator ───────────────────────────────────────────
+function getRvManualUrl(make?: string, model?: string, year?: number | string): string | null {
+  if (!make || !model || !year) return null;
+
+  const makeClean = make.toLowerCase().trim();
+  const modelSlug = model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const yr = String(year);
+
+  // Forest River family (uses forestriverinc.help)
+  const forestRiverBrands: Record<string, string> = {
+    'coachmen': 'coachmenrv',
+    'coachman': 'coachmenrv',
+    'forest river': 'forestriver',
+    'flagstaff': 'flagstaff',
+    'rockwood': 'rockwood',
+    'cherokee': 'cherokee',
+    'grey wolf': 'greywolf',
+    'wildwood': 'wildwood',
+    'surveyor': 'surveyor',
+    'sunseeker': 'sunseeker',
+    'forester': 'forester',
+    'georgetown': 'georgetown',
+    'legacy': 'legacy',
+    'palomino': 'palomino',
+  };
+
+  for (const [brand, slug] of Object.entries(forestRiverBrands)) {
+    if (makeClean.includes(brand)) {
+      return `https://forestriverinc.help/#/${slug}/guide/${yr}/${modelSlug}/browse/tags/Owner's%20Manual`;
+    }
+  }
+
+  // Thor Industries
+  const thorBrands: Record<string, string> = {
+    'airstream': 'https://www.airstream.com/support/owners-manuals/',
+    'jayco': `https://www.jayco.com/owners/manuals/`,
+    'keystone': `https://www.keystonerv.com/owners/manuals/`,
+    'heartland': `https://www.heartlandrv.com/owners-corner/manuals/`,
+    'dutchmen': `https://www.dutchmenrv.com/owner-resources/`,
+    'thor motor coach': `https://www.thormotorcoach.com/owner-resources/`,
+    'thor': `https://www.thormotorcoach.com/owner-resources/`,
+  };
+
+  for (const [brand, url] of Object.entries(thorBrands)) {
+    if (makeClean.includes(brand)) return url;
+  }
+
+  // Winnebago Industries
+  if (makeClean.includes('winnebago') || makeClean.includes('grand design') || makeClean.includes('newmar')) {
+    return `https://www.winnebago.com/owners/manuals`;
+  }
+
+  // Tiffin
+  if (makeClean.includes('tiffin')) return 'https://www.tiffinmotorhomes.com/owner-resources';
+
+  // Gulf Stream
+  if (makeClean.includes('gulf stream')) return 'https://www.gulfstreamcoach.com/owner-support';
+
+  // Generic Google search fallback
+  const query = encodeURIComponent(`${year} ${make} ${model} owner manual PDF`);
+  return `https://www.google.com/search?q=${query}`;
+}
+
 export default function BasecampPage({ user }: BasecampProps) {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
@@ -1979,6 +2043,15 @@ export default function BasecampPage({ user }: BasecampProps) {
                     {rvInfo.rvType && (
                       <p className="text-sm text-gray-500 capitalize">{rvInfo.rvType}</p>
                     )}
+                    {(() => {
+                      const manualUrl = getRvManualUrl(rvInfo.rvMake, rvInfo.rvModel, rvInfo.rvYear);
+                      return manualUrl ? (
+                        <a href={manualUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                          📖 Owner's Manual
+                        </a>
+                      ) : null;
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-500 mb-4">No RV info added yet</p>

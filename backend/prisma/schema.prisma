@@ -374,6 +374,7 @@ model Campground {
   bookingUrl             String?
   storeUrl               String?
   city                   String?
+  zipCode                String?
   businessEmail          String?
   businessPhone          String?
   claimedAt              DateTime?
