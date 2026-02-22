@@ -41,7 +41,25 @@ model User {
   rvFeatures                                      String[]
   rvLength                                        Int?
   rvMpg                                           Float?
-  rvTankGallons                                   Float?
+  // Tanks & Fluids
+  rvFuelGal                                       Float?
+  rvFreshWaterGal                                 Float?
+  rvGreyWaterGal                                  Float?
+  rvBlackWaterGal                                 Float?
+  rvLpGasGal                                      Float?
+  // Electrical
+  rvShorepower                                    String?
+  rvGeneratorWatts                                Int?
+  rvBatteryAh                                     Int?
+  rvSolarWatts                                    Int?
+  // Towing & Weight
+  rvGvwr                                          Int?
+  rvHitchWeight                                   Int?
+  rvAxles                                         Int?
+  // Comfort & Layout
+  rvAwningFt                                      Float?
+  rvAirconditioners                               Int?
+  rvFloorplan                                     String?
   rvHeight                                        Int?
   rvWeight                                        Int?
   rvSleeps                                        Int?
