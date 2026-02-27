@@ -954,6 +954,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   });
   const [savingRv, setSavingRv] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [rvManualUrl, setRvManualUrl] = useState<string | null>(null);
   const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats | null>(null);
 
   // Packing List State
@@ -1170,6 +1171,16 @@ export default function BasecampPage({ user }: BasecampProps) {
         rvMake: profile.rvMake,
         rvModel: profile.rvModel,
       });
+
+      // Fetch manual URL from database
+      try {
+        if (profile.rvMake) {
+          const { data: manualData } = await api.get(`/rv/manual?makeName=${encodeURIComponent(profile.rvMake)}`);
+          setRvManualUrl(manualData.manualUrl || null);
+        }
+      } catch (e) {
+        // ignore
+      }
 
       // Populate edit form data
       setRvEditData({
@@ -2043,15 +2054,12 @@ export default function BasecampPage({ user }: BasecampProps) {
                     {rvInfo.rvType && (
                       <p className="text-sm text-gray-500 capitalize">{rvInfo.rvType}</p>
                     )}
-                    {(() => {
-                      const manualUrl = getRvManualUrl(rvInfo.rvMake, rvInfo.rvModel, rvInfo.rvYear);
-                      return manualUrl ? (
-                        <a href={manualUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-1 text-sm text-blue-600 hover:text-blue-800 hover:underline">
-                          📖 Owner's Manual
-                        </a>
-                      ) : null;
-                    })()}
+                    {rvManualUrl && (
+                      <a href={rvManualUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-1 text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                        📖 Owner's Manual
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <p className="text-gray-500 mb-4">No RV info added yet</p>

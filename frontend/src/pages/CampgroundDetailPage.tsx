@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation,
-  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned
+  Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned, Edit
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -217,6 +217,9 @@ export default function CampgroundDetailPage() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [editSaving, setEditSaving] = useState(false);
 
   const [checkInData, setCheckInData] = useState({ checkInDate: new Date().toISOString().split('T')[0], checkOutDate: '', siteNumber: '' });
   const [inWishlist, setInWishlist] = useState(false);
@@ -323,6 +326,79 @@ export default function CampgroundDetailPage() {
       navigate("/campgrounds");
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to delete campground");
+    }
+  };
+
+  const handleOpenEdit = () => {
+    if (!campground) return;
+    setEditForm({
+      name: campground.name || '', description: campground.description || '',
+      location: campground.location || '', state: campground.state || '',
+      latitude: campground.latitude ?? '', longitude: campground.longitude ?? '',
+      phone: campground.phone || '', websiteUrl: campground.websiteUrl || '',
+      businessEmail: campground.businessEmail || '', businessPhone: campground.businessPhone || '',
+      bookingUrl: campground.bookingUrl || '', campspotSlug: campground.campspotSlug || '',
+      imageUrl: campground.imageUrl || '', facebookUrl: campground.facebookUrl || '',
+      instagramUrl: campground.instagramUrl || '', twitterUrl: campground.twitterUrl || '',
+      youtubeUrl: campground.youtubeUrl || '', tiktokUrl: campground.tiktokUrl || '',
+      hasWifi: (campground as any).hasWifi ?? false,
+      hasShowers: (campground as any).hasShowers ?? false,
+      hasRestrooms: (campground as any).hasRestrooms ?? false,
+      hasElectricHookup: (campground as any).hasElectricHookup ?? false,
+      hasWaterHookup: (campground as any).hasWaterHookup ?? false,
+      hasSewerHookup: (campground as any).hasSewerHookup ?? false,
+      hasDumpStation: (campground as any).hasDumpStation ?? false,
+      hasLaundry: (campground as any).hasLaundry ?? false,
+      hasStore: (campground as any).hasStore ?? false,
+      hasPool: (campground as any).hasPool ?? false,
+      hasPullThrough: (campground as any).hasPullThrough ?? false,
+      hasBackIn: (campground as any).hasBackIn ?? false,
+      isBigRigFriendly: (campground as any).isBigRigFriendly ?? false,
+      isPetFriendly: (campground as any).isPetFriendly ?? false,
+      isWaterfront: (campground as any).isWaterfront ?? false,
+      maxAmpService: (campground as any).maxAmpService ?? '',
+      maxRvLength: (campground as any).maxRvLength ?? '',
+      pricePerNight: (campground as any).pricePerNight ?? '',
+      seasonStart: (campground as any).seasonStart || '',
+      seasonEnd: (campground as any).seasonEnd || '',
+      minRvYear: (campground as any).minRvYear ?? '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUploadEditPhoto = async (file: File) => {
+    if (!campground) return;
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const { data } = await api.post(`/campground-features/${campground.id}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setEditForm((f: any) => ({ ...f, imageUrl: data.imageUrl }));
+    } catch (e: any) { alert(e.response?.data?.error || 'Upload failed'); }
+  };
+
+  const handleUploadEditMap = async (file: File) => {
+    if (!campground) return;
+    try {
+      const fd = new FormData();
+      fd.append('map', file);
+      const { data } = await api.post(`/campground-features/${campground.id}/map`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setCampgroundMapUrl(data.mapUrl);
+      alert('✅ Map uploaded!');
+    } catch (e: any) { alert(e.response?.data?.error || 'Upload failed'); }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!campground) return;
+    try {
+      setEditSaving(true);
+      const { data } = await api.put(`/campgrounds/${campground.id}/admin-edit`, editForm);
+      setCampground({ ...campground, ...data });
+      setShowEditModal(false);
+      alert('✅ Campground updated!');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to save');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -444,6 +520,7 @@ export default function CampgroundDetailPage() {
                 {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Globe className="w-4 h-4" />Website</a>}
                 {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Navigation className="w-4 h-4" />Directions</a>}
                 {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
+              <div className="flex flex-wrap items-center gap-2 mt-2 pt-3 border-t border-gray-100"><span className="text-xs text-gray-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-green-100 hover:text-green-600 transition">🌿 Hipcamp</a></div>
               </div>
               <div className="flex gap-2">
                 {user && <>
@@ -611,6 +688,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-sky-100"><span className="text-xs text-sky-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌿 Hipcamp</a></div>
           </div>
         </div>
       )}
@@ -674,6 +752,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-700"><span className="text-xs text-gray-500 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-orange-500 hover:text-orange-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌿 Hipcamp</a></div>
           </div>
         </div>
       )}
@@ -723,6 +802,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
+            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100"><span className="text-xs text-gray-400 tracking-wide uppercase mr-2">Also check</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌿 Hipcamp</a></div>
           </div>
         </div>
       )}
@@ -874,6 +954,7 @@ export default function CampgroundDetailPage() {
                     {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
                     {isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
                   </div>
+                    <div className="w-full flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-amber-200"><span className="text-xs text-amber-600 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🌿 Hipcamp</a></div>
                 </div>
               </div>
             </div>
@@ -954,6 +1035,7 @@ export default function CampgroundDetailPage() {
               {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-purple-500/30 hover:border-purple-500 hover:text-purple-400 transition"><Globe className="w-4 h-4" />Website</a>}
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-gray-300 rounded border border-cyan-500/30 hover:border-cyan-500 hover:text-cyan-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
             </div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-purple-500/20"><span className="text-xs text-purple-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-900 text-gray-300 rounded border border-pink-500/30 text-xs hover:border-pink-500 hover:text-pink-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-900 text-gray-300 rounded border border-cyan-500/30 text-xs hover:border-cyan-500 hover:text-cyan-400 transition">🌿 Hipcamp</a></div>
           </div>
         </div>
       )}
@@ -970,7 +1052,8 @@ export default function CampgroundDetailPage() {
           {isAdmin && <div className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⭐ Admin</div>}
           {campground.verificationStatus === "VERIFIED" && <div className="absolute top-16 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified Business</div>}
           {isAdmin && <Link to={`/business/${campground.id}`} className="absolute top-16 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Settings className="w-5 h-5" />Manage Business</Link>}         
-          {isSiteAdmin && <button onClick={handleDeleteCampground} className="absolute top-28 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Trash2 className="w-5 h-5" />Delete Campground</button>}
+          {isSiteAdmin && <button onClick={handleOpenEdit} className="absolute top-28 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Edit className="w-5 h-5" />Edit Campground</button>}
+          {isSiteAdmin && <button onClick={handleDeleteCampground} className="absolute top-40 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Trash2 className="w-5 h-5" />Delete Campground</button>}
           {campground.verificationStatus === "PENDING" && <div className="absolute top-16 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">⏳ Claim Pending</div>}
           {user && (!campground.verificationStatus || campground.verificationStatus === "UNCLAIMED") && <button onClick={() => setShowClaimModal(true)} className="absolute bottom-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"><Award className="w-5 h-5" />Own this campground? Claim it</button>}
         </div>
@@ -996,6 +1079,17 @@ export default function CampgroundDetailPage() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
             {campground.latitude && campground.longitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Navigation className="w-4 h-4" />Directions</a>}
+          </div>
+          <div className="mt-4 pt-4 border-t flex items-center justify-between flex-wrap gap-3">
+            <p className="text-sm text-gray-500 italic">Don't just take our word for it — see what others are saying:</p>
+            <div className="flex gap-3">
+              <a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-orange-400 hover:text-orange-600 text-sm text-gray-600 transition">
+                <span className="text-base">🏕️</span> The Dyrt
+              </a>
+              <a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-green-500 hover:text-green-600 text-sm text-gray-600 transition">
+                <span className="text-base">🌿</span> Hipcamp
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -1556,6 +1650,77 @@ export default function CampgroundDetailPage() {
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label><input type="tel" placeholder="(555) 123-4567" value={claimData.businessPhone} onChange={e => setClaimData({ ...claimData, businessPhone: e.target.value })} className="input w-full" /></div>
             </div>
             <div className="flex gap-3 mt-6"><button onClick={() => setShowClaimModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleClaimSubmit} disabled={!claimData.businessEmail || claimSubmitting} className="btn btn-primary flex-1 disabled:opacity-50">{claimSubmitting ? "Submitting..." : "Submit Claim"}</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* SITE ADMIN EDIT MODAL */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">✏️ Edit Campground</h2>
+              <button onClick={() => setShowEditModal(false)}><X className="w-6 h-6 text-gray-500 hover:text-gray-900" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <section>
+                <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Basic Info</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[['name','Name'],['location','Location'],['state','State'],['latitude','Latitude'],['longitude','Longitude']].map(([k,label]) => (
+                    <div key={k}><label className="block text-xs text-gray-500 mb-1">{label}</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={editForm[k] || ''} onChange={e => setEditForm({...editForm, [k]: e.target.value})} /></div>
+                  ))}
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-gray-500 mb-1">Main Photo</label>
+                    <div className="flex gap-2 items-center flex-wrap">
+                      {editForm.imageUrl && <img src={editForm.imageUrl} alt="" className="w-16 h-16 object-cover rounded" />}
+                      <label className="cursor-pointer px-3 py-2 border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2">
+                        <Upload className="w-4 h-4" /> Upload Photo
+                        <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUploadEditPhoto(e.target.files[0])} />
+                      </label>
+                      <span className="text-xs text-gray-400">or paste URL:</span>
+                      <input className="flex-1 border rounded-lg px-3 py-2 text-sm min-w-0" value={editForm.imageUrl || ''} onChange={e => setEditForm({...editForm, imageUrl: e.target.value})} placeholder="https://..." />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-gray-500 mb-1">Campground Map</label>
+                    <label className="cursor-pointer px-3 py-2 border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 w-fit">
+                      <Map className="w-4 h-4" /> Upload Map Image
+                      <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUploadEditMap(e.target.files[0])} />
+                    </label>
+                    {campgroundMapUrl && <p className="text-xs text-green-600 mt-1">✅ Map saved</p>}
+                  </div>
+                  <div className="md:col-span-2"><label className="block text-xs text-gray-500 mb-1">Description</label><textarea rows={3} className="w-full border rounded-lg px-3 py-2 text-sm" value={editForm.description || ''} onChange={e => setEditForm({...editForm, description: e.target.value})} /></div>
+                </div>
+              </section>
+              <section>
+                <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Contact & Links</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[['phone','Phone'],['businessPhone','Business Phone'],['businessEmail','Business Email'],['websiteUrl','Website URL'],['bookingUrl','Booking URL'],['campspotSlug','Campspot Slug'],['facebookUrl','Facebook'],['instagramUrl','Instagram'],['twitterUrl','Twitter'],['youtubeUrl','YouTube'],['tiktokUrl','TikTok']].map(([k,label]) => (
+                    <div key={k}><label className="block text-xs text-gray-500 mb-1">{label}</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={editForm[k] || ''} onChange={e => setEditForm({...editForm, [k]: e.target.value})} /></div>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">RV Specs</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[['maxAmpService','Max Amps'],['maxRvLength','Max RV Length (ft)'],['minRvYear','Min RV Year'],['pricePerNight','Price/Night ($)'],['seasonStart','Season Start'],['seasonEnd','Season End']].map(([k,label]) => (
+                    <div key={k}><label className="block text-xs text-gray-500 mb-1">{label}</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={editForm[k] || ''} onChange={e => setEditForm({...editForm, [k]: e.target.value})} /></div>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Amenities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {([['hasWifi','📶 WiFi'],['hasShowers','🚿 Showers'],['hasRestrooms','🚻 Restrooms'],['hasElectricHookup','⚡ Electric Hookup'],['hasWaterHookup','💧 Water Hookup'],['hasSewerHookup','🚰 Sewer Hookup'],['hasDumpStation','♻️ Dump Station'],['hasLaundry','👕 Laundry'],['hasStore','🏪 Camp Store'],['hasPool','🏊 Pool'],['hasPullThrough','🚛 Pull-Through'],['hasBackIn','↩️ Back-In'],['isBigRigFriendly','🚌 Big Rig Friendly'],['isPetFriendly','🐾 Pet Friendly'],['isWaterfront','🌊 Waterfront']] as [string,string][]).map(([k,label]) => (
+                    <label key={k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={!!editForm[k]} onChange={e => setEditForm({...editForm, [k]: e.target.checked})} className="w-4 h-4 rounded" /><span className="text-sm">{label}</span></label>
+                  ))}
+                </div>
+              </section>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
+              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSaveEdit} disabled={editSaving} className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50">{editSaving ? 'Saving...' : 'Save Changes'}</button>
+            </div>
           </div>
         </div>
       )}

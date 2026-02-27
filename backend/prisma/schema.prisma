@@ -416,6 +416,7 @@ model Campground {
   isWaterfront           Boolean?
   maxAmpService          Int?
   maxRvLength            Int?
+  minRvYear              Int?
   pricePerNight          Float?
   seasonEnd              String?
   seasonStart            String?
@@ -3295,6 +3296,7 @@ model RVModel {
   features    String[]
   stockImage  String?
   msrp        String?
+  manualUrl   String?
   createdAt   DateTime @default(now())
   make        RVMake   @relation(fields: [makeId], references: [id], onDelete: Cascade)
 

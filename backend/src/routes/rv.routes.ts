@@ -110,6 +110,26 @@ router.get('/models/:modelId', async (req, res) => {
   }
 });
 
+// GET /api/rv/manual?makeName=Coachmen — get owner manual URL for a make
+router.get('/manual', async (req, res) => {
+  try {
+    const { makeName } = req.query as { makeName?: string };
+    if (!makeName) return res.status(400).json({ error: 'makeName required' });
+
+    const model = await prisma.rVModel.findFirst({
+      where: {
+        make: { name: { equals: makeName, mode: 'insensitive' } },
+        manualUrl: { not: null },
+      },
+      select: { manualUrl: true, name: true },
+    });
+
+    res.json({ manualUrl: model?.manualUrl || null });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch manual URL' });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════
 // AUTOFILL — apply model specs to user profile
 // ═══════════════════════════════════════════════════════════════
@@ -239,7 +259,7 @@ router.post('/link/request', authenticateToken, async (req: any, res) => {
           receiverId: targetUserId,
           status: 'PENDING',
         },
-      }).catch(() => {}); // Ignore if already exists
+      }).catch(() => {});
     }
 
     // Notify the target user
@@ -293,7 +313,6 @@ router.put('/link/:linkId/respond', authenticateToken, async (req: any, res) => 
       });
 
       if (owner) {
-        // Clone RV specs to partner (only fill empty fields)
         const partner = await prisma.user.findUnique({ where: { id: req.userId } });
         const cloneData: any = {};
         if (!partner?.rvMake && owner.rvMake) cloneData.rvMake = owner.rvMake;
@@ -316,13 +335,11 @@ router.put('/link/:linkId/respond', authenticateToken, async (req: any, res) => 
         }
       }
 
-      // Accept the link
       const updated = await prisma.sharedVehicle.update({
         where: { id: linkId },
         data: { status: 'ACTIVE' },
       });
 
-      // Also accept friend request if pending
       await prisma.friendship.updateMany({
         where: {
           OR: [
@@ -333,7 +350,6 @@ router.put('/link/:linkId/respond', authenticateToken, async (req: any, res) => 
         data: { status: 'ACCEPTED' },
       });
 
-      // Notify owner
       const partner = await prisma.user.findUnique({
         where: { id: req.userId },
         select: { firstName: true, username: true, profilePicture: true },
@@ -411,13 +427,13 @@ router.get('/link/mine', authenticateToken, async (req: any, res) => {
 // POST /api/rv/link/invite — generate invite code
 router.post('/link/invite', authenticateToken, async (req: any, res) => {
   try {
-    const code = crypto.randomBytes(6).toString('hex'); // 12-char code
+    const code = crypto.randomBytes(6).toString('hex');
 
     await prisma.vehicleInvite.create({
       data: {
         code,
         creatorId: req.userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
@@ -446,13 +462,11 @@ router.post('/link/invite/redeem', authenticateToken, async (req: any, res) => {
     if (invite.expiresAt < new Date()) return res.status(400).json({ error: 'Invite expired' });
     if (invite.creatorId === req.userId) return res.status(400).json({ error: 'Cannot use your own invite' });
 
-    // Mark invite as used
     await prisma.vehicleInvite.update({
       where: { id: invite.id },
       data: { usedAt: new Date(), usedById: req.userId },
     });
 
-    // Create shared vehicle link (auto-accepted via invite)
     const link = await prisma.sharedVehicle.create({
       data: {
         ownerId: invite.creatorId,
@@ -462,7 +476,6 @@ router.post('/link/invite/redeem', authenticateToken, async (req: any, res) => {
       },
     });
 
-    // Clone RV data
     const owner = await prisma.user.findUnique({
       where: { id: invite.creatorId },
       select: { rvMake: true, rvModel: true, rvType: true, rvYear: true, rvLength: true, rvHeight: true, rvWeight: true, rvSleeps: true, rvSlideouts: true, rvMpg: true, rvTankGallons: true, rvFeatures: true },
@@ -478,7 +491,6 @@ router.post('/link/invite/redeem', authenticateToken, async (req: any, res) => {
       }
     }
 
-    // Auto friend request
     const existingFriend = await prisma.friendship.findFirst({
       where: { OR: [{ initiatorId: req.userId, receiverId: invite.creatorId }, { initiatorId: invite.creatorId, receiverId: req.userId }] },
     });

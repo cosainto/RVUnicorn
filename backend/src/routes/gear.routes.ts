@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -18,36 +19,7 @@ const GEAR_CATEGORIES = [
   'Other'
 ];
 
-// Configure multer for gear image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/gear/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = file.mimetype.startsWith('image/');
-    
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // GET /api/gear - Get user's gear items
 router.get('/', authenticateToken, async (req, res) => {
@@ -196,7 +168,7 @@ router.post(
           visibility: visibility || 'PRIVATE',
           borrowable: borrowable === 'true',
           rulesText,
-          imageUrl: req.file ? `/uploads/gear/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear') : null,
           forSale: forSale === 'true',
           price: price ? parseFloat(price) : null,
           saleDescription,
@@ -244,7 +216,7 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
 
     // Add image if uploaded
     if (req.file) {
-      updateData.imageUrl = `/uploads/gear/${req.file.filename}`;
+      updateData.imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear');
       
       // Delete old image if exists
       if (gearItem.imageUrl) {

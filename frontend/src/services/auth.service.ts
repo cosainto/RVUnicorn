@@ -15,6 +15,7 @@ export interface User {
   rvMake?: string;
   rvModel?: string;
   rvLength?: number;
+  rvShorepower?: string;
   rvName?: string;
   statesVisited?: string[];
   totalStays?: number;

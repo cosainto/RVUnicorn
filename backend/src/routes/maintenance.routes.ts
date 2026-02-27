@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -8,36 +9,7 @@ import { prisma } from '../index';
 
 const router = Router();
 
-// Configure multer for receipt images
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/maintenance/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image and PDF files are allowed for receipts'));
-    }
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // POST /api/maintenance/records - Create maintenance record
 router.post(
@@ -92,7 +64,7 @@ router.post(
     };
 
       if (req.file) {
-        data.receiptImage = `/uploads/maintenance/${req.file.filename}`;
+        data.receiptImage = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/maintenance');
       }
 
       const record = await prisma.maintenanceRecord.create({
@@ -269,7 +241,7 @@ providerAddress: providerAddress || undefined,
 
 
     if (req.file) {
-      updateData.receiptImage = `/uploads/maintenance/${req.file.filename}`;
+      updateData.receiptImage = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/maintenance');
     }
 
     const updated = await prisma.maintenanceRecord.update({

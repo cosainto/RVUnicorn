@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -8,36 +9,7 @@ import { prisma } from '../index';
 
 const router = Router();
 
-// Configure multer for campsite uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/campsites/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = file.mimetype.startsWith('image/');
-    
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // Middleware to check if user is campsite admin
 const isCampsiteAdmin = async (req, res: any, next: any) => {
@@ -261,7 +233,7 @@ router.post(
           campgroundId,
           title,
           content,
-          imageUrl: req.file ? `/uploads/campsites/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campsites') : null,
           target: target || 'ALL_FOLLOWERS',
         }
       });
@@ -350,7 +322,7 @@ router.post(
           description,
           startDate: new Date(startDate),
           endDate: endDate ? new Date(endDate) : null,
-          imageUrl: req.file ? `/uploads/campsites/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campsites') : null,
         }
       });
 
@@ -405,7 +377,7 @@ router.post(
           pricePerDay: pricePerDay ? parseFloat(pricePerDay) : null,
           pricePerHour: pricePerHour ? parseFloat(pricePerHour) : null,
           available: available !== 'false',
-          imageUrl: req.file ? `/uploads/campsites/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campsites') : null,
         }
       });
 
@@ -600,7 +572,7 @@ router.post(
           description,
           price: parseFloat(price),
           inStock: inStock !== 'false',
-          imageUrl: req.file ? `/uploads/campsites/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campsites') : null,
         }
       });
 
@@ -657,7 +629,7 @@ router.post(
         data: {
           campgroundId,
           userId: admin ? null : req.user!.id, // null if admin upload
-          imageUrl: `/uploads/campsites/${req.file.filename}`,
+          imageUrl: cloudinaryUrl,
           caption,
           approved: admin ? true : false, // Auto-approve admin uploads
         }

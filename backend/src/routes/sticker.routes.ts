@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { logStickerEarned } from '../services/activity.service';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -9,36 +10,7 @@ import { prisma } from '../index';
 
 const router = Router();
 
-// Configure multer for sticker artwork uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/stickers/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = file.mimetype.startsWith('image/');
-    
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // Middleware to check if user is campground admin
 const isCampgroundAdmin = async (req: any, res: any, next: any) => {
@@ -332,7 +304,7 @@ router.post(
           description,
           criteria,
           emoji,
-          imageUrl: req.file ? `/uploads/stickers/${req.file.filename}` : null,
+          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/stickers') : null,
           isLimited: isLimited === 'true',
           maxQuantity: maxQuantity ? parseInt(maxQuantity) : null,
         }

@@ -798,3 +798,76 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
 
 export default router;
 
+
+// SITE ADMIN EDIT - Will only
+const SITE_ADMIN_ID = 'cmlpeyk82005s3qause3sws7y';
+
+router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (userId !== SITE_ADMIN_ID) return res.status(403).json({ error: 'Forbidden' });
+
+    const { id } = req.params;
+    const {
+      name, description, location, state, latitude, longitude,
+      phone, websiteUrl, businessEmail, businessPhone,
+      bookingUrl, campspotSlug, facebookUrl, instagramUrl,
+      twitterUrl, youtubeUrl, tiktokUrl, imageUrl,
+      hasWifi, hasShowers, hasRestrooms, hasElectricHookup,
+      hasWaterHookup, hasSewerHookup, hasDumpStation, hasLaundry,
+      hasStore, hasPool, hasPullThrough, hasBackIn, isBigRigFriendly,
+      isPetFriendly, isWaterfront, maxAmpService, maxRvLength,
+      pricePerNight, seasonStart, seasonEnd, minRvYear,
+    } = req.body;
+
+    const campground = await prisma.campground.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(location !== undefined && { location }),
+        ...(state !== undefined && { state }),
+        ...(latitude !== undefined && { latitude: latitude ? parseFloat(latitude) : null }),
+        ...(longitude !== undefined && { longitude: longitude ? parseFloat(longitude) : null }),
+        ...(phone !== undefined && { phone }),
+        ...(websiteUrl !== undefined && { websiteUrl }),
+        ...(businessEmail !== undefined && { businessEmail }),
+        ...(businessPhone !== undefined && { businessPhone }),
+        ...(bookingUrl !== undefined && { bookingUrl }),
+        ...(campspotSlug !== undefined && { campspotSlug }),
+        ...(facebookUrl !== undefined && { facebookUrl }),
+        ...(instagramUrl !== undefined && { instagramUrl }),
+        ...(twitterUrl !== undefined && { twitterUrl }),
+        ...(youtubeUrl !== undefined && { youtubeUrl }),
+        ...(tiktokUrl !== undefined && { tiktokUrl }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(hasWifi !== undefined && { hasWifi }),
+        ...(hasShowers !== undefined && { hasShowers }),
+        ...(hasRestrooms !== undefined && { hasRestrooms }),
+        ...(hasElectricHookup !== undefined && { hasElectricHookup }),
+        ...(hasWaterHookup !== undefined && { hasWaterHookup }),
+        ...(hasSewerHookup !== undefined && { hasSewerHookup }),
+        ...(hasDumpStation !== undefined && { hasDumpStation }),
+        ...(hasLaundry !== undefined && { hasLaundry }),
+        ...(hasStore !== undefined && { hasStore }),
+        ...(hasPool !== undefined && { hasPool }),
+        ...(hasPullThrough !== undefined && { hasPullThrough }),
+        ...(hasBackIn !== undefined && { hasBackIn }),
+        ...(isBigRigFriendly !== undefined && { isBigRigFriendly }),
+        ...(isPetFriendly !== undefined && { isPetFriendly }),
+        ...(isWaterfront !== undefined && { isWaterfront }),
+        ...(maxAmpService !== undefined && { maxAmpService: maxAmpService ? parseInt(maxAmpService) : null }),
+        ...(maxRvLength !== undefined && { maxRvLength: maxRvLength ? parseInt(maxRvLength) : null }),
+        ...(pricePerNight !== undefined && { pricePerNight: pricePerNight ? parseFloat(pricePerNight) : null }),
+        ...(seasonStart !== undefined && { seasonStart }),
+        ...(seasonEnd !== undefined && { seasonEnd }),
+        ...(minRvYear !== undefined && { minRvYear: minRvYear ? parseInt(minRvYear) : null }),
+      }
+    });
+
+    res.json(campground);
+  } catch (error) {
+    console.error('Admin edit error:', error);
+    res.status(500).json({ error: 'Failed to update campground' });
+  }
+});

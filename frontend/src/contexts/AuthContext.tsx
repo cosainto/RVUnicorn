@@ -18,6 +18,12 @@ interface User {
   tiktokUrl?: string;
   youtubeUrl?: string;
   blueskyUrl?: string;
+  rvLength?: number;
+  rvShorepower?: string;
+  rvType?: string;
+  rvMake?: string;
+  rvModel?: string;
+  rvYear?: number;
 }
 
 interface AuthContextType {

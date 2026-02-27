@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -8,35 +9,7 @@ import { prisma } from '../index';
 
 const router = Router();
 
-// Configure multer for resume uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/resumes/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    
-    if (extname) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF and DOC files are allowed for resumes'));
-    }
-  }
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // POST /api/jobs/postings - Create job posting (campground admin only)
 router.post(
@@ -353,7 +326,7 @@ router.post(
       };
 
       if (req.file) {
-        data.resumeUrl = `/uploads/resumes/${req.file.filename}`;
+        data.resumeUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/resumes');
       }
 
       if (req.body.references) {
@@ -552,7 +525,7 @@ router.post(
       };
 
       if (req.file) {
-        data.resumeFileUrl = `/uploads/resumes/${req.file.filename}`;
+        data.resumeFileUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/resumes');
       }
 
       const resume = await prisma.userResume.upsert({

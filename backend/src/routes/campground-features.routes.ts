@@ -4,25 +4,15 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
+
+const SITE_ADMIN_ID = 'cmlpeyk82005s3qause3sws7y';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// File upload setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'uploads/campground-photos';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
+// File upload setup - memory storage for Cloudinary
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ============== REVIEWS ==============
 
@@ -236,11 +226,14 @@ router.post('/:campgroundId/photos', authenticateToken, upload.single('photo'), 
     // Auto-approve if uploaded by admin, otherwise pending
     const status = isAdmin ? 'APPROVED' : 'PENDING';
 
+    // Upload to Cloudinary
+    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-photos');
+
     const photo = await prisma.campgroundPhoto.create({
       data: {
         campgroundId,
         userId,
-        imageUrl: `/uploads/campground-photos/${req.file.filename}`,
+        imageUrl,
         caption,
         status,
         reviewedBy: isAdmin ? userId : null,
@@ -785,8 +778,9 @@ router.post('/:campgroundId/map', authenticateToken, upload.single('map'), async
     const { campgroundId } = req.params;
     const userId = (req as any).userId;
 
-    // Check if user is admin
-    const isAdmin = await prisma.campgroundAdmin.findFirst({
+    // Check if user is admin or site admin
+    const isSiteAdmin = userId === SITE_ADMIN_ID;
+    const isAdmin = isSiteAdmin || await prisma.campgroundAdmin.findFirst({
       where: { campgroundId, userId },
     });
     if (!isAdmin) {
@@ -797,7 +791,8 @@ router.post('/:campgroundId/map', authenticateToken, upload.single('map'), async
       return res.status(400).json({ error: 'Map image is required' });
     }
 
-    const mapUrl = `/uploads/campground-photos/${req.file.filename}`;
+    // Upload to Cloudinary
+    const mapUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-maps');
 
     await prisma.campground.update({
       where: { id: campgroundId },
