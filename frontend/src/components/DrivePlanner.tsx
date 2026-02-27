@@ -170,6 +170,26 @@ export default function DrivePlanner() {
     }
   }, [user]);
 
+  // Pre-populate origin from user's home city/state
+  useEffect(() => {
+    if (!user) return;
+    const homeCity = (user as any).homeCity as string | undefined;
+    const homeState = (user as any).homeState as string | undefined;
+    if (!homeCity && !homeState) return;
+    // Only set if origin hasn't been set yet
+    if (origin) return;
+    const homeAddress = [homeCity, homeState].filter(Boolean).join(', ');
+    setOriginSearch(homeAddress);
+    // Geocode it so route calculation works immediately
+    api.get(`/drive-planner/geocode?q=${encodeURIComponent(homeAddress)}`)
+      .then(({ data }) => {
+        if (data?.lat && data?.lng) {
+          setOrigin({ lat: data.lat, lng: data.lng, address: homeAddress });
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
+
   const loadUserTrips = async () => {
     try {
       const { data } = await api.get('/events/my-events');
