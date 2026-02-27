@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar } from 'lucide-react';
+import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import AddToEventModal from './AddToEventModal';
@@ -21,6 +21,21 @@ interface Recommendation {
   imageUrl?: string;
   existingId?: string;
   isSaved: boolean;
+}
+
+interface AiPick {
+  placeId: string;
+  title: string;
+  address: string;
+  lat: number;
+  lng: number;
+  distance: number;
+  type: string;
+  rating?: number;
+  reviewCount?: number;
+  imageUrl?: string;
+  sourceUrl: string;
+  tip: string;
 }
 
 interface SavedThing {
@@ -72,6 +87,9 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [featuredItems, setFeaturedItems] = useState<SavedThing[]>([]);
   const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [aiPicks, setAiPicks] = useState<AiPick[]>([]);
+  const [loadingAiPicks, setLoadingAiPicks] = useState(false);
+  const [aiPicksLoaded, setAiPicksLoaded] = useState(false);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   useEffect(() => { loadSavedThings(); loadFeatured(); }, [campgroundId]);
@@ -122,6 +140,17 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
     } catch (error) { console.error('Remove error:', error); }
   };
 
+  const loadAiPicks = async () => {
+    if (aiPicksLoaded) return;
+    setLoadingAiPicks(true);
+    try {
+      const { data } = await api.get(`/things-to-do/campgrounds/${campgroundId}/ai-picks`, { params: { radius: radiusMiles } });
+      setAiPicks(data.picks || []);
+      setAiPicksLoaded(true);
+    } catch (error) { console.error('AI picks error:', error); }
+    finally { setLoadingAiPicks(false); }
+  };
+
   const loadRecommendations = async () => {
     try {
       setDiscoverLoading(true);
@@ -131,7 +160,12 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
     finally { setDiscoverLoading(false); }
   };
 
-  useEffect(() => { if (activeTab === 'discover' && recommendations.length === 0) loadRecommendations(); }, [activeTab]);
+  useEffect(() => {
+    if (activeTab === 'discover') {
+      if (recommendations.length === 0) loadRecommendations();
+      if (!aiPicksLoaded) loadAiPicks();
+    }
+  }, [activeTab]);
 
   const handleSave = (rec: Recommendation) => {
     if (!user) { alert('Please log in to save things'); return; }
@@ -302,6 +336,40 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
         ) : filteredRecs.length === 0 ? (
           <div className="text-center py-12"><Map className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-600">No recommendations found</p><p className="text-sm text-gray-400 mt-1">Try increasing the search radius</p></div>
         ) : (
+          <>
+          {/* AI Picks Section */}
+          {(loadingAiPicks || aiPicks.length > 0) && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h3 className="font-bold text-gray-900">AI Picks for Campers</h3>
+                {loadingAiPicks && <Loader2 className="w-4 h-4 animate-spin text-amber-500" />}
+              </div>
+              {loadingAiPicks ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1,2,3].map(i => <div key={i} className="h-40 bg-amber-50 rounded-xl animate-pulse border border-amber-100" />)}
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {aiPicks.map(pick => (
+                    <a key={pick.placeId} href={pick.sourceUrl} target="_blank" rel="noopener noreferrer"
+                      className="group bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden hover:shadow-md transition block">
+                      {pick.imageUrl && <div className="h-28 bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>}
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-1">
+                          <h4 className="font-semibold text-gray-900 text-sm leading-tight">{pick.title}</h4>
+                          <span className="text-xs text-amber-600 font-medium whitespace-nowrap">{pick.distance} mi</span>
+                        </div>
+                        {pick.rating && <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /><span className="text-xs text-gray-600">{pick.rating} ({pick.reviewCount})</span></div>}
+                        <p className="text-xs text-gray-600 mt-2 line-clamp-3 italic">"{pick.tip}"</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+              <div className="border-t border-gray-200 mt-4 mb-4" />
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             {filteredRecs.map(rec => (
               <div key={rec.placeId} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
@@ -333,6 +401,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
 

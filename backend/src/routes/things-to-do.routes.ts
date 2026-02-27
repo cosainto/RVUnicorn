@@ -446,3 +446,98 @@ router.get('/campgrounds/:id/discovery/manage', authenticateToken, async (req: R
 });
 
 export default router;
+
+// GET AI-powered attraction picks for a campground
+router.get('/campgrounds/:id/ai-picks', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { id: campgroundId } = req.params;
+    const { radius = '30' } = req.query;
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { id: true, name: true, latitude: true, longitude: true, state: true, amenities: true }
+    });
+
+    if (!campground?.latitude || !campground?.longitude) {
+      return res.status(404).json({ error: 'Campground not found or missing coordinates' });
+    }
+
+    const radiusMiles = parseInt(radius as string) || 30;
+    const radiusMeters = radiusMiles * 1609.34;
+
+    // Fetch places from Google
+    const searchTypes = ['tourist_attraction', 'park', 'natural_feature', 'museum', 'hiking_area'];
+    const allResults: PlaceResult[] = [];
+    for (const type of searchTypes) {
+      const results = await searchGooglePlaces(campground.latitude, campground.longitude, radiusMeters, type);
+      allResults.push(...results);
+    }
+
+    const uniquePlaces = Array.from(new Map(allResults.map(p => [p.place_id, p])).values())
+      .filter(p => p.rating && p.rating >= 3.5)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 30);
+
+    if (uniquePlaces.length === 0) return res.json({ picks: [] });
+
+    // Ask Claude to pick the best ones
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const placeList = uniquePlaces.map((p, i) => {
+      const dist = calculateDistance(campground.latitude!, campground.longitude!, p.geometry.location.lat, p.geometry.location.lng);
+      return `${i + 1}. ${p.name} | ${p.types.join(', ')} | Rating: ${p.rating || 'N/A'} (${p.user_ratings_total || 0} reviews) | ${dist.toFixed(1)} miles away | ${p.vicinity || ''}`;
+    }).join('\n');
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `You are an expert camping trip advisor. A camper is staying at "${campground.name}" in ${campground.state}.
+
+Here are nearby attractions within ${radiusMiles} miles:
+${placeList}
+
+Pick the TOP 5 best attractions for RV campers. For each pick, write a 1-2 sentence tip that is specific and useful for campers (mention timing, what makes it special for campers, kids/dogs if relevant, etc).
+
+Respond ONLY with valid JSON array, no markdown, no explanation:
+[
+  {
+    "index": <number from list above, 1-based>,
+    "tip": "<1-2 sentence camper-specific tip>"
+  }
+]`
+      }]
+    });
+
+    const raw = (message.content[0] as any).text.trim();
+    const cleaned = raw.replace(/^```json|^```|```$/gm, '').trim();
+    const picks = JSON.parse(cleaned);
+
+    const result = picks.map((pick: any) => {
+      const place = uniquePlaces[pick.index - 1];
+      if (!place) return null;
+      const dist = calculateDistance(campground.latitude!, campground.longitude!, place.geometry.location.lat, place.geometry.location.lng);
+      return {
+        placeId: place.place_id,
+        title: place.name,
+        address: place.vicinity || place.formatted_address,
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng,
+        distance: Math.round(dist * 10) / 10,
+        type: mapPlaceTypeToThingType(place.types),
+        rating: place.rating,
+        reviewCount: place.user_ratings_total,
+        imageUrl: place.photos?.[0]?.photo_reference ? getPhotoUrl(place.photos[0].photo_reference) : null,
+        sourceUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
+        tip: pick.tip,
+      };
+    }).filter(Boolean);
+
+    res.json({ picks: result, campgroundName: campground.name });
+  } catch (error) {
+    console.error('AI picks error:', error);
+    res.status(500).json({ error: 'Failed to get AI picks' });
+  }
+});
