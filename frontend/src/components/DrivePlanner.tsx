@@ -119,6 +119,12 @@ export default function DrivePlanner() {
   
   // Campground selection
   const [showCampgroundPicker, setShowCampgroundPicker] = useState(false);
+  const [showWishlistPicker, setShowWishlistPicker] = useState(false);
+  const [showFriendsPicker, setShowFriendsPicker] = useState(false);
+  const [wishlistCampgrounds, setWishlistCampgrounds] = useState<Campground[]>([]);
+  const [friendsCheckins, setFriendsCheckins] = useState<any[]>([]);
+  const [loadingWishlist, setLoadingWishlist] = useState(false);
+  const [loadingFriends, setLoadingFriends] = useState(false);
   const [campgroundSearch, setCampgroundSearch] = useState('');
   const [campgrounds, setCampgrounds] = useState<Campground[]>([]);
   const [selectedCampground, setSelectedCampground] = useState<Campground | null>(null);
@@ -205,6 +211,32 @@ export default function DrivePlanner() {
       setSavedTrips(data);
     } catch (err) {
       console.error('Failed to load saved trips:', err);
+    }
+  };
+
+  const loadWishlist = async () => {
+    if (!user) return;
+    setLoadingWishlist(true);
+    try {
+      const { data } = await api.get('/wishlist');
+      setWishlistCampgrounds(data.map((item: any) => item.campground).filter(Boolean));
+    } catch (err) {
+      console.error('Failed to load wishlist:', err);
+    } finally {
+      setLoadingWishlist(false);
+    }
+  };
+
+  const loadFriendsCheckins = async () => {
+    if (!user) return;
+    setLoadingFriends(true);
+    try {
+      const { data } = await api.get(`/drive-planner/users/${user.id}/friends/checkins`);
+      setFriendsCheckins((data.checkIns || []).filter((c: any) => c.campground));
+    } catch (err) {
+      console.error('Failed to load friends check-ins:', err);
+    } finally {
+      setLoadingFriends(false);
     }
   };
 
@@ -803,11 +835,25 @@ export default function DrivePlanner() {
                   <MapPin className="w-4 h-4 inline mr-1 text-red-600" />
                   Destination
                   <button
-                    onClick={() => setShowCampgroundPicker(!showCampgroundPicker)}
+                    onClick={() => { setShowCampgroundPicker(!showCampgroundPicker); setShowWishlistPicker(false); setShowFriendsPicker(false); }}
                     className="ml-2 text-primary-600 hover:text-primary-700 text-xs font-normal"
                   >
                     <Tent className="w-3 h-3 inline" /> Pick Campground
                   </button>
+                  {user && <>
+                    <button
+                      onClick={() => { setShowWishlistPicker(!showWishlistPicker); setShowCampgroundPicker(false); setShowFriendsPicker(false); if (!showWishlistPicker) loadWishlist(); }}
+                      className="ml-2 text-purple-600 hover:text-purple-700 text-xs font-normal"
+                    >
+                      🧞 Wishlist
+                    </button>
+                    <button
+                      onClick={() => { setShowFriendsPicker(!showFriendsPicker); setShowCampgroundPicker(false); setShowWishlistPicker(false); if (!showFriendsPicker) loadFriendsCheckins(); }}
+                      className="ml-2 text-green-600 hover:text-green-700 text-xs font-normal"
+                    >
+                      👥 Friends Here
+                    </button>
+                  </>}
                 </label>
                 
                 {showCampgroundPicker ? (
@@ -857,6 +903,48 @@ export default function DrivePlanner() {
                     >
                       Cancel - enter address manually
                     </button>
+                  </div>
+                ) : showWishlistPicker ? (
+                  <div>
+                    {loadingWishlist ? (
+                      <div className="flex items-center gap-2 py-3 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Loading wishlist...</div>
+                    ) : wishlistCampgrounds.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-2">Your wishlist is empty.</p>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                        {wishlistCampgrounds.map((cg) => (
+                          <button key={cg.id} onClick={() => { selectCampground(cg); setShowWishlistPicker(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 border-b last:border-0">
+                            {cg.imageUrl ? <img src={cg.imageUrl} alt="" className="w-12 h-12 rounded object-cover" /> : <div className="w-12 h-12 rounded bg-purple-50 flex items-center justify-center"><span className="text-xl">🧞</span></div>}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{cg.name}</p>
+                              <p className="text-sm text-gray-500 truncate">{cg.location}, {cg.state}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button onClick={() => setShowWishlistPicker(false)} className="mt-2 text-xs text-gray-500 hover:text-gray-700">Cancel - enter address manually</button>
+                  </div>
+                ) : showFriendsPicker ? (
+                  <div>
+                    {loadingFriends ? (
+                      <div className="flex items-center gap-2 py-3 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Loading friends' check-ins...</div>
+                    ) : friendsCheckins.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-2">No friends are currently checked in anywhere.</p>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                        {friendsCheckins.map((checkin: any) => (
+                          <button key={checkin.id} onClick={() => { selectCampground(checkin.campground); setShowFriendsPicker(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 border-b last:border-0">
+                            {checkin.user.profilePicture ? <img src={checkin.user.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold text-green-700">{checkin.user.firstName?.[0]}</div>}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{checkin.campground.name}</p>
+                              <p className="text-sm text-gray-500 truncate">{checkin.user.firstName} {checkin.user.lastName} is here · {checkin.campground.location}, {checkin.campground.state}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button onClick={() => setShowFriendsPicker(false)} className="mt-2 text-xs text-gray-500 hover:text-gray-700">Cancel - enter address manually</button>
                   </div>
                 ) : (
                   <>
