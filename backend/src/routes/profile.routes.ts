@@ -70,6 +70,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
         rvWeight: true,
         rvDescription: true,
         rvFeatures: true,
+        campingInterests: true,
         rvMpg: true,
         rvFuelGal: true,
         rvFreshWaterGal: true,
@@ -200,6 +201,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
       travelPartySize,
       hasPets,
       petTypes,
+      campingInterests,
     } = req.body;
 
     // Verify the user is updating their own profile
@@ -271,6 +273,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
         petTypes: petTypes !== undefined ? petTypes : undefined,
         rvDescription: rvDescription !== undefined ? rvDescription : undefined,
         rvFeatures: rvFeatures !== undefined ? rvFeatures : undefined,
+        campingInterests: campingInterests !== undefined ? campingInterests : undefined,
         rvMpg: rvMpg !== undefined ? (rvMpg ? parseFloat(rvMpg) : null) : undefined,
         rvFuelGal: rvFuelGal !== undefined ? (rvFuelGal ? parseFloat(rvFuelGal) : null) : undefined,
         rvFreshWaterGal: rvFreshWaterGal !== undefined ? (rvFreshWaterGal ? parseFloat(rvFreshWaterGal) : null) : undefined,

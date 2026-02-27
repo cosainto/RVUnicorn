@@ -39,6 +39,18 @@ const RV_TYPES = [
   { value: 'TEARDROP', label: 'Teardrop Trailer' },
 ];
 
+const CAMPING_INTERESTS = [
+  { value: 'hiking', label: '🥾 Hiking & Trails' },
+  { value: 'fishing', label: '🎣 Fishing & Water' },
+  { value: 'history', label: '🏛️ History & Culture' },
+  { value: 'wildlife', label: '🦌 Wildlife & Nature' },
+  { value: 'food', label: '🍽️ Food & Dining' },
+  { value: 'photography', label: '📷 Photography' },
+  { value: 'kids', label: '👧 Kids Activities' },
+  { value: 'dogs', label: '🐾 Dog Friendly' },
+  { value: 'sports', label: '🏟️ Sporting Events' },
+];
+
 const COMMON_FEATURES = [
   'Air Conditioning',
   'Heating',
@@ -96,6 +108,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
     rvSleeps: '',
     rvWeight: '',
     rvFeatures: [] as string[],
+    campingInterests: [] as string[],
     rvDescription: '',
   });
 
@@ -126,6 +139,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
         rvSleeps: data.rvSleeps?.toString() || '',
         rvWeight: data.rvWeight?.toString() || '',
         rvFeatures: data.rvFeatures || [],
+        campingInterests: data.campingInterests || [],
         rvDescription: data.rvDescription || '',
       });
 
@@ -149,6 +163,15 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
       rvFeatures: prev.rvFeatures.includes(feature)
         ? prev.rvFeatures.filter(f => f !== feature)
         : [...prev.rvFeatures, feature]
+    }));
+  };
+
+  const handleInterestToggle = (interest: string) => {
+    setRvData(prev => ({
+      ...prev,
+      campingInterests: prev.campingInterests.includes(interest)
+        ? prev.campingInterests.filter(i => i !== interest)
+        : [...prev.campingInterests, interest]
     }));
   };
 
@@ -239,6 +262,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
       if (rvData.rvFeatures.length > 0) {
         formData.append('rvFeatures', JSON.stringify(rvData.rvFeatures));
       }
+      formData.append('campingInterests', JSON.stringify(rvData.campingInterests));
 
       // Add existing images
       if (existingImages.length > 0) {
@@ -439,6 +463,17 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                   </div>
                 </div>
               )}
+            </div>
+          )}
+          {profile.campingInterests && profile.campingInterests.length > 0 && (
+            <div>
+              <h3 className="font-bold text-gray-900 mb-3">🏕️ Camping Interests</h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.campingInterests.map((interest) => {
+                  const found = CAMPING_INTERESTS.find(i => i.value === interest);
+                  return <span key={interest} className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">{found ? found.label : interest}</span>;
+                })}
+              </div>
             </div>
           )}
         </>
@@ -722,6 +757,22 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
               <p className="text-xs text-gray-500 mt-1">
                 Selected: {rvData.rvFeatures.length} features
               </p>
+            </div>
+          </div>
+
+          {/* Camping Interests */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              🏕️ Camping Interests
+              <span className="text-xs text-gray-400 font-normal ml-2">Used to personalize AI recommendations</span>
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {CAMPING_INTERESTS.map(({ value, label }) => (
+                <label key={value} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition ${rvData.campingInterests.includes(value) ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="checkbox" className="hidden" checked={rvData.campingInterests.includes(value)} onChange={() => handleInterestToggle(value)} />
+                  <span className="text-sm">{label}</span>
+                </label>
+              ))}
             </div>
           </div>
 

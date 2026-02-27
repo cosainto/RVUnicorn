@@ -489,12 +489,25 @@ router.get('/campgrounds/:id/ai-picks', optionalAuth, async (req: Request, res: 
       return `${i + 1}. ${p.name} | ${p.types.join(', ')} | Rating: ${p.rating || 'N/A'} (${p.user_ratings_total || 0} reviews) | ${dist.toFixed(1)} miles away | ${p.vicinity || ''}`;
     }).join('\n');
 
+    // Get user interests if logged in
+    const userId = (req as any).userId;
+    let interestsNote = '';
+    if (userId) {
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { campingInterests: true }
+      });
+      if (userRecord?.campingInterests?.length) {
+        interestsNote = `\nThis camper's interests include: ${userRecord.campingInterests.join(', ')}. Prioritize picks that match these interests.`;
+      }
+    }
+
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       messages: [{
         role: 'user',
-        content: `You are an expert camping trip advisor. A camper is staying at "${campground.name}" in ${campground.state}.
+        content: `You are an expert camping trip advisor. A camper is staying at "${campground.name}" in ${campground.state}.${interestsNote}
 
 Here are nearby attractions within ${radiusMiles} miles:
 ${placeList}

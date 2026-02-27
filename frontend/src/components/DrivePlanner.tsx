@@ -580,6 +580,7 @@ export default function DrivePlanner() {
       setLoadingAttractions(true);
       try {
         const { data: attractionsData } = await api.post('/drive-planner/attractions-along-route', {
+          userInterests: user?.campingInterests || [],
           routePoints: points,
           maxDistanceMiles: maxDistance,
           types: ['tourist_attraction', 'park', 'restaurant', 'lodging'],

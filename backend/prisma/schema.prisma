@@ -39,6 +39,7 @@ model User {
   rvDescription                                   String?
   hitchPreferences                                 String[]
   rvFeatures                                      String[]
+  campingInterests                                String[]                  @default([])
   rvLength                                        Int?
   rvMpg                                           Float?
   // Tanks & Fluids

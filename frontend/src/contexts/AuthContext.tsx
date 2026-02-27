@@ -19,6 +19,7 @@ interface User {
   youtubeUrl?: string;
   blueskyUrl?: string;
   rvLength?: number;
+  campingInterests?: string[];
   rvShorepower?: string;
   rvType?: string;
   rvMake?: string;
