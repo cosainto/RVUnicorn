@@ -418,7 +418,7 @@ export default function CampgroundDetailPage() {
 
   const getTripUrl = () => {
     if (!campground) return '/trips';
-    return `/trips?createFromWishlist=true&campgroundId=${campground.id}&campgroundName=${encodeURIComponent(campground.name)}`;
+    return `/travel?campgroundId=${campground.id}&campgroundName=${encodeURIComponent(campground.name)}&campgroundState=${encodeURIComponent(campground.state || '')}`;
   };
 
   const BadgeIcons = () => {

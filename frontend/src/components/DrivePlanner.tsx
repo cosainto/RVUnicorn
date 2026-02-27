@@ -247,7 +247,7 @@ export default function DrivePlanner() {
       if (urlCampgroundId) {
         try {
           // First try to get campground details from API
-          const { data: campground } = await api.get(`/campsites/${urlCampgroundId}`);
+          const { data: campground } = await api.get(`/campgrounds/${urlCampgroundId}`);
           
           if (campground) {
             // If campground has coordinates, use them directly
