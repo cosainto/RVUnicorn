@@ -383,8 +383,8 @@ export default function DrivePlanner() {
 
     setLoadingCampgrounds(true);
     try {
-      const { data } = await api.get(`/campsites?search=${encodeURIComponent(query)}&limit=10`);
-      setCampgrounds(data.campsites || data || []);
+      const { data } = await api.get(`/campgrounds?search=${encodeURIComponent(query)}&limit=10`);
+      setCampgrounds(data.campgrounds || data || []);
     } catch (err) {
       console.error('Campground search error:', err);
     } finally {
