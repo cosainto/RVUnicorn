@@ -600,7 +600,8 @@ export default function DrivePlanner() {
 
     } catch (err: any) {
       console.error('Route calculation error:', err);
-      setError(err.response?.data?.error || 'Failed to calculate route');
+      const msg = err.response?.data?.error || err.message || 'Failed to calculate route';
+      setError(`Route error: ${msg} (status: ${err.response?.status || 'unknown'})`);
     } finally {
       setLoading(false);
     }
