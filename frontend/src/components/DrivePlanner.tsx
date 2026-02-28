@@ -177,6 +177,13 @@ export default function DrivePlanner() {
     }
   }, [user]);
 
+  // Fetch gas prices on mount
+  useEffect(() => {
+    api.get('/drive-planner/gas-prices')
+      .then(({ data }) => setGasPrice(data))
+      .catch(() => {});
+  }, []);
+
   // Pre-populate origin from user's home city/state
   useEffect(() => {
     if (!user) return;
@@ -485,6 +492,7 @@ export default function DrivePlanner() {
 
     setLoading(true);
     setError(null);
+    setGasPrice(null);
     setAttractionsAlongRoute({ attractions: [], restaurants: [], gasStations: [], hotels: [] });
 
     try {
