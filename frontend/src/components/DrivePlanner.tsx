@@ -189,8 +189,9 @@ export default function DrivePlanner() {
     // Geocode it so route calculation works immediately
     api.get(`/drive-planner/geocode?q=${encodeURIComponent(homeAddress)}`)
       .then(({ data }) => {
-        if (data?.lat && data?.lng) {
-          setOrigin({ lat: data.lat, lng: data.lng, address: homeAddress });
+        const pos = data?.items?.[0]?.position;
+        if (pos?.lat && pos?.lng) {
+          setOrigin({ lat: pos.lat, lng: pos.lng, address: homeAddress });
         }
       })
       .catch(() => {});
