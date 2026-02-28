@@ -515,12 +515,6 @@ export default function DrivePlanner() {
         });
         setFuelEstimate(fuelData);
 
-        // Fetch gas prices for destination state
-        try {
-          const stateCode = urlCampgroundState || (selectedCampground as any)?.state || '';
-          const { data: gasPriceData } = await api.get(`/drive-planner/gas-prices${stateCode ? `?state=${stateCode}` : ''}`);
-          setGasPrice(gasPriceData);
-        } catch (e) { console.error('Gas price fetch failed', e); }
 
       } else {
         // Use HERE Maps API (existing)
@@ -605,6 +599,13 @@ export default function DrivePlanner() {
         const destName = selectedCampground?.name || destination.address.split(',')[0];
         setTripName(`Trip to ${destName}`);
       }
+
+      // Fetch gas prices regardless of route provider
+      try {
+        const stateCode = (selectedCampground as any)?.state || urlCampgroundState || '';
+        const { data: gasPriceData } = await api.get(`/drive-planner/gas-prices${stateCode ? `?state=${stateCode}` : ''}`);
+        setGasPrice(gasPriceData);
+      } catch (e) { console.error('Gas price fetch failed', e); }
 
     } catch (err: any) {
       console.error('Route calculation error:', err);
