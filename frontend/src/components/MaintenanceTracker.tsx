@@ -96,6 +96,60 @@ export default function MaintenanceTracker() {
   const [providerName, setProviderName] = useState('');
   const [providerAddress, setProviderAddress] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
+  const [metadata, setMetadata] = useState<Record<string, string>>({});
+
+  const CATEGORY_DEFAULTS: Record<string, { frequency: string; miles?: string; months?: string }> = {
+    TIRES: { frequency: 'SEMI_ANNUALLY', months: '6' },
+    ENGINE: { frequency: 'CUSTOM_MILES', miles: '5000' },
+    BRAKES: { frequency: 'ANNUALLY' },
+    TRANSMISSION: { frequency: 'ANNUALLY' },
+    GENERATOR: { frequency: 'SEMI_ANNUALLY' },
+    ELECTRICAL: { frequency: 'ANNUALLY' },
+    HVAC: { frequency: 'ANNUALLY' },
+    PLUMBING: { frequency: 'ANNUALLY' },
+    SAFETY: { frequency: 'ANNUALLY' },
+    EXTERIOR: { frequency: 'SEMI_ANNUALLY' },
+  };
+
+  const CATEGORY_FIELDS: Record<string, Array<{ key: string; label: string; placeholder: string }>> = {
+    TIRES: [
+      { key: 'tireBrand', label: 'Tire Brand', placeholder: 'e.g., Michelin, Goodyear' },
+      { key: 'tireSize', label: 'Tire Size', placeholder: 'e.g., 235/65R16' },
+      { key: 'tireType', label: 'Tire Type', placeholder: 'e.g., All Season, Highway' },
+      { key: 'tiresPressurePsi', label: 'Tire Pressure (PSI)', placeholder: 'e.g., 80' },
+      { key: 'tiresReplaced', label: 'Tires Replaced', placeholder: 'e.g., All 4, Front 2' },
+      { key: 'treadDepth', label: 'Tread Depth (32nds)', placeholder: 'e.g., 10/32' },
+    ],
+    ENGINE: [
+      { key: 'oilBrand', label: 'Oil Brand', placeholder: 'e.g., Mobil 1, Castrol' },
+      { key: 'oilType', label: 'Oil Type/Viscosity', placeholder: 'e.g., 5W-30, 15W-40' },
+      { key: 'oilFilterBrand', label: 'Oil Filter Brand', placeholder: 'e.g., Fram, K&N' },
+      { key: 'oilFilterPartNum', label: 'Filter Part #', placeholder: 'e.g., PH16' },
+      { key: 'quartsUsed', label: 'Quarts Used', placeholder: 'e.g., 7' },
+      { key: 'airFilterReplaced', label: 'Air Filter Replaced?', placeholder: 'Yes / No' },
+    ],
+    BRAKES: [
+      { key: 'brakePadBrand', label: 'Brake Pad Brand', placeholder: 'e.g., Raybestos' },
+      { key: 'rotorsReplaced', label: 'Rotors Replaced?', placeholder: 'Yes / No' },
+      { key: 'brakeFluidFlushed', label: 'Brake Fluid Flushed?', placeholder: 'Yes / No' },
+      { key: 'axlesDone', label: 'Axles Serviced', placeholder: 'e.g., Front, Rear, All' },
+      { key: 'padThickness', label: 'Pad Thickness (mm)', placeholder: 'e.g., 8' },
+    ],
+    EXTERIOR: [
+      { key: 'wiperDriverSize', label: 'Driver Wiper Size', placeholder: 'e.g., 22"' },
+      { key: 'wiperPassSize', label: 'Passenger Wiper Size', placeholder: 'e.g., 20"' },
+      { key: 'wiperBrand', label: 'Wiper Brand', placeholder: 'e.g., Bosch, Rain-X' },
+      { key: 'sealantApplied', label: 'Sealant Applied?', placeholder: 'Yes / No' },
+      { key: 'roofInspected', label: 'Roof Inspected?', placeholder: 'Yes / No' },
+    ],
+    GENERATOR: [
+      { key: 'genMake', label: 'Generator Make', placeholder: 'e.g., Onan, Honda' },
+      { key: 'genHours', label: 'Generator Hours', placeholder: 'e.g., 500' },
+      { key: 'genOilChanged', label: 'Oil Changed?', placeholder: 'Yes / No' },
+      { key: 'genFilterReplaced', label: 'Filter Replaced?', placeholder: 'Yes / No' },
+      { key: 'genSparkPlugs', label: 'Spark Plugs Replaced?', placeholder: 'Yes / No' },
+    ],
+  };
 
   const [reminderForm, setReminderForm] = useState({
     title: '',
@@ -179,6 +233,9 @@ export default function MaintenanceTracker() {
       }
       if (receiptImage) {
         formDataToSend.append('receiptImage', receiptImage);
+      }
+      if (Object.keys(metadata).length > 0) {
+        formDataToSend.append('metadata', JSON.stringify(metadata));
       }
 
       await api.post('/maintenance/records', formDataToSend, {
@@ -298,6 +355,7 @@ export default function MaintenanceTracker() {
   };
 
   const resetForm = () => {
+    setMetadata({});
     setTitle('');
     setCategory('ENGINE');
     setDescription('');
@@ -508,6 +566,13 @@ export default function MaintenanceTracker() {
                             </div>
                           )}
 
+                          {(record as any).metadata && Object.keys((record as any).metadata).length > 0 && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 grid grid-cols-2 gap-1">
+                              {Object.entries((record as any).metadata).filter(([,v]) => v).map(([k, v]) => (
+                                <span key={k}><span className="font-medium capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}:</span> {v as string}</span>
+                              ))}
+                            </div>
+                          )}
                           {record.notes && (
                             <p className="text-sm text-gray-600 mt-2 italic">{record.notes}</p>
                           )}
@@ -652,7 +717,18 @@ export default function MaintenanceTracker() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input" required>
+                <select value={category} onChange={(e) => {
+                  const cat = e.target.value;
+                  setCategory(cat);
+                  setMetadata({});
+                  const defaults = CATEGORY_DEFAULTS[cat];
+                  if (defaults) {
+                    setCreateReminder(true);
+                    setReminderFrequency(defaults.frequency);
+                    if (defaults.miles) setCustomMiles(defaults.miles);
+                    if (defaults.months) setCustomMonths(defaults.months);
+                  }
+                }} className="input" required>
                   {CATEGORIES.map((cat) => (<option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>))}
                 </select>
               </div>
@@ -699,6 +775,20 @@ export default function MaintenanceTracker() {
                   </div>
                 </div>
               </div>
+
+              {CATEGORY_FIELDS[category] && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">🔍 {CATEGORIES.find(c => c.value === category)?.label} Details</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {CATEGORY_FIELDS[category].map(field => (
+                      <div key={field.key}>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
+                        <input type="text" value={metadata[field.key] || ''} onChange={(e) => setMetadata(prev => ({ ...prev, [field.key]: e.target.value }))} placeholder={field.placeholder} className="input text-sm" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -811,6 +901,20 @@ export default function MaintenanceTracker() {
                   </div>
                 </div>
               </div>
+
+              {CATEGORY_FIELDS[category] && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">🔍 {CATEGORIES.find(c => c.value === category)?.label} Details</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {CATEGORY_FIELDS[category].map(field => (
+                      <div key={field.key}>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
+                        <input type="text" value={metadata[field.key] || ''} onChange={(e) => setMetadata(prev => ({ ...prev, [field.key]: e.target.value }))} placeholder={field.placeholder} className="input text-sm" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

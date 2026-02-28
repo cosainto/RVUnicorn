@@ -1318,6 +1318,7 @@ model MaintenanceRecord {
   receiptImage    String?
   providerName    String?
   providerAddress String?
+  metadata        Json?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)

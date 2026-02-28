@@ -44,6 +44,7 @@ router.post(
          customMonths,
          providerName,
          providerAddress,
+         metadata,
          } = req.body; 
 
 
@@ -59,8 +60,8 @@ router.post(
         status: 'COMPLETED',
         notes: notes || undefined,
         providerName: providerName || undefined,
-        providerAddress: providerAddress || undefined,  
-
+        providerAddress: providerAddress || undefined,
+        metadata: metadata ? (typeof metadata === "string" ? JSON.parse(metadata) : metadata) : undefined,
     };
 
       if (req.file) {
@@ -207,6 +208,7 @@ router.put('/records/:id', authenticateToken, upload.single('receiptImage'), asy
       notes,
       providerName,
       providerAddress,
+      metadata,
     } = req.body;
 
     const record = await prisma.maintenanceRecord.findUnique({
@@ -235,7 +237,8 @@ const updateData: any = {
   status: status || undefined,
   notes: notes || undefined,
   providerName: providerName || undefined,
-providerAddress: providerAddress || undefined,
+  providerAddress: providerAddress || undefined,
+  metadata: metadata ? (typeof metadata === "string" ? JSON.parse(metadata) : metadata) : undefined,
 
 };
 
