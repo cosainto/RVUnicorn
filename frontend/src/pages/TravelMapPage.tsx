@@ -14,7 +14,8 @@ export default function TravelMapPage() {
   // Handle URL parameter to switch to Drive Planner tab
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'drive-planner') {
+    const campgroundId = searchParams.get('campgroundId');
+    if (tabParam === 'drive-planner' || campgroundId) {
       setActiveTab('trips');
     }
   }, [searchParams]);
