@@ -146,7 +146,7 @@ export default function DrivePlanner() {
   const [maxDistance, setMaxDistance] = useState(5);
   
   // Route provider toggle
-  const [routeProvider, setRouteProvider] = useState<'here' | 'google'>('google');
+  const [routeProvider, setRouteProvider] = useState<'here' | 'google'>('here');
   const [attractionsAlongRoute, setAttractionsAlongRoute] = useState<any>({ attractions: [], restaurants: [], gasStations: [], hotels: [] });
   const [loadingAttractions, setLoadingAttractions] = useState(false);
   const [mpg, setMpg] = useState(10);
