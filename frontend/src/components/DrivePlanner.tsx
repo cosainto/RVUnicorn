@@ -1359,9 +1359,11 @@ export default function DrivePlanner() {
                                 )}
                                 <p className="text-sm text-gray-500">{stop.address}</p>
                                 {stop.type === 'gas' && gasPrice && (
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">⛽ ~${gasPrice.price.toFixed(2)}/gal</span>
-                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">🚛 Diesel ~${gasPrice.diesel.toFixed(2)}</span>
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">⛽ Reg ${gasPrice.price.toFixed(2)}</span>
+                                    {(gasPrice as any).midgrade && <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Mid ${(gasPrice as any).midgrade.toFixed(2)}</span>}
+                                    {(gasPrice as any).premium && <span className="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded">Prem ${(gasPrice as any).premium.toFixed(2)}</span>}
+                                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">🚛 Diesel ${gasPrice.diesel.toFixed(2)}</span>
                                   </div>
                                 )}
                               </div>

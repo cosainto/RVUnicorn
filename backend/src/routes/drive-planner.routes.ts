@@ -917,24 +917,29 @@ router.get('/gas-prices', async (req: Request, res: Response) => {
     }
 
     // EIA weekly retail gas prices - no API key required
-    const eiaUrl = 'https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=DEMO_KEY&frequency=weekly&data[0]=value&facets[product][]=EPM0&facets[product][]=EPD2D&sort[0][column]=period&sort[0][direction]=desc&length=20&offset=0';
+    // fueleconomy.gov - free, no API key, returns current national averages
+    const response = await fetch('https://www.fueleconomy.gov/ws/rest/fuelprices', {
+      headers: { 'Accept': 'application/json' }
+    });
+    const text = await response.text();
     
-    const response = await fetch(eiaUrl);
-    const data = await response.json();
-    
-    // Parse EIA response - get US average regular and diesel
+    // Parse XML response
     let regularPrice = 3.35;
     let dieselPrice = 3.85;
+    let midgradePrice = 3.55;
+    let premiumPrice = 3.90;
     
-    if (data?.response?.data) {
-      const records = data.response.data;
-      const regularRecord = records.find((r: any) => r.product === 'EPM0' && r.duoarea === 'R10'); // US average
-      const dieselRecord = records.find((r: any) => r.product === 'EPD2D' && r.duoarea === 'R10');
-      if (regularRecord?.value) regularPrice = parseFloat(regularRecord.value);
-      if (dieselRecord?.value) dieselPrice = parseFloat(dieselRecord.value);
-    }
+    const getXmlValue = (xml: string, tag: string) => {
+      const match = xml.match(new RegExp(`<${tag}>([^<]+)</${tag}>`));
+      return match ? parseFloat(match[1]) : null;
+    };
+    
+    regularPrice = getXmlValue(text, 'regular') || regularPrice;
+    dieselPrice = getXmlValue(text, 'diesel') || dieselPrice;
+    midgradePrice = getXmlValue(text, 'midgrade') || midgradePrice;
+    premiumPrice = getXmlValue(text, 'premium') || premiumPrice;
 
-    const result = { price: regularPrice, diesel: dieselPrice, timestamp: Date.now(), source: 'EIA', state: cacheKey };
+    const result = { price: regularPrice, diesel: dieselPrice, midgrade: midgradePrice, premium: premiumPrice, timestamp: Date.now(), source: 'fueleconomy.gov', state: cacheKey };
     gasPriceCache.set(cacheKey, result);
     res.json(result);
   } catch (error) {
