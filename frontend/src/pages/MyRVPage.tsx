@@ -36,6 +36,21 @@ const RV_FEATURES = [
   'Tow Package', 'Hitch', 'Weight Distribution',
 ];
 
+const MPG_BY_TYPE: Record<string, { min: number; max: number; avg: number }> = {
+  'CLASS_A': { min: 6, max: 10, avg: 8 },
+  'CLASS_B': { min: 18, max: 25, avg: 20 },
+  'CLASS_C': { min: 10, max: 14, avg: 12 },
+  'TRUCK_CAMPER': { min: 12, max: 18, avg: 15 },
+  'VAN_CONVERSION': { min: 16, max: 22, avg: 18 },
+};
+
+const MPG_BY_MAKE: Record<string, number> = {
+  'Winnebago': 10, 'Thor': 8, 'Forest River': 9, 'Coachmen': 9,
+  'Tiffin': 10, 'Newmar': 10, 'Fleetwood': 8, 'Jayco': 9,
+  'Holiday Rambler': 9, 'Entegra': 10, 'Airstream': 18,
+  'Roadtrek': 20, 'Pleasure-Way': 22, 'Leisure Travel': 18,
+};
+
 const US_STATES = [
   'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
   'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
@@ -72,6 +87,7 @@ export default function MyRVPage() {
     rvSleeps: '',
     rvSlideouts: '',
     rvWeight: '',
+    rvMpg: '',
     rvWidth: '',
     rvHeight: '',
     rvDescription: '',
@@ -115,6 +131,7 @@ export default function MyRVPage() {
         rvSleeps: profile.rvSleeps?.toString() || '',
         rvSlideouts: profile.rvSlideouts?.toString() || '',
         rvWeight: profile.rvWeight?.toString() || '',
+        rvMpg: profile.rvMpg?.toString() || '',
         rvWidth: profile.rvWidth?.toString() || '',
         rvHeight: profile.rvHeight?.toString() || '',
         rvDescription: profile.rvDescription || '',
@@ -169,6 +186,7 @@ export default function MyRVPage() {
         rvSleeps: rvData.rvSleeps ? parseInt(rvData.rvSleeps) : null,
         rvSlideouts: rvData.rvSlideouts ? parseInt(rvData.rvSlideouts) : null,
         rvWeight: rvData.rvWeight ? parseInt(rvData.rvWeight) : null,
+        rvMpg: rvData.rvMpg ? parseFloat(rvData.rvMpg) : null,
         rvWidth: rvData.rvWidth ? parseInt(rvData.rvWidth) : null,
         rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
         rvDescription: rvData.rvDescription || null,
@@ -480,6 +498,28 @@ export default function MyRVPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+          </div>
+
+          {/* MPG */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ⛽ Fuel Economy (MPG)
+              {(() => { const t = MPG_BY_TYPE[rvData.rvType]; const m = MPG_BY_MAKE[rvData.rvMake]; const avg = m || t?.avg; return avg ? <span className="text-xs text-blue-600 font-normal ml-2">Suggested: {t?.min}–{t?.max} mpg, avg {avg}</span> : null; })()}
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                step="0.1"
+                min="1"
+                max="40"
+                value={rvData.rvMpg}
+                onChange={(e) => setRvData({ ...rvData, rvMpg: e.target.value })}
+                placeholder="e.g., 10"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+              {(() => { const t = MPG_BY_TYPE[rvData.rvType]; const m = MPG_BY_MAKE[rvData.rvMake]; const avg = (m || t?.avg)?.toString(); return avg && rvData.rvMpg !== avg ? <button type="button" onClick={() => setRvData(prev => ({ ...prev, rvMpg: avg }))} className="text-xs text-blue-600 hover:text-blue-700">Use suggested ({avg} mpg)</button> : null; })()}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Used for fuel cost estimates in the trip planner</p>
           </div>
 
           {/* Description */}
