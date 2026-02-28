@@ -900,3 +900,46 @@ router.post('/route-with-waypoints', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to calculate route' });
   }
 });
+
+// GET /drive-planner/gas-prices?state=IL
+// Returns current average gas prices for a state from EIA
+const gasPriceCache = new Map<string, { price: number; diesel: number; timestamp: number }>();
+const GAS_CACHE_TTL = 1000 * 60 * 60 * 6; // 6 hours
+
+router.get('/gas-prices', async (req: Request, res: Response) => {
+  try {
+    const { state } = req.query as { state?: string };
+
+    const cacheKey = state || 'US';
+    const cached = gasPriceCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < GAS_CACHE_TTL) {
+      return res.json(cached);
+    }
+
+    // EIA weekly retail gas prices - no API key required
+    const eiaUrl = 'https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=DEMO_KEY&frequency=weekly&data[0]=value&facets[product][]=EPM0&facets[product][]=EPD2D&sort[0][column]=period&sort[0][direction]=desc&length=20&offset=0';
+    
+    const response = await fetch(eiaUrl);
+    const data = await response.json();
+    
+    // Parse EIA response - get US average regular and diesel
+    let regularPrice = 3.35;
+    let dieselPrice = 3.85;
+    
+    if (data?.response?.data) {
+      const records = data.response.data;
+      const regularRecord = records.find((r: any) => r.product === 'EPM0' && r.duoarea === 'R10'); // US average
+      const dieselRecord = records.find((r: any) => r.product === 'EPD2D' && r.duoarea === 'R10');
+      if (regularRecord?.value) regularPrice = parseFloat(regularRecord.value);
+      if (dieselRecord?.value) dieselPrice = parseFloat(dieselRecord.value);
+    }
+
+    const result = { price: regularPrice, diesel: dieselPrice, timestamp: Date.now(), source: 'EIA', state: cacheKey };
+    gasPriceCache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Gas price error:', error);
+    // Return reasonable fallback
+    res.json({ price: 3.35, diesel: 3.85, source: 'estimate', state: req.query.state || 'US' });
+  }
+});

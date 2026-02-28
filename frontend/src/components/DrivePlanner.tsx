@@ -149,6 +149,7 @@ export default function DrivePlanner() {
   const [routeProvider, setRouteProvider] = useState<'here' | 'google'>('here');
   const [attractionsAlongRoute, setAttractionsAlongRoute] = useState<any>({ attractions: [], restaurants: [], gasStations: [], hotels: [] });
   const [loadingAttractions, setLoadingAttractions] = useState(false);
+  const [gasPrice, setGasPrice] = useState<{ price: number; diesel: number } | null>(null);
   const [mpg, setMpg] = useState(10);
   
   // Save trip state
@@ -513,6 +514,13 @@ export default function DrivePlanner() {
           mpg,
         });
         setFuelEstimate(fuelData);
+
+        // Fetch gas prices for destination state
+        try {
+          const stateCode = urlCampgroundState || (selectedCampground as any)?.state || '';
+          const { data: gasPriceData } = await api.get(`/drive-planner/gas-prices${stateCode ? `?state=${stateCode}` : ''}`);
+          setGasPrice(gasPriceData);
+        } catch (e) { console.error('Gas price fetch failed', e); }
 
       } else {
         // Use HERE Maps API (existing)
@@ -1350,6 +1358,12 @@ export default function DrivePlanner() {
                                   <p className="text-sm text-gray-600">{stop.brand}</p>
                                 )}
                                 <p className="text-sm text-gray-500">{stop.address}</p>
+                                {stop.type === 'gas' && gasPrice && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">⛽ ~${gasPrice.price.toFixed(2)}/gal</span>
+                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">🚛 Diesel ~${gasPrice.diesel.toFixed(2)}</span>
+                                  </div>
+                                )}
                               </div>
                               {stop.distanceFromStart !== undefined && (
                                 <span className="text-sm text-gray-500 whitespace-nowrap">
