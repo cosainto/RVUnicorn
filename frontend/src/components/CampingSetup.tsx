@@ -469,6 +469,13 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                     <p className="text-sm text-gray-600">lbs</p>
                   </div>
                 )}
+                {profile.rvMpg && (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <span className="text-2xl mx-auto mb-2 block">⛽</span>
+                    <p className="text-2xl font-bold text-gray-900">{profile.rvMpg}</p>
+                    <p className="text-sm text-gray-600">MPG</p>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
