@@ -26,6 +26,35 @@ interface UserProfile {
   setupVideo?: string;
 }
 
+// Real-world MPG averages by RV type and make
+const MPG_BY_TYPE: Record<string, { min: number; max: number; avg: number }> = {
+  'Class A Gas': { min: 6, max: 10, avg: 8 },
+  'Class A Diesel': { min: 7, max: 13, avg: 10 },
+  'Class A': { min: 6, max: 10, avg: 8 },
+  'Class B': { min: 18, max: 25, avg: 20 },
+  'Class B+': { min: 14, max: 18, avg: 16 },
+  'Class C': { min: 10, max: 14, avg: 12 },
+  'Super C': { min: 8, max: 12, avg: 10 },
+  'Truck Camper': { min: 12, max: 18, avg: 15 },
+};
+
+const MPG_BY_MAKE: Record<string, number> = {
+  'Winnebago': 10, 'Thor': 8, 'Forest River': 9, 'Coachmen': 9,
+  'Tiffin': 10, 'Newmar': 10, 'Fleetwood': 8, 'Jayco': 9,
+  'Holiday Rambler': 9, 'Monaco': 9, 'Entegra': 10, 'Airstream': 18,
+  'Roadtrek': 20, 'Pleasure-Way': 22, 'Leisure Travel': 18,
+};
+
+function getSuggestedMpg(rvType: string, rvMake: string): { avg: number; min: number; max: number } | null {
+  const typeData = MPG_BY_TYPE[rvType];
+  if (!typeData) return null;
+  const makeMpg = MPG_BY_MAKE[rvMake];
+  if (makeMpg) {
+    return { avg: makeMpg, min: typeData.min, max: typeData.max };
+  }
+  return typeData;
+}
+
 const RV_TYPES = [
   { value: 'CLASS_A', label: 'Class A Motorhome' },
   { value: 'CLASS_B', label: 'Class B Motorhome (Van)' },
@@ -104,6 +133,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
     rvModel: '',
     rvYear: '',
     rvLength: '',
+    rvMpg: '',
     rvSlideouts: '',
     rvSleeps: '',
     rvWeight: '',
@@ -135,6 +165,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
         rvModel: data.rvModel || '',
         rvYear: data.rvYear?.toString() || '',
         rvLength: data.rvLength?.toString() || '',
+        rvMpg: data.rvMpg?.toString() || '',
         rvSlideouts: data.rvSlideouts?.toString() || '',
         rvSleeps: data.rvSleeps?.toString() || '',
         rvWeight: data.rvWeight?.toString() || '',
@@ -255,6 +286,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
       if (rvData.rvModel) formData.append('rvModel', rvData.rvModel);
       if (rvData.rvYear) formData.append('rvYear', rvData.rvYear);
       if (rvData.rvLength) formData.append('rvLength', rvData.rvLength);
+      if (rvData.rvMpg) formData.append('rvMpg', rvData.rvMpg);
       if (rvData.rvSlideouts) formData.append('rvSlideouts', rvData.rvSlideouts);
       if (rvData.rvSleeps) formData.append('rvSleeps', rvData.rvSleeps);
       if (rvData.rvWeight) formData.append('rvWeight', rvData.rvWeight);
@@ -614,7 +646,13 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
               </label>
               <select
                 value={rvData.rvType}
-                onChange={(e) => setRvData({ ...rvData, rvType: e.target.value })}
+onChange={(e) => {
+                  const newType = e.target.value;
+                  setRvData(prev => ({ ...prev, rvType: newType }));
+                  const suggestion = getSuggestedMpg(newType, rvData.rvMake);
+                  setSuggestedMpg(suggestion);
+                  if (suggestion && !rvData.rvMpg) setRvData(prev => ({ ...prev, rvType: newType, rvMpg: suggestion.avg.toString() }));
+                }}
                 className="input"
               >
                 <option value="">Select RV type...</option>
@@ -635,7 +673,13 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                 <input
                   type="text"
                   value={rvData.rvMake}
-                  onChange={(e) => setRvData({ ...rvData, rvMake: e.target.value })}
+onChange={(e) => {
+                    const newMake = e.target.value;
+                    setRvData(prev => ({ ...prev, rvMake: newMake }));
+                    const suggestion = getSuggestedMpg(rvData.rvType, newMake);
+                    setSuggestedMpg(suggestion);
+                    if (suggestion && !rvData.rvMpg) setRvData(prev => ({ ...prev, rvMake: newMake, rvMpg: suggestion.avg.toString() }));
+                  }}
                   placeholder="e.g., Winnebago"
                   className="input"
                 />
@@ -732,6 +776,32 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
                 placeholder="Tell us about your RV..."
                 className="input"
               />
+            </div>
+
+            {/* MPG */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ⛽ Fuel Economy (MPG)
+                {suggestedMpg && <span className="text-xs text-blue-600 font-normal ml-2">Suggested: {suggestedMpg.min}–{suggestedMpg.max} mpg avg {suggestedMpg.avg}</span>}
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="40"
+                  value={rvData.rvMpg}
+                  onChange={(e) => setRvData(prev => ({ ...prev, rvMpg: e.target.value }))}
+                  placeholder={suggestedMpg ? `Suggested: ${suggestedMpg.avg}` : 'e.g., 10'}
+                  className="input w-32"
+                />
+                {suggestedMpg && rvData.rvMpg !== suggestedMpg.avg.toString() && (
+                  <button type="button" onClick={() => setRvData(prev => ({ ...prev, rvMpg: suggestedMpg.avg.toString() }))} className="text-xs text-blue-600 hover:text-blue-700">
+                    Use suggested ({suggestedMpg.avg} mpg)
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Used for fuel cost estimates in the trip planner</p>
             </div>
 
             {/* Features */}
