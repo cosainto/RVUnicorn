@@ -4,6 +4,10 @@ import { Truck, Wrench, Save, Upload, X, Trash2, Camera, Video, ChevronDown, Che
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from '../components/ImageUpload';
+import RvEnhancements from '../components/RvEnhancements'; // ← ADD THIS
+
+
+
 
 const RV_TYPES = [
   { value: '', label: 'Select Type...' },
@@ -679,6 +683,11 @@ export default function MyRVPage() {
           </div>
         </div>
       </div>
+
+
+      {/* Custom Enhancements */}
+      <RvEnhancements />
+
 
       {/* Save Button */}
       <div className="flex justify-end">

@@ -514,6 +514,65 @@ router.get('/tags/all', async (req: Request, res: Response) => {
   }
 });
 
+
+// GET /api/threads/user/:userId - threads authored or participated in by a user
+router.get('/user/:userId', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const viewerId = (req as any).userId;
+    const { type = 'authored' } = req.query;
+
+    let threads: any[] = [];
+
+    if (type === 'authored') {
+      threads = await prisma.thread.findMany({
+        where: { authorId: userId },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+          tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
+          campground: { select: { id: true, name: true, state: true } },
+          _count: { select: { posts: true, favorites: true } },
+          ...(viewerId ? { favorites: { where: { userId: viewerId } } } : {}),
+        },
+      });
+    } else {
+      // participated = threads where user posted a reply
+      const posts = await prisma.threadPost.findMany({
+        where: { authorId: userId },
+        select: { threadId: true },
+        distinct: ['threadId'],
+      });
+      const threadIds = posts.map((p: any) => p.threadId);
+      threads = await prisma.thread.findMany({
+        where: { id: { in: threadIds }, authorId: { not: userId } },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+          tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
+          campground: { select: { id: true, name: true, state: true } },
+          _count: { select: { posts: true, favorites: true } },
+          ...(viewerId ? { favorites: { where: { userId: viewerId } } } : {}),
+        },
+      });
+    }
+
+    const formatted = threads.map((t: any) => ({
+      ...t,
+      isFavorited: viewerId ? (t.favorites && t.favorites.length > 0) : false,
+      favorites: undefined,
+    }));
+
+    const enriched = await enrichThreadsWithScores(formatted, viewerId);
+    res.json(enriched);
+  } catch (error) {
+    console.error('User threads error:', error);
+    res.status(500).json({ error: 'Failed to fetch user threads' });
+  }
+});
+
 router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

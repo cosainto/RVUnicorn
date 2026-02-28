@@ -46,9 +46,13 @@ import {
   Users,
   X,
   Zap,
+  Wrench,
+  MessageSquare,
 } from 'lucide-react';
 
 import api from '../services/api';
+import RvEnhancements from '../components/RvEnhancements';
+import CommunityEnhancements from '../components/CommunityEnhancements';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Creator {
@@ -79,6 +83,14 @@ interface Creator {
   rvMake?: string;
   rvModel?: string;
   rvYear?: number;
+  rvLength?: number;
+  rvSleeps?: number;
+  rvSlideouts?: number;
+  rvWeight?: number;
+  rvWidth?: number;
+  rvHeight?: number;
+  rvDescription?: string;
+  rvFeatures?: string[];
   followerCount: number;
   contentCount: number;
   isFollowing: boolean;
@@ -94,6 +106,7 @@ interface Creator {
   creatorMerchLabel?: string;
   creatorThemeColor?: string;
   creatorPinnedContentIds?: string[];
+  creatorShowEnhancements?: boolean;
 }
 
 interface ContentItem {
@@ -727,6 +740,10 @@ export default function CreatorPage() {
 
             {activeTab === 'about' && <AboutSection creator={creator} />}
             {activeTab === 'gear' && <GearSection creatorId={creator.id} />}
+            {activeTab === 'threads' && <CreatorThreadsSection creatorId={creator.id} creatorName={creator.firstName} />}
+            {activeTab === 'mods' && creator.creatorShowEnhancements && (
+              <ModsSection creator={creator} isOwner={isOwner} />
+            )}
             {activeTab === 'collabs' && <CollabsSection creatorId={creator.id} creatorName={creator.firstName} isOwner={isOwner} />}
           </div>
 
@@ -986,11 +1003,70 @@ function AboutSection({ creator }: { creator: Creator }) {
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Truck className="w-5 h-5 text-amber-500" /> My Rig
             </h3>
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100 space-y-4">
               {creator.rvYear && creator.rvMake && creator.rvModel && (
                 <p className="text-lg font-bold text-gray-900">{creator.rvYear} {creator.rvMake} {creator.rvModel}</p>
               )}
-              {creator.rvType && <p className="text-amber-700 mt-1">{creator.rvType}</p>}
+              {creator.rvType && <p className="text-amber-700">{creator.rvType.replace(/_/g, ' ')}</p>}
+
+              {/* Specs grid */}
+              {(creator.rvLength || creator.rvSleeps || creator.rvSlideouts || creator.rvWeight || creator.rvWidth || creator.rvHeight) && (
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {creator.rvLength && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Length</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvLength}ft</p>
+                    </div>
+                  )}
+                  {creator.rvSleeps && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Sleeps</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvSleeps}</p>
+                    </div>
+                  )}
+                  {creator.rvSlideouts != null && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Slide-outs</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvSlideouts}</p>
+                    </div>
+                  )}
+                  {creator.rvWeight && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Weight</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvWeight.toLocaleString()} lbs</p>
+                    </div>
+                  )}
+                  {creator.rvWidth && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Width</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvWidth}ft</p>
+                    </div>
+                  )}
+                  {creator.rvHeight && (
+                    <div className="bg-white/70 rounded-lg p-2 text-center">
+                      <p className="text-xs text-amber-600 font-medium">Height</p>
+                      <p className="text-sm font-bold text-gray-900">{creator.rvHeight}ft</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Description */}
+              {creator.rvDescription && (
+                <p className="text-sm text-gray-700 leading-relaxed pt-1 border-t border-amber-100">{creator.rvDescription}</p>
+              )}
+
+              {/* Features */}
+              {creator.rvFeatures && creator.rvFeatures.length > 0 && (
+                <div className="pt-2 border-t border-amber-100">
+                  <p className="text-xs font-semibold text-amber-700 mb-2">Features & Amenities</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {creator.rvFeatures.map((f: string) => (
+                      <span key={f} className="text-xs px-2 py-1 bg-white text-amber-800 rounded-full border border-amber-200 font-medium">{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1110,6 +1186,234 @@ function GearSection({ creatorId }: { creatorId: string }) {
 }
 
 // ===== COLLABS SECTION =====
+
+function ModsSection({ creator, isOwner }: { creator: Creator; isOwner: boolean }) {
+  return (
+    <div className="space-y-6">
+      {/* Owner sees their own enhancements (editable) */}
+      {isOwner && (
+        <div>
+          <p className="text-sm text-gray-500 mb-3 px-1">
+            Your mods visible here. Manage them anytime from <a href="/my-rv" className="text-blue-600 underline">My RV</a>.
+          </p>
+          <RvEnhancements />
+        </div>
+      )}
+
+      {/* Visitors see read-only public enhancements */}
+      {!isOwner && (
+        <PublicEnhancementsSection userId={creator.id} creator={creator} />
+      )}
+
+      {/* Community enhancements from same model */}
+      {(creator.rvMake || creator.rvModel) && (
+        <CommunityEnhancements rvMake={creator.rvMake} rvModel={creator.rvModel} />
+      )}
+    </div>
+  );
+}
+
+function PublicEnhancementsSection({ userId, creator }: { userId: string; creator: Creator }) {
+  const [enhancements, setEnhancements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const CATEGORY_COLORS: Record<string, string> = {
+    Solar: 'bg-yellow-100 text-yellow-700', Kitchen: 'bg-orange-100 text-orange-700',
+    Tech: 'bg-blue-100 text-blue-700', Safety: 'bg-red-100 text-red-700',
+    Comfort: 'bg-purple-100 text-purple-700', Towing: 'bg-gray-100 text-gray-700',
+    Storage: 'bg-green-100 text-green-700', Electrical: 'bg-cyan-100 text-cyan-700',
+    Other: 'bg-gray-100 text-gray-500',
+  };
+
+  useEffect(() => {
+    api.get(`/rv-enhancements/user/${userId}`)
+      .then(({ data }) => setEnhancements(data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return <div className="py-8 text-center text-sm text-gray-400">Loading…</div>;
+  if (enhancements.length === 0) return (
+    <div className="py-12 text-center bg-white rounded-lg shadow-sm border border-gray-100">
+      <p className="text-3xl mb-2">🔧</p>
+      <p className="text-sm text-gray-500">{creator.firstName} hasn't shared any mods yet</p>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100">
+        <h3 className="text-base font-bold text-gray-900">🔧 {creator.firstName}'s RV Mods</h3>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {[creator.rvYear, creator.rvMake, creator.rvModel].filter(Boolean).join(' ')}
+        </p>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {enhancements.map(e => {
+          const isExpanded = expandedId === e.id;
+          const hasMedia = !!(e.imageUrl || e.videoUrl);
+          const isEmbeddable = (url: string) => url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+          const getEmbedUrl = (url: string) => {
+            if (url.includes('youtu.be/')) return `https://www.youtube.com/embed/${url.split('youtu.be/')[1]?.split('?')[0]}`;
+            if (url.includes('youtube.com/watch')) { try { return `https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`; } catch { return url; } }
+            if (url.includes('vimeo.com/')) return `https://player.vimeo.com/video/${url.split('vimeo.com/')[1]?.split('?')[0]}`;
+            return url;
+          };
+          return (
+            <div key={e.id} className="p-4">
+              <div className="flex items-start gap-3">
+                {e.imageUrl && (
+                  <img src={e.imageUrl} alt={e.title} onClick={() => setExpandedId(isExpanded ? null : e.id)}
+                    className="w-20 h-20 object-cover rounded-lg border border-gray-100 shrink-0 cursor-pointer" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-gray-900">{e.title}</span>
+                    {e.category && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[e.category] ?? 'bg-gray-100 text-gray-500'}`}>{e.category}</span>
+                    )}
+                  </div>
+                  {e.cost != null && <p className="text-xs text-gray-400 mt-0.5">${e.cost.toLocaleString()} spent</p>}
+                  {e.description && <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-2">{e.description}</p>}
+                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                    {e.purchaseUrl && (
+                      <a href={e.purchaseUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                        <LinkIcon className="w-3 h-3" /> Where they bought it
+                      </a>
+                    )}
+                    {hasMedia && (
+                      <button onClick={() => setExpandedId(isExpanded ? null : e.id)} className="text-xs text-gray-500 hover:text-gray-700 font-medium">
+                        {isExpanded ? '▲ Hide media' : `▼ ${e.videoUrl ? 'Watch install video' : 'View photos'}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {isExpanded && (
+                <div className="mt-3 space-y-3">
+                  {e.imageUrl && <img src={e.imageUrl} alt={e.title} className="w-full max-h-72 object-cover rounded-lg border border-gray-100" />}
+                  {e.videoUrl && (isEmbeddable(e.videoUrl)
+                    ? <div className="aspect-video rounded-lg overflow-hidden border border-gray-100"><iframe src={getEmbedUrl(e.videoUrl)} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" /></div>
+                    : <video src={e.videoUrl} controls className="w-full rounded-lg border border-gray-100 max-h-72" />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CreatorThreadsSection({ creatorId, creatorName }: { creatorId: string; creatorName: string }) {
+  const [tab, setTab] = useState<'authored' | 'participated'>('authored');
+  const [threads, setThreads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchThreads(tab);
+  }, [creatorId, tab]);
+
+  const fetchThreads = async (type: string) => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/threads/user/${creatorId}?type=${type}`);
+      setThreads(data);
+    } catch (err) {
+      console.error('Failed to fetch threads:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const timeAgo = (date: string) => {
+    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('authored')}
+          className={"px-4 py-2 text-sm font-medium rounded-lg transition " + (
+            tab === 'authored' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+          )}
+        >
+          💬 Started by {creatorName}
+        </button>
+        <button
+          onClick={() => setTab('participated')}
+          className={"px-4 py-2 text-sm font-medium rounded-lg transition " + (
+            tab === 'participated' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+          )}
+        >
+          🗣️ Also replied in
+        </button>
+      </div>
+
+      {/* Thread list */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-gray-400">Loading threads...</div>
+        ) : threads.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-3xl mb-2">💬</p>
+            <p className="text-sm text-gray-500">
+              {tab === 'authored' ? creatorName + " hasn't started any threads yet" : creatorName + " hasn't replied in any threads yet"}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {threads.map((t: any) => (
+              <Link
+                key={t.id}
+                to={"/threads/" + t.slug}
+                className="block p-4 hover:bg-gray-50 transition"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Tags */}
+                    {t.tags && t.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1.5">
+                        {t.tags.slice(0, 3).map((tl: any) => (
+                          <span
+                            key={tl.tag.id}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: tl.tag.color + '20', color: tl.tag.color }}
+                          >
+                            {tl.tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{t.title}</p>
+                    {t.campground && (
+                      <p className="text-xs text-blue-600 mt-0.5">📍 {t.campground.name}, {t.campground.state}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                      <span>⬆️ {t.score ?? 0}</span>
+                      <span>💬 {t._count?.posts ?? 0} replies</span>
+                      <span>⭐ {t._count?.favorites ?? 0}</span>
+                      <span>{timeAgo(t.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CollabsSection({ creatorId, creatorName, isOwner }: { creatorId: string; creatorName: string; isOwner: boolean }) {
   const [collabs, setCollabs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
