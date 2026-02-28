@@ -20,6 +20,7 @@ interface UserProfile {
   rvSlideouts?: number;
   rvSleeps?: number;
   rvWeight?: number;
+  rvMpg?: number;
   rvFeatures?: string[];
   rvDescription?: string;
   rvImages?: string[];
