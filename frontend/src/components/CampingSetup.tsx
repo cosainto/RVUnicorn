@@ -127,6 +127,7 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [suggestedMpg, setSuggestedMpg] = useState<{ avg: number; min: number; max: number } | null>(null);
   
   const [rvData, setRvData] = useState({
     rvType: '',
