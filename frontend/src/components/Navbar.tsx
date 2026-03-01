@@ -433,7 +433,7 @@ export default function Navbar() {
 
 function DropSection({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div className={\`p-2\${last ? '' : ' border-b'}\`} style={{ borderColor: '#f1f5f9' }}>
+    <div className={"p-2" + (last ? "" : " border-b")}>
       <p className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5" style={{ color: '#94a3b8' }}>{label}</p>
       {children}
     </div>
