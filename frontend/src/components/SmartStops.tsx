@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Fuel, Moon, Utensils, MapPin, Star, Trash2, ChevronDown, ChevronUp, Loader2, Navigation, Compass, AlertTriangle, Settings, Route, ArrowRight, Sliders, X, RefreshCw, Clock } from 'lucide-react';
 import api from '../services/api';
+import OvernightStopCard from './OvernightStopCard';
 
 interface SmartStopsProps {
   tripPlan: any;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation,
+  MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation, Leaf,
   Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned, Edit
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
+import HarvestHostsTab from '../components/HarvestHostsTab';
 
 
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
@@ -170,7 +171,7 @@ const AMENITY_LABELS: Record<string, string> = {
   TRAILS: '🥾 Trails', CAMPING: '⛺ Camping',
 };
 
-const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews'];
+const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews', 'harvest-hosts'];
 
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
@@ -182,6 +183,7 @@ const ALL_TABS = [
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'harvest-hosts', label: '🌾 Hosts', icon: Leaf },
 ];
 
 export default function CampgroundDetailPage() {
@@ -1533,6 +1535,14 @@ export default function CampgroundDetailPage() {
           )}
 
           {/* Reviews Tab */}
+          {activeTab === 'harvest-hosts' && (
+            <HarvestHostsTab
+              campgroundLat={campground.latitude ?? undefined}
+              campgroundLng={campground.longitude ?? undefined}
+              campgroundState={campground.state ?? undefined}
+            />
+          )}
+
           {activeTab === 'reviews' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4"><div><h3 className="text-xl font-bold">Reviews</h3>{avgRating > 0 && <div className="flex items-center gap-2 mt-1">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">{avgRating.toFixed(1)} avg ({reviews.length})</span></div>}</div>{user && <button onClick={() => setShowReviewModal(true)} className="btn btn-primary btn-sm"><Star className="w-4 h-4 mr-1" />Write</button>}</div>

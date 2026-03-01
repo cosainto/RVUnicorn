@@ -3342,3 +3342,104 @@ model VehicleInvite {
   @@index([code])
 }
 
+model OvernightStop {
+  id                  String               @id @default(cuid())
+  name                String
+  address             String
+  city                String?
+  state               String?
+  latitude            Float
+  longitude           Float
+  stopType            String               // WALMART, CRACKER_BARREL, CABELAS, COSTCO, FLYING_J, LOVES, PILOT, REST_AREA, CASINO, OTHER
+  website             String?
+  phone               String?
+  notes               String?
+  isVerified          Boolean              @default(false)
+  policeStationName   String?
+  policeStationMiles  Float?
+  crimeLevel          String?              // LOW, MODERATE, HIGH, UNKNOWN
+  crimeSummary        String?
+  allowsRvs           Boolean              @default(true)
+  requiresPermission  Boolean              @default(false)
+  maxNights           Int?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  reviews             OvernightStopReview[]
+  updates             OvernightStopUpdate[]
+  @@index([latitude, longitude])
+  @@index([state])
+  @@index([stopType])
+}
+
+model OvernightStopReview {
+  id            String        @id @default(cuid())
+  stopId        String
+  userId        String
+  rating        Int           // 1-5
+  safetyRating  Int           // 1-5
+  noiseLevel    String?       // QUIET, MODERATE, LOUD
+  content       String?
+  visitDate     DateTime?
+  wouldReturn   Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  stop          OvernightStop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([stopId, userId])
+  @@index([stopId])
+  @@index([userId])
+}
+
+model OvernightStopUpdate {
+  id        String        @id @default(cuid())
+  stopId    String
+  userId    String
+  content   String
+  updateType String       // STILL_ALLOWS, NO_LONGER_ALLOWS, POLICE_PRESENCE, BUSY, QUIET, OTHER
+  createdAt DateTime      @default(now())
+  stop      OvernightStop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([stopId])
+  @@index([createdAt])
+}
+
+model HarvestHost {
+  id           String    @id @default(cuid())
+  name         String
+  hostType     String    // WINERY, BREWERY, FARM, DISTILLERY, RANCH, MUSEUM, OTHER
+  description  String?
+  address      String
+  city         String?
+  state        String?
+  latitude     Float
+  longitude    Float
+  website      String?
+  phone        String?
+  imageUrl     String?
+  amenities    String[]
+  maxRvLength  Int?
+  maxRvs       Int?
+  hookups      Boolean   @default(false)
+  requiresMembership Boolean @default(true)
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  reviews      HarvestHostReview[]
+  @@index([latitude, longitude])
+  @@index([state])
+  @@index([hostType])
+}
+
+model HarvestHostReview {
+  id          String      @id @default(cuid())
+  hostId      String
+  userId      String
+  rating      Int
+  content     String?
+  visitDate   DateTime?
+  createdAt   DateTime    @default(now())
+  host        HarvestHost @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([hostId, userId])
+  @@index([hostId])
+}
+
