@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { sendEmail, notificationEmail, friendRequestEmail, mentionEmail } from './email-sms.service';
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ interface NotificationData {
 export const notificationService = {
   async create(data: NotificationData) {
     try {
-      return await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: data.userId,
           type: data.type,
@@ -34,6 +35,34 @@ export const notificationService = {
           actorName: data.actorName,
         },
       });
+
+      // Send email notification if user has it enabled
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: data.userId },
+          select: { email: true, firstName: true, emailOnNotification: true }
+        });
+        if (user && user.emailOnNotification) {
+          const typeEmojiMap: Record<string, string> = {
+            EVENT_INVITE: '📅', EVENT_UPDATE: '📝', RSVP_CHANGE: '✅',
+            COMMENT_ADDED: '💬', NOTE_ADDED: '📌', CHECKLIST_ASSIGNED: '✅',
+            CHECKLIST_COMPLETED: '🎉', CAMPGROUND_ADDED: '🏕️',
+            FRIEND_REQUEST: '🤝', MENTION: '📣', LIKE: '❤️',
+          };
+          const emailContent = notificationEmail({
+            recipientName: user.firstName || 'there',
+            title: data.title,
+            content: data.content,
+            link: data.link,
+            emoji: typeEmojiMap[data.type] || '🔔',
+          });
+          await sendEmail({ to: user.email, ...emailContent });
+        }
+      } catch (emailErr) {
+        console.error('Email notification error (non-fatal):', emailErr);
+      }
+
+      return notification;
     } catch (error) {
       console.error('Create notification error:', error);
     }

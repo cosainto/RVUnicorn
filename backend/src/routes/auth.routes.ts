@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { awardBadge } from '../services/badge.service';
+import { sendEmail, welcomeEmail } from '../services/email-sms.service';
 
 const router = express.Router();
 
@@ -54,6 +55,28 @@ router.post('/register', async (req, res) => {
 
     // Award RVUnicorn Member badge
     await awardBadge(user.id, 'rvunicorn-member');
+
+    // Send welcome email
+    try {
+      const emailContent = welcomeEmail({ firstName: user.firstName || 'there' });
+      await sendEmail({
+        to: user.email,
+        ...emailContent,
+      });
+    } catch (emailErr) {
+      console.error('Welcome email error (non-fatal):', emailErr);
+    }
+
+    // Send welcome email
+    try {
+      const emailContent = welcomeEmail({ firstName: user.firstName || 'there' });
+      await sendEmail({
+        to: user.email,
+        ...emailContent,
+      });
+    } catch (emailErr) {
+      console.error('Welcome email error (non-fatal):', emailErr);
+    }
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },

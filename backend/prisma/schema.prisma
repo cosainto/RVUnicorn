@@ -11,6 +11,11 @@ model User {
   id                                              String                    @id @default(cuid())
   email                                           String                    @unique
   phoneNumber                                     String?
+  emailOnMessage                                  Boolean                   @default(true)
+  emailOnNotification                             Boolean                   @default(true)
+  emailOnFriendRequest                            Boolean                   @default(true)
+  emailOnTripUpdate                               Boolean                   @default(true)
+  emailOnMention                                  Boolean                   @default(true)
   username                                        String                    @unique
   password                                        String
   bio                                             String?

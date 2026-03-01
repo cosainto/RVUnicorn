@@ -186,11 +186,29 @@ router.post(
         data: {
           userId: recipientId,
           type: 'MESSAGE',
-          
           content: `${sender?.firstName || "Someone"} ${sender?.lastName || ""} sent you a message`,
           link: `/messages/${message.id}`,
         },
       });
+
+      // Send email notification if recipient has it enabled
+      try {
+        const recipientFull = await prisma.user.findUnique({
+          where: { id: recipientId },
+          select: { email: true, firstName: true, emailOnMessage: true }
+        });
+        if (recipientFull?.emailOnMessage) {
+          const emailContent = newMessageEmail({
+            recipientName: recipientFull.firstName || 'there',
+            senderName: (sender?.firstName || '') + ' ' + (sender?.lastName || ''),
+            senderUsername: req.user.username || '',
+            preview: content,
+          });
+          await sendEmail({ to: recipientFull.email, ...emailContent });
+        }
+      } catch (emailErr) {
+        console.error('Message email error (non-fatal):', emailErr);
+      }
 
       res.status(201).json(message);
     } catch (error) {
