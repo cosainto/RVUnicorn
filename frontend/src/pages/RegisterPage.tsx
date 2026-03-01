@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(email, username, password, firstName, lastName);
+      await register(email, username, password, firstName, lastName, phone);
       navigate('/welcome');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to register');
@@ -140,6 +141,20 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm"
+                placeholder="(555) 555-5555"
+              />
             </div>
 
             <div>

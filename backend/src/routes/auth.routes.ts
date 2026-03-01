@@ -10,7 +10,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, username } = req.body;
+    const { email, password, firstName, lastName, username, phoneNumber } = req.body;
 
     if (!email || !password || !firstName || !lastName || !username) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -38,6 +38,7 @@ router.post('/register', async (req, res) => {
         firstName,
         lastName,
         username,
+        ...(phoneNumber ? { phoneNumber } : {}),
       },
       select: {
         id: true,
@@ -157,6 +158,7 @@ router.get('/me', authenticateToken, async (req, res) => {
         hasPets: true,
         petTypes: true,
         onboardingCompleted: true,
+        phoneNumber: true,
       }
     });
 
@@ -168,6 +170,63 @@ router.get('/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
+
+// Update email or phone (requires password confirmation)
+router.put('/update-contact', authenticateToken, async (req: any, res) => {
+  try {
+    const { email, phoneNumber, currentPassword } = req.body;
+    if (!currentPassword) return res.status(400).json({ error: 'Current password required' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+    // Check email uniqueness if changing
+    if (email && email !== user.email) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) return res.status(400).json({ error: 'Email already in use' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        ...(email ? { email } : {}),
+        ...(phoneNumber !== undefined ? { phoneNumber } : {}),
+      },
+      select: { id: true, email: true, phoneNumber: true, firstName: true, lastName: true, username: true, profilePicture: true }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update contact error:', error);
+    res.status(500).json({ error: 'Failed to update contact info' });
+  }
+});
+
+// Change password
+router.put('/change-password', authenticateToken, async (req: any, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'Incorrect current password' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: req.userId }, data: { password: hashed } });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 
