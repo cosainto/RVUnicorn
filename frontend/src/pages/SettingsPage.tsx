@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Settings, Eye, EyeOff, Save, Shield, UserX, Activity, 
-  Trash2, ChevronRight, Lock, Bell, Mail, Phone, Key, Check, AlertCircle
+  Trash2, ChevronRight, Lock, Bell, Mail, Phone, Key, Check, AlertCircle, MapPin
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
