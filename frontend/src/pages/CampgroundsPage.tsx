@@ -126,7 +126,7 @@ export default function CampgroundsPage() {
         <HarvestHostsTab />
       )}
 
-      {pageTab === 'campgrounds' && <>
+      {pageTab === 'campgrounds' && <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Discover Campgrounds</h1>
         <p className="text-gray-500">Find campgrounds that fit your rig and style</p>
@@ -257,7 +257,7 @@ export default function CampgroundsPage() {
       )}
 
       {showSuggestModal && <SuggestCampground onClose={() => setShowSuggestModal(false)} onSubmit={() => { setShowSuggestModal(false); fetchCampgrounds(); }} />}
-    </> }
+    </div> }
     </div>
   );
 }
