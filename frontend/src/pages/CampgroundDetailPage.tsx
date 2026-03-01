@@ -175,6 +175,7 @@ const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews', 'harvest-hosts'];
 
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
+  { id: 'harvest-hosts', label: '🌾 Hosts', icon: Leaf },
   { id: 'map', label: 'Map', icon: Map },
   { id: 'amenities', label: 'Amenities', icon: Check },
   { id: 'threads', label: 'Threads', icon: MessageSquare },
@@ -183,7 +184,6 @@ const ALL_TABS = [
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
-  { id: 'harvest-hosts', label: '🌾 Hosts', icon: Leaf },
 ];
 
 export default function CampgroundDetailPage() {
