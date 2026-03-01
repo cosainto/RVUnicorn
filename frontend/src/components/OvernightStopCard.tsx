@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Shield, Volume2, MapPin, ExternalLink, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, XCircle, Clock, Plus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,13 +34,29 @@ const UPDATE_TYPE_LABELS: Record<string, { label: string; color: string }> = {
 
 interface Props {
   stop: any;
-  onAddToPitStops?: (stop: any) => void;
+  onAddToPitStops?: (stop: any, overnightStopId: string) => void;
   compact?: boolean;
 }
 
 export default function OvernightStopCard({ stop, onAddToPitStops, compact }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
+  const [travelers, setTravelers] = useState<{ count: number; travelers: any[] } | null>(null);
+  const [loadingTravelers, setLoadingTravelers] = useState(false);
+
+  const fetchTravelers = async () => {
+    if (travelers !== null) return; // already loaded
+    setLoadingTravelers(true);
+    try {
+      const { data } = await api.get('/overnight-stops/' + stop.id + '/travelers');
+      setTravelers(data);
+    } catch (err) { console.error(err); }
+    finally { setLoadingTravelers(false); }
+  };
+
+  useEffect(() => {
+    if (expanded) fetchTravelers();
+  }, [expanded]);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [reviews, setReviews] = useState<any[]>(stop.reviews || []);
@@ -132,12 +148,17 @@ export default function OvernightStopCard({ stop, onAddToPitStops, compact }: Pr
                   🚔 Police {stop.policeStationMiles.toFixed(1)} mi away
                 </span>
               )}
+              {travelers && travelers.count > 0 && (
+                <span className="text-xs text-indigo-600 font-semibold flex items-center gap-1">
+                  🚐 {travelers.count} RVer{travelers.count !== 1 ? 's' : ''} stopping here
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {onAddToPitStops && (
               <button
-                onClick={(e) => { e.stopPropagation(); onAddToPitStops(stop); }}
+                onClick={(e) => { e.stopPropagation(); onAddToPitStops(stop, stop.id); }}
                 className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Add Stop
@@ -214,6 +235,33 @@ export default function OvernightStopCard({ stop, onAddToPitStops, compact }: Pr
                     <p className="text-gray-400 mt-1">{r.user?.firstName} {r.wouldReturn ? '· Would return ✓' : ''}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fellow travelers */}
+          {loadingTravelers && <p className="text-xs text-gray-400">Loading travelers...</p>}
+          {travelers && travelers.count > 0 && (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                🚐 {travelers.count} RVer{travelers.count !== 1 ? 's' : ''} also stopping here
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {travelers.travelers.slice(0, 8).map((t: any) => (
+                  <div key={t.user.id} className="flex items-center gap-1.5 bg-white rounded-full px-2 py-1 border border-gray-100 text-xs text-gray-700">
+                    {t.user.profilePicture
+                      ? <img src={t.user.profilePicture} className="w-5 h-5 rounded-full object-cover" alt="" />
+                      : <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">{t.user.firstName?.[0]}</div>
+                    }
+                    {t.user.firstName}
+                    {t.estimatedArrival && (
+                      <span className="text-gray-400">· {new Date(t.estimatedArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    )}
+                  </div>
+                ))}
+                {travelers.count > 8 && (
+                  <span className="text-xs text-gray-400 self-center">+{travelers.count - 8} more</span>
+                )}
               </div>
             </div>
           )}

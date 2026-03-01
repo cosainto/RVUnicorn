@@ -1108,9 +1108,13 @@ model PitStop {
   orderIndex        Int
   estimatedArrival  DateTime?
   estimatedDuration Int?
+  overnightStopId   String?
+  harvestHostId     String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   tripPlan          TripPlan  @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
+  overnightStop     OvernightStop? @relation(fields: [overnightStopId], references: [id])
+  harvestHost       HarvestHost?   @relation(fields: [harvestHostId], references: [id])
 }
 
 model Thread {
@@ -3369,6 +3373,7 @@ model OvernightStop {
   updatedAt           DateTime             @updatedAt
   reviews             OvernightStopReview[]
   updates             OvernightStopUpdate[]
+  pitStops            PitStop[]
   @@index([latitude, longitude])
   @@index([state])
   @@index([stopType])
@@ -3427,6 +3432,7 @@ model HarvestHost {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   reviews      HarvestHostReview[]
+  pitStops     PitStop[]
   @@index([latitude, longitude])
   @@index([state])
   @@index([hostType])

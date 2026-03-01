@@ -131,4 +131,62 @@ router.post('/:id/updates', authenticateToken, async (req: any, res) => {
   }
 });
 
+
+// GET /api/overnight-stops/:id/travelers — who else is stopping here
+router.get('/:id/travelers', optionalAuth, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const stop = await prisma.overnightStop.findUnique({
+      where: { id },
+      select: { latitude: true, longitude: true }
+    });
+    if (!stop) return res.status(404).json({ error: 'Not found' });
+
+    // Find pit stops linked directly OR by proximity (within ~0.3 miles)
+    const latDelta = 0.005; // ~0.3 miles
+    const lngDelta = 0.005;
+    const pitStops = await prisma.pitStop.findMany({
+      where: {
+        stopType: 'OVERNIGHT',
+        OR: [
+          { overnightStopId: id },
+          {
+            latitude: { gte: stop.latitude - latDelta, lte: stop.latitude + latDelta },
+            longitude: { gte: stop.longitude - lngDelta, lte: stop.longitude + lngDelta },
+          }
+        ]
+      },
+      include: {
+        tripPlan: {
+          include: {
+            user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+            event: { select: { id: true, title: true, startDate: true, endDate: true } }
+          }
+        }
+      },
+      orderBy: { estimatedArrival: 'asc' }
+    });
+
+    // Deduplicate by userId
+    const seen = new Set<string>();
+    const travelers = pitStops
+      .filter(ps => {
+        const uid = ps.tripPlan?.user?.id;
+        if (!uid || seen.has(uid)) return false;
+        seen.add(uid);
+        return true;
+      })
+      .map(ps => ({
+        user: ps.tripPlan.user,
+        estimatedArrival: ps.estimatedArrival,
+        tripTitle: ps.tripPlan.event?.title,
+      }));
+
+    res.json({ count: travelers.length, travelers });
+  } catch (error) {
+    console.error('Travelers error:', error);
+    res.status(500).json({ error: 'Failed to fetch travelers' });
+  }
+});
+
 export default router;
