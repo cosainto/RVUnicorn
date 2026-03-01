@@ -350,6 +350,90 @@ router.post('/trip/:tripId/complete', authenticateToken, async (req: Request, re
   }
 });
 
+
+// POST /api/trip-planner/process-auto-mileage
+// Called on page load - auto-logs departure and return miles when trip dates pass
+router.post('/process-auto-mileage', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const now = new Date();
+    const logged = [];
+
+    // Get all planned/active trips for this user
+    const tripPlans = await prisma.tripPlan.findMany({
+      where: { userId, status: { not: 'CANCELLED' } },
+      include: {
+        event: { select: { id: true, title: true, startDate: true, endDate: true } },
+        mileageLogs: { select: { id: true, description: true } },
+      },
+    });
+
+    for (const trip of tripPlans) {
+      if (!trip.distanceMiles || !trip.event.startDate) continue;
+      const oneWay = trip.distanceMiles;
+
+      const startDate = new Date(trip.event.startDate);
+      const endDate = trip.event.endDate ? new Date(trip.event.endDate) : new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+      // Log departure miles 1 day after startDate
+      const departureLogDay = new Date(startDate);
+      departureLogDay.setDate(departureLogDay.getDate() + 1);
+      departureLogDay.setHours(0, 0, 0, 0);
+
+      const departureKey = `Departed to ${trip.event.title}`;
+      const alreadyLoggedDeparture = trip.mileageLogs.some(l => l.description === departureKey);
+
+      if (!alreadyLoggedDeparture && now >= departureLogDay) {
+        await prisma.userMileageLog.create({
+          data: {
+            userId,
+            tripPlanId: trip.id,
+            miles: oneWay,
+            description: departureKey,
+            tripDate: departureLogDay,
+          },
+        });
+        logged.push({ type: 'departure', trip: trip.event.title, miles: oneWay });
+      }
+
+      // Log return miles 1 day after endDate
+      const returnLogDay = new Date(endDate);
+      returnLogDay.setDate(returnLogDay.getDate() + 1);
+      returnLogDay.setHours(12, 0, 0, 0);
+
+      const returnKey = `Returned from ${trip.event.title}`;
+      const alreadyLoggedReturn = trip.mileageLogs.some(l => l.description === returnKey);
+
+      if (!alreadyLoggedReturn && now >= returnLogDay) {
+        await prisma.userMileageLog.create({
+          data: {
+            userId,
+            tripPlanId: trip.id,
+            miles: oneWay,
+            description: returnKey,
+            tripDate: returnLogDay,
+          },
+        });
+
+        // Mark trip as completed if not already
+        if (trip.status === 'PLANNED') {
+          await prisma.tripPlan.update({
+            where: { id: trip.id },
+            data: { status: 'COMPLETED', completedAt: returnLogDay, actualMiles: oneWay * 2 },
+          });
+        }
+
+        logged.push({ type: 'return', trip: trip.event.title, miles: oneWay });
+      }
+    }
+
+    res.json({ processed: logged.length, logged });
+  } catch (error) {
+    console.error('Auto mileage error:', error);
+    res.status(500).json({ error: 'Failed to process auto mileage' });
+  }
+});
+
 // Get user's mileage stats
 router.get('/my-mileage', authenticateToken, async (req: Request, res: Response) => {
   try {

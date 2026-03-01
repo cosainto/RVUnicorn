@@ -7,6 +7,8 @@ interface SmartStopsProps {
   eventId: string;
   event?: any;
   onAddPitStop: (stop: any) => void;
+  userMpg?: number;
+  userTankGallons?: number;
 }
 
 interface StopPlace {
@@ -45,7 +47,7 @@ const STOP_CONFIG: Record<string, { icon: string; label: string; dot: string; bg
   ATTRACTION: { icon: '⭐', label: 'Attraction', dot: 'bg-violet-500', bg: 'bg-violet-50 border-violet-200', text: 'text-violet-700' },
 };
 
-export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: SmartStopsProps) {
+export default function SmartStops({ tripPlan, eventId, event, onAddPitStop, userMpg, userTankGallons }: SmartStopsProps) {
   const [loading, setLoading] = useState(false);
   const [smartStops, setSmartStops] = useState<any>(null);
   const [expandedStop, setExpandedStop] = useState<number | null>(null);
@@ -54,7 +56,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
   const [showSettings, setShowSettings] = useState(false);
   const [step, setStep] = useState<'preferences' | 'results'>('preferences');
   
-  const [rvSettings, setRvSettings] = useState({ mpg: 10, tankGallons: 50, drivingHoursPerDay: 8 });
+  const [rvSettings, setRvSettings] = useState({ mpg: userMpg || 10, tankGallons: userTankGallons || 50, drivingHoursPerDay: 8 });
   const [prefs, setPrefs] = useState<TripPreferences>({
     tripStyle: 'balanced',
     restStopMode: 'hours',
@@ -423,7 +425,7 @@ export default function SmartStops({ tripPlan, eventId, event, onAddPitStop }: S
           <div className="bg-gray-50 rounded-xl p-3 space-y-2.5 border border-gray-100">
             <div className="grid grid-cols-3 gap-3">
               {[
-                { key: 'mpg', label: 'Fuel Economy', unit: 'mpg', hint: 'Class A: 6-10 · C: 10-14', min: 3, max: 30, step: 0.5 },
+                { key: 'mpg', label: 'Fuel Economy', unit: 'mpg', hint: userMpg ? `From your RV: ${userMpg} mpg` : 'Class A: 6-10 · C: 10-14', min: 3, max: 30, step: 0.5 },
                 { key: 'tankGallons', label: 'Tank Size', unit: 'gal', hint: `Range: ~${Math.round(rvSettings.mpg * rvSettings.tankGallons)} mi`, min: 10, max: 150, step: 5 },
                 { key: 'drivingHoursPerDay', label: 'Max Drive/Day', unit: 'hrs', hint: 'Recommended: 6-8', min: 4, max: 14, step: 1 },
               ].map(({ key, label, unit, hint, min, max, step }) => (

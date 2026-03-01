@@ -76,6 +76,8 @@ export default function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [userRvMpg, setUserRvMpg] = useState<number>(10);
+  const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
@@ -134,6 +136,20 @@ export default function EventDetailPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}T14:00`;
   };
+
+  useEffect(() => {
+    // Fetch user RV specs for gas calculations
+    api.get('/auth/me').then(({ data }) => {
+      if (data.rvMpg) setUserRvMpg(data.rvMpg);
+      const tankByType: Record<string, number> = {
+        CLASS_A: 100, CLASS_B: 25, CLASS_C: 55, FIFTH_WHEEL: 50,
+        TRAVEL_TRAILER: 0, TRUCK_CAMPER: 35, VAN_CONVERSION: 25,
+      };
+      if (data.rvType && tankByType[data.rvType]) setUserRvTankGallons(tankByType[data.rvType]);
+    }).catch(() => {});
+    // Auto-process mileage logs for trips whose dates have passed
+    api.post('/trip-planner/process-auto-mileage', {}).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadEvent();
@@ -866,7 +882,10 @@ export default function EventDetailPage() {
 
                     {/* Smart RV Stops */}
                     <div className="pt-4 border-t">
-                      <SmartStops tripPlan={tripPlan} eventId={event.id} event={event} onAddPitStop={() => loadTripPlan()} />
+                      <SmartStops tripPlan={tripPlan} eventId={event.id} event={event} onAddPitStop={() => loadTripPlan()} userMpg={userRvMpg} userTankGallons={userRvTankGallons} />
+
+                    {/* Odometer Projection */}
+                    <OdometerProjection tripPlan={tripPlan} event={event} />
                     </div>
 
                     {/* Pit Stops Section */}
