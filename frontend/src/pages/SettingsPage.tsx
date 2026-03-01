@@ -18,6 +18,9 @@ export default function SettingsPage() {
   // Account info state
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [homeCity, setHomeCity] = useState('');
+  const [homeState, setHomeState] = useState('');
+  const [homeZip, setHomeZip] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [contactSaving, setContactSaving] = useState(false);
   const [contactMsg, setContactMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -39,6 +42,9 @@ export default function SettingsPage() {
       setSettings({ showCampingStatus: data.showCampingStatus !== false });
       setEmail(data.email || '');
       setPhone(data.phoneNumber || '');
+      setHomeCity(data.homeCity || '');
+      setHomeState(data.homeState || '');
+      setHomeZip(data.homeZipCode || '');
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -72,6 +78,7 @@ export default function SettingsPage() {
     setContactMsg(null);
     try {
       await api.put('/auth/update-contact', { email, phoneNumber: phone, currentPassword });
+      await api.put(`/profile/${user?.username}`, { homeCity, homeState, homeZipCode: homeZip });
       setContactMsg({ type: 'success', text: 'Contact info updated successfully!' });
       setCurrentPassword('');
       if (refreshUser) refreshUser();
@@ -156,6 +163,27 @@ export default function SettingsPage() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                 className={inputClass + " pl-10"} placeholder="(555) 555-5555" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Hometown</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-1">
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input type="text" value={homeCity} onChange={e => setHomeCity(e.target.value)}
+                    className={inputClass + " pl-10"} placeholder="City" />
+                </div>
+              </div>
+              <div className="col-span-1">
+                <input type="text" value={homeState} onChange={e => setHomeState(e.target.value)}
+                  className={inputClass} placeholder="State" maxLength={2} />
+              </div>
+              <div className="col-span-1">
+                <input type="text" value={homeZip} onChange={e => setHomeZip(e.target.value)}
+                  className={inputClass} placeholder="ZIP" maxLength={10} />
+              </div>
             </div>
           </div>
 

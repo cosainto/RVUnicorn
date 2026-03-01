@@ -276,7 +276,7 @@ export default function Navbar() {
                       <ProfileLink to={`/profile/${user.username}`} onClick={() => setProfileOpen(false)} icon={<User className="w-4 h-4" />} label="My Profile" />
                       <ProfileLink to="/my-rv" onClick={() => setProfileOpen(false)} icon={<Wrench className="w-4 h-4" />} label="RV Settings" />
                       <ProfileLink to="/badges" onClick={() => setProfileOpen(false)} icon={<Award className="w-4 h-4" />} label="Badges" />
-                      <ProfileLink to="/settings/privacy" onClick={() => setProfileOpen(false)} icon={<Shield className="w-4 h-4" />} label="Privacy & Settings" />
+                      <ProfileLink to="/settings" onClick={() => setProfileOpen(false)} icon={<Settings className="w-4 h-4" />} label="Account Settings" />
                     </div>
                     <div className="p-2 border-t" style={{ borderColor: '#f1f5f9' }}>
                       <button onClick={() => { setProfileOpen(false); handleLogout(); }}
@@ -397,7 +397,7 @@ export default function Navbar() {
               <MobileLink to={`/profile/${user.username}`} icon={<User className="w-5 h-5" />} label="My Profile" active={false} />
               <MobileLink to="/my-rv" icon={<Wrench className="w-5 h-5" />} label="RV Settings" active={isActive('/my-rv')} />
               <MobileLink to="/badges" icon={<Award className="w-5 h-5" />} label="Badges" active={isActive('/badges')} />
-              <MobileLink to="/settings/privacy" icon={<Shield className="w-5 h-5" />} label="Privacy & Settings" active={isActive('/settings')} />
+              <MobileLink to="/settings" icon={<Settings className="w-5 h-5" />} label="Account Settings" active={isActive('/settings')} />
             </MobileSection>
 
             <div className="p-4" style={{ borderTop: '1px solid #f1f5f9' }}>
