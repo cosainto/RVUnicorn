@@ -257,6 +257,7 @@ export default function CampgroundsPage() {
       )}
 
       {showSuggestModal && <SuggestCampground onClose={() => setShowSuggestModal(false)} onSubmit={() => { setShowSuggestModal(false); fetchCampgrounds(); }} />}
+    </> }
     </div>
   );
 }
