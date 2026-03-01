@@ -256,6 +256,9 @@ model User {
   tripPlans                                       TripPlan[]
   badges                                          UserBadge[]
   mileageLogs                                     UserMileageLog[]
+  overnightStopReviews                            OvernightStopReview[]
+  overnightStopUpdates                            OvernightStopUpdate[]
+  harvestHostReviews                              HarvestHostReview[]
   preferences                                     UserPreferences?
   userStickers                                    UserSticker[]
   videos                                          Video[]
