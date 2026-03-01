@@ -2,32 +2,43 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Settings, Eye, EyeOff, Save, Shield, UserX, Activity, 
-  Trash2, ChevronRight, Lock, Bell
+  Trash2, ChevronRight, Lock, Bell, Mail, Phone, Key, Check, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  
-  const [settings, setSettings] = useState({
-    showCampingStatus: true,
-  });
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  const [settings, setSettings] = useState({ showCampingStatus: true });
+
+  // Account info state
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactMsg, setContactMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Password change state
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showPasswords, setShowPasswords] = useState(false);
+
+  useEffect(() => { loadSettings(); }, []);
 
   const loadSettings = async () => {
     try {
       setLoading(true);
       const { data } = await api.get('/auth/me');
-      setSettings({
-        showCampingStatus: data.showCampingStatus !== false,
-      });
+      setSettings({ showCampingStatus: data.showCampingStatus !== false });
+      setEmail(data.email || '');
+      setPhone(data.phoneNumber || '');
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -38,16 +49,64 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     try {
       setSaving(true);
-      await api.put(`/profile/${user?.username}`, {
-        showCampingStatus: settings.showCampingStatus,
-      });
+      await api.put(`/profile/${user?.username}`, { showCampingStatus: settings.showCampingStatus });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
-      console.error('Failed to save settings:', error);
       alert('Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveContactInfo = async () => {
+    if (!currentPassword) {
+      setContactMsg({ type: 'error', text: 'Please enter your current password to confirm changes' });
+      return;
+    }
+    if (!email) {
+      setContactMsg({ type: 'error', text: 'Email cannot be empty' });
+      return;
+    }
+    setContactSaving(true);
+    setContactMsg(null);
+    try {
+      await api.put('/auth/update-contact', { email, phoneNumber: phone, currentPassword });
+      setContactMsg({ type: 'success', text: 'Contact info updated successfully!' });
+      setCurrentPassword('');
+      if (refreshUser) refreshUser();
+      setTimeout(() => setContactMsg(null), 4000);
+    } catch (err: any) {
+      setContactMsg({ type: 'error', text: err.response?.data?.error || 'Failed to update contact info' });
+    } finally {
+      setContactSaving(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'All password fields are required' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordMsg({ type: 'error', text: 'New password must be at least 6 characters' });
+      return;
+    }
+    setPasswordSaving(true);
+    setPasswordMsg(null);
+    try {
+      await api.put('/auth/change-password', { currentPassword: oldPassword, newPassword });
+      setPasswordMsg({ type: 'success', text: 'Password changed successfully!' });
+      setOldPassword(''); setNewPassword(''); setConfirmPassword('');
+      setTimeout(() => setPasswordMsg(null), 4000);
+    } catch (err: any) {
+      setPasswordMsg({ type: 'error', text: err.response?.data?.error || 'Failed to change password' });
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -59,9 +118,11 @@ export default function SettingsPage() {
     );
   }
 
+  const inputClass = "w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all";
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <div className="flex items-center gap-3 mb-2">
         <div className="p-3 bg-primary-100 rounded-full">
           <Settings className="w-8 h-8 text-primary-600" />
         </div>
@@ -71,202 +132,181 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Settings Navigation */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="p-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Lock className="w-5 h-5 text-primary-600" />
-            Privacy & Security
-          </h2>
+      {/* ── Account Info ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Mail className="w-5 h-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Account Information</h2>
         </div>
-        
-        <nav className="divide-y divide-gray-100">
-          <Link 
-            to="/settings/privacy" 
-            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Shield className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Privacy Settings</p>
-                <p className="text-sm text-gray-500">Control who can see your information</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-
-          <Link 
-            to="/settings/blocked" 
-            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <UserX className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Blocked Users</p>
-                <p className="text-sm text-gray-500">Manage users you've blocked</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-
-
-          <Link 
-            to="/settings/muted" 
-            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <EyeOff className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Muted & Snoozed</p>
-                <p className="text-sm text-gray-500">Manage snoozed users, events, and campgrounds</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-          <Link 
-            to="/settings/activity" 
-            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Activity className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Account Activity</p>
-                <p className="text-sm text-gray-500">Review security events and login history</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-        </nav>
-      </div>
-
-      {/* Camping Status Section */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-5 h-5 text-primary-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Camping Status</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {settings.showCampingStatus ? (
-                    <Eye className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <EyeOff className="w-5 h-5 text-gray-400" />
-                  )}
-                  <span className="font-medium text-gray-900">Show my camping status</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1 ml-7">
-                  When enabled, other users can see when you're camping at a campground or have upcoming trips.
-                </p>
-              </div>
-              <button
-                onClick={() => setSettings({ ...settings, showCampingStatus: !settings.showCampingStatus })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  settings.showCampingStatus ? 'bg-green-500' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.showCampingStatus ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Preview */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800 font-medium mb-2">Preview:</p>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-600 font-semibold">
-                      {user?.firstName?.[0] || 'U'}
-                    </span>
-                  </div>
-                  {settings.showCampingStatus && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-green-500 text-white">
-                      CAMPING
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-sm text-gray-500">
-                    {settings.showCampingStatus 
-                      ? 'Others can see your camping status' 
-                      : 'Your camping status is hidden'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="p-6 bg-gray-50 flex items-center justify-between">
+        <div className="p-6 space-y-4">
           <div>
-            {saved && (
-              <span className="text-green-600 font-medium flex items-center gap-2">
-                ✓ Settings saved!
-              </span>
-            )}
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                className={inputClass + " pl-10"} placeholder="you@example.com" />
+            </div>
           </div>
-          <button
-            onClick={saveSettings}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save Settings
-              </>
-            )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                className={inputClass + " pl-10"} placeholder="(555) 555-5555" />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Confirm with Current Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                className={inputClass + " pl-10"} placeholder="Enter your password to save changes" />
+            </div>
+          </div>
+
+          {contactMsg && (
+            <div className={"flex items-center gap-2 p-3 rounded-lg text-sm font-medium " + (contactMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200')}>
+              {contactMsg.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+              {contactMsg.text}
+            </div>
+          )}
+
+          <button onClick={saveContactInfo} disabled={contactSaving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition disabled:opacity-50">
+            {contactSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Contact Info</>}
           </button>
         </div>
       </div>
 
-      {/* Danger Zone */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-red-200">
-        <div className="p-4 border-b border-red-100 bg-red-50">
-          <h2 className="text-lg font-semibold text-red-800 flex items-center gap-2">
-            <Trash2 className="w-5 h-5" />
-            Danger Zone
-          </h2>
+      {/* ── Change Password ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
+          </div>
+          <button onClick={() => setShowPasswords(!showPasswords)}
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            {showPasswords ? 'Hide' : 'Change password'}
+          </button>
         </div>
-        
-        <Link 
-          to="/settings/delete-account" 
-          className="flex items-center justify-between p-4 hover:bg-red-50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="w-5 h-5 text-red-600" />
+
+        {showPasswords && (
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+              <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)}
+                className={inputClass} placeholder="Your current password" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                className={inputClass} placeholder="At least 6 characters" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                className={inputClass} placeholder="Repeat new password" />
+            </div>
+
+            {passwordMsg && (
+              <div className={"flex items-center gap-2 p-3 rounded-lg text-sm font-medium " + (passwordMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200')}>
+                {passwordMsg.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                {passwordMsg.text}
+              </div>
+            )}
+
+            <button onClick={savePassword} disabled={passwordSaving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition disabled:opacity-50">
+              {passwordSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Key className="w-4 h-4" />Update Password</>}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Privacy & Security Links ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Lock className="w-5 h-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Privacy & Security</h2>
+        </div>
+        <nav className="divide-y divide-gray-100">
+          <SettingsLink to="/settings/privacy" icon={<Shield className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="Privacy Settings" desc="Control who can see your information" />
+          <SettingsLink to="/settings/blocked" icon={<UserX className="w-5 h-5 text-red-500" />} iconBg="bg-red-50" label="Blocked Users" desc="Manage users you've blocked" />
+          <SettingsLink to="/settings/muted" icon={<EyeOff className="w-5 h-5 text-purple-500" />} iconBg="bg-purple-50" label="Muted & Snoozed" desc="Manage snoozed users, events, and campgrounds" />
+          <SettingsLink to="/settings/activity" icon={<Activity className="w-5 h-5 text-amber-500" />} iconBg="bg-amber-50" label="Account Activity" desc="Review security events and login history" />
+        </nav>
+      </div>
+
+      {/* ── Camping Status ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Camping Status</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                {settings.showCampingStatus ? <Eye className="w-5 h-5 text-green-600" /> : <EyeOff className="w-5 h-5 text-gray-400" />}
+                <span className="font-medium text-gray-900">Show my camping status</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-1 ml-7">Others can see when you're camping or have upcoming trips</p>
+            </div>
+            <button onClick={() => setSettings({ ...settings, showCampingStatus: !settings.showCampingStatus })}
+              className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors " + (settings.showCampingStatus ? 'bg-green-500' : 'bg-gray-300')}>
+              <span className={"inline-block h-4 w-4 transform rounded-full bg-white transition-transform " + (settings.showCampingStatus ? 'translate-x-6' : 'translate-x-1')} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            {saved && <span className="text-green-600 font-medium text-sm flex items-center gap-1"><Check className="w-4 h-4" />Saved!</span>}
+            <button onClick={saveSettings} disabled={saving}
+              className="ml-auto flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition disabled:opacity-50">
+              {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save</>}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Danger Zone ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-red-100 bg-red-50 flex items-center gap-2">
+          <Trash2 className="w-5 h-5 text-red-600" />
+          <h2 className="text-lg font-semibold text-red-800">Danger Zone</h2>
+        </div>
+        <Link to="/settings/delete-account" className="flex items-center justify-between p-4 hover:bg-red-50 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg"><Trash2 className="w-5 h-5 text-red-600" /></div>
+            <div>
               <p className="font-medium text-red-700">Delete Account</p>
-              <p className="text-sm text-red-500">Permanently delete your account and all data</p>
+              <p className="text-sm text-red-400">Permanently delete your account and all data</p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-red-400" />
         </Link>
       </div>
     </div>
+  );
+}
+
+function SettingsLink({ to, icon, iconBg, label, desc }: { to: string; icon: React.ReactNode; iconBg: string; label: string; desc: string }) {
+  return (
+    <Link to={to} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className={"p-2 rounded-lg " + iconBg}>{icon}</div>
+        <div>
+          <p className="font-medium text-gray-900">{label}</p>
+          <p className="text-sm text-gray-500">{desc}</p>
+        </div>
+      </div>
+      <ChevronRight className="w-5 h-5 text-gray-400" />
+    </Link>
   );
 }
