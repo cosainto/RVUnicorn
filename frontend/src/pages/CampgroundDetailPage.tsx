@@ -171,11 +171,10 @@ const AMENITY_LABELS: Record<string, string> = {
   TRAILS: '🥾 Trails', CAMPING: '⛺ Camping',
 };
 
-const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews', 'harvest-hosts'];
+const PUBLIC_TABS = ['overview', 'map', 'photos', 'reviews'];
 
 const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
-  { id: 'harvest-hosts', label: '🌾 Hosts', icon: Leaf },
   { id: 'map', label: 'Map', icon: Map },
   { id: 'amenities', label: 'Amenities', icon: Check },
   { id: 'threads', label: 'Threads', icon: MessageSquare },
@@ -1535,14 +1534,6 @@ export default function CampgroundDetailPage() {
           )}
 
           {/* Reviews Tab */}
-          {activeTab === 'harvest-hosts' && (
-            <HarvestHostsTab
-              campgroundLat={campground.latitude ?? undefined}
-              campgroundLng={campground.longitude ?? undefined}
-              campgroundState={campground.state ?? undefined}
-            />
-          )}
-
           {activeTab === 'reviews' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4"><div><h3 className="text-xl font-bold">Reviews</h3>{avgRating > 0 && <div className="flex items-center gap-2 mt-1">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">{avgRating.toFixed(1)} avg ({reviews.length})</span></div>}</div>{user && <button onClick={() => setShowReviewModal(true)} className="btn btn-primary btn-sm"><Star className="w-4 h-4 mr-1" />Write</button>}</div>

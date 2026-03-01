@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { Search, MapPin, Star, Plus, Phone, Globe, Navigation, SlidersHorizontal, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SuggestCampground from '../components/SuggestCampground';
+import HarvestHostsTab from '../components/HarvestHostsTab';
+import { Leaf } from 'lucide-react';
 
 interface Campground {
   id: string; name: string; slug: string; location: string; state: string | null;
@@ -51,6 +53,7 @@ export default function CampgroundsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [pageTab, setPageTab] = useState<'campgrounds' | 'harvest-hosts'>('campgrounds');
 
   useEffect(() => {
     if (!user) return;
@@ -103,6 +106,27 @@ export default function CampgroundsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Page Tab Switcher */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => setPageTab('campgrounds')}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'campgrounds' ? 'bg-primary-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+        >
+          🏕️ Campgrounds
+        </button>
+        <button
+          onClick={() => setPageTab('harvest-hosts')}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'harvest-hosts' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+        >
+          <Leaf className="w-4 h-4" /> Harvest Hosts
+        </button>
+      </div>
+
+      {pageTab === 'harvest-hosts' && (
+        <HarvestHostsTab />
+      )}
+
+      {pageTab === 'campgrounds' && <>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Discover Campgrounds</h1>
         <p className="text-gray-500">Find campgrounds that fit your rig and style</p>

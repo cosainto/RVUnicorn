@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Map, Heart, Navigation } from 'lucide-react';
+import { Map, Heart, Navigation, Moon } from 'lucide-react';
+import OvernightPlanner from '../components/OvernightPlanner';
 import TravelMap from '../components/TravelMap';
 import Attractions from '../components/Attractions';
 import DrivePlanner from '../components/DrivePlanner';
@@ -24,6 +25,7 @@ export default function TravelMapPage() {
     { id: 'map', label: 'Map View', icon: Map },
     { id: 'attractions', label: 'Attractions', icon: Heart },
     { id: 'trips', label: 'Drive Planner', icon: Navigation },
+    { id: 'overnight', label: 'Overnight Stops', icon: Moon },
   ];
 
   if (!user) {
@@ -71,6 +73,7 @@ export default function TravelMapPage() {
           )}
           {activeTab === 'attractions' && <Attractions />}
           {activeTab === 'trips' && <DrivePlanner />}
+          {activeTab === 'overnight' && <OvernightPlanner />}
         </div>
       </div>
     </div>
