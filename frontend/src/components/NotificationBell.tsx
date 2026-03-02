@@ -48,13 +48,10 @@ export default function NotificationBell() {
 
   const loadNotifications = async () => {
     try {
-      setLoading(true);
       const { data } = await api.get('/notifications');
-      setNotifications(data);
+      setNotifications(data.notifications || data);
     } catch (error) {
       console.error('Load notifications error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -68,8 +65,8 @@ export default function NotificationBell() {
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await api.put(`/notifications/${notificationId}/read`);
-      loadNotifications();
-      loadUnreadCount();
+      setNotifications(prev => prev.map((n: any) => n.id === notificationId ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Mark as read error:', error);
     }
@@ -78,8 +75,8 @@ export default function NotificationBell() {
   const handleMarkAllAsRead = async () => {
     try {
       await api.put('/notifications/read-all');
-      loadNotifications();
-      loadUnreadCount();
+      setNotifications(prev => prev.map((n: any) => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Mark all as read error:', error);
     }
