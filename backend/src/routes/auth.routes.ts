@@ -55,6 +55,21 @@ router.post('/register', async (req, res) => {
 
     // Award RVUnicorn Member badge
     await awardBadge(user.id, 'rvunicorn-member');
+    // Auto-friend Will (founder) with every new user
+    try {
+      const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
+      if (user.id !== WILL_ID) {
+        await prisma.friendship.create({
+          data: {
+            initiatorId: WILL_ID,
+            receiverId: user.id,
+          }
+        });
+      }
+    } catch (friendErr) {
+      console.error('Auto-friend Will error (non-fatal):', friendErr);
+    }
+
 
     // Send welcome email
     try {
