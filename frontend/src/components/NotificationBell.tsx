@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Mail, UserPlus, MessageSquare, Heart, Calendar, CheckSquare, MapPin } from 'lucide-react';
 import api from '../services/api';
@@ -16,7 +16,18 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
 
   // Load unread count on mount
   useEffect(() => {
@@ -122,14 +133,8 @@ export default function NotificationBell() {
       {/* Dropdown */}
       {showDropdown && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setShowDropdown(false)}
-          />
-
           {/* Dropdown Panel */}
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl z-50 border-2 border-primary-600">
+          <div ref={dropdownRef} className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl z-50 border-2 border-primary-600">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-t-lg">
               <div className="flex items-center justify-between">
