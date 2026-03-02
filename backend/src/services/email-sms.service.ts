@@ -157,16 +157,16 @@ export const welcomeEmail = (params: { firstName: string }) => ({
   subject: 'Welcome to RVUnicorn! 🎉🦄',
   html: baseHtml(
     '<p style="font-size:18px;font-weight:700;color:#1a1f2e;margin:0 0 16px">Hey ' + params.firstName + ', welcome to the herd! 🦄</p>' +
-    '<p>We're seriously excited you're here.</p>' +
+    '<p>We are seriously excited you are here.</p>' +
     '<p>RVUnicorn was created by a husband-and-wife team who love camping, road trips, and the people you meet along the way. After years of traveling the country, swapping stories at campgrounds, and planning the next trip before the current one ended, we realized something was missing&hellip;</p>' +
     '<p>A place where campers and RVers could actually <strong>engage with each other</strong>, share real experiences, and feel like part of a community &mdash; not just users on a map.</p>' +
-    '<p><strong>That's why we built RVUnicorn.</strong></p>' +
+    '<p><strong>That is why we built RVUnicorn.</strong></p>' +
 
     '<div class="box" style="margin:24px 0">' +
     '<p style="font-size:15px;font-weight:700;color:#92400e;margin:0 0 12px">&#x1F3D5; What you can do as a member</p>' +
     '<p style="margin:6px 0">&#x1F91D; <strong>Engage with each other</strong> &mdash; comment, react, and connect with people who share your interests</p>' +
     '<p style="margin:6px 0">&#x1F4A1; <strong>Share ideas &amp; get ideas</strong> &mdash; campgrounds, routes, tips, tricks, and must-see spots</p>' +
-    '<p style="margin:6px 0">&#x1F5FA; <strong>Discover and track campgrounds</strong> you've visited, loved, or want to visit</p>' +
+    '<p style="margin:6px 0">&#x1F5FA; <strong>Discover and track campgrounds</strong> you have visited, loved, or want to visit</p>' +
     '<p style="margin:6px 0">&#x1F690; <strong>Manage your rig</strong> &mdash; keep track of your setup, preferences, and camping style</p>' +
     '<p style="margin:6px 0">&#x1F4CD; <strong>See who's nearby</strong> and what others are doing at campsites around the country</p>' +
     '<p style="margin:6px 0">&#x1F3C6; <strong>Earn badges and pins</strong> for trips, milestones, and adventures</p>' +
@@ -174,8 +174,8 @@ export const welcomeEmail = (params: { firstName: string }) => ({
     '<p style="margin:6px 0">&#x2B50; <strong>Favorite, wishlist, or mute</strong> campgrounds based on what works for you</p>' +
     '</div>' +
 
-    '<p>Whether you're a weekend camper, a full-timer, or just getting started &mdash; <strong>you belong here.</strong></p>' +
-    '<p>This isn't just another camping site. It's a growing community where stories, experiences, and connections matter as much as the destination.</p>' +
+    '<p>Whether you are a weekend camper, a full-timer, or just getting started &mdash; <strong>you belong here.</strong></p>' +
+    '<p>This is not just another camping site. It is a growing community where stories, experiences, and connections matter as much as the destination.</p>' +
 
     '<p style="text-align:center;margin:28px 0 8px">' +
     '<a href="https://www.rvunicorn.com/basecamp" class="btn" style="margin-right:8px">Explore RVUnicorn &rarr;</a>' +
@@ -193,7 +193,7 @@ export const welcomeEmail = (params: { firstName: string }) => ({
   text: [
     "Hey " + params.firstName + ", welcome to RVUnicorn!",
     "",
-    "We're seriously excited you're here.",
+    "We are seriously excited you are here.",
     "",
     "RVUnicorn is a community-first platform for people who love camping and RV life.",
     "",
