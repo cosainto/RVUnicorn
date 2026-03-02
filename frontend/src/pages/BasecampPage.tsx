@@ -3164,5 +3164,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
 
 
     </div>
+    </>
   );
 }
