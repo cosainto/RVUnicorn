@@ -904,7 +904,7 @@ function getRvManualUrl(make?: string, model?: string, year?: number | string): 
 
 export default function BasecampPage({ user }: BasecampProps) {
   const navigate = useNavigate();
-  const { refreshUser, user } = useAuth();
+  const { refreshUser } = useAuth();
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
