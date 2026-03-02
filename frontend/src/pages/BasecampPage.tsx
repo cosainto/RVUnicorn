@@ -57,6 +57,7 @@ import Top8Friends from '../components/Top8Friends';
 import SocialFeed from '../components/SocialFeed';
 import { TrendingHashtags } from '../components/HashtagDisplay';
 import { CreatorToggleSection } from '../components/CreatorComponents';
+import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -530,6 +531,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const currentStatus = getCurrentStatus();
 
   return (
+    <>
+      {showTour && <BasecampTour firstName={user?.firstName} onComplete={handleTourComplete} />}
     <div className="space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
@@ -799,6 +802,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -1754,6 +1758,8 @@ export default function BasecampPage({ user }: BasecampProps) {
   }
 
   return (
+    <>
+      {showTour && <BasecampTour firstName={user?.firstName} onComplete={handleTourComplete} />}
     <div className="min-h-screen bg-gray-50">
       {/* Event Countdown Banner OR Inspirational Quote */}
       {nextEvent ? (
