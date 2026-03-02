@@ -84,6 +84,7 @@ function GlobalCameraButton() {
 
 import SearchPage from './pages/SearchPage';
 import AdminBadgeApprovalPage from "./components/AdminBadgeApproval";
+import AdminCampgroundsPage from './pages/AdminCampgroundsPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -151,6 +152,7 @@ function AppContent() {
 
         <Route path="/basecamp" element={<BasecampPage user={user} />} />
         <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
+        <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
 
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/media-albums" element={<PrivateRoute><MediaAlbumsPage /></PrivateRoute>} />
