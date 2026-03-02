@@ -532,7 +532,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
 
   return (
     <>
-      {showTour && <BasecampTour firstName={user?.firstName} onComplete={handleTourComplete} />}
+      {showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
     <div className="space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
@@ -904,7 +904,22 @@ function getRvManualUrl(make?: string, model?: string, year?: number | string): 
 
 export default function BasecampPage({ user }: BasecampProps) {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
+  const [showTour, setShowTour] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const tourKey = 'basecampTourDone_' + user.id;
+    if (!localStorage.getItem(tourKey)) {
+      const timer = setTimeout(() => setShowTour(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
+
+  const handleTourComplete = () => {
+    if (user) localStorage.setItem('basecampTourDone_' + user.id, 'true');
+    setShowTour(false);
+  };
   
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
@@ -1759,7 +1774,6 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   return (
     <>
-      {showTour && <BasecampTour firstName={user?.firstName} onComplete={handleTourComplete} />}
     <div className="min-h-screen bg-gray-50">
       {/* Event Countdown Banner OR Inspirational Quote */}
       {nextEvent ? (
