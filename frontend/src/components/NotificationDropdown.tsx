@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell, MessageCircle, Users, MapPin, Settings, Check, CheckCheck,
@@ -86,7 +86,7 @@ export default function NotificationDropdown({ isOpen, onClose, onUnreadUpdate }
   const dropdownRef = useRef<HTMLDivElement>(null);
   const quickReplyRef = useRef<HTMLInputElement>(null);
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = async () => {
     setLoading(true);
     try {
       const category = activeTab === 'all' ? '' : `&category=${activeTab}`;
@@ -96,22 +96,22 @@ export default function NotificationDropdown({ isOpen, onClose, onUnreadUpdate }
       console.error('Failed to load notifications:', e);
     }
     setLoading(false);
-  }, [activeTab]);
+  };
 
-  const loadCounts = useCallback(async () => {
+  const loadCounts = async () => {
     try {
       const { data } = await api.get('/notifications/unread');
       setCounts(data);
       onUnreadUpdate(data);
     } catch {}
-  }, [onUnreadUpdate]);
+  };
 
   useEffect(() => {
     if (isOpen) {
       loadNotifications();
       loadCounts();
     }
-  }, [isOpen, activeTab, loadNotifications, loadCounts]);
+  }, [isOpen, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close on click outside
   useEffect(() => {
