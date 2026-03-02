@@ -212,6 +212,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     try { return localStorage.getItem('notif-sound') !== 'off'; } catch { return true; }
   });
   const eventSourceRef = useRef<EventSource | null>(null);
+  const addToastRef = useRef<((n: any) => void) | null>(null);
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') || sessionStorage.getItem('token') : null;
 
   const toggleSound = useCallback(() => {
@@ -251,6 +252,9 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     setTimeout(() => dismissToast(toast.id), 6000);
   }, [soundEnabled, dismissToast]);
 
+  // Keep ref in sync so SSE handler always uses latest without reconnecting
+  addToastRef.current = addToast;
+
   // SSE Connection for real-time notifications
   useEffect(() => {
     if (!user || !token) return;
@@ -265,7 +269,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
       es.addEventListener('notification', (event) => {
         try {
           const notification = JSON.parse(event.data);
-          addToast(notification);
+          addToastRef.current?.(notification);
         } catch {}
       });
 
@@ -283,7 +287,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     return () => {
       eventSourceRef.current?.close();
     };
-  }, [user, token, addToast]);
+  }, [user, token]); // addToast intentionally excluded - using ref to avoid reconnects
 
   // Poll as fallback (every 30s)
   useEffect(() => {
@@ -297,13 +301,13 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
         const newOnes = notifs.filter((n: any) =>
           new Date(n.createdAt).getTime() > lastCheck && !n.read
         );
-        newOnes.forEach((n: any) => addToast(n));
+        newOnes.forEach((n: any) => addToastRef.current?.(n));
         lastCheck = Date.now();
       } catch {}
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [user, addToast]);
+  }, [user]); // addToast intentionally excluded - using ref
 
   const handleQuickReply = async (toast: Toast, text: string) => {
     try {
