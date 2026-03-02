@@ -412,6 +412,55 @@ router.post('/', authenticateToken, async (req, res) => {
       await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
     }
 
+
+    // Send Hitch welcome message on first trip creation
+    try {
+      const tripCount = await prisma.event.count({ where: { organizerId: userId } });
+      if (tripCount === 1) {
+        const conversation = await prisma.hitchConversation.create({
+          data: {
+            userId,
+            title: 'Welcome to Trip Planning!',
+            summary: 'Hitch congratulated user on planning their first trip.',
+          }
+        });
+
+        const hitchWelcome = [
+          "🎉 Congrats on planning your first trip, " + (event.organizer?.firstName || 'fellow adventurer') + "! I'm Hitch, your RVUnicorn trail guide — and I'm pumped to help you make this one unforgettable.",
+          "",
+          "Here's everything you can do with your trip **" + event.title + "**:",
+          "",
+          "**📋 Trip Checklist** — Create tasks and assign them to trip members so nothing gets forgotten. Who's bringing the firewood? Who's on s'mores duty? Sorted.",
+          "",
+          "**👥 Invite Your Crew** — Add friends to your trip so everyone stays on the same page. They'll get notified and can RSVP right inside RVUnicorn.",
+          "",
+          "**🏕️ Link a Campground** — Connect your trip to a campground from our database so your crew knows exactly where you're headed and can explore reviews and photos.",
+          "",
+          "**📸 Trip Album** — Every trip gets its own photo album. Document the journey and share the memories with your RVUnicorn community.",
+          "",
+          "**🍽️ Meal Planning** — Plan your camp meals day by day. Add recipes, assign cooks, and show up to the campsite ready to eat well.",
+          "",
+          "**💬 Trip Comments** — Keep the conversation going with your crew right inside the trip. No more scattered group texts.",
+          "",
+          "**🗺️ Activities & Attractions** — Add must-see stops, hikes, and activities to your trip itinerary so everyone knows the plan.",
+          "",
+          "**📦 Packing Lists** — Build shared packing lists so your whole crew is packed and ready. No more 'I thought YOU brought the camp chairs.'",
+          "",
+          "Ready to build out your trip? Ask me anything — I can suggest campgrounds, help you plan a route, recommend gear, or just help you get excited for the road ahead. 🚐✨",
+        ].join("\n");
+
+        await prisma.hitchMessage.create({
+          data: {
+            conversationId: conversation.id,
+            role: 'assistant',
+            content: hitchWelcome,
+          }
+        });
+      }
+    } catch (hitchErr) {
+      console.error('Hitch welcome message error (non-fatal):', hitchErr);
+    }
+
     res.json(event);
   } catch (error) {
     console.error('Create event error:', error);

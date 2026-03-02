@@ -81,7 +81,7 @@ router.post('/approve-claim/:campgroundId', authenticateToken, async (req: Reque
     const { campgroundId } = req.params;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user?.email !== 'will@kindletribe.com') {
+    if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -100,6 +100,24 @@ router.post('/approve-claim/:campgroundId', authenticateToken, async (req: Reque
       create: { userId: campground.claimedById, campgroundId, role: 'OWNER' },
       update: { role: 'OWNER' }
     });
+
+    // Send welcome email to new campground owner
+    try {
+      const owner = await prisma.user.findUnique({
+        where: { id: campground.claimedById },
+        select: { email: true, firstName: true }
+      });
+      if (owner) {
+        const emailContent = campgroundWelcomeEmail({
+          ownerName: owner.firstName || 'there',
+          campgroundName: campground.name,
+          campgroundId: campgroundId,
+        });
+        await sendEmail({ to: owner.email, ...emailContent });
+      }
+    } catch (emailErr) {
+      console.error('Campground welcome email error (non-fatal):', emailErr);
+    }
 
     res.json({ message: 'Claim approved' });
   } catch (error) {

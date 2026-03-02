@@ -214,6 +214,97 @@ export const welcomeEmail = (params: { firstName: string }) => ({
   ].join("\n")
 });
 
+
+// ─── Campground Owner Welcome Email ─────────────────────────────────────────
+export const campgroundWelcomeEmail = (params: {
+  ownerName: string;
+  campgroundName: string;
+  campgroundId: string;
+}) => ({
+  subject: 'Welcome to RVUnicorn! Your campground is now verified 🏕️🦄',
+  html: baseHtml(
+    '<p style="font-size:18px;font-weight:700;color:#1a1f2e;margin:0 0 8px">Congratulations, ' + params.ownerName + '!</p>' +
+    '<p style="margin:0 0 20px;color:#6b7280">Your campground <strong>' + params.campgroundName + '</strong> is now verified on RVUnicorn.</p>' +
+
+    '<div class="box" style="margin:0 0 24px">' +
+    '<p style="font-weight:700;color:#92400e;margin:0 0 8px">&#x1F91D; Welcome to the Community</p>' +
+    '<p style="margin:0;font-size:14px">RVUnicorn is a community-first platform connecting thousands of campers and RV enthusiasts. As a verified campground, you are now part of a growing network of destinations that real campers discover, review, and share every day.</p>' +
+    '</div>' +
+
+    '<p style="font-weight:700;color:#1a1f2e;font-size:16px;margin:0 0 12px">&#x1F3D5; Your Campground Dashboard</p>' +
+    '<p style="margin:0 0 16px;font-size:14px;color:#374151">Log in and visit your campground dashboard to get started. Here is everything you can do:</p>' +
+
+    '<div style="background:#f8fafc;border-radius:12px;padding:20px;margin:0 0 24px">' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x1F4F8; <strong>Add Photos &amp; Media</strong> &mdash; showcase your best sites, amenities, and scenery to attract more campers</p>' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x1F4E3; <strong>Post Announcements</strong> &mdash; let your followers know about openings, events, or updates in real time</p>' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x1F4C5; <strong>Create Events</strong> &mdash; host rallies, themed weekends, or community gatherings and promote them to the RVUnicorn community</p>' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x1F3E0; <strong>Manage Rentals</strong> &mdash; list cabins, glamping tents, or gear rentals directly on your campground page</p>' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x2B50; <strong>Collect Reviews</strong> &mdash; campers can rate and review your campground, building trust and visibility</p>' +
+    '<p style="margin:0 0 10px;font-size:14px">&#x1F4CA; <strong>View Analytics</strong> &mdash; see how many people are viewing, following, and checking in at your campground</p>' +
+    '<p style="margin:0;font-size:14px">&#x1F465; <strong>Manage Your Team</strong> &mdash; add staff members as admins to help manage your campground profile</p>' +
+    '</div>' +
+
+    '<p style="font-weight:700;color:#1a1f2e;font-size:16px;margin:0 0 12px">&#x1F3C6; Your Campground Badges</p>' +
+    '<p style="margin:0 0 16px;font-size:14px;color:#374151">RVUnicorn rewards campgrounds that engage with the community. Badges appear on your campground profile and build credibility with campers:</p>' +
+    '<div style="background:#f8fafc;border-radius:12px;padding:20px;margin:0 0 24px">' +
+    '<p style="margin:0 0 8px;font-size:14px">&#x2705; <strong>Verified Campground</strong> &mdash; you already have this one!</p>' +
+    '<p style="margin:0 0 8px;font-size:14px">&#x1F4F8; <strong>Photo Ready</strong> &mdash; add 10+ photos to your campground profile</p>' +
+    '<p style="margin:0 0 8px;font-size:14px">&#x1F31F; <strong>Top Rated</strong> &mdash; maintain a 4.5+ star average from camper reviews</p>' +
+    '<p style="margin:0 0 8px;font-size:14px">&#x1F465; <strong>Community Favorite</strong> &mdash; reach 50+ followers on your campground page</p>' +
+    '<p style="margin:0 0 8px;font-size:14px">&#x1F4C5; <strong>Event Host</strong> &mdash; create and host your first community event</p>' +
+    '<p style="margin:0;font-size:14px">&#x1F4E3; <strong>Active Voice</strong> &mdash; post 5+ announcements to keep campers informed</p>' +
+    '</div>' +
+
+    '<p style="font-weight:700;color:#1a1f2e;font-size:16px;margin:0 0 12px">&#x1F680; Upgrade Your Listing</p>' +
+    '<p style="margin:0 0 16px;font-size:14px;color:#374151">Take your campground profile to the next level with our upgrade options:</p>' +
+    '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin:0 0 24px">' +
+    '<p style="margin:0 0 12px;font-size:14px">&#x2B50; <strong>Featured Listing</strong> &mdash; appear at the top of search results and on the RVUnicorn homepage for maximum visibility</p>' +
+    '<p style="margin:0 0 12px;font-size:14px">&#x1F4F0; <strong>Sponsored Posts</strong> &mdash; promote your announcements and events to campers beyond your followers</p>' +
+    '<p style="margin:0 0 12px;font-size:14px">&#x1F3A8; <strong>Custom Branding</strong> &mdash; add your logo, brand colors, and a custom banner to make your page stand out</p>' +
+    '<p style="margin:0;font-size:14px">&#x1F4CA; <strong>Advanced Analytics</strong> &mdash; get detailed insights on visitor demographics, peak interest times, and camper behavior</p>' +
+    '</div>' +
+
+    '<p style="text-align:center;margin:28px 0 8px">' +
+    '<a href="https://www.rvunicorn.com/campgrounds/' + params.campgroundId + '/dashboard" class="btn">Go to Your Dashboard &rarr;</a>' +
+    '</p>' +
+    '<p style="text-align:center;margin:8px 0 0">' +
+    '<a href="https://www.rvunicorn.com/campgrounds/' + params.campgroundId + '" style="color:#d97706;font-weight:600;font-size:14px">View Your Public Page</a>' +
+    '</p>' +
+
+    '<p style="margin-top:32px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:14px;color:#374151">Have questions or need help getting set up? Reply to this email or reach out to us at <a href="mailto:will@rvunicorn.com" style="color:#d97706">will@rvunicorn.com</a> &mdash; we are happy to help.</p>' +
+    '<p style="margin:0;font-size:14px">See you out there,<br><strong>Will &amp; Deanna</strong><br><span style="color:#94a3b8;font-size:13px">Founders, RVUnicorn &#x1F984;</span></p>'
+  ),
+  text: [
+    "Congratulations " + params.ownerName + "!",
+    "",
+    params.campgroundName + " is now verified on RVUnicorn.",
+    "",
+    "Visit your dashboard to get started:",
+    "https://www.rvunicorn.com/campgrounds/" + params.campgroundId + "/dashboard",
+    "",
+    "WHAT YOU CAN DO:",
+    "- Add photos and media",
+    "- Post announcements",
+    "- Create events",
+    "- Manage rentals",
+    "- View analytics",
+    "- Manage your team",
+    "",
+    "BADGES TO EARN:",
+    "- Verified Campground (you have this!)",
+    "- Photo Ready (add 10+ photos)",
+    "- Top Rated (4.5+ star average)",
+    "- Community Favorite (50+ followers)",
+    "- Event Host (create an event)",
+    "- Active Voice (post 5+ announcements)",
+    "",
+    "Questions? Email will@rvunicorn.com",
+    "",
+    "Will & Deanna",
+    "Founders, RVUnicorn"
+  ].join("\n")
+});
+
 // Maintenance reminder email templates
 export const maintenanceReminderEmail = (params: {
   userName: string;
