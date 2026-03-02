@@ -89,6 +89,63 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       console.error('Failed to create badge thread:', postError);
     }
 
+    // Send Hitch message celebrating the badge
+    try {
+      const badgeDescriptions: Record<string, string> = {
+        'rvunicorn-member': 'You joined the RVUnicorn community — welcome to the herd!',
+        'first-trip': 'You planned your first trip. The adventure begins!',
+        'road-warrior': 'You have been on multiple trips and are racking up the miles.',
+        'campfire-chef': 'You shared your first camp recipe with the community.',
+        'social-butterfly': 'You made your first friend connection on RVUnicorn.',
+        'explorer': 'You discovered and checked in at a campground.',
+        'photographer': 'You uploaded photos to your first album.',
+        'trail-blazer': 'You visited campgrounds across multiple states.',
+        'top-rated': 'Your campground reviews are helping fellow RVers.',
+        'community-voice': 'You have been an active voice in the RVUnicorn community.',
+      };
+
+      const reason = badgeDescriptions[badge.slug] || badge.description || 'You met all the requirements for this achievement.';
+
+      const hitchMsg = [
+        '&#x1F3C6; **You just earned the "' + badge.name + '" badge!** ' + (badge.icon || '') ,
+        '',
+        reason,
+        '',
+        'Badges are how RVUnicorn recognizes your adventures, contributions, and milestones. Each one tells a story about your journey in the camping community.',
+        '',
+        '**Did you know?** Campgrounds on RVUnicorn can also award their own exclusive badges to visitors — so next time you check in at a campground, keep an eye out for special campground badges you can earn just by being there.',
+        '',
+        'Want to see all the badges you can earn and track your progress? Check out your badge collection here: [View All Badges](https://www.rvunicorn.com/badges)',
+        '',
+        'Keep exploring, connecting, and sharing — there are plenty more badges waiting for you out on the road. &#x1F690;&#x2728;',
+      ].join('\n');
+
+      // Find or create a Hitch conversation for badge celebrations
+      let conversation = await prisma.hitchConversation.findFirst({
+        where: { userId, title: 'Your Badges & Achievements' }
+      });
+
+      if (!conversation) {
+        conversation = await prisma.hitchConversation.create({
+          data: {
+            userId,
+            title: 'Your Badges & Achievements',
+            summary: 'Hitch celebrates badge milestones with the user.',
+          }
+        });
+      }
+
+      await prisma.hitchMessage.create({
+        data: {
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: hitchMsg,
+        }
+      });
+    } catch (hitchErr) {
+      console.error('Hitch badge message error (non-fatal):', hitchErr);
+    }
+
     console.log(`Badge "${badge.name}" awarded to user ${userId}`);
     return { awarded: true, badge: userBadge.badge };
   } catch (error) {

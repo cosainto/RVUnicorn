@@ -272,6 +272,15 @@ router.post('/:campgroundId/:badgeId/manual-award', requireAuth, async (req: Req
       });
     }
 
+    // Send Hitch message to each awarded user
+    const cg = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true } });
+    for (const award of awards) {
+      const remaining = badge.isLimitedEdition && badge.maxIssues
+        ? badge.maxIssues - badge.issuedCount
+        : null;
+      await sendCampgroundBadgeHitchMessage(award.userId, badge.name, badge.iconEmoji, cg?.name || 'the campground', badge.isLimitedEdition, remaining);
+    }
+
     res.json({ awarded: awards.length, message: `Awarded badge to ${awards.length} user(s)` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to award badge' });
@@ -289,7 +298,7 @@ router.get('/admin/pending', requireAuth, async (req: Request, res: Response) =>
     
     // Check if admin (you can expand this check)
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
-    if (user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
+    if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -314,7 +323,7 @@ router.post('/admin/:badgeId/approve', requireAuth, async (req: Request, res: Re
   try {
     const userId = (req as any).user.userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
-    if (user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
+    if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -338,7 +347,7 @@ router.post('/admin/:badgeId/reject', requireAuth, async (req: Request, res: Res
   try {
     const userId = (req as any).user.userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
-    if (user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
+    if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -362,7 +371,7 @@ router.get('/admin/stats', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
-    if (user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
+    if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -384,6 +393,45 @@ router.get('/admin/stats', requireAuth, async (req: Request, res: Response) => {
 // ═══════════════════════════════════════════════════════════════
 // AUTO-AWARD ON CHECK-IN
 // ═══════════════════════════════════════════════════════════════
+
+
+// Helper: send Hitch message when campground badge is awarded
+async function sendCampgroundBadgeHitchMessage(userId: string, badgeName: string, badgeEmoji: string | null, campgroundName: string, isLimitedEdition: boolean, remaining: number | null) {
+  try {
+    const limitedMsg = isLimitedEdition && remaining !== null
+      ? `\n\n&#x1F525; **This is a limited edition badge** — only ${remaining} more can ever be issued at ${campgroundName}. That makes yours extra special.`
+      : '';
+
+    const msg = [
+      `&#x1F3C5; **You just earned the "${badgeName}" badge** ${badgeEmoji || ''} from **${campgroundName}**!`,
+      '',
+      'Campgrounds on RVUnicorn can create their own exclusive badges to reward their most loyal visitors. These are separate from your RVUnicorn achievement badges and show up on your profile as proof of your adventures at specific campgrounds.' + limitedMsg,
+      '',
+      'Campground badges can be earned by:',
+      '- Checking in at a campground',
+      '- Staying multiple nights',
+      '- Coming back as a repeat visitor',
+      '- Attending a campground event',
+      '- Being personally awarded by the campground owner',
+      '',
+      'Want to see all your badges — both from RVUnicorn and from campgrounds you have visited? [View Your Badge Collection](https://www.rvunicorn.com/badges) &#x1F3C6;',
+    ].join('\n');
+
+    let conversation = await prisma.hitchConversation.findFirst({
+      where: { userId, title: 'Your Badges & Achievements' }
+    });
+    if (!conversation) {
+      conversation = await prisma.hitchConversation.create({
+        data: { userId, title: 'Your Badges & Achievements', summary: 'Hitch celebrates badge milestones.' }
+      });
+    }
+    await prisma.hitchMessage.create({
+      data: { conversationId: conversation.id, role: 'assistant', content: msg }
+    });
+  } catch (e) {
+    console.error('Campground badge Hitch message error (non-fatal):', e);
+  }
+}
 
 // POST /api/campground-badges/auto-award/:campgroundId/:userId - Check and auto-award badges
 router.post('/auto-award/:campgroundId/:userId', async (req: Request, res: Response) => {
@@ -472,6 +520,13 @@ router.post('/auto-award/:campgroundId/:userId', async (req: Request, res: Respo
 
           awarded.push(badge.name);
           console.log(`🏅 Badge awarded: "${badge.name}" to user ${userId}`);
+
+          // Get campground name for Hitch message
+          const cg = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true } });
+          const remaining = badge.isLimitedEdition && badge.maxIssues
+            ? badge.maxIssues - (badge.issuedCount + 1)
+            : null;
+          await sendCampgroundBadgeHitchMessage(userId, badge.name, badge.iconEmoji, cg?.name || 'the campground', badge.isLimitedEdition, remaining);
         } catch (e) {
           // Duplicate - skip
         }
