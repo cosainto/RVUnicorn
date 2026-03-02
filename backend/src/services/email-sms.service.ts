@@ -168,9 +168,9 @@ export const welcomeEmail = (params: { firstName: string }) => ({
     '<p style="margin:6px 0">&#x1F4A1; <strong>Share ideas &amp; get ideas</strong> &mdash; campgrounds, routes, tips, tricks, and must-see spots</p>' +
     '<p style="margin:6px 0">&#x1F5FA; <strong>Discover and track campgrounds</strong> you have visited, loved, or want to visit</p>' +
     '<p style="margin:6px 0">&#x1F690; <strong>Manage your rig</strong> &mdash; keep track of your setup, preferences, and camping style</p>' +
-    '<p style="margin:6px 0">&#x1F4CD; <strong>See who's nearby</strong> and what others are doing at campsites around the country</p>' +
+    '<p style="margin:6px 0">&#x1F4CD; <strong>See who is nearby</strong> and what others are doing at campsites around the country</p>' +
     '<p style="margin:6px 0">&#x1F3C6; <strong>Earn badges and pins</strong> for trips, milestones, and adventures</p>' +
-    '<p style="margin:6px 0">&#x1F5E3; <strong>Be part of the conversation</strong> &mdash; whether you're planning a trip or sitting at a campsite right now</p>' +
+    '<p style="margin:6px 0">&#x1F5E3; <strong>Be part of the conversation</strong> &mdash; whether you are planning a trip or sitting at a campsite right now</p>' +
     '<p style="margin:6px 0">&#x2B50; <strong>Favorite, wishlist, or mute</strong> campgrounds based on what works for you</p>' +
     '</div>' +
 
