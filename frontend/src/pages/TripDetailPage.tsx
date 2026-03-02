@@ -84,6 +84,14 @@ export default function EventDetailPage() {
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [tripAlbums, setTripAlbums] = useState<any[]>([]);
+  const [myAlbums, setMyAlbums] = useState<any[]>([]);
+  const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [albumModalTab, setAlbumModalTab] = useState<'create' | 'link'>('create');
+  const [newAlbumTitle, setNewAlbumTitle] = useState('');
+  const [newAlbumDesc, setNewAlbumDesc] = useState('');
+  const [albumPrivacy, setAlbumPrivacy] = useState('PUBLIC');
+  const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -154,6 +162,7 @@ export default function EventDetailPage() {
   useEffect(() => {
     loadEvent();
     loadFriends();
+    loadTripAlbums();
     if (user) {
       loadTripPlan();
       loadHomeLocation();
@@ -406,6 +415,51 @@ export default function EventDetailPage() {
     }
   };
 
+  const loadTripAlbums = async () => {
+    if (!event?.id) return;
+    try {
+      const [albumsRes, myRes] = await Promise.all([
+        api.get(`/events/${event.id}/albums`),
+        api.get('/albums?limit=50'),
+      ]);
+      setTripAlbums(albumsRes.data);
+      setMyAlbums(myRes.data?.albums || myRes.data || []);
+    } catch {}
+  };
+
+  const handleCreateTripAlbum = async () => {
+    if (!newAlbumTitle.trim()) return;
+    try {
+      const { data } = await api.post(`/events/${event.id}/albums`, {
+        title: newAlbumTitle,
+        description: newAlbumDesc,
+        privacy: albumPrivacy,
+      });
+      setTripAlbums(prev => [data, ...prev]);
+      setShowAlbumModal(false);
+      setNewAlbumTitle('');
+      setNewAlbumDesc('');
+    } catch { alert('Failed to create album'); }
+  };
+
+  const handleLinkAlbum = async () => {
+    if (!selectedAlbumId) return;
+    try {
+      const { data } = await api.post(`/events/${event.id}/albums/link`, { albumId: selectedAlbumId });
+      setTripAlbums(prev => [data, ...prev]);
+      setShowAlbumModal(false);
+      setSelectedAlbumId('');
+    } catch { alert('Failed to link album'); }
+  };
+
+  const handleUnlinkAlbum = async (albumId: string) => {
+    if (!confirm('Remove this album from the trip?')) return;
+    try {
+      await api.delete(`/events/${event.id}/albums/${albumId}/unlink`);
+      setTripAlbums(prev => prev.filter(a => a.id !== albumId));
+    } catch { alert('Failed to unlink album'); }
+  };
+
   const handleInvite = async () => {
     try {
       await api.post(`/events/${id}/attendees`, { userIds: selectedFriends });
@@ -511,6 +565,7 @@ export default function EventDetailPage() {
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
 
   const isOrganizer = user?.id === event.organizerId;
+  const isPastTrip = event?.endDate ? new Date(event.endDate) < new Date() : event?.startDate ? new Date(event.startDate) < new Date() : false;
 
   const handlePrivacyChange = async (newPrivacy: string) => {
     try {
@@ -639,7 +694,7 @@ export default function EventDetailPage() {
                   <Copy className="w-4 h-4" />Copy Event
                 </button>
               )}
-              {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />Invite</button>}
+              {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag People' : 'Invite'}</button>}
               {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
               {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
               {isOrganizer && (
@@ -759,7 +814,7 @@ export default function EventDetailPage() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">👥 Attendees ({event.attendees.length})</h3>
-                    {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />Invite More</button>}
+                    {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag More People' : 'Invite More'}</button>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {event.attendees.map((attendee) => (
@@ -974,6 +1029,51 @@ export default function EventDetailPage() {
             </div>
           )}
           {activeTab === 'photos' && <EventAlbum eventId={event.id} />}
+          {activeTab === 'albums' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900">Trip Albums</h3>
+                {isOrganizer && (
+                  <button onClick={() => setShowAlbumModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700">
+                    <span>+</span> {isPastTrip ? 'Add Album' : 'Create Album'}
+                  </button>
+                )}
+              </div>
+              {tripAlbums.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <span className="text-4xl block mb-2">🗂️</span>
+                  <p className="font-medium">No albums yet</p>
+                  {isOrganizer && <p className="text-sm mt-1">Create an album or link an existing one to this trip</p>}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {tripAlbums.map((album: any) => (
+                    <div key={album.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                      <div className="h-32 bg-gray-100 relative overflow-hidden grid grid-cols-2 gap-0.5">
+                        {album.photos?.slice(0, 4).map((p: any, i: number) => (
+                          <img key={i} src={p.imageUrl} className="w-full h-full object-cover" />
+                        ))}
+                        {(!album.photos || album.photos.length === 0) && (
+                          <div className="col-span-2 w-full h-full flex items-center justify-center text-3xl">📷</div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <p className="font-semibold text-sm text-gray-900 truncate">{album.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{album._count?.photos || 0} photos • by {album.user?.firstName}</p>
+                        <div className="flex gap-2 mt-2">
+                          <a href={'/albums/' + album.id} className="text-xs text-primary-600 hover:underline">View →</a>
+                          {isOrganizer && (
+                            <button onClick={() => handleUnlinkAlbum(album.id)} className="text-xs text-red-400 hover:text-red-600 ml-auto">Remove</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} />}
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
@@ -984,15 +1084,106 @@ export default function EventDetailPage() {
         </div>
       </div>
 
+
+      {/* Album Modal */}
+      {showAlbumModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-r from-primary-600 to-purple-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">🗂️ Trip Album</h2>
+                <button onClick={() => setShowAlbumModal(false)} className="text-white hover:text-gray-200"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setAlbumModalTab('create')}
+                  className={'px-3 py-1 rounded-full text-sm font-medium ' + (albumModalTab === 'create' ? 'bg-white text-primary-600' : 'text-white/70 hover:text-white')}>
+                  Create New
+                </button>
+                <button onClick={() => setAlbumModalTab('link')}
+                  className={'px-3 py-1 rounded-full text-sm font-medium ' + (albumModalTab === 'link' ? 'bg-white text-primary-600' : 'text-white/70 hover:text-white')}>
+                  Link Existing
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              {albumModalTab === 'create' ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Album Title *</label>
+                    <input value={newAlbumTitle} onChange={e => setNewAlbumTitle(e.target.value)}
+                      placeholder={isPastTrip ? `${event.title} Photos` : 'Trip Photos'}
+                      className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Description</label>
+                    <textarea value={newAlbumDesc} onChange={e => setNewAlbumDesc(e.target.value)}
+                      placeholder="Memories from this trip..."
+                      className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-400" rows={2} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Privacy</label>
+                    <select value={albumPrivacy} onChange={e => setAlbumPrivacy(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400">
+                      <option value="PUBLIC">🌍 Public</option>
+                      <option value="FRIENDS">👥 Friends Only</option>
+                      <option value="PRIVATE">🔒 Private</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={handleCreateTripAlbum} disabled={!newAlbumTitle.trim()}
+                      className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50 hover:bg-primary-700">
+                      Create Album
+                    </button>
+                    <button onClick={() => setShowAlbumModal(false)} className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">Select one of your existing albums to link to this trip:</p>
+                  {myAlbums.filter((a: any) => a.eventId !== event.id).length === 0 ? (
+                    <p className="text-center py-6 text-gray-400 text-sm">No albums available to link</p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {myAlbums.filter((a: any) => a.eventId !== event.id).map((album: any) => (
+                        <label key={album.id} className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50">
+                          <input type="radio" name="albumSelect" value={album.id}
+                            checked={selectedAlbumId === album.id}
+                            onChange={() => setSelectedAlbumId(album.id)} />
+                          {album.coverPhotoUrl && <img src={album.coverPhotoUrl} className="w-10 h-10 rounded object-cover" />}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{album.title}</p>
+                            <p className="text-xs text-gray-400">{album._count?.photos || 0} photos</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={handleLinkAlbum} disabled={!selectedAlbumId}
+                      className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50 hover:bg-primary-700">
+                      Link Album
+                    </button>
+                    <button onClick={() => setShowAlbumModal(false)} className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4 rounded-t-lg">
-              <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Invite Friends</h2><button onClick={() => setShowInviteModal(false)} className="text-white hover:text-gray-200"><X className="w-6 h-6" /></button></div>
+              <div className="flex items-center justify-between"><h2 className="text-xl font-bold">{isPastTrip ? '🏷️ Tag Trip Members' : 'Invite Friends'}</h2><button onClick={() => setShowInviteModal(false)} className="text-white hover:text-gray-200"><X className="w-6 h-6" /></button></div>
             </div>
             <div className="p-6">
-              <p className="text-gray-600 mb-4">Select friends to invite:</p>
+              <p className="text-gray-600 mb-4">{isPastTrip ? 'Tag friends who were on this trip with you. They will be automatically added as going.' : 'Select friends to invite:'}</p>
               {friends.length > 0 ? (
                 <div className="max-h-96 overflow-y-auto space-y-2 mb-4">
                   {friends.filter(friend => !event.attendees?.some(a => a.userId === friend.id)).map((friend) => (
@@ -1007,7 +1198,7 @@ export default function EventDetailPage() {
                 <p className="text-gray-600 text-center py-8">No friends to invite</p>
               )}
               <div className="flex gap-3">
-                <button onClick={handleInvite} disabled={selectedFriends.length === 0} className="btn btn-primary flex-1">Invite {selectedFriends.length > 0 && `(${selectedFriends.length})`}</button>
+                <button onClick={handleInvite} disabled={selectedFriends.length === 0} className="btn btn-primary flex-1">{isPastTrip ? 'Tag' : 'Invite'} {selectedFriends.length > 0 && `(${selectedFriends.length})`}</button>
                 <button onClick={() => setShowInviteModal(false)} className="btn btn-secondary">Cancel</button>
               </div>
             </div>

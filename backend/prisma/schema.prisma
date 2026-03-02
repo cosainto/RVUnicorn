@@ -522,6 +522,7 @@ model Event {
   tripPackItems     TripPackItem[]       @relation("EventTripPackItems")
   tripPlans         TripPlan[]
   eventActivities   EventActivity[]
+  photoAlbums       PhotoAlbum[]
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -618,6 +619,8 @@ model PhotoAlbum {
   updatedAt     DateTime          @updatedAt
   privacy       String            @default("PUBLIC")
   coverPhotoUrl String?
+  eventId       String?
+  event         Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
   photos        Photo[]
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   albumComments PhotoComment[]
@@ -626,6 +629,7 @@ model PhotoAlbum {
 
   @@index([userId])
   @@index([privacy])
+  @@index([eventId])
 }
 
 model Photo {

@@ -700,11 +700,14 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
       });
 
       if (!existing) {
+        const isPastTrip = event.endDate ? new Date(event.endDate) < new Date() : new Date(event.startDate) < new Date();
+        const attendeeStatus = isPastTrip ? 'going' : 'invited';
+
         const attendee = await prisma.eventAttendee.create({
           data: {
             eventId: id,
             userId: invitedUserId,
-            status: 'invited',
+            status: attendeeStatus,
           },
           include: {
             user: {
@@ -724,7 +727,9 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
           data: {
             userId: invitedUserId,
             type: 'EVENT_INVITE',
-            content: `You've been invited to ${event.title}`,
+            content: isPastTrip
+              ? `You were tagged in the trip "${event.title}"`
+              : `You've been invited to ${event.title}`,
             link: `/events/${id}`,
             read: false,
           },
@@ -1158,5 +1163,92 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
 });
 
 // GET /api/trips/my-events - Get user's events for linking
+
+
+// GET /api/events/:id/albums - Get albums linked to a trip
+router.get('/:id/albums', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const albums = await prisma.photoAlbum.findMany({
+      where: { eventId: id },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        photos: { take: 4, orderBy: { createdAt: 'desc' } },
+        _count: { select: { photos: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(albums);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch albums' });
+  }
+});
+
+// POST /api/events/:id/albums - Create a new album linked to this trip
+router.post('/:id/albums', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const { title, description, privacy } = req.body;
+
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const album = await prisma.photoAlbum.create({
+      data: { userId, eventId: id, title, description, privacy: privacy || 'PUBLIC' },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        _count: { select: { photos: true } },
+      },
+    });
+    res.status(201).json(album);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create album' });
+  }
+});
+
+// POST /api/events/:id/albums/link - Link an existing album to this trip
+router.post('/:id/albums/link', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const { albumId } = req.body;
+
+    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    if (!album) return res.status(404).json({ error: 'Album not found' });
+    if (album.userId !== userId) return res.status(403).json({ error: 'Not your album' });
+
+    const updated = await prisma.photoAlbum.update({
+      where: { id: albumId },
+      data: { eventId: id },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        _count: { select: { photos: true } },
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to link album' });
+  }
+});
+
+// DELETE /api/events/:id/albums/:albumId/unlink - Unlink album from trip
+router.delete('/:id/albums/:albumId/unlink', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { albumId } = req.params;
+
+    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    if (!album) return res.status(404).json({ error: 'Album not found' });
+    if (album.userId !== userId) return res.status(403).json({ error: 'Not your album' });
+
+    await prisma.photoAlbum.update({ where: { id: albumId }, data: { eventId: null } });
+    res.json({ message: 'Album unlinked' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to unlink album' });
+  }
+});
 
 export default router;
