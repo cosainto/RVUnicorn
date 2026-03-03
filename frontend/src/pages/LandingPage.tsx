@@ -64,11 +64,11 @@ function BadgeStrip({
           >
             <div className="relative">
               <div
-                className="absolute -inset-4 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-all duration-500"
-                style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.45), transparent 70%)' }}
+                className="absolute -inset-4 rounded-full blur-2xl opacity-40 group-hover:opacity-100 transition-all duration-500"
+                style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.55), rgba(245,158,11,0.3) 50%, transparent 70%)' }}
               />
               <div
-                className="absolute -inset-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                className="absolute -inset-2 rounded-full opacity-25 group-hover:opacity-100 transition-opacity duration-300"
                 style={{
                   background:
                     'conic-gradient(from 0deg, rgba(245,158,11,.9), rgba(253,230,138,.85) 30%, rgba(146,64,14,.85) 60%, rgba(252,211,77,.85) 80%, rgba(245,158,11,.9))',
@@ -78,14 +78,14 @@ function BadgeStrip({
               <div
                 className="relative w-32 h-32 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                 style={{
-                  background: 'radial-gradient(circle at 32% 28%, #1e3564, #080f25)',
-                  border: '2px solid rgba(251,191,36,0.18)',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.13)',
+                  background: 'radial-gradient(circle at 30% 22%, #2d4f96, #0e1d52 60%, #060c28)',
+                  
+                  boxShadow: '0 8px 36px rgba(0,0,0,0.65), 0 0 28px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.5)',
                 }}
               >
                 <div
                   className="absolute inset-0 rounded-full"
-                  style={{ background: 'radial-gradient(circle at 28% 22%, rgba(255,255,255,0.16), transparent 52%)' }}
+                  style={{ background: 'radial-gradient(circle at 28% 22%, rgba(255,255,255,0.34), transparent 46%)' }}
                 />
                 <img
                   src={b.img}
@@ -93,7 +93,7 @@ function BadgeStrip({
                   loading="lazy"
                   decoding="async"
                   className="w-24 h-24 object-contain z-10 relative group-hover:scale-105 transition-transform duration-300"
-                  style={{ filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.7))' }}
+                  style={{ filter: 'drop-shadow(0 3px 14px rgba(0,0,0,0.5)) brightness(1.2) saturate(1.3)' }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
                   }}
@@ -102,7 +102,7 @@ function BadgeStrip({
             </div>
             <span
               className="text-sm font-bold text-center leading-tight group-hover:text-amber-200 transition-colors"
-              style={{ color: 'rgba(255,255,255,0.58)' }}
+              style={{ color: 'rgba(255,255,255,0.82)' }}
             >
               {b.name}
             </span>
