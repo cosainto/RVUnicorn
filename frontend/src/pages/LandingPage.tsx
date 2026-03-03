@@ -685,7 +685,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right — Hitch */}
-          <div className="flex-shrink-0 relative flex items-center justify-center lg:w-[480px]" style={{ animation: 'fadeUp .7s .25s ease both' }}>
+          <div className="flex-shrink-0 relative flex flex-col items-center justify-center lg:w-[480px]" style={{ animation: 'fadeUp .7s .25s ease both' }}>
             <div
               className="absolute inset-0 rounded-full pointer-events-none"
               style={{ background: 'radial-gradient(circle at 50% 60%, rgba(245,158,11,.14), transparent 65%)', animation: 'glowPulse 3s ease-in-out infinite' }}
@@ -711,7 +711,7 @@ export default function LandingPage() {
             />
 
             <div
-              className="absolute top-4 right-4 md:right-0 max-w-[180px] rounded-2xl px-4 py-3 text-xs font-bold text-center"
+              className="relative mt-4 max-w-[260px] rounded-2xl px-5 py-3 text-xs font-bold text-center"
               style={{
                 background: 'rgba(245,158,11,.10)',
                 border: '1px solid rgba(245,158,11,.20)',
