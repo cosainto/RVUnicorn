@@ -53,6 +53,7 @@ app.use('/api/events', tripRoutes);
 app.use('/api/events', tripCommentsRoutes);
 app.use('/api/events', eventAccessRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/calendar', calendarRoutes);
 app.use('/api/campgrounds', campgroundRoutes);
 app.use('/api/campsite', campsiteRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
