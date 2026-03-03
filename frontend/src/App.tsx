@@ -360,7 +360,7 @@ function AppContent() {
         <Route path="/rv-setup" element={<PrivateRoute><div className="min-h-screen bg-gray-50 py-8 px-4"><RVOnboardingFlow /></div></PrivateRoute>} />
         <Route path="/notifications" element={<PrivateRoute><NotificationCenterPage /></PrivateRoute>} />
         <Route path="/admin/badges" element={<PrivateRoute><AdminBadgeApprovalPage /></PrivateRoute>} />
-        <Route path="/" element={<Navigate to="/basecamp" />} />
+        <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/basecamp" />} />
       </Routes>
       
       {/* Booking follow-up notification - asks if user booked after clicking Campspot */}
