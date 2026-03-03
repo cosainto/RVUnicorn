@@ -535,10 +535,7 @@ model EventAttendee {
   userId    String
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  confirmationNumber String?
-  siteNumber         String?
-  notes              String?
+  updatedAt DateTime @updatedAt
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1438,10 +1435,7 @@ model EventComment {
   content   String
   mentions  String[] @default([])
   createdAt DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  confirmationNumber String?
-  siteNumber         String?
-  notes              String?
+  updatedAt DateTime @updatedAt
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2189,10 +2183,7 @@ model EventSubtabPrivacy {
   subtab    String
   privacy   String   @default("INHERIT")
   createdAt DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  confirmationNumber String?
-  siteNumber         String?
-  notes              String?
+  updatedAt DateTime @updatedAt
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, subtab])

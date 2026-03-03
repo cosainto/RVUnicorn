@@ -23,6 +23,7 @@ import {
   Play
 } from 'lucide-react';
 import api from '../services/api';
+import TripCalendarWidget from '../components/TripCalendarWidget';
 import { User as UserType } from '../services/auth.service';
 import RVShowcaseEdit from '../components/RVShowcaseEdit';
 import SocialLinks from '../components/SocialLinks';
