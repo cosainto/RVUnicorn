@@ -741,6 +741,11 @@ const [editForm, setEditForm] = useState({
             </div>
           </div>
         )}
+        {/* Trip Calendar Section */}
+        <div className="mb-6">
+          <TripCalendarWidget compact={false} userId={profile?.id} />
+        </div>
+
         {/* Creator Content Section */}
         {profile.isCreator && creatorContent.length > 0 && (
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-md p-6 mb-6">
