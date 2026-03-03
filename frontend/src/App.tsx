@@ -43,6 +43,7 @@ import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorContentEditorPage from './pages/CreatorContentEditorPage';
 import BasecampPage from './pages/BasecampPage';
+import LandingPage from './pages/LandingPage';
 import BusinessBasecampPage from "./pages/BusinessBasecampPage";
 import SettingsPage from "./pages/SettingsPage";
 import DrivePlanner from './components/DrivePlanner';
