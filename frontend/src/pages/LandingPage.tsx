@@ -205,10 +205,11 @@ function HitchTip({ children }: { children: React.ReactNode }) {
       style={{ borderColor: 'rgba(245,158,11,.16)', background: 'rgba(245,158,11,.06)' }}
     >
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.22)' }}
+        className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
+        style={{ border: '1.5px solid rgba(245,158,11,.35)' }}
       >
-        🦄
+        <img src="/images/hitchpic.png" alt="Hitch" className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       </div>
       <div>
         <div className="text-xs font-black tracking-widest uppercase" style={{ color: 'rgba(245,158,11,.75)' }}>
