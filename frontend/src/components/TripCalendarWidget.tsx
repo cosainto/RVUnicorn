@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, Edit2, Check, UserPlus, MapPin } from 'lucide-react';
 import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 interface Attendee {
   id: string; status: string; userId: string;
@@ -20,6 +21,32 @@ interface Props { compact?: boolean; userId?: string; }
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+
+// Infer day emoji from calendar items
+const getDayEmoji = (hits: CalendarItem[]): string => {
+  if (!hits.length) return '🏠';
+  const hasStay = hits.some(h => h.type === 'STAY');
+  const hasEvent = hits.some(h => h.type === 'EVENT');
+  if (hasStay) {
+    // Check if campground name suggests RV park vs tent
+    const cg = hits.find(h => h.campground)?.campground?.name?.toLowerCase() || '';
+    const isRVPark = cg.includes('rv') || cg.includes('park') || cg.includes('resort') || cg.includes('campground');
+    return isRVPark ? '🅿️' : '⛺';
+  }
+  if (hasEvent) return '⛺';
+  return '🏠';
+};
+
+const isDrivingDay = (hits: CalendarItem[]): boolean => {
+  // A driving day = trip exists but no overnight stay on this specific date
+  // (start or end date of a trip but no stay covers this night)
+  return hits.some(h => {
+    const s = new Date(h.startDate);
+    const e = new Date(h.endDate);
+    return s.toDateString() === e.toDateString(); // single-day = driving/transit
+  });
+};
+
 export default function TripCalendarWidget({ compact=false, userId }: Props) {
   const today=new Date();
   const [year,setYear]=useState(today.getFullYear());
@@ -34,6 +61,7 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
   const [tagging,setTagging]=useState<string|null>(null);
   const [tagSearch,setTagSearch]=useState('');
   const [tagResults,setTagResults]=useState<any[]>([]);
+  const navigate = useNavigate();
 
   const fetchItems=useCallback(async()=>{
     try {
@@ -96,13 +124,13 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
       const active=editKey===eKey&&editField===field;
       return (
         <div>
-          <div className="text-xs mb-1" style={{color:'rgba(255,255,255,.4)'}}>{label}</div>
+          <div className="text-xs mb-1" style={{color:'#6b7280'}}>{label}</div>
           {active?(
             <div className="flex gap-1">
               <input autoFocus value={editValue} onChange={e=>setEditValue(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&saveRes(item,attendee?.user?.id)}
                 placeholder={ph} className="flex-1 text-xs rounded-lg px-2 py-1.5 text-white outline-none"
-                style={{background:'rgba(255,255,255,.08)',border:`1px solid ${color}66`}}/>
+                style={{background:'#f3f4f6',border:`1px solid ${color}66`}}/>
               <button onClick={()=>saveRes(item,attendee?.user?.id)} disabled={saving}
                 className="px-2 py-1 rounded-lg text-xs font-bold" style={{background:color,color:'#000'}}>
                 {saving?'…':<Check size={11}/>}
@@ -110,10 +138,10 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
             </div>
           ):(
             <div className="flex items-center gap-1 group/f">
-              <span className="text-sm font-mono" style={{color:val?color:'rgba(255,255,255,.25)'}}>{val||'—'}</span>
+              <span className="text-sm font-mono" style={{color:val?color:'#d1d5db'}}>{val||'—'}</span>
               {canEdit&&<button onClick={()=>{setEditKey(eKey);setEditField(field);setEditValue(val||'');}}
                 className="opacity-0 group-hover/f:opacity-100 transition-opacity">
-                <Edit2 size={11} style={{color:'rgba(255,255,255,.35)'}}/>
+                <Edit2 size={11} style={{color:'#9ca3af'}}/>
               </button>}
             </div>
           )}
@@ -121,14 +149,14 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
       );
     };
     return (
-      <div className="rounded-xl p-3 mb-2" style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)'}}>
+      <div className="rounded-xl p-3 mb-2" style={{background:'#ffffff',border:'1px solid #e5e7eb'}}>
         {attendee?.user&&(
           <div className="flex items-center gap-2 mb-2">
             {attendee.user.profilePicture
               ?<img src={attendee.user.profilePicture} className="w-7 h-7 rounded-full object-cover" alt=""/>
-              :<div className="w-7 h-7 rounded-full bg-indigo-800 flex items-center justify-center text-xs font-bold text-indigo-200">{attendee.user.firstName?.[0]}</div>
+              :<div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">{attendee.user.firstName?.[0]}</div>
             }
-            <span className="text-sm font-semibold text-white">{attendee.user.firstName} {attendee.user.lastName}</span>
+            <span className="text-sm font-semibold text-gray-800">{attendee.user.firstName} {attendee.user.lastName}</span>
             {isMe&&<span className="text-xs px-2 py-0.5 rounded-full" style={{background:'rgba(245,158,11,.12)',color:'rgba(245,158,11,.9)',border:'1px solid rgba(245,158,11,.2)'}}>You</span>}
           </div>
         )}
@@ -142,80 +170,115 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
   };
 
   if(compact) return (
-    <div className="rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}>
-      <div className="flex items-center justify-between px-4 py-3" style={{borderBottom:'1px solid rgba(255,255,255,.07)'}}>
-        <span className="font-bold text-sm text-white">My Calendar</span>
-        <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white/10"><ChevronLeft size={13} className="text-white/60"/></button>
-          <span className="text-xs font-semibold text-white/70 w-24 text-center">{MONTHS[month-1].slice(0,3)} {year}</span>
-          <button onClick={nextMonth} className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white/10"><ChevronRight size={13} className="text-white/60"/></button>
+    <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:'16px',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.07)'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f3f4f6'}}>
+        <span style={{fontWeight:700,fontSize:'14px',color:'#111827'}}>My Calendar</span>
+        <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
+          <button onClick={prevMonth} style={{width:'24px',height:'24px',borderRadius:'50%',border:'none',background:'#f3f4f6',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><ChevronLeft size={13} color="#6b7280"/></button>
+          <span style={{fontSize:'12px',fontWeight:600,color:'#374151',width:'88px',textAlign:'center'}}>{MONTHS[month-1].slice(0,3)} {year}</span>
+          <button onClick={nextMonth} style={{width:'24px',height:'24px',borderRadius:'50%',border:'none',background:'#f3f4f6',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><ChevronRight size={13} color="#6b7280"/></button>
         </div>
       </div>
-      <div className="px-3 py-2">
-        <div className="grid grid-cols-7 mb-1">{DAYS.map(d=><div key={d} className="text-center text-xs font-bold" style={{color:'rgba(255,255,255,.3)'}}>{d[0]}</div>)}</div>
-        <div className="grid grid-cols-7 gap-y-0.5">
+      <div style={{padding:'8px 12px'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',marginBottom:'4px'}}>
+          {DAYS.map(d=><div key={d} style={{textAlign:'center',fontSize:'11px',fontWeight:700,color:'#9ca3af'}}>{d[0]}</div>)}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'2px'}}>
           {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`}/>)}
           {Array.from({length:daysInMonth},(_,i)=>i+1).map(day=>{
             const hits=itemsOnDay(day);
             const isToday=day===today.getDate()&&month===today.getMonth()+1&&year===today.getFullYear();
             return(
-              <button key={day} onClick={()=>{setSelDay(day);setSelected(hits.length?hits:null);}}
-                className="flex flex-col items-center justify-center h-7 rounded-lg text-xs font-semibold transition-all"
-                style={{color:isToday?'#000':hits.length?'#fff':'rgba(255,255,255,.5)',background:isToday?'#f59e0b':hits.length?'rgba(255,255,255,.08)':'transparent'}}>
-                {day}
-                {hits.length>0&&!isToday&&<div className="flex gap-0.5 mt-0.5">{hits.slice(0,3).map(h=><div key={h.id} className="w-1 h-1 rounded-full" style={{background:h.color}}/>)}</div>}
+              <button key={day} onClick={()=>{
+                  if(hits.length===1) {
+                    const h=hits[0];
+                    navigate(h.type==='STAY' ? `/trips/${h.tripId||h.id}` : `/trips/${h.id}`);
+                  } else {
+                    setSelDay(day);setSelected(hits.length?hits:null);
+                  }
+                }}
+                style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'32px',borderRadius:'8px',border:'none',cursor:'pointer',fontSize:'11px',fontWeight:hits.length?700:400,background:isToday?'#f59e0b':hits.length?'#eff6ff':'transparent',color:isToday?'#fff':hits.length?'#1d4ed8':'#374151'}}>
+                {hits.length > 0 ? (
+                  <span style={{fontSize:'13px',title:'Click to view'}}>{isDrivingDay(hits) ? '🚗' : getDayEmoji(hits)}</span>
+                ) : (
+                  <span>{day}</span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
       {items.filter(it=>new Date(it.startDate)>=today).slice(0,3).map(it=>(
-        <div key={it.id} className="flex items-start gap-2 px-4 py-2" style={{borderTop:'1px solid rgba(255,255,255,.05)'}}>
-          <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{background:it.color}}/>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-white truncate">{it.title}</div>
-            <div className="text-xs" style={{color:'rgba(255,255,255,.4)'}}>{new Date(it.startDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})}{it.campground&&` · ${it.campground.name}`}</div>
+        <div key={it.id} style={{display:'flex',alignItems:'flex-start',gap:'8px',padding:'8px 16px',borderTop:'1px solid #f3f4f6'}}>
+          <div style={{width:'6px',height:'6px',borderRadius:'50%',background:it.color,marginTop:'5px',flexShrink:0}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:'12px',fontWeight:600,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{it.title}</div>
+            <div style={{fontSize:'11px',color:'#9ca3af'}}>{new Date(it.startDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})}{it.campground&&` · ${it.campground.name}`}</div>
           </div>
         </div>
       ))}
-      {selDay&&selected&&(
-        <div className="px-4 pb-4 pt-2" style={{borderTop:'1px solid rgba(255,255,255,.07)'}}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-white">{MONTHS[month-1]} {selDay}</span>
-            <button onClick={()=>{setSelDay(null);setSelected(null);}}><X size={13} style={{color:'rgba(255,255,255,.4)'}}/></button>
+      <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',gap:'8px',fontSize:'11px',color:'#9ca3af'}}>
+          <span>⛺ camp</span><span>🅿️ RV park</span><span>🚗 drive</span>
+        </div>
+        <button onClick={()=>navigate('/calendar')} style={{fontSize:'11px',fontWeight:600,color:'#f59e0b',border:'none',background:'none',cursor:'pointer'}}>View all →</button>
+      </div>
+      {selDay&&(
+        <div style={{padding:'12px 16px',borderTop:'1px solid #f3f4f6'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
+            <span style={{fontSize:'12px',fontWeight:700,color:'#111827'}}>{MONTHS[month-1]} {selDay}</span>
+            <button onClick={()=>{setSelDay(null);setSelected(null);}} style={{border:'none',background:'none',cursor:'pointer'}}><X size={13} color="#9ca3af"/></button>
           </div>
-          {selected.map(item=>(
-            <div key={item.id} className="mb-2 rounded-xl p-3" style={{background:'rgba(255,255,255,.05)',border:`1px solid ${item.color}44`}}>
-              <div className="text-sm font-bold text-white mb-1">{item.title}</div>
-              {item.campground&&<div className="text-xs mb-2" style={{color:'rgba(255,255,255,.45)'}}>{item.campground.name}</div>}
+          {selected && selected.map(item=>(
+            <div key={item.id} style={{marginBottom:'8px',borderRadius:'12px',padding:'12px',background:'#f9fafb',border:`1px solid ${item.color}44`}}>
+              <div style={{fontSize:'13px',fontWeight:700,color:'#111827',marginBottom:'4px'}}>{item.title}</div>
+              {item.campground&&<div style={{fontSize:'11px',color:'#6b7280',marginBottom:'8px'}}>{item.campground.name}</div>}
               <ResCard item={item} attendee={item.myAttendee} isMe={true}/>
             </div>
           ))}
+          {(!selected || !selected.length) && (
+            <div>
+              <p style={{fontSize:'12px',color:'#6b7280',marginBottom:'8px'}}>Nothing planned — add something?</p>
+              <div style={{display:'flex',gap:'8px'}}>
+                <button
+                  onClick={()=>navigate(`/trips?create=true&startDate=${year}-${String(month).padStart(2,'0')}-${String(selDay).padStart(2,'0')}`)}
+                  style={{flex:1,padding:'8px',borderRadius:'10px',border:'1px solid #e5e7eb',background:'#fff',cursor:'pointer',fontSize:'12px',fontWeight:600,color:'#374151',display:'flex',alignItems:'center',justifyContent:'center',gap:'4px'}}>
+                  🗺️ Plan Trip
+                </button>
+                <button
+                  onClick={()=>navigate(`/trips?create=true&type=event&startDate=${year}-${String(month).padStart(2,'0')}-${String(selDay).padStart(2,'0')}`)}
+                  style={{flex:1,padding:'8px',borderRadius:'10px',border:'1px solid #e5e7eb',background:'#fff',cursor:'pointer',fontSize:'12px',fontWeight:600,color:'#374151',display:'flex',alignItems:'center',justifyContent:'center',gap:'4px'}}>
+                  🎪 Create Event
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 
+
   return (
-    <div className="p-4" style={{color:'#fff'}}>
+    <div className="p-4" style={{color:'#1f2937'}}>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-xl font-extrabold text-white">Trip Calendar</h2>
-          <p className="text-sm mt-0.5" style={{color:'rgba(255,255,255,.5)'}}>Events, stays &amp; reservations</p>
+          <h2 className="text-xl font-extrabold text-gray-900">Trip Calendar</h2>
+          <p className="text-sm mt-0.5" style={{color:'#6b7280'}}>Events, stays &amp; reservations</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="w-9 h-9 rounded-full flex items-center justify-center" style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)'}}><ChevronLeft size={16}/></button>
+          <button onClick={prevMonth} className="w-9 h-9 rounded-full flex items-center justify-center" style={{background:'#f3f4f6',border:'1px solid rgba(255,255,255,.1)'}}><ChevronLeft size={16}/></button>
           <span className="text-base font-bold w-36 text-center">{MONTHS[month-1]} {year}</span>
-          <button onClick={nextMonth} className="w-9 h-9 rounded-full flex items-center justify-center" style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)'}}><ChevronRight size={16}/></button>
+          <button onClick={nextMonth} className="w-9 h-9 rounded-full flex items-center justify-center" style={{background:'#f3f4f6',border:'1px solid rgba(255,255,255,.1)'}}><ChevronRight size={16}/></button>
         </div>
       </div>
-      <div className="flex gap-4 mb-4 text-xs" style={{color:'rgba(255,255,255,.5)'}}>
+      <div className="flex gap-4 mb-4 text-xs" style={{color:'#6b7280'}}>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{background:'#f59e0b'}}/> Events</div>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{background:'#34d399'}}/> Trip Stays</div>
       </div>
-      <div className="rounded-2xl overflow-hidden mb-5" style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.09)'}}>
+      <div className="rounded-2xl overflow-hidden mb-5" style={{background:'#ffffff',border:'1px solid #e5e7eb'}}>
         <div className="grid grid-cols-7" style={{borderBottom:'1px solid rgba(255,255,255,.07)'}}>
-          {DAYS.map(d=><div key={d} className="py-3 text-center text-xs font-bold" style={{color:'rgba(255,255,255,.4)'}}>{d}</div>)}
+          {DAYS.map(d=><div key={d} className="py-3 text-center text-xs font-bold" style={{color:'#6b7280'}}>{d}</div>)}
         </div>
         <div className="grid grid-cols-7">
           {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-20 p-1" style={{borderRight:'1px solid rgba(255,255,255,.05)',borderBottom:'1px solid rgba(255,255,255,.05)'}}/>)}
@@ -229,7 +292,7 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                 style={{borderRight:'1px solid rgba(255,255,255,.05)',borderBottom:'1px solid rgba(255,255,255,.05)',background:isSel?'rgba(245,158,11,.08)':'transparent'}}>
                 <div className="mb-1">
                   <span className="w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold"
-                    style={{background:isToday?'#f59e0b':'transparent',color:isToday?'#000':'rgba(255,255,255,.6)'}}>
+                    style={{background:isToday?'#f59e0b':'transparent',color:isToday?'#000':'#374151'}}>
                     {day}
                   </span>
                 </div>
@@ -239,17 +302,17 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                     {h.title}
                   </div>
                 ))}
-                {hits.length>3&&<div className="text-xs" style={{color:'rgba(255,255,255,.4)'}}>+{hits.length-3} more</div>}
+                {hits.length>3&&<div className="text-xs" style={{color:'#6b7280'}}>+{hits.length-3} more</div>}
               </div>
             );
           })}
         </div>
       </div>
       {selDay&&selected&&(
-        <div className="rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.09)'}}>
+        <div className="rounded-2xl overflow-hidden" style={{background:'#ffffff',border:'1px solid #e5e7eb'}}>
           <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:'1px solid rgba(255,255,255,.07)'}}>
-            <h3 className="font-bold text-base text-white">{MONTHS[month-1]} {selDay}, {year}</h3>
-            <button onClick={()=>{setSelDay(null);setSelected(null);}}><X size={16} style={{color:'rgba(255,255,255,.5)'}}/></button>
+            <h3 className="font-bold text-base text-gray-900">{MONTHS[month-1]} {selDay}, {year}</h3>
+            <button onClick={()=>{setSelDay(null);setSelected(null);}}><X size={16} style={{color:'#6b7280'}}/></button>
           </div>
           <div className="p-5 space-y-5">
             {selected.map(item=>(
@@ -258,11 +321,11 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-2 h-2 rounded-full" style={{background:item.color}}/>
-                      <span className="font-extrabold text-white">{item.title}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{background:'rgba(255,255,255,.08)',color:'rgba(255,255,255,.5)'}}>{item.type==='EVENT'?'Event':'Stay'}</span>
+                      <span className="font-extrabold text-gray-900">{item.title}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{background:'#f3f4f6',color:'#6b7280'}}>{item.type==='EVENT'?'Event':'Stay'}</span>
                     </div>
-                    {item.campground&&<div className="flex items-center gap-1 text-xs" style={{color:'rgba(255,255,255,.5)'}}><MapPin size={11}/>{item.campground.name} · {item.campground.location}</div>}
-                    <div className="text-xs mt-1" style={{color:'rgba(255,255,255,.4)'}}>
+                    {item.campground&&<div className="flex items-center gap-1 text-xs" style={{color:'#6b7280'}}><MapPin size={11}/>{item.campground.name} · {item.campground.location}</div>}
+                    <div className="text-xs mt-1" style={{color:'#6b7280'}}>
                       {new Date(item.startDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – {new Date(item.endDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
                     </div>
                   </div>
@@ -278,21 +341,21 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                   <div className="px-5 py-3" style={{borderBottom:'1px solid rgba(255,255,255,.07)',background:'rgba(245,158,11,.05)'}}>
                     <input value={tagSearch} onChange={e=>{setTagSearch(e.target.value);searchFriends(e.target.value);}}
                       className="w-full text-sm rounded-xl px-3 py-2 text-white outline-none"
-                      style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(245,158,11,.3)'}}
+                      style={{background:'#f3f4f6',border:'1px solid rgba(245,158,11,.3)'}}
                       placeholder="Search friends to tag..."/>
                     {tagResults.map(f=>(
                       <button key={f.id} onClick={()=>tagFriend(item.id,f.id)}
                         className="flex items-center gap-2 w-full text-left px-2 py-2 rounded-xl mt-1 hover:bg-white/10 transition-colors">
                         {f.profilePicture?<img src={f.profilePicture} className="w-7 h-7 rounded-full object-cover" alt=""/>
-                          :<div className="w-7 h-7 rounded-full bg-indigo-800 flex items-center justify-center text-xs font-bold text-indigo-200">{f.firstName?.[0]}</div>}
+                          :<div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">{f.firstName?.[0]}</div>}
                         <span className="text-sm text-white">{f.firstName} {f.lastName}</span>
-                        <span className="text-xs" style={{color:'rgba(255,255,255,.4)'}}>@{f.username}</span>
+                        <span className="text-xs" style={{color:'#6b7280'}}>@{f.username}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 <div className="px-5 py-4">
-                  <div className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.1em'}}>
+                  <div className="text-xs font-bold mb-3" style={{color:'#6b7280',textTransform:'uppercase',letterSpacing:'.1em'}}>
                     {item.type==='EVENT'?'Attendees & Reservations':'Your Reservation'}
                   </div>
                   {item.type==='EVENT'

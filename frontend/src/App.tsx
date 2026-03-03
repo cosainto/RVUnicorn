@@ -1,5 +1,6 @@
 import FeedPage from './pages/FeedPage';
 import ThreadDetailPage from './pages/ThreadDetailPage';
+import TripCalendarWidget from './components/TripCalendarWidget';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -221,7 +222,8 @@ function AppContent() {
         <Route path="/events/:id" element={<EventToTripRedirect />} />
 
         <Route
-          path="/trips"
+          path="/calendar" element={<PrivateRoute><div style={{minHeight:'100vh',background:'#f9fafb',padding:'24px'}}><TripCalendarWidget compact={false} /></div></PrivateRoute>} />
+          <Route path="/trips"
           element={
             <PrivateRoute>
               <TripsPage />

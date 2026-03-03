@@ -8,3 +8,5 @@ backend/discovered-campgrounds/
 *.pdf
 backend/campground-maps-compressed/
 backend/.env
+frontend/dist
+frontend/dist

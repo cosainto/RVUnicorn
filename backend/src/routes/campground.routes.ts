@@ -809,7 +809,7 @@ router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Respo
 
     const { id } = req.params;
     const {
-      name, description, location, state, latitude, longitude,
+      name, description, location, state, city, zipCode, latitude, longitude,
       phone, websiteUrl, businessEmail, businessPhone,
       bookingUrl, campspotSlug, facebookUrl, instagramUrl,
       twitterUrl, youtubeUrl, tiktokUrl, imageUrl,
@@ -827,6 +827,8 @@ router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Respo
         ...(description !== undefined && { description }),
         ...(location !== undefined && { location }),
         ...(state !== undefined && { state }),
+        ...(city !== undefined && { city }),
+        ...(zipCode !== undefined && { zipCode }),
         ...(latitude !== undefined && { latitude: latitude ? parseFloat(latitude) : null }),
         ...(longitude !== undefined && { longitude: longitude ? parseFloat(longitude) : null }),
         ...(phone !== undefined && { phone }),

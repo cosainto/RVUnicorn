@@ -85,6 +85,12 @@ export default function EventsPage() {
     const createFromWishlist = searchParams.get('createFromWishlist');
     const campgroundId = searchParams.get('campgroundId');
     const campgroundName = searchParams.get('campgroundName');
+    const startDateParam = searchParams.get('startDate');
+    const createParam = searchParams.get('create');
+    if (createParam === 'true' && startDateParam) {
+      setFormData(prev => ({ ...prev, startDate: startDateParam, endDate: startDateParam }));
+      setShowCreateModal(true);
+    }
     
     if (createFromWishlist === 'true' && campgroundId) {
       setFormData(prev => ({

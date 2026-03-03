@@ -335,6 +335,7 @@ export default function CampgroundDetailPage() {
     setEditForm({
       name: campground.name || '', description: campground.description || '',
       location: campground.location || '', state: campground.state || '',
+      city: (campground as any).city || '', zipCode: (campground as any).zipCode || '',
       latitude: campground.latitude ?? '', longitude: campground.longitude ?? '',
       phone: campground.phone || '', websiteUrl: campground.websiteUrl || '',
       businessEmail: campground.businessEmail || '', businessPhone: campground.businessPhone || '',
@@ -504,7 +505,7 @@ export default function CampgroundDetailPage() {
                   {campground.verificationStatus === "VERIFIED" && <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4" />Verified</span>}
                 </div>
                 <h1 className="text-4xl md:text-6xl font-bold text-white mb-3">{campground.name}<BadgeIcons /></h1>
-                <div className="flex items-center text-white/80 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span></div>
+                <div className="flex items-center text-white/80 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span></div>
                 <div className="flex flex-wrap items-center gap-6 text-white/70">
                   {avgRating > 0 && <div className="flex items-center gap-2">{renderSmores(Math.round(avgRating))}<span>({reviews.length})</span></div>}
                   {campground._count && <><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers}</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns}</span></>}
@@ -602,7 +603,7 @@ export default function CampgroundDetailPage() {
             {/* Campground info card */}
             <div className="bg-amber-100 border-2 border-amber-400 rounded-lg p-6 -mt-6 mx-4 relative z-10 shadow-md">
               <h1 className="text-3xl md:text-4xl font-bold text-amber-900 mb-2 font-serif">{campground.name}<BadgeIcons /></h1>
-              <div className="flex items-center text-amber-700 text-lg mb-3"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span></div>
+              <div className="flex items-center text-amber-700 text-lg mb-3"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span></div>
               
               <div className="flex flex-wrap gap-4 mb-4">
                 {avgRating > 0 && <div className="flex items-center gap-2">{renderSmores(Math.round(avgRating))}<span className="text-amber-700">({reviews.length} reviews)</span></div>}
@@ -655,7 +656,7 @@ export default function CampgroundDetailPage() {
             <div className="absolute bottom-20 left-0 right-0 px-8">
               <div className="max-w-5xl mx-auto">
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">{campground.name}<BadgeIcons /></h1>
-                <div className="flex items-center text-white/90 text-lg"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span></div>
+                <div className="flex items-center text-white/90 text-lg"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span></div>
               </div>
             </div>
           </div>
@@ -723,7 +724,7 @@ export default function CampgroundDetailPage() {
               <div className="max-w-5xl mx-auto">
                 <div className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1 rounded text-sm font-bold tracking-wider mb-4">CAMPGROUND</div>
                 <h1 className="text-4xl md:text-6xl font-black text-white mb-3 tracking-tight">{campground.name}<BadgeIcons /></h1>
-                <div className="flex items-center text-gray-300 text-lg"><MapPin className="w-5 h-5 mr-2 text-orange-500" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span></div>
+                <div className="flex items-center text-gray-300 text-lg"><MapPin className="w-5 h-5 mr-2 text-orange-500" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span></div>
               </div>
             </div>
           </div>
@@ -785,7 +786,7 @@ export default function CampgroundDetailPage() {
           {/* Content */}
           <div className="max-w-4xl mx-auto px-8 py-6">
             <h1 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide mb-2">{campground.name}<BadgeIcons /></h1>
-            <p className="text-gray-400 font-light mb-8">{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</p>
+            <p className="text-gray-400 font-light mb-8">{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</p>
             
             <div className="flex flex-wrap items-center gap-8 mb-6 pb-6 border-b border-gray-100">
               {avgRating > 0 && <div className="flex items-center gap-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-400 font-light">{reviews.length} reviews</span></div>}
@@ -837,7 +838,7 @@ export default function CampgroundDetailPage() {
               </div>
               
               <h1 className="text-4xl lg:text-6xl font-black mb-4 leading-tight">{campground.name}<BadgeIcons /></h1>
-              <p className="text-xl text-gray-400 mb-8 font-light">{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</p>
+              <p className="text-xl text-gray-400 mb-8 font-light">{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</p>
               
               {/* Pull quote style stats */}
               <div className="border-l-4 border-white pl-6 mb-8">
@@ -914,7 +915,7 @@ export default function CampgroundDetailPage() {
                   </div>
                   
                   <h1 className="text-3xl md:text-5xl font-black text-amber-900 mb-2" style={{ fontFamily: 'Georgia, serif' }}>{campground.name}<BadgeIcons /></h1>
-                  <div className="flex items-center justify-center text-amber-700 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" />{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</div>
+                  <div className="flex items-center justify-center text-amber-700 text-lg mb-4"><MapPin className="w-5 h-5 mr-2" />{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</div>
                   
                   {/* Decorative divider */}
                   <div className="flex items-center justify-center gap-4 my-6">
@@ -1002,7 +1003,7 @@ export default function CampgroundDetailPage() {
               <div className="max-w-5xl mx-auto">
                 {campground.verificationStatus === "VERIFIED" && <span className="inline-block px-3 py-1 bg-green-500/20 border border-green-500 text-green-400 text-xs font-bold tracking-wider rounded mb-4">VERIFIED</span>}
                 <h1 className="text-4xl md:text-6xl font-black mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">{campground.name}<BadgeIcons /></h1>
-                <div className="flex items-center text-gray-400 text-lg"><MapPin className="w-5 h-5 mr-2 text-cyan-500" />{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</div>
+                <div className="flex items-center text-gray-400 text-lg"><MapPin className="w-5 h-5 mr-2 text-cyan-500" />{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</div>
               </div>
             </div>
           </div>
@@ -1062,7 +1063,7 @@ export default function CampgroundDetailPage() {
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{campground.name}<BadgeIcons /></h1>
-              <div className="flex items-center text-gray-600 text-lg mb-2"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span></div>
+              <div className="flex items-center text-gray-600 text-lg mb-2"><MapPin className="w-5 h-5 mr-2" /><span>{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span></div>
               {avgRating > 0 && <div className="flex items-center gap-2 mb-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-2"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -1315,7 +1316,7 @@ export default function CampgroundDetailPage() {
                   <div className={`rounded-lg overflow-hidden border ${isAdventure ? "border-gray-700" : isNeon ? "border-purple-500/30" : "border-gray-200"}`}>
                     <iframe src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d10000!2d${campground.longitude}!3d${campground.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1sen!2sus!4v1600000000000!5m2!1sen!2sus`} width="100%" height="300" style={{ border: 0 }} allowFullScreen loading="lazy" title={`Map of ${campground.name}`} />
                     <div className={`p-4 flex flex-col sm:flex-row gap-3 items-center justify-between ${isAdventure ? "bg-gray-800" : isNeon ? "bg-gray-900" : "bg-white"}`}>
-                      <div className={(isAdventure || isNeon) ? "text-gray-300 text-sm" : "text-gray-600 text-sm"}><span className="font-medium">{campground.location && campground.location !== campground.state ? `${campground.location}, ${campground.state}` : campground.state}</span><span className={(isAdventure || isNeon) ? "text-gray-500 ml-2" : "text-gray-400 ml-2"}>({campground.latitude.toFixed(4)}, {campground.longitude.toFixed(4)})</span></div>
+                      <div className={(isAdventure || isNeon) ? "text-gray-300 text-sm" : "text-gray-600 text-sm"}><span className="font-medium">{campground.location && campground.location !== campground.state ? `${campground.location}, ${(campground as any).city || ''} ${(campground as any).zipCode || ''} ${campground.state}`.replace(/  +/g,' ').trim() : campground.state}</span><span className={(isAdventure || isNeon) ? "text-gray-500 ml-2" : "text-gray-400 ml-2"}>({campground.latitude.toFixed(4)}, {campground.longitude.toFixed(4)})</span></div>
                       <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex items-center gap-2"><Navigation className="w-4 h-4" />Get Driving Directions</a>
                     </div>
                   </div>
@@ -1667,7 +1668,7 @@ export default function CampgroundDetailPage() {
               <section>
                 <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Basic Info</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[['name','Name'],['location','Location'],['state','State'],['latitude','Latitude'],['longitude','Longitude']].map(([k,label]) => (
+                  {[['name','Name'],['location','Location'],['city','City'],['state','State'],['zipCode','Zip Code'],['latitude','Latitude'],['longitude','Longitude']].map(([k,label]) => (
                     <div key={k}><label className="block text-xs text-gray-500 mb-1">{label}</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={editForm[k] || ''} onChange={e => setEditForm({...editForm, [k]: e.target.value})} /></div>
                   ))}
                   <div className="md:col-span-2">
