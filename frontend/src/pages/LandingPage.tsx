@@ -224,7 +224,8 @@ function HitchTip({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Mock profile card ────────────────────────────────────────────────────────
-function ProfileCard({ name, rig, state, trips, img, badge }: any) {
+function ProfileCard({ name, rig, state, trips, img, badges }: any) {
+  const badgeList: string[] = Array.isArray(badges) ? badges : [badges];
   return (
     <div
       className="flex-shrink-0 w-64 rounded-2xl overflow-hidden group"
@@ -254,29 +255,24 @@ function ProfileCard({ name, rig, state, trips, img, badge }: any) {
         <div className="text-xs mt-0.5 mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
           {rig} • {state}
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div className="text-center">
             <div className="text-lg font-extrabold text-amber-300">{trips}</div>
-            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              Trips
-            </div>
+            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Trips</div>
           </div>
-          <img
-            src={badge}
-            alt="badge"
-            loading="lazy"
-            decoding="async"
-            className="w-10 h-10 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
-            }}
-          />
           <div className="text-center">
             <div className="text-lg font-extrabold text-emerald-300">{Math.floor(Math.random() * 20) + 5}</div>
-            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              States
-            </div>
+            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>States</div>
           </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {badgeList.map((b: string, i: number) => (
+            <img key={i} src={b} alt="badge" loading="lazy" decoding="async"
+              className="w-8 h-8 object-contain hover:scale-110 transition-transform duration-200"
+              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -858,14 +854,14 @@ export default function LandingPage() {
 
             <div className="flex gap-5 px-6 w-max" style={{ animation: 'slideProf 35s linear infinite' }}>
               {[
-                { name: 'Road Runner Mike', rig: '40ft Class A',      state: 'TX', trips: 47, img: '/images/Facebook.png',        badge: '/images/road-warrior.png' },
-                { name: 'The Hendersons',   rig: '32ft 5th Wheel',    state: 'CO', trips: 23, img: '/images/Facebook1.png',       badge: '/images/TruecamperBadge.png' },
-                { name: 'Solo Sandra',      rig: 'Class B Van',       state: 'CA', trips: 61, img: '/images/Deanna_Roberts.png',  badge: '/images/fifty-state-explorer.png' },
-                { name: 'Camp Carters',     rig: '28ft Travel Trailer',state: 'WA',trips: 18, img: '/images/Facebook3.png',       badge: '/images/Weekendwarriorbadge.png' },
-                { name: 'NomadNancy',       rig: 'Solo Class C',      state: 'AZ', trips: 34, img: '/images/Mary.png',            badge: '/images/trailblazer.png' },
-                { name: 'Road Runner Mike', rig: '40ft Class A',      state: 'TX', trips: 47, img: '/images/Photo1.png',          badge: '/images/road-warrior.png' },
-                { name: 'The Hendersons',   rig: '32ft 5th Wheel',    state: 'CO', trips: 23, img: '/images/kid.png',             badge: '/images/TruecamperBadge.png' },
-                { name: 'Solo Sandra',      rig: 'Class B Van',       state: 'CA', trips: 61, img: '/images/smores.png',          badge: '/images/fifty-state-explorer.png' },
+                { name: 'Road Runner Mike', rig: '40ft Class A',      state: 'TX', trips: 47, img: '/images/Facebook.png',        badges: ['/images/road-warrior.png', '/images/trailblazer.png', '/images/fifty-state-explorer.png'] },
+                { name: 'The Hendersons',   rig: '32ft 5th Wheel',    state: 'CO', trips: 23, img: '/images/bags.png',            badges: ['/images/TruecamperBadge.png', '/images/Weekendwarriorbadge.png', '/images/first-friend.png', '/images/campfirechef.png', '/images/Shutterbug.png'] },
+                { name: 'Solo Sandra',      rig: 'Class B Van',       state: 'CA', trips: 61, img: '/images/Deanna_Roberts.png',  badges: ['/images/fifty-state-explorer.png', '/images/road-warrior.png', '/images/storyteller.png', '/images/album-pro.png', '/images/pacificDrift.png', '/images/AmericanHeritage.png', '/images/trailblazer.png'] },
+                { name: 'Camp Carters',     rig: '28ft Travel Trailer',state: 'WA',trips: 18, img: '/images/daybbq.png',          badges: ['/images/Weekendwarriorbadge.png', '/images/campfirechef.png', '/images/first-friend.png'] },
+                { name: 'NomadNancy',       rig: 'Solo Class C',      state: 'AZ', trips: 34, img: '/images/Mary.png',            badges: ['/images/trailblazer.png', '/images/SeasonedCamper.png', '/images/Shutterbug.png', '/images/RecipeMaster.png', '/images/maintenance_pro.png'] },
+                { name: 'Road Runner Mike', rig: '40ft Class A',      state: 'TX', trips: 47, img: '/images/Photo1.png',          badges: ['/images/road-warrior.png', '/images/trailblazer.png', '/images/fifty-state-explorer.png'] },
+                { name: 'The Hendersons',   rig: '32ft 5th Wheel',    state: 'CO', trips: 23, img: '/images/kid.png',             badges: ['/images/TruecamperBadge.png', '/images/Weekendwarriorbadge.png', '/images/first-friend.png', '/images/campfirechef.png', '/images/Shutterbug.png'] },
+                { name: 'Solo Sandra',      rig: 'Class B Van',       state: 'CA', trips: 61, img: '/images/smores.png',          badges: ['/images/fifty-state-explorer.png', '/images/road-warrior.png', '/images/storyteller.png', '/images/album-pro.png', '/images/pacificDrift.png', '/images/AmericanHeritage.png', '/images/trailblazer.png'] },
               ].map((p, i) => <ProfileCard key={i} {...p} />)}
             </div>
           </div>
