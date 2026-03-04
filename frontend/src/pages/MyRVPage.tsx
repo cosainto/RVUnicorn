@@ -204,6 +204,9 @@ export default function MyRVPage() {
         rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
         rvDescription: rvData.rvDescription || null,
         rvFeatures: rvData.rvFeatures,
+        travelPartyType: homeData.travelPartyType || null,
+        travelPartySize: homeData.travelPartySize ? parseInt(homeData.travelPartySize) : null,
+        hasPets: homeData.hasPets,
       });
 
       // Save showcase (photos/video)
