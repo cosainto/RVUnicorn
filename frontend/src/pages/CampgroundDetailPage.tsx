@@ -15,6 +15,20 @@ import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import HarvestHostsTab from '../components/HarvestHostsTab';
 
+const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
+  const base = "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  const variants: Record<string, string> = {
+    primary: "text-white hover:opacity-90",
+    secondary: "bg-white/20 text-white backdrop-blur-sm hover:bg-white/30",
+    tertiary: "bg-gray-100 text-gray-800 hover:bg-gray-200",
+    ghost: "bg-transparent hover:bg-black/5 text-white",
+  };
+  const cls = `${base} ${variants[variant]}`;
+  if (as === "a") return <a className={cls} href={href} {...rest}>{icon}{children}</a>;
+  return <button className={cls} onClick={onClick} {...rest}>{icon}{children}</button>;
+};
+
+
 
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
 
