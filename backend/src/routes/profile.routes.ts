@@ -272,7 +272,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
         travelPartyType: travelPartyType !== undefined ? travelPartyType : undefined,
         travelPartySize: travelPartySize !== undefined ? travelPartySize : undefined,
         hasPets: hasPets !== undefined ? hasPets : undefined,
-        petTypes: petTypes !== undefined ? petTypes : undefined,
+        petTypes: petTypes !== undefined ? { set: petTypes } : undefined,
         rvDescription: rvDescription !== undefined ? rvDescription : undefined,
         rvFeatures: rvFeatures !== undefined ? rvFeatures : undefined,
         campingInterests: campingInterests !== undefined ? campingInterests : undefined,
