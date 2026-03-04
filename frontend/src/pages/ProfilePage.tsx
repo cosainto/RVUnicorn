@@ -748,7 +748,7 @@ const [editForm, setEditForm] = useState({
         )}
         {/* Trip Calendar Section */}
         <div className="mb-6">
-          <TripCalendarWidget compact={false} userId={profile?.id} />
+          <TripCalendarWidget compact={true} userId={profile?.id} />
         </div>
 
         {/* Creator Content Section */}
