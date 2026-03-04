@@ -241,7 +241,6 @@ export default function MyRVPage() {
     setShowcase({ ...showcase, photos: newPhotos });
   };
 
-  if (loading) {
   const searchCoOwners = async (q: string) => {
     setCoOwnerSearch(q);
     if (q.length < 2) { setCoOwnerResults([]); return; }
@@ -258,6 +257,7 @@ export default function MyRVPage() {
       setCoOwners((prev: any[]) => [...prev, data]);
       setCoOwnerSearch('');
       setCoOwnerResults([]);
+
     } catch (e: any) { alert(e.response?.data?.error || 'Failed to add co-owner'); }
   };
 
@@ -269,7 +269,8 @@ export default function MyRVPage() {
     } catch { alert('Failed to remove co-owner'); }
   };
 
-  return (
+  if (loading) {
+    return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
