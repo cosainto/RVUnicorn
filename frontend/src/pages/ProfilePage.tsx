@@ -746,10 +746,7 @@ const [editForm, setEditForm] = useState({
             </div>
           </div>
         )}
-        {/* Trip Calendar Section */}
-        <div className="mb-6">
-          <TripCalendarWidget compact={true} userId={profile?.id} />
-        </div>
+
 
         {/* Creator Content Section */}
         {profile.isCreator && creatorContent.length > 0 && (
@@ -823,6 +820,11 @@ const [editForm, setEditForm] = useState({
 	{/* Top 8 Friends */}
       <Top8Friends username={username} />
 
+
+          {/* Calendar */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <TripCalendarWidget compact={true} userId={profile?.id} />
+          </div>
 
           {/* RV Tour */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
