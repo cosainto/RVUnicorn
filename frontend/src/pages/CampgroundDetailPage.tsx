@@ -517,23 +517,28 @@ export default function CampgroundDetailPage() {
           {/* Floating action bar */}
           <div className="max-w-6xl mx-auto px-4 -mt-8 relative z-10 mb-8">
             <div className="bg-white rounded-2xl shadow-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap gap-3">
-                {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Phone className="w-4 h-4" />Call</a>}
-                {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Globe className="w-4 h-4" />Website</a>}
-                {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition"><Navigation className="w-4 h-4" />Directions</a>}
-                {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
-              <div className="flex flex-wrap items-center gap-2 mt-2 pt-3 border-t border-gray-100"><span className="text-xs text-gray-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-green-100 hover:text-green-600 transition">🌿 Hipcamp</a></div>
+              <div className="flex flex-wrap gap-2">
+                {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white border border-white/20 hover:bg-white/20 transition backdrop-blur-sm"><Phone className="w-3.5 h-3.5" />Call</a>}
+                {campground.websiteUrl && <a href={campground.websiteUrl} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white border border-white/20 hover:bg-white/20 transition backdrop-blur-sm"><Globe className="w-3.5 h-3.5" />Website</a>}
+                {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white border border-white/20 hover:bg-white/20 transition backdrop-blur-sm"><Navigation className="w-3.5 h-3.5" />Directions</a>}
+                {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white border border-white/20 hover:bg-white/20 transition backdrop-blur-sm"><ShoppingBag className="w-3.5 h-3.5" />Store</a>}
+                <div className="w-px bg-white/20 mx-1 self-stretch" />
+                <a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🏕️ Dyrt</a>
+                <a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🌿 Hipcamp</a>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {user && <>
-                  <button onClick={() => setShowCheckInModal(true)} className="px-6 py-3 rounded-full text-white font-medium transition hover:opacity-90" style={{ backgroundColor: accentColor }}><Calendar className="w-5 h-5 inline mr-2" />I'm Here! 📍</button><button onClick={() => navigate(getTripUrl())} className="px-6 py-3 rounded-full font-medium transition hover:opacity-90 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"><MapPinned className="w-5 h-5 inline mr-2" />Plan a Trip 🗺️</button>
-                  
-                </>
-              }
+                  <button onClick={() => setShowCheckInModal(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white transition-all duration-200 shadow-sm hover:shadow-md hover:brightness-110" style={{ backgroundColor: accentColor }}>
+                    <Calendar className="w-4 h-4" />I'm Here! 📍
+                  </button>
+                  <button onClick={() => navigate(getTripUrl())} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm">
+                    <MapPinned className="w-4 h-4" />Plan a Trip
+                  </button>
+                </>}
                 {campground.campspotSlug && <CampspotBookButton campgroundId={campground.id} campspotSlug={campground.campspotSlug} variant="modern" />}
-                {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full bg-green-600 text-white font-medium transition hover:bg-green-700 flex items-center gap-2"><Calendar className="w-5 h-5" />Book Now<ExternalLink className="w-3 h-3 opacity-70" /></a>}
-                {user && <button onClick={toggleMute} className={`px-4 py-3 rounded-full font-medium transition ${isMuted ? 'bg-gray-200 text-gray-700' : 'bg-white/20 text-white hover:bg-white/30'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
-                {isAdmin && <Link to={`/business/${campground.id}`} className="px-6 py-3 rounded-full bg-gray-900 text-white font-medium transition hover:bg-gray-800"><Settings className="w-5 h-5 inline mr-2" />Manage</Link>}
+                {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:shadow-emerald-500/30 hover:shadow-md transition-all duration-200"><Calendar className="w-4 h-4" />Book Now<ExternalLink className="w-3 h-3 opacity-60" /></a>}
+                {user && <button onClick={toggleMute} className={`inline-flex items-center justify-center w-9 h-9 rounded-full transition ${isMuted ? 'bg-white/20 text-white/50' : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
+                {isAdmin && <Link to={`/business/${campground.id}`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm"><Settings className="w-4 h-4" />Manage</Link>}
               </div>
             </div>
 
