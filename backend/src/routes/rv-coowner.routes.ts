@@ -59,8 +59,8 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       data: {
         userId: coOwnerId,
         type: 'RV_CO_OWNER',
-        message: `added you as a co-owner of their RV`,
-        fromUserId: userId,
+        content: `added you as a co-owner of their RV`,
+        actorId: userId,
         read: false,
       }
     }).catch(() => {});
