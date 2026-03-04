@@ -953,6 +953,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // RV Info State
   const [rvInfo, setRvInfo] = useState<any>(null);
+  const [coOwnedRVs, setCoOwnedRVs] = useState<any[]>([]);
   const [rvShowcase, setRvShowcase] = useState<any>(null);
   const [rvTab, setRvTab] = useState<'overview' | 'edit' | 'log'>('overview');
   const [rvEditData, setRvEditData] = useState({
@@ -1195,6 +1196,11 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       // Fetch manual URL from database
       try {
+        // Load co-owned RVs
+        try {
+          const { data: coOwned } = await api.get('/rv/co-owners/shared-with-me');
+          setCoOwnedRVs(coOwned.map((c: any) => c.owner));
+        } catch {}
         if (profile.rvMake) {
           const { data: manualData } = await api.get(`/rv/manual?makeName=${encodeURIComponent(profile.rvMake)}`);
           setRvManualUrl(manualData.manualUrl || null);
@@ -1844,8 +1850,33 @@ export default function BasecampPage({ user }: BasecampProps) {
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500 mb-4">No RV info added yet</p>
+                  <div className="mb-4">
+                    <p className="text-gray-500">No RV info added yet</p>
+                    {coOwnedRVs.length === 0 && <a href="/my-rv" className="text-sm text-blue-600 hover:underline">Add your RV →</a>}
+                  </div>
                 )}
+                {/* Co-owned RVs */}
+                {coOwnedRVs.map((rv: any) => (
+                  <div key={rv.id} className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      {rv.profilePicture
+                        ? <img src={rv.profilePicture} className="w-6 h-6 rounded-full object-cover" />
+                        : <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">{rv.firstName?.[0]}</div>
+                      }
+                      <span className="text-xs font-semibold text-blue-700">Shared with {rv.firstName}</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-800">{rv.rvYear} {rv.rvMake} {rv.rvModel}</p>
+                    {rv.rvType && <p className="text-xs text-gray-500 capitalize">{rv.rvType}</p>}
+                    {rv.rvShowcase?.photos?.length > 0 && (
+                      <div className="grid grid-cols-3 gap-1 mt-2">
+                        {rv.rvShowcase.photos.slice(0,3).map((p: string, i: number) => (
+                          <img key={i} src={p} className="w-full h-16 object-cover rounded-lg" />
+                        ))}
+                      </div>
+                    )}
+                    <a href={`/profile/${rv.username}`} className="text-xs text-blue-600 hover:underline mt-1 inline-block">View full RV →</a>
+                  </div>
+                ))}
 
                 {/* Maintenance Stats */}
                 {maintenanceStats && (
