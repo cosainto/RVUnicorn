@@ -192,8 +192,7 @@ export default function MyRVPage() {
       await api.put(`/profile/${user?.username}`, {
         rvType: rvData.rvType || null,
         rvYear: rvData.rvYear ? parseInt(rvData.rvYear) : null,
-        rvMake: rvData.rvMake || null,        
-
+        rvMake: rvData.rvMake || null,
         rvModel: rvData.rvModel || null,
         rvLength: rvData.rvLength ? parseInt(rvData.rvLength) : null,
         rvSleeps: rvData.rvSleeps ? parseInt(rvData.rvSleeps) : null,
@@ -204,9 +203,13 @@ export default function MyRVPage() {
         rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
         rvDescription: rvData.rvDescription || null,
         rvFeatures: rvData.rvFeatures,
+        homeCity: homeData.homeCity || null,
+        homeState: homeData.homeState || null,
+        homeZipCode: homeData.homeZipCode || null,
         travelPartyType: homeData.travelPartyType || null,
         travelPartySize: homeData.travelPartySize ? parseInt(homeData.travelPartySize) : null,
         hasPets: homeData.hasPets,
+        petTypes: homeData.petTypes,
       });
 
       // Save showcase (photos/video)
