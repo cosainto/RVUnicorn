@@ -813,336 +813,249 @@ const [editForm, setEditForm] = useState({
           </div>
         )}
 
-        {/* ROW 1: Top 8 Friends | RV Tour | Photo Albums */}
+        {/* ROW 1: Top 8 | Photo Albums | Groups */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          
-
-	{/* Top 8 Friends */}
+          {/* Top 8 Friends */}
       <Top8Friends username={username} />
 
-
-          {/* Calendar */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <TripCalendarWidget compact={true} userId={profile?.id} />
-          </div>
-
-          {/* RV Tour */}
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <Tent className="w-5 h-5 mr-2 text-orange-600" />
-              RV Tour
-            </h2>
-            {/* Co-owned RV section */}
-            {coOwnedRVs.length > 0 && coOwnedRVs.map((rv: any) => (
-              <div key={rv.id} className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <div className="flex items-center gap-3 mb-3">
-                  {rv.profilePicture
-                    ? <img src={rv.profilePicture} className="w-8 h-8 rounded-full object-cover" />
-                    : <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{rv.firstName?.[0]}</div>
-                  }
-                  <div>
-                    <div className="text-sm font-semibold text-blue-900">Shared RV with {rv.firstName}</div>
-                    {rv.rvMake && <div className="text-xs text-blue-600">{rv.rvYear} {rv.rvMake} {rv.rvModel}</div>}
-                  </div>
-                </div>
-                {rv.rvShowcase?.photos?.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {rv.rvShowcase.photos.slice(0, 3).map((photo: string, idx: number) => (
-                      <img key={idx} src={photo} className="w-full h-24 object-cover rounded-lg" />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {rvShowcase ? (
-              <div className="space-y-3">
-                {rvShowcase.videoUrl && (
-                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                    <video
-                      src={rvShowcase.videoUrl.startsWith('http') ? rvShowcase.videoUrl : `${rvShowcase.videoUrl}`}
-                      controls
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                {rvShowcase.photos && rvShowcase.photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {rvShowcase.photos.slice(0, 3).map((photo: any, idx: number) => (
-                      <img
-                        key={idx}
-                        src={photo.startsWith('http') ? photo : `${photo}`}
-                        alt={`RV ${idx + 1}`}
-                        className="aspect-square object-cover rounded"
-                      />
-                    ))}
-                  </div>
-                )}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowRVShowcaseEdit(true)}
-                    className="btn btn-secondary btn-sm w-full"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <img 
-                  src="/images/Showusyourrig_Default_Badge.jpeg" 
-                  alt="Show us your rig" 
-                  className="w-full h-full object-cover"
-                />
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowRVShowcaseEdit(true)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
-                  >
-                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Add Your Rig
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Photo Albums */}
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <Camera className="w-5 h-5 mr-2 text-pink-600" />
-              Photo Albums
-            </h2>
-            {loadingAlbums ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600 text-sm">Loading...</p>
-              </div>
-            ) : albums.length > 0 ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {albums.slice(0, 4).map((album) => (
-                    <Link
-                      key={album.id}
-                      to={`/media-albums/${album.id}`}
-                      className="aspect-square bg-gray-100 rounded overflow-hidden hover:opacity-90 transition"
-                    >
-                      {album.previewMedia && album.previewMedia[0] ? (
-                        <img
-                          src={album.previewMedia[0].thumbnailUrl || album.previewMedia[0].url}
-                          alt={album.title}
-                          className="w-full h-full object-cover"
-                        />
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                      <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <Camera className="w-5 h-5 mr-2 text-pink-600" />
+                        Photo Albums
+                      </h2>
+                      {loadingAlbums ? (
+                        <div className="text-center py-8">
+                          <p className="text-gray-600 text-sm">Loading...</p>
+                        </div>
+                      ) : albums.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            {albums.slice(0, 4).map((album) => (
+                              <Link
+                                key={album.id}
+                                to={`/media-albums/${album.id}`}
+                                className="aspect-square bg-gray-100 rounded overflow-hidden hover:opacity-90 transition"
+                              >
+                                {album.previewMedia && album.previewMedia[0] ? (
+                                  <img
+                                    src={album.previewMedia[0].thumbnailUrl || album.previewMedia[0].url}
+                                    alt={album.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Camera className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                          <Link
+                            to={`/media-albums?userId=${profile?.id}`}
+                            className="text-sm text-primary-600 hover:text-primary-700 block text-center"
+                          >
+                            View all albums →
+                          </Link>
+                        </div>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Camera className="w-8 h-8 text-gray-400" />
+                        <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          <img 
+                            src="/images/add_photoalbum_badge.jpeg" 
+                            alt="Add photo albums" 
+                            className="w-full h-full object-cover"
+                          />
+                          {isOwnProfile && (
+                            <button
+                              onClick={() => setShowCreateAlbumModal(true)}
+                              className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                            >
+                              <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                                <Plus className="w-5 h-5" />
+                                Add Photos
+                              </span>
+                            </button>
+                          )}
                         </div>
                       )}
-                    </Link>
-                  ))}
-                </div>
-                <Link
-                  to={`/media-albums?userId=${profile?.id}`}
-                  className="text-sm text-primary-600 hover:text-primary-700 block text-center"
-                >
-                  View all albums →
-                </Link>
-              </div>
-            ) : (
-              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <img 
-                  src="/images/add_photoalbum_badge.jpeg" 
-                  alt="Add photo albums" 
-                  className="w-full h-full object-cover"
-                />
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowCreateAlbumModal(true)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
-                  >
-                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Add Photos
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+                    </div>
 
-        {/* ROW 2: Followed Campsites | Travel Map */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* Left Column: Followed Campsites + Social Links */}
-          <div className="flex flex-col space-y-6 lg:col-span-1">
-            {/* Followed Campgrounds */}
-            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Star className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-yellow-500" />
-                Followed Campsites
-              </h2>
-              {loadingFavorites ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600">Loading...</p>
-                </div>
-              ) : favoriteCampgrounds.length > 0 ? (
-                <div className="space-y-2">
-                  {favoriteCampgrounds.slice(0, 5).map((campground) => (
-                    <Link
-                      key={campground.id}
-                      to={`/campgrounds/${campground.id}`}
-                      className="border border-gray-200 rounded-lg p-3 hover:shadow-lg transition group block"
-                    >
-                      <div className="flex items-start gap-3">
-                        {(campground.imageUrl || campground.photos?.[0]?.imageUrl) ? (
-                          <img
-                            src={campground.imageUrl || campground.photos[0].imageUrl}
-                            alt={campground.name}
-                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                          />
+          {/* Groups */}
+                      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 flex-1">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            Groups
+                          </h2>
+                          <Link to="/groups" className="text-blue-500 hover:text-blue-600 text-sm">
+                            All Groups
+                          </Link>
+                        </div>
+                        {userGroups.length === 0 ? (
+                          <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                            <img 
+                              src="/images/Find_Your_Herd_Default_Poppy.png" 
+                              alt="Find your herd" 
+                              className="w-full h-full object-cover"
+                            />
+                            <Link
+                              to="/groups"
+                              className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
+                            >
+                              <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+                                <Plus className="w-5 h-5" />
+                                Find Your Herd
+                              </span>
+                            </Link>
+                          </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <MapPin className="w-5 h-5 text-green-600" />
+                          <div className="space-y-2">
+                            {userGroups.slice(0, 4).map((group) => (
+                              <Link
+                                key={group.id}
+                                to={`/groups/${group.slug || group.id}`}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors group"
+                              >
+                                {group.imageUrl ? (
+                                  <img
+                                    src={group.imageUrl.startsWith("http") ? group.imageUrl : `${group.imageUrl}`}
+                                    alt={group.name}
+                                    className="w-10 h-10 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                                    <Users className="w-5 h-5 text-blue-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-800 text-sm truncate group-hover:text-blue-600">
+                                    {group.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {group._count?.members || group.memberCount || 0} members
+                                  </p>
+                                </div>
+                              </Link>
+                            ))}
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-gray-900 group-hover:text-primary-600 truncate">
-                            {campground.name}
-                          </h3>
-                          <p className="text-xs text-gray-600 truncate">
-                            {campground.location}, {campground.state}
-                          </p>
-                        </div>
                       </div>
-                    </Link>
-                  ))}
-                  {favoriteCampgrounds.length > 5 && (
-                    <Link
-                      to="/campgrounds"
-                      className="text-sm text-primary-600 hover:text-primary-700 block text-center pt-2"
-                    >
-                      View all {favoriteCampgrounds.length} campgrounds →
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-600">
-                  <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-sm">No followed campgrounds yet</p>
-                  {isOwnProfile && (
-                    <Link to="/campgrounds" className="btn btn-primary mt-3 inline-block text-sm">
-                      Browse Campgrounds
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
+        </div>
 
+        {/* ROW 2: Followed Campsites | Following Creators | Creator Followers */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Followed Campgrounds */}
+                      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center">
+                          <Star className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-yellow-500" />
+                          Followed Campsites
+                        </h2>
+                        {loadingFavorites ? (
+                          <div className="text-center py-8">
+                            <p className="text-gray-600">Loading...</p>
+                          </div>
+                        ) : favoriteCampgrounds.length > 0 ? (
+                          <div className="space-y-2">
+                            {favoriteCampgrounds.slice(0, 5).map((campground) => (
+                              <Link
+                                key={campground.id}
+                                to={`/campgrounds/${campground.id}`}
+                                className="border border-gray-200 rounded-lg p-3 hover:shadow-lg transition group block"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {(campground.imageUrl || campground.photos?.[0]?.imageUrl) ? (
+                                    <img
+                                      src={campground.imageUrl || campground.photos[0].imageUrl}
+                                      alt={campground.name}
+                                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                                      <MapPin className="w-5 h-5 text-green-600" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm text-gray-900 group-hover:text-primary-600 truncate">
+                                      {campground.name}
+                                    </h3>
+                                    <p className="text-xs text-gray-600 truncate">
+                                      {campground.location}, {campground.state}
+                                    </p>
+                                  </div>
+                                </div>
+                              </Link>
+                            ))}
+                            {favoriteCampgrounds.length > 5 && (
+                              <Link
+                                to="/campgrounds"
+                                className="text-sm text-primary-600 hover:text-primary-700 block text-center pt-2"
+                              >
+                                View all {favoriteCampgrounds.length} campgrounds →
+                              </Link>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-600">
+                            <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                            <p className="text-sm">No followed campgrounds yet</p>
+                            {isOwnProfile && (
+                              <Link to="/campgrounds" className="btn btn-primary mt-3 inline-block text-sm">
+                                Browse Campgrounds
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-
-            {/* Following Creators */}
-            {profile && (
-              <FollowingSection
-                userId={profile.id}
-                isOwnProfile={isOwnProfile}
-                className="flex-1"
-              />
-            )}
-
-            {/* Creator Followers */}
-            {profile?.isCreator && (
-              <FollowersSection
-                creatorId={profile.id}
-                isOwnProfile={isOwnProfile}
-                className="flex-1"
-              />
-            )}
-
-            {/* User Groups */}
-            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-500" />
-                  Groups
-                </h2>
-                <Link to="/groups" className="text-blue-500 hover:text-blue-600 text-sm">
-                  All Groups
-                </Link>
-              </div>
-              {userGroups.length === 0 ? (
-                <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src="/images/Find_Your_Herd_Default_Poppy.png" 
-                    alt="Find your herd" 
-                    className="w-full h-full object-cover"
-                  />
-                  <Link
-                    to="/groups"
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
-                  >
-                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Find Your Herd
-                    </span>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {userGroups.slice(0, 4).map((group) => (
-                    <Link
-                      key={group.id}
-                      to={`/groups/${group.slug || group.id}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors group"
-                    >
-                      {group.imageUrl ? (
-                        <img
-                          src={group.imageUrl.startsWith("http") ? group.imageUrl : `${group.imageUrl}`}
-                          alt={group.name}
-                          className="w-10 h-10 rounded-lg object-cover"
+          {/* Following Creators */}
+                      {profile && (
+                        <FollowingSection
+                          userId={profile.id}
+                          isOwnProfile={isOwnProfile}
+                          className="flex-1"
                         />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-blue-500" />
-                        </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 text-sm truncate group-hover:text-blue-600">
-                          {group.name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {group._count?.members || group.memberCount || 0} members
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          
+                      {/* Creator Followers */}
+                      {profile?.isCreator && (
+                        <FollowersSection
+                          creatorId={profile.id}
+                          isOwnProfile={isOwnProfile}
+                          className="flex-1"
+                        />
+                      )}
+        </div>
 
-          {/* Right Column: Travel Map */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
-                  <Map className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary-600" />
-                  Travel Map
-                </h2>
-                <Link
-                  to={`/map/${username}`}
-                  className="text-sm text-primary-600 hover:text-primary-700"
-                >
-                  View Full Map →
-                </Link>
-              </div>
-              
-              {profile && (
-                <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} />
-              )}
-            </div>
+        {/* ROW 3: Calendar (1/3) | Travel Map (2/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <TripCalendarWidget compact={true} userId={profile?.id} />
+          </div>
+          <div className="lg:col-span-2">
+                    <div className="lg:col-span-3">
+                      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
+                            <Map className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary-600" />
+                            Travel Map
+                          </h2>
+                          <Link
+                            to={`/map/${username}`}
+                            className="text-sm text-primary-600 hover:text-primary-700"
+                          >
+                            View Full Map →
+                          </Link>
+                        </div>
+                        
+                        {profile && (
+                          <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
           </div>
         </div>
+
         {/* SOCIAL FEED / ACTIVITY WALL */}
         <div className="mb-6">
           <SocialFeed username={username || ''} isOwnProfile={isOwnProfile} />
