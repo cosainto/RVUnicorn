@@ -64,6 +64,8 @@ router.get('/:username', optionalAuth, async (req, res) => {
         showSocialOnCreator: true,
         rvMake: true,
         rvModel: true,
+        rvCoOwners: { select: { coOwner: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } } } },
+        rvCoOwnedBy: { select: { owner: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true, rvMake: true, rvModel: true, rvYear: true, rvType: true, rvLength: true, rvDescription: true, rvFeatures: true, rvShowcase: true } } } },
         rvLength: true,
         rvSleeps: true,
         rvSlideouts: true,

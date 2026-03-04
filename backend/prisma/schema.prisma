@@ -228,6 +228,8 @@ model User {
   profileVisits                                   ProfileVisit[]            @relation("ProfileVisits")
   visitorVisits                                   ProfileVisit[]            @relation("VisitorVisits")
   rvShowcase                                      RVShowcase?
+  rvCoOwners                                      RVCoOwner[]            @relation("RVOwner")
+  rvCoOwnedBy                                     RVCoOwner[]            @relation("RVCoOwned")
   reactions                                       Reaction[]
   recipes                                         Recipe[]
   recipeComments                                  RecipeComment[]
@@ -3471,3 +3473,16 @@ model HarvestHostReview {
   @@index([hostId])
 }
 
+
+model RVCoOwner {
+  id          String   @id @default(cuid())
+  ownerId     String
+  coOwnerId   String
+  createdAt   DateTime @default(now())
+  owner       User     @relation("RVOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  coOwner     User     @relation("RVCoOwned", fields: [coOwnerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, coOwnerId])
+  @@index([ownerId])
+  @@index([coOwnerId])
+}

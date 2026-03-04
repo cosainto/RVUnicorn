@@ -80,6 +80,10 @@ export default function MyRVPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [coOwners, setCoOwners] = useState<any[]>([]);
+  const [coOwnerSearch, setCoOwnerSearch] = useState('');
+  const [coOwnerResults, setCoOwnerResults] = useState<any[]>([]);
+  const [coOwnerSearching, setCoOwnerSearching] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
   
   const [rvData, setRvData] = useState({
@@ -152,6 +156,11 @@ export default function MyRVPage() {
         petTypes: profile.petTypes || [],
       });
 
+      // Load co-owners
+      try {
+        const { data: coOwnerData } = await api.get('/rv/co-owners');
+        setCoOwners(coOwnerData);
+      } catch {}
       // Load RV showcase for photos/video
       try {
         const { data: showcaseData } = await api.get(`/rv-showcase/user/${profile.id}`);
@@ -233,7 +242,34 @@ export default function MyRVPage() {
   };
 
   if (loading) {
-    return (
+    const searchCoOwners = async (q: string) => {
+    setCoOwnerSearch(q);
+    if (q.length < 2) { setCoOwnerResults([]); return; }
+    setCoOwnerSearching(true);
+    try {
+      const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
+      setCoOwnerResults(data.filter((u: any) => u.id !== user?.id && !coOwners.find(c => c.coOwnerId === u.id)));
+    } catch {} finally { setCoOwnerSearching(false); }
+  };
+
+  const addCoOwner = async (coOwnerId: string) => {
+    try {
+      const { data } = await api.post('/rv/co-owners', { coOwnerId });
+      setCoOwners(prev => [...prev, data]);
+      setCoOwnerSearch('');
+      setCoOwnerResults([]);
+    } catch (e: any) { alert(e.response?.data?.error || 'Failed to add co-owner'); }
+  };
+
+  const removeCoOwner = async (coOwnerId: string) => {
+    if (!confirm('Remove this co-owner?')) return;
+    try {
+      await api.delete(`/rv/co-owners/${coOwnerId}`);
+      setCoOwners(prev => prev.filter(c => c.coOwnerId !== coOwnerId));
+    } catch { alert('Failed to remove co-owner'); }
+  };
+
+  return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
@@ -688,6 +724,58 @@ export default function MyRVPage() {
       {/* Custom Enhancements */}
       <RvEnhancements />
 
+
+      {/* Co-Owner Section */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">🔑 RV Co-Owners</h3>
+        <p className="text-sm text-gray-500 mb-4">Share your RV with a family member or partner. They'll see your RV photos and specs in their profile and Basecamp.</p>
+        
+        {/* Current co-owners */}
+        {coOwners.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-4">
+            {coOwners.map(co => (
+              <div key={co.id} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full pl-1 pr-3 py-1">
+                {co.coOwner.profilePicture
+                  ? <img src={co.coOwner.profilePicture} className="w-7 h-7 rounded-full object-cover" />
+                  : <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">{co.coOwner.firstName?.[0]}</div>
+                }
+                <span className="text-sm font-medium text-blue-900">{co.coOwner.firstName} {co.coOwner.lastName}</span>
+                <button onClick={() => removeCoOwner(co.coOwnerId)} className="text-blue-300 hover:text-red-500 transition ml-1 text-xs">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search to add */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search friends to add as co-owner..."
+            value={coOwnerSearch}
+            onChange={e => searchCoOwners(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {coOwnerSearching && <span className="absolute right-3 top-3 text-xs text-gray-400">Searching...</span>}
+          {coOwnerResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 overflow-hidden">
+              {coOwnerResults.map(u => (
+                <button key={u.id} onClick={() => addCoOwner(u.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition text-left">
+                  {u.profilePicture
+                    ? <img src={u.profilePicture} className="w-8 h-8 rounded-full object-cover" />
+                    : <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">{u.firstName?.[0]}</div>
+                  }
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{u.firstName} {u.lastName}</div>
+                    {u.username && <div className="text-xs text-gray-400">@{u.username}</div>}
+                  </div>
+                  <span className="ml-auto text-xs text-blue-600 font-medium">Add</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Save Button */}
       <div className="flex justify-end">

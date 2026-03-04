@@ -120,6 +120,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [favoriteCampgrounds, setFavoriteCampgrounds] = useState<any[]>([]);
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [rvShowcase, setRVShowcase] = useState<any>(null);
+  const [coOwnedRVs, setCoOwnedRVs] = useState<any[]>([]);
   const [pendingClaims, setPendingClaims] = useState<any[]>([]);
   const [creatorContent, setCreatorContent] = useState<any[]>([]);
   const [creatorStats, setCreatorStats] = useState<any>(null);
@@ -230,6 +231,10 @@ const [editForm, setEditForm] = useState({
       }
       // Load user badges
       try {
+        // Extract co-owned RV data from profile
+        if (data.rvCoOwnedBy && data.rvCoOwnedBy.length > 0) {
+          setCoOwnedRVs(data.rvCoOwnedBy.map((c: any) => c.owner));
+        }
         const badgeRes = await api.get(`/badges/user/${data.id}`);
         setProfileBadges(badgeRes.data?.badges || []);
         setDisplayedBadges((badgeRes.data?.badges || []).slice(0, 5));
@@ -825,6 +830,28 @@ const [editForm, setEditForm] = useState({
               <Tent className="w-5 h-5 mr-2 text-orange-600" />
               RV Tour
             </h2>
+            {/* Co-owned RV section */}
+            {coOwnedRVs.length > 0 && coOwnedRVs.map((rv: any) => (
+              <div key={rv.id} className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-3 mb-3">
+                  {rv.profilePicture
+                    ? <img src={rv.profilePicture} className="w-8 h-8 rounded-full object-cover" />
+                    : <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{rv.firstName?.[0]}</div>
+                  }
+                  <div>
+                    <div className="text-sm font-semibold text-blue-900">Shared RV with {rv.firstName}</div>
+                    {rv.rvMake && <div className="text-xs text-blue-600">{rv.rvYear} {rv.rvMake} {rv.rvModel}</div>}
+                  </div>
+                </div>
+                {rv.rvShowcase?.photos?.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {rv.rvShowcase.photos.slice(0, 3).map((photo: string, idx: number) => (
+                      <img key={idx} src={photo} className="w-full h-24 object-cover rounded-lg" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
             {rvShowcase ? (
               <div className="space-y-3">
                 {rvShowcase.videoUrl && (
