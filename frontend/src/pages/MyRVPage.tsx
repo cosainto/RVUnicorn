@@ -242,20 +242,20 @@ export default function MyRVPage() {
   };
 
   if (loading) {
-    const searchCoOwners = async (q: string) => {
+  const searchCoOwners = async (q: string) => {
     setCoOwnerSearch(q);
     if (q.length < 2) { setCoOwnerResults([]); return; }
     setCoOwnerSearching(true);
     try {
       const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
-      setCoOwnerResults(data.filter((u: any) => u.id !== user?.id && !coOwners.find(c => c.coOwnerId === u.id)));
+      setCoOwnerResults(data.filter((u: any) => u.id !== user?.id && !coOwners.find((c: any) => c.coOwnerId === u.id)));
     } catch {} finally { setCoOwnerSearching(false); }
   };
 
   const addCoOwner = async (coOwnerId: string) => {
     try {
       const { data } = await api.post('/rv/co-owners', { coOwnerId });
-      setCoOwners(prev => [...prev, data]);
+      setCoOwners((prev: any[]) => [...prev, data]);
       setCoOwnerSearch('');
       setCoOwnerResults([]);
     } catch (e: any) { alert(e.response?.data?.error || 'Failed to add co-owner'); }
@@ -265,7 +265,7 @@ export default function MyRVPage() {
     if (!confirm('Remove this co-owner?')) return;
     try {
       await api.delete(`/rv/co-owners/${coOwnerId}`);
-      setCoOwners(prev => prev.filter(c => c.coOwnerId !== coOwnerId));
+      setCoOwners((prev: any[]) => prev.filter((c: any) => c.coOwnerId !== coOwnerId));
     } catch { alert('Failed to remove co-owner'); }
   };
 
@@ -721,10 +721,6 @@ export default function MyRVPage() {
       </div>
 
 
-      {/* Custom Enhancements */}
-      <RvEnhancements />
-
-
       {/* Co-Owner Section */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">🔑 RV Co-Owners</h3>
@@ -776,6 +772,10 @@ export default function MyRVPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Enhancements */}
+      <RvEnhancements />
+
 
       {/* Save Button */}
       <div className="flex justify-end">
