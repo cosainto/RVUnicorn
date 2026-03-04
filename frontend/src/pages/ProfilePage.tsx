@@ -942,7 +942,7 @@ const [editForm, setEditForm] = useState({
                       </div>
         </div>
 
-        {/* ROW 2: Followed Campsites | Following Creators | Creator Followers */}
+        {/* ROW 2: Followed Campsites | Following Creators | Calendar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           {/* Followed Campgrounds */}
                       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
@@ -1024,28 +1024,27 @@ const [editForm, setEditForm] = useState({
                           className="flex-1"
                         />
                       )}
-        </div>
-
-        {/* ROW 3: Calendar (1/3) | Travel Map (2/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Calendar */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <TripCalendarWidget compact={true} userId={profile?.id} />
           </div>
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 h-full">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
-                  <Map className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary-600" />
-                  Travel Map
-                </h2>
-                <Link to={`/map/${username}`} className="text-sm text-primary-600 hover:text-primary-700">
-                  View Full Map →
-                </Link>
-              </div>
-              {profile && (
-                <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} />
-              )}
+        </div>
+
+        {/* ROW 3: Travel Map (full width) */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
+                <Map className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary-600" />
+                Travel Map
+              </h2>
+              <Link to={`/map/${username}`} className="text-sm text-primary-600 hover:text-primary-700">
+                View Full Map →
+              </Link>
             </div>
+            {profile && (
+              <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} />
+            )}
           </div>
         </div>
 
