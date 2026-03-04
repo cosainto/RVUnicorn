@@ -25,7 +25,8 @@ const CAMPSPOT_ADVERTISER_ID = '22326';
  * @returns The full Campspot URL
  */
 export const getCampspotUrl = (campspotSlug: string, useAffiliate: boolean = true): string => {
-  const baseUrl = `https://www.campspot.com/park/${campspotSlug}`;
+  // Use search URL since park slugs aren't verified yet
+  const baseUrl = `https://www.campspot.com/search?q=${encodeURIComponent(campspotSlug.replace(/-/g, ' '))}`;
   
   // If affiliate tracking is enabled and we have a publisher ID
   if (useAffiliate && AWIN_PUBLISHER_ID) {
