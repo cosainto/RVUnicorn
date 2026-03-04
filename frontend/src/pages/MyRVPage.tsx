@@ -298,6 +298,51 @@ export default function MyRVPage() {
         </div>
       </div>
 
+      {/* Co-Owner Section */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">🔑 RV Co-Owners</h3>
+        <p className="text-sm text-gray-500 mb-4">Share your RV with a family member or partner. They'll see your RV photos and specs in their profile and Basecamp.</p>
+        {coOwners.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-4">
+            {(coOwners as any[]).map((co: any) => (
+              <div key={co.id} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full pl-1 pr-3 py-1">
+                {co.coOwner.profilePicture
+                  ? <img src={co.coOwner.profilePicture} className="w-7 h-7 rounded-full object-cover" />
+                  : <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">{co.coOwner.firstName?.[0]}</div>}
+                <span className="text-sm font-medium text-blue-900">{co.coOwner.firstName} {co.coOwner.lastName}</span>
+                <button onClick={() => removeCoOwner(co.coOwnerId)} className="text-blue-300 hover:text-red-500 transition ml-1 text-xs">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder="Search friends to add as co-owner..."
+          value={coOwnerSearch}
+          onChange={e => searchCoOwners(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoComplete="off"
+        />
+        {coOwnerSearching && <p className="text-xs text-gray-400 mt-1">Searching...</p>}
+        {(coOwnerResults as any[]).length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
+            {(coOwnerResults as any[]).map((u: any) => (
+              <button key={u.id} onClick={() => addCoOwner(u.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition text-left">
+                {u.profilePicture
+                  ? <img src={u.profilePicture} className="w-8 h-8 rounded-full object-cover" />
+                  : <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">{u.firstName?.[0]}</div>}
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{u.firstName} {u.lastName}</div>
+                  {u.username && <div className="text-xs text-gray-400">@{u.username}</div>}
+                </div>
+                <span className="ml-auto text-xs text-blue-600 font-medium">Add</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Home Location Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
