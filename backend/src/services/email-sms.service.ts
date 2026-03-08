@@ -1,16 +1,8 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import twilio from 'twilio';
 
-// Email transporter
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
+// Resend email client
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Twilio client (only if enabled)
 const twilioClient = process.env.ENABLE_SMS_NOTIFICATIONS === 'true' && process.env.TWILIO_ACCOUNT_SID
@@ -36,8 +28,8 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   }
 
   try {
-    await emailTransporter.sendMail({
-      from: process.env.EMAIL_FROM || 'KindleTribe <noreply@kindletribe.com>',
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'RVUnicorn <noreply@rvunicorn.com>',
       to: options.to,
       subject: options.subject,
       html: options.html,
