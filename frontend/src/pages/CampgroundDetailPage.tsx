@@ -524,10 +524,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span></div>
                 <div className="flex flex-wrap items-center gap-6 text-white/70">
                   {avgRating > 0 && <div className="flex items-center gap-2">{renderSmores(Math.round(avgRating))}<span>({reviews.length})</span></div>}
@@ -636,10 +639,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span></div>
               
               <div className="flex flex-wrap gap-4 mb-4">
@@ -698,10 +704,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span></div>
               </div>
             </div>
@@ -775,10 +784,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span></div>
               </div>
             </div>
@@ -846,10 +858,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</p>
             
             <div className="flex flex-wrap items-center gap-8 mb-6 pb-6 border-b border-gray-100">
@@ -907,10 +922,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</p>
               
               {/* Pull quote style stats */}
@@ -993,10 +1011,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</div>
                   
                   {/* Decorative divider */}
@@ -1090,10 +1111,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</div>
               </div>
             </div>
@@ -1159,10 +1183,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span></div>
               {avgRating > 0 && <div className="flex items-center gap-2 mb-2">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">({reviews.length} reviews)</span></div>}
               {campground._count && <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-2"><span className="flex items-center gap-1"><Heart className="w-4 h-4" />{campground._count.followers} followers</span><span className="flex items-center gap-1"><Users className="w-4 h-4" />{campground._count.checkIns} check-ins</span></div>}
@@ -1421,10 +1448,13 @@ export default function CampgroundDetailPage() {
                   const city = (campground as any).city || '';
                   const zip = (campground as any).zipCode || '';
                   const state = campground.state || '';
-                  // Strip state abbreviation from end of location if present
                   const cleanLoc = loc.replace(/,?\s*[A-Z]{2}$/, '').trim();
-                  const parts = [cleanLoc, city, zip ? zip : '', state].filter(Boolean);
-                  return [...new Set(parts)].join(', ').replace(/,\s*,/g, ',').trim();
+                  // Build: "Street, City, State Zip"
+                  let line = cleanLoc;
+                  if (city && city !== cleanLoc) line += (line ? ', ' : '') + city;
+                  if (state) line += (line ? ', ' : '') + state;
+                  if (zip) line += ' ' + zip;
+                  return line.trim();
                 })()}</span><span className={(isAdventure || isNeon) ? "text-gray-500 ml-2" : "text-gray-400 ml-2"}>({campground.latitude.toFixed(4)}, {campground.longitude.toFixed(4)})</span></div>
                       <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex items-center gap-2"><Navigation className="w-4 h-4" />Get Driving Directions</a>
                     </div>
