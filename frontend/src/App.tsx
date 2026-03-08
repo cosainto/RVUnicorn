@@ -50,6 +50,7 @@ import SettingsPage from "./pages/SettingsPage";
 import DrivePlanner from './components/DrivePlanner';
 import EnhancedDrivePlanner from './components/EnhancedDrivePlanner';
 import PrivacySettingsPage from './pages/PrivacySettingsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import BlockedUsersPage from './pages/BlockedUsersPage';
 import MutedSettingsPage from './pages/MutedSettingsPage';
 import AccountActivityLogPage from './pages/AccountActivityLogPage';
