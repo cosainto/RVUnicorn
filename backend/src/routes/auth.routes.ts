@@ -55,6 +55,10 @@ router.post('/register', async (req, res) => {
 
     // Award RVUnicorn Member badge
     await awardBadge(user.id, 'rvunicorn-member');
+    // Award Founding Member badge to early adopters (before July 1, 2027)
+    if (new Date() < new Date('2027-07-01')) {
+      await awardBadge(user.id, 'founding-member');
+    }
     // Auto-friend Will (founder) with every new user
     try {
       const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
