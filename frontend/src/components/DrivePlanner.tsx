@@ -1500,10 +1500,6 @@ export default function DrivePlanner() {
                                 {place.photo ? (
                                   <img src={place.photo} alt={place.name} className="w-16 h-16 rounded-lg object-cover" />
                                 ) : (
-
-                  {place.lat && place.lng && (
-                    <NavigationButtons lat={place.lat} lng={place.lng} name={place.name} compact />
-                  )}
                                   <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center">
                                     <Camera className="w-6 h-6 text-blue-500" />
                                   </div>
@@ -1513,6 +1509,9 @@ export default function DrivePlanner() {
                                   <p className="text-sm text-gray-500 truncate">{place.address}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     {place.rating && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">★ {place.rating}</span>}
+                                    {place.lat && place.lng && (
+                                      <NavigationButtons lat={place.lat} lng={place.lng} name={place.name} compact />
+                                    )}
                                     <span className="text-xs text-gray-400">{place.distanceFromRoute} mi from route</span>
                                   </div>
                                 </div>
