@@ -53,7 +53,11 @@ router.get('/', async (req: Request, res: Response) => {
       where,
       take: limit ? parseInt(limit as string) : 50,
       skip: page ? (parseInt(page as string) - 1) * (limit ? parseInt(limit as string) : 50) : (offset ? parseInt(offset as string) : 0),
-      orderBy: { name: 'asc' },
+      orderBy: [
+        { followers: { _count: 'desc' } },
+        { reviews: { _count: 'desc' } },
+        { name: 'asc' },
+      ],
       include: {
         claimedBy: {
           select: {
