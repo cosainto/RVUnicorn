@@ -30,6 +30,9 @@ model User {
   rvModel                                         String?
   rvType                                          String?
   rvYear                                          Int?
+  aiMaintenanceEnabled                            Boolean   @default(false)
+  maintenanceRecommendations                      MaintenanceRecommendation[]
+  currentOdometer                                 Int?
   website                                         String?
   facebookUrl                                     String?
   instagramUrl                                    String?
@@ -3485,4 +3488,20 @@ model RVCoOwner {
   @@unique([ownerId, coOwnerId])
   @@index([ownerId])
   @@index([coOwnerId])
+}
+
+model MaintenanceRecommendation {
+  id                  String    @id @default(cuid())
+  userId              String
+  serviceType         String
+  recommendedDate     DateTime?
+  recommendedMileage  Int?
+  urgency             String    @default("normal")
+  aiReason            String    @db.Text
+  status              String    @default("pending")
+  notificationSent    Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

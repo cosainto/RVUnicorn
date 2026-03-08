@@ -92,6 +92,10 @@ import eventActivitiesRoutes from './routes/event-activities.routes';
 import profileMapRoutes from './routes/profile-map.routes';
 import searchRoutes from './routes/search.routes';
 import hitchRemindersRoutes from './routes/hitch-reminders.routes';
+import aiMaintenanceRouter from "./routes/ai-maintenance";
+import { runMaintenanceCron } from "./cron/maintenance-cron";
+
+
 // import campgroundBadgesRoutes from './routes/campground-badges.routes';
 
 
@@ -207,6 +211,8 @@ app.use('/api/hitch', hitchRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/hitch/reminders', hitchRemindersRoutes);
 // app.use('/api/campground-badges', campgroundBadgesRoutes);
+app.use("/api/ai-maintenance", aiMaintenanceRouter);
+
 
 
 
@@ -222,3 +228,10 @@ app.listen(PORT, () => {
 });
 // trigger deploy
 // Force redeploy Sat Jan 17 17:17:40 CST 2026
+
+
+// Nightly AI maintenance check — runs at 2am
+const CRON_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+setInterval(runMaintenanceCron, CRON_INTERVAL);
+// Also run once 30 seconds after server start
+setTimeout(runMaintenanceCron, 30000);
