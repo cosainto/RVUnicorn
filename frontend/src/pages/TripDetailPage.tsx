@@ -1,4 +1,5 @@
 import ShareButton from '../components/ShareButton';
+import NavigationButtons from '../components/NavigationButtons';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload } from 'lucide-react';
@@ -786,14 +787,18 @@ export default function EventDetailPage() {
                         <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><ExternalLink className="w-4 h-4" />View Campground</Link>
                         {!event.isWishlist && <button onClick={handleAddToTravelMap} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Map className="w-4 h-4" />Add to Map</button>}
                         {event.campground.latitude && event.campground.longitude && (
-                          <a href={`https://www.google.com/maps/search/?api=1&query=${event.campground.latitude},${event.campground.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium"><Navigation className="w-4 h-4" />Directions</a>
+                          <NavigationButtons lat={event.campground.latitude} lng={event.campground.longitude} name={event.campground.name} />
                         )}
                       </div>
                     </div>
                   ) : event.location ? (
                     <div className="space-y-3">
                       <p className="text-gray-900">{event.location}</p>
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium"><Navigation className="w-4 h-4" />Get Directions</a>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                      <a href={`https://waze.com/ul?q=${encodeURIComponent(event.location)}&navigate=yes`} target="_blank" rel="noopener noreferrer" title="Open in Waze" className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all shadow-sm">🚗</a>
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`} target="_blank" rel="noopener noreferrer" title="Open in Google Maps" className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all shadow-sm">📍</a>
+                      <a href={`https://maps.apple.com/?q=${encodeURIComponent(event.location)}&dirflg=d`} target="_blank" rel="noopener noreferrer" title="Open in Apple Maps" className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all shadow-sm">🗺️</a>
+                    </div>
                     </div>
                   ) : (
                     <p className="text-gray-500 italic">No location set</p>
