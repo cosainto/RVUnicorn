@@ -1212,16 +1212,15 @@ export default function CampgroundDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {user && <><ActionButton variant={isFavorited ? "primary" : "tertiary"} onClick={handleToggleFavorite} icon={<Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />} style={isFavorited ? { backgroundColor: '#dc2626' } : {}}>{isFavorited ? "Favorited" : "Favorite"}</ActionButton><ActionButton variant={inWishlist ? "primary" : "tertiary"} onClick={toggleWishlist} icon={<span>🧞</span>} style={inWishlist ? { backgroundColor: '#7c3aed' } : {}}>{inWishlist ? "Wishlisted" : "Wishlist"}</ActionButton><ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }}>Check In</ActionButton><ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#16a34a' }}>Plan a Trip</ActionButton><ActionButton variant="ghost" onClick={toggleMute} icon={isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />} className="text-gray-600" /></>}
-              {campground?.latitude && campground?.longitude && (
-                <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} compact />
-              )}
               {<CampspotBookButton campgroundId={campground.id} campspotSlug={campground.name} variant="classic" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="btn flex items-center gap-2 bg-green-600 text-white hover:bg-green-700">Book Now<ExternalLink className="w-4 h-4" /></a>}
 
             </div>
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-            {campground.latitude && campground.longitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-600 hover:text-primary-600"><Navigation className="w-4 h-4" />Directions</a>}
+            {campground.latitude && campground.longitude && (
+                <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} />
+              )}
           </div>
           <div className="mt-4 pt-4 border-t flex items-center justify-between flex-wrap gap-3">
             <p className="text-sm text-gray-500 italic">Don't just take our word for it — see what others are saying:</p>
