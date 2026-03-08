@@ -167,6 +167,8 @@ function AppContent() {
 
         <Route path="/threads/:id" element={<ThreadDetailPage />} />
         <Route path="/settings/privacy" element={<PrivacySettingsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/sms-terms" element={<SMSTermsPage />} />
         <Route path="/settings/blocked" element={<BlockedUsersPage />} />
         <Route path="/settings/muted" element={<MutedSettingsPage />} />
         <Route path="/settings/activity" element={<AccountActivityLogPage />} />
