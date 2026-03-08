@@ -1,3 +1,4 @@
+import NavigationButtons from '../components/NavigationButtons';
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
@@ -658,7 +659,14 @@ export default function CampgroundDetailPage() {
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-5 py-2 rounded-lg bg-green-700 text-white font-medium hover:bg-green-800 flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
 
                 {getBookingUrl(campground) && <a href={getBookingUrl(campground)!} target="_blank" rel="noopener noreferrer" className="px-5 py-2 rounded-lg bg-green-700 text-white font-medium hover:bg-green-800 flex items-center gap-2">{getBookingLabel(campground)}<ExternalLink className="w-3 h-3"/></a>}
-                {user && <button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? 'bg-amber-300 text-amber-800' : 'bg-amber-200 text-amber-800 hover:bg-amber-300'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
+                {user && <button onClick={toggleMute} className={`px-4 py-2 rounded-lg font-medium transition ${isMuted ? 'bg-amber-300 text-amber-800' : 'bg-amber-200 text-amber-800 hover:bg-amber-300'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>
+              {campground?.latitude && campground?.longitude && (
+                <NavigationButtons
+                  lat={campground.latitude}
+                  lng={campground.longitude}
+                  name={campground.name}
+                />
+              )}}
                 {campground.businessPhone && <a href={`tel:${campground.businessPhone}`} className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 flex items-center gap-2"><Phone className="w-4 h-4" />Call</a>}
                 {campground.websiteUrlUrl && <a href={campground.websiteUrlUrl} target="_blank" className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 flex items-center gap-2"><Globe className="w-4 h-4" />Website</a>}
               </div>

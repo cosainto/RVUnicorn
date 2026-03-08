@@ -1,3 +1,4 @@
+import NavigationButtons from '../components/NavigationButtons';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Camera, 
@@ -1499,6 +1500,10 @@ export default function DrivePlanner() {
                                 {place.photo ? (
                                   <img src={place.photo} alt={place.name} className="w-16 h-16 rounded-lg object-cover" />
                                 ) : (
+
+                  {place.lat && place.lng && (
+                    <NavigationButtons lat={place.lat} lng={place.lng} name={place.name} compact />
+                  )}
                                   <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center">
                                     <Camera className="w-6 h-6 text-blue-500" />
                                   </div>
