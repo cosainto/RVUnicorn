@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 interface Recommendation {
   id: string;
@@ -43,7 +43,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
 
   const fetchRecommendations = async () => {
     try {
-      const { data } = await axios.get(`/api/ai-maintenance/recommendations/${userId}`);
+      const { data } = await api.get(`/ai-maintenance/recommendations/${userId}`);
       setRecommendations(data);
     } catch (e) {
       console.error("Failed to fetch recommendations:", e);
@@ -54,12 +54,12 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
     const newVal = !enabled;
     setLoading(true);
     try {
-      await axios.post("/api/ai-maintenance/toggle", { userId, enabled: newVal });
+      await api.post("/ai-maintenance/toggle", { userId, enabled: newVal });
       setEnabled(newVal);
       onToggle?.(newVal);
       if (newVal) {
         setAnalyzing(true);
-        await axios.post(`/api/ai-maintenance/analyze/${userId}`);
+        await api.post(`/ai-maintenance/analyze/${userId}`);
         await fetchRecommendations();
         setAnalyzing(false);
       }
@@ -73,7 +73,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
     const miles = parseInt(odometerInput);
     if (isNaN(miles) || miles < 0) return;
     try {
-      await axios.post("/api/ai-maintenance/odometer", { userId, mileage: miles });
+      await api.post("/ai-maintenance/odometer", { userId, mileage: miles });
       setOdometer(miles);
       setEditingOdo(false);
       await fetchRecommendations();
@@ -84,7 +84,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
 
   const handleDismiss = async (id: string) => {
     try {
-      await axios.post(`/api/ai-maintenance/recommendations/${id}/dismiss`);
+      await api.post(`/ai-maintenance/recommendations/${id}/dismiss`);
       setRecommendations(prev => prev.filter(r => r.id !== id));
     } catch (e) {
       console.error("Dismiss failed:", e);
@@ -93,7 +93,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
 
   const handleSchedule = async (id: string) => {
     try {
-      await axios.post(`/api/ai-maintenance/recommendations/${id}/schedule`, {
+      await api.post(`/ai-maintenance/recommendations/${id}/schedule`, {
         scheduledDate: scheduleDate || new Date().toISOString(),
       });
       setRecommendations(prev => prev.filter(r => r.id !== id));
@@ -106,7 +106,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
   const handleRunAnalysis = async () => {
     setAnalyzing(true);
     try {
-      await axios.post(`/api/ai-maintenance/analyze/${userId}`);
+      await api.post(`/ai-maintenance/analyze/${userId}`);
       await fetchRecommendations();
     } catch (e) {
       console.error("Analysis failed:", e);
