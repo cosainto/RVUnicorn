@@ -145,6 +145,8 @@ export default function MyRVPage() {
         rvHeight: profile.rvHeight?.toString() || '',
         rvDescription: profile.rvDescription || '',
         rvFeatures: profile.rvFeatures || [],
+        currentOdometer: profile.currentOdometer || 0,
+        aiMaintenanceEnabled: profile.aiMaintenanceEnabled || false,
       });
 
       setHomeData({

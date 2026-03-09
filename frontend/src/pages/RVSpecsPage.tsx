@@ -36,6 +36,7 @@ interface RVSpecsForm {
   rvShorepower: string; rvGeneratorWatts: string; rvBatteryAh: string; rvSolarWatts: string;
   rvMpg: string;
   licensePlate: string; licensePlateState: string;
+  currentOdometer: string; tagExpiration: string;
 }
 
 const EMPTY: RVSpecsForm = {
@@ -46,6 +47,7 @@ const EMPTY: RVSpecsForm = {
   rvFuelGal:'',rvFreshWaterGal:'',rvGreyWaterGal:'',rvBlackWaterGal:'',rvLpGasGal:'',
   rvShorepower:'',rvGeneratorWatts:'',rvBatteryAh:'',rvSolarWatts:'',
   rvMpg:'',licensePlate:'',licensePlateState:'',
+  currentOdometer:'',tagExpiration:'',
 };
 
 const RV_TYPES = [
@@ -274,6 +276,8 @@ export default function RVSpecsPage() {
       rvMpg: u.rvMpg?.toString() ?? '',
       licensePlate: u.licensePlate ?? '',
       licensePlateState: u.licensePlateState ?? '',
+      currentOdometer: u.currentOdometer?.toString() ?? '',
+      tagExpiration: u.tagExpiration ? new Date(u.tagExpiration).toISOString().split('T')[0] : '',
     });
   }, [user]);
 
@@ -301,8 +305,10 @@ export default function RVSpecsPage() {
         rvGeneratorWatts: maybeNum(form.rvGeneratorWatts), rvBatteryAh: maybeNum(form.rvBatteryAh),
         rvSolarWatts: maybeNum(form.rvSolarWatts), rvMpg: maybeNum(form.rvMpg),
         licensePlate: maybeStr(form.licensePlate), licensePlateState: maybeStr(form.licensePlateState),
+        currentOdometer: form.currentOdometer ? parseInt(form.currentOdometer) : null,
+        tagExpiration: form.tagExpiration ? new Date(form.tagExpiration).toISOString() : null,
       };
-      const res = await api.put('/users/profile', payload);
+      const res = await api.put(`/profile/${user.username}`, payload);
       if (setUser) setUser(res.data.user ?? res.data);
       setSaved(true); setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
@@ -607,6 +613,14 @@ export default function RVSpecsPage() {
                 <option value="">Select...</option>
                 {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+            </Field>
+            <Field label="Tag Expiration">
+              <input className={inp} type="date" value={form.tagExpiration}
+                onChange={set('tagExpiration')} />
+            </Field>
+            <Field label="Odometer (mi)">
+              <input className={inp} type="number" value={form.currentOdometer}
+                onChange={set('currentOdometer')} placeholder="45000" />
             </Field>
           </div>
           <div
