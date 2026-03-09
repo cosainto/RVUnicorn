@@ -152,8 +152,7 @@ export async function runAIAnalysis(rvId: string, userId: string): Promise<numbe
     const date = r.completedDate ? new Date(r.completedDate).toLocaleDateString() : "scheduled";
     const miles = r.mileageAtService ? ` at ${r.mileageAtService} miles` : "";
     return `- ${r.serviceType}${miles} on ${date}`;
-  }).join("
-") || "- No maintenance history on record";
+  }).join("\n") || "- No maintenance history on record";
 
   const currentMiles = rv.currentOdometer || 0;
   const rvAge = rv.year ? new Date().getFullYear() - rv.year : null;
