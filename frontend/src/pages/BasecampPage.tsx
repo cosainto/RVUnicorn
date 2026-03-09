@@ -130,6 +130,8 @@ interface PlannedTrip {
     state?: string;
   };
   state?: string;
+  siteNumber?: string;
+  attendeeId?: string;
 }
 
 interface MaintenanceStats {
@@ -937,6 +939,9 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Event Countdown State
   const [nextEvent, setNextEvent] = useState<UpcomingEvent | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [siteNumberInput, setSiteNumberInput] = useState('');
+  const [siteNumberSaving, setSiteNumberSaving] = useState(false);
+  const [siteNumberSaved, setSiteNumberSaved] = useState(false);
 
   // Random quote for when no trip is planned
   const [randomQuote] = useState(() => 
@@ -1067,6 +1072,14 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [user?.username]);
 
+  // Sync site number input when nextEvent loads
+  useEffect(() => {
+    if (nextEvent) {
+      const myAttendee = (nextEvent as any).myAttendee;
+      setSiteNumberInput(myAttendee?.siteNumber || '');
+    }
+  }, [nextEvent]);
+
   // Load Events and State Visits (upcoming, wishlist, and next event for countdown)
   const loadEvents = useCallback(async () => {
     try {
@@ -1117,6 +1130,8 @@ export default function BasecampPage({ user }: BasecampProps) {
         location: e.location,
         type: 'event' as const,
         campground: e.campground,
+        siteNumber: e.myAttendee?.siteNumber || '',
+        attendeeId: e.myAttendee?.id || '',
       }));
 
       // Load state visits for future planned trips
@@ -1540,6 +1555,22 @@ export default function BasecampPage({ user }: BasecampProps) {
     return <LandingPage />;
   }
 
+  const handleSaveSiteNumber = async () => {
+    if (!nextEvent || !(nextEvent as any).myAttendee?.id) return;
+    setSiteNumberSaving(true);
+    try {
+      await api.put(`/events/${nextEvent.id}/attendees/${(nextEvent as any).myAttendee.id}`, {
+        siteNumber: siteNumberInput
+      });
+      setSiteNumberSaved(true);
+      setTimeout(() => setSiteNumberSaved(false), 2000);
+      setPlannedTrips(prev => prev.map(t =>
+        t.id === nextEvent.id ? { ...t, siteNumber: siteNumberInput } : t
+      ));
+    } catch(e) { console.error(e); }
+    setSiteNumberSaving(false);
+  };
+
   return (
     <>
     <div className="min-h-screen bg-gray-50">
@@ -1577,6 +1608,28 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="text-2xl font-bold">{countdown.seconds}</div>
                   <div className="text-xs text-blue-100">Sec</div>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {(nextEvent as any).myAttendee && (
+                  <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
+                    <span className="text-xs text-blue-100 whitespace-nowrap">🏕️ Site</span>
+                    <input
+                      type="text"
+                      value={siteNumberInput}
+                      onChange={e => setSiteNumberInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveSiteNumber()}
+                      placeholder="e.g. 42B"
+                      className="bg-transparent text-white placeholder-blue-200 text-sm font-medium w-20 outline-none border-b border-white/30 focus:border-white"
+                    />
+                    <button
+                      onClick={handleSaveSiteNumber}
+                      disabled={siteNumberSaving}
+                      className="text-xs text-white/70 hover:text-white font-medium"
+                    >
+                      {siteNumberSaved ? '✓' : siteNumberSaving ? '…' : 'Save'}
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-blue-100">Starting</p>
@@ -2365,6 +2418,9 @@ export default function BasecampPage({ user }: BasecampProps) {
                           {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           {trip.campground?.name && ` · ${trip.campground.name}`}
                         </p>
+                        {trip.siteNumber && (
+                          <p className="text-xs text-blue-500 font-medium mt-0.5">🏕️ Site {trip.siteNumber}</p>
+                        )}
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
                     </Link>

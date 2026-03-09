@@ -196,8 +196,14 @@ router.get('/my', authenticateToken, async (req, res) => {
       organizerId: userId,
     }));
 
+    // Add myAttendee to each event so frontend can get siteNumber + attendeeId
+    const eventsWithMyAttendee = events.map(event => ({
+      ...event,
+      myAttendee: event.attendees.find((a: any) => a.userId === userId) || null,
+    }));
+
     // Combine and sort by start date
-    const allTrips = [...events, ...stateVisitEvents].sort(
+    const allTrips = [...eventsWithMyAttendee, ...stateVisitEvents].sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
 
@@ -749,7 +755,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
   try {
     const userId = (req as any).userId;
     const { id, attendeeId } = req.params;
-    const { status } = req.body;
+    const { status, siteNumber } = req.body;
 
     const attendee = await prisma.eventAttendee.findUnique({
       where: { id: attendeeId },
@@ -763,9 +769,13 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (siteNumber !== undefined) updateData.siteNumber = siteNumber;
+
     const updated = await prisma.eventAttendee.update({
       where: { id: attendeeId },
-      data: { status },
+      data: updateData,
       include: {
         user: {
           select: {
