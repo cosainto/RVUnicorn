@@ -337,6 +337,13 @@ router.put('/:username', authenticateToken, async (req, res) => {
         rvAwningFt: true,
         rvAirconditioners: true,
         rvFloorplan: true,
+        rvWidth: true,
+        rvHeight: true,
+        currentOdometer: true,
+        aiMaintenanceEnabled: true,
+        licensePlate: true,
+        licensePlateState: true,
+        tagExpiration: true,
         createdAt: true,
       },
     });

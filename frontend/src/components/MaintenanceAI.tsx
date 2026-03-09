@@ -39,6 +39,10 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
   const [scheduleDate, setScheduleDate]       = useState("");
 
   useEffect(() => { if (enabled) fetchRecommendations(); }, [enabled]);
+  useEffect(() => {
+    if (currentOdometer) { setOdometer(currentOdometer); setOdometerInput(String(currentOdometer)); }
+  }, [currentOdometer]);
+  useEffect(() => { setEnabled(aiMaintenanceEnabled); }, [aiMaintenanceEnabled]);
 
   const fetchRecommendations = async () => {
     try {

@@ -101,6 +101,8 @@ export default function MyRVPage() {
     rvHeight: '',
     rvDescription: '',
     rvFeatures: [] as string[],
+    currentOdometer: 0 as number,
+    aiMaintenanceEnabled: false as boolean,
   });
 
   const [homeData, setHomeData] = useState({
@@ -315,6 +317,7 @@ export default function MyRVPage() {
           rvName={[rvData.rvYear, rvData.rvMake, rvData.rvModel].filter(Boolean).join(' ') || 'My RV'}
           aiMaintenanceEnabled={rvData.aiMaintenanceEnabled || false}
           currentOdometer={rvData.currentOdometer || 0}
+          onToggle={(enabled) => setRvData(prev => ({ ...prev, aiMaintenanceEnabled: enabled }))}
         />
       </div>
 
