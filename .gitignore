@@ -10,3 +10,6 @@ backend/campground-maps-compressed/
 backend/.env
 frontend/dist
 frontend/dist
+add_campgrounds.cjs
+add_photos.cjs
+add_photos2.cjs
