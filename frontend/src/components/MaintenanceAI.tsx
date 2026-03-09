@@ -54,7 +54,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
     const newVal = !enabled;
     setLoading(true);
     try {
-      await axios.post("/api/ai-maintenance/toggle", { rvId, enabled: newVal });
+      await axios.post("/api/ai-maintenance/toggle", { userId, enabled: newVal });
       setEnabled(newVal);
       onToggle?.(newVal);
       if (newVal) {
@@ -73,7 +73,7 @@ export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, cu
     const miles = parseInt(odometerInput);
     if (isNaN(miles) || miles < 0) return;
     try {
-      await axios.post("/api/ai-maintenance/odometer", { rvId, mileage: miles });
+      await axios.post("/api/ai-maintenance/odometer", { userId, mileage: miles });
       setOdometer(miles);
       setEditingOdo(false);
       await fetchRecommendations();
