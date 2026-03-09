@@ -306,6 +306,16 @@ export default function MyRVPage() {
         </div>
       </div>
 
+      {/* Hitch AI Maintenance - compact banner */}
+      <div className="mb-6">
+        <MaintenanceAI
+          userId={user?.id || ''}
+          rvName={[rvData.rvYear, rvData.rvMake, rvData.rvModel].filter(Boolean).join(' ') || 'My RV'}
+          aiMaintenanceEnabled={rvData.aiMaintenanceEnabled || false}
+          currentOdometer={rvData.currentOdometer || 0}
+        />
+      </div>
+
       {/* Co-Owner Section */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
         <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">🔑 RV Co-Owners</h3>
@@ -829,14 +839,6 @@ export default function MyRVPage() {
       {/* Custom Enhancements */}
       <RvEnhancements />
 
-
-      {/* Hitch AI Maintenance */}
-      <MaintenanceAI
-        userId={user?.id || ''}
-        rvName={[rvData.rvYear, rvData.rvMake, rvData.rvModel].filter(Boolean).join(' ') || 'My RV'}
-        aiMaintenanceEnabled={rvData.aiMaintenanceEnabled || false}
-        currentOdometer={rvData.currentOdometer || 0}
-      />
 
       {/* Save Button */}
       <div className="flex justify-end">
