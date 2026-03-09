@@ -9,15 +9,12 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Toggle AI monitoring on/off ───────────────────────────────────────────────
 router.post("/toggle", authenticateToken, async (req: any, res) => {
-  const { rvId, enabled } = req.body;
+  const { enabled } = req.body;
   const userId = req.user.id;
 
   try {
-    const rv = await prisma.rV.findFirst({ where: { id: userId } });
-    if (!rv) return res.status(404).json({ error: "RV not found" });
-
-    const updated = await prisma.rV.update({
-      where: { id: rvId },
+    const updated = await prisma.user.update({
+      where: { id: userId },
       data: { aiMaintenanceEnabled: enabled },
     });
 
@@ -29,15 +26,12 @@ router.post("/toggle", authenticateToken, async (req: any, res) => {
 
 // ── Update current odometer ───────────────────────────────────────────────────
 router.post("/odometer", authenticateToken, async (req: any, res) => {
-  const { rvId, mileage } = req.body;
+  const { mileage } = req.body;
   const userId = req.user.id;
 
   try {
-    const rv = await prisma.rV.findFirst({ where: { id: userId } });
-    if (!rv) return res.status(404).json({ error: "RV not found" });
-
-    await prisma.rV.update({
-      where: { id: rvId },
+    await prisma.user.update({
+      where: { id: userId },
       data: { currentOdometer: mileage },
     });
 
