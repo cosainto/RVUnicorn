@@ -35,9 +35,6 @@ router.post("/odometer", authenticateToken, async (req: any, res) => {
       data: { currentOdometer: mileage },
     });
 
-    // Trigger AI analysis immediately after odometer update
-    await runAIAnalysis(rvId, userId);
-
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -129,7 +126,7 @@ router.post("/analyze/:rvId", authenticateToken, async (req: any, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function runAIAnalysis(rvId: string, userId: string): Promise<number> {
   // Fetch RV with full details and maintenance history
-  const rv = await (prisma as any).rV.findFirst({
+  const rv = await (prisma as any).user.findFirst({
     where: { id: userId },
     include: {
       maintenanceRecords: {
@@ -149,17 +146,17 @@ export async function runAIAnalysis(rvId: string, userId: string): Promise<numbe
   }).join("\n") || "- No maintenance history on record";
 
   const currentMiles = rv.currentOdometer || 0;
-  const rvAge = rv.year ? new Date().getFullYear() - rv.year : null;
+  const rvAge = rv.rvYear ? new Date().getFullYear() - rv.rvYear : null;
 
   const prompt = `You are Hitch, RVUnicorn's AI maintenance assistant. Analyze this RV and return maintenance recommendations as JSON only.
 
 RV Details:
-- Year: ${rv.year || "Unknown"}
-- Make: ${rv.make || "Unknown"}
-- Model: ${rv.model || "Unknown"}
-- Type: ${rv.type || "Unknown"}
+- Year: ${rv.rvYear || "Unknown"}
+- Make: ${rv.rvMake || "Unknown"}
+- Model: ${rv.rvModel || "Unknown"}
+- Type: ${rv.rvType || "Unknown"}
 - Current Odometer: ${currentMiles} miles
-- Engine Type: ${rv.engineType || "Unknown"}
+- Engine Type: ${rv.rvEngineType || "Unknown"}
 - Age: ${rvAge ? rvAge + " years" : "Unknown"}
 
 Maintenance History:
@@ -255,7 +252,7 @@ async function createMaintenanceNotification(userId: string, rv: any, rec: any) 
         userId,
         type: "MAINTENANCE_REMINDER",
         title: `${rec.urgency === "critical" ? "🚨" : "🔧"} Maintenance Due: ${rec.serviceType}`,
-        message: `Hitch thinks your ${rv.year || ""} ${rv.make || ""} ${rv.model || ""} needs a ${rec.serviceType}. ${rec.reason}`,
+        message: `Hitch thinks your ${rv.rvYear || ""} ${rv.rvMake || ""} ${rv.rvModel || ""} needs a ${rec.serviceType}. ${rec.reason}`,
         data: JSON.stringify({ rvId: rv.id, serviceType: rec.serviceType, urgency: rec.urgency }),
       },
     });
