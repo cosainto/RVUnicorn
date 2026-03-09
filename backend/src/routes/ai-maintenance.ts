@@ -9,18 +9,19 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Toggle AI monitoring on/off ───────────────────────────────────────────────
 router.post("/toggle", authenticateToken, async (req: any, res) => {
-  const { enabled } = req.body;
-  const userId = req.user.id;
-
   try {
+    const { enabled } = req.body;
+    const userId = req.user?.id;
+    console.log("TOGGLE HIT - userId:", userId, "enabled:", enabled);
+    if (!userId) return res.status(400).json({ error: "No userId" });
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { aiMaintenanceEnabled: enabled },
+      data: { aiMaintenanceEnabled: Boolean(enabled) },
     });
-
+    console.log("TOGGLE SUCCESS:", updated.aiMaintenanceEnabled);
     res.json({ success: true, aiMaintenanceEnabled: updated.aiMaintenanceEnabled });
   } catch (e: any) {
-    console.error("AI TOGGLE ERROR:", e.message, e.stack);
+    console.error("AI TOGGLE ERROR:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
