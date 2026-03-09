@@ -20,6 +20,7 @@ router.post("/toggle", authenticateToken, async (req: any, res) => {
 
     res.json({ success: true, aiMaintenanceEnabled: updated.aiMaintenanceEnabled });
   } catch (e: any) {
+    console.error("AI TOGGLE ERROR:", e.message, e.stack);
     res.status(500).json({ error: e.message });
   }
 });
