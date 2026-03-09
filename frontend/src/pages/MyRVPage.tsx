@@ -4,7 +4,8 @@ import { Truck, Wrench, Save, Upload, X, Trash2, Camera, Video, ChevronDown, Che
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from '../components/ImageUpload';
-import RvEnhancements from '../components/RvEnhancements'; // ← ADD THIS
+import RvEnhancements from '../components/RvEnhancements';
+import MaintenanceAI from '../components/MaintenanceAI'; // ← ADD THIS
 
 
 
@@ -828,6 +829,14 @@ export default function MyRVPage() {
       {/* Custom Enhancements */}
       <RvEnhancements />
 
+
+      {/* Hitch AI Maintenance */}
+      <MaintenanceAI
+        userId={user?.id || ''}
+        rvName={[rvData.rvYear, rvData.rvMake, rvData.rvModel].filter(Boolean).join(' ') || 'My RV'}
+        aiMaintenanceEnabled={rvData.aiMaintenanceEnabled || false}
+        currentOdometer={rvData.currentOdometer || 0}
+      />
 
       {/* Save Button */}
       <div className="flex justify-end">

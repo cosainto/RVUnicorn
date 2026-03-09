@@ -12,7 +12,7 @@ interface Recommendation {
 }
 
 interface Props {
-  rvId: string;
+  userId: string;
   rvName: string;
   aiMaintenanceEnabled: boolean;
   currentOdometer?: number;
@@ -26,7 +26,7 @@ const URGENCY_STYLES: Record<string, { bg: string; text: string; label: string; 
   low:      { bg: "bg-blue-50 border-blue-200",   text: "text-blue-700",   label: "Info",      icon: "ℹ️" },
 };
 
-export default function MaintenanceAI({ rvId, rvName, aiMaintenanceEnabled, currentOdometer, onToggle }: Props) {
+export default function MaintenanceAI({ userId, rvName, aiMaintenanceEnabled, currentOdometer, onToggle }: Props) {
   const [enabled, setEnabled]               = useState(aiMaintenanceEnabled);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [odometer, setOdometer]             = useState(currentOdometer || 0);
@@ -43,7 +43,7 @@ export default function MaintenanceAI({ rvId, rvName, aiMaintenanceEnabled, curr
 
   const fetchRecommendations = async () => {
     try {
-      const { data } = await axios.get(`/api/ai-maintenance/recommendations/${rvId}`);
+      const { data } = await axios.get(`/api/ai-maintenance/recommendations/${userId}`);
       setRecommendations(data);
     } catch (e) {
       console.error("Failed to fetch recommendations:", e);
@@ -59,7 +59,7 @@ export default function MaintenanceAI({ rvId, rvName, aiMaintenanceEnabled, curr
       onToggle?.(newVal);
       if (newVal) {
         setAnalyzing(true);
-        await axios.post(`/api/ai-maintenance/analyze/${rvId}`);
+        await axios.post(`/api/ai-maintenance/analyze/${userId}`);
         await fetchRecommendations();
         setAnalyzing(false);
       }
@@ -106,7 +106,7 @@ export default function MaintenanceAI({ rvId, rvName, aiMaintenanceEnabled, curr
   const handleRunAnalysis = async () => {
     setAnalyzing(true);
     try {
-      await axios.post(`/api/ai-maintenance/analyze/${rvId}`);
+      await axios.post(`/api/ai-maintenance/analyze/${userId}`);
       await fetchRecommendations();
     } catch (e) {
       console.error("Analysis failed:", e);
