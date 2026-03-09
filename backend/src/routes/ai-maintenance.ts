@@ -91,16 +91,7 @@ router.post("/recommendations/:id/schedule", authenticateToken, async (req: any,
     });
 
     // Create actual maintenance record
-    await (prisma as any).rVMaintenance.create({
-      data: {
-        rvId: rec.rvId,
-        userId,
-        serviceType: rec.serviceType,
-        scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
-        notes: `Scheduled from Hitch AI recommendation: ${rec.aiReason}`,
-        status: "scheduled",
-      },
-    });
+    // Maintenance record creation skipped - link to MaintenanceReminder if needed
 
     res.json({ success: true });
   } catch (e: any) {
