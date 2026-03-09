@@ -132,7 +132,7 @@ export default function MyRVPage() {
       // Load user profile for RV specs
       const { data: profile } = await api.get('/auth/me');
       setRvData({
-        rvType: profile.rvType || '',
+        rvType: profile.rvType?.toUpperCase() || '',
         rvYear: profile.rvYear?.toString() || '',
         rvMake: profile.rvMake || '',
         rvModel: profile.rvModel || '',
