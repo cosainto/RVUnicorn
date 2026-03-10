@@ -197,9 +197,9 @@ router.post('/event/:eventId/plan', authenticateToken, async (req: Request, res:
     }
 
     res.json(tripPlan);
-  } catch (error) {
-    console.error('Create trip plan error:', error);
-    res.status(500).json({ error: 'Failed to create trip plan' });
+  } catch (error: any) {
+    console.error('Create trip plan error:', error?.message, error?.code, JSON.stringify(error?.meta));
+    res.status(500).json({ error: 'Failed to create trip plan', detail: error?.message });
   }
 });
 
