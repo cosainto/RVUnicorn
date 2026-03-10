@@ -1021,6 +1021,10 @@ export default function EventDetailPage() {
             </div>
           )}
 
+          {activeTab === 'itinerary' && (
+            <TripItineraryTab eventId={id} eventTitle={event?.title} />
+          )}
+
           {activeTab === 'schedule' && (
             <div className="space-y-8">
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
@@ -1086,10 +1090,6 @@ export default function EventDetailPage() {
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
           )}
-          {activeTab === 'itinerary' && (
-            <TripItineraryTab eventId={id} eventTitle={event?.title} />
-          )}
-
           {activeTab === 'packup' && (
             <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
           )}
