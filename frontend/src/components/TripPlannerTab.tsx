@@ -65,6 +65,12 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMsg, setInviteMsg] = useState('');
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [companions, setCompanions] = useState<any[]>([]);
+  const [inviteUsername, setInviteUsername] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState('');
   const [recommendations, setRecommendations] = useState<{stopId: string; items: any[]; loading: boolean} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -196,6 +202,44 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       await api.delete(`/itinerary/${trip.id}`);
       setTrip(null);
       setShowHitch(false);
+    } catch(e) {}
+  };
+
+  const generateShareLink = async () => {
+    if (!trip) return;
+    try {
+      const { data } = await api.post(`/itinerary/${trip.id}/share`);
+      setShareUrl(data.url);
+    } catch(e) {}
+  };
+
+  const revokeShare = async () => {
+    if (!trip) return;
+    try {
+      await api.delete(`/itinerary/${trip.id}/share`);
+      setShareUrl('');
+    } catch(e) {}
+  };
+
+  const inviteCompanion = async () => {
+    if (!trip || !inviteUsername.trim()) return;
+    setInviteLoading(true); setInviteMsg('');
+    try {
+      const { data } = await api.post(`/itinerary/${trip.id}/members`, { username: inviteUsername.trim(), role: 'EDITOR' });
+      setCompanions(c => [...c.filter(m => m.userId !== data.userId), data]);
+      setInviteUsername('');
+      setInviteMsg('✓ Added!');
+    } catch(e: any) {
+      setInviteMsg(e.response?.data?.error || 'User not found');
+    }
+    setInviteLoading(false);
+  };
+
+  const removeCompanion = async (userId: string) => {
+    if (!trip) return;
+    try {
+      await api.delete(`/itinerary/${trip.id}/members/${userId}`);
+      setCompanions(c => c.filter(m => m.userId !== userId));
     } catch(e) {}
   };
 
@@ -603,6 +647,10 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                     className={`text-xs px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${showSharePanel ? 'bg-primary-50 border-primary-300 text-primary-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     👥 Share
                   </button>
+                  <button onClick={() => setShowSharePanel(v => !v)}
+                    className={`text-xs px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${showSharePanel ? 'bg-primary-50 border-primary-300 text-primary-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    👥 Share
+                  </button>
                   <button onClick={deleteTrip}
                     className="text-xs border border-red-200 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all flex items-center gap-1"
                     title="Delete itinerary and start over">
@@ -610,6 +658,59 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                   </button>
                 </div>
               </div>
+
+              {/* Share panel */}
+              {showSharePanel && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-4">
+                  {/* Travel companions */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">👥 Travel Companions</p>
+                    <p className="text-xs text-gray-400 mb-3">People in your RV can view and edit this itinerary</p>
+                    <div className="flex gap-2 mb-3">
+                      <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && inviteCompanion()}
+                        placeholder="RVUnicorn username" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400" />
+                      <button onClick={inviteCompanion} disabled={inviteLoading || !inviteUsername.trim()}
+                        className="bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600 disabled:opacity-50">
+                        {inviteLoading ? '...' : 'Add'}
+                      </button>
+                    </div>
+                    {inviteMsg && <p className={`text-xs mb-2 ${inviteMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>{inviteMsg}</p>}
+                    {companions.length > 0 && (
+                      <div className="space-y-1.5">
+                        {companions.map(m => (
+                          <div key={m.userId} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                            {m.user?.profileImage ? <img src={m.user.profileImage} className="w-6 h-6 rounded-full object-cover" /> : <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs text-primary-600 font-bold">{m.user?.firstName?.[0]}</div>}
+                            <span className="text-sm text-gray-700 flex-1">{m.user?.firstName} {m.user?.lastName} <span className="text-gray-400">@{m.user?.username}</span></span>
+                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">{m.role}</span>
+                            <button onClick={() => removeCompanion(m.userId)} className="text-gray-300 hover:text-red-400 p-1"><X className="w-3 h-3"/></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Share link */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <p className="text-sm font-semibold text-gray-800 mb-1">🔗 Read-only share link</p>
+                    <p className="text-xs text-gray-400 mb-3">Anyone with this link can view your itinerary</p>
+                    {shareUrl ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input readOnly value={shareUrl} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs bg-gray-50 text-gray-600" />
+                          <button onClick={() => navigator.clipboard.writeText(shareUrl)}
+                            className="border border-gray-200 text-gray-500 px-3 py-2 rounded-xl text-xs hover:bg-gray-50">Copy</button>
+                        </div>
+                        <button onClick={revokeShare} className="text-xs text-red-400 hover:text-red-600">Revoke link</button>
+                      </div>
+                    ) : (
+                      <button onClick={generateShareLink}
+                        className="text-sm border border-gray-200 text-gray-600 px-4 py-2 rounded-xl hover:bg-gray-50 flex items-center gap-2">
+                        🔗 Generate share link
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Share panel */}
               {showSharePanel && (
