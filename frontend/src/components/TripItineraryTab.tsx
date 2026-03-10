@@ -213,21 +213,24 @@ export default function TripItineraryTab({ eventId, eventTitle, homeLocation, ca
           <h3 className="text-lg font-bold text-gray-800">🗺️ Trip Itinerary</h3>
           <p className="text-sm text-gray-500">AI-planned day-by-day route with overnight stops</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           {allTrips.length > 1 && (
             <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
               value={trip?.id || ''} onChange={e => setTrip(allTrips.find(t => t.id === e.target.value) || null)}>
               {allTrips.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
             </select>
           )}
-          <button onClick={() => { setShowAI(!showAI); setSuggestion(null); }}
-            className="bg-gradient-to-r from-primary-500 to-blue-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:from-primary-600 hover:to-blue-600 flex items-center gap-1 shadow-sm">
-            ✨ AI Plan
-          </button>
           <button onClick={createBlank}
             className="border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
             <Plus className="w-4 h-4" /> Blank
           </button>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-sm font-medium text-gray-600">✨ AI Plan</span>
+            <div onClick={() => { setShowAI(!showAI); setSuggestion(null); }}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${showAI ? 'bg-primary-500' : 'bg-gray-200'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${showAI ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+          </label>
         </div>
       </div>
 
