@@ -26,6 +26,18 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       `${c.id}|${c.name}|${c.city || c.location}, ${c.state}|${c.latitude},${c.longitude}|${[c.hasFullHookups && 'full hookups', c.hasElectricHookup && 'electric', c.hasDumpStation && 'dump station'].filter(Boolean).join(', ')}`
     ).join('\n');
 
+    // Pull free overnight spots from our database
+    const overnightSpots = await prisma.freeOvernightSpot.findMany({
+      where: { allowsRvs: true },
+      select: { id: true, name: true, chain: true, category: true, city: true, state: true, latitude: true, longitude: true, hasFuel: true, hasFood: true, hasShowers: true, is24Hours: true },
+      take: 500,
+      orderBy: { rating: 'desc' }
+    });
+
+    const overnightSpotList = overnightSpots.map(s =>
+      `${s.id}|${s.name}|${s.chain}|${s.city}, ${s.state}|${s.latitude},${s.longitude}|${[s.hasFuel && 'fuel', s.hasFood && 'food', s.hasShowers && 'showers', s.is24Hours && '24hr'].filter(Boolean).join(', ')}`
+    ).join('\n');
+
     const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '6 hours per day max driving';
     const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
     const departureTimeInfo = departureTime ? `Preferred daily departure time: ${departureTime}` : 'Preferred daily departure time: 8:00 AM';
@@ -44,6 +56,9 @@ AVOID HIGHWAYS: ${avoidHighways ? 'yes, prefer scenic routes' : 'no preference'}
 AVAILABLE CAMPGROUNDS IN OUR DATABASE (format: id|name|location|lat,lng|amenities):
 ${campgroundList}
 
+FREE OVERNIGHT STOPS IN OUR DATABASE (format: id|name|chain|location|lat,lng|amenities):
+${overnightSpotList}
+
 CRITICAL PLANNING RULES:
 1. RVs average 55-60 mph on highways, 45 mph on scenic routes
 2. Add 20-30% extra time for RV stops, weight stations, slower speeds
@@ -51,7 +66,9 @@ CRITICAL PLANNING RULES:
 4. Include a FOOD stop for trips over 4 hours
 5. Space overnight stops based on the driving limit - do NOT exceed it
 6. Calculate recommended DEPARTURE DATE based on arrival date and number of driving days needed
-7. For overnight stops, STRONGLY PREFER campgrounds from our database (use exact id)
+7. For OVERNIGHT stops, STRONGLY PREFER campgrounds from our database (use exact campgroundId)
+8. For WALMART/REST/FUEL stops, use spots from our FREE OVERNIGHT STOPS database (use freeOvernightSpotId field)
+9. Walmart, Flying J, Pilot, Love's, Cracker Barrel are excellent free overnight options - use them for mid-route nights
 8. Each day should have realistic mileage noted in the notes field
 9. RVParky search links will be auto-generated for overnight stops based on lat/lng
 
@@ -90,7 +107,8 @@ Respond ONLY with valid JSON:
           "latitude": 00.0000,
           "longitude": -00.0000,
           "notes": "Why this is a great overnight stop",
-          "campgroundId": "exact id from database or null"
+          "campgroundId": "exact campground id or null",
+          "freeOvernightSpotId": "exact free overnight spot id or null"
         }
       ]
     }
