@@ -10,7 +10,7 @@ interface TripPlan {
   useHometown: boolean; routePreference: string; endLatitude?: number; endLongitude?: number;
   pitStops?: PitStop[];
 }
-interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; campground?: { id: string; name: string; location: string; state: string; }; }
+interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; campground?: { id: string; name: string; location: string; state: string; latitude?: number; longitude?: number; }; }
 interface TripDay { id: string; dayNumber: number; date?: string; type: string; notes?: string; stops: TripStop[]; }
 interface Trip { id: string; title: string; startDate?: string; days: TripDay[]; }
 
