@@ -97,6 +97,7 @@ export default function MyRVPage() {
     rvSlideouts: '',
     rvWeight: '',
     rvMpg: '',
+    rvFuelType: 'gas',
     rvWidth: '',
     rvHeight: '',
     rvDescription: '',
@@ -143,6 +144,7 @@ export default function MyRVPage() {
         rvSlideouts: profile.rvSlideouts?.toString() || '',
         rvWeight: profile.rvWeight?.toString() || '',
         rvMpg: profile.rvMpg?.toString() || '',
+        rvFuelType: profile.rvFuelType || 'gas',
         rvWidth: profile.rvWidth?.toString() || '',
         rvHeight: profile.rvHeight?.toString() || '',
         rvDescription: profile.rvDescription || '',
@@ -204,6 +206,7 @@ export default function MyRVPage() {
         rvSlideouts: rvData.rvSlideouts ? parseInt(rvData.rvSlideouts) : null,
         rvWeight: rvData.rvWeight ? parseInt(rvData.rvWeight) : null,
         rvMpg: rvData.rvMpg ? parseFloat(rvData.rvMpg) : null,
+        rvFuelType: rvData.rvFuelType || 'gas',
         rvWidth: rvData.rvWidth ? parseInt(rvData.rvWidth) : null,
         rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
         rvDescription: rvData.rvDescription || null,
@@ -606,6 +609,22 @@ export default function MyRVPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+          </div>
+
+          {/* Fuel Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">⛽ Fuel Type</label>
+            <div className="flex gap-3">
+              {[{val:'gas',label:'⛽ Gasoline',sub:'Most Class A/C, vans'},{val:'diesel',label:'🛢️ Diesel',sub:'Most Class A diesel, 5th wheels'}].map(opt => (
+                <button key={opt.val} type="button"
+                  onClick={() => setRvData(prev => ({...prev, rvFuelType: opt.val}))}
+                  className={`flex-1 p-3 rounded-xl border-2 text-left transition-all ${rvData.rvFuelType === opt.val ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
+                  <p className="text-xs text-gray-400">{opt.sub}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Affects fuel stop recommendations and price estimates in trip planner</p>
           </div>
 
           {/* MPG */}

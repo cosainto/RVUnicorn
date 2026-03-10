@@ -51,6 +51,7 @@ model User {
   campingInterests                                String[]                  @default([])
   rvLength                                        Int?
   rvMpg                                           Float?
+  rvFuelType                                      String?                   @default("gas") // gas, diesel
   // Tanks & Fluids
   rvFuelGal                                       Float?
   rvFreshWaterGal                                 Float?

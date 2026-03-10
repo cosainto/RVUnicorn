@@ -29,7 +29,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/itinerary/recommendations?lat=&lng=&type=&mealPref=
 router.get('/recommendations', authenticateToken, async (req: any, res) => {
   try {
-    const { lat, lng, type, mealPref } = req.query;
+    const { lat, lng, type, mealPref, fuelType } = req.query;
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
     const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
@@ -72,15 +72,30 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         .map(s => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
         .filter(s => s.distanceMiles <= 10)
         .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 5)
-        .map(s => ({
+        .slice(0, 5);
+
+      // Fetch gas prices from GasBuddy-style API
+      let regularPrice: number | null = null;
+      let dieselPrice: number | null = null;
+      try {
+        const priceRes = await fetch(`https://www.fueleconomy.gov/ws/rest/fuelprices`, { headers: { Accept: 'application/json' } });
+        if (priceRes.ok) {
+          const priceData = await priceRes.json() as any;
+          regularPrice = parseFloat(priceData.regular) || null;
+          dieselPrice = parseFloat(priceData.diesel) || null;
+        }
+      } catch(e) {}
+
+      const fuelResults = nearbyFuel.map(s => ({
           id: s.id,
-          name: `${s.chain} - ${s.city}, ${s.state}`,
+          name: `${s.chain}${s.city ? ' - ' + s.city + (s.state ? ', ' + s.state : '') : ''}`,
           address: s.address,
           latitude: s.latitude,
           longitude: s.longitude,
           distanceMiles: s.distanceMiles,
           rating: s.rating,
+          gasPrice: fuelType === 'diesel' ? dieselPrice : regularPrice,
+          fuelType: fuelType || 'gas',
           tags: [
             s.hasFuel && '⛽ Fuel',
             s.hasFood && '🍔 Food',
@@ -90,7 +105,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
           source: 'rvunicorn',
         }));
 
-      return res.json(nearby);
+      return res.json(fuelResults);
     }
 
     if (type === 'FOOD') {

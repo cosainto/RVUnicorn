@@ -49,7 +49,7 @@ const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
 export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, tripPlan, tripLoading, onEditTrip, onReload }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
-  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void;
+  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string;
 }) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
@@ -165,7 +165,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     setRecommendations({ stopId: stop.id, items: [], loading: true });
     try {
       const { data } = await api.get('/itinerary/recommendations', {
-        params: { lat, lng, type: stop.type, mealPref: aiForm.mealPref }
+        params: { lat, lng, type: stop.type, mealPref: aiForm.mealPref, fuelType: rvFuelType || 'gas' }
       });
       setRecommendations({ stopId: stop.id, items: data, loading: false });
     } catch(e) {
@@ -796,6 +796,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                                               <div className="flex flex-wrap gap-1 mt-0.5">
                                                 {rec.rating && <span className="text-xs text-amber-600">⭐ {rec.rating}</span>}
                                                 {rec.distanceMiles && <span className="text-xs text-gray-400">{rec.distanceMiles} mi</span>}
+                                                {rec.gasPrice && <span className="text-xs font-semibold text-green-600">${rec.gasPrice.toFixed(2)}/gal {rec.fuelType === 'diesel' ? '🛢️' : '⛽'}</span>}
                                                 {rec.tags?.slice(0,2).map((t: string) => <span key={t} className="text-xs text-gray-500 bg-gray-100 px-1 rounded">{t}</span>)}
                                               </div>
                                             </div>
