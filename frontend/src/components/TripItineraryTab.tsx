@@ -52,11 +52,12 @@ interface AISuggestion {
   notes?: string; days: any[];
 }
 
-export default function TripItineraryTab({ eventId, eventTitle, homeLocation, campground, arrivalDate }: {
+export default function TripItineraryTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, showAIExternal }: {
   eventId: string;
   eventTitle?: string;
   homeLocation?: string;
   arrivalDate?: string;
+  showAIExternal?: boolean;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
 }) {
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -95,6 +96,10 @@ export default function TripItineraryTab({ eventId, eventTitle, homeLocation, ca
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (showAIExternal !== undefined) setShowAI(showAIExternal);
+  }, [showAIExternal]);
 
   useEffect(() => {
     if (homeLocation) setAiForm(f => ({ ...f, startLocation: homeLocation }));
@@ -222,13 +227,6 @@ export default function TripItineraryTab({ eventId, eventTitle, homeLocation, ca
             <Plus className="w-3.5 h-3.5" /> Blank
           </button>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <span className="text-sm font-medium text-gray-600">✨ AI Plan</span>
-          <div onClick={() => { setShowAI(!showAI); setSuggestion(null); }}
-            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${showAI ? 'bg-primary-500' : 'bg-gray-200'}`}>
-            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${showAI ? 'translate-x-5' : 'translate-x-0'}`} />
-          </div>
-        </label>
       </div>
 
       {/* AI Generator */}

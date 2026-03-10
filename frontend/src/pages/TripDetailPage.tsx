@@ -136,6 +136,7 @@ export default function EventDetailPage() {
   });
 
   const [userHomeLocation, setUserHomeLocation] = useState<string | null>(null);
+  const [showAIPlanner, setShowAIPlanner] = useState(false);
 
   // Helper to build default arrival datetime string (event start date at 2pm)
   const getDefaultArrivalDate = () => {
@@ -847,11 +848,18 @@ export default function EventDetailPage() {
               <div className="bg-white rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold flex items-center gap-2"><Car className="w-6 h-6" />My Trip</h3>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-3">
                     {tripPlan && !tripPlan.status?.includes('COMPLETED') && (
                       <button onClick={openTripModal} className="btn btn-secondary btn-sm flex items-center gap-1"><Edit className="w-4 h-4" />Edit Trip</button>
                     )}
                     {!tripPlan && <button onClick={openTripModal} className="btn btn-primary btn-sm">Plan My Trip</button>}
+                    <label className="flex items-center gap-2 cursor-pointer select-none ml-2">
+                      <span className="text-sm font-medium text-gray-500">✨ AI Plan</span>
+                      <div onClick={() => setShowAIPlanner(v => !v)}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${showAIPlanner ? 'bg-primary-500' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${showAIPlanner ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                    </label>
                   </div>
                 </div>
 
@@ -1005,7 +1013,7 @@ export default function EventDetailPage() {
 
                     {/* Day-by-Day Itinerary */}
                     <div className="border-t pt-4 mt-4">
-                      <TripItineraryTab eventId={id} eventTitle={event?.title} homeLocation={userHomeLocation || tripPlan?.startLocation || ''} campground={event?.campground} arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined} />
+                      <TripItineraryTab eventId={id} eventTitle={event?.title} homeLocation={userHomeLocation || tripPlan?.startLocation || ''} campground={event?.campground} arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined} showAIExternal={showAIPlanner} />
                     </div>
                   </div>
                 ) : (
