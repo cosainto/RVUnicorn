@@ -64,8 +64,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [aiForm, setAiForm] = useState({
     startLocation: homeLocation||'', destination: campDest, nights: 3,
     rvType: 'Class A Motorhome', avoidHighways: false,
-    drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 6, milesPerDay: 300,
+    drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 8, milesPerDay: 300,
     departureTime: '8:00 AM', arrivalDate: arrivalDate||'',
+    wantSightseeing: false,
+    mealPref: 'balanced' as 'fast'|'balanced'|'sitdown',
+    stopFrequency: 'few' as 'none'|'few'|'frequent',
   });
 
   useEffect(() => { if (homeLocation) setAiForm(f=>({...f,startLocation:homeLocation})); }, [homeLocation]);
@@ -83,6 +86,9 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         ...aiForm,
         hoursPerDay: aiForm.drivingLimitType==='hours' ? aiForm.hoursPerDay : null,
         milesPerDay: aiForm.drivingLimitType==='miles' ? aiForm.milesPerDay : null,
+        wantSightseeing: aiForm.wantSightseeing,
+        mealPref: aiForm.mealPref,
+        stopFrequency: aiForm.stopFrequency,
       });
       const { data: newTrip } = await api.post('/itinerary-ai/create-from-suggestion', {
         title: eventTitle ? `Itinerary for ${eventTitle}` : suggestion.title, suggestion,
@@ -237,6 +243,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                     value={aiForm.destination} onChange={e=>setAiForm(f=>({...f,destination:e.target.value}))} placeholder="Campground or City, State" />
                 </div>
               </div>
+              {/* Row 1: Nights + Drive limit + Depart time */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Nights 🌙</label>
@@ -248,7 +255,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Drive limit / day</label>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 mb-1">
                     <button onClick={()=>setAiForm(f=>({...f,drivingLimitType:'hours'}))}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${aiForm.drivingLimitType==='hours'?'bg-primary-500 text-white border-primary-500':'bg-white text-gray-500 border-gray-200'}`}>
                       ⏰ {aiForm.hoursPerDay}h
@@ -259,10 +266,10 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                     </button>
                   </div>
                   {aiForm.drivingLimitType==='hours' ? (
-                    <input type="range" min={2} max={12} value={aiForm.hoursPerDay} className="w-full accent-primary-500 mt-1"
+                    <input type="range" min={2} max={16} value={aiForm.hoursPerDay} className="w-full accent-primary-500"
                       onChange={e=>setAiForm(f=>({...f,hoursPerDay:parseInt(e.target.value)}))} />
                   ) : (
-                    <input type="range" min={50} max={600} step={25} value={aiForm.milesPerDay} className="w-full accent-primary-500 mt-1"
+                    <input type="range" min={50} max={800} step={25} value={aiForm.milesPerDay} className="w-full accent-primary-500"
                       onChange={e=>setAiForm(f=>({...f,milesPerDay:parseInt(e.target.value)}))} />
                   )}
                 </div>
@@ -274,22 +281,71 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
-                  value={aiForm.rvType} onChange={e=>setAiForm(f=>({...f,rvType:e.target.value}))}>
-                  {RV_TYPES.map(t=><option key={t}>{t}</option>)}
-                </select>
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="checkbox" checked={aiForm.avoidHighways} className="accent-primary-500"
-                    onChange={e=>setAiForm(f=>({...f,avoidHighways:e.target.checked}))} /> Scenic routes
-                </label>
-                <div className="ml-auto">
-                  {aiError && <p className="text-xs text-red-500 mb-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{aiError}</p>}
-                  <button onClick={generateAI} disabled={aiLoading||!aiForm.startLocation}
-                    className="bg-primary-500 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 flex items-center gap-2">
-                    {aiLoading ? <><Loader className="w-4 h-4 animate-spin"/>Planning... (15-20s)</> : <><img src="/hitch.png" className="w-4 h-4 rounded-full"/>Generate Itinerary</>}
-                  </button>
+
+              {/* Row 2: Meals */}
+              <div className="bg-white rounded-xl p-3 border border-gray-200 space-y-2">
+                <p className="text-xs font-semibold text-gray-600">🍽️ How do you want to eat on the road?</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { val: 'fast', label: '🚀 Fast Food', sub: 'Drive-thrus, quick stops' },
+                    { val: 'balanced', label: '⚖️ Balanced', sub: 'Mix of fast & sit-down' },
+                    { val: 'sitdown', label: '🍽️ Sit-down', sub: 'Full meals, local spots' },
+                  ].map(opt => (
+                    <button key={opt.val} onClick={()=>setAiForm(f=>({...f,mealPref:opt.val as any}))}
+                      className={`p-2 rounded-xl border text-left transition-all ${aiForm.mealPref===opt.val?'border-primary-400 bg-primary-50':'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                      <p className="text-xs font-semibold text-gray-700">{opt.label}</p>
+                      <p className="text-xs text-gray-400">{opt.sub}</p>
+                    </button>
+                  ))}
                 </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-1">How often do you want snack/rest stops?</p>
+                  <div className="flex gap-2">
+                    {[
+                      { val: 'none', label: '💨 None', sub: 'Push through' },
+                      { val: 'few', label: '☕ A few', sub: 'Every 3-4 hrs' },
+                      { val: 'frequent', label: '🛑 Frequent', sub: 'Every 1-2 hrs' },
+                    ].map(opt => (
+                      <button key={opt.val} onClick={()=>setAiForm(f=>({...f,stopFrequency:opt.val as any}))}
+                        className={`flex-1 p-2 rounded-xl border text-center transition-all ${aiForm.stopFrequency===opt.val?'border-primary-400 bg-primary-50':'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                        <p className="text-xs font-semibold text-gray-700">{opt.label}</p>
+                        <p className="text-xs text-gray-400">{opt.sub}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Sightseeing + RV type + scenic */}
+              <div className="bg-white rounded-xl p-3 border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700">⭐ Recommend sightseeing along the way?</p>
+                    <p className="text-xs text-gray-400">Hitch will suggest attractions, parks, and landmarks</p>
+                  </div>
+                  <div onClick={()=>setAiForm(f=>({...f,wantSightseeing:!f.wantSightseeing}))}
+                    className={`relative w-10 h-5 rounded-full cursor-pointer transition-colors ${aiForm.wantSightseeing?'bg-primary-500':'bg-gray-200'}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${aiForm.wantSightseeing?'translate-x-5':'translate-x-0'}`} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                  <select className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white flex-1"
+                    value={aiForm.rvType} onChange={e=>setAiForm(f=>({...f,rvType:e.target.value}))}>
+                    {RV_TYPES.map(t=><option key={t}>{t}</option>)}
+                  </select>
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer whitespace-nowrap">
+                    <input type="checkbox" checked={aiForm.avoidHighways} className="accent-primary-500"
+                      onChange={e=>setAiForm(f=>({...f,avoidHighways:e.target.checked}))} /> Scenic routes
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                {aiError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{aiError}</p>}
+                <button onClick={generateAI} disabled={aiLoading||!aiForm.startLocation}
+                  className="bg-primary-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                  {aiLoading ? <><Loader className="w-4 h-4 animate-spin"/>Planning... (15-20s)</> : <><img src="/hitch.png" className="w-4 h-4 rounded-full"/>Generate My Itinerary</>}
+                </button>
               </div>
             </div>
           )}

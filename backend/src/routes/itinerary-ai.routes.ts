@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/suggest', authenticateToken, async (req, res) => {
   try {
-    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate } = req.body;
+    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing } = req.body;
 
     if (!startLocation || !nights) {
       return res.status(400).json({ error: 'startLocation and nights are required' });
@@ -38,7 +38,14 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       `${s.id}|${s.name}|${s.chain}|${s.city}, ${s.state}|${s.latitude},${s.longitude}|${[s.hasFuel && 'fuel', s.hasFood && 'food', s.hasShowers && 'showers', s.is24Hours && '24hr'].filter(Boolean).join(', ')}`
     ).join('\n');
 
-    const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '6 hours per day max driving';
+    const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '8 hours per day max driving';
+    const mealStyle = mealPref === 'fast' ? 'fast food / drive-thrus preferred (Chick-fil-A, McDonalds, Wendy's, etc) - traveler is in a hurry' 
+      : mealPref === 'sitdown' ? 'sit-down meals preferred - recommend local diners, family restaurants, or well-known chains with table service'
+      : 'balanced mix - fast food for quick stops, sit-down for dinner or when time allows';
+    const snackFreq = stopFrequency === 'none' ? 'no snack/rest stops - driver wants to push through'
+      : stopFrequency === 'frequent' ? 'frequent stops every 1-2 hours for snacks, coffee, or rest'
+      : 'a few stops - roughly every 3-4 hours for a quick break';
+    const sightseeingPref = wantSightseeing ? 'YES - recommend notable attractions, state parks, landmarks, or scenic viewpoints along the route. Add as ATTRACTION stops.' : 'NO - skip attractions, focus on efficient travel';
     const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
     const departureTimeInfo = departureTime ? `Preferred daily departure time: ${departureTime}` : 'Preferred daily departure time: 8:00 AM';
 
@@ -51,7 +58,10 @@ RV TYPE: ${rvType || 'Class A Motorhome'}
 DRIVING LIMIT: ${drivingLimit}
 ${departureTimeInfo}
 ${arrivalInfo}
-AVOID HIGHWAYS: ${avoidHighways ? 'yes, prefer scenic routes' : 'no preference'}
+AVOID HIGHWAYS: \${avoidHighways ? 'yes, prefer scenic routes' : 'no preference'}
+MEAL PREFERENCE: \${mealStyle}
+SNACK/REST STOPS: \${snackFreq}
+SIGHTSEEING: \${sightseeingPref}
 
 AVAILABLE CAMPGROUNDS IN OUR DATABASE (format: id|name|location|lat,lng|amenities):
 ${campgroundList}
