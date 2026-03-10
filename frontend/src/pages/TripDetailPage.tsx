@@ -8,6 +8,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
 import TripItineraryTab from '../components/TripItineraryTab';
+import TripPlannerTab from '../components/TripPlannerTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
 import InventoryPackingModal from '../components/InventoryPackingModal';
@@ -844,8 +845,19 @@ export default function EventDetailPage() {
           )}
 
           {activeTab === 'trip' && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg border p-6">
+            <div className="space-y-4">
+              <TripPlannerTab
+                eventId={id}
+                eventTitle={event?.title}
+                homeLocation={userHomeLocation || ''}
+                campground={event?.campground}
+                arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined}
+                tripPlan={tripPlan}
+                tripLoading={tripLoading}
+                onEditTrip={openTripModal}
+                onReload={loadTripPlan}
+              />
+              {false && <div className="bg-white rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold flex items-center gap-2"><Car className="w-6 h-6" />My Trip</h3>
                   <div className="flex items-center gap-3">
@@ -1011,25 +1023,15 @@ export default function EventDetailPage() {
                       </div>
                     )}
 
-                    {/* Day-by-Day Itinerary */}
-                    <div className="border-t pt-4 mt-4">
-                      <TripItineraryTab eventId={id} eventTitle={event?.title} homeLocation={userHomeLocation || tripPlan?.startLocation || ''} campground={event?.campground} arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined} showAIExternal={showAIPlanner} />
-                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p className="text-gray-600 mb-2">Plan your personal route to this event</p>
-                    {(event.campground || event.location) && (
-                      <p className="text-sm text-gray-500 mb-4">
-                        <MapPin className="w-4 h-4 inline mr-1" />
-                        Destination: {getEventDestination()}
-                      </p>
-                    )}
                     <button onClick={openTripModal} className="btn btn-primary">Plan My Trip</button>
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           )}
 
