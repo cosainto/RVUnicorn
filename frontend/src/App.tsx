@@ -87,6 +87,7 @@ function GlobalCameraButton() {
 }
 
 import SearchPage from './pages/SearchPage';
+import ItineraryPage from './pages/ItineraryPage';
 import AdminBadgeApprovalPage from "./components/AdminBadgeApproval";
 import AdminCampgroundsPage from './pages/AdminCampgroundsPage';
 
@@ -235,6 +236,8 @@ function AppContent() {
           }
         />
         <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/itinerary" element={<PrivateRoute><ItineraryPage /></PrivateRoute>} />
+        <Route path="/itinerary/:id" element={<PrivateRoute><ItineraryPage /></PrivateRoute>} />
         <Route
           path="/trips/:id/edit"
           element={

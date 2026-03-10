@@ -100,6 +100,7 @@ export default function Navbar() {
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
     { to: '/feed', icon: Flame, label: 'Feed' },
     { to: '/events', icon: Calendar, label: 'Trips' },
+    { to: '/itinerary', icon: Map, label: 'Itinerary' },
     { to: '/travel', icon: Map, label: 'Travel' },
   ];
 
