@@ -26,6 +26,135 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/itinerary/recommendations?lat=&lng=&type=&mealPref=
+router.get('/recommendations', authenticateToken, async (req: any, res) => {
+  try {
+    const { lat, lng, type, mealPref } = req.query;
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
+    const radiusM = 16093; // 10 miles
+
+    // Haversine helper
+    const dist = (lat2: number, lng2: number) => {
+      const R = 3959;
+      const dLat = (lat2 - latitude) * Math.PI / 180;
+      const dLng = (lng2 - longitude) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(latitude*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;
+    };
+
+    if (type === 'FUEL' || type === 'OVERNIGHT' || type === 'WALMART') {
+      // Query our own FreeOvernightSpot DB
+      const categories = type === 'FUEL'
+        ? ['fuel'] 
+        : type === 'WALMART'
+        ? ['retail']
+        : ['retail', 'parking', 'rv_dealer'];
+
+      const chains = type === 'FUEL'
+        ? ['Pilot', "Love's", 'Flying J', 'TA Travel Center', 'Petro', 'Kwik Trip', 'Sheetz', 'Wawa', 'Casey\'s', 'Maverik', 'Sapp Bros']
+        : type === 'WALMART'
+        ? ['Walmart']
+        : ['Walmart', 'Cracker Barrel', 'Camping World', 'Costco', "Sam's Club", 'Cabela\'s', "Bass Pro", 'Home Depot', 'Lowe\'s'];
+
+      const spots = await prisma.freeOvernightSpot.findMany({
+        where: {
+          chain: { in: chains },
+          latitude: { gte: latitude - 0.5, lte: latitude + 0.5 },
+          longitude: { gte: longitude - 0.5, lte: longitude + 0.5 },
+        },
+        select: { id: true, name: true, chain: true, address: true, city: true, state: true, latitude: true, longitude: true, rating: true, hasFuel: true, hasFood: true, hasDump: true, hasWater: true },
+        take: 50,
+      });
+
+      const nearby = spots
+        .map(s => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
+        .filter(s => s.distanceMiles <= 10)
+        .sort((a, b) => a.distanceMiles - b.distanceMiles)
+        .slice(0, 5)
+        .map(s => ({
+          id: s.id,
+          name: `${s.chain} - ${s.city}, ${s.state}`,
+          address: s.address,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          distanceMiles: s.distanceMiles,
+          rating: s.rating,
+          tags: [
+            s.hasFuel && '⛽ Fuel',
+            s.hasFood && '🍔 Food',
+            s.hasDump && '🚰 Dump',
+            s.hasWater && '💧 Water',
+          ].filter(Boolean),
+          source: 'rvunicorn',
+        }));
+
+      return res.json(nearby);
+    }
+
+    if (type === 'FOOD') {
+      const keyword = mealPref === 'fast'
+        ? 'fast food restaurant'
+        : mealPref === 'sitdown'
+        ? 'diner restaurant family'
+        : 'restaurant';
+
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=restaurant&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json() as any;
+
+      const results = (data.results || []).slice(0, 5).map((p: any) => ({
+        id: p.place_id,
+        name: p.name,
+        address: p.vicinity,
+        latitude: p.geometry.location.lat,
+        longitude: p.geometry.location.lng,
+        distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
+        rating: p.rating,
+        priceLevel: p.price_level,
+        tags: [
+          p.price_level <= 1 && '💲 Budget',
+          p.price_level === 2 && '💲💲 Moderate',
+          p.price_level >= 3 && '💲💲💲 Upscale',
+          p.opening_hours?.open_now && '🟢 Open now',
+        ].filter(Boolean),
+        source: 'google',
+      }));
+
+      return res.json(results);
+    }
+
+    if (type === 'ATTRACTION') {
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=tourist_attraction&key=${GOOGLE_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json() as any;
+
+      const results = (data.results || []).slice(0, 5).map((p: any) => ({
+        id: p.place_id,
+        name: p.name,
+        address: p.vicinity,
+        latitude: p.geometry.location.lat,
+        longitude: p.geometry.location.lng,
+        distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
+        rating: p.rating,
+        tags: [
+          p.opening_hours?.open_now && '🟢 Open now',
+          ...(p.types?.slice(0,2).map((t: string) => t.replace(/_/g,' ')) || [])
+        ].filter(Boolean),
+        source: 'google',
+      }));
+
+      return res.json(results);
+    }
+
+    res.json([]);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // GET /api/itinerary/:id - Get single trip
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
@@ -226,131 +355,3 @@ router.post('/:id/days/:dayId/stops/:stopId/skip', authenticateToken, async (req
 });
 
 export default router;
-
-// GET /api/itinerary/recommendations?lat=&lng=&type=&mealPref=
-router.get('/recommendations', authenticateToken, async (req: any, res) => {
-  try {
-    const { lat, lng, type, mealPref } = req.query;
-    const latitude = parseFloat(lat);
-    const longitude = parseFloat(lng);
-    const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
-    const radiusM = 16093; // 10 miles
-
-    // Haversine helper
-    const dist = (lat2: number, lng2: number) => {
-      const R = 3959;
-      const dLat = (lat2 - latitude) * Math.PI / 180;
-      const dLng = (lng2 - longitude) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(latitude*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;
-    };
-
-    if (type === 'FUEL' || type === 'OVERNIGHT' || type === 'WALMART') {
-      // Query our own FreeOvernightSpot DB
-      const categories = type === 'FUEL'
-        ? ['fuel'] 
-        : type === 'WALMART'
-        ? ['retail']
-        : ['retail', 'parking', 'rv_dealer'];
-
-      const chains = type === 'FUEL'
-        ? ['Pilot', "Love's", 'Flying J', 'TA Travel Center', 'Petro', 'Kwik Trip', 'Sheetz', 'Wawa', 'Casey\'s', 'Maverik', 'Sapp Bros']
-        : type === 'WALMART'
-        ? ['Walmart']
-        : ['Walmart', 'Cracker Barrel', 'Camping World', 'Costco', "Sam's Club", 'Cabela\'s', "Bass Pro", 'Home Depot', 'Lowe\'s'];
-
-      const spots = await prisma.freeOvernightSpot.findMany({
-        where: {
-          chain: { in: chains },
-          latitude: { gte: latitude - 0.5, lte: latitude + 0.5 },
-          longitude: { gte: longitude - 0.5, lte: longitude + 0.5 },
-        },
-        select: { id: true, name: true, chain: true, address: true, city: true, state: true, latitude: true, longitude: true, rating: true, hasFuel: true, hasFood: true, hasDump: true, hasWater: true },
-        take: 50,
-      });
-
-      const nearby = spots
-        .map(s => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
-        .filter(s => s.distanceMiles <= 10)
-        .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 5)
-        .map(s => ({
-          id: s.id,
-          name: `${s.chain} - ${s.city}, ${s.state}`,
-          address: s.address,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          distanceMiles: s.distanceMiles,
-          rating: s.rating,
-          tags: [
-            s.hasFuel && '⛽ Fuel',
-            s.hasFood && '🍔 Food',
-            s.hasDump && '🚰 Dump',
-            s.hasWater && '💧 Water',
-          ].filter(Boolean),
-          source: 'rvunicorn',
-        }));
-
-      return res.json(nearby);
-    }
-
-    if (type === 'FOOD') {
-      const keyword = mealPref === 'fast'
-        ? 'fast food restaurant'
-        : mealPref === 'sitdown'
-        ? 'diner restaurant family'
-        : 'restaurant';
-
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=restaurant&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_KEY}`;
-      const response = await fetch(url);
-      const data = await response.json() as any;
-
-      const results = (data.results || []).slice(0, 5).map((p: any) => ({
-        id: p.place_id,
-        name: p.name,
-        address: p.vicinity,
-        latitude: p.geometry.location.lat,
-        longitude: p.geometry.location.lng,
-        distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
-        rating: p.rating,
-        priceLevel: p.price_level,
-        tags: [
-          p.price_level <= 1 && '💲 Budget',
-          p.price_level === 2 && '💲💲 Moderate',
-          p.price_level >= 3 && '💲💲💲 Upscale',
-          p.opening_hours?.open_now && '🟢 Open now',
-        ].filter(Boolean),
-        source: 'google',
-      }));
-
-      return res.json(results);
-    }
-
-    if (type === 'ATTRACTION') {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=tourist_attraction&key=${GOOGLE_KEY}`;
-      const response = await fetch(url);
-      const data = await response.json() as any;
-
-      const results = (data.results || []).slice(0, 5).map((p: any) => ({
-        id: p.place_id,
-        name: p.name,
-        address: p.vicinity,
-        latitude: p.geometry.location.lat,
-        longitude: p.geometry.location.lng,
-        distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
-        rating: p.rating,
-        tags: [
-          p.opening_hours?.open_now && '🟢 Open now',
-          ...(p.types?.slice(0,2).map((t: string) => t.replace(/_/g,' ')) || [])
-        ].filter(Boolean),
-        source: 'google',
-      }));
-
-      return res.json(results);
-    }
-
-    res.json([]);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
