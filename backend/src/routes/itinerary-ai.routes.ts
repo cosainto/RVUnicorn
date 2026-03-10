@@ -7,17 +7,14 @@ const router = Router();
 const prisma = new PrismaClient();
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// POST /api/itinerary-ai/suggest
-// Given start, destination, nights → returns suggested day-by-day itinerary
 router.post('/suggest', authenticateToken, async (req, res) => {
   try {
-    const { startLocation, destination, nights, rvType, avoidHighways } = req.body;
+    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate } = req.body;
 
     if (!startLocation || !nights) {
       return res.status(400).json({ error: 'startLocation and nights are required' });
     }
 
-    // Pull campgrounds from DB as candidates (limit to avoid huge prompt)
     const campgrounds = await prisma.campground.findMany({
       where: { latitude: { not: null }, longitude: { not: null } },
       select: { id: true, name: true, location: true, state: true, city: true, latitude: true, longitude: true, hasFullHookups: true, hasElectricHookup: true, hasDumpStation: true },
@@ -29,38 +26,60 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       `${c.id}|${c.name}|${c.city || c.location}, ${c.state}|${c.latitude},${c.longitude}|${[c.hasFullHookups && 'full hookups', c.hasElectricHookup && 'electric', c.hasDumpStation && 'dump station'].filter(Boolean).join(', ')}`
     ).join('\n');
 
-    const prompt = `You are an expert RV trip planner. Plan a ${nights}-night RV road trip.
+    const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '6 hours per day max driving';
+    const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
+    const departureTimeInfo = departureTime ? `Preferred daily departure time: ${departureTime}` : 'Preferred daily departure time: 8:00 AM';
+
+    const prompt = `You are an expert RV trip planner. Plan a ${nights}-night RV road trip with realistic driving constraints.
 
 START: ${startLocation}
 DESTINATION: ${destination || 'flexible / scenic route'}
 NIGHTS: ${nights}
-RV TYPE: ${rvType || 'Class A motorhome'}
+RV TYPE: ${rvType || 'Class A Motorhome'}
+DRIVING LIMIT: ${drivingLimit}
+${departureTimeInfo}
+${arrivalInfo}
 AVOID HIGHWAYS: ${avoidHighways ? 'yes, prefer scenic routes' : 'no preference'}
 
 AVAILABLE CAMPGROUNDS IN OUR DATABASE (format: id|name|location|lat,lng|amenities):
 ${campgroundList}
 
-Create a day-by-day itinerary. For each overnight stop, PREFER campgrounds from our database above (use their exact id). For fuel, food, attractions, and waypoints, use real named locations.
+CRITICAL PLANNING RULES:
+1. RVs average 55-60 mph on highways, 45 mph on scenic routes
+2. Add 20-30% extra time for RV stops, weight stations, slower speeds
+3. Include a GAS STOP every 200-250 miles (most RVs get 8-12 mpg with 50-100 gal tanks)
+4. Include a FOOD stop for trips over 4 hours
+5. Space overnight stops based on the driving limit - do NOT exceed it
+6. Calculate recommended DEPARTURE DATE based on arrival date and number of driving days needed
+7. For overnight stops, STRONGLY PREFER campgrounds from our database (use exact id)
+8. Each day should have realistic mileage noted in the notes field
+9. RVParky search links will be auto-generated for overnight stops based on lat/lng
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {
   "title": "Trip title",
   "description": "One sentence description",
+  "recommendedDepartureDate": "YYYY-MM-DD or null",
+  "recommendedDepartureTime": "8:00 AM",
+  "totalDrivingDays": 3,
+  "totalMiles": 1200,
+  "notes": "Brief planning notes about this route",
   "days": [
     {
       "dayNumber": 1,
       "type": "TRAVEL",
-      "date": null,
-      "notes": "Brief day summary",
+      "estimatedMiles": 280,
+      "estimatedDriveHours": 5.5,
+      "notes": "Day summary with mileage",
       "stops": [
         {
           "order": 0,
           "type": "FUEL",
-          "customName": "Name of place",
+          "customName": "Stop name",
           "address": "City, State",
           "latitude": 00.0000,
           "longitude": -00.0000,
-          "notes": "Optional tip",
+          "notes": "Tip for this stop",
           "campgroundId": null
         },
         {
@@ -70,8 +89,8 @@ Respond ONLY with valid JSON in this exact format:
           "address": "City, State",
           "latitude": 00.0000,
           "longitude": -00.0000,
-          "notes": "Why this stop is great",
-          "campgroundId": "use exact id from database or null if not in database"
+          "notes": "Why this is a great overnight stop",
+          "campgroundId": "exact id from database or null"
         }
       ]
     }
@@ -79,10 +98,7 @@ Respond ONLY with valid JSON in this exact format:
 }
 
 Stop types: OVERNIGHT, FUEL, FOOD, ATTRACTION, WAYPOINT, BOONDOCK, WALMART, DUMP, REST
-- Space driving days 300-400 miles apart max for RVs
-- Include 1-3 stops per day (fuel, food, attraction + overnight)
-- Last day should be ARRIVAL type if destination is specific
-- Be realistic about RV-friendly roads`;
+Last day type should be ARRIVAL if destination is specific.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
@@ -102,19 +118,22 @@ Stop types: OVERNIGHT, FUEL, FOOD, ATTRACTION, WAYPOINT, BOONDOCK, WALMART, DUMP
   }
 });
 
-// POST /api/itinerary-ai/create-from-suggestion
-// Create a full Trip with days and stops from AI suggestion
 router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { title, description, startDate, suggestion } = req.body;
 
-    // Create the trip
     const trip = await prisma.trip.create({
-      data: { userId, title: title || suggestion.title, description: description || suggestion.description, startDate: startDate ? new Date(startDate) : null, status: 'PLANNING', visibility: 'PRIVATE' }
+      data: {
+        userId,
+        title: title || suggestion.title,
+        description: description || suggestion.description,
+        startDate: suggestion.recommendedDepartureDate ? new Date(suggestion.recommendedDepartureDate) : startDate ? new Date(startDate) : null,
+        status: 'PLANNING',
+        visibility: 'PRIVATE'
+      }
     });
 
-    // Create days and stops
     for (const day of suggestion.days) {
       const tripDay = await prisma.tripDay.create({
         data: {
@@ -122,7 +141,9 @@ router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
           dayNumber: day.dayNumber,
           type: day.type || 'TRAVEL',
           notes: day.notes,
-          date: startDate && day.dayNumber ? new Date(new Date(startDate).getTime() + (day.dayNumber - 1) * 86400000) : null
+          date: suggestion.recommendedDepartureDate
+            ? new Date(new Date(suggestion.recommendedDepartureDate).getTime() + (day.dayNumber - 1) * 86400000)
+            : null
         }
       });
 
@@ -144,7 +165,6 @@ router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
       }
     }
 
-    // Return full trip with days and stops
     const fullTrip = await prisma.trip.findUnique({
       where: { id: trip.id },
       include: {

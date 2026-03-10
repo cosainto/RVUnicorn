@@ -1005,7 +1005,7 @@ export default function EventDetailPage() {
 
                     {/* Day-by-Day Itinerary */}
                     <div className="border-t pt-4 mt-4">
-                      <TripItineraryTab eventId={id} eventTitle={event?.title} homeLocation={userHomeLocation || tripPlan?.startLocation || ''} campground={event?.campground} />
+                      <TripItineraryTab eventId={id} eventTitle={event?.title} homeLocation={userHomeLocation || tripPlan?.startLocation || ''} campground={event?.campground} arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined} />
                     </div>
                   </div>
                 ) : (
