@@ -183,6 +183,16 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     } catch(e) {}
   };
 
+  const deleteTrip = async () => {
+    if (!trip) return;
+    if (!window.confirm('Delete this itinerary and start fresh?')) return;
+    try {
+      await api.delete(`/itinerary/${trip.id}`);
+      setTrip(null);
+      setShowHitch(false);
+    } catch(e) {}
+  };
+
   const generateAI = async () => {
     setAiLoading(true); setAiError('');
     try {
@@ -545,6 +555,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                       🚗 Start Trip
                     </button>
                   )}
+                  <button onClick={deleteTrip}
+                    className="text-xs border border-red-200 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all flex items-center gap-1"
+                    title="Delete itinerary and start over">
+                    <Trash2 className="w-3 h-3"/> Reset
+                  </button>
                 </div>
               </div>
 
