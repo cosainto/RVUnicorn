@@ -59,6 +59,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [nearbyStop, setNearbyStop] = useState<{stop: TripStop; dayId: string; dist: number} | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
   const [amendingStop, setAmendingStop] = useState<{stop: TripStop; dayId: string} | null>(null);
+  const [recommendations, setRecommendations] = useState<{stopId: string; items: any[]; loading: boolean} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [editingFrom, setEditingFrom] = useState(false);
@@ -147,6 +148,38 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       await api.post(`/itinerary/${trip.id}/activate`);
       setTrip(t => t ? {...t, status: 'IN_PROGRESS'} : t);
       startLiveMode();
+    } catch(e) {}
+  };
+
+  const fetchRecommendations = async (stop: TripStop, dayId: string) => {
+    const lat = stop.campground?.latitude || stop.latitude;
+    const lng = stop.campground?.longitude || stop.longitude;
+    if (!lat || !lng) return;
+    setRecommendations({ stopId: stop.id, items: [], loading: true });
+    try {
+      const { data } = await api.get('/itinerary/recommendations', {
+        params: { lat, lng, type: stop.type, mealPref: aiForm.mealPref }
+      });
+      setRecommendations({ stopId: stop.id, items: data, loading: false });
+    } catch(e) {
+      setRecommendations({ stopId: stop.id, items: [], loading: false });
+    }
+  };
+
+  const replaceStop = async (dayId: string, stop: TripStop, rec: any) => {
+    if (!trip) return;
+    try {
+      const { data } = await api.put(`/itinerary/${trip.id}/days/${dayId}/stops/${stop.id}`, {
+        ...stop,
+        customName: rec.name,
+        address: rec.address,
+        latitude: rec.latitude,
+        longitude: rec.longitude,
+        notes: `Rating: ${rec.rating || 'N/A'} | ${rec.tags?.join(', ') || ''}`,
+        confirmed: true,
+      });
+      setTrip(t => t ? {...t, days: t.days.map(d => d.id === dayId ? {...d, stops: d.stops.map(s => s.id === stop.id ? data : s)} : d)} : t);
+      setRecommendations(null);
     } catch(e) {}
   };
 
@@ -548,11 +581,53 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                               <p className="text-sm font-medium text-gray-700 truncate mt-0.5">{name||'Unnamed stop'}</p>
                               {stop.address && <p className="text-xs text-gray-400 truncate">{stop.address}</p>}
                               {stop.notes && <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-2">{stop.notes}</p>}
-                              {stop.type==='OVERNIGHT' && (
-                                <a href={rvParkyUrl(lat,lng,name)} target="_blank" rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-200 transition-all">
-                                  <ExternalLink className="w-2.5 h-2.5"/> RV Parks nearby
-                                </a>
+                              {(stop.type==='OVERNIGHT'||stop.type==='FUEL'||stop.type==='FOOD'||stop.type==='ATTRACTION'||stop.type==='WALMART') && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <button
+                                    onClick={() => recommendations?.stopId === stop.id ? setRecommendations(null) : fetchRecommendations(stop, day.id)}
+                                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg border transition-all ${recommendations?.stopId===stop.id?'bg-primary-100 text-primary-700 border-primary-300':'bg-gray-50 text-gray-500 border-gray-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200'}`}>
+                                    ✨ {recommendations?.stopId===stop.id ? 'Hide options' : 'See options'}
+                                  </button>
+                                  {stop.type==='OVERNIGHT' && (
+                                    <a href={rvParkyUrl(lat,lng,name)} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-200 transition-all">
+                                      <ExternalLink className="w-2.5 h-2.5"/> RVParky
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {/* Recommendations panel */}
+                              {recommendations?.stopId === stop.id && (
+                                <div className="mt-2 space-y-1.5">
+                                  {recommendations.loading ? (
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                                      <Loader className="w-3 h-3 animate-spin"/> Finding nearby options...
+                                    </div>
+                                  ) : recommendations.items.length === 0 ? (
+                                    <p className="text-xs text-gray-400 py-1">No options found nearby</p>
+                                  ) : (
+                                    <>
+                                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nearby options — tap to switch</p>
+                                      {recommendations.items.map((rec: any) => (
+                                        <button key={rec.id} onClick={() => replaceStop(day.id, stop, rec)}
+                                          className="w-full text-left p-2 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 transition-all group">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-semibold text-gray-800 truncate group-hover:text-primary-700">{rec.name}</p>
+                                              {rec.address && <p className="text-xs text-gray-400 truncate">{rec.address}</p>}
+                                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                                {rec.rating && <span className="text-xs text-amber-600">⭐ {rec.rating}</span>}
+                                                {rec.distanceMiles && <span className="text-xs text-gray-400">{rec.distanceMiles} mi</span>}
+                                                {rec.tags?.slice(0,2).map((t: string) => <span key={t} className="text-xs text-gray-500 bg-gray-100 px-1 rounded">{t}</span>)}
+                                              </div>
+                                            </div>
+                                            <span className="text-xs text-primary-500 font-medium flex-shrink-0 mt-1">Select →</span>
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </div>
                             <div className="flex flex-col gap-1 flex-shrink-0">
