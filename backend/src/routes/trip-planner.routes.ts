@@ -473,18 +473,18 @@ async function calculateRoute(
   destination: { lat: number; lng: number }
 ): Promise<{ distanceMiles: number | null; durationMinutes: number | null }> {
   try {
+    const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
     const geoResponse = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(origin)}&limit=1`,
-      { headers: { 'User-Agent': 'KindleTribe/1.0' } }
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(origin)}&key=${GOOGLE_KEY}`
     );
-    
-    if (!geoResponse.ok) return { distanceMiles: null, durationMinutes: null };
-    
-    const geoData = await geoResponse.json();
-    if (!geoData.length) return { distanceMiles: null, durationMinutes: null };
 
-    const originLat = parseFloat(geoData[0].lat);
-    const originLng = parseFloat(geoData[0].lon);
+    if (!geoResponse.ok) return { distanceMiles: null, durationMinutes: null };
+
+    const geoData = await geoResponse.json();
+    if (!geoData.results?.length) return { distanceMiles: null, durationMinutes: null };
+
+    const originLat = geoData.results[0].geometry.location.lat;
+    const originLng = geoData.results[0].geometry.location.lng;
 
     const R = 3959;
     const dLat = (destination.lat - originLat) * Math.PI / 180;
