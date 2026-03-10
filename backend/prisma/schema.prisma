@@ -260,6 +260,7 @@ model User {
   inTopFriendsOf                                  TopFriend[]               @relation("FriendInTopFriends")
   topFriends                                      TopFriend[]               @relation("UserTopFriends")
   trips                                           Trip[]
+  tripMemberships                                 TripMember[]
   assignedTripPackItems                           TripPackItem[]            @relation("AssignedTripPackItems")
   createdTripPackItems                            TripPackItem[]            @relation("CreatedTripPackItems")
   packedTripPackItems                             TripPackItem[]            @relation("PackedByTripPackItems")
@@ -372,6 +373,8 @@ model Trip {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   stays       Stay[]
   days        TripDay[]
+  members     TripMember[]
+  shareToken  String?   @unique
 
   @@index([userId])
   @@index([startDate])
@@ -414,6 +417,20 @@ model TripStop {
 
   @@index([tripDayId])
   @@index([campgroundId])
+}
+
+model TripMember {
+  id        String   @id @default(cuid())
+  tripId    String
+  userId    String
+  role      String   @default("VIEWER")
+  createdAt DateTime @default(now())
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([tripId])
+  @@index([userId])
 }
 
 model Campground {

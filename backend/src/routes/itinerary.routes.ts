@@ -355,3 +355,69 @@ router.post('/:id/days/:dayId/stops/:stopId/skip', authenticateToken, async (req
 });
 
 export default router;
+
+// POST /api/itinerary/:id/members - Invite a travel companion by username
+router.post('/:id/members', authenticateToken, async (req: any, res) => {
+  try {
+    const { username, role } = req.body;
+    const trip = await prisma.trip.findUnique({ where: { id: req.params.id, userId: req.userId } });
+    if (!trip) return res.status(403).json({ error: 'Not your trip' });
+    const invitee = await prisma.user.findFirst({ where: { username } });
+    if (!invitee) return res.status(404).json({ error: 'User not found' });
+    const member = await prisma.tripMember.upsert({
+      where: { tripId_userId: { tripId: req.params.id, userId: invitee.id } },
+      update: { role: role || 'VIEWER' },
+      create: { tripId: req.params.id, userId: invitee.id, role: role || 'VIEWER' },
+      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } }
+    });
+    res.json(member);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/itinerary/:id/members/:userId - Remove a companion
+router.delete('/:id/members/:userId', authenticateToken, async (req: any, res) => {
+  try {
+    await prisma.tripMember.deleteMany({ where: { tripId: req.params.id, userId: req.params.userId } });
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/itinerary/:id/share - Generate share token
+router.post('/:id/share', authenticateToken, async (req: any, res) => {
+  try {
+    const { crypto } = await import('node:crypto');
+    const token = crypto.randomBytes(16).toString('hex');
+    const trip = await prisma.trip.update({
+      where: { id: req.params.id, userId: req.userId },
+      data: { shareToken: token, visibility: 'SHARED' }
+    });
+    res.json({ shareToken: trip.shareToken, url: `${process.env.FRONTEND_URL || 'https://rvunicorn.com'}/trip/shared/${trip.shareToken}` });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/itinerary/:id/share - Revoke share token
+router.delete('/:id/share', authenticateToken, async (req: any, res) => {
+  try {
+    await prisma.trip.update({
+      where: { id: req.params.id, userId: req.userId },
+      data: { shareToken: null, visibility: 'PRIVATE' }
+    });
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/itinerary/shared/:token - Public view of shared trip
+router.get('/shared/:token', async (req, res) => {
+  try {
+    const trip = await prisma.trip.findUnique({
+      where: { shareToken: req.params.token },
+      include: {
+        user: { select: { username: true, firstName: true, lastName: true, profileImage: true } },
+        days: { include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, latitude: true, longitude: true } } }, orderBy: { order: 'asc' } } }, orderBy: { dayNumber: 'asc' } },
+        members: { include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } } }
+      }
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found or no longer shared' });
+    res.json(trip);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
