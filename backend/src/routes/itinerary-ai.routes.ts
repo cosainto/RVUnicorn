@@ -39,7 +39,7 @@ router.post('/suggest', authenticateToken, async (req, res) => {
     ).join('\n');
 
     const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '8 hours per day max driving';
-    const mealStyle = mealPref === 'fast' ? 'fast food / drive-thrus preferred (Chick-fil-A, McDonalds, Wendy's, etc) - traveler is in a hurry' 
+    const mealStyle = mealPref === 'fast' ? 'fast food / drive-thrus preferred (Chick-fil-A, McDonalds, Wendys, etc) - traveler is in a hurry' 
       : mealPref === 'sitdown' ? 'sit-down meals preferred - recommend local diners, family restaurants, or well-known chains with table service'
       : 'balanced mix - fast food for quick stops, sit-down for dinner or when time allows';
     const snackFreq = stopFrequency === 'none' ? 'no snack/rest stops - driver wants to push through'
