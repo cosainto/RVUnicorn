@@ -77,6 +77,17 @@ export default function TripItineraryTab({ eventId, eventTitle, homeLocation, ca
     }
   }, [campground]);
 
+  useEffect(() => {
+    if (homeLocation) setAiForm(f => ({ ...f, startLocation: homeLocation }));
+  }, [homeLocation]);
+
+  useEffect(() => {
+    if (campground) {
+      const dest = `${campground.name}, ${campground.location || ''}, ${campground.state || ''}`.trim().replace(/,\s*$/, '');
+      setAiForm(f => ({ ...f, destination: dest }));
+    }
+  }, [campground]);
+
   const createBlank = async () => {
     try {
       const { data } = await api.post('/itinerary', { title: eventTitle ? `Itinerary for ${eventTitle}` : 'My Trip Itinerary', status: 'PLANNING', visibility: 'PRIVATE' });
