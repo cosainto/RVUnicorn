@@ -613,7 +613,6 @@ export default function EventDetailPage() {
     { id: 'meals', label: 'Meal Plan', icon: ChefHat },
     { id: 'pack', label: 'Pack List', icon: Package },
     { id: 'packup', label: 'Pack Up', icon: Check },
-    { id: 'itinerary', label: 'Itinerary', icon: MapPin },
   ];
 
   return (
@@ -1003,6 +1002,11 @@ export default function EventDetailPage() {
                         <p className="text-green-600">Logged {tripPlan.actualMiles * 2} miles (round trip)</p>
                       </div>
                     )}
+
+                    {/* Day-by-Day Itinerary */}
+                    <div className="border-t pt-4 mt-4">
+                      <TripItineraryTab eventId={id} eventTitle={event?.title} />
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1019,10 +1023,6 @@ export default function EventDetailPage() {
                 )}
               </div>
             </div>
-          )}
-
-          {activeTab === 'itinerary' && (
-            <TripItineraryTab eventId={id} eventTitle={event?.title} />
           )}
 
           {activeTab === 'schedule' && (
