@@ -186,4 +186,43 @@ router.delete('/:id/days/:dayId/stops/:stopId', authenticateToken, async (req, r
   }
 });
 
+// POST /api/itinerary/:id/activate - Set trip as active (on the road)
+router.post('/:id/activate', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    // Deactivate any other active trips first
+    await prisma.trip.updateMany({ where: { userId, status: 'IN_PROGRESS' }, data: { status: 'PLANNING' } });
+    const trip = await prisma.trip.update({
+      where: { id: req.params.id, userId },
+      data: { status: 'IN_PROGRESS' }
+    });
+    res.json(trip);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/itinerary/:id/complete - Mark trip complete
+router.post('/:id/complete', authenticateToken, async (req: any, res) => {
+  try {
+    const trip = await prisma.trip.update({
+      where: { id: req.params.id, userId: req.userId },
+      data: { status: 'COMPLETED' }
+    });
+    res.json(trip);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/itinerary/:id/days/:dayId/stops/:stopId/skip - Skip a stop and optionally get replacement
+router.post('/:id/days/:dayId/stops/:stopId/skip', authenticateToken, async (req: any, res) => {
+  try {
+    const { reason } = req.body;
+    await prisma.tripStop.update({
+      where: { id: req.params.stopId },
+      data: { notes: reason ? `SKIPPED: ${reason}` : 'SKIPPED', confirmed: false }
+    });
+    // Mark with a skipped flag via type prefix workaround
+    const stop = await prisma.tripStop.findUnique({ where: { id: req.params.stopId } });
+    res.json({ ...stop, skipped: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

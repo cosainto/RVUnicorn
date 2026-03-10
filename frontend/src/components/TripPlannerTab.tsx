@@ -54,6 +54,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
   const [showHitch, setShowHitch] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
+  const [nearbyStop, setNearbyStop] = useState<{stop: TripStop; dayId: string; dist: number} | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
+  const [amendingStop, setAmendingStop] = useState<{stop: TripStop; dayId: string} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [editingFrom, setEditingFrom] = useState(false);
@@ -78,6 +83,72 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   useEffect(() => {
     api.get('/itinerary').then(({data}) => { if (data.length>0) setTrip(data[0]); }).catch(()=>{}).finally(()=>setLoadingItinerary(false));
   }, []);
+
+  // ── GPS Live Mode ────────────────────────────────────────────────────────
+  const startLiveMode = () => {
+    if (!navigator.geolocation) { alert('GPS not available on this device'); return; }
+    setLiveMode(true);
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setUserLocation({ lat, lng });
+        // Check proximity to upcoming unconfirmed stops
+        if (!trip) return;
+        for (const day of trip.days) {
+          for (const stop of day.stops) {
+            if (stop.confirmed) continue;
+            const stopLat = stop.campground?.latitude || stop.latitude;
+            const stopLng = stop.campground?.longitude || stop.longitude;
+            if (!stopLat || !stopLng) continue;
+            const dist = haversine(lat, lng, stopLat, stopLng);
+            if (dist < 3) { // within 3 miles
+              setNearbyStop({ stop, dayId: day.id, dist: Math.round(dist * 10) / 10 });
+              return;
+            }
+          }
+        }
+        setNearbyStop(null);
+      },
+      (err) => console.error('GPS error:', err),
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+    );
+    setWatchId(id);
+  };
+
+  const stopLiveMode = () => {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    setLiveMode(false);
+    setWatchId(null);
+    setNearbyStop(null);
+  };
+
+  const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 3959;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  const skipStop = async (dayId: string, stop: TripStop, reason?: string) => {
+    if (!trip) return;
+    try {
+      await api.post(`/itinerary/${trip.id}/days/${dayId}/stops/${stop.id}/skip`, { reason });
+      // Mark locally as skipped
+      setTrip(t => t ? {...t, days: t.days.map(d => d.id === dayId ? {...d, stops: d.stops.map(s => s.id === stop.id ? {...s, notes: 'SKIPPED'} : s)} : d)} : t);
+      setNearbyStop(null);
+      setAmendingStop(null);
+    } catch(e) {}
+  };
+
+  const activateTrip = async () => {
+    if (!trip) return;
+    try {
+      await api.post(`/itinerary/${trip.id}/activate`);
+      setTrip(t => t ? {...t, status: 'IN_PROGRESS'} : t);
+      startLiveMode();
+    } catch(e) {}
+  };
 
   const generateAI = async () => {
     setAiLoading(true); setAiError('');
@@ -386,9 +457,62 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
             <div className="flex justify-center py-4"><Loader className="w-5 h-5 animate-spin text-primary-300" /></div>
           ) : trip && (
             <>
+              {/* Live mode banner */}
+              {nearbyStop && (
+                <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-sm animate-pulse">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">📍</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-amber-800">Coming up in {nearbyStop.dist} mi</p>
+                      <p className="text-base font-semibold text-gray-800">{nearbyStop.stop.campground?.name || nearbyStop.stop.customName}</p>
+                      <p className="text-xs text-gray-500">{nearbyStop.stop.address}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => toggleConfirmed(nearbyStop.dayId, nearbyStop.stop)}
+                      className="flex-1 bg-green-500 text-white py-2 rounded-xl text-sm font-semibold hover:bg-green-600 flex items-center justify-center gap-1">
+                      <Check className="w-4 h-4"/> Stopping here
+                    </button>
+                    <button onClick={() => setAmendingStop(nearbyStop)}
+                      className="flex-1 bg-white border border-gray-200 text-gray-700 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 flex items-center justify-center gap-1">
+                      <X className="w-4 h-4"/> Skipping it
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Amend stop modal */}
+              {amendingStop && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3">
+                  <p className="text-sm font-bold text-gray-800">Why are you skipping?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['Already fueled up', 'Not hungry yet', 'Running ahead of schedule', 'Prefer a different spot', 'Too busy / no time', 'Other'].map(reason => (
+                      <button key={reason} onClick={() => skipStop(amendingStop.dayId, amendingStop.stop, reason)}
+                        className="text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-600 hover:bg-gray-50 hover:border-primary-300 text-left">
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setAmendingStop(null)} className="text-xs text-gray-400 hover:text-gray-600 w-full text-center">Cancel</button>
+                </div>
+              )}
+
               <div className="flex items-center justify-between px-1">
                 <p className="text-sm font-semibold text-gray-700">📅 {trip.title}</p>
-                {trip.startDate && <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">Departs {fmtDate(trip.startDate)}</span>}
+                <div className="flex items-center gap-2">
+                  {trip.startDate && <span className="text-xs text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">Departs {fmtDate(trip.startDate)}</span>}
+                  {(trip as any).status === 'IN_PROGRESS' ? (
+                    <button onClick={stopLiveMode}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 ${liveMode ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700'}`}>
+                      {liveMode ? '🟢 Live' : '▶ Resume GPS'}
+                    </button>
+                  ) : (
+                    <button onClick={activateTrip}
+                      className="text-xs bg-primary-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-primary-600 flex items-center gap-1">
+                      🚗 Start Trip
+                    </button>
+                  )}
+                </div>
               </div>
 
               {trip.days.map(day => {
@@ -411,7 +535,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                         const lng = stop.campground?.longitude || stop.longitude;
                         const name = stop.campground?.name || stop.customName;
                         return (
-                          <div key={stop.id} className={`flex items-start gap-2 p-2.5 rounded-xl border transition-all ${stop.confirmed?'bg-green-50 border-green-200':'bg-white border-gray-100'}`}>
+                          <div key={stop.id} className={`flex items-start gap-2 p-2.5 rounded-xl border transition-all ${stop.notes?.startsWith('SKIPPED') ? 'bg-gray-50 border-gray-100 opacity-50' : stop.confirmed?'bg-green-50 border-green-200':'bg-white border-gray-100'}`}>
                             <button onClick={()=>toggleConfirmed(day.id,stop)}
                               className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${stop.confirmed?'bg-green-500 border-green-500':'border-gray-300 hover:border-green-400'}`}>
                               {stop.confirmed && <Check className="w-2.5 h-2.5 text-white" />}
@@ -431,9 +555,17 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                                 </a>
                               )}
                             </div>
-                            <button onClick={()=>deleteStop(day.id,stop.id)} className="p-1 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0">
-                              <X className="w-3 h-3" />
-                            </button>
+                            <div className="flex flex-col gap-1 flex-shrink-0">
+                              {(trip as any).status === 'IN_PROGRESS' && !stop.confirmed && !(stop.notes?.startsWith('SKIPPED')) && (
+                                <button onClick={() => setAmendingStop({stop, dayId: day.id})}
+                                  className="text-xs text-orange-500 hover:text-orange-700 px-1.5 py-0.5 rounded border border-orange-200 hover:bg-orange-50">
+                                  Skip
+                                </button>
+                              )}
+                              <button onClick={()=>deleteStop(day.id,stop.id)} className="p-1 text-gray-300 hover:text-red-400 rounded-lg">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
