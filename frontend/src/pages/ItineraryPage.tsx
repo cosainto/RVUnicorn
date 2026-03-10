@@ -451,30 +451,218 @@ function TripDetail({ tripId, onBack }: { tripId: string; onBack: () => void }) 
   );
 }
 
+// ── AI Trip Wizard ────────────────────────────────────────────────────────
+function AITripWizard({ onCreated, onCancel }: { onCreated: (id: string) => void; onCancel: () => void }) {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    title: '', startLocation: '', destination: '', nights: 3,
+    startDate: '', rvType: 'Class A Motorhome', avoidHighways: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const suggest = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post('/itinerary-ai/suggest', {
+        startLocation: form.startLocation,
+        destination: form.destination,
+        nights: form.nights,
+        rvType: form.rvType,
+        avoidHighways: form.avoidHighways
+      });
+      setSuggestion(data);
+      setStep(3);
+    } catch (e) {
+      setError('Failed to generate suggestions. Try again.');
+    }
+    setLoading(false);
+  };
+
+  const createTrip = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post('/itinerary-ai/create-from-suggestion', {
+        title: form.title || suggestion.title,
+        startDate: form.startDate || null,
+        suggestion
+      });
+      onCreated(data.id);
+    } catch (e) {
+      setError('Failed to create trip. Try again.');
+    }
+    setLoading(false);
+  };
+
+  const createManual = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post('/itinerary', {
+        title: form.title || 'My Trip',
+        status: 'PLANNING',
+        visibility: 'PRIVATE',
+        startDate: form.startDate || null
+      });
+      onCreated(data.id);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const RV_TYPES = ['Class A Motorhome', 'Class B Van', 'Class C Motorhome', 'Fifth Wheel', 'Travel Trailer', 'Pop-Up Camper', 'Truck Camper'];
+
+  return (
+    <div className="bg-white border-2 border-primary-300 rounded-2xl p-5 shadow-sm space-y-4">
+      {/* Step 1: Basic info */}
+      {step === 1 && (
+        <>
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg mb-1">✨ Plan a New Trip</h3>
+            <p className="text-sm text-gray-500">Start with the basics, then let AI suggest your route</p>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Trip Name (optional)</label>
+              <input className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                placeholder='e.g. "Summer 2025 Pacific Coast"'
+                value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Start Date (optional)</label>
+              <input type="date" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary-400"
+                value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">RV Type</label>
+              <select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary-400"
+                value={form.rvType} onChange={e => setForm(f => ({ ...f, rvType: e.target.value }))}>
+                {RV_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setStep(2)}
+              className="flex-1 bg-primary-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-primary-600 flex items-center justify-center gap-1">
+              Next: Route Details →
+            </button>
+            <button onClick={createManual} disabled={loading}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
+              Skip AI
+            </button>
+            <button onClick={onCancel} className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Step 2: Route info */}
+      {step === 2 && (
+        <>
+          <div>
+            <button onClick={() => setStep(1)} className="text-sm text-gray-400 hover:text-gray-600 mb-2 flex items-center gap-1">
+              ← Back
+            </button>
+            <h3 className="font-bold text-gray-800 text-lg mb-1">🗺️ Where are you headed?</h3>
+            <p className="text-sm text-gray-500">AI will plan your stops, overnight stays, and fuel breaks</p>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Starting From *</label>
+              <input className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                placeholder="e.g. Springfield, IL"
+                value={form.startLocation} onChange={e => setForm(f => ({ ...f, startLocation: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Destination (or leave blank for scenic loop)</label>
+              <input className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                placeholder="e.g. Yellowstone National Park, WY"
+                value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Number of Nights 🌙</label>
+              <div className="flex items-center gap-3">
+                <input type="range" min={1} max={21} value={form.nights}
+                  onChange={e => setForm(f => ({ ...f, nights: parseInt(e.target.value) }))}
+                  className="flex-1 accent-primary-500" />
+                <span className="w-16 text-center font-bold text-primary-600 text-lg">{form.nights} {form.nights === 1 ? 'night' : 'nights'}</span>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.avoidHighways}
+                onChange={e => setForm(f => ({ ...f, avoidHighways: e.target.checked }))}
+                className="w-4 h-4 accent-primary-500" />
+              <span className="text-sm text-gray-600">Prefer scenic routes over highways</span>
+            </label>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <button onClick={suggest} disabled={loading || !form.startLocation}
+              className="flex-1 bg-gradient-to-r from-primary-500 to-blue-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:from-primary-600 hover:to-blue-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm">
+              {loading ? <><Loader className="w-4 h-4 animate-spin" /> Generating your route...</> : <>✨ Generate AI Itinerary</>}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Step 3: Review AI suggestion */}
+      {step === 3 && suggestion && (
+        <>
+          <div>
+            <button onClick={() => setStep(2)} className="text-sm text-gray-400 hover:text-gray-600 mb-2 flex items-center gap-1">← Regenerate</button>
+            <h3 className="font-bold text-gray-800 text-lg mb-1">🎉 Your AI-Planned Trip</h3>
+            <p className="text-sm text-gray-500 mb-3">{suggestion.description}</p>
+          </div>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {suggestion.days?.map((day: any) => (
+              <div key={day.dayNumber} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">{day.dayNumber}</span>
+                  <span className="text-sm font-semibold text-gray-700">{getDayType(day.type).icon} {getDayType(day.type).label}</span>
+                  {day.notes && <span className="text-xs text-gray-400 truncate">— {day.notes}</span>}
+                </div>
+                <div className="space-y-1 ml-8">
+                  {day.stops?.map((stop: any, i: number) => {
+                    const st = getStopType(stop.type);
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className={`px-1.5 py-0.5 rounded text-xs border ${st.color}`}>{st.icon}</span>
+                        <span className="truncate">{stop.customName}</span>
+                        {stop.campgroundId && <span className="text-green-500 text-xs">✓ in database</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <button onClick={createTrip} disabled={loading}
+              className="flex-1 bg-primary-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save This Itinerary
+            </button>
+            <button onClick={() => { setStep(2); suggest(); }} disabled={loading}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
+              Regenerate
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Trip List View ─────────────────────────────────────────────────────────
 function TripList({ onSelect }: { onSelect: (id: string) => void }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.get('/itinerary').then(({ data }) => { setTrips(data); setLoading(false); }).catch(() => setLoading(false));
   }, []);
-
-  const create = async () => {
-    if (!newTitle.trim()) return;
-    setSaving(true);
-    try {
-      const { data } = await api.post('/itinerary', { title: newTitle.trim(), status: 'PLANNING', visibility: 'PRIVATE' });
-      setTrips(t => [data, ...t]);
-      setCreating(false);
-      setNewTitle('');
-      onSelect(data.id);
-    } catch (e) { console.error(e); }
-    setSaving(false);
-  };
 
   const deleteTrip = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -507,24 +695,7 @@ function TripList({ onSelect }: { onSelect: (id: string) => void }) {
         </button>
       </div>
 
-      {creating && (
-        <div className="bg-white border-2 border-primary-300 rounded-2xl p-4 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Name your trip</p>
-          <input autoFocus className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-            placeholder='e.g. "Summer 2025 Pacific Coast Loop"'
-            value={newTitle} onChange={e => setNewTitle(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && create()} />
-          <div className="flex gap-2 mt-3">
-            <button onClick={create} disabled={saving || !newTitle.trim()}
-              className="flex-1 bg-primary-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-1">
-              {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Create Trip
-            </button>
-            <button onClick={() => { setCreating(false); setNewTitle(''); }} className="px-4 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      {creating && <AITripWizard onCreated={onCreated} onCancel={() => setCreating(false)} />}
 
       {trips.length === 0 && !creating && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
