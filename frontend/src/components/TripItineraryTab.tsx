@@ -34,12 +34,24 @@ interface TripStop {
 interface TripDay { id: string; dayNumber: number; date?: string; type: string; notes?: string; stops: TripStop[]; }
 interface Trip { id: string; title: string; description?: string; startDate?: string; endDate?: string; status: string; days: TripDay[]; }
 
-export default function TripItineraryTab({ eventId, eventTitle }: { eventId: string; eventTitle?: string }) {
+export default function TripItineraryTab({ eventId, eventTitle, homeLocation, campground }: { 
+  eventId: string; 
+  eventTitle?: string; 
+  homeLocation?: string;
+  campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
+}) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [showAI, setShowAI] = useState(false);
-  const [aiForm, setAiForm] = useState({ startLocation: '', destination: '', nights: 3, rvType: 'Class A Motorhome', avoidHighways: false });
+  const campgroundDestination = campground ? `${campground.name}, ${campground.location || ''}, ${campground.state || ''}`.trim().replace(/,\s*$/, '') : '';
+  const [aiForm, setAiForm] = useState({ 
+    startLocation: homeLocation || '', 
+    destination: campgroundDestination, 
+    nights: 3, 
+    rvType: 'Class A Motorhome', 
+    avoidHighways: false 
+  });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
 
@@ -53,6 +65,17 @@ export default function TripItineraryTab({ eventId, eventTitle }: { eventId: str
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (homeLocation) setAiForm(f => ({ ...f, startLocation: homeLocation }));
+  }, [homeLocation]);
+
+  useEffect(() => {
+    if (campground) {
+      const dest = `${campground.name}, ${campground.location || ''}, ${campground.state || ''}`.trim().replace(/,\s*$/, '');
+      setAiForm(f => ({ ...f, destination: dest }));
+    }
+  }, [campground]);
 
   const createBlank = async () => {
     try {
@@ -151,7 +174,7 @@ export default function TripItineraryTab({ eventId, eventTitle }: { eventId: str
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white" placeholder="Starting from (City, State) *"
               value={aiForm.startLocation} onChange={e => setAiForm(f => ({ ...f, startLocation: e.target.value }))} />
-            <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white" placeholder="Destination (or leave blank)"
+            <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white" placeholder="Destination campground or city"
               value={aiForm.destination} onChange={e => setAiForm(f => ({ ...f, destination: e.target.value }))} />
           </div>
           <div className="flex items-center gap-4 flex-wrap">
