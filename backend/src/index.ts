@@ -94,6 +94,7 @@ import searchRoutes from './routes/search.routes';
 import hitchRemindersRoutes from './routes/hitch-reminders.routes';
 import itineraryRoutes from './routes/itinerary.routes';
 import itineraryAiRoutes from './routes/itinerary-ai.routes';
+import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 
@@ -216,6 +217,7 @@ app.use('/api/hitch/reminders', hitchRemindersRoutes);
 app.use("/api/ai-maintenance", aiMaintenanceRouter);
 app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
+app.use("/api/overnight-spots", overnightSpotsRoutes);
 
 
 

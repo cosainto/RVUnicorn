@@ -3549,3 +3549,45 @@ model MaintenanceRecommendation {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model FreeOvernightSpot {
+  id          String   @id @default(cuid())
+  name        String
+  chain       String   // e.g. "Walmart", "Cracker Barrel", "Pilot Flying J"
+  category    String   // RETAIL, OUTDOOR_RETAIL, HARDWARE, FARM_RANCH, RESTAURANT, TRUCK_STOP, GAS_STATION, LODGE, CASINO, GROCERY, MALL, REST_AREA, BLM, NATIONAL_FOREST, OTHER
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  latitude    Float
+  longitude   Float
+  phone       String?
+  notes       String?
+  verified    Boolean  @default(false)
+  allowsRvs   Boolean  @default(true)
+  is24Hours   Boolean  @default(false)
+  hasWifi     Boolean  @default(false)
+  hasDump     Boolean  @default(false)
+  hasWater    Boolean  @default(false)
+  hasElectric Boolean  @default(false)
+  hasFuel     Boolean  @default(false)
+  hasFood     Boolean  @default(false)
+  hasShowers  Boolean  @default(false)
+  maxNights   Int?     // null = unlimited
+  requiresPermission Boolean @default(false)
+  membershipRequired Boolean @default(false)
+  membershipType String? // "Harvest Hosts", "Boondockers Welcome", etc.
+  googlePlaceId String? @unique
+  rvParkyUrl  String?
+  websiteUrl  String?
+  rating      Float?
+  reviewCount Int      @default(0)
+  sourceData  String?  // JSON blob of original API data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([latitude, longitude])
+  @@index([chain])
+  @@index([category])
+  @@index([state])
+}
