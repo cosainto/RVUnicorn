@@ -65,12 +65,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMsg, setInviteMsg] = useState('');
-  const [showSharePanel, setShowSharePanel] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
-  const [companions, setCompanions] = useState<any[]>([]);
-  const [inviteUsername, setInviteUsername] = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteMsg, setInviteMsg] = useState('');
+
   const [recommendations, setRecommendations] = useState<{stopId: string; items: any[]; loading: boolean} | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -243,43 +238,9 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     } catch(e) {}
   };
 
-  const generateShareLink = async () => {
-    if (!trip) return;
-    try {
-      const { data } = await api.post(`/itinerary/${trip.id}/share`);
-      setShareUrl(data.url);
-    } catch(e) {}
-  };
 
-  const revokeShare = async () => {
-    if (!trip) return;
-    try {
-      await api.delete(`/itinerary/${trip.id}/share`);
-      setShareUrl('');
-    } catch(e) {}
-  };
 
-  const inviteCompanion = async () => {
-    if (!trip || !inviteUsername.trim()) return;
-    setInviteLoading(true); setInviteMsg('');
-    try {
-      const { data } = await api.post(`/itinerary/${trip.id}/members`, { username: inviteUsername.trim(), role: 'EDITOR' });
-      setCompanions(c => [...c.filter(m => m.userId !== data.userId), data]);
-      setInviteUsername('');
-      setInviteMsg('✓ Added!');
-    } catch(e: any) {
-      setInviteMsg(e.response?.data?.error || 'User not found');
-    }
-    setInviteLoading(false);
-  };
 
-  const removeCompanion = async (userId: string) => {
-    if (!trip) return;
-    try {
-      await api.delete(`/itinerary/${trip.id}/members/${userId}`);
-      setCompanions(c => c.filter(m => m.userId !== userId));
-    } catch(e) {}
-  };
 
   const generateAI = async () => {
     setAiLoading(true); setAiError('');
