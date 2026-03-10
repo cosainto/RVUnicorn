@@ -7,6 +7,7 @@ import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCir
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
+import TripItineraryTab from '../components/TripItineraryTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
 import InventoryPackingModal from '../components/InventoryPackingModal';
@@ -612,6 +613,7 @@ export default function EventDetailPage() {
     { id: 'meals', label: 'Meal Plan', icon: ChefHat },
     { id: 'pack', label: 'Pack List', icon: Package },
     { id: 'packup', label: 'Pack Up', icon: Check },
+    { id: 'itinerary', label: 'Itinerary', icon: MapPin },
   ];
 
   return (
@@ -1084,6 +1086,10 @@ export default function EventDetailPage() {
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
           )}
+          {activeTab === 'itinerary' && (
+            <TripItineraryTab eventId={id} eventTitle={event?.title} />
+          )}
+
           {activeTab === 'packup' && (
             <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
           )}
