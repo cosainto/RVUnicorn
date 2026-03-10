@@ -259,14 +259,15 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         ? ['Walmart']
         : ['Walmart', 'Cracker Barrel', 'Camping World', 'Costco', "Sam's Club", 'Cabela\'s', "Bass Pro", 'Home Depot', 'Lowe\'s'];
 
-      const spots = await prisma.$queryRaw`
-        SELECT id, name, chain, address, city, state, latitude, longitude, rating, hasFuel, hasFood, hasDump, hasWater
-        FROM "FreeOvernightSpot"
-        WHERE latitude BETWEEN ${latitude - 0.5} AND ${latitude + 0.5}
-          AND longitude BETWEEN ${longitude - 0.5} AND ${longitude + 0.5}
-          AND chain = ANY(${chains}::text[])
-        LIMIT 50
-      ` as any[];
+      const spots = await prisma.freeOvernightSpot.findMany({
+        where: {
+          chain: { in: chains },
+          latitude: { gte: latitude - 0.5, lte: latitude + 0.5 },
+          longitude: { gte: longitude - 0.5, lte: longitude + 0.5 },
+        },
+        select: { id: true, name: true, chain: true, address: true, city: true, state: true, latitude: true, longitude: true, rating: true, hasFuel: true, hasFood: true, hasDump: true, hasWater: true },
+        take: 50,
+      });
 
       const nearby = spots
         .map(s => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
