@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "npx prisma generate && npx prisma db push --accept-data-loss",
-    "start": "npx prisma generate && npx prisma db push && npx tsx src/index.ts",
+    "start": "npx prisma generate && npx tsx src/index.ts",
     "db:migrate": "prisma migrate dev",
     "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
     "db:studio": "prisma studio",
