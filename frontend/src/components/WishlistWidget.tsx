@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, MapPin, ChevronRight, Star, Trash2, StickyNote, X, Calendar } from 'lucide-react';
+import { Heart, MapPin, ChevronRight, Star, Trash2, StickyNote, X, Calendar, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -21,8 +21,23 @@ interface WishlistItem {
   };
 }
 
+interface PlaceItem {
+  id: string;
+  placeId: string;
+  name: string;
+  address: string | null;
+  sourceUrl: string | null;
+  imageUrl: string | null;
+  type: string;
+  rating: number | null;
+  notes: string | null;
+  createdAt: string;
+}
+
 export default function WishlistWidget() {
+  const [activeTab, setActiveTab] = useState<'campgrounds' | 'places'>('campgrounds');
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -33,12 +48,25 @@ export default function WishlistWidget() {
 
   const loadWishlist = async () => {
     try {
-      const { data } = await api.get('/wishlist');
+      const [{ data }, { data: placesData }] = await Promise.all([
+        api.get('/wishlist'),
+        api.get('/place-wishlist'),
+      ]);
       setItems(data);
+      setPlaces(placesData);
     } catch (error) {
       console.error('Load wishlist error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const removePlace = async (placeId: string) => {
+    try {
+      await api.delete(`/place-wishlist/${placeId}`);
+      setPlaces(prev => prev.filter(p => p.placeId !== placeId));
+    } catch (e) {
+      console.error('Remove place error', e);
     }
   };
 

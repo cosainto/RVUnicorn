@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar, Sparkles } from 'lucide-react';
+import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar, Sparkles, Clock, Heart, HeartOff, CalendarPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import AddToEventModal from './AddToEventModal';
@@ -18,9 +18,11 @@ interface Recommendation {
   reviewCount?: number;
   priceLevel?: number;
   isOpen?: boolean;
+  openingHours?: string[] | null;
   imageUrl?: string;
   existingId?: string;
   isSaved: boolean;
+  isWishlisted?: boolean;
 }
 
 interface AiPick {
@@ -36,6 +38,9 @@ interface AiPick {
   imageUrl?: string;
   sourceUrl: string;
   tip: string;
+  openingHours?: string[] | null;
+  isOpen?: boolean;
+  isWishlisted?: boolean;
 }
 
 interface SavedThing {
@@ -91,6 +96,34 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
   const [aiPicks, setAiPicks] = useState<AiPick[]>([]);
   const [loadingAiPicks, setLoadingAiPicks] = useState(false);
   const [aiPicksLoaded, setAiPicksLoaded] = useState(false);
+  const [showHours, setShowHours] = useState<string | null>(null);
+  const [wishlistingId, setWishlistingId] = useState<string | null>(null);
+
+  const handleWishlist = async (item: { placeId: string; title: string; address?: string; sourceUrl?: string; imageUrl?: string; type?: string; rating?: number; isWishlisted?: boolean }) => {
+    if (!user) return;
+    setWishlistingId(item.placeId);
+    try {
+      if (item.isWishlisted) {
+        await api.delete(`/place-wishlist/${item.placeId}`);
+      } else {
+        await api.post('/place-wishlist', {
+          placeId: item.placeId,
+          name: item.title,
+          address: item.address,
+          sourceUrl: item.sourceUrl,
+          imageUrl: item.imageUrl,
+          type: item.type || 'ATTRACTION',
+          rating: item.rating,
+        });
+      }
+      // Update recommendation state
+      setRecommendations(prev => prev.map(r => r.placeId === item.placeId ? { ...r, isWishlisted: !item.isWishlisted } : r));
+    } catch (e) {
+      console.error('Wishlist error', e);
+    } finally {
+      setWishlistingId(null);
+    }
+  };
   const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   useEffect(() => { loadSavedThings(); loadFeatured(); }, [campgroundId]);
@@ -393,7 +426,32 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           <span className={`text-xs font-medium whitespace-nowrap ${matchesInterest ? 'text-violet-600' : 'text-amber-600'}`}>{pick.distance} mi</span>
                         </div>
                         {pick.rating && <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /><span className="text-xs text-gray-600">{pick.rating} ({pick.reviewCount})</span></div>}
-                        <p className={`text-xs mt-2 line-clamp-3 italic ${matchesInterest ? 'text-violet-700' : 'text-gray-600'}`}>"{pick.tip}"</p>
+                        <p className={`text-xs mt-2 line-clamp-2 italic ${matchesInterest ? 'text-violet-700' : 'text-gray-600'}`}>"{pick.tip}"</p>
+                        {/* Hours toggle */}
+                        {pick.openingHours && pick.openingHours.length > 0 && (
+                          <div className="mt-1">
+                            <button onClick={(e) => { e.preventDefault(); setShowHours(showHours === pick.placeId ? null : pick.placeId); }} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                              <Clock className="w-3 h-3" />{showHours === pick.placeId ? 'Hide hours' : 'See hours'}
+                            </button>
+                            {showHours === pick.placeId && (
+                              <div className="mt-1 bg-white/60 rounded p-2 text-xs text-gray-600 space-y-0.5">
+                                {pick.openingHours.map((h, i) => <div key={i}>{h}</div>)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Actions */}
+                        {user && (
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-100">
+                            <button
+                              onClick={(e) => { e.preventDefault(); handleWishlist({ placeId: pick.placeId, title: pick.title, address: pick.address, sourceUrl: pick.sourceUrl, imageUrl: pick.imageUrl, type: pick.type, rating: pick.rating, isWishlisted: pick.isWishlisted }); }}
+                              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-rose-300 text-rose-500 bg-rose-50' : 'border-gray-200 text-gray-500 hover:border-rose-300 hover:text-rose-500'}`}
+                            >
+                              <Heart className={`w-3 h-3 ${pick.isWishlisted ? 'fill-rose-500' : ''}`} />
+                              {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </a>
                     );
@@ -431,9 +489,36 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                     {rec.rating && <span className="flex items-center gap-1 text-xs"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />{rec.rating}{rec.reviewCount && <span className="text-gray-400">({rec.reviewCount})</span>}</span>}
                     {rec.priceLevel && <span className="text-green-600 text-xs">{'$'.repeat(rec.priceLevel)}<span className="text-gray-300">{'$'.repeat(4 - rec.priceLevel)}</span></span>}
                   </div>
+                  {/* Hours */}
+                  {rec.openingHours && rec.openingHours.length > 0 && (
+                    <div className="mt-1">
+                      <button onClick={() => setShowHours(showHours === rec.placeId ? null : rec.placeId)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                        <Clock className="w-3 h-3" />{showHours === rec.placeId ? 'Hide hours' : 'See hours'}
+                      </button>
+                      {showHours === rec.placeId && (
+                        <div className="mt-1 bg-gray-50 rounded p-2 text-xs text-gray-600 space-y-0.5">
+                          {rec.openingHours.map((h, i) => <div key={i}>{h}</div>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-400">via {rec.sourceName}</span>
-                    <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View details <ExternalLink className="w-3 h-3" /></a>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400">via {rec.sourceName}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {user && (
+                        <button
+                          onClick={() => handleWishlist({ placeId: rec.placeId, title: rec.title, address: rec.address, sourceUrl: rec.sourceUrl, imageUrl: rec.imageUrl, type: rec.type, rating: rec.rating, isWishlisted: rec.isWishlisted })}
+                          disabled={wishlistingId === rec.placeId}
+                          className={`p-1 rounded transition text-xs flex items-center gap-0.5 ${rec.isWishlisted ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'}`}
+                          title={rec.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${rec.isWishlisted ? 'fill-rose-500' : ''}`} />
+                        </button>
+                      )}
+                      <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>
+                    </div>
                   </div>
                 </div>
               </div>

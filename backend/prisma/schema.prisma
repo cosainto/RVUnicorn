@@ -146,6 +146,7 @@ model User {
   campgroundEvents                                CampgroundEvent[]
   campgroundFollows                               CampgroundFollow[]
   campgroundWishlists                             CampgroundWishlist[]
+  placeWishlists                                   PlaceWishlist[]
   reviewedPhotos                                  CampgroundPhoto[]         @relation("PhotoReviewer")
   campgroundPhotos                                CampgroundPhoto[]
   campgroundPosts                                 CampgroundPost[]
@@ -2942,6 +2943,24 @@ model CampgroundWishlist {
 
   @@unique([userId, campgroundId])
   @@index([campgroundId])
+  @@index([userId])
+}
+
+model PlaceWishlist {
+  id          String   @id @default(cuid())
+  userId      String
+  placeId     String
+  name        String
+  address     String?
+  sourceUrl   String?
+  imageUrl    String?
+  type        String   @default("ATTRACTION")
+  rating      Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, placeId])
   @@index([userId])
 }
 

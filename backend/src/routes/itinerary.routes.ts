@@ -128,6 +128,8 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
         rating: p.rating,
         priceLevel: p.price_level,
+        isOpen: p.opening_hours?.open_now,
+        openingHours: p.opening_hours?.weekday_text || null,
         tags: [
           p.price_level <= 1 && '💲 Budget',
           p.price_level === 2 && '💲💲 Moderate',
@@ -153,6 +155,8 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         longitude: p.geometry.location.lng,
         distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
         rating: p.rating,
+        isOpen: p.opening_hours?.open_now,
+        openingHours: p.opening_hours?.weekday_text || null,
         tags: [
           p.opening_hours?.open_now && '🟢 Open now',
           ...(p.types?.slice(0,2).map((t: string) => t.replace(/_/g,' ')) || [])
