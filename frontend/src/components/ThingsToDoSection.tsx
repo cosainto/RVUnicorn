@@ -493,6 +493,14 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                         {user && (
                           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-100">
                             <button
+                              onClick={(e) => { e.preventDefault(); handleSave({ placeId: pick.placeId, sourceUrl: pick.sourceUrl, sourceName: 'Google', title: pick.title, type: pick.type as any, lat: pick.lat, lng: pick.lng, address: pick.address, imageUrl: pick.imageUrl, isSaved: false, distance: pick.distance, rating: pick.rating, reviewCount: pick.reviewCount } as any); }}
+                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition"
+                              title="Save to RVUnicorn"
+                            >
+                              <Bookmark className="w-3 h-3" />
+                              Save
+                            </button>
+                            <button
                               onClick={(e) => { e.preventDefault(); handleWishlist({ placeId: pick.placeId, title: pick.title, address: pick.address, sourceUrl: pick.sourceUrl, imageUrl: pick.imageUrl, type: pick.type, rating: pick.rating, isWishlisted: pick.isWishlisted }); }}
                               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-purple-400 text-white bg-purple-500' : 'border-gray-200 text-gray-500 hover:border-purple-400 hover:text-purple-600'}`}
                             >
