@@ -96,10 +96,9 @@ export default function EventsPage() {
       setFormData(prev => ({
         ...prev,
         campgroundId,
-        title: `From ${user?.firstName || 'My'}'s Wishlist`
+        title: campgroundName ? `Trip to ${campgroundName}` : `From ${user?.firstName || 'My'}'s Wishlist`
       }));
       setShowCreateModal(true);
-      // Clear the params
       setSearchParams({});
     }
   }, [searchParams, user]);
