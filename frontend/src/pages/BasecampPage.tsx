@@ -536,8 +536,6 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const currentStatus = getCurrentStatus();
 
   return (
-    <>
-      {showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
     <div className="space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
