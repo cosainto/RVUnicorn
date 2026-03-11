@@ -390,7 +390,9 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                         <h3 className="font-semibold text-gray-900 truncate">{thing.title}</h3>
                         <div className="flex items-center gap-2 mt-1 flex-wrap"><TypeIcon type={thing.type} />{thing.distanceMiles && <span className="text-xs text-gray-500">{thing.distanceMiles.toFixed(1)} mi</span>}</div>
                       </div>
-                      <button onClick={() => setAddToEventModal({ isOpen: true, thingId: thing.id, thingTitle: thing.title })} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Add to trip"><Calendar className="w-5 h-5" /></button>
+                      {eventId && (
+                      <button onClick={() => setAddToEventModal({ isOpen: true, thingId: thing.id, thingTitle: thing.title })} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Add to schedule"><CalendarPlus className="w-5 h-5" /></button>
+                    )}
                       <button onClick={() => handleUnsave(thing.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Unsave"><BookmarkCheck className="w-5 h-5" /></button>
                       {isAdmin && (
                         <div className="flex gap-1">

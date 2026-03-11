@@ -852,6 +852,8 @@ export default function EventDetailPage() {
                     campgroundId={event.campground.id}
                     campgroundName={event.campground.name}
                     isAdmin={false}
+                    eventId={event.id}
+                    onActivityAdded={() => setScheduleRefreshKey(k => k + 1)}
                   />
                 </div>
               )}
