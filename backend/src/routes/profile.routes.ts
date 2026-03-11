@@ -881,7 +881,7 @@ router.put('/:username/status', authenticateToken, async (req, res) => {
 
     // Update status
     const updatedUser = await prisma.user.update({
-      
+      where: { id: userId },
       data: {
         status: status || null,
         statusEmoji: statusEmoji || null,
