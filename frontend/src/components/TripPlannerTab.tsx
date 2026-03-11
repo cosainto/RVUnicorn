@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Navigation, Plus, Trash2, Check, X, Loader, Edit2, ExternalLink, AlertCircle } from 'lucide-react';
+import FuelStopPrice from './FuelStopPrice';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface PitStop { id: string; name: string; stopType: string; location?: string; estimatedDuration?: number; notes?: string; }
@@ -252,6 +253,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         wantSightseeing: aiForm.wantSightseeing,
         mealPref: aiForm.mealPref,
         stopFrequency: aiForm.stopFrequency,
+        rvFuelType: rvFuelType || 'gas',
       });
       const { data: newTrip } = await api.post('/itinerary-ai/create-from-suggestion', {
         title: eventTitle ? `Itinerary for ${eventTitle}` : suggestion.title, suggestion,

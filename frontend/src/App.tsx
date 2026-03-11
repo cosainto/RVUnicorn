@@ -1,6 +1,7 @@
 import FeedPage from './pages/FeedPage';
 import ThreadDetailPage from './pages/ThreadDetailPage';
 import TripCalendarWidget from './components/TripCalendarWidget';
+import SharedTripPage from './pages/SharedTripPage';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';

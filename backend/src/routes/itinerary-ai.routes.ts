@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/suggest', authenticateToken, async (req, res) => {
   try {
-    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing } = req.body;
+    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing, rvFuelType } = req.body;
 
     if (!startLocation || !nights) {
       return res.status(400).json({ error: 'startLocation and nights are required' });
@@ -45,6 +45,9 @@ router.post('/suggest', authenticateToken, async (req, res) => {
     const snackFreq = stopFrequency === 'none' ? 'no snack/rest stops - driver wants to push through'
       : stopFrequency === 'frequent' ? 'frequent stops every 1-2 hours for snacks, coffee, or rest'
       : 'a few stops - roughly every 3-4 hours for a quick break';
+    const fuelNote = rvFuelType === 'diesel'
+      ? 'RV runs on DIESEL - only recommend diesel truck stops: Pilot, Flying J, Love\'s, TA Travel Center, Petro, Sapp Bros. Do NOT suggest gas-only stations.'
+      : 'RV runs on regular GASOLINE - recommend any fuel stop including Pilot, Love\'s, Kwik Trip, Sheetz, Wawa, Casey\'s, Maverik.';
     const sightseeingPref = wantSightseeing ? 'YES - recommend notable attractions, state parks, landmarks, or scenic viewpoints along the route. Add as ATTRACTION stops.' : 'NO - skip attractions, focus on efficient travel';
     const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
     const departureTimeInfo = departureTime ? `Preferred daily departure time: ${departureTime}` : 'Preferred daily departure time: 8:00 AM';
