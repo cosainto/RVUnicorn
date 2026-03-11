@@ -56,6 +56,7 @@ interface SavedThing {
 
 interface Props {
   isAdmin?: boolean;
+  userInterests?: string[];
   campgroundId: string;
   campgroundName: string;
 }
@@ -71,7 +72,7 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; label:
 
 const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'scenic', 'easy-access', 'reservation-required'];
 
-export default function ThingsToDoSection({ campgroundId, campgroundName, onActivityAdded, isAdmin = false }: Props) {
+export default function ThingsToDoSection({ campgroundId, campgroundName, onActivityAdded, isAdmin = false, userInterests = [] }: Props) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('discover');
   const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
