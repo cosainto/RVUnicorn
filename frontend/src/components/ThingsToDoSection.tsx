@@ -564,10 +564,19 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           className={`p-1 rounded transition text-xs flex items-center gap-0.5 ${rec.isWishlisted ? 'bg-purple-500 text-white rounded-full' : 'text-gray-400 hover:text-purple-500'}`}
                           title={rec.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                         >
-                          <span className="text-sm">{rec.isWishlisted ? '🧞' : '🧞'}</span>
+                          <span className="text-sm">🧞</span>
                         </button>
                       )}
-
+                      {user && eventId && (
+                        <button
+                          onClick={() => saveAndAddToEvent(rec)}
+                          disabled={addingToEventId === rec.placeId}
+                          className="p-1 rounded transition text-gray-400 hover:text-green-600 hover:bg-green-50"
+                          title="Add to trip schedule"
+                        >
+                          {addingToEventId === rec.placeId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>
                     </div>
                   </div>
