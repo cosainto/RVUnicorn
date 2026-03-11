@@ -89,6 +89,16 @@ const CAMPING_INTERESTS = [
   { value: 'scenicdrives', label: '🛤️ Scenic Drives & Overlooks' },
   { value: 'spas', label: '🧖 Spas & Hot Springs' },
   { value: 'atv', label: '🚵 ATV & Off-Roading' },
+  { value: 'golf', label: '⛳ Golf' },
+  { value: 'pickleball', label: '🏓 Pickleball' },
+  { value: 'tennis', label: '🎾 Tennis' },
+  { value: 'swimming', label: '🏊 Swimming & Beaches' },
+  { value: 'biking', label: '🚴 Biking & Cycling' },
+  { value: 'skiing', label: '🎿 Skiing & Snow Sports' },
+  { value: 'horseback', label: '🏇 Horseback Riding' },
+  { value: 'archery', label: '🎯 Archery & Shooting Sports' },
+  { value: 'bowling', label: '🎳 Bowling & Mini Golf' },
+  { value: 'casino', label: '🃏 Casinos & Gaming' },
 ];
 
 const COMMON_FEATURES = [
