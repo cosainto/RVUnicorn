@@ -99,6 +99,7 @@ const CAMPING_INTERESTS = [
   { value: 'archery', label: '🎯 Archery & Shooting Sports' },
   { value: 'bowling', label: '🎳 Bowling & Mini Golf' },
   { value: 'casino', label: '🃏 Casinos & Gaming' },
+  { value: 'everything', label: '🌟 Everything & Anything' },
 ];
 
 const COMMON_FEATURES = [
