@@ -124,6 +124,39 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
       setWishlistingId(null);
     }
   };
+  const [addingToEventId, setAddingToEventId] = useState<string | null>(null);
+
+  const saveAndAddToEvent = async (rec: Recommendation | AiPick) => {
+    if (!user) return;
+    setAddingToEventId(rec.placeId);
+    try {
+      let thingId = (rec as Recommendation).existingId;
+      // Save first if not already saved
+      if (!thingId) {
+        const { data } = await api.post('/things-to-do/save', {
+          campgroundId,
+          placeId: rec.placeId,
+          sourceUrl: rec.sourceUrl,
+          sourceName: 'source' in rec ? (rec as Recommendation).sourceName : 'Google',
+          title: rec.title,
+          type: rec.type,
+          lat: rec.lat,
+          lng: rec.lng,
+          address: rec.address,
+          imageUrl: rec.imageUrl,
+        });
+        thingId = data.id;
+        setRecommendations(prev => prev.map(r => r.placeId === rec.placeId ? { ...r, isSaved: true, existingId: thingId } : r));
+        loadSavedThings();
+      }
+      setAddToEventModal({ isOpen: true, thingId: thingId!, thingTitle: rec.title });
+    } catch (e) {
+      console.error('Save and add to event error', e);
+    } finally {
+      setAddingToEventId(null);
+    }
+  };
+
   const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   useEffect(() => { loadSavedThings(); loadFeatured(); }, [campgroundId]);
@@ -462,6 +495,15 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                               <Heart className={`w-3 h-3 ${pick.isWishlisted ? 'fill-rose-500' : ''}`} />
                               {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
                             </button>
+                            <button
+                              onClick={(e) => { e.preventDefault(); saveAndAddToEvent(pick); }}
+                              disabled={addingToEventId === pick.placeId}
+                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 transition"
+                              title="Add to trip schedule"
+                            >
+                              {addingToEventId === pick.placeId ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarPlus className="w-3 h-3" />}
+                              Add to Trip
+                            </button>
                           </div>
                         )}
                       </div>
@@ -527,6 +569,16 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           title={rec.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                         >
                           <Heart className={`w-3.5 h-3.5 ${rec.isWishlisted ? 'fill-rose-500' : ''}`} />
+                        </button>
+                      )}
+                      {user && (
+                        <button
+                          onClick={() => saveAndAddToEvent(rec)}
+                          disabled={addingToEventId === rec.placeId}
+                          className="p-1 rounded transition text-gray-400 hover:text-green-600 hover:bg-green-50"
+                          title="Add to trip schedule"
+                        >
+                          {addingToEventId === rec.placeId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />}
                         </button>
                       )}
                       <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>
