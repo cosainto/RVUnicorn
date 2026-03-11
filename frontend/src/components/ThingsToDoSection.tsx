@@ -499,7 +499,17 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                               <span className="text-sm">🧞</span>
                               {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
                             </button>
-
+                            {eventId && (
+                              <button
+                                onClick={(e) => { e.preventDefault(); saveAndAddToEvent(pick); }}
+                                disabled={addingToEventId === pick.placeId}
+                                className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600 transition"
+                                title="Add to trip schedule"
+                              >
+                                {addingToEventId === pick.placeId ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarPlus className="w-3 h-3" />}
+                                Add to Schedule
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
