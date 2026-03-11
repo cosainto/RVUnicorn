@@ -204,6 +204,14 @@ export default function CampgroundDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [userInterests, setUserInterests] = useState<string[]>([]);
+  useEffect(() => {
+    if (user) {
+      api.get('/profile/me').then(({ data }) => {
+        setUserInterests(data.campingInterests || []);
+      }).catch(() => {});
+    }
+  }, [user]);
 
   const [campground, setCampground] = useState<Campground | null>(null);
   const [loading, setLoading] = useState(true);
@@ -246,7 +254,7 @@ export default function CampgroundDetailPage() {
   const [announcementData, setAnnouncementData] = useState({ title: '', content: '', isPinned: false, priority: 'NORMAL' as const, scheduledAt: '' });
   const [eventData, setEventData] = useState({ title: '', description: '', startDate: '', endDate: '', location: '' });
 
-  useEffect(() => { if (id) { loadCampground();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); if (id) { loadCampground();
     // Check wishlist status
     if (user) {
       api.get(`/wishlist/check/${id}`).then(res => setInWishlist(res.data.inWishlist)).catch(() => {});
@@ -552,6 +560,7 @@ export default function CampgroundDetailPage() {
                 <div className="w-px bg-white/20 mx-1 self-stretch" />
                 <a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🏕️ Dyrt</a>
                 <a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🌿 Hipcamp</a>
+                <a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">⛺ Campspot</a>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {user && <>
@@ -756,7 +765,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-sky-100"><span className="text-xs text-sky-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌿 Hipcamp</a></div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-sky-100"><span className="text-xs text-sky-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -832,7 +841,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-700"><span className="text-xs text-gray-500 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-orange-500 hover:text-orange-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌿 Hipcamp</a></div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-700"><span className="text-xs text-gray-500 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-orange-500 hover:text-orange-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-blue-500 hover:text-blue-400 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -894,7 +903,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100"><span className="text-xs text-gray-400 tracking-wide uppercase mr-2">Also check</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌿 Hipcamp</a></div>
+            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100"><span className="text-xs text-gray-400 tracking-wide uppercase mr-2">Also check</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -1489,7 +1498,7 @@ export default function CampgroundDetailPage() {
               )}
               
               {/* Things to Do Nearby */}
-              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
+              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
               {isAdmin && <CampgroundBadgeCreator campgroundId={campground.id} />}
               
               {/* Community - Followers & Campers */}

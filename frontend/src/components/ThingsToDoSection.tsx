@@ -340,10 +340,20 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
           {/* AI Picks Section */}
           {(loadingAiPicks || aiPicks.length > 0) && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                <h3 className="font-bold text-gray-900">AI Picks for Campers</h3>
-                {loadingAiPicks && <Loader2 className="w-4 h-4 animate-spin text-amber-500" />}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900">AI Picks</h3>
+                    <p className="text-xs text-gray-400">Curated by Hitch based on what campers love here</p>
+                  </div>
+                  {loadingAiPicks && <Loader2 className="w-4 h-4 animate-spin text-amber-500" />}
+                </div>
+                {userInterests && userInterests.length > 0 && (
+                  <span className="text-xs text-violet-600 bg-violet-50 border border-violet-200 px-2 py-1 rounded-full">💜 Personalized for you</span>
+                )}
               </div>
               {loadingAiPicks ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -351,20 +361,42 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {aiPicks.map(pick => (
+                  {aiPicks.map(pick => {
+                    // Check if this pick matches user interests
+                    const matchesInterest = userInterests && userInterests.length > 0 && userInterests.some(interest =>
+                      pick.title?.toLowerCase().includes(interest.toLowerCase()) ||
+                      pick.tip?.toLowerCase().includes(interest.toLowerCase()) ||
+                      interest.toLowerCase().includes(pick.type?.toLowerCase() || '')
+                    );
+                    return (
                     <a key={pick.placeId} href={pick.sourceUrl} target="_blank" rel="noopener noreferrer"
-                      className="group bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl overflow-hidden hover:shadow-md transition block">
-                      {pick.imageUrl && <div className="h-28 bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>}
+                      className={`group rounded-xl overflow-hidden hover:shadow-lg transition block relative ${matchesInterest ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-300 ring-1 ring-violet-200' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'}`}>
+                      {/* Badges */}
+                      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-sm">
+                          ✨ AI Pick
+                        </span>
+                        {matchesInterest && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-600 text-white shadow-sm">
+                            💜 Picked for you
+                          </span>
+                        )}
+                      </div>
+                      {pick.imageUrl
+                        ? <div className="h-32 bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
+                        : <div className={`h-16 ${matchesInterest ? 'bg-violet-100' : 'bg-amber-100'}`} />
+                      }
                       <div className="p-3">
                         <div className="flex items-start justify-between gap-1">
-                          <h4 className="font-semibold text-gray-900 text-sm leading-tight">{pick.title}</h4>
-                          <span className="text-xs text-amber-600 font-medium whitespace-nowrap">{pick.distance} mi</span>
+                          <h4 className={`font-bold text-sm leading-tight ${matchesInterest ? 'text-violet-900' : 'text-gray-900'}`}>{pick.title}</h4>
+                          <span className={`text-xs font-medium whitespace-nowrap ${matchesInterest ? 'text-violet-600' : 'text-amber-600'}`}>{pick.distance} mi</span>
                         </div>
                         {pick.rating && <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /><span className="text-xs text-gray-600">{pick.rating} ({pick.reviewCount})</span></div>}
-                        <p className="text-xs text-gray-600 mt-2 line-clamp-3 italic">"{pick.tip}"</p>
+                        <p className={`text-xs mt-2 line-clamp-3 italic ${matchesInterest ? 'text-violet-700' : 'text-gray-600'}`}>"{pick.tip}"</p>
                       </div>
                     </a>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <div className="border-t border-gray-200 mt-4 mb-4" />
