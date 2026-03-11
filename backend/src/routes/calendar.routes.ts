@@ -31,6 +31,20 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       include: { stays: { include: { campground: { select: { id: true, name: true, location: true } } } } },
     });
 
+    // Fetch AI itinerary travel days
+    const aiTrips = await (prisma as any).trip.findMany({
+      where: {
+        userId,
+        days: { some: { date: { gte: start, lt: end } } }
+      },
+      include: {
+        days: {
+          where: { date: { gte: start, lt: end } },
+          orderBy: { dayNumber: 'asc' }
+        }
+      }
+    });
+
     const items = [
       ...events.map(e => ({
         id: e.id, type: 'EVENT', title: e.title,
@@ -46,6 +60,16 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         campground: s.campground, isOrganizer: true,
         myAttendee: { confirmationNumber: s.confirmationNumber, siteNumber: s.siteNumber, userId },
         attendees: [], color: '#34d399',
+      }))),
+      ...aiTrips.flatMap((t: any) => t.days.map((d: any) => ({
+        id: d.id, tripId: t.id, type: 'TRAVEL_DAY',
+        title: t.title || 'Road Trip',
+        dayType: d.type || 'TRAVEL',
+        dayNumber: d.dayNumber,
+        startDate: d.date, endDate: d.date,
+        campground: null, isOrganizer: true,
+        myAttendee: null, attendees: [], color: '#8b5cf6',
+        notes: d.notes,
       }))),
     ];
     res.json({ items });

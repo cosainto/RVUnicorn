@@ -79,7 +79,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     startLocation: homeLocation||'', destination: campDest, nights: 3,
     rvType: 'Class A Motorhome', avoidHighways: false,
     drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 8, milesPerDay: 300,
-    departureTime: '8:00 AM', arrivalDate: arrivalDate||'',
+    departureTime: '8:00 AM', arrivalDate: arrivalDate||'', returnDate: '',
     wantSightseeing: false,
     mealPref: 'balanced' as 'fast'|'balanced'|'sitdown',
     stopFrequency: 'few' as 'none'|'few'|'frequent',
@@ -253,6 +253,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         wantSightseeing: aiForm.wantSightseeing,
         mealPref: aiForm.mealPref,
         stopFrequency: aiForm.stopFrequency,
+        returnDate: aiForm.returnDate || undefined,
         rvFuelType: rvFuelType || 'gas',
       });
       const { data: newTrip } = await api.post('/itinerary-ai/create-from-suggestion', {
