@@ -490,9 +490,9 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-100">
                             <button
                               onClick={(e) => { e.preventDefault(); handleWishlist({ placeId: pick.placeId, title: pick.title, address: pick.address, sourceUrl: pick.sourceUrl, imageUrl: pick.imageUrl, type: pick.type, rating: pick.rating, isWishlisted: pick.isWishlisted }); }}
-                              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-rose-300 text-rose-500 bg-rose-50' : 'border-gray-200 text-gray-500 hover:border-rose-300 hover:text-rose-500'}`}
+                              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-purple-400 text-white bg-purple-500' : 'border-gray-200 text-gray-500 hover:border-purple-400 hover:text-purple-600'}`}
                             >
-                              <Heart className={`w-3 h-3 ${pick.isWishlisted ? 'fill-rose-500' : ''}`} />
+                              <span className="text-sm">🧞</span>
                               {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
                             </button>
 
@@ -557,10 +557,10 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                         <button
                           onClick={() => handleWishlist({ placeId: rec.placeId, title: rec.title, address: rec.address, sourceUrl: rec.sourceUrl, imageUrl: rec.imageUrl, type: rec.type, rating: rec.rating, isWishlisted: rec.isWishlisted })}
                           disabled={wishlistingId === rec.placeId}
-                          className={`p-1 rounded transition text-xs flex items-center gap-0.5 ${rec.isWishlisted ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'}`}
+                          className={`p-1 rounded transition text-xs flex items-center gap-0.5 ${rec.isWishlisted ? 'bg-purple-500 text-white rounded-full' : 'text-gray-400 hover:text-purple-500'}`}
                           title={rec.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                         >
-                          <Heart className={`w-3.5 h-3.5 ${rec.isWishlisted ? 'fill-rose-500' : ''}`} />
+                          <span className="text-sm">{rec.isWishlisted ? '🧞' : '🧞'}</span>
                         </button>
                       )}
 

@@ -115,27 +115,7 @@ export default function WishlistWidget() {
     );
   }
 
-  if (items.length === 0 && places.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-red-50 border-b">
-          <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-red-500" />
-            <h3 className="font-semibold text-gray-900">My Wishlist</h3>
-          </div>
-        </div>
-        <div className="relative">
-          <img src="/images/Daydreaming.png" alt="Daydreaming about camping" className="w-full h-40 object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white/90 to-transparent flex flex-col items-center justify-end pb-3">
-            <p className="text-gray-600 text-sm font-medium">Start daydreaming...</p>
-            <Link to="/campgrounds" className="text-primary-600 text-sm hover:underline">
-              Explore campgrounds →
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
