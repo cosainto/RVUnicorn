@@ -41,7 +41,7 @@ router.get('/events/:eventId/activities', authenticateToken, async (req, res) =>
 router.post('/events/:eventId/activities', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id || req.user?.id;
     const { thingToDoId, scheduledDate, scheduledTime, duration, notes } = req.body;
     
     // Verify user has access to this event (is organizer or attendee)
@@ -97,7 +97,7 @@ router.post('/events/:eventId/activities', authenticateToken, async (req, res) =
 router.patch('/events/:eventId/activities/:activityId', authenticateToken, async (req, res) => {
   try {
     const { eventId, activityId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id || req.user?.id;
     const { scheduledDate, scheduledTime, duration, notes, status } = req.body;
     
     // Verify user has access
@@ -140,7 +140,7 @@ router.patch('/events/:eventId/activities/:activityId', authenticateToken, async
 router.delete('/events/:eventId/activities/:activityId', authenticateToken, async (req, res) => {
   try {
     const { eventId, activityId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id || req.user?.id;
     
     // Verify user has access
     const event = await prisma.event.findFirst({
@@ -172,7 +172,7 @@ router.delete('/events/:eventId/activities/:activityId', authenticateToken, asyn
 router.get('/campgrounds/:campgroundId/things-to-do/saved', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id || req.user?.id;
     
     // Get things to do near this campground that the user has saved
     const saved = await prisma.thingToDoSave.findMany({
@@ -202,7 +202,7 @@ router.get('/campgrounds/:campgroundId/things-to-do/saved', authenticateToken, a
 router.get('/campgrounds/:campgroundId/my-events', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id || req.user?.id;
     
     const events = await prisma.event.findMany({
       where: {
