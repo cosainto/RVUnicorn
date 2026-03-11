@@ -403,30 +403,35 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
               <div className="border-t border-gray-200 mt-4 mb-4" />
             </div>
           )}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-3">
             {filteredRecs.map(rec => (
-              <div key={rec.placeId} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
-                {rec.imageUrl && <div className="relative h-32 bg-gray-100"><img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover" /></div>}
-                <div className="p-4">
+              <div key={rec.placeId} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex gap-3 p-3">
+                {/* Thumbnail */}
+                {rec.imageUrl
+                  ? <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100"><img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
+                  : <div className="w-20 h-20 flex-shrink-0 rounded-lg bg-gray-100 flex items-center justify-center"><TypeIcon type={rec.type} /></div>
+                }
+                {/* Content */}
+                <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">{rec.title}</h3>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <h3 className="font-semibold text-gray-900 truncate text-sm">{rec.title}</h3>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <TypeIcon type={rec.type} />
                         <span className="text-xs text-gray-500">{rec.distance} mi</span>
                         {rec.isOpen !== undefined && <span className={`text-xs ${rec.isOpen ? 'text-green-600' : 'text-red-500'}`}>{rec.isOpen ? 'Open' : 'Closed'}</span>}
                       </div>
                     </div>
-                    <button onClick={() => rec.isSaved ? null : handleSave(rec)} disabled={savingId === rec.placeId || rec.isSaved} className={`p-1.5 rounded-lg transition ${rec.isSaved ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`} title={rec.isSaved ? 'Saved' : 'Save to RVUnicorn'}>
-                      {savingId === rec.placeId ? <Loader2 className="w-5 h-5 animate-spin" /> : rec.isSaved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+                    <button onClick={() => rec.isSaved ? null : handleSave(rec)} disabled={savingId === rec.placeId || rec.isSaved} className={`p-1.5 rounded-lg transition flex-shrink-0 ${rec.isSaved ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`} title={rec.isSaved ? 'Saved' : 'Save to RVUnicorn'}>
+                      {savingId === rec.placeId ? <Loader2 className="w-4 h-4 animate-spin" /> : rec.isSaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                     </button>
                   </div>
-                  {rec.address && <p className="text-sm text-gray-500 mt-2 truncate">{rec.address}</p>}
-                  <div className="flex items-center gap-3 mt-2">
-                    {rec.rating && <span className="flex items-center gap-1 text-sm"><Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />{rec.rating}{rec.reviewCount && <span className="text-gray-400">({rec.reviewCount})</span>}</span>}
-                    {rec.priceLevel && <span className="text-green-600 text-sm">{'$'.repeat(rec.priceLevel)}<span className="text-gray-300">{'$'.repeat(4 - rec.priceLevel)}</span></span>}
+                  {rec.address && <p className="text-xs text-gray-500 mt-1 truncate">{rec.address}</p>}
+                  <div className="flex items-center gap-3 mt-1">
+                    {rec.rating && <span className="flex items-center gap-1 text-xs"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />{rec.rating}{rec.reviewCount && <span className="text-gray-400">({rec.reviewCount})</span>}</span>}
+                    {rec.priceLevel && <span className="text-green-600 text-xs">{'$'.repeat(rec.priceLevel)}<span className="text-gray-300">{'$'.repeat(4 - rec.priceLevel)}</span></span>}
                   </div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
                     <span className="text-xs text-gray-400">via {rec.sourceName}</span>
                     <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View details <ExternalLink className="w-3 h-3" /></a>
                   </div>
