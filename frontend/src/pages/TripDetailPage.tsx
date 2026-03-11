@@ -841,6 +841,20 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               )}
+              {event.campground && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">📍</span>
+                    <h3 className="text-lg font-semibold text-gray-900">Things to Do Nearby</h3>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-4 ml-7">Discover attractions, trails, and restaurants near {event.campground.name}</p>
+                  <ThingsToDoSection
+                    campgroundId={event.campground.id}
+                    campgroundName={event.campground.name}
+                    isAdmin={false}
+                  />
+                </div>
+              )}
             </div>
           )}
 
