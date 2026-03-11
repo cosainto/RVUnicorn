@@ -495,15 +495,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                               <Heart className={`w-3 h-3 ${pick.isWishlisted ? 'fill-rose-500' : ''}`} />
                               {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
                             </button>
-                            <button
-                              onClick={(e) => { e.preventDefault(); saveAndAddToEvent(pick); }}
-                              disabled={addingToEventId === pick.placeId}
-                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 transition"
-                              title="Add to trip schedule"
-                            >
-                              {addingToEventId === pick.placeId ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarPlus className="w-3 h-3" />}
-                              Add to Trip
-                            </button>
+
                           </div>
                         )}
                       </div>
@@ -571,16 +563,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           <Heart className={`w-3.5 h-3.5 ${rec.isWishlisted ? 'fill-rose-500' : ''}`} />
                         </button>
                       )}
-                      {user && (
-                        <button
-                          onClick={() => saveAndAddToEvent(rec)}
-                          disabled={addingToEventId === rec.placeId}
-                          className="p-1 rounded transition text-gray-400 hover:text-green-600 hover:bg-green-50"
-                          title="Add to trip schedule"
-                        >
-                          {addingToEventId === rec.placeId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
+
                       <a href={rec.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">View <ExternalLink className="w-3 h-3" /></a>
                     </div>
                   </div>
