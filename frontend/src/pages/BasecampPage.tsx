@@ -805,7 +805,6 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
         </div>
       </div>
     </div>
-    </>
   );
 }
 
