@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Sparkles, ChevronDown, ChevronUp, Check } from 'lucide-react';
-import api from '../lib/api';
+import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 const CAMPING_INTERESTS = [
