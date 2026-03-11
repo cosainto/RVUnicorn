@@ -9,7 +9,7 @@ const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
 const ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
 function requireWill(req: any, res: Response, next: any) {
-  if (req.user?.id !== WILL_ID && req.!ADMIN_IDS.includes(userId)) {
+  if (!ADMIN_IDS.includes(req.user?.id)) {
     return res.status(403).json({ error: 'Not authorized' });
   }
   next();
