@@ -610,10 +610,6 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                     className={`text-xs px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${showSharePanel ? 'bg-primary-50 border-primary-300 text-primary-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     👥 Share
                   </button>
-                  <button onClick={() => setShowSharePanel(v => !v)}
-                    className={`text-xs px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${showSharePanel ? 'bg-primary-50 border-primary-300 text-primary-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                    👥 Share
-                  </button>
                   <button onClick={deleteTrip}
                     className="text-xs border border-red-200 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all flex items-center gap-1"
                     title="Delete itinerary and start over">
