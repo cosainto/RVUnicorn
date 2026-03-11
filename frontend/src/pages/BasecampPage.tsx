@@ -61,6 +61,7 @@ import { TrendingHashtags } from '../components/HashtagDisplay';
 import { CreatorToggleSection } from '../components/CreatorComponents';
 import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
+import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
 
 interface BasecampProps {
@@ -1803,6 +1804,7 @@ export default function BasecampPage({ user }: BasecampProps) {
           <div className="lg:col-span-2 space-y-6">
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
+            <CampingInterestsWidget username={user?.username || ''} initialInterests={(user as any)?.campingInterests || []} onUpdate={(interests) => { (user as any).campingInterests = interests; }} />
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
 
