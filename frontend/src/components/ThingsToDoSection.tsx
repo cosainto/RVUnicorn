@@ -189,7 +189,19 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
     try {
       setDiscoverLoading(true);
       const { data } = await api.get(`/things-to-do/campgrounds/${campgroundId}/recommendations`, { params: { radius: radiusMiles } });
-      setRecommendations(data.recommendations);
+      const recs = data.recommendations || [];
+      // Cross-reference with user's place wishlist
+      if (user && recs.length > 0) {
+        try {
+          const { data: wishlistData } = await api.get('/place-wishlist');
+          const savedIds = new Set((wishlistData || []).map((p: any) => p.placeId));
+          setRecommendations(recs.map((r: any) => ({ ...r, isWishlisted: savedIds.has(r.placeId) })));
+        } catch {
+          setRecommendations(recs);
+        }
+      } else {
+        setRecommendations(recs);
+      }
     } catch (error) { console.error('Load recommendations error:', error); }
     finally { setDiscoverLoading(false); }
   };

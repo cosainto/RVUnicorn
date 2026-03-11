@@ -115,7 +115,7 @@ export default function WishlistWidget() {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && places.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-red-50 border-b">
