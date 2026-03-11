@@ -204,14 +204,7 @@ export default function CampgroundDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [userInterests, setUserInterests] = useState<string[]>([]);
-  useEffect(() => {
-    if (user) {
-      api.get('/profile/me').then(({ data }) => {
-        setUserInterests(data.campingInterests || []);
-      }).catch(() => {});
-    }
-  }, [user]);
+  const userInterests = (user as any)?.campingInterests || [];
 
   const [campground, setCampground] = useState<Campground | null>(null);
   const [loading, setLoading] = useState(true);
