@@ -16,7 +16,7 @@ const isAdmin = async (req: Request, res: Response, next: Function) => {
       select: { email: true }
     });
     
-    if (!user || user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!user || !ADMIN_EMAILS.map(e => e.toLowerCase()).includes(user.email.toLowerCase())) {
       return res.status(403).json({ error: 'Admin access required' });
     }
     
@@ -809,7 +809,7 @@ const SITE_ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'
 router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
-    if (userId !== SITE_ADMIN_ID) return res.status(403).json({ error: 'Forbidden' });
+    if (!SITE_ADMIN_IDS.includes(userId)) return res.status(403).json({ error: 'Forbidden' });
 
     const { id } = req.params;
     const {
