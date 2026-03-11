@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../index';
 
 // Admin emails that can edit/delete campgrounds
-const ADMIN_EMAILS = ['wroberts82@yahoo.com'];
+const ADMIN_EMAILS = ['wroberts82@yahoo.com', 'deanna@rvunicorn.com'];
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {

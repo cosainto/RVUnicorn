@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
-const SITE_ADMIN_ID = 'cmlpeyk82005s3qause3sws7y';
+const SITE_ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -779,7 +779,7 @@ router.post('/:campgroundId/map', authenticateToken, upload.single('map'), async
     const userId = (req as any).userId;
 
     // Check if user is admin or site admin
-    const isSiteAdmin = userId === SITE_ADMIN_ID;
+    const isSiteAdmin = SITE_ADMIN_IDS.includes(userId);
     const isAdmin = isSiteAdmin || await prisma.campgroundAdmin.findFirst({
       where: { campgroundId, userId },
     });

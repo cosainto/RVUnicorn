@@ -5,7 +5,7 @@ import { prisma } from '../index';
 const router = Router();
 
 // Admin email that can delete/edit campgrounds
-const ADMIN_EMAIL = 'wroberts82@yahoo.com';
+const ADMIN_EMAILS = ['wroberts82@yahoo.com', 'deanna@rvunicorn.com'];
 
 // Middleware to check if user is admin
 const isAdmin = async (req: Request, res: Response, next: Function) => {
@@ -804,7 +804,7 @@ export default router;
 
 
 // SITE ADMIN EDIT - Will only
-const SITE_ADMIN_ID = 'cmlpeyk82005s3qause3sws7y';
+const SITE_ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
 router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Response) => {
   try {
