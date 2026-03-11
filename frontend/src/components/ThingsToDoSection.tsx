@@ -341,33 +341,58 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
         </button>
       </div>
 
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
-            <option value="all">All Types</option>
-            <option value="TRAIL">Trails</option>
-            <option value="FOOD">Food</option>
-            <option value="ATTRACTION">Attractions</option>
-            <option value="EVENT">Events</option>
-            <option value="TOUR">Tours</option>
-          </select>
-        </div>
-        {activeTab === 'discover' && (
-          <>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gray-500" />
-              <select value={radiusMiles} onChange={(e) => { setRadiusMiles(Number(e.target.value)); setRecommendations([]); }} className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
-                <option value={10}>10 miles</option>
-                <option value={20}>20 miles</option>
-                <option value={30}>30 miles</option>
-                <option value={50}>50 miles</option>
-              </select>
-            </div>
-            <button onClick={loadRecommendations} disabled={discoverLoading} className="ml-auto text-sm text-blue-600 hover:text-blue-700 font-medium">
-              {discoverLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+      {/* Modern Filter Bar */}
+      <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-100">
+        {/* Type pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {[
+            { value: 'all', label: '✨ All' },
+            { value: 'TRAIL', label: '🥾 Trails' },
+            { value: 'FOOD', label: '🍽️ Food' },
+            { value: 'ATTRACTION', label: '📸 Attractions' },
+            { value: 'EVENT', label: '🎟️ Events' },
+            { value: 'TOUR', label: '🗺️ Tours' },
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setTypeFilter(value)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap ${
+                typeFilter === value
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {label}
             </button>
-          </>
+          ))}
+          {activeTab === 'discover' && (
+            <button
+              onClick={loadRecommendations}
+              disabled={discoverLoading}
+              className="ml-auto p-1.5 text-blue-600 hover:bg-blue-50 rounded-full transition"
+              title="Refresh results"
+            >
+              {discoverLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-xs font-medium">↺ Refresh</span>}
+            </button>
+          )}
+        </div>
+        {/* Distance slider - only on discover tab */}
+        {activeTab === 'discover' && (
+          <div className="mt-3 flex items-center gap-3">
+            <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <input
+              type="range"
+              min={5}
+              max={50}
+              step={5}
+              value={radiusMiles}
+              onChange={(e) => { setRadiusMiles(Number(e.target.value)); setRecommendations([]); }}
+              className="flex-1 h-1.5 accent-blue-600 cursor-pointer"
+            />
+            <span className="text-xs font-medium text-blue-600 w-16 text-right whitespace-nowrap">
+              {radiusMiles} miles
+            </span>
+          </div>
         )}
       </div>
 
