@@ -79,6 +79,16 @@ const CAMPING_INTERESTS = [
   { value: 'kids', label: '👧 Kids Activities' },
   { value: 'dogs', label: '🐾 Dog Friendly' },
   { value: 'sports', label: '🏟️ Sporting Events' },
+  { value: 'music', label: '🎵 Music & Live Entertainment' },
+  { value: 'themeparks', label: '🎢 Theme Parks & Attractions' },
+  { value: 'breweries', label: '🍷 Wineries, Breweries & Distilleries' },
+  { value: 'shopping', label: '🛍️ Shopping & Local Markets' },
+  { value: 'watersports', label: '🏄 Kayaking & Water Sports' },
+  { value: 'climbing', label: '🪨 Rock Climbing & Bouldering' },
+  { value: 'stargazing', label: '🌌 Stargazing & Astronomy' },
+  { value: 'scenicdrives', label: '🛤️ Scenic Drives & Overlooks' },
+  { value: 'spas', label: '🧖 Spas & Hot Springs' },
+  { value: 'atv', label: '🚵 ATV & Off-Roading' },
 ];
 
 const COMMON_FEATURES = [
