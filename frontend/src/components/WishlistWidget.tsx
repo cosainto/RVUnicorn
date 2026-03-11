@@ -141,20 +141,93 @@ export default function WishlistWidget() {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-red-50 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-            <h3 className="font-semibold text-gray-900">My Wishlist</h3>
-          </div>
-          <span className="px-2 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
-            {items.length}
-          </span>
+        <div className="flex items-center gap-2 mb-3">
+          <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+          <h3 className="font-semibold text-gray-900">My Wishlist</h3>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('campgrounds')}
+            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition ${
+              activeTab === 'campgrounds'
+                ? 'bg-red-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-red-50'
+            }`}
+          >
+            🏕️ Campgrounds {items.length > 0 && <span className="ml-1 opacity-75">({items.length})</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('places')}
+            className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition ${
+              activeTab === 'places'
+                ? 'bg-red-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-red-50'
+            }`}
+          >
+            📍 Places {places.length > 0 && <span className="ml-1 opacity-75">({places.length})</span>}
+          </button>
         </div>
       </div>
 
       {/* List */}
       <div className="divide-y max-h-96 overflow-y-auto">
-        {items.map(item => (
+        {/* Places Tab */}
+        {activeTab === 'places' && places.length === 0 && (
+          <div className="p-6 text-center">
+            <MapPin className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+            <p className="text-sm text-gray-400">No saved places yet</p>
+            <p className="text-xs text-gray-300 mt-1">Heart restaurants, attractions & stops on your trips</p>
+          </div>
+        )}
+        {activeTab === 'places' && places.map(place => (
+          <div key={place.id} className="p-3 hover:bg-gray-50">
+            <div className="flex gap-3">
+              {place.imageUrl ? (
+                <img src={place.imageUrl} alt={place.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 line-clamp-1">{place.name}</p>
+                {place.address && (
+                  <p className="text-xs text-gray-500 line-clamp-1">{place.address}</p>
+                )}
+                <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">
+                  {place.type?.replace(/_/g, ' ') || 'Place'}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {place.sourceUrl && (
+                  <a href={place.sourceUrl} target="_blank" rel="noopener noreferrer"
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+                <button onClick={() => removePlace(place.placeId)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            {place.notes && (
+              <p className="mt-1 text-xs text-gray-600 bg-yellow-50 px-2 py-1 rounded">📝 {place.notes}</p>
+            )}
+          </div>
+        ))}
+        {/* Campgrounds Tab */}
+        {activeTab === 'campgrounds' && items.length === 0 && (
+          <div className="p-6 text-center">
+            <Heart className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+            <p className="text-sm text-gray-400">No campgrounds wishlisted yet</p>
+            <Link to="/campgrounds" className="text-xs text-primary-600 hover:underline mt-1 inline-block">
+              Explore campgrounds →
+            </Link>
+          </div>
+        )}
+        {activeTab === 'campgrounds' && items.map(item => (
           <div key={item.id} className="p-3 hover:bg-gray-50">
             <div className="flex gap-3">
               {/* Photo */}
