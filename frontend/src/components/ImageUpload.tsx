@@ -21,6 +21,11 @@ export default function ImageUpload({
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(currentImage || '');
+
+  // Sync preview when currentImage prop changes (e.g. pre-filled from campground)
+  useEffect(() => {
+    if (currentImage) setPreview(currentImage);
+  }, [currentImage]);
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
   const [urlInput, setUrlInput] = useState('');
 
