@@ -8,6 +8,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
 import TripItineraryTab from '../components/TripItineraryTab';
+import TripTabEmptyState from '../components/TripTabEmptyState';
 import TripPlannerTab from '../components/TripPlannerTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
@@ -1067,7 +1068,14 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'photos' && <EventAlbum eventId={event.id} />}
+          {activeTab === 'photos' && <EventAlbum eventId={event.id} emptyState={
+            <TripTabEmptyState
+              icon="📸"
+              title="No photos yet — be the first!"
+              description="Capture the memories! Add photos from your trip and share the adventure with everyone."
+              tips={["Add photos before, during, and after the trip", "Tag fellow campers in your shots", "Photos here are shared with all attendees"]}
+            />
+          } />}
           {activeTab === 'albums' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1113,7 +1121,14 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} />}
+          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} emptyState={
+            <TripTabEmptyState
+              icon="🍳"
+              title="No meals planned yet"
+              description="Plan your campfire meals so everyone knows what to expect and what to bring!"
+              tips={["Plan meals by day so shopping is easy", "Assign a chef for each night", "Don't forget s'mores 🍫"]}
+            />
+          } />}
           {activeTab === 'pack' && (
             <EventPackList eventId={event.id} />
           )}
