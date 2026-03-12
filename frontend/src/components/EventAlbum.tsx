@@ -6,6 +6,7 @@ import ImageUpload from './ImageUpload';
 
 interface EventAlbumProps {
   eventId: string;
+  canUpload?: boolean;
 }
 
 interface Photo {
@@ -34,7 +35,7 @@ interface PhotosByUser {
   photos: Photo[];
 }
 
-export default function EventAlbum({ eventId }: EventAlbumProps) {
+export default function EventAlbum({ eventId, canUpload = false }: EventAlbumProps) {
   const { user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [photosByUser, setPhotosByUser] = useState<PhotosByUser[]>([]);
@@ -115,11 +116,11 @@ export default function EventAlbum({ eventId }: EventAlbumProps) {
           </p>
         </div>
         <button
-          onClick={() => setShowUploadModal(true)}
+          onClick={() => canUpload ? setShowUploadModal(true) : alert('Only trip attendees can upload photos')}
           className="btn btn-primary btn-sm flex items-center gap-2"
         >
           <Upload className="w-4 h-4" />
-          Upload Photo
+          {canUpload ? 'Upload Photo' : '🔒 Attendees Only'}
         </button>
       </div>
 
@@ -194,7 +195,7 @@ export default function EventAlbum({ eventId }: EventAlbumProps) {
           <p className="text-gray-600 mb-2">No photos yet</p>
           <p className="text-sm text-gray-500 mb-4">Be the first to share a photo from this event!</p>
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => canUpload ? setShowUploadModal(true) : alert('Only trip attendees can upload photos')}
             className="btn btn-primary"
           >
             <Upload className="w-4 h-4 mr-2" />

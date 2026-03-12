@@ -1069,7 +1069,7 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'photos' && <EventAlbum eventId={event.id} emptyState={
+          {activeTab === 'photos' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status === 'going'} emptyState={
             <TripTabEmptyState
               icon="📸"
               title="No photos yet — be the first!"
