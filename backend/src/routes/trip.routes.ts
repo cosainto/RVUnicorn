@@ -285,6 +285,7 @@ router.get('/my-events', authenticateToken, async (req, res) => {
         title: true,
         startDate: true,
         endDate: true,
+        bannerImage: true,
         campground: { select: { id: true, name: true, imageUrl: true, location: true, state: true } },
       },
       orderBy: { startDate: 'desc' },

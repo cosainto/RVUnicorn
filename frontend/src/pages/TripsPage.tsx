@@ -235,7 +235,7 @@ export default function EventsPage() {
         endDate: formData.endDate || formData.startDate,
         location: formData.location,
         campgroundId: formData.campgroundId,
-        imageUrl: formData.imageUrl,
+        bannerImage: formData.imageUrl,
       });
 
       // Invite attendees if any selected
@@ -368,7 +368,7 @@ export default function EventsPage() {
                 <div className="h-48 bg-gradient-to-br from-green-100 to-blue-100 relative overflow-hidden">
                   {(event.imageUrl || event.campground?.imageUrl) ? (
                     <img
-                      src={event.imageUrl || event.campground?.imageUrl}
+                      src={event.bannerImage || event.campground?.imageUrl}
                       alt={event.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition"
                     />
