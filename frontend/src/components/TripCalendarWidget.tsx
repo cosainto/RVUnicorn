@@ -24,27 +24,23 @@ const MONTHS=['January','February','March','April','May','June','July','August',
 
 // Infer day emoji from calendar items
 const getDayEmoji = (hits: CalendarItem[]): string => {
-  if (!hits.length) return '🏠';
   const hasStay = hits.some(h => h.type === 'STAY');
   const hasEvent = hits.some(h => h.type === 'EVENT');
-  if (hasStay) {
-    // Check if campground name suggests RV park vs tent
-    const cg = hits.find(h => h.campground)?.campground?.name?.toLowerCase() || '';
-    const isRVPark = cg.includes('rv') || cg.includes('park') || cg.includes('resort') || cg.includes('campground');
-    return isRVPark ? '🅿️' : '⛺';
-  }
-  if (hasEvent) return '⛺';
-  return '🏠';
+  if (hasStay || hasEvent) return '⛺';
+  return '';
+};
+
+const isReturnDay = (hits: CalendarItem[], dateStr: string): boolean => {
+  // Show 🏠 on the day a trip/event ends (return home day)
+  return hits.some(h => {
+    const end = new Date(h.endDate);
+    const d = new Date(dateStr);
+    return end.toDateString() === d.toDateString();
+  });
 };
 
 const isDrivingDay = (hits: CalendarItem[]): boolean => {
-  // A driving day = trip exists but no overnight stay on this specific date
-  // (start or end date of a trip but no stay covers this night)
-  return hits.some(h => {
-    const s = new Date(h.startDate);
-    const e = new Date(h.endDate);
-    return s.toDateString() === e.toDateString(); // single-day = driving/transit
-  });
+  return hits.some(h => h.type === 'TRAVEL_DAY');
 };
 
 export default function TripCalendarWidget({ compact=false, userId }: Props) {
@@ -199,7 +195,7 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                 }}
                 style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'32px',borderRadius:'8px',border:'none',cursor:'pointer',fontSize:'11px',fontWeight:hits.length?700:400,background:isToday?'#f59e0b':hits.length?'#eff6ff':'transparent',color:isToday?'#fff':hits.length?'#1d4ed8':'#374151'}}>
                 {hits.length > 0 ? (
-                  <span style={{fontSize:'13px',title:'Click to view'}}>{isDrivingDay(hits) ? '🚗' : getDayEmoji(hits)}</span>
+                  <span style={{fontSize:'13px',title:'Click to view'}}>{isDrivingDay(hits) ? '🚗' : getDayEmoji(hits) || ''}</span>
                 ) : (
                   <span>{day}</span>
                 )}
@@ -219,7 +215,7 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
       ))}
       <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div style={{display:'flex',gap:'8px',fontSize:'11px',color:'#9ca3af'}}>
-          <span>⛺ camp</span><span>🅿️ RV park</span><span>🚗 drive</span>
+          <span>⛺ camping</span><span>🚗 driving</span><span>🏠 return home</span>
         </div>
         <button onClick={()=>navigate('/calendar')} style={{fontSize:'11px',fontWeight:600,color:'#f59e0b',border:'none',background:'none',cursor:'pointer'}}>View all →</button>
       </div>
