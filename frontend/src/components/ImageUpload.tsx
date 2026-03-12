@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 import api from '../services/api';
 
