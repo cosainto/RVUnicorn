@@ -93,11 +93,22 @@ export default function EventsPage() {
     }
     
     if (createFromWishlist === 'true' && campgroundId) {
-      setFormData(prev => ({
-        ...prev,
-        campgroundId,
-        title: campgroundName ? `Trip to ${campgroundName}` : `From ${user?.firstName || 'My'}'s Wishlist`
-      }));
+      // Fetch campground to get its banner image
+      api.get(`/campgrounds/${campgroundId}`).then(({ data: cg }) => {
+        const bannerImage = cg.imageUrl || cg.bannerImage || cg.photos?.[0]?.imageUrl || '';
+        setFormData(prev => ({
+          ...prev,
+          campgroundId,
+          title: campgroundName ? `Trip to ${campgroundName}` : `From ${user?.firstName || 'My'}'s Wishlist`,
+          imageUrl: bannerImage,
+        }));
+      }).catch(() => {
+        setFormData(prev => ({
+          ...prev,
+          campgroundId,
+          title: campgroundName ? `Trip to ${campgroundName}` : `From ${user?.firstName || 'My'}'s Wishlist`,
+        }));
+      });
       setShowCreateModal(true);
       setSearchParams({});
     }
