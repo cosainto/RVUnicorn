@@ -98,6 +98,7 @@ export default function EventDetailPage() {
   const [albumPrivacy, setAlbumPrivacy] = useState('PUBLIC');
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [showPackUpReminder, setShowPackUpReminder] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
@@ -1478,6 +1479,44 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+        </div>
+      )}
+    </div>
+
+      {/* Pack Up Reminder Popup */}
+      {showPackUpReminder && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-6 text-center">
+              <div className="text-6xl mb-2">😭🏕️</div>
+              <h2 className="text-2xl font-bold text-white">Nooooo... It's Almost Over!</h2>
+            </div>
+            <div className="p-6 text-center">
+              <p className="text-gray-700 text-lg mb-2 font-medium">
+                Your trip ends in less than 2 days.
+              </p>
+              <p className="text-gray-500 mb-4 text-sm italic">
+                The campfire is dying, the s'mores are gone, and real life is lurking around the corner like a bear at the dumpster. 🐻
+              </p>
+              <p className="text-gray-600 mb-6">
+                Time to start thinking about packing up so you're not doing the "throwing everything in a bag at 6am" dance. Again.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowPackUpReminder(false); setActiveTab('packup'); }}
+                  className="flex-1 px-4 py-3 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition"
+                >
+                  📦 Start Packing Up
+                </button>
+                <button
+                  onClick={() => setShowPackUpReminder(false)}
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold hover:bg-gray-200 transition"
+                >
+                  😤 5 More Minutes
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
