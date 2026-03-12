@@ -140,6 +140,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             state: true,
             latitude: true,
             longitude: true,
+            imageUrl: true,
           },
         },
         attendees: {
