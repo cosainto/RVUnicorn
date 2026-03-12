@@ -629,10 +629,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Delete associated StateVisits
-    await prisma.stateVisit.deleteMany({
-      where: { eventId: id },
-    });
+    // Delete all associated records before deleting event
+    await prisma.stateVisit.deleteMany({ where: { eventId: id } });
+    await prisma.eventActivity.deleteMany({ where: { eventId: id } });
+    await prisma.eventMeal.deleteMany({ where: { eventId: id } });
+    await prisma.eventAttendee.deleteMany({ where: { eventId: id } });
+    await prisma.tripPlan.deleteMany({ where: { eventId: id } });
 
     await prisma.event.delete({
       where: { id }
