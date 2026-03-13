@@ -61,16 +61,44 @@ router.post('/meal-reminder', async (req, res) => {
         },
       });
 
-      // Notify all attendees
+      // Get muted users
+      const mutedUsers = await prisma.eventCommentMute.findMany({
+        where: { eventId: event.id },
+        select: { userId: true }
+      });
+      const mutedUserIds = new Set(mutedUsers.map((m: any) => m.userId));
+
+      // Notify all attendees + organizer (except muted)
+      const notifyIds = userIds.filter(uid => !mutedUserIds.has(uid));
+
       await prisma.notification.createMany({
-        data: userIds.map(uid => ({
+        data: notifyIds.map(uid => ({
           userId: uid,
           type: 'EVENT_COMMENT',
-          content: `Hitch has a tip for your trip "${event.title}" 🍳`,
+          content: `Hitch has a meal planning tip for your trip "${event.title}" 🍳`,
           link: `/trips/${event.id}`,
         })),
         skipDuplicates: true,
       });
+
+      // Also create basecamp activity for each user
+      for (const notifyUserId of notifyIds) {
+        await prisma.basecampActivity.create({
+          data: {
+            userId: notifyUserId,
+            actorId: HITCH_USER_ID,
+            type: 'EVENT_COMMENT',
+            entityType: 'EVENT',
+            entityId: event.id,
+            entityName: event.title,
+            metadata: {
+              commentPreview: message.substring(0, 100),
+              commenterName: 'Hitch AI',
+              canMute: true
+            }
+          }
+        });
+      }
 
       reminded++;
     }
