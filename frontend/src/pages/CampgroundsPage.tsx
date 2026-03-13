@@ -118,7 +118,7 @@ export default function CampgroundsPage() {
           onClick={() => setPageTab('rv-networks')}
           className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'rv-networks' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
         >
-          🏠 RV Host Networks
+          <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773413639/rv-host-networks-icon.png" alt="RV Host Networks" className="w-5 h-5 rounded-full object-cover" /> RV Host Networks
         </button>
       </div>
 

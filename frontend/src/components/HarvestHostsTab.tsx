@@ -120,7 +120,7 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
       <div className="flex items-center justify-between mb-2">
         <div>
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            🏠 RV Host Networks
+            <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773413639/rv-host-networks-icon.png" alt="RV Host Networks" className="w-6 h-6 rounded-full object-cover" /> RV Host Networks
           </h3>
           <p className="text-sm text-gray-500 mt-0.5">
             Wineries, farms, driveways &amp; more that welcome RV overnight stays
