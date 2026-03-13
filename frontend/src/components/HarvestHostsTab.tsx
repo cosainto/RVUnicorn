@@ -25,6 +25,9 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
   const [filter, setFilter] = useState('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [searchZip, setSearchZip] = useState('');
+  const [searchState, setSearchState] = useState('');
+  const [searchRadius, setSearchRadius] = useState('50');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, content: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -52,14 +55,29 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
     fetchHosts();
   }, [campgroundLat, campgroundLng, campgroundState]);
 
-  const fetchHosts = async () => {
+  const fetchHosts = async (zipOverride?: string, stateOverride?: string) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      const zip = zipOverride ?? searchZip;
+      const state = stateOverride ?? searchState;
       if (campgroundLat && campgroundLng) {
         params.append('lat', campgroundLat.toString());
         params.append('lng', campgroundLng.toString());
         params.append('radius', '75');
+      } else if (zip) {
+        // Geocode zip to lat/lng via free API
+        try {
+          const geo = await fetch(`https://api.zippopotam.us/us/${zip}`);
+          if (geo.ok) {
+            const gd = await geo.json();
+            params.append('lat', gd.places[0].latitude);
+            params.append('lng', gd.places[0].longitude);
+            params.append('radius', searchRadius);
+          }
+        } catch { params.append('state', zip); }
+      } else if (state) {
+        params.append('state', state);
       } else if (campgroundState) {
         params.append('state', campgroundState);
       }
@@ -306,6 +324,50 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
           </div>
           </div>
           )}
+        </div>
+      )}
+
+      {/* Search by zip / state */}
+      {!campgroundLat && !campgroundLng && (
+        <div className="flex flex-wrap gap-2 items-end mb-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">Search by ZIP</label>
+            <input
+              value={searchZip}
+              onChange={e => setSearchZip(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && fetchHosts()}
+              placeholder="e.g. 60188"
+              maxLength={5}
+              className="w-28 text-sm border border-gray-200 rounded-lg px-3 py-2"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">or State</label>
+            <select
+              value={searchState}
+              onChange={e => { setSearchState(e.target.value); setSearchZip(''); fetchHosts(undefined, e.target.value); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
+            >
+              <option value="">All States</option>
+              {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 font-medium">Radius</label>
+            <select value={searchRadius} onChange={e => setSearchRadius(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white">
+              <option value="25">25 mi</option>
+              <option value="50">50 mi</option>
+              <option value="100">100 mi</option>
+              <option value="200">200 mi</option>
+            </select>
+          </div>
+          <button onClick={() => fetchHosts()}
+            className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
+            🔍 Search
+          </button>
         </div>
       )}
 
