@@ -53,7 +53,7 @@ export default function CampgroundsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageTab, setPageTab] = useState<'campgrounds' | 'harvest-hosts'>('campgrounds');
+  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks'>('campgrounds');
 
   useEffect(() => {
     if (!user) return;
@@ -115,14 +115,14 @@ export default function CampgroundsPage() {
           🏕️ Campgrounds
         </button>
         <button
-          onClick={() => setPageTab('harvest-hosts')}
-          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'harvest-hosts' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+          onClick={() => setPageTab('rv-networks')}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'rv-networks' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
         >
-          <Leaf className="w-4 h-4" /> Harvest Hosts
+          🏠 RV Host Networks
         </button>
       </div>
 
-      {pageTab === 'harvest-hosts' && (
+      {pageTab === 'rv-networks' && (
         <HarvestHostsTab />
       )}
 

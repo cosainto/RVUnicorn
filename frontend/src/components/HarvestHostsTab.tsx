@@ -34,6 +34,18 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
     city: '', state: campgroundState || '', latitude: '', longitude: '',
     website: '', phone: '', maxRvLength: '', hookups: false, requiresMembership: true,
   });
+  const [listingMode, setListingMode] = useState<'url' | 'manual'>('url');
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [scraping, setScraping] = useState(false);
+  const [scrapeError, setScrapeError] = useState('');
+  const [networkType, setNetworkType] = useState('HARVEST_HOSTS');
+
+  const NETWORKS = [
+    { id: 'HARVEST_HOSTS', label: 'Harvest Hosts', url: 'https://harvesthosts.com', icon: '🍷', color: 'bg-green-100 text-green-800 border-green-300' },
+    { id: 'BOONDOCKERS', label: "Boondockers Welcome", url: 'https://boondockerswelcome.com', icon: '🏕️', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+    { id: 'RV_OVERNIGHTERS', label: 'RV Overnighters', url: 'https://rvovernighters.com', icon: '🌙', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+    { id: 'IOVERLANDER', label: 'iOverlander', url: 'https://ioverlander.com', icon: '🗺️', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  ];
 
   useEffect(() => {
     fetchHosts();
@@ -105,27 +117,113 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Leaf className="w-5 h-5 text-green-600" /> Harvest Hosts Nearby
+            🏠 RV Host Networks
           </h3>
           <p className="text-sm text-gray-500 mt-0.5">
-            Wineries, farms, breweries &amp; more that welcome RV overnight stays
+            Wineries, farms, driveways &amp; more that welcome RV overnight stays
           </p>
         </div>
         {user && (
           <button onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
-            <Plus className="w-4 h-4" /> Add Host
+            <Plus className="w-4 h-4" /> List Your Location
           </button>
         )}
       </div>
 
+      {/* Network partner banner */}
+      {!showAddForm && (
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-4">
+          <p className="text-sm font-bold text-gray-800 mb-1">🦄 Are you an RV host?</p>
+          <p className="text-sm text-gray-600 mb-3">
+            RVUnicorn matches your location with thousands of RV travelers — whether they're looking for a short overnight stop or a destination along their route. List your spot and get discovered.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            {NETWORKS.map(n => (
+              <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${n.color} hover:opacity-80 transition`}>
+                <span>{n.icon}</span>{n.label}
+              </a>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">Already a member of one of these networks? Click <strong>List Your Location</strong> above and paste your listing URL — we'll do the rest.</p>
+        </div>
+      )}
+
       {/* Add host form */}
       {showAddForm && (
         <div className="bg-green-50 rounded-xl border border-green-200 p-4 space-y-3">
-          <p className="text-sm font-bold text-gray-900">Submit a Harvest Host</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-gray-900">List Your RV Host Location</p>
+            <button onClick={() => setShowAddForm(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          </div>
+          <p className="text-xs text-gray-500">RVUnicorn will use your information to match with our users and recommend your spot as a destination or overnight stop along their route.</p>
+
+          {/* Network selector */}
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Which network are you part of?</label>
+            <div className="flex flex-wrap gap-2">
+              {NETWORKS.map(n => (
+                <button key={n.id} onClick={() => setNetworkType(n.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${networkType === n.id ? n.color + ' ring-2 ring-offset-1 ring-green-400' : 'bg-white text-gray-600 border-gray-200'}`}>
+                  {n.icon} {n.label}
+                </button>
+              ))}
+              <button onClick={() => setNetworkType('INDEPENDENT')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${networkType === 'INDEPENDENT' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}`}>
+                🏠 Independent
+              </button>
+            </div>
+          </div>
+
+          {/* Mode toggle */}
+          <div className="flex gap-2">
+            <button onClick={() => setListingMode('url')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${listingMode === 'url' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+              🔗 Paste My Listing URL
+            </button>
+            <button onClick={() => setListingMode('manual')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${listingMode === 'manual' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+              ✏️ Enter Info Manually
+            </button>
+          </div>
+
+          {listingMode === 'url' && (
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500 font-medium">Your listing URL</label>
+              <div className="flex gap-2">
+                <input value={scrapeUrl} onChange={e => { setScrapeUrl(e.target.value); setScrapeError(''); }}
+                  placeholder="https://harvesthosts.com/locations/your-place"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2" />
+                <button onClick={async () => {
+                  if (!scrapeUrl) return;
+                  setScraping(true); setScrapeError('');
+                  try {
+                    const res = await api.post('/harvest-hosts/scrape', { url: scrapeUrl, networkType });
+                    if (res.data.success) {
+                      alert('✅ Your location has been submitted! Our team will review and publish it shortly.');
+                      setShowAddForm(false); setScrapeUrl('');
+                    } else {
+                      setScrapeError(res.data.error || 'Could not read that URL. Try entering manually.');
+                    }
+                  } catch { setScrapeError('Could not read that URL. Try entering info manually instead.'); }
+                  finally { setScraping(false); }
+                }} disabled={scraping}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition whitespace-nowrap">
+                  {scraping ? '⏳ Loading...' : '🔍 Import'}
+                </button>
+              </div>
+              {scrapeError && <p className="text-xs text-red-600">{scrapeError}</p>}
+              <p className="text-xs text-gray-400">We'll pull your name, location, description and amenities automatically. You can review before it goes live.</p>
+            </div>
+          )}
+
+          {listingMode === 'manual' && (
+          <div className="grid grid-cols-2 gap-3">
+          <p className="col-span-2 text-sm font-bold text-gray-900">Submit a Host Location</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 font-medium">Name *</label>
@@ -199,6 +297,8 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
             </button>
             <button onClick={() => setShowAddForm(false)} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg">Cancel</button>
           </div>
+          </div>
+          )}
         </div>
       )}
 

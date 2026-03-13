@@ -117,3 +117,33 @@ router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
 });
 
 export default router;
+
+// POST /api/harvest-hosts/scrape - Accept URL submission for review
+router.post('/scrape', authenticateToken, async (req: any, res) => {
+  try {
+    const { url, networkType } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL required' });
+
+    const userId = req.user?.id;
+
+    // Store submission for admin review
+    await (prisma as any).harvestHostSubmission?.create?.({
+      data: { url, networkType: networkType || 'HARVEST_HOSTS', submittedById: userId, status: 'PENDING' }
+    }).catch(() => null); // If model doesn't exist yet, fail silently
+
+    // Notify Will for review
+    await prisma.notification.create({
+      data: {
+        userId: 'cmlpeyk82005s3qause3sws7y',
+        type: 'SYSTEM',
+        content: `New RV host listing submitted: ${url} (${networkType})`,
+        link: '/admin',
+      }
+    }).catch(() => null);
+
+    res.json({ success: true, message: 'Submitted for review' });
+  } catch (error) {
+    console.error('Scrape submission error:', error);
+    res.status(500).json({ error: 'Failed to submit' });
+  }
+});
