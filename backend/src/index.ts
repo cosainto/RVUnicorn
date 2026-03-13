@@ -243,3 +243,4 @@ const CRON_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 setInterval(runMaintenanceCron, CRON_INTERVAL);
 // Also run once 30 seconds after server start
 setTimeout(runMaintenanceCron, 30000);
+// force prisma regen Thu Mar 12 19:02:31 CDT 2026
