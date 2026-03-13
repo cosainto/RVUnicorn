@@ -45,6 +45,7 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
     { id: 'BOONDOCKERS', label: "Boondockers Welcome", url: 'https://boondockerswelcome.com', icon: '🏕️', color: 'bg-blue-100 text-blue-800 border-blue-300' },
     { id: 'RV_OVERNIGHTERS', label: 'RV Overnighters', url: 'https://rvovernighters.com', icon: '🌙', color: 'bg-purple-100 text-purple-800 border-purple-300' },
     { id: 'IOVERLANDER', label: 'iOverlander', url: 'https://ioverlander.com', icon: '🗺️', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+    { id: 'OTHER', label: 'Other', url: '', icon: '🌿', color: 'bg-gray-100 text-gray-800 border-gray-300' },
   ];
 
   useEffect(() => {
