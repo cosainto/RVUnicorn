@@ -142,12 +142,18 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
           <p className="text-sm text-gray-600 mb-3">
             RVUnicorn matches your location with thousands of RV travelers — whether they're looking for a short overnight stop or a destination along their route. List your spot and get discovered.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             {NETWORKS.map(n => (
-              <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${n.color} hover:opacity-80 transition`}>
-                <span>{n.icon}</span>{n.label}
-              </a>
+              n.url ? (
+                <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${n.color} hover:opacity-80 transition`}>
+                  <span>{n.icon}</span>{n.label}
+                </a>
+              ) : (
+                <span key={n.id} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${n.color}`}>
+                  <span>{n.icon}</span>{n.label}
+                </span>
+              )
             ))}
           </div>
           <p className="text-xs text-gray-500">Already a member of one of these networks? Click <strong>List Your Location</strong> above and paste your listing URL — we'll do the rest.</p>
