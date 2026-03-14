@@ -40,6 +40,27 @@ router.post('/', authenticateToken, async (req: any, res) => {
       }
     });
 
+    // Award campground first stay badge
+    if (campgroundId) {
+      const slug = 'campground-first-stay';
+      const badge = await prisma.badge.findUnique({ where: { slug } }).catch(() => null);
+      if (badge) {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId, badgeId: badge.id } },
+          create: { userId, badgeId: badge.id },
+          update: {}
+        }).catch(() => null);
+        await prisma.notification.create({
+          data: {
+            userId,
+            type: 'BADGE_EARNED',
+            content: `🏕️ You earned the "First Campground Stay" badge!`,
+            link: '/profile',
+          }
+        }).catch(() => null);
+      }
+    }
+
     // Award first night badge for host check-ins
     if (harvestHostId) {
       const host = await (prisma as any).harvestHost.findUnique({ where: { id: harvestHostId }, select: { hostType: true } });
@@ -120,3 +141,18 @@ router.get('/herd/:type/:id', async (req: any, res) => {
 });
 
 export default router;
+
+// GET /api/checkins/user/:userId/active - Get another user's active check-in (public)
+router.get('/user/:userId/active', async (req: any, res) => {
+  try {
+    const checkIn = await prisma.checkIn.findFirst({
+      where: { userId: req.params.userId, isActive: true },
+      include: {
+        campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } },
+        harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
+        overnightSpot: { select: { id: true, name: true, category: true, city: true, state: true } },
+      }
+    });
+    res.json(checkIn);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});

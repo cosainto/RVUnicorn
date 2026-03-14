@@ -43,6 +43,7 @@ import CampgroundDetailPage from './pages/CampgroundDetailPage';
 import HostDetailPage from './pages/HostDetailPage';
 import OvernightSpotDetailPage from './pages/OvernightSpotDetailPage';
 import CreateHostPage from './pages/CreateHostPage';
+import HitchAIPage from './pages/HitchAIPage';
 import CreatorPage from './pages/CreatorPage';
 import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
@@ -165,6 +166,7 @@ function AppContent() {
         <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
           <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
           <Route path="/hosts/new" element={<CreateHostPage />} />
+          <Route path="/hitch" element={<HitchAIPage />} />
           <Route path="/hosts/:id" element={<HostDetailPage />} />
           <Route path="/overnight-spots/:id" element={<OvernightSpotDetailPage />} />
 
