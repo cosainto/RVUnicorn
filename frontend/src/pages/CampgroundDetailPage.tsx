@@ -11,6 +11,7 @@ import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import DraggableBanner from '../components/DraggableBanner';
 import CheckInButton from '../components/CheckInButton';
 import HitchCampgroundChat from '../components/HitchCampgroundChat';
+import CampgroundVibeCard from '../components/CampgroundVibeCard';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -203,6 +204,7 @@ const ALL_TABS = [
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'vibe', label: '✨ Vibe', icon: null },
   { id: 'ask-hitch', label: '🦄 Ask Hitch', icon: null },
 ];
 
@@ -1734,6 +1736,9 @@ export default function CampgroundDetailPage() {
           )}
 
           {/* Stickers Tab */}
+          {activeTab === 'vibe' && campground && (
+            <CampgroundVibeCard campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
+          )}
           {activeTab === 'ask-hitch' && campground && (
             <HitchCampgroundChat
               campgroundId={campground.id}

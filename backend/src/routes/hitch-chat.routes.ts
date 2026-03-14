@@ -737,3 +737,94 @@ Keep responses concise and helpful. Use emojis sparingly.`;
     res.status(500).json({ error: 'Failed to get answer' });
   }
 });
+
+
+// POST /api/hitch/analyze-campground
+// Generates vibe label, review insights, rig stress score, and personality
+router.post('/analyze-campground', async (req: any, res) => {
+  try {
+    const { campgroundId } = req.body;
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: {
+        id: true, name: true, description: true, state: true, city: true,
+        maxRvLength: true, hasElectricHookup: true, hasWifi: true,
+        isPetFriendly: true, isBigRigFriendly: true, pricePerNight: true,
+        hasPool: true, hasShowers: true, hasRestrooms: true,
+        isWaterfront: true, googleRating: true,
+      }
+    });
+
+    if (!campground) return res.status(404).json({ error: 'Not found' });
+
+    const reviews = await prisma.campgroundReview.findMany({
+      where: { campgroundId },
+      select: { rating: true, content: true },
+      take: 30,
+    }).catch(() => []);
+
+    const reviewText = reviews.map(r => r.content).filter(Boolean).join(' ');
+    const avgRating = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
+
+    const prompt = `Analyze this campground and return ONLY valid JSON, no markdown.
+
+Campground: ${campground.name}
+Location: ${campground.city}, ${campground.state}
+Max RV Length: ${campground.maxRvLength || 'unknown'}ft
+Price: ${campground.pricePerNight ? '$' + campground.pricePerNight + '/night' : 'unknown'}
+Big Rig Friendly: ${campground.isBigRigFriendly}
+Waterfront: ${campground.isWaterfront}
+Pet Friendly: ${campground.isPetFriendly}
+Pool: ${campground.hasPool}
+Avg Rating: ${avgRating?.toFixed(1) || 'N/A'}
+Review excerpts: ${reviewText.substring(0, 500) || 'No reviews'}
+
+Return JSON:
+{
+  "vibeLabel": "Peaceful Retreat",
+  "vibeEmoji": "🧘",
+  "vibeDescription": "A quiet escape for couples and solo travelers seeking nature",
+  "personalityTags": ["Quiet", "Nature Lover", "Off the Beaten Path"],
+  "insights": {
+    "quiet": "high",
+    "familyFriendly": "medium", 
+    "bigRigFriendly": "low",
+    "scenic": "high",
+    "petFriendly": "high",
+    "valueForMoney": "medium"
+  },
+  "rigStressScore": 3,
+  "rigStressReason": "Narrow entrance road may be tight for rigs over 35ft",
+  "hiddenGem": false,
+  "bestFor": ["Couples", "Nature lovers", "Weekend getaways"],
+  "communityInsight": "Reviewers consistently praise the peaceful atmosphere and scenic views. A few mention the WiFi is unreliable.",
+  "bookingTip": "Book at least 3 weeks in advance for summer weekends"
+}
+
+rigStressScore: 1=easy, 5=very difficult. vibeLabel options: Peaceful Retreat, Weekend Warrior Hangout, Adventure Basecamp, Family Fun Zone, Wine Country Escape, Boondocking Paradise, Luxury RV Resort, Hidden Gem, Social Hub, Nature Sanctuary`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const analysis = JSON.parse(clean);
+
+    // Cache in DB
+    await prisma.campground.update({
+      where: { id: campgroundId },
+      data: {
+        description: analysis.communityInsight || campground.description,
+      }
+    }).catch(() => null);
+
+    res.json(analysis);
+  } catch (e: any) {
+    console.error('Analyze campground error:', e?.message);
+    res.status(500).json({ error: 'Failed to analyze campground' });
+  }
+});
