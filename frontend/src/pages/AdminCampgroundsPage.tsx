@@ -3,7 +3,7 @@ import { Plus, Search, Trash2, Edit3, Check, X, MapPin, Wifi, Zap, Droplets,
   Phone, Mail, Globe, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
 
@@ -133,6 +133,11 @@ export default function AdminCampgroundsPage() {
             <h1 className="text-2xl font-black text-gray-900" style={{ letterSpacing: '-0.02em' }}>
               🏕️ Campground Admin
             </h1>
+            <div className="flex gap-3 mt-2">
+              <Link to="/admin/campgrounds" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-100 text-primary-700 hover:bg-primary-200 transition">🏕️ Campgrounds</Link>
+              <Link to="/admin/hosts" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">🏡 Host Listings</Link>
+              <Link to="/admin/badges" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition">🏅 Badges</Link>
+            </div>
             <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} total campgrounds</p>
           </div>
           <button onClick={() => { setForm(EMPTY_FORM); setEditId(null); setShowForm(!showForm); setMsg(null); }}

@@ -46,7 +46,11 @@ export default function AdminHostListingsPage() {
           <h1 className="text-2xl font-bold text-gray-900">🏡 Host Listings</h1>
           <p className="text-sm text-gray-500">Review and approve RV host location submissions</p>
         </div>
-        <Link to="/admin/campgrounds" className="text-sm text-gray-500 hover:text-gray-700">← Admin Home</Link>
+        <div className="flex gap-3">
+          <Link to="/admin/campgrounds" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-100 text-primary-700 hover:bg-primary-200 transition">🏕️ Campgrounds</Link>
+          <Link to="/admin/hosts" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">🏡 Host Listings</Link>
+          <Link to="/admin/badges" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition">🏅 Badges</Link>
+        </div>
       </div>
 
       {/* Status tabs */}
