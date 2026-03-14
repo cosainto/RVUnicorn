@@ -4,6 +4,7 @@ import { MapPin, Star, Phone, Globe, ArrowLeft, Camera, ChevronLeft, ChevronRigh
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import CheckInButton from '../components/CheckInButton';
+import DraggableBanner from '../components/DraggableBanner';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -82,7 +83,16 @@ export default function HostDetailPage() {
       <div className="relative h-72 bg-gradient-to-br from-green-100 to-emerald-200 rounded-2xl overflow-hidden mb-6 group">
         {allPhotos.length > 0 ? (
           <>
-            <img src={allPhotos[photoIndex]} alt={host.name} className="w-full h-full object-cover" />
+            <DraggableBanner
+              imageUrl={allPhotos[photoIndex]}
+              altText={host.name}
+              position={host.bannerPosition || '50% 50%'}
+              canEdit={isOwner || false}
+              onPositionChange={async (pos) => {
+                try { await api.put(`/harvest-hosts/${host.id}`, { bannerPosition: pos }); } catch {}
+              }}
+              className="w-full h-full"
+            />
             {allPhotos.length > 1 && (
               <>
                 <button onClick={() => setPhotoIndex(i => (i - 1 + allPhotos.length) % allPhotos.length)}

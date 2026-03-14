@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MealPlanner from '../components/MealPlanner';
 import TripItineraryTab from '../components/TripItineraryTab';
 import TripTabEmptyState from '../components/TripTabEmptyState';
+import DraggableBanner from '../components/DraggableBanner';
 import TripPlannerTab from '../components/TripPlannerTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
@@ -99,6 +100,7 @@ export default function EventDetailPage() {
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [showPackUpReminder, setShowPackUpReminder] = useState(false);
+  const [bannerPosition, setBannerPosition] = useState('50% 50%');
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
@@ -641,7 +643,17 @@ export default function EventDetailPage() {
           {(() => {
             const img = (event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : (event.imageUrl && !event.imageUrl.startsWith('/images/')) ? event.imageUrl : event.campground?.imageUrl;
             return img ? (
-              <img src={img} alt={event.title} className="w-full h-full object-cover" />
+              <DraggableBanner
+                imageUrl={img}
+                altText={event.title}
+                position={bannerPosition}
+                canEdit={isOrganizer}
+                onPositionChange={async (pos) => {
+                  setBannerPosition(pos);
+                  try { await api.patch(`/trips/${event.id}/banner-position`, { bannerPosition: pos }); } catch {}
+                }}
+                className="w-full h-full"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
             );

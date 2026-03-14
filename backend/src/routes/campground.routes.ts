@@ -877,3 +877,13 @@ router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Respo
     res.status(500).json({ error: 'Failed to update campground' });
   }
 });
+
+// PATCH /api/campgrounds/:id/banner-position
+router.patch('/:id/banner-position', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { bannerPosition } = req.body;
+    await prisma.campground.update({ where: { id }, data: { bannerPosition } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});

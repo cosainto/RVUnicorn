@@ -1275,3 +1275,15 @@ router.delete('/:id/albums/:albumId/unlink', authenticateToken, async (req: any,
 });
 
 export default router;
+// PATCH /api/trips/:id/banner-position
+router.patch('/:id/banner-position', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const { bannerPosition } = req.body;
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event || event.organizerId !== userId) return res.status(403).json({ error: 'Not authorized' });
+    await prisma.event.update({ where: { id }, data: { bannerPosition } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});

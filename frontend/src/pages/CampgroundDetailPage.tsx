@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
+import DraggableBanner from '../components/DraggableBanner';
 import CheckInButton from '../components/CheckInButton';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
@@ -238,6 +239,7 @@ export default function CampgroundDetailPage() {
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [herdRefresh, setHerdRefresh] = useState(0);
+  const [bannerPosition, setBannerPosition] = useState('50% 50%');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [editSaving, setEditSaving] = useState(false);
@@ -261,6 +263,7 @@ export default function CampgroundDetailPage() {
 
   const loadCampground = async () => {
     try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
+        setBannerPosition(data.bannerPosition || '50% 50%');
       try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
   };
@@ -504,7 +507,19 @@ export default function CampgroundDetailPage() {
         <div className="relative">
           {/* Full-width hero */}
           <div className={themeStyles.heroHeight + " w-full relative"}>
-            {campground.imageUrl ? <img src={campground.imageUrl.startsWith("http") ? campground.imageUrl : `${campground.imageUrl}`} alt={campground.name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
+            {campground.imageUrl
+              ? <DraggableBanner
+                  imageUrl={campground.imageUrl}
+                  altText={campground.name}
+                  position={bannerPosition}
+                  canEdit={isAdmin}
+                  onPositionChange={async (pos) => {
+                    setBannerPosition(pos);
+                    try { await api.patch(`/campgrounds/${campground.id}/banner-position`, { bannerPosition: pos }); } catch {}
+                  }}
+                  className="w-full h-full"
+                />
+              : <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center"><MapPin className="w-32 h-32 text-white/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             
             {/* Back button */}
