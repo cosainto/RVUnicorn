@@ -111,3 +111,127 @@ router.post('/meal-reminder', async (req, res) => {
 });
 
 export default router;
+
+// POST /api/hitch/jobs/pack-reminder
+// Fires if event starts within 7 days, has 2+ attendees, and pack list is empty
+router.post('/pack-reminder', async (req, res) => {
+  try {
+    const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const events = await (prisma as any).event.findMany({
+      where: {
+        createdAt: { lte: oneDayAgo },
+        startDate: { gte: new Date(), lte: sevenDaysFromNow },
+        isWishlist: false,
+      },
+      include: {
+        attendees: true,
+        comments: { where: { userId: HITCH_USER_ID, content: { contains: 'pack' } } },
+      }
+    });
+
+    let reminded = 0;
+    for (const event of events) {
+      const goingCount = event.attendees.filter((a: any) => a.status === 'GOING').length + 1;
+      if (goingCount < 2 || event.comments.length > 0) continue;
+
+      // Check if pack list is empty
+      const packItems = await (prisma as any).tripPackItem.count({ where: { eventId: event.id } });
+      if (packItems > 0) continue;
+
+      const userIds = [event.organizerId, ...event.attendees.filter((a: any) => a.status === 'GOING').map((a: any) => a.userId)];
+      const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { username: true } });
+      const mentions = users.map(u => `@${u.username}`).join(' ');
+
+      const message = `Hey ${mentions} 👋\n\nYour trip is coming up soon and the pack list is still empty! 🎒 Head to the **Pack List** tab and add what you're bringing — it's the easiest way to make sure nobody forgets the bug spray (or the s'mores). Trust me on this one. 🔥`;
+
+      await prisma.eventComment.create({
+        data: { eventId: event.id, userId: HITCH_USER_ID, content: message }
+      });
+
+      const mutedUsers = await prisma.eventCommentMute.findMany({ where: { eventId: event.id }, select: { userId: true } });
+      const mutedIds = new Set(mutedUsers.map((m: any) => m.userId));
+      const notifyIds = userIds.filter(uid => !mutedIds.has(uid));
+
+      await prisma.notification.createMany({
+        data: notifyIds.map(uid => ({
+          userId: uid,
+          type: 'EVENT_COMMENT',
+          content: `Hitch has a packing tip for your trip! 🎒`,
+          link: `/trips/${event.id}`,
+        })),
+        skipDuplicates: true,
+      });
+
+      reminded++;
+    }
+
+    res.json({ success: true, reminded });
+  } catch (error) {
+    console.error('Hitch pack reminder error:', error);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// POST /api/hitch/jobs/schedule-reminder
+// Fires if event starts within 5 days, has 2+ attendees, and schedule is empty
+router.post('/schedule-reminder', async (req, res) => {
+  try {
+    const fiveDaysFromNow = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const events = await (prisma as any).event.findMany({
+      where: {
+        createdAt: { lte: oneDayAgo },
+        startDate: { gte: new Date(), lte: fiveDaysFromNow },
+        isWishlist: false,
+      },
+      include: {
+        attendees: true,
+        comments: { where: { userId: HITCH_USER_ID, content: { contains: 'schedule' } } },
+      }
+    });
+
+    let reminded = 0;
+    for (const event of events) {
+      const goingCount = event.attendees.filter((a: any) => a.status === 'GOING').length + 1;
+      if (goingCount < 2 || event.comments.length > 0) continue;
+
+      const subevents = await (prisma as any).eventSubevent?.count?.({ where: { eventId: event.id } }).catch(() => 0) || 0;
+      const activities = await (prisma as any).eventActivity?.count?.({ where: { eventId: event.id } }).catch(() => 0) || 0;
+      if (subevents + activities > 0) continue;
+
+      const userIds = [event.organizerId, ...event.attendees.filter((a: any) => a.status === 'GOING').map((a: any) => a.userId)];
+      const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { username: true } });
+      const mentions = users.map(u => `@${u.username}`).join(' ');
+
+      const message = `Hey ${mentions} 👋\n\nTrip's almost here and the schedule is wide open! 📅 Jump into the **Schedule** tab and add some activities — hikes, meals, fire time, whatever you're planning. Your crew will thank you when nobody's standing around asking "so what are we doing today?" 😄`;
+
+      await prisma.eventComment.create({
+        data: { eventId: event.id, userId: HITCH_USER_ID, content: message }
+      });
+
+      const mutedUsers = await prisma.eventCommentMute.findMany({ where: { eventId: event.id }, select: { userId: true } });
+      const mutedIds = new Set(mutedUsers.map((m: any) => m.userId));
+      const notifyIds = userIds.filter(uid => !mutedIds.has(uid));
+
+      await prisma.notification.createMany({
+        data: notifyIds.map(uid => ({
+          userId: uid,
+          type: 'EVENT_COMMENT',
+          content: `Hitch wants to help plan your schedule! 📅`,
+          link: `/trips/${event.id}`,
+        })),
+        skipDuplicates: true,
+      });
+
+      reminded++;
+    }
+
+    res.json({ success: true, reminded });
+  } catch (error) {
+    console.error('Hitch schedule reminder error:', error);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
