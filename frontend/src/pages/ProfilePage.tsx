@@ -141,6 +141,7 @@ const [editForm, setEditForm] = useState({
     website: '',
     profilePicture: '',
     coverPhoto: '',
+    bannerPosition: '50% 50%',
   });
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState('');
@@ -225,6 +226,7 @@ const [editForm, setEditForm] = useState({
         website: data.website || '',
         profilePicture: data.profilePicture || '',
         coverPhoto: data.coverPhoto || '',
+        bannerPosition: data.bannerPosition || '50% 50%',
       });
       if (user && !isOwnProfile && data.id) {
         checkFriendshipStatus(data.id);
@@ -424,10 +426,18 @@ const [editForm, setEditForm] = useState({
         className="badge-container h-48 sm:h-64 md:h-80 bg-gradient-to-br from-green-400 to-blue-500 relative"
       >
         {profile.coverPhoto && (
-          <img
-            src={`${profile.coverPhoto}`}
-            alt="Cover"
-            className="w-full h-full object-cover"
+          <DraggableBanner
+            imageUrl={profile.coverPhoto}
+            altText="Cover"
+            position={profile.bannerPosition || '50% 50%'}
+            canEdit={isOwnProfile}
+            onPositionChange={async (pos) => {
+              try {
+                await api.put('/profile', { bannerPosition: pos });
+                setProfile(prev => prev ? { ...prev, bannerPosition: pos } : prev);
+              } catch {}
+            }}
+            className="w-full h-full"
           />
         )}
         {isOwnProfile && (
@@ -436,7 +446,6 @@ const [editForm, setEditForm] = useState({
             type="cover"
             onUploadSuccess={loadProfile}
           />
-
         )}
         {/* Profile Badges Display */}
         {displayedBadges.map((badge, index) => (
