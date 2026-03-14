@@ -182,6 +182,25 @@ export default function EventPackList({ eventId, isOrganizer }: EventPackListPro
     return total === 0 ? 0 : Math.round((getCheckedItems() / total) * 100);
   };
 
+  if (!loading && items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="text-6xl mb-4">🎒</div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Your pack list is empty!</h3>
+        <p className="text-gray-500 max-w-sm mb-6">Don't be that person who forgets the bug spray. Add items to your pack list so nothing gets left behind.</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left mb-6">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 Pro Tips</p>
+          <ul className="space-y-1 text-sm text-amber-800">
+            <li>• Add items by category to stay organized</li>
+            <li>• Check items off as you pack them</li>
+            <li>• Share the list so everyone knows what to bring</li>
+            <li>• Save your list as a template for next time</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">

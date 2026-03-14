@@ -535,12 +535,22 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         </div>
       ) : (
         /* No trip yet */
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <img src="/hitch.png" alt="Hitch" className="w-16 h-16 rounded-full object-cover mx-auto mb-3" />
-          <h3 className="font-bold text-gray-800 mb-1">Plan your drive to {eventTitle || 'this event'}</h3>
-          <p className="text-sm text-gray-400 mb-4">Hitch will plan your route, overnight stops, fuel stops, and more</p>
-          <button onClick={onEditTrip} className="bg-primary-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-600">
-            Get Started
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <img src="/hitch.png" alt="Hitch" className="w-20 h-20 rounded-full object-cover mx-auto mb-4 shadow-lg" />
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No route planned yet!</h3>
+          <p className="text-gray-500 max-w-sm mb-6">Let Hitch AI map out your drive — overnight stops, fuel stations, scenic detours and all. Just tell it where you're starting from.</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left mb-6">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 What Hitch plans for you</p>
+            <ul className="space-y-1 text-sm text-amber-800">
+              <li>🗺️ Turn-by-turn route from your home base</li>
+              <li>⛽ Fuel stops based on your RV's tank size</li>
+              <li>🌙 Overnight stops along the way</li>
+              <li>🎯 Sightseeing detours if you want them</li>
+              <li>🚛 RV-safe roads — no low bridges!</li>
+            </ul>
+          </div>
+          <button onClick={onEditTrip} className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2">
+            <img src="/hitch.png" className="w-5 h-5 rounded-full" /> Plan My Route with Hitch
           </button>
         </div>
       )}
