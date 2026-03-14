@@ -966,3 +966,100 @@ router.get('/trust-score/:userId', async (req: any, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+
+// POST /api/hitch/route-suggestions
+// Suggest overnight stops along a route
+router.post('/route-suggestions', async (req: any, res) => {
+  try {
+    const { origin, destination, rvLength, rvType, interests = [], maxDriveHours = 6 } = req.body;
+
+    // Estimate route states based on origin/destination
+    const prompt = `Plan an RV route with overnight stops.
+Origin: ${origin}
+Destination: ${destination}
+RV: ${rvLength || 35}ft ${rvType || 'Class C'}
+Max driving per day: ${maxDriveHours} hours
+Interests: ${interests.join(', ') || 'general camping'}
+
+Return ONLY valid JSON:
+{
+  "totalDays": 3,
+  "totalMiles": 850,
+  "stops": [
+    {
+      "day": 1,
+      "city": "Nashville, TN",
+      "state": "TN",
+      "drivingHours": 4.5,
+      "drivingMiles": 280,
+      "suggestion": "Great overnight spot here",
+      "spotType": "campground",
+      "searchQuery": "RV park Nashville Tennessee"
+    }
+  ],
+  "tips": ["Avoid I-40 on Friday afternoons", "Great BBQ in Memphis on Day 2"]
+}`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 800,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const routeData = JSON.parse(clean);
+
+    // For each stop, find real campgrounds in that state
+    const enrichedStops = await Promise.all((routeData.stops || []).map(async (stop: any) => {
+      const campgrounds = await prisma.campground.findMany({
+        where: {
+          state: { contains: stop.state, mode: 'insensitive' },
+          ...(rvLength ? { maxRvLength: { gte: rvLength - 5 } } : {}),
+          isApproved: true,
+        },
+        select: { id: true, name: true, city: true, state: true, imageUrl: true, googleRating: true, pricePerNight: true },
+        orderBy: { googleRating: 'desc' },
+        take: 3,
+      });
+
+      // Also find free overnight spots
+      const freeSpots = await prisma.freeOvernightSpot.findMany({
+        where: { state: { contains: stop.state, mode: 'insensitive' }, allowsRvs: true },
+        select: { id: true, name: true, category: true, city: true, state: true },
+        take: 2,
+      });
+
+      return { ...stop, campgrounds, freeSpots };
+    }));
+
+    res.json({ ...routeData, stops: enrichedStops });
+  } catch (e: any) {
+    console.error('Route suggestions error:', e?.message);
+    res.status(500).json({ error: 'Failed to plan route' });
+  }
+});
+
+// POST /api/hitch/basecamp-question
+// Answer a question posted in the basecamp feed
+router.post('/basecamp-question', async (req: any, res) => {
+  try {
+    const { question, context } = req.body;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      system: `You are Hitch, RVUnicorn's AI camping expert. You're answering a question posted in the community feed.
+Be helpful, friendly, and concise. Keep answers under 150 words.
+Always suggest the user check the campground directly for the most current info.
+Context: ${context || 'General camping question'}`,
+      messages: [{ role: 'user', content: question }],
+    });
+
+    const answer = response.content[0].type === 'text' ? response.content[0].text : '';
+    res.json({ answer });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to answer' });
+  }
+});
