@@ -314,12 +314,7 @@ router.post('/daily-digest', async (req, res) => {
 
       if (parts.length === 0) continue;
 
-      const message = `Good morning, ${user.firstName || user.username}! 🦄
-
-${parts.join('
-')}
-
-Have an amazing day on the road!`;
+      const message = `Good morning, ${user.firstName || user.username}! 🦄\n\n${parts.join('\n')}\n\nHave an amazing day on the road!`;
 
       await prisma.notification.create({
         data: {
