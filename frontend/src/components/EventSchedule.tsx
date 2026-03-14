@@ -298,24 +298,7 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
   };
 
   const totalScheduleItems = subevents.length + activities.length;
-  if (!loading && totalScheduleItems === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <div className="text-6xl mb-4">📅</div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">No activities scheduled yet</h3>
-        <p className="text-gray-500 max-w-sm mb-6">A great trip doesn't just happen — it's planned! Add activities, excursions, and must-dos to your schedule so the whole crew knows what's coming.</p>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left mb-6">
-          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 Pro Tips</p>
-          <ul className="space-y-1 text-sm text-amber-800">
-            <li>• Add activities from the Things To Do Nearby section</li>
-            <li>• Schedule hikes, tours, meals, and events by day</li>
-            <li>• Let attendees RSVP to each activity</li>
-            <li>• Leave some free time — you're on vacation! 🏕️</li>
-          </ul>
-        </div>
-      </div>
-    );
-  }
+  const isEmptySchedule = !loading && totalScheduleItems === 0;
 
   // Get unscheduled activities
   const unscheduledActivities = activities.filter(a => !a.scheduledDate);
@@ -445,6 +428,24 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
           Add Activity
         </button>
       </div>
+
+      {/* Empty state */}
+      {isEmptySchedule && (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="text-6xl mb-4">📅</div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No activities scheduled yet</h3>
+          <p className="text-gray-500 max-w-sm mb-4">A great trip doesn't just happen — it's planned! Add activities so the whole crew knows what's coming.</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 Pro Tips</p>
+            <ul className="space-y-1 text-sm text-amber-800">
+              <li>• Add activities from the Things To Do Nearby section</li>
+              <li>• Schedule hikes, tours, meals, and events by day</li>
+              <li>• Let attendees RSVP to each activity</li>
+              <li>• Leave some free time — you're on vacation! 🏕️</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Schedule by Day */}
       <div className="space-y-6">
