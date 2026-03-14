@@ -67,7 +67,6 @@ import VideoPlayerPage from './pages/VideoPlayerPage';
 import MediaAlbumsPage from './pages/MediaAlbumsPage';
 import MediaAlbumDetailPage from './pages/MediaAlbumDetailPage';
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
-import HitchChat from './components/HitchChat';
 import QuickCaptureModal from './components/QuickCaptureModal';
 import React from 'react';
 import { Camera } from 'lucide-react';
@@ -389,7 +388,6 @@ function AppContent() {
       {user && (
         <>
           <GlobalCameraButton />
-          <HitchChat />
         </>
       )}
     </div>
