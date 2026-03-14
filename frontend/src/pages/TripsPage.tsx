@@ -375,9 +375,9 @@ export default function EventsPage() {
               <Link to={event.isStateVisit ? `/travel-map` : `/trips/${event.id}`}>
                 {/* Event Image */}
                 <div className="h-48 bg-gradient-to-br from-green-100 to-blue-100 relative overflow-hidden">
-                  {(event.imageUrl || event.campground?.imageUrl) ? (
+                  {((event.bannerImage && !event.bannerImage.startsWith('/images/')) || event.imageUrl || event.campground?.imageUrl) ? (
                     <img
-                      src={event.bannerImage || event.campground?.imageUrl}
+                      src={(event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : event.imageUrl || event.campground?.imageUrl}
                       alt={event.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition"
                     />
