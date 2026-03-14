@@ -56,6 +56,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [overnightSpotResults, setOvernightSpotResults] = useState<any[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "discover" | "friends">("upcoming");
   const [discoverEvents, setDiscoverEvents] = useState<Event[]>([]);
@@ -75,6 +76,8 @@ export default function EventsPage() {
     endDate: getDateString(7),
     location: '',
     campgroundId: null as string | null,
+    overnightSpotId: null as string | null,
+    destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
     imageUrl: '',
     attendeeIds: [] as string[],
     privacy: 'PUBLIC',
@@ -234,7 +237,9 @@ export default function EventsPage() {
         startDate: formData.startDate,
         endDate: formData.endDate || formData.startDate,
         location: formData.location,
-        campgroundId: formData.campgroundId,
+        campgroundId: formData.destinationType === 'CAMPGROUND' ? formData.campgroundId : null,
+        overnightSpotId: formData.destinationType === 'OVERNIGHT_SPOT' ? formData.overnightSpotId : null,
+        destinationType: formData.destinationType,
         bannerImage: formData.imageUrl,
       });
 
@@ -254,6 +259,8 @@ export default function EventsPage() {
         endDate: getDateString(7),
         location: '',
         campgroundId: null,
+        overnightSpotId: null,
+        destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
         imageUrl: '',
         attendeeIds: [],
         privacy: 'PUBLIC',
@@ -299,6 +306,8 @@ export default function EventsPage() {
               endDate: getDateString(7),
               location: '',
               campgroundId: null,
+        overnightSpotId: null,
+        destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
               imageUrl: '',
               attendeeIds: [],
             });
@@ -575,6 +584,8 @@ export default function EventsPage() {
                   setFormData({
                     ...formData,
                     campgroundId: null,
+        overnightSpotId: null,
+        destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
                     location,
                   });
                 }}
