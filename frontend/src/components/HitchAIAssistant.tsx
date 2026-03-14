@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Send, Loader, MapPin, Star } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -36,6 +37,7 @@ export default function HitchAIAssistant() {
     }
   ]);
   const [input, setInput] = useState('');
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [userContext, setUserContext] = useState<any>(null);
 
