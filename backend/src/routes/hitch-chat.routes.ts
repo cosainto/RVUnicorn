@@ -1030,8 +1030,8 @@ Return ONLY valid JSON:
 
     res.json({ ...routeData, stops: enrichedStops });
   } catch (e: any) {
-    console.error('Route suggestions error:', e?.message);
-    res.status(500).json({ error: 'Failed to plan route' });
+    console.error('Route suggestions error:', e?.message, e?.stack?.substring(0, 200));
+    res.status(500).json({ error: e?.message || 'Failed to plan route' });
   }
 });
 
