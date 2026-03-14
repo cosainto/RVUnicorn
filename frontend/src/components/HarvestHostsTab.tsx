@@ -174,6 +174,9 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
               )
             ))}
           </div>
+          <Link to="/hosts/new" className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition mb-3">
+            🏡 Create My Host Page
+          </Link>
           <p className="text-xs text-gray-500">Already a member of one of these networks? Click <strong>List Your Location</strong> above and paste your listing URL — we'll do the rest.</p>
         </div>
       )}
