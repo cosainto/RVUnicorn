@@ -878,7 +878,7 @@ router.get('/hidden-gems', async (req: any, res) => {
     const scored = campgrounds
       .map(c => ({
         ...c,
-        gemScore: ((c as any).googleRating || 0) * 20 - Math.log(Math.max(c._count.followers + 1, 1)) * 5,
+        gemScore: ((c as any).googleRating || 0) * 20 - Math.log(Math.max(c._count.followers + 1, 1)) * 5 + ((c as any).verificationStatus === 'VERIFIED' ? 15 : 0),
       }))
       .sort((a, b) => b.gemScore - a.gemScore)
       .slice(0, parseInt(limit as string));
