@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Loader, MapPin, Star } from 'lucide-react';
+import { Send, Loader, MapPin, Star, ThumbsUp, ThumbsDown } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useEffect } from 'react';
@@ -39,6 +39,7 @@ export default function HitchAIAssistant() {
   const [input, setInput] = useState('');
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [userContext, setUserContext] = useState<any>(null);
 
   useEffect(() => {
@@ -46,6 +47,11 @@ export default function HitchAIAssistant() {
       api.get('/hitch/user-context').then(r => setUserContext(r.data)).catch(() => {});
     }
   }, [user]);
+
+  const sendFeedback = async (index: number, rating: 'up' | 'down', question: string, answer: string) => {
+    setFeedback(f => ({ ...f, [index]: rating }));
+    try { await api.post('/hitch/feedback', { rating, question, answer: answer.substring(0, 200) }); } catch {}
+  };
 
   const sendMessage = async (text?: string) => {
     const msg = text || input;
@@ -107,6 +113,18 @@ export default function HitchAIAssistant() {
               <div className={`rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-primary-600 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
+              {msg.role === 'assistant' && i > 0 && (
+                <div className="flex gap-2 mt-1">
+                  <button onClick={() => sendFeedback(i, 'up', messages[i-1]?.content || '', msg.content)}
+                    className={`p-1.5 rounded-lg transition ${feedback[i] === 'up' ? 'bg-green-100 text-green-600' : 'text-gray-300 hover:text-green-500'}`}>
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => sendFeedback(i, 'down', messages[i-1]?.content || '', msg.content)}
+                    className={`p-1.5 rounded-lg transition ${feedback[i] === 'down' ? 'bg-red-100 text-red-500' : 'text-gray-300 hover:text-red-400'}`}>
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               {/* Suggestions */}
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="space-y-2">

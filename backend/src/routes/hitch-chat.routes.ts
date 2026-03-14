@@ -828,3 +828,24 @@ rigStressScore: 1=easy, 5=very difficult. vibeLabel options: Peaceful Retreat, W
     res.status(500).json({ error: 'Failed to analyze campground' });
   }
 });
+
+// POST /api/hitch/feedback - Log user feedback on Hitch responses
+router.post('/feedback', async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { messageId, rating, question, answer, action } = req.body;
+    // Store in notifications table as a feedback record for now
+    // action can be: 'thumbs_up', 'thumbs_down', 'saved_campground', 'created_trip', 'viewed_campground'
+    await prisma.notification.create({
+      data: {
+        userId: userId || 'anonymous',
+        type: 'HITCH_FEEDBACK',
+        content: JSON.stringify({ rating, question: question?.substring(0, 100), action }),
+        link: '/hitch',
+      }
+    }).catch(() => null);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to log feedback' });
+  }
+});

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader, Minimize2 } from 'lucide-react';
+import { X, Send, Loader, Minimize2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,7 @@ export default function HitchFloatingChat() {
   const [loading, setLoading] = useState(false);
   const [userContext, setUserContext] = useState<any>(null);
   const [unread, setUnread] = useState(0);
+  const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +60,11 @@ export default function HitchFloatingChat() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendFeedback = async (index: number, rating: 'up' | 'down', question: string, answer: string) => {
+    setFeedback(f => ({ ...f, [index]: rating }));
+    try { await api.post('/hitch/feedback', { rating, question, answer: answer.substring(0, 200) }); } catch {}
   };
 
   const getSuggestionLink = (s: any) => {
@@ -113,6 +119,18 @@ export default function HitchFloatingChat() {
                       <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-primary-600 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
                         {msg.content}
                       </div>
+                      {msg.role === 'assistant' && i > 0 && (
+                        <div className="flex gap-1.5 mt-0.5">
+                          <button onClick={() => sendFeedback(i, 'up', messages[i-1]?.content || '', msg.content)}
+                            className={`p-1 rounded transition ${feedback[i] === 'up' ? 'text-green-600' : 'text-gray-300 hover:text-green-500'}`}>
+                            <ThumbsUp className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => sendFeedback(i, 'down', messages[i-1]?.content || '', msg.content)}
+                            className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}`}>
+                            <ThumbsDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                       {msg.suggestions?.map((s, j) => (
                         <Link key={j} to={getSuggestionLink(s)}
                           onClick={() => setOpen(false)}
