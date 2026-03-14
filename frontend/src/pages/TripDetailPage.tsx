@@ -638,8 +638,10 @@ export default function EventDetailPage() {
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
         <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative group">
-          {(event.bannerImage || event.imageUrl) ? (
-            <img src={(event.bannerImage || event.imageUrl)?.startsWith('http') ? (event.bannerImage || event.imageUrl) : `${event.bannerImage || event.imageUrl}`} alt={event.title} className="w-full h-full object-cover" />
+          {(() => {
+            const img = (event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : (event.imageUrl && !event.imageUrl.startsWith('/images/')) ? event.imageUrl : event.campground?.imageUrl;
+            return img ? (
+            <img src={img} alt={event.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
           )}
