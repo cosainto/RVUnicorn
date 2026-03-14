@@ -375,18 +375,27 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { title, description, startDate, endDate, location, campgroundId, privacy, bannerImage } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, privacy, bannerImage, destinationType, overnightSpotId } = req.body;
+
+    // Auto-use campground image if no banner provided
+    let resolvedBanner = bannerImage || null;
+    if (!resolvedBanner && campgroundId) {
+      const cg = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { imageUrl: true } });
+      resolvedBanner = cg?.imageUrl || null;
+    }
 
     const event = await prisma.event.create({
       data: {
         organizerId: userId,
         title,
         description,
-        bannerImage: bannerImage || '/images/Event_default.png',
+        bannerImage: resolvedBanner,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         location,
-        campgroundId: campgroundId || null,
+        campgroundId: destinationType === 'CAMPGROUND' ? (campgroundId || null) : null,
+        overnightSpotId: destinationType === 'OVERNIGHT_SPOT' ? (overnightSpotId || null) : null,
+        destinationType: destinationType || 'CAMPGROUND',
         privacy: privacy || 'PUBLIC',
       },
       include: {
