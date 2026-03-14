@@ -21,7 +21,7 @@ const authenticateToken = (req: Request, res: Response, next: any) => {
 async function parseSearchQuery(query: string) {
   try {
     const resp = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 500,
+      model: 'claude-sonnet-4-6', max_tokens: 500,
       system: `Parse search queries for an RV/camping platform. Return ONLY valid JSON:
 {"type":["campgrounds","users","recipes","events"],"campgroundFilters":{"state":null,"hasFullHookups":null,"hasElectricHookup":null,"hasWifi":null,"hasPool":null,"hasShowers":null,"isPetFriendly":null,"isWaterfront":null,"isBigRigFriendly":null,"hasPullThrough":null,"maxPricePerNight":null,"minRating":null},"userFilters":{"rvType":null,"location":null},"recipeFilters":{"category":null},"eventFilters":{"location":null},"keywords":["word1"],"aiSummary":"brief description"}`,
       messages: [{ role: 'user', content: `Parse: "${query}"` }],

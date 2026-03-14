@@ -120,7 +120,7 @@ async function extractPreferences(userId: string, messages: { role: string; cont
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { hitchPreferences: true } });
     const existing = user?.hitchPreferences || [];
     const resp = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 500,
+      model: 'claude-sonnet-4-6', max_tokens: 500,
       system: `Extract camping/RV preferences as a JSON array of short strings. Existing (don't duplicate): ${JSON.stringify(existing)}. Return ONLY [] or ["pref1","pref2"]. No other text.`,
       messages: [{ role: 'user', content: messages.map(m => `${m.role}: ${m.content}`).join('\n\n') }],
     });
@@ -135,7 +135,7 @@ async function extractPreferences(userId: string, messages: { role: string; cont
 async function summarizeConversation(messages: { role: string; content: string }[]) {
   try {
     const resp = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 200,
+      model: 'claude-sonnet-4-6', max_tokens: 200,
       system: 'Generate a short title (max 6 words) and brief summary (max 2 sentences). Return ONLY valid JSON: {"title":"...","summary":"..."}',
       messages: [{ role: 'user', content: messages.map(m => `${m.role}: ${m.content}`).join('\n') }],
     });
@@ -182,7 +182,7 @@ router.post('/chat', authenticateToken, async (req: Request, res: Response) => {
     res.setHeader('Connection', 'keep-alive');
 
     const stream = await anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514', max_tokens: 1024,
+      model: 'claude-sonnet-4-6', max_tokens: 1024,
       system: systemPrompt + campCtx,
       messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
     });

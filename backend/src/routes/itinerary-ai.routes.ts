@@ -132,7 +132,7 @@ Stop types: OVERNIGHT, FUEL, FOOD, ATTRACTION, WAYPOINT, BOONDOCK, WALMART, DUMP
 Last day type should be ARRIVAL if destination is specific.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     });
