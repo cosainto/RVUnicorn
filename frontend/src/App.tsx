@@ -41,6 +41,7 @@ import GroupEditPage from './pages/GroupEditPage';
 import GroupInvitesPage from './pages/GroupInvitesPage';
 import CampgroundDetailPage from './pages/CampgroundDetailPage';
 import HostDetailPage from './pages/HostDetailPage';
+import OvernightSpotDetailPage from './pages/OvernightSpotDetailPage';
 import CreateHostPage from './pages/CreateHostPage';
 import CreatorPage from './pages/CreatorPage';
 import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';

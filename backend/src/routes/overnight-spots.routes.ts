@@ -127,3 +127,101 @@ router.get('/stats', authenticateToken, async (req, res) => {
 });
 
 export default router;
+
+// GET /api/overnight-spots/search?q=&limit=
+router.get('/search', async (req: any, res) => {
+  try {
+    const { q = '', limit = 10, state } = req.query;
+    const spots = await prisma.freeOvernightSpot.findMany({
+      where: {
+        AND: [
+          state ? { state: state as string } : {},
+          q ? {
+            OR: [
+              { name: { contains: q as string, mode: 'insensitive' } },
+              { city: { contains: q as string, mode: 'insensitive' } },
+              { chain: { contains: q as string, mode: 'insensitive' } },
+              { category: { contains: q as string, mode: 'insensitive' } },
+            ]
+          } : {},
+        ]
+      },
+      take: parseInt(limit as string),
+      include: {
+        reviews: { select: { rating: true } }
+      }
+    });
+    const spotsWithRating = spots.map((s: any) => ({
+      ...s,
+      avgRating: s.reviews.length ? (s.reviews.reduce((a: number, r: any) => a + r.rating, 0) / s.reviews.length).toFixed(1) : null,
+      reviewCount: s.reviews.length,
+    }));
+    res.json({ spots: spotsWithRating });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/overnight-spots/:id
+router.get('/:id', async (req: any, res) => {
+  try {
+    const spot = await prisma.freeOvernightSpot.findUnique({
+      where: { id: req.params.id },
+      include: {
+        reviews: {
+          include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+    if (!spot) return res.status(404).json({ error: 'Not found' });
+    const avgRating = spot.reviews.length
+      ? (spot.reviews.reduce((a, r) => a + r.rating, 0) / spot.reviews.length).toFixed(1)
+      : null;
+    res.json({ ...spot, avgRating, reviewCount: spot.reviews.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/overnight-spots/:id/reviews
+router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const { rating, wouldReturn, tags, notes, visitDate } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating 1-5 required' });
+
+    const review = await prisma.freeOvernightSpotReview.upsert({
+      where: { spotId_userId: { spotId: id, userId } },
+      create: { spotId: id, userId, rating, wouldReturn, tags: tags || [], notes, visitDate: visitDate ? new Date(visitDate) : null },
+      update: { rating, wouldReturn, tags: tags || [], notes, visitDate: visitDate ? new Date(visitDate) : null },
+      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } }
+    });
+
+    // Update spot rating cache
+    const allReviews = await prisma.freeOvernightSpotReview.findMany({ where: { spotId: id }, select: { rating: true } });
+    const avgRating = allReviews.reduce((a, r) => a + r.rating, 0) / allReviews.length;
+    await prisma.freeOvernightSpot.update({
+      where: { id },
+      data: { rating: avgRating, reviewCount: allReviews.length }
+    });
+
+    // Award first night badge
+    try {
+      const badge = await prisma.badge.findUnique({ where: { slug: 'first-night-host' } });
+      if (badge) {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId, badgeId: badge.id } },
+          create: { userId, badgeId: badge.id },
+          update: {}
+        });
+      }
+    } catch {}
+
+    res.json(review);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
