@@ -666,3 +666,74 @@ Return JSON:
     res.status(500).json({ error: 'Failed to calculate trip cost' });
   }
 });
+
+// POST /api/hitch/campground-chat
+router.post('/campground-chat', async (req: any, res) => {
+  try {
+    const { message, campgroundId, campgroundName, campground, history = [], userContext } = req.body;
+
+    // Get reviews for this campground
+    const reviews = await prisma.campgroundReview.findMany({
+      where: { campgroundId },
+      select: { rating: true, content: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }).catch(() => []);
+
+    const avgRating = reviews.length
+      ? (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
+    const reviewSummary = reviews.length > 0
+      ? reviews.slice(0, 8).map(r => `${r.rating}★: ${r.content?.substring(0, 100) || 'No comment'}`).join('\n')
+      : 'No reviews yet';
+
+    // Build user RV context
+    let rvContext = '';
+    if (userContext?.rv?.type) {
+      rvContext = `User's RV: ${userContext.rv.year || ''} ${userContext.rv.make || ''} ${userContext.rv.type} (${userContext.rv.length || '?'}ft)`;
+    }
+
+    const systemPrompt = `You are Hitch, RVUnicorn's AI camping expert. You are answering questions specifically about ${campgroundName}.
+
+Campground Data:
+- Location: ${campground.city}, ${campground.state}
+- Max RV Length: ${campground.maxRvLength || 'Unknown'}ft
+- Electric Hookups: ${campground.hasElectricHookup ? 'Yes' : 'No'}
+- Water Hookups: ${campground.hasWaterHookup ? 'Yes' : 'No'}
+- Sewer Hookups: ${campground.hasSewerHookup ? 'Yes' : 'No'}
+- WiFi: ${campground.hasWifi ? 'Yes' : 'No'}
+- Pet Friendly: ${campground.isPetFriendly ? 'Yes' : 'No'}
+- Big Rig Friendly: ${campground.isBigRigFriendly ? 'Yes' : 'No'}
+- Price: ${campground.pricePerNight ? '$' + campground.pricePerNight + '/night' : 'Unknown'}
+- Google Rating: ${campground.googleRating || 'N/A'} (${campground.googleReviewCount || 0} reviews)
+- Description: ${campground.description || 'No description available'}
+
+RVUnicorn Community Reviews (${reviews.length} total, avg ${avgRating || 'N/A'}★):
+${reviewSummary}
+
+${rvContext ? `\n${rvContext}` : ''}
+${userContext?.name ? `\nUser: ${userContext.name}` : ''}
+
+Answer questions about this specific campground. Be honest about limitations in the data. 
+If asked about RV compatibility, compare with the user's RV specs if available.
+Label facts vs community insights vs your suggestions clearly.
+Keep responses concise and helpful. Use emojis sparingly.`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: [
+        ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
+        { role: 'user', content: message }
+      ],
+    });
+
+    const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
+    res.json({ message: aiMessage, suggestions: [] });
+  } catch (e: any) {
+    console.error('Campground chat error:', e?.message);
+    res.status(500).json({ error: 'Failed to get answer' });
+  }
+});

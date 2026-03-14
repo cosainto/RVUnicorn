@@ -10,6 +10,7 @@ import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import DraggableBanner from '../components/DraggableBanner';
 import CheckInButton from '../components/CheckInButton';
+import HitchCampgroundChat from '../components/HitchCampgroundChat';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -202,6 +203,7 @@ const ALL_TABS = [
   { id: 'photos', label: 'Photos', icon: Camera },
   { id: 'stickers', label: 'Stickers', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'ask-hitch', label: '🦄 Ask Hitch', icon: null },
 ];
 
 export default function CampgroundDetailPage() {
@@ -1414,6 +1416,7 @@ export default function CampgroundDetailPage() {
             <div className="flex">{ALL_TABS.map(tab => { 
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
+              const TabIcon = tab.icon;
               const isLocked = !user && !PUBLIC_TABS.includes(tab.id);
               return (
                 <button 
@@ -1731,6 +1734,13 @@ export default function CampgroundDetailPage() {
           )}
 
           {/* Stickers Tab */}
+          {activeTab === 'ask-hitch' && campground && (
+            <HitchCampgroundChat
+              campgroundId={campground.id}
+              campgroundName={campground.name}
+              campground={campground}
+            />
+          )}
           {activeTab === 'stickers' && (
             <div>
               <h3 className="text-xl font-bold mb-4">Collectible Stickers</h3>
