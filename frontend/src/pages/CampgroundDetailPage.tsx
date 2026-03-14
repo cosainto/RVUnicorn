@@ -8,6 +8,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
+import CheckInButton from '../components/CheckInButton';
+import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
@@ -235,6 +237,7 @@ export default function CampgroundDetailPage() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [herdRefresh, setHerdRefresh] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [editSaving, setEditSaving] = useState(false);

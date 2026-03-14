@@ -918,21 +918,27 @@ model SavedRecipe {
 }
 
 model CheckIn {
-  id           String     @id @default(cuid())
-  userId       String
-  campgroundId String
-  checkInDate  DateTime
-  checkOutDate DateTime?
-  siteNumber   String?
-  notes        String?
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String             @id @default(cuid())
+  userId          String
+  campgroundId    String?
+  harvestHostId   String?
+  overnightSpotId String?
+  checkInDate     DateTime
+  checkOutDate    DateTime?
+  siteNumber      String?
+  notes           String?
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  campground      Campground?        @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  harvestHost     HarvestHost?       @relation(fields: [harvestHostId], references: [id], onDelete: Cascade)
+  overnightSpot   FreeOvernightSpot? @relation(fields: [overnightSpotId], references: [id], onDelete: Cascade)
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([campgroundId])
+  @@index([harvestHostId])
+  @@index([overnightSpotId])
   @@index([isActive])
 }
 
@@ -3573,6 +3579,7 @@ model HarvestHost {
   reviews               HarvestHostReview[]
   pitStops              PitStop[]
   events                CampgroundEvent[]
+  checkIns              CheckIn[]
 
   @@index([latitude, longitude])
   @@index([state])
@@ -3666,8 +3673,9 @@ model FreeOvernightSpot {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  events  Event[]
-  reviews FreeOvernightSpotReview[]
+  events   Event[]
+  reviews  FreeOvernightSpotReview[]
+  checkIns CheckIn[]
 
   @@index([latitude, longitude])
   @@index([chain])

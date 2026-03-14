@@ -1,406 +1,121 @@
 import { Router, Request, Response } from 'express';
-import { logCheckIn } from '../services/activity.service';
+import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
 
 const router = Router();
+const prisma = new PrismaClient();
 
-// GET /api/checkins - Get user's check-ins
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+// POST /api/checkins - Check in to a location
+router.post('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = (req as any).userId;
-    const { active } = req.query;
-    const now = new Date();
+    const userId = req.user?.id;
+    const { campgroundId, harvestHostId, overnightSpotId, siteNumber, notes } = req.body;
 
-    let whereClause: any = { userId };
-
-    if (active === 'true') {
-      whereClause.isActive = true;
-      whereClause.checkOutDate = { gte: now };
+    if (!campgroundId && !harvestHostId && !overnightSpotId) {
+      return res.status(400).json({ error: 'Must provide a location to check in to' });
     }
 
-    const checkIns = await prisma.checkIn.findMany({
-      where: whereClause,
-      include: {
-        campground: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            state: true,
-            imageUrl: true,
-          }
-        }
-      },
-      orderBy: { checkInDate: 'desc' }
+    // Check out of any active check-ins first
+    await prisma.checkIn.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false, checkOutDate: new Date() }
     });
 
-    
-    // Auto-award campground badges on check-in
-    try {
-      const fetch = (await import('node-fetch')).default;
-      fetch(`http://localhost:${process.env.PORT || 3001}/api/campground-badges/auto-award/${checkIn.campgroundId}/${checkIn.userId}`, { method: 'POST' }).catch(() => {});
-    } catch (e) { /* badge auto-award is non-critical */ }
-
-    res.json(checkIns);
-  } catch (error) {
-    console.error('Get check-ins error:', error);
-    res.status(500).json({ error: 'Failed to get check-ins' });
-  }
-});
-
-// GET /api/checkins/campground/:campgroundId - Get current check-ins at campground
-router.get('/campground/:campgroundId', async (req: Request, res: Response) => {
-  try {
-    const { campgroundId } = req.params;
-    const now = new Date();
-
-    const checkIns = await prisma.checkIn.findMany({
-      where: {
-        campgroundId,
-        isActive: true,
-        checkInDate: { lte: now },
-        OR: [
-          { checkOutDate: { gte: now } },
-          { checkOutDate: null }
-        ]
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          }
-        }
-      },
-      orderBy: { checkInDate: 'desc' }
-    });
-
-    res.json(checkIns);
-  } catch (error) {
-    console.error('Get campground check-ins error:', error);
-    res.status(500).json({ error: 'Failed to get campground check-ins' });
-  }
-});
-
-// GET /api/checkins/user/:userId - Get check-ins for a specific user
-router.get('/user/:userId', async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-
-    const checkIns = await prisma.checkIn.findMany({
-      where: { userId },
-      include: {
-        campground: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            state: true,
-            imageUrl: true,
-          }
-        }
-      },
-      orderBy: { checkInDate: 'desc' }
-    });
-
-    res.json(checkIns);
-  } catch (error) {
-    console.error('Get user check-ins error:', error);
-    res.status(500).json({ error: 'Failed to get check-ins' });
-  }
-});
-
-// GET /api/checkins/my/active - Get current user's active check-in
-router.get('/my/active', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const now = new Date();
-
-    const activeCheckIn = await prisma.checkIn.findFirst({
-      where: {
-        userId,
-        isActive: true,
-        checkInDate: { lte: now },
-        OR: [
-          { checkOutDate: { gte: now } },
-          { checkOutDate: null }
-        ]
-      },
-      include: {
-        campground: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            state: true,
-          }
-        }
-      }
-    });
-
-    res.json(activeCheckIn);
-  } catch (error) {
-    console.error('Get active check-in error:', error);
-    res.status(500).json({ error: 'Failed to get active check-in' });
-  }
-});
-
-// POST /api/checkins - Create check-in
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { campgroundId, checkInDate, checkOutDate, siteNumber, notes } = req.body;
-
-    if (!campgroundId || !checkInDate) {
-      return res.status(400).json({ error: 'campgroundId and checkInDate are required' });
-    }
-
-    const checkIn = new Date(checkInDate);
-    const checkOut = checkOutDate ? new Date(checkOutDate) : null;
-
-    if (checkOut && checkOut <= checkIn) {
-      return res.status(400).json({ error: 'Check-out date must be after check-in date' });
-    }
-
-    // Check for existing active check-in at this campground
-    const existing = await prisma.checkIn.findFirst({
-      where: {
-        userId,
-        campgroundId,
-        isActive: true,
-      }
-    });
-
-    if (existing) {
-      return res.status(400).json({ error: 'You already have an active check-in at this campground' });
-    }
-
-    const checkInRecord = await prisma.checkIn.create({
+    // Create new check-in
+    const checkIn = await prisma.checkIn.create({
       data: {
         userId,
-        campgroundId,
-        checkInDate: checkIn,
-        checkOutDate: checkOut,
-        siteNumber,
-        notes,
+        campgroundId: campgroundId || null,
+        harvestHostId: harvestHostId || null,
+        overnightSpotId: overnightSpotId || null,
+        checkInDate: new Date(),
+        siteNumber, notes,
         isActive: true,
       },
       include: {
-        campground: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            state: true,
-            imageUrl: true,
-          }
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          }
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        campground: { select: { id: true, name: true, imageUrl: true } },
+        harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
+        overnightSpot: { select: { id: true, name: true, category: true } },
+      }
+    });
+
+    // Award first night badge for host check-ins
+    if (harvestHostId) {
+      const host = await (prisma as any).harvestHost.findUnique({ where: { id: harvestHostId }, select: { hostType: true } });
+      const slugs = ['first-night-host'];
+      if (host?.hostType === 'BREWERY') slugs.push('brew-hopper');
+      if (host?.hostType === 'WINERY') slugs.push('vineyard-voyager');
+      for (const slug of slugs) {
+        const badge = await prisma.badge.findUnique({ where: { slug } }).catch(() => null);
+        if (badge) {
+          await prisma.userBadge.upsert({
+            where: { userId_badgeId: { userId, badgeId: badge.id } },
+            create: { userId, badgeId: badge.id },
+            update: {}
+          }).catch(() => null);
         }
       }
-    });
-
-    // Auto-create StateVisit for this check-in
-    const campground = await prisma.campground.findUnique({
-      where: { id: campgroundId },
-    });
-
-    if (campground?.state) {
-      await prisma.stateVisit.create({
-        data: {
-          userId,
-          state: campground.state,
-          startDate: checkIn,
-          endDate: checkOut,
-          campsiteId: campgroundId,
-          notes: `Checked in at ${campground.name}`,
-          visibility: 'PUBLIC',
-        },
-      }).catch(() => {}); // Ignore if already exists
     }
 
-    // Auto-complete trip plans for this campground
-    try {
-      const userEvents = await prisma.event.findMany({
-        where: {
-          OR: [
-            { organizerId: userId },
-            { attendees: { some: { userId } } }
-          ],
-          campgroundId,
-        },
-        select: { id: true }
-      });
-
-      if (userEvents.length > 0) {
-        const eventIds = userEvents.map(e => e.id);
-        await prisma.tripPlan.updateMany({
-          where: {
-            userId,
-            eventId: { in: eventIds },
-            status: 'PLANNED',
-          },
-          data: {
-            status: 'COMPLETED',
-            completedAt: new Date(),
-          }
-        });
-      }
-    } catch (e) { console.error('Auto-complete trip error:', e); }
-
-    // Notify friends about check-in
-    const friendships = await prisma.friendship.findMany({
-      where: {
-        status: "ACCEPTED",
-        OR: [
-          { initiatorId: userId },
-          { receiverId: userId }
-        ]
-      },
-      select: { initiatorId: true, receiverId: true }
-    });
-
-    const friendIds = friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
-    
-    if (friendIds.length > 0 && checkInRecord.campground) {
-      const notificationPromises = friendIds.map(friendId =>
-        prisma.notification.create({
-          data: {
-            userId: friendId,
-            type: "FRIEND_CHECKIN",
-            content: checkInRecord.user.firstName + " " + checkInRecord.user.lastName + " checked in at " + checkInRecord.campground!.name,
-            link: "/campgrounds/" + campgroundId
-          }
-        })
-      );
-      await Promise.all(notificationPromises);
-    }
-
-    res.json(checkInRecord);
-  } catch (error) {
-    console.error('Create check-in error:', error);
-    res.status(500).json({ error: 'Failed to create check-in' });
+    res.json(checkIn);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-// PUT /api/checkins/:id - Update check-in
-router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
+// DELETE /api/checkins/active - Check out
+router.delete('/active', authenticateToken, async (req: any, res) => {
   try {
-    const userId = (req as any).userId;
-    const { id } = req.params;
-    const { checkInDate, checkOutDate, siteNumber, notes, isActive } = req.body;
-
-    const checkIn = await prisma.checkIn.findUnique({
-      where: { id }
+    const userId = req.user?.id;
+    await prisma.checkIn.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false, checkOutDate: new Date() }
     });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-    if (!checkIn) {
-      return res.status(404).json({ error: 'Check-in not found' });
-    }
-
-    if (checkIn.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    const updatedCheckIn = await prisma.checkIn.update({
-      where: { id },
-      data: {
-        checkInDate: checkInDate ? new Date(checkInDate) : undefined,
-        checkOutDate: checkOutDate ? new Date(checkOutDate) : undefined,
-        siteNumber: siteNumber !== undefined ? siteNumber : undefined,
-        notes: notes !== undefined ? notes : undefined,
-        isActive: isActive !== undefined ? isActive : undefined,
-      },
+// GET /api/checkins/active - Get my active check-in
+router.get('/active', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const checkIn = await prisma.checkIn.findFirst({
+      where: { userId, isActive: true },
       include: {
-        campground: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            state: true,
-            imageUrl: true,
-          }
-        }
+        campground: { select: { id: true, name: true, imageUrl: true } },
+        harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
+        overnightSpot: { select: { id: true, name: true, category: true } },
       }
     });
-
-    res.json(updatedCheckIn);
-  } catch (error) {
-    console.error('Update check-in error:', error);
-    res.status(500).json({ error: 'Failed to update check-in' });
+    res.json(checkIn);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 
-// POST /api/checkins/:id/checkout - Check out
-router.post('/:id/checkout', authenticateToken, async (req: Request, res: Response) => {
+// GET /api/checkins/herd/:type/:id - Get who's checked in at a location (RV Herd Here Now)
+router.get('/herd/:type/:id', async (req: any, res) => {
   try {
-    const userId = (req as any).userId;
-    const { id } = req.params;
+    const { type, id } = req.params;
+    const where: any = { isActive: true };
+    if (type === 'campground') where.campgroundId = id;
+    else if (type === 'host') where.harvestHostId = id;
+    else if (type === 'spot') where.overnightSpotId = id;
 
-    const checkIn = await prisma.checkIn.findUnique({
-      where: { id }
+    const checkIns = await prisma.checkIn.findMany({
+      where,
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } }
+      },
+      orderBy: { checkInDate: 'desc' },
+      take: 20,
     });
-
-    if (!checkIn) {
-      return res.status(404).json({ error: 'Check-in not found' });
-    }
-
-    if (checkIn.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    const updated = await prisma.checkIn.update({
-      where: { id },
-      data: {
-        isActive: false,
-        checkOutDate: new Date(),
-      }
-    });
-
-    res.json(updated);
-  } catch (error) {
-    console.error('Checkout error:', error);
-    res.status(500).json({ error: 'Failed to check out' });
-  }
-});
-
-// DELETE /api/checkins/:id - Delete check-in
-router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { id } = req.params;
-
-    const checkIn = await prisma.checkIn.findUnique({
-      where: { id }
-    });
-
-    if (!checkIn) {
-      return res.status(404).json({ error: 'Check-in not found' });
-    }
-
-    if (checkIn.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    await prisma.checkIn.delete({
-      where: { id }
-    });
-
-    res.json({ message: 'Check-in deleted' });
-  } catch (error) {
-    console.error('Delete check-in error:', error);
-    res.status(500).json({ error: 'Failed to delete check-in' });
+    res.json(checkIns);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

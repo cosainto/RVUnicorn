@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Star, Phone, Globe, ArrowLeft, Camera, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
+import CheckInButton from '../components/CheckInButton';
+import RVHerdHereNow from '../components/RVHerdHereNow';
 import { useAuth } from '../contexts/AuthContext';
 
 
@@ -46,6 +48,7 @@ export default function HostDetailPage() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const isOwner = user && host?.claimedByUserId === user.id;
+  const [herdRefresh, setHerdRefresh] = useState(0);
 
   useEffect(() => {
     api.get(`/harvest-hosts/${id}`).then(r => setHost(r.data)).catch(() => navigate('/campgrounds')).finally(() => setLoading(false));
@@ -133,6 +136,7 @@ export default function HostDetailPage() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
+          <CheckInButton locationId={host.id} locationType="host" locationName={host.name} onCheckIn={() => setHerdRefresh(r => r + 1)} />
           {host.website && (
             <a href={host.website} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition">
@@ -196,6 +200,9 @@ export default function HostDetailPage() {
               {host.storeHours && <p className="text-sm text-amber-800 mt-1"><strong>Hours:</strong> {host.storeHours}</p>}
             </div>
           )}
+
+          {/* RV Herd Here Now */}
+          <RVHerdHereNow locationId={host.id} locationType="host" refreshTrigger={herdRefresh} />
 
           {/* Events Calendar */}
           <LocationEventsCalendar
