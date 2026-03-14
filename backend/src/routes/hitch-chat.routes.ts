@@ -538,3 +538,52 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
     res.json({});
   }
 });
+
+// POST /api/hitch/trip-cost
+router.post('/trip-cost', async (req: any, res) => {
+  try {
+    const { from, to, nights, rvType, tankSize, mpg, fuelPrice, campingFeePerNight, groupSize } = req.body;
+
+    const prompt = `Calculate RV trip cost estimate. Return ONLY valid JSON, no markdown.
+Trip: ${from} to ${to}
+Nights: ${nights}
+RV: ${rvType} (${mpg} mpg, ${tankSize}gal tank)
+Fuel price: $${fuelPrice}/gal
+Camping fee: $${campingFeePerNight}/night
+Group: ${groupSize} people
+
+Estimate driving distance in miles between these two locations.
+Then calculate:
+- Fuel cost (distance * 2 for round trip / mpg * fuel price)
+- Camping fees (nights * fee, range +/-20%)
+- Food estimate ($15-25/person/day)
+- Activities ($20-60/person for the trip)
+- Misc/emergency fund (10% of total)
+
+Return JSON:
+{
+  "estimatedMiles": 450,
+  "fuelMin": 120, "fuelMax": 160,
+  "campingMin": 180, "campingMax": 220,
+  "foodMin": 90, "foodMax": 150,
+  "activitiesMin": 40, "activitiesMax": 120,
+  "miscMin": 50, "miscMax": 80,
+  "totalMin": 480, "totalMax": 730,
+  "tips": ["Book campgrounds in advance for discounts", "Use GasBuddy to find cheapest fuel along route"]
+}`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(clean);
+    res.json(data);
+  } catch (e: any) {
+    console.error('Trip cost error:', e);
+    res.status(500).json({ error: 'Failed to calculate trip cost' });
+  }
+});

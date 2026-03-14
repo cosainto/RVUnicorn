@@ -235,3 +235,107 @@ router.post('/schedule-reminder', async (req, res) => {
     res.status(500).json({ error: 'Failed' });
   }
 });
+
+// POST /api/hitch/jobs/daily-digest
+// Send personalized daily digest to active users
+router.post('/daily-digest', async (req, res) => {
+  try {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Get users who have been active in the last 30 days
+    const activeUsers = await prisma.user.findMany({
+      where: {
+        updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        username: true,
+        campingInterests: true,
+        state: true,
+        events: {
+          where: { startDate: { gte: new Date(), lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } },
+          select: { title: true, startDate: true },
+          take: 1,
+        },
+        userBadges: { select: { id: true }, take: 1 },
+      },
+      take: 100,
+    });
+
+    let digested = 0;
+
+    for (const user of activeUsers) {
+      // Check if already sent today
+      const alreadySent = await prisma.notification.findFirst({
+        where: {
+          userId: user.id,
+          type: 'HITCH_DIGEST',
+          createdAt: { gte: yesterday },
+        }
+      });
+      if (alreadySent) continue;
+
+      // Build personalized digest message
+      const parts: string[] = [];
+
+      if (user.events.length > 0) {
+        const trip = user.events[0];
+        const daysUntil = Math.ceil((new Date(trip.startDate!).getTime() - Date.now()) / 86400000);
+        parts.push(`🏕️ Your trip "${trip.title}" is in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}!`);
+      }
+
+      // Find new campgrounds in their state
+      if (user.state) {
+        const newCampground = await prisma.campground.findFirst({
+          where: { state: { contains: user.state, mode: 'insensitive' } },
+          orderBy: { createdAt: 'desc' },
+          select: { name: true, id: true },
+        });
+        if (newCampground) {
+          parts.push(`🗺️ Check out ${newCampground.name} near you!`);
+        }
+      }
+
+      // Check for friends' new trips
+      const friendTrip = await prisma.event.findFirst({
+        where: {
+          privacy: 'PUBLIC',
+          organizerId: { not: user.id },
+          createdAt: { gte: yesterday },
+          startDate: { gte: new Date() },
+        },
+        select: { title: true, organizer: { select: { username: true } } },
+        orderBy: { attendees: { _count: 'desc' } },
+      });
+      if (friendTrip) {
+        parts.push(`👥 @${friendTrip.organizer.username} just planned "${friendTrip.title}" — check it out!`);
+      }
+
+      if (parts.length === 0) continue;
+
+      const message = `Good morning, ${user.firstName || user.username}! 🦄
+
+${parts.join('
+')}
+
+Have an amazing day on the road!`;
+
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'HITCH_DIGEST',
+          content: message,
+          link: '/basecamp',
+        }
+      });
+
+      digested++;
+    }
+
+    res.json({ success: true, digested });
+  } catch (error) {
+    console.error('Daily digest error:', error);
+    res.status(500).json({ error: 'Failed to send digest' });
+  }
+});

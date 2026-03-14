@@ -13,6 +13,7 @@ import DraggableBanner from '../components/DraggableBanner';
 import HitchPackingSuggestions from '../components/HitchPackingSuggestions';
 import HitchMealSuggestions from '../components/HitchMealSuggestions';
 import HitchTripSummary from '../components/HitchTripSummary';
+import HitchTripCostEstimator from '../components/HitchTripCostEstimator';
 import TripPlannerTab from '../components/TripPlannerTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
@@ -880,6 +881,17 @@ export default function EventDetailPage() {
             </div>
           )}
 
+          {activeTab === 'details' && event && (
+            <div className="mt-4">
+              <HitchTripCostEstimator
+                eventId={event.id}
+                destination={event.campground?.name || event.location}
+                startDate={event.startDate}
+                endDate={event.endDate}
+              />
+            </div>
+          )}
+          {activeTab === 'trip_placeholder_' && null}
           {activeTab === 'trip' && (
             <div className="space-y-4">
               <TripPlannerTab
