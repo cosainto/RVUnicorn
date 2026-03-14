@@ -1667,6 +1667,7 @@ export default function CampgroundDetailPage() {
 
           {/* Events Tab */}
           {activeTab === 'events' && (
+            <>
             <LocationEventsCalendar
               locationId={campground.id}
               locationType="campground"
@@ -1682,6 +1683,7 @@ export default function CampgroundDetailPage() {
                 </div>
               )) : <div className="text-center py-12 text-gray-500"><Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No upcoming events</p></div>}
             </div>
+            </>
           )}
 
           {/* Photos Tab */}
