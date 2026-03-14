@@ -100,7 +100,7 @@ export default function Navbar() {
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
     { to: '/feed', icon: Flame, label: 'Feed' },
     { to: '/events', icon: Calendar, label: 'Trips' },
-    { to: '/hitch', icon: null, label: 'Hitch', isHitch: true },
+    { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
     { to: '/itinerary', icon: Map, label: 'Itinerary' },
     { to: '/travel', icon: Map, label: 'Travel' },
   ];
@@ -128,7 +128,8 @@ export default function Navbar() {
 
             {/* Primary Nav */}
             <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
-              {primaryLinks.map(({ to, icon: Icon, label }) => {
+              {primaryLinks.map(({ to, icon: Icon, label, ...rest }) => {
+                const isHitch = (rest as any).isHitch;
                 const active = isActive(to);
                 return (
                   <Link key={to} to={to} className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${to === '/hitch' ? 'bg-gradient-to-r from-primary-50 to-purple-50 text-primary-700' : ''}`}
@@ -139,7 +140,7 @@ export default function Navbar() {
                     onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}}
                     onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {isHitch ? <img src="/hitch.png" className="w-5 h-5 rounded-full object-cover flex-shrink-0" alt="Hitch" /> : <Icon className="w-4 h-4 flex-shrink-0" />}
                     <span>{label}</span>
                     {active && (
                       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: '#f59e0b' }} />
