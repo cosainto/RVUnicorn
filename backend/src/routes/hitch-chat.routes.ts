@@ -319,7 +319,6 @@ router.post('/find-similar-campground', async (req: any, res) => {
     const campgrounds = await prisma.campground.findMany({
       where: {
         state: { contains: targetState, mode: 'insensitive' },
-        verificationStatus: 'VERIFIED',
       },
       select: {
         id: true, name: true, description: true, state: true,
@@ -861,7 +860,6 @@ router.get('/hidden-gems', async (req: any, res) => {
       where: {
         ...(state ? { state: { contains: state as string, mode: 'insensitive' } } : {}),
         googleRating: { gte: 4.2 },
-        verificationStatus: 'VERIFIED',
       },
       select: {
         id: true, name: true, state: true, city: true, imageUrl: true,
