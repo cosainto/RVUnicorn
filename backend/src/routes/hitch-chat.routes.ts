@@ -309,8 +309,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
 
     const campgroundList = campgrounds.map((c, i) =>
       `${i + 1}. ${c.name} in ${c.city}, ${c.state} (rating: ${c.rating || 'unrated'})`
-    ).join('
-');
+    ).join('\n');
 
     const prompt = `A user loves "${campgroundName}" and wants similar campgrounds in ${targetState}.
 User preferences: ${preferences.join(', ') || 'similar vibe and amenities'}
