@@ -147,3 +147,46 @@ router.post('/scrape', authenticateToken, async (req: any, res) => {
     res.status(500).json({ error: 'Failed to submit' });
   }
 });
+
+// POST /api/harvest-hosts/:id/claim
+router.post('/:id/claim', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const host = await (prisma as any).harvestHost.findUnique({ where: { id } });
+    if (!host) return res.status(404).json({ error: 'Not found' });
+    if (host.claimedByUserId) return res.status(400).json({ error: 'Already claimed' });
+    const updated = await (prisma as any).harvestHost.update({
+      where: { id },
+      data: { claimedByUserId: userId }
+    });
+    // Notify admin
+    await prisma.notification.create({
+      data: {
+        userId: 'cmlpeyk82005s3qause3sws7y',
+        type: 'SYSTEM',
+        content: `New host claim: "${host.name}" claimed by user ${userId}`,
+        link: '/admin',
+      }
+    }).catch(() => null);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to claim' });
+  }
+});
+
+// PUT /api/harvest-hosts/:id - Update host (owner or admin only)
+router.put('/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const host = await (prisma as any).harvestHost.findUnique({ where: { id } });
+    if (!host) return res.status(404).json({ error: 'Not found' });
+    const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
+    if (host.claimedByUserId !== userId && !isAdmin) return res.status(403).json({ error: 'Not authorized' });
+    const updated = await (prisma as any).harvestHost.update({ where: { id }, data: req.body });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update' });
+  }
+});

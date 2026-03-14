@@ -3521,44 +3521,75 @@ model OvernightStopUpdate {
 }
 
 model HarvestHost {
-  id                 String              @id @default(cuid())
-  name               String
-  hostType           String // WINERY, BREWERY, FARM, DISTILLERY, RANCH, MUSEUM, OTHER
-  description        String?
-  address            String
-  city               String?
-  state              String?
-  latitude           Float
-  longitude          Float
-  website            String?
-  phone              String?
-  imageUrl           String?
-  amenities          String[]
-  maxRvLength        Int?
-  maxRvs             Int?
-  hookups            Boolean             @default(false)
-  requiresMembership Boolean             @default(true)
-  isVerified         Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  reviews            HarvestHostReview[]
-  pitStops           PitStop[]
+  id                    String              @id @default(cuid())
+  name                  String
+  hostType              String
+  description           String?
+  hostStory             String?
+  address               String
+  city                  String?
+  state                 String?
+  latitude              Float
+  longitude             Float
+  website               String?
+  phone                 String?
+  imageUrl              String?
+  photos                String[]            @default([])
+  amenities             String[]            @default([])
+  activityTags          String[]            @default([])
+  vibeScores            String[]            @default([])
+  maxRvLength           Int?
+  maxRvs                Int?
+  hookups               Boolean             @default(false)
+  requiresMembership    Boolean             @default(true)
+  isVerified            Boolean             @default(false)
+  status                String              @default("PENDING")
+  networkType           String              @default("INDEPENDENT")
+  claimedByUserId       String?
+  surfaceType           String?
+  levelness             Int?
+  turnaroundAvailable   Boolean             @default(false)
+  bigRigFriendly        Boolean             @default(false)
+  selfContainedRequired Boolean             @default(false)
+  familyFriendly        Boolean             @default(false)
+  petPolicy             String?
+  quietHours            String?
+  maxNights             Int?                @default(1)
+  arrivalWindow         String?
+  departureTime         String?
+  generatorPolicy       String?
+  reservationType       String              @default("REQUEST")
+  checkInInstructions   String?
+  supportMessage        String?
+  suggestedPurchase     String?
+  storeHours            String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  reviews               HarvestHostReview[]
+  pitStops              PitStop[]
 
   @@index([latitude, longitude])
   @@index([state])
   @@index([hostType])
+  @@index([claimedByUserId])
+  @@index([status])
 }
 
 model HarvestHostReview {
-  id        String      @id @default(cuid())
-  hostId    String
-  userId    String
-  rating    Int
-  content   String?
-  visitDate DateTime?
-  createdAt DateTime    @default(now())
-  host      HarvestHost @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(cuid())
+  hostId              String
+  userId              String
+  rating              Int
+  hostFriendliness    Int?
+  experienceQuality   Int?
+  parkingConvenience  Int?
+  overallVibe         Int?
+  content             String?
+  tags                String[]    @default([])
+  visitDate           DateTime?
+  createdAt           DateTime    @default(now())
+  host                HarvestHost @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([hostId, userId])
   @@index([hostId])

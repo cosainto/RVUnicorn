@@ -40,6 +40,7 @@ import GroupDetailPage from './pages/GroupDetailPage';
 import GroupEditPage from './pages/GroupEditPage';
 import GroupInvitesPage from './pages/GroupInvitesPage';
 import CampgroundDetailPage from './pages/CampgroundDetailPage';
+import HostDetailPage from './pages/HostDetailPage';
 import CreatorPage from './pages/CreatorPage';
 import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
