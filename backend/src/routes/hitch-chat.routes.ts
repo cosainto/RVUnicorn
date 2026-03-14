@@ -101,7 +101,7 @@ ${contextData ? `\nRelevant locations found: ${contextData}` : ''}
 Keep responses concise (2-4 paragraphs max). If you found relevant locations above, reference them naturally in your response. Always end with an actionable suggestion.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 500,
       system: systemPrompt,
       messages: [
@@ -155,7 +155,7 @@ Include 6-8 categories like: Kitchen & Food, Bedding & Comfort, Clothing, Safety
 Each category should have 4-8 specific, practical items. Be specific to RV travel, not generic camping.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -198,7 +198,7 @@ Return ONLY valid JSON in this exact format, no markdown:
 }`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -234,7 +234,7 @@ Trip details:
 Write a 3-4 paragraph recap in first person plural ("We..."). Be warm, fun, and capture the spirit of RV camping. Include specific details from the trip info. End with a teaser for the next adventure. Keep it under 250 words.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -270,7 +270,7 @@ Return ONLY valid JSON, no markdown:
 Make captions fun, shareable, and RV/camping themed. Mix emojis naturally. Vary the tone - one heartfelt, one funny, one adventurous.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -329,7 +329,7 @@ Return ONLY valid JSON, no markdown:
 Pick the top 3 best matches and explain why each is similar. Be specific.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -371,7 +371,7 @@ Be specific to the location. Do not make up specific details not implied by the 
 Return only the description text, no quotes, no markdown.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     });
