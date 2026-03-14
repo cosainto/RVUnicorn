@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Send, Loader, MapPin, Star } from 'lucide-react';
 import api from '../services/api';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 interface Message {
@@ -36,6 +37,13 @@ export default function HitchAIAssistant() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userContext, setUserContext] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      api.get('/hitch/user-context').then(r => setUserContext(r.data)).catch(() => {});
+    }
+  }, [user]);
 
   const sendMessage = async (text?: string) => {
     const msg = text || input;
@@ -50,6 +58,7 @@ export default function HitchAIAssistant() {
       const { data } = await api.post('/hitch/chat', {
         message: msg,
         history: newMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+        userContext,
       });
 
       setMessages(prev => [...prev, {

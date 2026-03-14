@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // POST /api/hitch/chat
 router.post('/chat', async (req: any, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], userContext } = req.body;
 
     // Search for relevant locations to include as context
     const searchTerms = message.toLowerCase();
@@ -86,19 +86,40 @@ router.post('/chat', async (req: any, res) => {
       }
     }
 
+    // Build user context string
+    let userContextStr = '';
+    if (userContext?.name) {
+      userContextStr += `\nUser: ${userContext.name} (@${userContext.username})`;
+      if (userContext.homeState) userContextStr += `, home state: ${userContext.homeState}`;
+      if (userContext.rv?.type) userContextStr += `\nRV: ${userContext.rv.year || ''} ${userContext.rv.make || ''} ${userContext.rv.model || ''} ${userContext.rv.type || ''} (${userContext.rv.length || '?'}ft, ${userContext.rv.fuelType || 'gas'})`;
+      if (userContext.interests?.length) userContextStr += `\nCamping interests: ${userContext.interests.join(', ')}`;
+      if (userContext.badges?.earned?.length) userContextStr += `\nBadges earned (${userContext.badges.totalEarned}): ${userContext.badges.earned.slice(0,5).join(', ')}`;
+      if (userContext.badges?.suggestions?.length) userContextStr += `\nBadges they haven't earned yet: ${userContext.badges.suggestions.map((b: any) => b.name).join(', ')}`;
+      if (userContext.visitedStates?.length) userContextStr += `\nStates visited: ${userContext.visitedStates.join(', ')}`;
+      if (userContext.upcomingTrips?.length) userContextStr += `\nUpcoming trips: ${userContext.upcomingTrips.map((t: any) => t.title).join(', ')}`;
+      if (userContext.similarUsers?.length) userContextStr += `\nUsers with similar interests: ${userContext.similarUsers.map((u: any) => `@${u.username} (shares: ${u.sharedInterests?.join(', ')})`).join(', ')}`;
+      if (userContext.popularTrips?.length) userContextStr += `\nPopular public trips they might enjoy: ${userContext.popularTrips.map((t: any) => `"${t.title}" at ${t.campground || 'TBD'} by @${t.organizer} (${t.attendeeCount} attendees)`).join('; ')}`;
+    }
+
     const systemPrompt = `You are Hitch, RVUnicorn's friendly AI travel companion for RV enthusiasts. You help users:
 - Plan RV routes with overnight stops
 - Find campgrounds, RV parks, and free overnight spots
 - Discover unique host locations (wineries, farms, breweries) that welcome RVers
 - Get RV-specific travel tips (road restrictions, height limits, hookups, dump stations)
-- Plan meals, activities, and adventures along their route
+- Answer personal questions about the user's badges, trips, and fellow campers
+- Suggest trips other users have planned that they might enjoy
+- Help with fuel planning based on RV type and distance
 
 Your personality: enthusiastic, knowledgeable about RV travel, friendly, and a little playful. Use camping/RV metaphors occasionally.
 
 Platform context: You have access to RVUnicorn's database of 24,000+ campgrounds, harvest host locations, and free overnight spots.
+${userContextStr ? `\nPersonal context for this user:${userContextStr}` : ''}
 ${contextData ? `\nRelevant locations found: ${contextData}` : ''}
 
-Keep responses concise (2-4 paragraphs max). If you found relevant locations above, reference them naturally in your response. Always end with an actionable suggestion.`;
+For fuel questions: estimate based on RV type (Class A: 7-10mpg, Class B: 18-25mpg, Class C: 10-15mpg, Travel Trailer: depends on tow vehicle 10-15mpg). Ask for tank size if needed.
+For travel time questions: estimate average RV travel speed of 55-60mph, add 15-20% for stops/traffic.
+
+Keep responses helpful and specific. Reference the user by name when you have it. If they ask about their badges, trips, or similar users, use the context provided. Always end with an actionable suggestion.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -297,7 +318,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
       },
       select: {
         id: true, name: true, description: true, state: true,
-        city: true, rating: true, amenities: true,
+        city: true, googleRating: true, amenities: true,
       },
       take: 20,
       orderBy: { rating: 'desc' },
@@ -387,5 +408,132 @@ Return only the description text, no quotes, no markdown.`;
     res.json({ description });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to enrich campground' });
+  }
+});
+
+// GET /api/hitch/user-context - Get current user's context for Hitch
+router.get('/user-context', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.json({});
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        username: true,
+        state: true,
+        campingInterests: true,
+        rvType: true,
+        rvLength: true,
+        rvMake: true,
+        rvModel: true,
+        rvYear: true,
+        rvFuelType: true,
+        userBadges: {
+          include: { badge: { select: { name: true, category: true } } },
+          take: 20,
+        },
+      }
+    });
+
+    if (!user) return res.json({});
+
+    // Get user's upcoming trips
+    const trips = await prisma.event.findMany({
+      where: { organizerId: userId, startDate: { gte: new Date() } },
+      select: { id: true, title: true, startDate: true, campground: { select: { name: true, state: true } } },
+      take: 5,
+      orderBy: { startDate: 'asc' },
+    });
+
+    // Get user's visited states
+    const stateVisits = await prisma.stateVisit.findMany({
+      where: { userId },
+      select: { state: true },
+      take: 20,
+    });
+
+    // Get all badges for suggestions
+    const allBadges = await prisma.badge.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, description: true, category: true },
+      take: 30,
+    });
+
+    const earnedBadgeIds = new Set(user.userBadges.map((ub: any) => ub.badge.name));
+    const unearnedBadges = allBadges.filter(b => !earnedBadgeIds.has(b.name)).slice(0, 8);
+
+    // Get users with similar interests
+    const similarUsers = user.campingInterests?.length > 0
+      ? await prisma.user.findMany({
+          where: {
+            id: { not: userId },
+            campingInterests: { hasSome: (user.campingInterests as string[]) },
+          },
+          select: { username: true, firstName: true, campingInterests: true, state: true },
+          take: 5,
+        })
+      : [];
+
+    // Get popular public trips
+    const popularTrips = await prisma.event.findMany({
+      where: {
+        privacy: 'PUBLIC',
+        organizerId: { not: userId },
+        startDate: { gte: new Date() },
+      },
+      select: {
+        id: true, title: true, startDate: true,
+        campground: { select: { name: true, state: true } },
+        organizer: { select: { username: true } },
+        attendees: { select: { id: true } },
+      },
+      orderBy: { attendees: { _count: 'desc' } },
+      take: 5,
+    });
+
+    res.json({
+      name: user.firstName,
+      username: user.username,
+      homeState: user.state,
+      interests: user.campingInterests || [],
+      rv: {
+        type: user.rvType,
+        length: user.rvLength,
+        make: user.rvMake,
+        model: user.rvModel,
+        year: user.rvYear,
+        fuelType: user.rvFuelType,
+      },
+      badges: {
+        earned: user.userBadges.map((ub: any) => ub.badge.name),
+        totalEarned: user.userBadges.length,
+        suggestions: unearnedBadges.map(b => ({ name: b.name, description: b.description })),
+      },
+      visitedStates: stateVisits.map(sv => sv.state),
+      upcomingTrips: trips,
+      similarUsers: similarUsers.map(u => ({
+        username: u.username,
+        name: u.firstName,
+        sharedInterests: (u.campingInterests as string[] || []).filter((i: string) =>
+          (user.campingInterests as string[] || []).includes(i)
+        ),
+        state: u.state,
+      })),
+      popularTrips: popularTrips.map(t => ({
+        id: t.id,
+        title: t.title,
+        campground: t.campground?.name,
+        state: t.campground?.state,
+        organizer: t.organizer.username,
+        attendeeCount: t.attendees.length,
+        startDate: t.startDate,
+      })),
+    });
+  } catch (e: any) {
+    console.error('User context error:', e.message);
+    res.json({});
   }
 });
