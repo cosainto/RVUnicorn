@@ -12,6 +12,8 @@ import DraggableBanner from '../components/DraggableBanner';
 import CheckInButton from '../components/CheckInButton';
 import HitchCampgroundChat from '../components/HitchCampgroundChat';
 import CampgroundVibeCard from '../components/CampgroundVibeCard';
+import CampersLikeYou from '../components/CampersLikeYou';
+import HitchRigCheck from '../components/HitchRigCheck';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -1737,7 +1739,11 @@ export default function CampgroundDetailPage() {
 
           {/* Stickers Tab */}
           {activeTab === 'vibe' && campground && (
-            <CampgroundVibeCard campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
+            <div className="space-y-4">
+              <CampgroundVibeCard campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
+              <HitchRigCheck campgroundId={campground.id} campgroundName={campground.name} />
+              <CampersLikeYou />
+            </div>
           )}
           {activeTab === 'ask-hitch' && campground && (
             <HitchCampgroundChat
