@@ -98,8 +98,12 @@ router.post('/chat', async (req: any, res) => {
       if (userContext.badges?.suggestions?.length) userContextStr += `\nBadges they haven't earned yet: ${userContext.badges.suggestions.map((b: any) => b.name).join(', ')}`;
       if (userContext.visitedStates?.length) userContextStr += `\nStates visited: ${userContext.visitedStates.join(', ')}`;
       if (userContext.upcomingTrips?.length) userContextStr += `\nUpcoming trips: ${userContext.upcomingTrips.map((t: any) => t.title).join(', ')}`;
-      if (userContext.similarUsers?.length) userContextStr += `\nUsers with similar interests: ${userContext.similarUsers.map((u: any) => `@${u.username} (shares: ${u.sharedInterests?.join(', ')})`).join(', ')}`;
-      if (userContext.popularTrips?.length) userContextStr += `\nPopular public trips they might enjoy: ${userContext.popularTrips.map((t: any) => `"${t.title}" at ${t.campground || 'TBD'} by @${t.organizer} (${t.attendeeCount} attendees)`).join('; ')}`;
+      if (userContext.similarUsers?.length) userContextStr += `\nUsers with similar camping interests: ${userContext.similarUsers.map((u: any) => `@${u.username} (shares: ${u.sharedInterests?.join(', ')})`).join(', ')}`;
+      if (userContext.popularTrips?.length) userContextStr += `\nMost popular public trips: ${userContext.popularTrips.map((t: any) => `"${t.title}" at ${t.campground || 'TBD'} by @${t.organizer} (${t.attendeeCount} attendees)`).join('; ')}`;
+      if (userContext.topCampgrounds?.length) userContextStr += `\nMost favorited campgrounds on RVUnicorn: ${userContext.topCampgrounds.map((c: any) => `${c.name} in ${c.location} (${c.followers} followers, ${c.reviews} reviews)`).join(', ')}`;
+      if (userContext.friends?.length) userContextStr += `\nUser's friends: ${userContext.friends.map((f: any) => `@${f.username}`).join(', ')}`;
+      if (userContext.friendTrips?.length) userContextStr += `\nFriends' upcoming trips: ${userContext.friendTrips.map((t: any) => `@${t.organizer} is going to "${t.title}" at ${t.campground || 'TBD'} on ${new Date(t.startDate).toLocaleDateString()}`).join('; ')}`;
+      if (userContext.friendCheckIns?.length) userContextStr += `\nFriends currently checked in: ${userContext.friendCheckIns.map((c: any) => `${c.user} is at ${c.location}`).join(', ')}`;
     }
 
     const systemPrompt = `You are Hitch, RVUnicorn's friendly AI travel companion for RV enthusiasts. You help users:
@@ -495,6 +499,57 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
       take: 5,
     });
 
+    // Get most favorited/followed campgrounds
+    const topCampgrounds = await prisma.campground.findMany({
+      select: {
+        id: true, name: true, state: true, city: true, imageUrl: true,
+        _count: { select: { followers: true, reviews: true, wishlists: true } }
+      },
+      orderBy: { followers: { _count: 'desc' } },
+      take: 10,
+    });
+
+    // Get friends (people the user follows)
+    const following = await prisma.friendship.findMany({
+      where: { requesterId: userId, status: 'ACCEPTED' },
+      select: { recipient: { select: { id: true, username: true, firstName: true } } },
+      take: 20,
+    }).catch(() => []);
+
+    const friendIds = following.map((f: any) => f.recipient.id);
+
+    // Get friends' upcoming trips
+    const friendTrips = friendIds.length > 0 ? await prisma.event.findMany({
+      where: {
+        organizerId: { in: friendIds },
+        startDate: { gte: new Date() },
+        privacy: { not: 'PRIVATE' },
+      },
+      select: {
+        id: true, title: true, startDate: true,
+        campground: { select: { name: true, state: true } },
+        organizer: { select: { username: true, firstName: true } },
+        attendees: { select: { id: true } },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 10,
+    }) : [];
+
+    // Get friends' recent check-ins
+    const friendCheckIns = friendIds.length > 0 ? await prisma.checkIn.findMany({
+      where: {
+        userId: { in: friendIds },
+        isActive: true,
+      },
+      include: {
+        user: { select: { username: true, firstName: true } },
+        campground: { select: { name: true, state: true } },
+        harvestHost: { select: { name: true } },
+        overnightSpot: { select: { name: true } },
+      },
+      take: 5,
+    }) : [];
+
     res.json({
       name: user.firstName,
       username: user.username,
@@ -531,6 +586,30 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         organizer: t.organizer.username,
         attendeeCount: t.attendees.length,
         startDate: t.startDate,
+      })),
+      topCampgrounds: topCampgrounds.map(c => ({
+        id: c.id,
+        name: c.name,
+        location: [c.city, c.state].filter(Boolean).join(', '),
+        followers: c._count.followers,
+        reviews: c._count.reviews,
+        wishlists: c._count.wishlists,
+      })),
+      friends: following.map((f: any) => ({ username: f.recipient.username, name: f.recipient.firstName })),
+      friendTrips: friendTrips.map(t => ({
+        id: t.id,
+        title: t.title,
+        campground: t.campground?.name,
+        state: t.campground?.state,
+        organizer: t.organizer.username,
+        organizerName: t.organizer.firstName,
+        attendeeCount: t.attendees.length,
+        startDate: t.startDate,
+      })),
+      friendCheckIns: friendCheckIns.map(c => ({
+        user: c.user.firstName || c.user.username,
+        location: c.campground?.name || (c.harvestHost as any)?.name || (c.overnightSpot as any)?.name,
+        type: c.campground ? 'campground' : c.harvestHost ? 'host' : 'spot',
       })),
     });
   } catch (e: any) {
