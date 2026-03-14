@@ -117,8 +117,8 @@ Keep responses concise (2-4 paragraphs max). If you found relevant locations abo
       suggestions: suggestions.slice(0, 4),
     });
   } catch (e: any) {
-    console.error('Hitch chat error:', e);
-    res.status(500).json({ error: 'Hitch is taking a nap. Try again in a moment! 🦄' });
+    console.error('Hitch chat error:', e?.message, e?.status, e?.error);
+    res.status(500).json({ error: e?.message || 'Hitch chat failed', details: e?.status });
   }
 });
 
