@@ -24,11 +24,12 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+
   const [searchZip, setSearchZip] = useState('');
   const [searchState, setSearchState] = useState('');
   const [searchRadius, setSearchRadius] = useState('50');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, content: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,11 +38,11 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
     city: '', state: campgroundState || '', latitude: '', longitude: '',
     website: '', phone: '', maxRvLength: '', hookups: false, requiresMembership: true,
   });
-  const [listingMode, setListingMode] = useState<'url' | 'manual'>('url');
-  const [scrapeUrl, setScrapeUrl] = useState('');
-  const [scraping, setScraping] = useState(false);
-  const [scrapeError, setScrapeError] = useState('');
-  const [networkType, setNetworkType] = useState('HARVEST_HOSTS');
+
+
+
+
+
 
   const NETWORKS = [
     { id: 'HARVEST_HOSTS', label: 'Harvest Hosts', url: 'https://harvesthosts.com', icon: '🍷', color: 'bg-green-100 text-green-800 border-green-300' },
@@ -145,41 +146,10 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
             Wineries, farms, driveways &amp; more that welcome RV overnight stays
           </p>
         </div>
-        {user && (
-          <button onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
-            <Plus className="w-4 h-4" /> List Your Location
-          </button>
-        )}
+
       </div>
 
-      {/* Network partner banner */}
-      {!showAddForm && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-4">
-          <p className="text-sm font-bold text-gray-800 mb-1">🦄 Are you an RV host?</p>
-          <p className="text-sm text-gray-600 mb-3">
-            RVUnicorn matches your location with thousands of RV travelers — whether they're looking for a short overnight stop or a destination along their route. List your spot and get discovered.
-          </p>
-          <div className="grid grid-cols-5 gap-1.5 mb-3 sm:grid-cols-5 grid-cols-3">
-            {NETWORKS.map(n => (
-              n.url ? (
-                <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer"
-                  className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-semibold text-center ${n.color} hover:opacity-80 transition`}>
-                  <span>{n.icon}</span><span className="truncate">{n.label}</span>
-                </a>
-              ) : (
-                <span key={n.id} className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-semibold text-center ${n.color}`}>
-                  <span>{n.icon}</span><span className="truncate">{n.label}</span>
-                </span>
-              )
-            ))}
-          </div>
-          <Link to="/hosts/new" className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition mb-3">
-            🏡 Create My Host Page
-          </Link>
-          <p className="text-xs text-gray-500">Already a member of one of these networks? Click <strong>List Your Location</strong> above and paste your listing URL — we'll do the rest.</p>
-        </div>
-      )}
+
 
       {/* Add host form */}
       {showAddForm && (
@@ -502,6 +472,15 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
           })}
         </div>
       )}
+      {/* Subtle host signup footer */}
+      <div className="text-center pt-4 pb-2 border-t border-gray-100 mt-4">
+        <p className="text-xs text-gray-400">
+          Own a winery, farm, brewery or unique property?{' '}
+          <Link to="/hosts/new" className="text-green-600 hover:underline font-medium">
+            List your location as an RV host →
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
