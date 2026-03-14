@@ -319,7 +319,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
     const campgrounds = await prisma.campground.findMany({
       where: {
         state: { contains: targetState, mode: 'insensitive' },
-        verificationStatus: 'APPROVED',
+        verificationStatus: 'VERIFIED',
       },
       select: {
         id: true, name: true, description: true, state: true,
@@ -861,7 +861,7 @@ router.get('/hidden-gems', async (req: any, res) => {
       where: {
         ...(state ? { state: { contains: state as string, mode: 'insensitive' } } : {}),
         googleRating: { gte: 4.2 },
-        verificationStatus: 'APPROVED',
+        verificationStatus: 'VERIFIED',
       },
       select: {
         id: true, name: true, state: true, city: true, imageUrl: true,
@@ -1012,7 +1012,7 @@ Return ONLY valid JSON:
       const campgrounds = await prisma.campground.findMany({
         where: {
           state: { contains: stop.state, mode: 'insensitive' },
-          ...(rvLength ? { maxRvLength: { gte: rvLength - 5 } } : {}),
+          ...(rvLength ? { maxRvLength: { gte: parseInt(String(rvLength)) - 5 } } : {}),
           isApproved: true,
         },
         select: { id: true, name: true, city: true, state: true, imageUrl: true, googleRating: true, pricePerNight: true },
