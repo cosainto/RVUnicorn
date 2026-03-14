@@ -623,6 +623,7 @@ export default function EventDetailPage() {
     { id: 'meals', label: 'Meal Plan', icon: ChefHat },
     { id: 'pack', label: 'Pack List', icon: Package },
     { id: 'packup', label: 'Pack Up', icon: Check },
+    { id: 'cost', label: '💰 Trip Cost', icon: null },
   ];
 
   return (
@@ -762,7 +763,7 @@ export default function EventDetailPage() {
           <div className="flex gap-4 px-6 overflow-x-auto">
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 py-4 px-2 border-b-2 transition whitespace-nowrap ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                <tab.icon className="w-5 h-5" />{tab.label}
+                {tab.icon && <tab.icon className="w-5 h-5" />}{tab.label}
               </button>
             ))}
           </div>
@@ -881,17 +882,6 @@ export default function EventDetailPage() {
             </div>
           )}
 
-          {activeTab === 'details' && event && (
-            <div className="mt-4">
-              <HitchTripCostEstimator
-                eventId={event.id}
-                destination={event.campground?.name || event.location}
-                startDate={event.startDate}
-                endDate={event.endDate}
-              />
-            </div>
-          )}
-          {activeTab === 'trip_placeholder_' && null}
           {activeTab === 'trip' && (
             <div className="space-y-4">
               <TripPlannerTab
@@ -1084,6 +1074,16 @@ export default function EventDetailPage() {
             </div>
           )}
 
+          {activeTab === 'cost' && (
+            <div className="p-4">
+              <HitchTripCostEstimator
+                eventId={event.id}
+                destination={event.campground?.name || event.location}
+                startDate={event.startDate}
+                endDate={event.endDate}
+              />
+            </div>
+          )}
           {activeTab === 'schedule' && (
             <div className="space-y-8">
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
