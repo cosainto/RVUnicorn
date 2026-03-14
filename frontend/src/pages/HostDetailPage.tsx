@@ -4,6 +4,17 @@ import { MapPin, Star, Phone, Globe, ArrowLeft, Camera, ChevronLeft, ChevronRigh
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
+
+const HOST_BADGES = {
+  first_night: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773457089/badges/rv_netwrok_1st-night-staying.png',
+  rv_host: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773457090/badges/rv_host_badge.png',
+  top_reviewer: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773457091/badges/top_reviewer_badge.png',
+  brew_hopper: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773457093/badges/brewhopperbadge.png',
+  vineyard_voyager: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773457094/badges/vineyard_voyager_badge.png',
+};
+
+const REVIEWER_BADGE_THRESHOLD = 3;
+
 const VIBE_BADGES: Record<string, string> = {
   'Social Host': '🍷', 'Quiet Farm': '🌾', 'Event Spot': '🎶',
   'Family Friendly': '👨‍👩‍👧', 'Stargazer Paradise': '🌌',
@@ -303,7 +314,38 @@ export default function HostDetailPage() {
           </div>
 
           {/* Not claimed yet */}
-          {!host.claimedByUserId && user && (
+      {user && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <h3 className="font-bold text-gray-900 mb-3">🏅 RVUnicorn Badges</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <img src={HOST_BADGES.first_night} alt="First Night" className="w-14 h-14 object-contain" />
+                  <span className="text-xs text-gray-500 text-center">1st Night Stay</span>
+                </div>
+                {host.hostType === 'BREWERY' && (
+                  <div className="flex flex-col items-center gap-1">
+                    <img src={HOST_BADGES.brew_hopper} alt="Brew Hopper" className="w-14 h-14 object-contain" />
+                    <span className="text-xs text-gray-500 text-center">Brew Hopper</span>
+                  </div>
+                )}
+                {host.hostType === 'WINERY' && (
+                  <div className="flex flex-col items-center gap-1">
+                    <img src={HOST_BADGES.vineyard_voyager} alt="Vineyard Voyager" className="w-14 h-14 object-contain" />
+                    <span className="text-xs text-gray-500 text-center">Vineyard Voyager</span>
+                  </div>
+                )}
+                {host.claimedByUserId === user?.id && (
+                  <div className="flex flex-col items-center gap-1">
+                    <img src={HOST_BADGES.rv_host} alt="RV Host" className="w-14 h-14 object-contain" />
+                    <span className="text-xs text-gray-500 text-center">RV Host</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Check in to earn these badges on your profile!</p>
+            </div>
+          )}
+
+                    {!host.claimedByUserId && user && (
             <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4">
               <p className="text-sm font-bold text-amber-800 mb-1">🏡 Is this your place?</p>
               <p className="text-xs text-amber-700 mb-3">Claim this listing to add photos, update info, and manage your page.</p>
