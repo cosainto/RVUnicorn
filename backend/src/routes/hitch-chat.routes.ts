@@ -1011,7 +1011,6 @@ Return ONLY valid JSON:
         where: {
           state: { contains: stop.state, mode: 'insensitive' },
           ...(rvLength ? { maxRvLength: { gte: parseInt(String(rvLength)) - 5 } } : {}),
-          isApproved: true,
         },
         select: { id: true, name: true, city: true, state: true, imageUrl: true, googleRating: true, pricePerNight: true },
         orderBy: { googleRating: 'desc' },
