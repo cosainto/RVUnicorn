@@ -151,6 +151,36 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
 
 
 
+      {/* Become a Host Banner */}
+      <div className="relative overflow-hidden rounded-2xl mb-2">
+        <div className="absolute inset-0">
+          <img
+            src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773413639/rv-host-networks-icon.png"
+            alt="Become a Host"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-green-900/85 to-green-700/60" />
+        </div>
+        <div className="relative p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold text-green-300 uppercase tracking-widest mb-1">For Host Properties</p>
+            <h3 className="text-xl font-bold text-white mb-1">Own a winery, farm, or unique property?</h3>
+            <p className="text-sm text-green-100 max-w-md">
+              List your location on RVUnicorn and get discovered by thousands of RV travelers looking for unique overnight stops along their route.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {['🍷 Wineries', '🍺 Breweries', '🌾 Farms', '🐄 Ranches', '🎪 Event Venues', '🌿 Any Unique Spot'].map(tag => (
+                <span key={tag} className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full font-medium">{tag}</span>
+              ))}
+            </div>
+          </div>
+          <Link to="/hosts/new"
+            className="shrink-0 px-6 py-3 bg-white text-green-800 font-bold text-sm rounded-xl hover:bg-green-50 transition shadow-lg whitespace-nowrap">
+            🏡 Become a Host
+          </Link>
+        </div>
+      </div>
+
       {/* Add host form */}
       {showAddForm && (
         <div className="bg-green-50 rounded-xl border border-green-200 p-4 space-y-3">
@@ -472,15 +502,7 @@ export default function HarvestHostsTab({ campgroundLat, campgroundLng, campgrou
           })}
         </div>
       )}
-      {/* Subtle host signup footer */}
-      <div className="text-center pt-4 pb-2 border-t border-gray-100 mt-4">
-        <p className="text-xs text-gray-400">
-          Own a winery, farm, brewery or unique property?{' '}
-          <Link to="/hosts/new" className="text-green-600 hover:underline font-medium">
-            List your location as an RV host →
-          </Link>
-        </p>
-      </div>
+
     </div>
   );
 }
