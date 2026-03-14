@@ -44,6 +44,7 @@ import HostDetailPage from './pages/HostDetailPage';
 import OvernightSpotDetailPage from './pages/OvernightSpotDetailPage';
 import CreateHostPage from './pages/CreateHostPage';
 import HitchAIPage from './pages/HitchAIPage';
+import HitchFloatingChat from './components/HitchFloatingChat';
 import CreatorPage from './pages/CreatorPage';
 import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
@@ -402,7 +403,8 @@ function App() {
         <ToastProvider>
         <AppContent />
       </ToastProvider>
-      </Router>
+        <HitchFloatingChat />
+    </Router>
     </AuthProvider>
   );
 }
