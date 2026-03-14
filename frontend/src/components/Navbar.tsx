@@ -100,6 +100,7 @@ export default function Navbar() {
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
     { to: '/feed', icon: Flame, label: 'Feed' },
     { to: '/events', icon: Calendar, label: 'Trips' },
+    { to: '/hitch', icon: null, label: '🦄 Hitch AI' },
     { to: '/itinerary', icon: Map, label: 'Itinerary' },
     { to: '/travel', icon: Map, label: 'Travel' },
   ];
@@ -130,7 +131,7 @@ export default function Navbar() {
               {primaryLinks.map(({ to, icon: Icon, label }) => {
                 const active = isActive(to);
                 return (
-                  <Link key={to} to={to} className="relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+                  <Link key={to} to={to} className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${to === '/hitch' ? 'bg-gradient-to-r from-primary-50 to-purple-50 text-primary-700' : ''}`}
                     style={{
                       color: active ? '#f59e0b' : 'rgba(255,255,255,0.65)',
                       background: active ? 'rgba(245,158,11,0.12)' : 'transparent',
@@ -372,6 +373,7 @@ export default function Navbar() {
               <MobileLink to="/campgrounds" icon={<Tent className="w-5 h-5" />} label="Campgrounds" active={isActive('/campgrounds')} />
               <MobileLink to="/feed" icon={<Flame className="w-5 h-5" />} label="Feed" active={isActive('/feed')} />
               <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips & Events" active={isActive('/events')} />
+              <MobileLink to="/hitch" icon={<span className="text-xl">🦄</span>} label="Hitch AI" active={isActive('/hitch')} />
               <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel & Routes" active={isActive('/travel')} />
             </MobileSection>
 
