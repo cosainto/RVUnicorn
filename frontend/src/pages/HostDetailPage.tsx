@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Star, Phone, Globe, ArrowLeft, Camera, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import api from '../services/api';
+import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import { useAuth } from '../contexts/AuthContext';
 
 
@@ -195,6 +196,14 @@ export default function HostDetailPage() {
               {host.storeHours && <p className="text-sm text-amber-800 mt-1"><strong>Hours:</strong> {host.storeHours}</p>}
             </div>
           )}
+
+          {/* Events Calendar */}
+          <LocationEventsCalendar
+            locationId={host.id}
+            locationType="host"
+            canManage={isOwner || false}
+            locationName={host.name}
+          />
 
           {/* Reviews */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">

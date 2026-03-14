@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
@@ -1666,6 +1667,12 @@ export default function CampgroundDetailPage() {
 
           {/* Events Tab */}
           {activeTab === 'events' && (
+            <LocationEventsCalendar
+              locationId={campground.id}
+              locationType="campground"
+              canManage={isAdmin || isOwner || false}
+              locationName={campground.name}
+            />
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Upcoming Events</h3>{isAdmin && <button onClick={() => setShowEventModal(true)} className="btn btn-primary btn-sm"><Plus className="w-4 h-4 mr-1" />Create</button>}</div>
               {events.length > 0 ? events.map(e => (

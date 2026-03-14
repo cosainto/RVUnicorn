@@ -211,3 +211,51 @@ router.put('/:id', authenticateToken, async (req: any, res) => {
     res.status(500).json({ error: 'Failed to update' });
   }
 });
+
+// GET /api/harvest-hosts/:id/events
+router.get('/:id/events', async (req: any, res) => {
+  try {
+    const events = await prisma.campgroundEvent.findMany({
+      where: { harvestHostId: req.params.id, startDate: { gte: new Date() } },
+      orderBy: { startDate: 'asc' },
+      include: { createdBy: { select: { id: true, username: true, profilePicture: true } } }
+    });
+    res.json(events);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/harvest-hosts/:id/events
+router.post('/:id/events', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const host = await (prisma as any).harvestHost.findUnique({ where: { id: req.params.id } });
+    if (!host) return res.status(404).json({ error: 'Not found' });
+    const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
+    if (host.claimedByUserId !== userId && !isAdmin) return res.status(403).json({ error: 'Not authorized' });
+    const { title, description, startDate, endDate, location, tags, imageUrl, isRecurring } = req.body;
+    const event = await prisma.campgroundEvent.create({
+      data: {
+        harvestHostId: req.params.id,
+        createdById: userId,
+        title, description, startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        location, tags: tags || [], imageUrl, isRecurring: isRecurring || false,
+      },
+      include: { createdBy: { select: { id: true, username: true, profilePicture: true } } }
+    });
+    res.json(event);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/harvest-hosts/:id/events/:eventId
+router.delete('/:id/events/:eventId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
+    const event = await prisma.campgroundEvent.findUnique({ where: { id: req.params.eventId } });
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    if (event.createdById !== userId && !isAdmin) return res.status(403).json({ error: 'Not authorized' });
+    await prisma.campgroundEvent.delete({ where: { id: req.params.eventId } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
