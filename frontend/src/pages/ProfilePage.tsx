@@ -549,8 +549,9 @@ const [editForm, setEditForm] = useState({
                   )}
                 </h1>
                 <p className="text-gray-600">@{profile.username}</p>
-              <div className="mt-2">
+              <div className="mt-2 space-y-2">
                 <CurrentlyAtBadge userId={profile.id} isOwnProfile={isOwnProfile} />
+                <CommunityTrustBadge userId={profile.id} />
               </div>
                 
                 {/* Creator Page Link */}

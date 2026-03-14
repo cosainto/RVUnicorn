@@ -849,3 +849,120 @@ router.post('/feedback', async (req: any, res) => {
     res.status(500).json({ error: 'Failed to log feedback' });
   }
 });
+
+
+// GET /api/hitch/hidden-gems?state=&interests=
+// Find under-discovered campgrounds with high satisfaction
+router.get('/hidden-gems', async (req: any, res) => {
+  try {
+    const { state, limit = 10 } = req.query;
+
+    // Find campgrounds with high ratings but low follower counts (hidden gems)
+    const campgrounds = await prisma.campground.findMany({
+      where: {
+        ...(state ? { state: { contains: state as string, mode: 'insensitive' } } : {}),
+        googleRating: { gte: 4.2 },
+        isApproved: true,
+      },
+      select: {
+        id: true, name: true, state: true, city: true, imageUrl: true,
+        googleRating: true, googleReviewCount: true, maxRvLength: true,
+        isPetFriendly: true, isBigRigFriendly: true, pricePerNight: true,
+        description: true,
+        _count: { select: { followers: true, reviews: true } }
+      },
+      orderBy: [
+        { googleRating: 'desc' },
+      ],
+      take: 50,
+    });
+
+    // Score each campground: high rating + low followers = hidden gem
+    const scored = campgrounds
+      .map(c => ({
+        ...c,
+        gemScore: (c.googleRating || 0) * 20 - Math.log(Math.max(c._count.followers + 1, 1)) * 5,
+      }))
+      .sort((a, b) => b.gemScore - a.gemScore)
+      .slice(0, parseInt(limit as string));
+
+    // Use AI to add personality to top gems
+    if (scored.length > 0) {
+      const prompt = `These are hidden gem campgrounds (high rated but not widely discovered).
+Write a one-line "why it's special" for each. Return ONLY valid JSON:
+{
+  "gems": [
+    { "index": 0, "tagline": "A secret riverside escape that regulars keep to themselves" }
+  ]
+}
+Campgrounds:
+${scored.slice(0, 5).map((c, i) => `${i}. ${c.name} in ${c.city}, ${c.state} (${c.googleRating}★, ${c._count.followers} followers)`).join('\n')}`;
+
+      try {
+        const response = await anthropic.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+        const aiData = JSON.parse(text.replace(/```json|```/g, '').trim());
+        aiData.gems?.forEach((g: any) => {
+          if (scored[g.index]) (scored[g.index] as any).tagline = g.tagline;
+        });
+      } catch {}
+    }
+
+    res.json({ gems: scored });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/hitch/trust-score/:userId
+// Calculate community trust score for a reviewer
+router.get('/trust-score/:userId', async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        createdAt: true,
+        campgroundReviews: { select: { rating: true, content: true } },
+        userBadges: { select: { badge: { select: { category: true } } } },
+        checkIns: { select: { id: true } },
+        _count: { select: { events: true, friends: true } }
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Not found' });
+
+    const reviewCount = user.campgroundReviews.length;
+    const verifiedStays = user.checkIns.length;
+    const accountAgeDays = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000);
+    const hasRelevantBadges = user.userBadges.some(b => ['HOST', 'CHECKIN'].includes(b.badge.category));
+
+    // Score components (0-100)
+    const reviewScore = Math.min(reviewCount * 5, 30);
+    const stayScore = Math.min(verifiedStays * 8, 30);
+    const ageScore = Math.min(accountAgeDays / 10, 20);
+    const badgeScore = hasRelevantBadges ? 10 : 0;
+    const socialScore = Math.min((user._count.friends || 0) * 2, 10);
+
+    const totalScore = Math.round(reviewScore + stayScore + ageScore + badgeScore + socialScore);
+
+    const level = totalScore >= 80 ? 'Expert Camper' :
+                  totalScore >= 60 ? 'Experienced Camper' :
+                  totalScore >= 40 ? 'Regular Camper' :
+                  totalScore >= 20 ? 'New Camper' : 'Beginner';
+
+    res.json({
+      score: totalScore,
+      level,
+      components: { reviews: reviewScore, verifiedStays: stayScore, accountAge: ageScore, badges: badgeScore, social: socialScore },
+      reviewCount, verifiedStays,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
