@@ -10,6 +10,9 @@ import MealPlanner from '../components/MealPlanner';
 import TripItineraryTab from '../components/TripItineraryTab';
 import TripTabEmptyState from '../components/TripTabEmptyState';
 import DraggableBanner from '../components/DraggableBanner';
+import HitchPackingSuggestions from '../components/HitchPackingSuggestions';
+import HitchMealSuggestions from '../components/HitchMealSuggestions';
+import HitchTripSummary from '../components/HitchTripSummary';
 import TripPlannerTab from '../components/TripPlannerTab';
 import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
@@ -1137,7 +1140,16 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'meals' && <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} emptyState={
+          {activeTab === 'meals' && (
+            <div className="space-y-4">
+              <HitchMealSuggestions
+                eventId={event.id}
+                destination={event.campground?.name || event.location}
+                startDate={event.startDate}
+                endDate={event.endDate}
+                groupSize={(event.attendees?.length || 0) + 1}
+              />
+              <MealPlanner eventId={event.id} startDate={event.startDate} endDate={event.endDate || event.startDate} isOrganizer={isOrganizer || (userAttendee?.status === 'going')} emptyState={
             <TripTabEmptyState
               icon="🍳"
               title="No meals planned yet"
@@ -1146,10 +1158,21 @@ export default function EventDetailPage() {
             />
           } />}
           {activeTab === 'pack' && (
-            <EventPackList eventId={event.id} />
+            <div className="space-y-4">
+              <HitchPackingSuggestions
+                eventId={event.id}
+                destination={event.campground?.name || event.location}
+                startDate={event.startDate}
+                endDate={event.endDate}
+                groupSize={(event.attendees?.length || 0) + 1}
+              />
+              <EventPackList eventId={event.id} />
           )}
           {activeTab === 'packup' && (
-            <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
+            <div className="space-y-4">
+              <HitchTripSummary event={event} />
+              <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
+            </div>
           )}
         </div>
       </div>

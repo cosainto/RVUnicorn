@@ -6,6 +6,7 @@ import { Search, MapPin, Star, Plus, Phone, Globe, Navigation, SlidersHorizontal
 import { useAuth } from '../contexts/AuthContext';
 import SuggestCampground from '../components/SuggestCampground';
 import HarvestHostsTab from '../components/HarvestHostsTab';
+import HitchCampgroundFinder from '../components/HitchCampgroundFinder';
 import { Leaf } from 'lucide-react';
 
 interface Campground {
@@ -53,7 +54,7 @@ export default function CampgroundsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks'>('campgrounds');
+  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar'>('campgrounds');
 
   useEffect(() => {
     if (!user) return;
@@ -115,12 +116,24 @@ export default function CampgroundsPage() {
           🏕️ Campgrounds
         </button>
         <button
+          onClick={() => setPageTab('find-similar')}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'find-similar' ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+        >
+          🦄 Find Similar
+        </button>
+        <button
           onClick={() => setPageTab('rv-networks')}
           className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'rv-networks' ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
         >
           <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773413639/rv-host-networks-icon.png" alt="RV Host Networks" className="w-5 h-5 rounded-full object-cover" /> RV Host Networks
         </button>
       </div>
+
+      {pageTab === 'find-similar' && (
+        <div className="max-w-xl mx-auto py-4">
+          <HitchCampgroundFinder />
+        </div>
+      )}
 
       {pageTab === 'rv-networks' && (
         <HarvestHostsTab />
