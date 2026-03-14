@@ -1156,7 +1156,9 @@ export default function EventDetailPage() {
               description="Plan your campfire meals so everyone knows what to expect and what to bring!"
               tips={["Plan meals by day so shopping is easy", "Assign a chef for each night", "Don't forget s'mores 🍫"]}
             />
-          } />}
+          } />
+            </div>
+          )}
           {activeTab === 'pack' && (
             <div className="space-y-4">
               <HitchPackingSuggestions
@@ -1167,6 +1169,7 @@ export default function EventDetailPage() {
                 groupSize={(event.attendees?.length || 0) + 1}
               />
               <EventPackList eventId={event.id} />
+            </div>
           )}
           {activeTab === 'packup' && (
             <div className="space-y-4">
