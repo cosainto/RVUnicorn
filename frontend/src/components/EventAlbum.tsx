@@ -3,10 +3,13 @@ import { Image, Upload, X, Trash2, Heart, Camera } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from './ImageUpload';
+import HitchPhotoCaptions from './HitchPhotoCaptions';
 
 interface EventAlbumProps {
   eventId: string;
   canUpload?: boolean;
+  campgroundName?: string;
+  eventTitle?: string;
 }
 
 interface Photo {
@@ -35,7 +38,7 @@ interface PhotosByUser {
   photos: Photo[];
 }
 
-export default function EventAlbum({ eventId, canUpload = false }: EventAlbumProps) {
+export default function EventAlbum({ eventId, canUpload = false, campgroundName, eventTitle }: EventAlbumProps) {
   const { user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [photosByUser, setPhotosByUser] = useState<PhotosByUser[]>([]);
@@ -271,6 +274,13 @@ export default function EventAlbum({ eventId, canUpload = false }: EventAlbumPro
                   className="input w-full"
                   placeholder="Add a caption..."
                 />
+                <div className="mt-2">
+                  <HitchPhotoCaptions
+                    campgroundName={campgroundName}
+                    tripTitle={eventTitle}
+                    onSelect={(caption) => setUploadCaption(caption)}
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
