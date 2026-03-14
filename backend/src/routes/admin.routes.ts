@@ -133,3 +133,143 @@ router.delete('/campgrounds/:id', authenticateToken, requireWill, async (req: Re
 });
 
 export default router;
+
+// ===== HOST LISTINGS ADMIN =====
+
+// GET /api/admin/hosts - List all host submissions
+router.get('/hosts', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const { status = 'PENDING' } = req.query;
+    const hosts = await (prisma as any).harvestHost.findMany({
+      where: { status: status as string },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reviews: { select: { id: true } },
+      }
+    });
+    res.json(hosts);
+  } catch (e) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
+});
+
+// PUT /api/admin/hosts/:id/approve
+router.put('/hosts/:id/approve', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const host = await (prisma as any).harvestHost.update({
+      where: { id: req.params.id },
+      data: { status: 'ACTIVE', isVerified: true }
+    });
+    // Notify the host owner if claimed
+    if (host.claimedByUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: host.claimedByUserId,
+          type: 'SYSTEM',
+          content: `🎉 Your host listing "${host.name}" has been approved and is now live!`,
+          link: `/hosts/${host.id}`,
+        }
+      });
+      // Award RV Host badge
+      const badge = await prisma.badge.findUnique({ where: { slug: 'rv-host' } });
+      if (badge) {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId: host.claimedByUserId, badgeId: badge.id } },
+          create: { userId: host.claimedByUserId, badgeId: badge.id },
+          update: {}
+        });
+      }
+    }
+    res.json(host);
+  } catch (e) { res.status(500).json({ error: 'Failed to approve' }); }
+});
+
+// PUT /api/admin/hosts/:id/reject
+router.put('/hosts/:id/reject', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const { reason } = req.body;
+    const host = await (prisma as any).harvestHost.update({
+      where: { id: req.params.id },
+      data: { status: 'REJECTED' }
+    });
+    if (host.claimedByUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: host.claimedByUserId,
+          type: 'SYSTEM',
+          content: `Your host listing "${host.name}" needs some updates before going live. ${reason || ''}`,
+          link: `/hosts/${host.id}/edit`,
+        }
+      });
+    }
+    res.json(host);
+  } catch (e) { res.status(500).json({ error: 'Failed to reject' }); }
+});
+
+// ===== HOST LISTINGS ADMIN =====
+
+// GET /api/admin/hosts - List all host submissions
+router.get('/hosts', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const { status = 'PENDING' } = req.query;
+    const hosts = await (prisma as any).harvestHost.findMany({
+      where: { status: status as string },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reviews: { select: { id: true } },
+      }
+    });
+    res.json(hosts);
+  } catch (e) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
+});
+
+// PUT /api/admin/hosts/:id/approve
+router.put('/hosts/:id/approve', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const host = await (prisma as any).harvestHost.update({
+      where: { id: req.params.id },
+      data: { status: 'ACTIVE', isVerified: true }
+    });
+    // Notify the host owner if claimed
+    if (host.claimedByUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: host.claimedByUserId,
+          type: 'SYSTEM',
+          content: `🎉 Your host listing "${host.name}" has been approved and is now live!`,
+          link: `/hosts/${host.id}`,
+        }
+      });
+      // Award RV Host badge
+      const badge = await prisma.badge.findUnique({ where: { slug: 'rv-host' } });
+      if (badge) {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId: host.claimedByUserId, badgeId: badge.id } },
+          create: { userId: host.claimedByUserId, badgeId: badge.id },
+          update: {}
+        });
+      }
+    }
+    res.json(host);
+  } catch (e) { res.status(500).json({ error: 'Failed to approve' }); }
+});
+
+// PUT /api/admin/hosts/:id/reject
+router.put('/hosts/:id/reject', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    const { reason } = req.body;
+    const host = await (prisma as any).harvestHost.update({
+      where: { id: req.params.id },
+      data: { status: 'REJECTED' }
+    });
+    if (host.claimedByUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: host.claimedByUserId,
+          type: 'SYSTEM',
+          content: `Your host listing "${host.name}" needs some updates before going live. ${reason || ''}`,
+          link: `/hosts/${host.id}/edit`,
+        }
+      });
+    }
+    res.json(host);
+  } catch (e) { res.status(500).json({ error: 'Failed to reject' }); }
+});

@@ -100,6 +100,27 @@ router.post('/', authenticateToken, async (req: any, res) => {
 });
 
 // POST /api/harvest-hosts/:id/reviews
+// Helper: award badge if not already earned
+async function awardBadgeIfEarned(userId: string, slug: string) {
+  try {
+    const badge = await prisma.badge.findUnique({ where: { slug } });
+    if (!badge) return;
+    await prisma.userBadge.upsert({
+      where: { userId_badgeId: { userId, badgeId: badge.id } },
+      create: { userId, badgeId: badge.id },
+      update: {}
+    });
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'BADGE_EARNED',
+        content: `🏅 You earned the "${badge.name}" badge!`,
+        link: '/profile',
+      }
+    }).catch(() => null);
+  } catch {}
+}
+
 router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
   try {
     const { rating, content, visitDate } = req.body;
