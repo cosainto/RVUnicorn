@@ -25,15 +25,15 @@ router.post('/chat', async (req: any, res) => {
             { state: { contains: message.match(/\b[A-Z]{2}\b/)?.[0] || '', mode: 'insensitive' } },
           ]
         },
-        select: { id: true, name: true, location: true, state: true, rating: true, imageUrl: true },
+        select: { id: true, name: true, location: true, state: true, imageUrl: true, googleRating: true, city: true },
         take: 3,
       });
       if (campgrounds.length > 0) {
         contextData += `\nNearby campgrounds: ${campgrounds.map(c => `${c.name} in ${c.state}`).join(', ')}`;
         suggestions.push(...campgrounds.map(c => ({
           type: 'campground', id: c.id, name: c.name,
-          location: [c.location, c.state].filter(Boolean).join(', '),
-          rating: c.rating, icon: '🏕️'
+          location: [c.city, c.state].filter(Boolean).join(', '),
+          rating: c.googleRating, icon: '🏕️'
         })));
       }
     }
