@@ -192,9 +192,9 @@ export default function HitchFloatingChat() {
                       {msg.role === 'assistant' && i > 0 && (
                         <div className="flex gap-1.5 mt-0.5">
                           <button onClick={() => sendFeedback(i, 'up', messages[i-1]?.content || '', msg.content)}
-                            className={`p-1 rounded transition ${feedback[i] === 'up' ? 'text-green-600' : 'text-gray-300 hover:text-green-500"}`}><ThumbsUp className="w-3 h-3" /></button>
+                              className={`p-1 rounded transition ${feedback[i] === 'up' ? 'text-green-600' : 'text-gray-300 hover:text-green-500'}`}><ThumbsUp className="w-3 h-3" /></button>
                           <button onClick={() => sendFeedback(i, 'down', messages[i-1]?.content || '', msg.content)}
-                            className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400"}`}><ThumbsDown className="w-3 h-3" /></button>
+                              className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}`}><ThumbsDown className="w-3 h-3" /></button>
                         </div>
                       )}
                       {msg.role === "assistant" && chimeIns[i - 1] && (() => {
