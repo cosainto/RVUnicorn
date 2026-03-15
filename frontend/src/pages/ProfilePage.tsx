@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import DraggableBanner from '../components/DraggableBanner';
 import CurrentlyAtBadge from '../components/CurrentlyAtBadge';
+import CommunityTrustBadge from '../components/CommunityTrustBadge';
+import HitchProfileSummary from '../components/HitchProfileSummary';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -23,7 +25,7 @@ import {
   Video,
   BadgeCheck,
   Play
-} from 'lucide-react';
+, Calendar } from 'lucide-react';
 import api from '../services/api';
 import TripCalendarWidget from '../components/TripCalendarWidget';
 import { User as UserType } from '../services/auth.service';
