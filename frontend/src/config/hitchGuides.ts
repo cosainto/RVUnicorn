@@ -34,7 +34,7 @@ Specialty: All-around camping expert — recommendations, planning, tips, commun
     name: 'Walter',
     emoji: '🎭',
     tagline: 'Seen it all. Roasts it all.',
-    avatarUrl: null, // TODO: upload Walter_Profile_v1.png to Cloudinary and paste URL here
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538549/rvunicorn/guides/walter_guide.png', // TODO: upload Walter_Profile_v1.png to Cloudinary and paste URL here
     bgGradient: 'from-amber-600 to-orange-700',
     accentColor: '#d97706',
     persona: `You are Walter 🎭, RVUnicorn's veteran camper and lovable curmudgeon.
@@ -49,7 +49,7 @@ Always end with a useful takeaway despite the jokes. Never mean-spirited toward 
     name: 'Rosé Merlot',
     emoji: '🍷',
     tagline: 'Glamping guru & vibe curator',
-    avatarUrl: null, // TODO: upload Rosé_Merlot_Icon.png to Cloudinary
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538550/rvunicorn/guides/rose_guide.png', // TODO: upload Rosé_Merlot_Icon.png to Cloudinary
     bgGradient: 'from-pink-500 to-rose-600',
     accentColor: '#e11d48',
     persona: `You are Rosé Merlot 🍷, RVUnicorn's glamping guru and lifestyle curator.
@@ -64,7 +64,7 @@ Always mention if there's a winery, vineyard, or great restaurant nearby when re
     name: 'Scout',
     emoji: '🏔️',
     tagline: 'Trailblazer & adventure seeker',
-    avatarUrl: null, // TODO: upload Scout_profile.png to Cloudinary
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538551/rvunicorn/guides/scout_guide.png', // TODO: upload Scout_profile.png to Cloudinary
     bgGradient: 'from-green-600 to-emerald-700',
     accentColor: '#059669',
     persona: `You are Scout 🏔️, RVUnicorn's adventure-first trailblazer.
@@ -79,7 +79,7 @@ Always mention the best nearby trails, outdoor activities, and scenic highlights
     name: 'Diesel Dave',
     emoji: '🚛',
     tagline: 'Big rig expert. No campground too tight.',
-    avatarUrl: null, // TODO: upload Diesel_Dave_profile.png to Cloudinary
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538552/rvunicorn/guides/diesel_guide.png', // TODO: upload Diesel_Dave_profile.png to Cloudinary
     bgGradient: 'from-slate-600 to-gray-800',
     accentColor: '#475569',
     persona: `You are Diesel Dave 🚛, RVUnicorn's big rig expert and technical authority.
@@ -95,7 +95,7 @@ Give specific warnings about tight turns, low branches, steep grades, and narrow
     name: 'Luna',
     emoji: '🌙',
     tagline: 'Family & pet camping queen',
-    avatarUrl: null, // TODO: upload Luna_RV_badge.png to Cloudinary
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538554/rvunicorn/guides/luna_guide.png', // TODO: upload Luna_RV_badge.png to Cloudinary
     bgGradient: 'from-indigo-500 to-blue-600',
     accentColor: '#4f46e5',
     persona: `You are Luna 🌙, RVUnicorn's family camping and pet travel expert.
@@ -110,7 +110,7 @@ Always highlight if a campground has a playground, pool, pet-friendly sites, or 
     name: 'Holden & Hannah',
     emoji: '🏕️',
     tagline: 'The Junior Rangers — kid-approved adventures',
-    avatarUrl: null, // TODO: upload Max_Lily image to Cloudinary when ready
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538555/rvunicorn/guides/holden_hannah_guide.jpg', // TODO: upload Max_Lily image to Cloudinary when ready
     bgGradient: 'from-sky-400 to-cyan-500',
     accentColor: '#0ea5e9',
     persona: `You are Holden & Hannah 🏕️, RVUnicorn's Junior Rangers — two adventurous kids who explore every campground like it's the greatest place on Earth.
