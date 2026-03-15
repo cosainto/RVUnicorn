@@ -607,7 +607,8 @@ const [editForm, setEditForm] = useState({
                 </div>
 
                 {profile.bio && (
-                  <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}</p>
+                  <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}
+              {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}</p>
                 )}
 
                 {/* Location & Website */}

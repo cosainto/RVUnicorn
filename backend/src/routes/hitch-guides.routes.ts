@@ -950,4 +950,57 @@ Sign off warmly as Hitch 🦄`,
   }
 });
 
+
+// POST /api/hitch/send-weekly-digests
+// Called by Railway cron job every Monday at 8am
+// Railway Cron setup: Add a cron job in Railway dashboard
+//   Schedule: 0 8 * * 1  (every Monday 8am UTC)
+//   Command: curl -X POST https://your-backend-url/api/hitch/send-weekly-digests -H "X-Cron-Secret: $CRON_SECRET"
+router.post('/send-weekly-digests', async (req: any, res) => {
+  try {
+    // Verify cron secret to prevent unauthorized calls
+    const cronSecret = req.headers['x-cron-secret'];
+    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get all users with emails who have been active in last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const activeUsers = await prisma.user.findMany({
+      where: {
+        email: { not: '' },
+        updatedAt: { gte: thirtyDaysAgo },
+      },
+      select: { id: true, email: true, firstName: true },
+      take: 500, // process in batches
+    });
+
+    let sent = 0;
+    let failed = 0;
+
+    // Process in small batches to avoid rate limits
+    for (const user of activeUsers) {
+      try {
+        // Call the individual digest endpoint
+        const res2 = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/hitch/weekly-digest/${user.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (res2.ok) sent++;
+        else failed++;
+        // Small delay between sends
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch {
+        failed++;
+      }
+    }
+
+    console.log(`Weekly digest: ${sent} sent, ${failed} failed, ${activeUsers.length} total`);
+    res.json({ sent, failed, total: activeUsers.length });
+  } catch (e: any) {
+    console.error('Weekly digest cron error:', e?.message);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;
