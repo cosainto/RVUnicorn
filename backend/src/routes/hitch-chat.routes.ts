@@ -33,7 +33,7 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
       const campgrounds = await prisma.campground.findMany({
         where: {
           OR: [
-            { name: { contains: message.split(' ').find(w => w.length > 4) || '', mode: 'insensitive' } },
+            { name: { contains: message.split(' ').find((w: string) => w.length > 4) || '', mode: 'insensitive' } },
             { state: { contains: message.match(/\b[A-Z]{2}\b/)?.[0] || '', mode: 'insensitive' } },
           ]
         },
@@ -93,7 +93,7 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
         suggestions.push(...spots.map(s => ({
           type: 'overnight_spot', id: s.id, name: s.name,
           location: [s.city, s.state].filter(Boolean).join(', '),
-          rating: s.rating, icon: '🅿️'
+          rating: (s as any).rating || null, icon: '🅿️'
         })));
       }
     }
@@ -106,21 +106,21 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: {
-            firstName: true, username: true, state: true,
+            firstName: true, username: true,
             campingInterests: true, rvType: true, rvLength: true,
             rvMake: true, rvModel: true, rvYear: true, rvFuelType: true,
           }
         });
         if (user) {
           const following = await prisma.friendship.findMany({
-            where: { senderId: userId, status: 'ACCEPTED' },
+            where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'ACCEPTED' },
             select: { receiver: { select: { id: true, username: true, firstName: true } } },
             take: 30,
           }).catch(() => []);
           resolvedContext = {
             name: user.firstName,
             username: user.username,
-            homeState: user.state,
+            homeState: (user as any).homeState,
             interests: user.campingInterests || [],
             rv: { type: user.rvType, length: user.rvLength, make: user.rvMake, model: user.rvModel, year: user.rvYear, fuelType: user.rvFuelType },
             friends: following.map((f: any) => ({ username: (f.receiver || f.recipient)?.username, name: (f.receiver || f.recipient)?.firstName })).filter((f: any) => f.username),
@@ -403,7 +403,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
         city: true, googleRating: true, amenities: true,
       },
       take: 20,
-      orderBy: { rating: 'desc' },
+      orderBy: { googleRating: 'desc' },
     });
 
     if (campgrounds.length === 0) {
@@ -411,7 +411,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
     }
 
     const campgroundList = campgrounds.map((c, i) =>
-      `${i + 1}. ${c.name} in ${c.city}, ${c.state} (rating: ${c.rating || 'unrated'})`
+      `${i + 1}. ${c.name} in ${c.city}, ${c.state} (rating: ${c.googleRating || 'unrated'})`
     ).join('\n');
 
     const prompt = `A user loves "${campgroundName}" and wants similar campgrounds in ${targetState}.
@@ -505,7 +505,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         id: true,
         firstName: true,
         username: true,
-        state: true,
+        homeState: true,
         campingInterests: true,
         rvType: true,
         rvLength: true,
@@ -544,7 +544,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
       take: 30,
     });
 
-    const earnedBadgeIds = new Set(user.userBadges.map((ub: any) => ub.badge.name));
+    const earnedBadgeIds = new Set((user as any).badges?.map((ub: any) => ub.badge?.name).filter(Boolean) || []);
     const unearnedBadges = allBadges.filter(b => !earnedBadgeIds.has(b.name)).slice(0, 8);
 
     // Get users with similar interests
@@ -554,7 +554,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
             id: { not: userId },
             campingInterests: { hasSome: (user.campingInterests as string[]) },
           },
-          select: { username: true, firstName: true, campingInterests: true, state: true },
+          select: { username: true, firstName: true, campingInterests: true, homeState: true },
           take: 5,
         })
       : [];
@@ -588,7 +588,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
 
     // Get friends (people the user follows)
     const following = await prisma.friendship.findMany({
-      where: { senderId: userId, status: 'ACCEPTED' },
+      where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'ACCEPTED' },
       select: { receiver: { select: { id: true, username: true, firstName: true } } },
       take: 20,
     }).catch(() => []);
@@ -630,7 +630,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
     res.json({
       name: user.firstName,
       username: user.username,
-      homeState: user.state,
+      homeState: user.homeState,
       interests: user.campingInterests || [],
       rv: {
         type: user.rvType,
@@ -746,12 +746,14 @@ Return JSON:
 // POST /api/hitch/campground-chat
 router.post('/campground-chat', async (req: any, res) => {
   try {
-    const { message, campgroundId, campgroundName, campground, history = [], userContext } = req.body;
+    const { message, campgroundId, campgroundName, campground, history = [], userContext, guideId = 'hitch' } = req.body;
+    const GUIDE_PERSONAS_CG: Record<string, string> = { hitch: '', walter: 'You are Walter, a grumpy veteran RVer.', diesel: 'You are Diesel Dave, big rig expert.', rose: 'You are Rose Merlot, glamping guru.', scout: 'You are Scout, adventure trailblazer.', luna: 'You are Luna, family/pet expert.', holden_hannah: 'You are Holden & Hannah, Junior Rangers.' };
+    const personaPrefix = GUIDE_PERSONAS_CG[guideId] || '';
 
     // Get reviews for this campground
     const reviews = await prisma.campgroundReview.findMany({
       where: { campgroundId },
-      select: { rating: true, content: true, createdAt: true },
+      select: { rating: true, review: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
       take: 20,
     }).catch(() => []);
@@ -761,7 +763,7 @@ router.post('/campground-chat', async (req: any, res) => {
       : null;
 
     const reviewSummary = reviews.length > 0
-      ? reviews.slice(0, 8).map(r => `${r.rating}★: ${r.content?.substring(0, 100) || 'No comment'}`).join('\n')
+      ? reviews.slice(0, 8).map(r => `${r.rating}★: ${r.review?.substring(0, 100) || 'No comment'}`).join('\n')
       : 'No reviews yet';
 
     // Build user RV context
@@ -786,7 +788,7 @@ Campground Data:
 - Pet Friendly: ${campground.isPetFriendly ? 'Yes' : 'No'}
 - Big Rig Friendly: ${campground.isBigRigFriendly ? 'Yes' : 'No'}
 - Price: ${campground.pricePerNight ? '$' + campground.pricePerNight + '/night' : 'Unknown'}
-- Google Rating: ${campground.googleRating || 'N/A'} (${campground.googleReviewCount || 0} reviews)
+- Google Rating: ${campground.rating || 'N/A'} (${campground.googleReviewCount || 0} reviews)
 - Description: ${campground.description || 'No description available'}
 
 RVUnicorn Community Reviews (${reviews.length} total, avg ${avgRating || 'N/A'}★):
@@ -841,11 +843,11 @@ router.post('/analyze-campground', async (req: any, res) => {
 
     const reviews = await prisma.campgroundReview.findMany({
       where: { campgroundId },
-      select: { rating: true, content: true },
+      select: { rating: true, review: true },
       take: 30,
     }).catch(() => []);
 
-    const reviewText = reviews.map(r => r.content).filter(Boolean).join(' ');
+    const reviewText = reviews.map(r => r.review).filter(Boolean).join(' ');
     const avgRating = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
 
     const prompt = `Analyze this campground and return ONLY valid JSON, no markdown.
@@ -948,7 +950,7 @@ router.get('/hidden-gems', async (req: any, res) => {
         id: true, name: true, state: true, city: true, imageUrl: true,
         googleRating: true, googleReviewCount: true, maxRvLength: true,
         isPetFriendly: true, isBigRigFriendly: true, pricePerNight: true,
-        description: true, city: true,
+        description: true,
         _count: { select: { followers: true, reviews: true } }
       },
       orderBy: { googleRating: 'desc' },
@@ -959,7 +961,7 @@ router.get('/hidden-gems', async (req: any, res) => {
     const scored = campgrounds
       .map(c => ({
         ...c,
-        gemScore: ((c as any).googleRating || 0) * 20 - Math.log(Math.max(c._count.followers + 1, 1)) * 5 + ((c as any).verificationStatus === 'VERIFIED' ? 15 : 0),
+        gemScore: ((c as any).googleRating || 0) * 20 - Math.log(Math.max((c as any)._count?.followers + 1 || 1, 1)) * 5,
       }))
       .sort((a, b) => b.gemScore - a.gemScore)
       .slice(0, parseInt(limit as string));
@@ -1006,16 +1008,16 @@ router.get('/trust-score/:userId', async (req: any, res) => {
       where: { id: userId },
       select: {
         createdAt: true,
-        campgroundReviews: { select: { rating: true, content: true } },
+        campgroundReviews: { select: { rating: true, review: true } },
         checkIns: { select: { id: true } },
-        _count: { select: { events: true, friends: true } }
+        _count: { select: { events: true, friendshipsInitiated: true } }
       }
     });
 
     if (!user) return res.status(404).json({ error: 'Not found' });
 
-    const reviewCount = user.campgroundReviews.length;
-    const verifiedStays = user.checkIns.length;
+    const reviewCount = (user as any).campgroundReviews?.length || 0;
+    const verifiedStays = (user as any).checkIns?.length || 0;
     const accountAgeDays = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000);
     const hasRelevantBadges = false; // simplified
 
@@ -1024,7 +1026,7 @@ router.get('/trust-score/:userId', async (req: any, res) => {
     const stayScore = Math.min(verifiedStays * 8, 30);
     const ageScore = Math.min(accountAgeDays / 10, 20);
     const badgeScore = hasRelevantBadges ? 10 : 0;
-    const socialScore = Math.min((user._count.friends || 0) * 2, 10);
+    const socialScore = Math.min(((user as any)._count?.friends || 0) * 2, 10);
 
     const totalScore = Math.round(reviewScore + stayScore + ageScore + badgeScore + socialScore);
 
