@@ -1,5 +1,11 @@
+[phases.setup]
+nixPkgs = []
+
+[phases.install]
+cmds = ["npm ci"]
+
 [phases.build]
-cmds = ["npm install", "npm run build"]
+cmds = ["rm -rf dist", "npm run build"]
 
 [start]
 cmd = "npm run preview"
