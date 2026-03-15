@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
-import DraggableBanner from '../components/DraggableBanner';
+import DraggableBanner from '../components/DraggableBanner'; // keep
 import CheckInButton from '../components/CheckInButton';
 import HitchCampgroundChat from '../components/HitchCampgroundChat';
 import CampgroundVibeCard from '../components/CampgroundVibeCard';
