@@ -183,7 +183,8 @@ Keep responses helpful and specific. Reference the user by name when you have it
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 500,
+      max_tokens: 2000,
+      tools: [{ type: "web_search_20250305" as any, name: "web_search" }],
       system: personaPrefix + "\n\n" + systemPrompt,
       messages: [
         ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
