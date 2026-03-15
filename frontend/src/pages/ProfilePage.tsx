@@ -611,10 +611,10 @@ const [editForm, setEditForm] = useState({
                 </div>
 
                 {profile.bio && (
-                  <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}
-              </p>)}
-                {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}
+                  <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}</p>
                 )}
+                {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}
+
 
                 {/* Location & Website */}
                 <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600">
