@@ -147,7 +147,12 @@ router.post('/chat', async (req: any, res) => {
       if (userContext.friendCheckIns?.length) userContextStr += `\nFriends currently checked in: ${userContext.friendCheckIns.map((c: any) => `${c.user} is at ${c.location}`).join(', ')}`;
     }
 
-    const systemPrompt = `You are Hitch, RVUnicorn's friendly AI travel companion for RV enthusiasts. You help users:
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+
+    const systemPrompt = `You are Hitch, RVUnicorn's friendly AI travel companion for RV enthusiasts.
+Current date and time: ${dateStr} at ${timeStr}. You help users:
 - Plan RV routes with overnight stops
 - Find campgrounds, RV parks, and free overnight spots
 - Discover unique host locations (wineries, farms, breweries) that welcome RVers
