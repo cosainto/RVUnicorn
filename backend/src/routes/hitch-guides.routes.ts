@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { PrismaClient } from '@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const router = Router();
 const prisma = new PrismaClient();
