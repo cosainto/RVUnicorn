@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { GUIDES, DEFAULT_GUIDE_ID, getGuide, type Guide } from '../config/hitchGuides';
+import { useGuideUnlocks } from '../hooks/useGuideUnlocks';
+import { Lock } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -22,7 +24,9 @@ export default function HitchFloatingChat() {
   const [loading, setLoading] = useState(false);
   const [userContext, setUserContext] = useState<any>(null);
   const [unread, setUnread] = useState(0);
+  const unreadDisplay = Math.min(unread, 9);
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
+  const [chimeIns, setChimeIns] = useState<Record<number, any>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const guide = getGuide(selectedGuideId);

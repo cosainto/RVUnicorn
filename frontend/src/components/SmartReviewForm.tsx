@@ -31,7 +31,7 @@ const ScaleQuestion = ({
 );
 
 export default function SmartReviewForm({ campgroundId, campgroundName, onSubmitted }: SmartReviewFormProps) {
-  const [step, setStep] = useState<'structured' | 'text' | "done">(\"structured");
+  const [step, setStep] = useState<'structured' | 'text' | 'done'>('structured');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [fields, setFields] = useState({
@@ -117,7 +117,7 @@ export default function SmartReviewForm({ campgroundId, campgroundName, onSubmit
             <strong>🎯 Campground Report</strong> — Quick structured questions that power AI insights for the whole community. Takes 60 seconds!
           </div>
 
-          <ScaleQuestion label="Access difficulty" icon={<Navigation className="w-4 h-4" />} value={fields.accessDifficulty} onChange={set("accessDifficulty')}
+          <ScaleQuestion label="Access difficulty" icon={<Navigation className="w-4 h-4" />} value={fields.accessDifficulty} onChange={set("accessDifficulty")}
             options={[
               { value: 'EASY', label: 'Easy', color: 'bg-green-100 text-green-700' },
               { value: 'MODERATE', label: 'Moderate', color: 'bg-yellow-100 text-yellow-700' },
@@ -125,21 +125,21 @@ export default function SmartReviewForm({ campgroundId, campgroundName, onSubmit
             ]}
             note="How difficult was the entrance road / approach?" />
 
-          <ScaleQuestion label="Site levelness" icon={<RectangleHorizontal className="w-4 h-4" />} value={fields.levelness} onChange={set("levelness')}
+          <ScaleQuestion label="Site levelness" icon={<RectangleHorizontal className="w-4 h-4" />} value={fields.levelness} onChange={set("levelness")}
             options={[
               { value: 'VERY_LEVEL', label: 'Very level', color: 'bg-green-100 text-green-700' },
               { value: 'MOSTLY_LEVEL', label: 'Mostly level', color: 'bg-yellow-100 text-yellow-700' },
               { value: 'UNEVEN', label: 'Uneven', color: 'bg-red-100 text-red-700' },
             ]} />
 
-          <ScaleQuestion label="Noise level" icon={<Volume2 className="w-4 h-4" />} value={fields.noise} onChange={set("noise')}
+          <ScaleQuestion label="Noise level" icon={<Volume2 className="w-4 h-4" />} value={fields.noise} onChange={set("noise")}
             options={[
               { value: 'VERY_QUIET', label: 'Very quiet', color: 'bg-green-100 text-green-700' },
               { value: 'MODERATE', label: 'Moderate', color: 'bg-yellow-100 text-yellow-700' },
               { value: 'LOUD', label: 'Loud', color: 'bg-red-100 text-red-700' },
             ]} />
 
-          <ScaleQuestion label="Cell service" icon={<Wifi className="w-4 h-4" />} value={fields.cellService} onChange={set("cellService')}
+          <ScaleQuestion label="Cell service" icon={<Wifi className="w-4 h-4" />} value={fields.cellService} onChange={set("cellService")}
             options={[
               { value: 'STRONG', label: 'Strong', color: 'bg-green-100 text-green-700' },
               { value: 'OK', label: 'OK', color: 'bg-yellow-100 text-yellow-700' },
@@ -147,14 +147,14 @@ export default function SmartReviewForm({ campgroundId, campgroundName, onSubmit
               { value: 'NONE', label: 'No signal', color: 'bg-red-100 text-red-700' },
             ]} />
 
-          <ScaleQuestion label="Big rig friendly?" icon={<Zap className="w-4 h-4" />} value={fields.bigRigFriendly} onChange={set("bigRigFriendly')}
+          <ScaleQuestion label="Big rig friendly?" icon={<Zap className="w-4 h-4" />} value={fields.bigRigFriendly} onChange={set("bigRigFriendly")}
             options={[
               { value: 'YES', label: 'Yes', color: 'bg-green-100 text-green-700' },
               { value: 'SOME_SITES', label: 'Some sites', color: 'bg-yellow-100 text-yellow-700' },
               { value: 'NO', label: 'No', color: 'bg-red-100 text-red-700' },
             ]} />
 
-          <ScaleQuestion label="Would you return?" icon={<Star className="w-4 h-4" />} value={fields.wouldReturn} onChange={set("wouldReturn')}
+          <ScaleQuestion label="Would you return?" icon={<Star className="w-4 h-4" />} value={fields.wouldReturn} onChange={set("wouldReturn")}
             options={[
               { value: 'DEFINITELY', label: 'Definitely', color: 'bg-green-100 text-green-700' },
               { value: 'MAYBE', label: 'Maybe', color: 'bg-yellow-100 text-yellow-700' },
@@ -191,10 +191,10 @@ export default function SmartReviewForm({ campgroundId, campgroundName, onSubmit
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2">
-            <button onClick={() => setStep('structured")} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">← Back</button>
+            <button onClick={() => setStep('structured')} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">← Back</button>
             <button onClick={handleSubmit} disabled={submitting || !canProceed}
               className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-40 flex items-center justify-center gap-2">
-              {submitting ? 'Submitting..." : <><Send className="w-4 h-4" /> Submit Report</>}
+              {submitting ? 'Submitting...' : <><Send className="w-4 h-4" /> Submit Report</>}
             </button>
           </div>
         </>

@@ -23,7 +23,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
       const { data: res } = await api.get(`/hitch/roast/${campgroundId}`);
       setData(res);
     } catch {
-      setData({ hasEnoughData: false, roastLines: [], positiveCounterpoint: '', verdict: '", reviewCount: 0 });
+      setData({ hasEnoughData: false, roastLines: [], positiveCounterpoint: '', verdict: '', reviewCount: 0 });
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
                 <p className="text-sm text-gray-300 italic">"{data.verdict}"</p>
               </div>
 
-              <p className="text-xs text-gray-600">Based on {data.reviewCount} community review{data.reviewCount !== 1 ? "s' : ''}. Walter's humor ≠ official RVUnicorn opinion.</p>
+              <p className="text-xs text-gray-600">Based on {data.reviewCount} community review{data.reviewCount !== 1 ? "s" : ""}. Walter's humor ≠ official RVUnicorn opinion.</p>
             </div>
           )}
         </div>
