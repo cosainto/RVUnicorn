@@ -9,3 +9,4 @@ cmds = ["rm -rf dist", "npm run build"]
 
 [start]
 cmd = "npm run preview"
+# bust cache 1773611445
