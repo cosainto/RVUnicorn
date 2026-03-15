@@ -449,7 +449,7 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { rvType: true, rvLength: true, campingInterests: true, state: true }
+      select: { rvType: true, rvLength: true, campingInterests: true, homeState: true }
     });
     if (!user) return res.status(404).json({ error: 'Not found' });
 
@@ -582,7 +582,7 @@ router.get('/profile-summary/:username', async (req: any, res) => {
     const user = await prisma.user.findUnique({
       where: { username },
       select: {
-        firstName: true, state: true, campingInterests: true,
+        firstName: true, homeState: true, campingInterests: true,
         rvType: true, rvLength: true, rvMake: true,
         createdAt: true,
         _count: { select: { checkIns: true, events: true, campgroundReviews: true } }
@@ -593,7 +593,7 @@ router.get('/profile-summary/:username', async (req: any, res) => {
 
     const stateVisits = await prisma.stateVisit.findMany({
       where: { userId: (await prisma.user.findUnique({ where: { username }, select: { id: true } }))?.id || '' },
-      select: { state: true },
+      select: { homeState: true },
     }).catch(() => []);
 
     const response = await anthropic.messages.create({
@@ -867,7 +867,7 @@ router.post('/weekly-digest/:userId', async (req: any, res) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        firstName: true, email: true, state: true,
+        firstName: true, email: true, homeState: true,
         campingInterests: true, rvType: true,
       }
     });
