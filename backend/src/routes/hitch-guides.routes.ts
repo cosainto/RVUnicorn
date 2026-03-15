@@ -170,7 +170,7 @@ router.get('/rig-stress/:campgroundId', async (req: any, res) => {
     const accessData = countField(reviews, 'accessDifficulty');
     const levelData = countField(reviews, 'levelness');
     const bigRigData = countField(reviews, 'bigRigFriendly');
-    const dataSource = reviews.length >= 3 ? 'community' : 'ai";
+    const dataSource = reviews.length >= 3 ? 'community' : 'ai';
 
     // Get user\'s rig if logged in
     let userRig: any = null;
@@ -188,7 +188,7 @@ Campground specs:
 - Big Rig Friendly: ${campground.isBigRigFriendly ?? 'Unknown'}
 - Pull-through sites: ${campground.hasPullThrough ?? 'Unknown'}
 - Back-in sites: ${campground.hasBackIn ?? 'Unknown'}
-- Max amp service: ${campground.maxAmpService || 'Unknown"}
+- Max amp service: ${campground.maxAmpService || 'Unknown'}ft
 - Full hookups: Electric=${campground.hasElectricHookup}, Water=${campground.hasWaterHookup}, Sewer=${campground.hasSewerHookup}
 
 Community reports (${reviews.length} total):
@@ -196,7 +196,7 @@ Community reports (${reviews.length} total):
 - Levelness votes: ${JSON.stringify(levelData)}
 - Big rig friendly votes: ${JSON.stringify(bigRigData)}
 
-${userRig ? `User\'s rig: ${userRig.rvYear || "'} ${userRig.rvMake || ''} ${userRig.rvType || 'RV'} (${userRig.rvLength || '?'}ft)` : 'User rig: unknown'}
+    ${userRig ? `User's rig: ${userRig.rvYear || ''} ${userRig.rvMake || ''} ${userRig.rvType || 'RV'} (${userRig.rvLength || '?'}ft)` : 'User rig: unknown'}
 
 Return ONLY valid JSON:
 {
@@ -285,7 +285,7 @@ Reviews (${reviews.length}): ${reviewSummary || 'None yet'}`
       guides.push('scout');
     if (questionLower.match(/wine|glamp|luxury|romantic|couple|vibe|scenic|beautiful/))
       guides.push('rose');
-    if (!guides.includes('walter')) guides.push('walter"); // Walter always adds color
+    if (!guides.includes('walter')) guides.push('walter'); // Walter always adds color
     guides = [...new Set(guides)].slice(0, 4); // max 4 guides
 
     // Generate each guide\'s response
@@ -379,7 +379,7 @@ router.get('/roast/:campgroundId', async (req: any, res) => {
       access: countField(reviews, 'accessDifficulty'),
       noise: countField(reviews, 'noise'),
       cell: countField(reviews, 'cellService'),
-      levelness: countField(reviews, 'levelness"),
+    const levelData = countField(reviews, 'levelness');
     };
 
     const prompt = `You are Walter 🎭 — a veteran RVer and lovable curmudgeon. Write a comedic-but-grounded campground roast.
