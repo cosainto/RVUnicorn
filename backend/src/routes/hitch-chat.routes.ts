@@ -183,7 +183,10 @@ Keep responses helpful and specific. Reference the user by name when you have it
       ],
     });
 
-    const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
+    const aiMessage = response.content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('') || '';
 
     res.json({
       message: aiMessage,
@@ -771,7 +774,8 @@ Keep responses concise and helpful. Use emojis sparingly.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 600,
+      max_tokens: 800,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
       system: personaPrefix + "\n\n" + systemPrompt,
       messages: [
         ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
