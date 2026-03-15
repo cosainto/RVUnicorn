@@ -612,7 +612,8 @@ const [editForm, setEditForm] = useState({
 
                 {profile.bio && (
                   <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}
-              {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}</p>
+              </p>)}
+                {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}
                 )}
 
                 {/* Location & Website */}
