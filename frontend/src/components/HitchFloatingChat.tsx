@@ -30,7 +30,7 @@ export default function HitchFloatingChat() {
   // Set welcome message when guide changes
   useEffect(() => {
     const welcomes: Record<string, string> = {
-      hitch: `Hey${user ? \`, \${(user as any).firstName || ''}\` : ''}! I'm Hitch 🦄 Need help finding a campground, planning a route, or anything RV related? I'm right here!`,
+      hitch: `Hey${user ? ', ' + ((user as any).firstName || '') : ''}! I'm Hitch 🦄 Need help finding a campground, planning a route, or anything RV related? I'm right here!`,
       walter: `Well, well, well. Another camper who can't figure it out on their own. 🎭 Fine — ask me. I've been to more campgrounds than I care to admit. What do you need?`,
       rose: `Hello, darling! ✨ I'm Rosé Merlot, your glamping guru. Whether you're looking for a stunning sunset view, a winery nearby, or the most Instagram-worthy campsite — I'm your girl. What are we planning? 🍷`,
       scout: `Hey! 🏔️ Ready for an adventure? I'm Scout — let's find you some epic trails, hidden gems, and the kind of camping stories you'll tell forever. What are we exploring?`,
