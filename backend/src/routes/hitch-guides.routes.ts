@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -439,5 +440,103 @@ function countField(arr: any[], field: string): Record<string, number> {
   }
   return counts;
 }
+
+
+router.get('/for-you', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Login required' });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { rvType: true, rvLength: true, campingInterests: true, state: true }
+    });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+
+    const missingFields: string[] = [];
+    if (!user.rvType) missingFields.push('RV type');
+    if (!user.rvLength) missingFields.push('RV length');
+    if (!(user.campingInterests as string[] || []).length) missingFields.push('camping interests');
+
+    const [wishlisted, checkedIn] = await Promise.all([
+      prisma.campgroundWishlist.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => []),
+      prisma.checkIn.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => []),
+    ]);
+    const excludeIds = [...wishlisted.map((w: any) => w.campgroundId), ...checkedIn.map((c: any) => c.campgroundId)].filter(Boolean);
+
+    const rvLen = user.rvLength ? parseInt(String(user.rvLength)) : null;
+    const interests = (user.campingInterests as string[] || []);
+    const wantsPets = interests.some(i => ['pet','dog','cat'].some(k => i.toLowerCase().includes(k)));
+    const wantsWaterfront = interests.some(i => ['waterfront','lake','ocean','river','fishing'].some(k => i.toLowerCase().includes(k)));
+
+    const campgrounds = await prisma.campground.findMany({
+      where: {
+        id: { notIn: excludeIds.length > 0 ? excludeIds : ['__none__'] },
+        ...(rvLen ? { OR: [{ maxRvLength: { gte: rvLen - 5 } }, { maxRvLength: null }] } : {}),
+        ...(wantsPets ? { isPetFriendly: true } : {}),
+        ...(wantsWaterfront ? { isWaterfront: true } : {}),
+        googleRating: { gte: 3.8 },
+      },
+      select: {
+        id: true, name: true, city: true, state: true, imageUrl: true,
+        googleRating: true, pricePerNight: true, maxRvLength: true,
+        isBigRigFriendly: true, hasPullThrough: true, isPetFriendly: true,
+        isWaterfront: true, hasPool: true, hasWifi: true,
+        hasElectricHookup: true, hasFullHookups: true,
+      },
+      orderBy: { googleRating: 'desc' },
+      take: 30,
+    });
+
+    if (campgrounds.length === 0) return res.json({ matches: [], missingFields });
+
+    const campList = campgrounds.slice(0, 15).map((c, i) =>
+      `${i}. ${c.name}, ${c.city} ${c.state} | Rating: ${c.googleRating || "N/A"} | MaxRV: ${c.maxRvLength || "?"}ft | BigRig: ${c.isBigRigFriendly} | PullThrough: ${c.hasPullThrough} | Pet: ${c.isPetFriendly} | Waterfront: ${c.isWaterfront} | Pool: ${c.hasPool}`
+    ).join("
+");
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1500,
+      messages: [{
+        role: "user",
+        content: `Match campgrounds to this RV user. Return ONLY valid JSON no markdown.
+
+User: RV=${user.rvType || "unknown"} (${user.rvLength || "?"}ft) | Interests: ${interests.join(", ") || "none"} | State: ${user.state || "unknown"}
+
+Campgrounds:
+${campList}
+
+{
+  "matches": [
+    {
+      "index": 0,
+      "matchScore": 92,
+      "matchTier": "Perfect Match",
+      "whyItFits": "Big rig friendly with pull-through sites for your Class A plus waterfront matching your fishing interests",
+      "watchOut": "Books up fast in summer",
+      "highlights": ["Pull-through", "Pet friendly", "Waterfront"]
+    }
+  ]
+}
+
+matchTier: "Perfect Match" (85-100%), "Great Fit" (65-84%), "Worth Checking Out" (45-64%)
+Pick top 8. Be specific about why each fits THIS user. Reference their exact RV size and interests.`
+      }],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "{}";
+    const parsed = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, "").trim());
+    const matches = (parsed.matches || [])
+      .map((m: any) => { const c = campgrounds[m.index]; if (!c) return null; return { ...c, matchScore: m.matchScore, matchTier: m.matchTier, whyItFits: m.whyItFits, watchOut: m.watchOut || null, highlights: m.highlights || [] }; })
+      .filter(Boolean)
+      .sort((a: any, b: any) => b.matchScore - a.matchScore);
+
+    res.json({ matches, missingFields });
+  } catch (e: any) {
+    console.error("For-you error:", e?.message);
+    res.status(500).json({ error: "Failed" });
+  }
+});
 
 export default router;

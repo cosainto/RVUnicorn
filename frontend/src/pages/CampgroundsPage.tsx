@@ -8,6 +8,7 @@ import SuggestCampground from '../components/SuggestCampground';
 import HarvestHostsTab from '../components/HarvestHostsTab';
 import HitchCampgroundFinder from '../components/HitchCampgroundFinder';
 import HiddenGemFinder from '../components/HiddenGemFinder';
+import YourKindOfPlace from '../components/YourKindOfPlace';
 import { Leaf } from 'lucide-react';
 
 interface Campground {
@@ -55,7 +56,7 @@ export default function CampgroundsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems'>('campgrounds');
+  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems' | 'for-you'>('campgrounds');
 
   useEffect(() => {
     if (!user) return;
@@ -117,6 +118,12 @@ export default function CampgroundsPage() {
           🏕️ Campgrounds
         </button>
         <button
+          onClick={() => setPageTab('for-you')}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'for-you' ? 'bg-primary-500 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+        >
+          <span>✨</span> For You
+        </button>
+        <button
           onClick={() => setPageTab('hidden-gems')}
           className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'hidden-gems' ? 'bg-purple-600 text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
         >
@@ -136,6 +143,9 @@ export default function CampgroundsPage() {
         </button>
       </div>
 
+      {pageTab === 'for-you' && (
+        <div className="max-w-2xl mx-auto px-4 py-4"><YourKindOfPlace /></div>
+      )}
       {pageTab === 'hidden-gems' && (
         <div className="max-w-xl mx-auto py-4">
           <HiddenGemFinder />
