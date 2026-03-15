@@ -10,6 +10,7 @@ import ToastProvider from './components/ToastProvider';
 import RVOnboardingFlow from './components/RVOnboardingFlow';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import Navbar from './components/Navbar';
+import GuideUnlockToast from './components/GuideUnlockToast';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -123,6 +124,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {user && <Navbar />}
+      <GuideUnlockToast />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

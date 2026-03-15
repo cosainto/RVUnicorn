@@ -193,4 +193,57 @@ Chime in with 1-2 sentences in your character voice. Options: add useful info Hi
   }
 });
 
+
+// POST /api/guide-unlocks/check-and-notify
+// Call this after any action that could trigger an unlock (review, checkin, wishlist, follow)
+router.post('/check-and-notify', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.json({ unlocked: [] });
+
+    const unlocks = await evaluateUnlocks(userId);
+
+    const GUIDE_NAMES: Record<string, string> = {
+      diesel: 'Diesel Dave',
+      walter: 'Walter',
+      luna: 'Luna',
+      scout: 'Scout',
+      rose: 'Rose Merlot',
+      holden_hannah: 'Holden & Hannah',
+    };
+
+    const GUIDE_EMOJIS: Record<string, string> = {
+      diesel: '🚛', walter: '🎭', luna: '🌙',
+      scout: '🏔️', rose: '🍷', holden_hannah: '🏕️',
+    };
+
+    // Check which guides just became unlocked that we havent notified about
+    const newlyUnlocked: string[] = [];
+    for (const [guideId, data] of Object.entries(unlocks) as any[]) {
+      if (guideId === 'hitch' || !data.unlocked) continue;
+
+      // Check if we already sent this notification
+      const existing = await prisma.notification.findFirst({
+        where: { userId, type: 'GUIDE_UNLOCKED', link: `/hitch?guide=${guideId}` }
+      }).catch(() => null);
+
+      if (!existing) {
+        await prisma.notification.create({
+          data: {
+            userId,
+            type: 'GUIDE_UNLOCKED',
+            content: `${GUIDE_EMOJIS[guideId]} You unlocked ${GUIDE_NAMES[guideId]}! Head to Hitch AI to chat with your new guide.`,
+            link: `/hitch?guide=${guideId}`,
+          }
+        }).catch(() => null);
+        newlyUnlocked.push(guideId);
+      }
+    }
+
+    res.json({ unlocked: newlyUnlocked, unlocks });
+  } catch (e: any) {
+    res.json({ unlocked: [] });
+  }
+});
+
 export default router;

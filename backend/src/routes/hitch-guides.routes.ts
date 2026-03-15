@@ -539,4 +539,416 @@ Pick top 8. Be specific about why each fits THIS user. Reference their exact RV 
   }
 });
 
+
+// GET /api/hitch/report-leaderboard
+router.get('/report-leaderboard', async (req: any, res) => {
+  try {
+    const { campgroundId } = req.query;
+
+    const grouped = await prisma.campgroundReview.groupBy({
+      by: ['userId'],
+      where: campgroundId ? { campgroundId: String(campgroundId) } : {},
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 10,
+    });
+
+    const userIds = grouped.map((g: any) => g.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, username: true, firstName: true, profilePicture: true },
+    });
+
+    const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
+
+    const leaders = grouped.map((g: any, i: number) => ({
+      ...userMap[g.userId],
+      userId: g.userId,
+      reportCount: g._count.id,
+      rank: i + 1,
+    })).filter((l: any) => l.username);
+
+    res.json({ leaders });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+
+// GET /api/hitch/profile-summary/:username
+router.get('/profile-summary/:username', async (req: any, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        firstName: true, state: true, campingInterests: true,
+        rvType: true, rvLength: true, rvMake: true,
+        createdAt: true,
+        _count: { select: { checkIns: true, events: true, campgroundReviews: true } }
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Not found' });
+
+    const stateVisits = await prisma.stateVisit.findMany({
+      where: { userId: (await prisma.user.findUnique({ where: { username }, select: { id: true } }))?.id || '' },
+      select: { state: true },
+    }).catch(() => []);
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 250,
+      messages: [{
+        role: 'user',
+        content: `Write a warm, enthusiastic 2-3 sentence summary of this RVUnicorn member's camping journey. Write in second person ("You've..."). Be specific and personal.
+
+Name: ${user.firstName}
+Home: ${user.state || 'unknown'}
+RV: ${user.rvType || 'unknown'} ${user.rvMake || ''} ${user.rvLength ? user.rvLength + 'ft' : ''}
+Check-ins: ${user._count.checkIns}
+Trips planned: ${user._count.events}
+Campground reports: ${user._count.campgroundReviews}
+States visited: ${stateVisits.map((s: any) => s.state).join(', ') || 'none yet'}
+Camping interests: ${(user.campingInterests as string[] || []).join(', ') || 'not set yet'}
+Member since: ${new Date(user.createdAt).getFullYear()}
+
+Write the summary now (2-3 sentences, warm and celebratory, mention specific numbers):`,
+      }],
+    });
+
+    const summary = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+    res.json({ summary });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+
+// POST /api/hitch/trip-copilot
+router.post('/trip-copilot', async (req: any, res) => {
+  try {
+    const { origin, destination, campgroundId } = req.body;
+    const userId = req.user?.id;
+
+    let userRv: any = null;
+    if (userId) {
+      userRv = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { rvType: true, rvLength: true, rvMake: true, rvFuelType: true }
+      }).catch(() => null);
+    }
+
+    let campInfo = '';
+    if (campgroundId) {
+      const camp = await prisma.campground.findUnique({
+        where: { id: campgroundId },
+        select: { name: true, maxRvLength: true, isBigRigFriendly: true, hasPullThrough: true }
+      }).catch(() => null);
+      if (camp) {
+        campInfo = `Destination campground: ${camp.name} | MaxRV: ${camp.maxRvLength || "unknown"}ft | BigRig: ${camp.isBigRigFriendly} | PullThrough: ${camp.hasPullThrough}`;
+      }
+    }
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 800,
+      tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
+      messages: [{
+        role: 'user',
+        content: `You are an RV trip co-pilot. Analyze this trip and return warnings/tips. Use web search to check current weather and road conditions.
+
+Trip: ${origin} to ${destination}
+RV: ${userRv?.rvType || 'unknown'} ${userRv?.rvMake || ''} (${userRv?.rvLength || '?'}ft, ${userRv?.rvFuelType || 'gas'})
+${campInfo}
+Today: ${new Date().toLocaleDateString()}
+
+Search for current weather at the destination and any road conditions or closures.
+
+Return ONLY valid JSON:
+{
+  "warnings": [
+    {
+      "type": "weather",
+      "severity": "warning",
+      "title": "Rain expected at destination",
+      "detail": "70% chance of rain Friday-Saturday. Pack rain gear and consider checking site drainage."
+    }
+  ]
+}
+
+type options: rig, fuel, weather, tip
+severity options: info, warning, danger
+Generate 2-4 relevant warnings/tips. Include: rig compatibility warning if campground maxRV is close to user rig length, weather from web search, fuel stop suggestion, any relevant tips.`,
+      }],
+    });
+
+    const textBlocks = response.content.filter((b: any) => b.type === 'text');
+    const text = textBlocks.map((b: any) => b.text).join('');
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    res.json({ warnings: parsed.warnings || [] });
+  } catch (e: any) {
+    console.error('Trip copilot error:', e?.message);
+    res.json({ warnings: [] });
+  }
+});
+
+
+// GET /api/hitch/site-prediction/:campgroundId
+router.get('/site-prediction/:campgroundId', async (req: any, res) => {
+  try {
+    const { campgroundId } = req.params;
+    const userId = req.user?.id;
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true, city: true, state: true, maxRvLength: true }
+    });
+    if (!campground) return res.status(404).json({ error: 'Not found' });
+
+    let userRvLength = null;
+    if (userId) {
+      const u = await prisma.user.findUnique({ where: { id: userId }, select: { rvLength: true } }).catch(() => null);
+      userRvLength = u?.rvLength;
+    }
+
+    const reviews = await prisma.campgroundReview.findMany({
+      where: { campgroundId },
+      select: { content: true, bestSiteNumber: true, rating: true, accessDifficulty: true },
+      take: 40,
+      orderBy: { createdAt: 'desc' },
+    }).catch(() => []) as any[];
+
+    const siteMentions = reviews.filter((r: any) => r.bestSiteNumber).map((r: any) => r.bestSiteNumber);
+    const reviewTexts = reviews.map((r: any) => r.content).filter(Boolean).slice(0, 15).join(' | ');
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `Based on community reviews, predict the best campsites at ${campground.name}.
+
+Camper recommended sites: ${siteMentions.join(', ') || 'none mentioned yet'}
+User RV length: ${userRvLength || 'unknown'}ft
+Review excerpts: ${reviewTexts.substring(0, 600) || 'No reviews yet'}
+
+Return ONLY valid JSON:
+{
+  "siteNumbers": ["A12", "B7", "Loop C"],
+  "reason": "Sites A12 and B7 are mentioned most by campers as having the best views and level pads",
+  "tips": ["Call ahead to request a specific site", "Loop C sites have more shade"],
+  "avoidSites": ["D1", "D2"],
+  "avoidReason": "Near the dump station according to multiple reviews"
+}
+
+If not enough data, return empty arrays with a honest reason. Never invent site numbers not mentioned in reviews.`,
+      }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    res.json(parsed);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+
+// POST /api/hitch/trip-recap
+router.post('/trip-recap', async (req: any, res) => {
+  try {
+    const { tripId, tripTitle, campgroundName, startDate, endDate, attendeeCount, checkInCount, photoCount, activities } = req.body;
+
+    const nights = startDate && endDate
+      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000)
+      : 1;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `Write a fun, shareable social-media-ready trip recap for this RV camping trip. Use "We" voice. Be warm, specific, and capture the spirit of RV life. End with a teaser for the next adventure. Max 200 words.
+
+Trip: ${tripTitle}
+Location: ${campgroundName || 'a great campground'}
+Duration: ${nights} night${nights !== 1 ? 's' : ''}
+People: ${attendeeCount || 'a group'}
+Check-ins: ${checkInCount || 0}
+Photos: ${photoCount || 0}
+Activities: ${(activities || []).join(', ') || 'camping and relaxing'}
+
+Write the recap now:`,
+      }],
+    });
+
+    const recap = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+    res.json({ recap });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+
+// POST /api/hitch/onboarding-chat
+router.post('/onboarding-chat', async (req: any, res) => {
+  try {
+    const { message, history, step, collectedData } = req.body;
+    const userId = req.user?.id;
+
+    const steps = [
+      { field: 'rvType',    question: 'What kind of RV?', nextQ: 'Great! And how long is your rig? (in feet, approximate is fine)' },
+      { field: 'rvLength',  question: 'RV length?',       nextQ: 'Perfect. Where are you based out of? (just your home state is fine)' },
+      { field: 'state',     question: 'Home state?',      nextQ: 'Almost done! What are your top 3 camping interests? (hiking, fishing, wine country, boondocking, family fun, beachside, etc.)' },
+      { field: 'interests', question: 'Camping interests?', nextQ: null },
+    ];
+
+    const currentStep = Math.min(step || 0, steps.length - 1);
+    const isLastStep = currentStep >= steps.length - 1;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      system: `You are Hitch, helping a new RVUnicorn member set up their profile through friendly conversation.
+Current step: ${currentStep} of ${steps.length - 1}
+Currently collecting: ${steps[currentStep]?.field}
+Already collected: ${JSON.stringify(collectedData)}
+
+Extract the user's answer from their message and respond warmly.
+Next question to ask: ${steps[currentStep + 1] ? steps[currentStep + 1].question : 'none - wrap up warmly'}
+If this is the last step, say something like "Perfect! Your profile is all set. Welcome to RVUnicorn!" and set complete=true.
+
+Return ONLY valid JSON:
+{
+  "message": "your warm response + next question",
+  "collectedData": { "${steps[currentStep]?.field}": "extracted value" },
+  "step": ${currentStep + 1},
+  "complete": ${isLastStep}
+}`,
+      messages: history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    // Save collected data to user profile
+    if (userId && parsed.collectedData) {
+      const updates: any = {};
+      if (parsed.collectedData.rvType) updates.rvType = parsed.collectedData.rvType;
+      if (parsed.collectedData.rvLength) updates.rvLength = parseInt(String(parsed.collectedData.rvLength)) || null;
+      if (parsed.collectedData.state) updates.state = parsed.collectedData.state;
+      if (parsed.collectedData.interests) {
+        const interests = Array.isArray(parsed.collectedData.interests)
+          ? parsed.collectedData.interests
+          : String(parsed.collectedData.interests).split(',').map((s: string) => s.trim());
+        updates.campingInterests = interests;
+      }
+      if (Object.keys(updates).length > 0) {
+        await prisma.user.update({ where: { id: userId }, data: updates }).catch(() => null);
+      }
+    }
+
+    res.json(parsed);
+  } catch (e: any) {
+    console.error('Onboarding error:', e?.message);
+    res.status(500).json({ message: "Let us keep going! What were you saying?", step: step, complete: false });
+  }
+});
+
+
+// POST /api/hitch/weekly-digest/:userId
+// Call this from a cron job (e.g. Railway cron or external scheduler) every Monday
+router.post('/weekly-digest/:userId', async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        firstName: true, email: true, state: true,
+        campingInterests: true, rvType: true,
+      }
+    });
+    if (!user || !user.email) return res.status(404).json({ error: 'No email' });
+
+    // Get new campgrounds added this week
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newCampgrounds = await prisma.campground.findMany({
+      where: { createdAt: { gte: oneWeekAgo } },
+      select: { name: true, city: true, state: true, googleRating: true },
+      take: 5,
+      orderBy: { googleRating: 'desc' },
+    });
+
+    // Get upcoming trips from friends
+    const following = await prisma.friendship.findMany({
+      where: { senderId: userId, status: 'ACCEPTED' },
+      select: { receiverId: true },
+      take: 20,
+    }).catch(() => []);
+    const friendIds = following.map((f: any) => f.receiverId);
+
+    const friendTrips = friendIds.length > 0 ? await prisma.event.findMany({
+      where: { organizerId: { in: friendIds }, startDate: { gte: new Date() }, privacy: { not: 'PRIVATE' } },
+      select: { title: true, startDate: true, campground: { select: { name: true } }, organizer: { select: { firstName: true } } },
+      take: 3,
+      orderBy: { startDate: 'asc' },
+    }) : [];
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `Write a personalized weekly camping digest email for an RVUnicorn member. Warm, enthusiastic, brief. Sign off as Hitch.
+
+Member: ${user.firstName}
+RV: ${user.rvType || 'unknown'}
+Interests: ${(user.campingInterests as string[] || []).join(', ') || 'general camping'}
+Home state: ${user.state || 'unknown'}
+
+New campgrounds added this week: ${newCampgrounds.map(c => `${c.name} in ${c.city}, ${c.state} (${c.googleRating || 'N/A'}★)`).join(', ') || 'none'}
+Friends with upcoming trips: ${friendTrips.map((t: any) => `${t.organizer.firstName} is going to "${t.title}" at ${t.campground?.name || 'TBD'}`).join(', ') || 'none'}
+
+Write a 3-paragraph email:
+1. Personalized greeting mentioning something relevant to their interests
+2. Highlight 1-2 new campgrounds or friend activity  
+3. Tip or inspiration for their next trip
+Sign off warmly as Hitch 🦄`,
+      }],
+    });
+
+    const emailBody = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+
+    // Send via Resend
+    const { Resend } = await import('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'Hitch at RVUnicorn <hitch@updates.rvunicorn.com>',
+      to: user.email,
+      subject: `🦄 Your weekly camping digest, ${user.firstName}!`,
+      text: emailBody,
+      html: `<div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #db2777); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 24px;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">🦄 RVUnicorn Weekly</h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px;">Your personalized camping digest</p>
+        </div>
+        <div style="line-height: 1.8; color: #374151; font-size: 16px; white-space: pre-line;">${emailBody}</div>
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px;">
+          <a href="https://www.rvunicorn.com" style="color: #7c3aed;">RVUnicorn</a> · 
+          <a href="https://www.rvunicorn.com/settings" style="color: #9ca3af;">Unsubscribe</a>
+        </div>
+      </div>`,
+    });
+
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Weekly digest error:', e?.message);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;
