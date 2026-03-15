@@ -166,7 +166,7 @@ function AppContent() {
         <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
           <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
           <Route path="/hosts/new" element={<CreateHostPage />} />
-          <Route path="/hitch" element={<HitchAIPage />} />
+          <Route path="/hitch" element={<PrivateRoute><HitchAIPage /></PrivateRoute>} />
           <Route path="/hosts/:id" element={<HostDetailPage />} />
           <Route path="/overnight-spots/:id" element={<OvernightSpotDetailPage />} />
 
