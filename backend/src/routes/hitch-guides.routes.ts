@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -8,36 +8,36 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Character persona definitions (mirrors frontend config) ───
 const GUIDE_PERSONAS: Record<string, string> = {
-  hitch: `You are Hitch 🦄, RVUnicorn's friendly and knowledgeable AI trail guide.
+  hitch: `You are Hitch 🦄, RVUnicorn\'s friendly and knowledgeable AI trail guide.
 Personality: Warm, encouraging, balanced. Like the helpful neighbor at the campground who knows everything.
 Voice: Conversational, optimistic, uses occasional camping lingo naturally. Emojis sparingly.`,
 
-  walter: `You are Walter 🎭, RVUnicorn's veteran camper and lovable curmudgeon.
-Personality: You've camped everywhere, seen every disaster, and have opinions about ALL of it. Funny, a little grumpy, but genuinely helpful.
+  walter: `You are Walter 🎭, RVUnicorn"s veteran camper and lovable curmudgeon.
+Personality: You"ve camped everywhere, seen every disaster, and have opinions about ALL of it. Funny, a little grumpy, but genuinely helpful.
 Voice: Dry humor, mock outrage, vivid stories. Always end with a useful takeaway despite the jokes.
 Never mean-spirited toward people, only places/situations. No profanity.`,
 
-  rose: `You are Rosé Merlot 🍷, RVUnicorn's glamping guru and lifestyle curator.
+  rose: `You are Rosé Merlot 🍷, RVUnicorn\'s glamping guru and lifestyle curator.
 Personality: Sophisticated but fun. You believe camping should be beautiful AND comfortable.
-Voice: Enthusiastic, a little extra, uses words like "divine" and "stunning." Always mention if there's a winery or great restaurant nearby.`,
+Voice: Enthusiastic, a little extra, uses words like "divine" and "stunning." Always mention if there"s a winery or great restaurant nearby.`,
 
-  scout: `You are Scout 🏔️, RVUnicorn's adventure-first trailblazer.
+  scout: `You are Scout 🏔️, RVUnicorn"s adventure-first trailblazer.
 Personality: High energy, loves the outdoors, always looking for the next trail or hidden gem.
 Voice: Enthusiastic, direct, action-oriented. Gets excited about trails, wildlife, stargazing.
 Always mention the best nearby trails, outdoor activities, and scenic highlights.`,
 
-  diesel: `You are Diesel Dave 🚛, RVUnicorn's big rig expert and technical authority.
+  diesel: `You are Diesel Dave 🚛, RVUnicorn\'s big rig expert and technical authority.
 Personality: Straight-talking, no-nonsense, deeply knowledgeable about big rigs, towing, and campground access.
 Voice: Direct, authoritative, practical. Uses specific technical terms (turning radius, amp service, pull-through).
 ALWAYS lead with whether a campground can handle a big rig and what the access is like.`,
 
-  holden_hannah: `You are Holden & Hannah 🏕️, RVUnicorn's Junior Rangers — two adventurous kids who explore every campground like it's the greatest place on Earth.
-Personality: Enthusiastic, curious, fun-loving. You see campgrounds through a kid's eyes.
+  holden_hannah: `You are Holden & Hannah 🏕️, RVUnicorn"s Junior Rangers — two adventurous kids who explore every campground like it"s the greatest place on Earth.
+Personality: Enthusiastic, curious, fun-loving. You see campgrounds through a kid\'s eyes.
 Voice: Energetic and playful. Use words like "SO cool" and "awesome." Kid-friendly language only.
 Specialty: Playgrounds, swimming spots, kid activities, fishing, campfire games, family trails.
 Always highlight playgrounds, pools, splash pads, and organized kids activities.`,
 
-  luna: `You are Luna 🌙, RVUnicorn's family camping and pet travel expert.
+  luna: `You are Luna 🌙, RVUnicorn"s family camping and pet travel expert.
 Personality: Warm, nurturing, organized. Cares about safety, kid-friendly activities, and pet policies.
 Voice: Friendly and reassuring, practical. Always highlight if a campground has a playground, pool, or pet-friendly sites.`,
 };
@@ -170,9 +170,9 @@ router.get('/rig-stress/:campgroundId', async (req: any, res) => {
     const accessData = countField(reviews, 'accessDifficulty');
     const levelData = countField(reviews, 'levelness');
     const bigRigData = countField(reviews, 'bigRigFriendly');
-    const dataSource = reviews.length >= 3 ? 'community' : 'ai';
+    const dataSource = reviews.length >= 3 ? 'community' : 'ai";
 
-    // Get user's rig if logged in
+    // Get user\'s rig if logged in
     let userRig: any = null;
     if (userId) {
       userRig = await prisma.user.findUnique({
@@ -184,11 +184,11 @@ router.get('/rig-stress/:campgroundId', async (req: any, res) => {
     const prompt = `Calculate Rig Stress Score for ${campground.name} (${campground.city}, ${campground.state}).
 
 Campground specs:
-- Max RV Length: ${campground.maxRvLength || 'Unknown'}ft
+- Max RV Length: ${campground.maxRvLength || "Unknown'}ft
 - Big Rig Friendly: ${campground.isBigRigFriendly ?? 'Unknown'}
 - Pull-through sites: ${campground.hasPullThrough ?? 'Unknown'}
 - Back-in sites: ${campground.hasBackIn ?? 'Unknown'}
-- Max amp service: ${campground.maxAmpService || 'Unknown'}
+- Max amp service: ${campground.maxAmpService || 'Unknown"}
 - Full hookups: Electric=${campground.hasElectricHookup}, Water=${campground.hasWaterHookup}, Sewer=${campground.hasSewerHookup}
 
 Community reports (${reviews.length} total):
@@ -196,7 +196,7 @@ Community reports (${reviews.length} total):
 - Levelness votes: ${JSON.stringify(levelData)}
 - Big rig friendly votes: ${JSON.stringify(bigRigData)}
 
-${userRig ? `User's rig: ${userRig.rvYear || ''} ${userRig.rvMake || ''} ${userRig.rvType || 'RV'} (${userRig.rvLength || '?'}ft)` : 'User rig: unknown'}
+${userRig ? `User\'s rig: ${userRig.rvYear || "'} ${userRig.rvMake || ''} ${userRig.rvType || 'RV'} (${userRig.rvLength || '?'}ft)` : 'User rig: unknown'}
 
 Return ONLY valid JSON:
 {
@@ -285,10 +285,10 @@ Reviews (${reviews.length}): ${reviewSummary || 'None yet'}`
       guides.push('scout');
     if (questionLower.match(/wine|glamp|luxury|romantic|couple|vibe|scenic|beautiful/))
       guides.push('rose');
-    if (!guides.includes('walter')) guides.push('walter'); // Walter always adds color
+    if (!guides.includes('walter')) guides.push('walter"); // Walter always adds color
     guides = [...new Set(guides)].slice(0, 4); // max 4 guides
 
-    // Generate each guide's response
+    // Generate each guide\'s response
     const discussion: { guideId: string; content: string }[] = [];
 
     for (const guideId of guides) {
@@ -297,7 +297,7 @@ Reviews (${reviews.length}): ${reviewSummary || 'None yet'}`
 
 You are one voice in a campfire discussion. Other guides will also weigh in.
 Answer concisely (2-4 sentences). Speak in your character voice.
-Stay factual — only reference the data below. Don't invent specifics.
+Stay factual — only reference the data below. Don"t invent specifics.
 
 ${campgroundContext}
 
@@ -379,7 +379,7 @@ router.get('/roast/:campgroundId', async (req: any, res) => {
       access: countField(reviews, 'accessDifficulty'),
       noise: countField(reviews, 'noise'),
       cell: countField(reviews, 'cellService'),
-      levelness: countField(reviews, 'levelness'),
+      levelness: countField(reviews, 'levelness"),
     };
 
     const prompt = `You are Walter 🎭 — a veteran RVer and lovable curmudgeon. Write a comedic-but-grounded campground roast.
@@ -392,14 +392,14 @@ Reviews: ${reviewTexts.substring(0, 800)}
 Rules:
 - Ground ALL jokes in actual review patterns. No invented complaints.
 - Funny but never mean to people, never profane.
-- Roast should feel like a friend who's been there, not a troll.
+- Roast should feel like a friend who\'s been there, not a troll.
 - Always include a genuine positive counterpoint.
 - Verdict should be punchy and quotable.
 
 Return ONLY valid JSON:
 {
   "roastLines": [
-    "The WiFi password is 'noservice' — and yes, they're being literal. 🎭",
+    "The WiFi password is "noservice' — and yes, they're being literal. 🎭",
     "Leveling your rig here is like trying to balance a pencil on your nose. Three blocks deep and still fighting gravity."
   ],
   "positiveCounterpoint": "That said, the lake views are genuinely stunning at sunrise, and the host family is some of the nicest people you'll meet on the road.",

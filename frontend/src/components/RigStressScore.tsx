@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext";
 
 interface StressData {
   score: number;         // 1-5
@@ -9,8 +9,8 @@ interface StressData {
   color: string;         // green/yellow/orange/red
   reason: string;        // Main explanation
   bigRigTips: string[];  // Specific tips for big rigs
-  userRigNote?: string;  // Personalized note for user's specific rig
-  factors: { label: string; impact: 'positive' | 'negative' | 'neutral'; detail: string }[];
+  userRigNote?: string;  // Personalized note for user\'s specific rig
+  factors: { label: string; impact: "positive' | 'negative' | 'neutral'; detail: string }[];
   dataSource: 'community' | 'ai' | 'minimal';
 }
 

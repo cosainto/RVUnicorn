@@ -31,7 +31,7 @@ const ScaleQuestion = ({
 );
 
 export default function SmartReviewForm({ campgroundId, campgroundName, onSubmitted }: SmartReviewFormProps) {
-  const [step, setStep] = useState<'structured' | 'text' | 'done'>('structured');
+  const [step, setStep] = useState<'structured' | 'text' | 'done">(\'structured");
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [fields, setFields] = useState({

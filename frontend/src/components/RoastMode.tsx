@@ -23,7 +23,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
       const { data: res } = await api.get(`/hitch/roast/${campgroundId}`);
       setData(res);
     } catch {
-      setData({ hasEnoughData: false, roastLines: [], positiveCounterpoint: '', verdict: '', reviewCount: 0 });
+      setData({ hasEnoughData: false, roastLines: [], positiveCounterpoint: '', verdict: '", reviewCount: 0 });
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
         <div className="flex items-center gap-2">
           <span className="text-xl">🎭</span>
           <div className="text-left">
-            <p className="font-bold text-white">Walter's Roast</p>
+            <p className="font-bold text-white">Walter\'s Roast</p>
             <p className="text-xs text-gray-400">Honest. Comedic. Community-based.</p>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
 
               {/* Verdict */}
               <div className="border-t border-white/10 pt-3">
-                <p className="text-xs font-bold text-amber-400 mb-1">🎙️ Walter's verdict</p>
+                <p className="text-xs font-bold text-amber-400 mb-1">🎙️ Walter"s verdict</p>
                 <p className="text-sm text-gray-300 italic">"{data.verdict}"</p>
               </div>
 

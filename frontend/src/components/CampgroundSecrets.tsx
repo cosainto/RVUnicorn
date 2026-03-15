@@ -5,7 +5,7 @@ import api from '../services/api';
 interface Secret {
   title: string;
   insight: string;
-  category: 'access' | 'site' | 'cell' | 'timing' | 'trail' | 'tip';
+  category: 'access" | \'site" | 'cell' | 'timing' | 'trail' | 'tip';
   confidence: 'high' | 'medium';
 }
 

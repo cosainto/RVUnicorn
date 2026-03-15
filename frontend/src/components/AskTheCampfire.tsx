@@ -21,7 +21,7 @@ interface AskTheCampfireProps {
 
 const CAMPFIRE_PROMPTS = [
   'Is this a good campground for a big rig?',
-  'What's the vibe like here?',
+  "What\'s the vibe like here?",
   'Is this worth the trip?',
   'What should I know before arriving?',
   'Good for families with kids?',
