@@ -588,6 +588,16 @@ router.get('/profile-summary/:username', async (req: any, res) => {
       nature:    "Write like a nature whisperer — contemplative, earthy, deeply connected to the outdoors and wildlife.",
     };
     const toneInstruction = TONE_PROMPTS[tone] || TONE_PROMPTS.campfire;
+    const tone = (req.query.tone as string) || 'campfire';
+    const TONE_PROMPTS: Record<string, string> = {
+      campfire:  "Write like a seasoned campfire storyteller — warm, vivid, poetic. Make it sound like a story told under the stars.",
+      comedian:  "Write like a road trip comedian — funny, self-deprecating, full of wit. Think stand-up comedy meets camping.",
+      adventure: "Write like an adventure seeker — bold, energetic, inspiring. Make it sound like the opening of an epic journey.",
+      vineyard:  "Write like a sophisticated vineyard voyager — elegant but fun, mention good taste and the finer things on the road.",
+      hophead:   "Write like an eternal hoptimist — craft beer lover, laid-back, always finding the local brewery. Pun-friendly.",
+      nature:    "Write like a nature whisperer — contemplative, earthy, deeply connected to the outdoors and wildlife.",
+    };
+    const toneInstruction = TONE_PROMPTS[tone] || TONE_PROMPTS.campfire;
 
     const user = await prisma.user.findUnique({
       where: { username },
