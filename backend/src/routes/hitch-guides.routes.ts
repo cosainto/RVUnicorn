@@ -975,28 +975,27 @@ router.post('/send-weekly-digests', async (req: any, res) => {
       take: 500, // process in batches
     });
 
+    // Return immediately so cron-job.org doesn't timeout
+    res.json({ queued: activeUsers.length, message: 'Processing in background' });
+
+    // Process in background after response sent
     let sent = 0;
     let failed = 0;
-
-    // Process in small batches to avoid rate limits
     for (const user of activeUsers) {
       try {
-        // Call the individual digest endpoint
-        const res2 = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/hitch/weekly-digest/${user.id}`, {
+        const backendUrl = process.env.BACKEND_URL || 'https://rvunicorn-production.up.railway.app';
+        const res2 = await fetch(`${backendUrl}/api/hitch/weekly-digest/${user.id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
         if (res2.ok) sent++;
         else failed++;
-        // Small delay between sends
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch {
         failed++;
       }
     }
-
-    console.log(`Weekly digest: ${sent} sent, ${failed} failed, ${activeUsers.length} total`);
-    res.json({ sent, failed, total: activeUsers.length });
+    console.log(`Weekly digest complete: ${sent} sent, ${failed} failed, ${activeUsers.length} total`);
   } catch (e: any) {
     console.error('Weekly digest cron error:', e?.message);
     res.status(500).json({ error: 'Failed' });
