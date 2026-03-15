@@ -739,7 +739,11 @@ router.post('/campground-chat', async (req: any, res) => {
       rvContext = `User's RV: ${userContext.rv.year || ''} ${userContext.rv.make || ''} ${userContext.rv.type} (${userContext.rv.length || '?'}ft)`;
     }
 
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     const systemPrompt = `You are Hitch, RVUnicorn's AI camping expert. You are answering questions specifically about ${campgroundName}.
+Current date and time: ${dateStr} at ${timeStr}.
 
 Campground Data:
 - Location: ${campground.city}, ${campground.state}
