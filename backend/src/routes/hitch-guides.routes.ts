@@ -501,7 +501,7 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
         role: "user",
         content: `Match campgrounds to this RV user. Return ONLY valid JSON no markdown.
 
-User: RV=${user.rvType || "unknown"} (${user.rvLength || "?"}ft) | Interests: ${interests.join(", ") || "none"} | State: ${user.state || "unknown"}
+User: RV=${user.rvType || "unknown"} (${user.rvLength || "?"}ft) | Interests: ${interests.join(", ") || "none"} | State: ${user.homeState || "unknown"}
 
 Campgrounds:
 ${campList}
@@ -604,7 +604,7 @@ router.get('/profile-summary/:username', async (req: any, res) => {
         content: `Write a warm, enthusiastic 2-3 sentence summary of this RVUnicorn member's camping journey. Write in second person ("You've..."). Be specific and personal.
 
 Name: ${user.firstName}
-Home: ${user.state || 'unknown'}
+Home: ${user.homeState || 'unknown'}
 RV: ${user.rvType || 'unknown'} ${user.rvMake || ''} ${user.rvLength ? user.rvLength + 'ft' : ''}
 Check-ins: ${user._count.checkIns}
 Trips planned: ${user._count.events}
@@ -907,7 +907,7 @@ router.post('/weekly-digest/:userId', async (req: any, res) => {
 Member: ${user.firstName}
 RV: ${user.rvType || 'unknown'}
 Interests: ${(user.campingInterests as string[] || []).join(', ') || 'general camping'}
-Home state: ${user.state || 'unknown'}
+Home state: ${user.homeState || 'unknown'}
 
 New campgrounds added this week: ${newCampgrounds.map(c => `${c.name} in ${c.city}, ${c.state} (${c.googleRating || 'N/A'}★)`).join(', ') || 'none'}
 Friends with upcoming trips: ${friendTrips.map((t: any) => `${t.organizer.firstName} is going to "${t.title}" at ${t.campground?.name || 'TBD'}`).join(', ') || 'none'}
