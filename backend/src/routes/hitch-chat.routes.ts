@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // POST /api/hitch/chat
-router.post('/chat', async (req: any, res) => {
+router.post('/chat', authenticateToken, async (req: any, res) => {
   try {
     const { message, history = [], userContext, guideId = 'hitch' } = req.body;
 
