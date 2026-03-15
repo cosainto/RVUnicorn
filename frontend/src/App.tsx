@@ -121,16 +121,24 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user } = useAuth();
-  const [showOnboarding, setShowOnboarding] = (typeof window !== 'undefined'
-    ? [localStorage.getItem('onboarding_done') !== '1' && !!user && !(user as any).rvType, (v: boolean) => { if (!v) localStorage.setItem('onboarding_done', '1'); }]
-    : [false, () => {}]) as [boolean, (v: boolean) => void];
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user && !(user as any).rvType) {
+      const done = localStorage.getItem('hitch_onboarding_done');
+      if (!done) setShowOnboarding(true);
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {user && <Navbar />}
       <GuideUnlockToast />
       {showOnboarding && (
-        <HitchOnboarding onComplete={() => setShowOnboarding(false)} />
+        <HitchOnboarding onComplete={() => {
+          localStorage.setItem('hitch_onboarding_done', '1');
+          setShowOnboarding(false);
+        }} />
       )}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
