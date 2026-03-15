@@ -128,11 +128,9 @@ router.post('/chat', async (req: any, res) => {
         }
       } catch {}
     }
-    const userContext = resolvedContext;
-
     // Build user context string
     let userContextStr = '';
-    if (userContext?.name) {
+    if (resolvedContext?.name) {
       userContextStr += `\nUser: ${userContext.name} (@${userContext.username})`;
       if (userContext.homeState) userContextStr += `, home state: ${userContext.homeState}`;
       if (userContext.rv?.type) userContextStr += `\nRV: ${userContext.rv.year || ''} ${userContext.rv.make || ''} ${userContext.rv.model || ''} ${userContext.rv.type || ''} (${userContext.rv.length || '?'}ft, ${userContext.rv.fuelType || 'gas'})`;
