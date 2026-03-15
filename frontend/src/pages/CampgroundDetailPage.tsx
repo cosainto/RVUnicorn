@@ -14,6 +14,11 @@ import HitchCampgroundChat from '../components/HitchCampgroundChat';
 import CampgroundVibeCard from '../components/CampgroundVibeCard';
 import CampersLikeYou from '../components/CampersLikeYou';
 import HitchRigCheck from '../components/HitchRigCheck';
+import CampgroundSecrets from '../components/CampgroundSecrets';
+import RigStressScore from '../components/RigStressScore';
+import AskTheCampfire from '../components/AskTheCampfire';
+import RoastMode from '../components/RoastMode';
+import SmartReviewForm from '../components/SmartReviewForm';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -1725,7 +1730,7 @@ export default function CampgroundDetailPage() {
           {/* Reviews Tab */}
           {activeTab === 'reviews' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4"><div><h3 className="text-xl font-bold">Reviews</h3>{avgRating > 0 && <div className="flex items-center gap-2 mt-1">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">{avgRating.toFixed(1)} avg ({reviews.length})</span></div>}</div>{user && <button onClick={() => setShowReviewModal(true)} className="btn btn-primary btn-sm"><Star className="w-4 h-4 mr-1" />Write</button>}</div>
+              <div className="flex items-center justify-between mb-4"><div><h3 className="text-xl font-bold">Reviews</h3>{avgRating > 0 && <div className="flex items-center gap-2 mt-1">{renderSmores(Math.round(avgRating))}<span className="text-gray-600">{avgRating.toFixed(1)} avg ({reviews.length})</span></div>}</div>{user && <button onClick={() => setShowReviewModal(true)} className="btn btn-primary btn-sm"><Star className="w-4 h-4 mr-1" />Campground Report</button>}</div>
               {reviews.length > 0 ? reviews.map(r => (
                 <div key={r.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-3">
@@ -1733,13 +1738,27 @@ export default function CampgroundDetailPage() {
                     <div className="flex-1"><div className="flex items-center justify-between"><Link to={`/profile/${r.user.username}`} className="font-semibold hover:text-primary-600">{r.user.firstName} {r.user.lastName}</Link>{renderSmores(r.rating)}</div>{r.title && <h4 className="font-medium mt-1">{r.title}</h4>}{r.review && <p className="text-gray-700 mt-2">{r.review}</p>}<p className="text-sm text-gray-500 mt-2">{formatDate(r.createdAt)}{r.visitDate && ` • Visited ${formatDate(r.visitDate)}`}</p></div>
                   </div>
                 </div>
-              )) : <div className="text-center py-12 text-gray-500"><Star className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No reviews yet</p></div>}
+              )) : <div className="text-center py-12 text-gray-500"><Star className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No reviews yet — be the first!</p></div>}
+              {showReviewModal && campground && (
+                <div className="mt-6 border rounded-2xl p-5 bg-gray-50">
+                  <h4 className="font-bold text-gray-900 mb-4">📋 Submit Campground Report</h4>
+                  <SmartReviewForm
+                    campgroundId={campground.id}
+                    campgroundName={campground.name}
+                    onSubmitted={() => { setShowReviewModal(false); loadTabData(); }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {/* Stickers Tab */}
           {activeTab === 'vibe' && campground && (
             <div className="space-y-4">
+              <RigStressScore campgroundId={campground.id} />
+              <CampgroundSecrets campgroundId={campground.id} />
+              <AskTheCampfire campgroundId={campground.id} campgroundName={campground.name} />
+              <RoastMode campgroundId={campground.id} campgroundName={campground.name} />
               <CampgroundVibeCard campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
               <HitchRigCheck campgroundId={campground.id} campgroundName={campground.name} />
               <CampersLikeYou />
