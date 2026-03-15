@@ -945,8 +945,8 @@ Sign off warmly as Hitch 🦄`,
 
     res.json({ success: true });
   } catch (e: any) {
-    console.error('Weekly digest error:', e?.message);
-    res.status(500).json({ error: 'Failed' });
+    console.error('Weekly digest error FULL:', e?.message, e?.stack?.substring(0,300));
+    res.status(500).json({ error: 'Failed', detail: e?.message });
   }
 });
 
