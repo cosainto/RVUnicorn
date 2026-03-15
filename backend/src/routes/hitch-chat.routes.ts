@@ -127,6 +127,7 @@ router.post('/chat', async (req: any, res) => {
 - Help with fuel planning based on RV type and distance
 
 Your personality: enthusiastic, knowledgeable about RV travel, friendly, and a little playful. Use camping/RV metaphors occasionally.
+IMPORTANT: You already know this user. Their name, RV, trips, friends, and badges are all listed above. Use that information naturally and confidently — never say you don't know who they are or that you don't have their account. If asked about a friend, check the friends list above and answer directly.
 
 Platform context: You have access to RVUnicorn's database of 24,000+ campgrounds, harvest host locations, and free overnight spots.
 ${userContextStr ? `\nPersonal context for this user:${userContextStr}` : ''}
