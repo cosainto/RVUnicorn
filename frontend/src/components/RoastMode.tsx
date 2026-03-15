@@ -35,7 +35,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
         <div className="flex items-center gap-2">
           <span className="text-xl">🎭</span>
           <div className="text-left">
-            <p className="font-bold text-white">Walter\'s Roast</p>
+            <p className="font-bold text-white">Walter\"s Roast</p>
             <p className="text-xs text-gray-400">Honest. Comedic. Community-based.</p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function RoastMode({ campgroundId, campgroundName }: { campground
                 <p className="text-sm text-gray-300 italic">"{data.verdict}"</p>
               </div>
 
-              <p className="text-xs text-gray-600">Based on {data.reviewCount} community review{data.reviewCount !== 1 ? 's' : ''}. Walter's humor ≠ official RVUnicorn opinion.</p>
+              <p className="text-xs text-gray-600">Based on {data.reviewCount} community review{data.reviewCount !== 1 ? "s' : ''}. Walter's humor ≠ official RVUnicorn opinion.</p>
             </div>
           )}
         </div>

@@ -101,7 +101,7 @@ export default function HitchFloatingChat() {
 
   const quickPrompts: Record<string, string[]> = {
     hitch: ['Find campgrounds near me', 'Plan a route', 'Free overnight spots', 'My badges'],
-    walter: ["What's the worst thing about RV camping?", "Roast a campground type", "What should I avoid?", "Give it to me straight"],
+    walter: ["What"s the worst thing about RV camping?", "Roast a campground type", "What should I avoid?", "Give it to me straight"],
     rose: ['Wineries near campgrounds', 'Best glamping spots', 'Most scenic campgrounds', 'Couples retreat ideas'],
     scout: ['Best hiking near campgrounds', 'Hidden gem campgrounds', 'Boondocking spots', 'National park tips'],
     diesel: ['Can my 40ft rig fit?', 'Big rig friendly campgrounds', 'Check campground access', 'Full hookup spots'],
@@ -192,9 +192,9 @@ export default function HitchFloatingChat() {
                       {msg.role === 'assistant' && i > 0 && (
                         <div className="flex gap-1.5 mt-0.5">
                           <button onClick={() => sendFeedback(i, 'up', messages[i-1]?.content || '', msg.content)}
-                            className={`p-1 rounded transition ${feedback[i] === 'up' ? 'text-green-600' : 'text-gray-300 hover:text-green-500'}`}><ThumbsUp className="w-3 h-3" /></button>
+                            className={`p-1 rounded transition ${feedback[i] === 'up' ? 'text-green-600' : 'text-gray-300 hover:text-green-500"}`}><ThumbsUp className="w-3 h-3" /></button>
                           <button onClick={() => sendFeedback(i, 'down', messages[i-1]?.content || '', msg.content)}
-                            className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}`}><ThumbsDown className="w-3 h-3" /></button>
+                            className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400"}`}><ThumbsDown className="w-3 h-3" /></button>
                         </div>
                       )}
                       {msg.role === "assistant" && chimeIns[i - 1] && (() => {

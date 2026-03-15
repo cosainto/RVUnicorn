@@ -5,7 +5,7 @@ import api from '../services/api';
 interface Secret {
   title: string;
   insight: string;
-  category: 'access" | \'site" | 'cell' | 'timing' | 'trail' | 'tip';
+  category: "access" | \"site" | "cell' | 'timing' | 'trail' | 'tip';
   confidence: 'high' | 'medium';
 }
 
@@ -79,7 +79,7 @@ export default function CampgroundSecrets({ campgroundId }: { campgroundId: stri
             <div className="text-center py-6 text-gray-500">
               <div className="text-3xl mb-2">🔍</div>
               <p className="text-sm font-medium text-gray-700 mb-1">Not enough data yet</p>
-              <p className="text-xs text-gray-400">{data?.dataMessage || 'Be the first to submit a Campground Report to unlock secrets for this campground!'}</p>
+              <p className="text-xs text-gray-400">{data?.dataMessage || "Be the first to submit a Campground Report to unlock secrets for this campground!'}</p>
             </div>
           ) : (
             <>

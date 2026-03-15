@@ -21,7 +21,7 @@ interface AskTheCampfireProps {
 
 const CAMPFIRE_PROMPTS = [
   'Is this a good campground for a big rig?',
-  "What\'s the vibe like here?",
+  "What\"s the vibe like here?",
   'Is this worth the trip?',
   'What should I know before arriving?',
   'Good for families with kids?',
@@ -57,7 +57,7 @@ export default function AskTheCampfire({ campgroundId, campgroundName }: AskTheC
 
 Q: ${result.question}
 
-${result.discussion.map(m => `${getGuide(m.guideId).emoji} ${getGuide(m.guideId).name}: "${m.content}"`).join('
+${result.discussion.map(m => `${getGuide(m.guideId).emoji} ${getGuide(m.guideId).name}: "${m.content}"`).join("
 
 ')}
 
