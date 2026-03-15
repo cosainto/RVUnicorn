@@ -492,8 +492,7 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
 
     const campList = campgrounds.slice(0, 15).map((c, i) =>
       `${i}. ${c.name}, ${c.city} ${c.state} | Rating: ${c.googleRating || "N/A"} | MaxRV: ${c.maxRvLength || "?"}ft | BigRig: ${c.isBigRigFriendly} | PullThrough: ${c.hasPullThrough} | Pet: ${c.isPetFriendly} | Waterfront: ${c.isWaterfront} | Pool: ${c.hasPool}`
-    ).join("
-");
+    ).join("\n");
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
