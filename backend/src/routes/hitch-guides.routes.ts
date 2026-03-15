@@ -184,7 +184,7 @@ router.get('/rig-stress/:campgroundId', async (req: any, res) => {
     const prompt = `Calculate Rig Stress Score for ${campground.name} (${campground.city}, ${campground.state}).
 
 Campground specs:
-- Max RV Length: ${campground.maxRvLength || "Unknown'}ft
+- Max RV Length: ${campground.maxRvLength || 'Unknown'}ft
 - Big Rig Friendly: ${campground.isBigRigFriendly ?? 'Unknown'}
 - Pull-through sites: ${campground.hasPullThrough ?? 'Unknown'}
 - Back-in sites: ${campground.hasBackIn ?? 'Unknown'}
@@ -399,10 +399,10 @@ Rules:
 Return ONLY valid JSON:
 {
   "roastLines": [
-    "The WiFi password is "noservice' — and yes, they're being literal. 🎭",
+    "The WiFi password is "noservice" — and yes, they're being literal. 🎭',
     "Leveling your rig here is like trying to balance a pencil on your nose. Three blocks deep and still fighting gravity."
   ],
-  "positiveCounterpoint": "That said, the lake views are genuinely stunning at sunrise, and the host family is some of the nicest people you'll meet on the road.",
+  "positiveCounterpoint": "That said, the lake views are genuinely stunning at sunrise, and the host family is some of the nicest people you"ll meet on the road.",
   "verdict": "Come for the views, leave with a story about your leveling jacks."
 }
 
