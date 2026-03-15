@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import GuideUnlockPanel from '../components/GuideUnlockPanel';
 import NavigationButtons from '../components/NavigationButtons';
 import HitchAIAssistant from '../components/HitchAIAssistant';
 import HitchRoutePlanner from '../components/HitchRoutePlanner';
@@ -47,6 +48,7 @@ export default function HitchAIPage() {
       {activeTab === 'gems' && <HiddenGemFinder />}
       {activeTab === 'similar' && <HitchCampgroundFinder />}
       {activeTab === 'foryou' && <CampersLikeYou />}
+      {activeTab === 'guides' && <GuideUnlockPanel />}
     </div>
   );
 }

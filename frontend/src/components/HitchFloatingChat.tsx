@@ -26,6 +26,7 @@ export default function HitchFloatingChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const guide = getGuide(selectedGuideId);
+  const { isUnlocked, getProgress } = useGuideUnlocks();
 
   // Set welcome message when guide changes
   useEffect(() => {
@@ -151,7 +152,7 @@ export default function HitchFloatingChat() {
             <div className="absolute top-[60px] left-2 right-2 z-10 bg-white rounded-xl shadow-xl border border-gray-200 p-2">
               <p className="text-xs font-semibold text-gray-500 px-2 py-1 mb-1">Choose your guide</p>
               {GUIDES.map(g => (
-                <button key={g.id} onClick={() => selectGuide(g)}
+                <button key={g.id} onClick={() => { if (g.id === "hitch" || isUnlocked(g.id)) selectGuide(g); }}
                   className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition text-left ${g.id === selectedGuideId ? 'bg-gray-100' : ''}`}>
                   {g.avatarUrl
                     ? <img src={g.avatarUrl} alt={g.name} className="w-8 h-8 rounded-full object-cover" />
@@ -162,6 +163,12 @@ export default function HitchFloatingChat() {
                     <p className="text-xs text-gray-500 truncate">{g.tagline}</p>
                   </div>
                   {g.id === selectedGuideId && <span className="text-xs font-bold" style={{ color: g.accentColor }}>Active</span>}
+                  {g.id !== "hitch" && !isUnlocked(g.id) && (
+                    <div className="flex items-center gap-0.5 ml-auto">
+                      <Lock className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-400">{getProgress(g.id).filter(c => c.met).length}/{getProgress(g.id).length}</span>
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -190,6 +197,36 @@ export default function HitchFloatingChat() {
                             className={`p-1 rounded transition ${feedback[i] === 'down' ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}`}><ThumbsDown className="w-3 h-3" /></button>
                         </div>
                       )}
+                      {msg.role === "assistant" && chimeIns[i - 1] && (() => {
+                        const chime = chimeIns[i - 1];
+                        const cg = getGuide(chime.guideId);
+                        return (
+                          <div className={`mt-2 rounded-xl border p-2.5 text-xs leading-relaxed ${chime.unlocked ? "bg-white border-gray-200" : "bg-gray-50 border-gray-200"}`}>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              {cg.avatarUrl
+                                ? <img src={cg.avatarUrl} className={`w-5 h-5 rounded-full object-cover ${!chime.unlocked ? "grayscale opacity-50" : ""}`} alt={cg.name} />
+                                : <span>{cg.emoji}</span>
+                              }
+                              <span className="font-bold text-gray-700">{cg.name}</span>
+                              {!chime.unlocked && <Lock className="w-3 h-3 text-gray-400" />}
+                            </div>
+                            {chime.unlocked ? (
+                              <p className="text-gray-700">{chime.content}</p>
+                            ) : (
+                              <div className="relative">
+                                <p className="text-gray-300 blur-sm select-none pointer-events-none">{chime.content}</p>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+                                  <Lock className="w-3.5 h-3.5 text-gray-500" />
+                                  <p className="text-xs text-gray-600 font-semibold">Unlock {cg.name}</p>
+                                  {chime.lockProgress && (
+                                    <p className="text-xs text-gray-400">{chime.lockProgress.filter((c: any) => c.met).length}/{chime.lockProgress.length} done</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {msg.suggestions?.map((s, j) => (
                         <Link key={j} to={getSuggestionLink(s)} onClick={() => setOpen(false)}
                           className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-xl hover:border-primary-300 transition text-xs">
