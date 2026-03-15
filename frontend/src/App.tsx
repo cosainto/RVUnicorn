@@ -11,6 +11,7 @@ import RVOnboardingFlow from './components/RVOnboardingFlow';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
+import HitchOnboarding from './components/HitchOnboarding';
 import CampsiteBusinessPage from './components/CampsiteBusinessPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -120,11 +121,17 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = (typeof window !== 'undefined'
+    ? [localStorage.getItem('onboarding_done') !== '1' && !!user && !(user as any).rvType, (v: boolean) => { if (!v) localStorage.setItem('onboarding_done', '1'); }]
+    : [false, () => {}]) as [boolean, (v: boolean) => void];
 
   return (
     <div className="min-h-screen bg-gray-50">
       {user && <Navbar />}
       <GuideUnlockToast />
+      {showOnboarding && (
+        <HitchOnboarding onComplete={() => setShowOnboarding(false)} />
+      )}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -19,6 +19,8 @@ import RigStressScore from '../components/RigStressScore';
 import AskTheCampfire from '../components/AskTheCampfire';
 import RoastMode from '../components/RoastMode';
 import SmartReviewForm from '../components/SmartReviewForm';
+import CampgroundReportLeaderboard from '../components/CampgroundReportLeaderboard';
+import PredictiveSiteSelector from '../components/PredictiveSiteSelector';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -1739,6 +1741,7 @@ export default function CampgroundDetailPage() {
                   </div>
                 </div>
               )) : <div className="text-center py-12 text-gray-500"><Star className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No reviews yet — be the first!</p></div>}
+              <CampgroundReportLeaderboard campgroundId={campground?.id} compact />
               {showReviewModal && campground && (
                 <div className="mt-6 border rounded-2xl p-5 bg-gray-50">
                   <h4 className="font-bold text-gray-900 mb-4">📋 Submit Campground Report</h4>
@@ -1756,6 +1759,7 @@ export default function CampgroundDetailPage() {
           {activeTab === 'vibe' && campground && (
             <div className="space-y-4">
               <RigStressScore campgroundId={campground.id} />
+              <PredictiveSiteSelector campgroundId={campground.id} campgroundName={campground.name} />
               <CampgroundSecrets campgroundId={campground.id} />
               <AskTheCampfire campgroundId={campground.id} campgroundName={campground.name} />
               <RoastMode campgroundId={campground.id} campgroundName={campground.name} />

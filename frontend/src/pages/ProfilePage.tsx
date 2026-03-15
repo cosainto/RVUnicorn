@@ -179,6 +179,7 @@ const [editForm, setEditForm] = useState({
   });
 
   const isOwnProfile = user?.username === username || user?.id === username;
+  const profileUsername = username || '';
 
   useEffect(() => {
     loadProfile();
