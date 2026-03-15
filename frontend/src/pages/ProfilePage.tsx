@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DraggableBanner from '../components/DraggableBanner';
+import CurrentlyAtBadge from '../components/CurrentlyAtBadge';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
