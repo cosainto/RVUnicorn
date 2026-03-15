@@ -98,6 +98,38 @@ router.post('/chat', async (req: any, res) => {
       }
     }
 
+    // If userContext not passed from frontend, fetch it server-side using auth token
+    let resolvedContext = userContext;
+    if (!resolvedContext?.name && req.user?.id) {
+      try {
+        const userId = req.user.id;
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            firstName: true, username: true, state: true,
+            campingInterests: true, rvType: true, rvLength: true,
+            rvMake: true, rvModel: true, rvYear: true, rvFuelType: true,
+          }
+        });
+        if (user) {
+          const following = await prisma.friendship.findMany({
+            where: { senderId: userId, status: 'ACCEPTED' },
+            select: { receiver: { select: { id: true, username: true, firstName: true } } },
+            take: 30,
+          }).catch(() => []);
+          resolvedContext = {
+            name: user.firstName,
+            username: user.username,
+            homeState: user.state,
+            interests: user.campingInterests || [],
+            rv: { type: user.rvType, length: user.rvLength, make: user.rvMake, model: user.rvModel, year: user.rvYear, fuelType: user.rvFuelType },
+            friends: following.map((f: any) => ({ username: (f.receiver || f.recipient)?.username, name: (f.receiver || f.recipient)?.firstName })).filter((f: any) => f.username),
+          };
+        }
+      } catch {}
+    }
+    const userContext = resolvedContext;
+
     // Build user context string
     let userContextStr = '';
     if (userContext?.name) {
