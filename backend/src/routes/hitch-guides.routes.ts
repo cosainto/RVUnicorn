@@ -399,7 +399,7 @@ Rules:
 Return ONLY valid JSON:
 {
   "roastLines": [
-    "The WiFi password is "noservice" — and yes, they're being literal. 🎭',
+    "The WiFi password is 'noservice' — and yes, they're being literal. 🎭",
     "Leveling your rig here is like trying to balance a pencil on your nose. Three blocks deep and still fighting gravity."
   ],
   "positiveCounterpoint": "That said, the lake views are genuinely stunning at sunrise, and the host family is some of the nicest people you"ll meet on the road.",
