@@ -101,7 +101,7 @@ export default function HitchFloatingChat() {
 
   const quickPrompts: Record<string, string[]> = {
     hitch: ['Find campgrounds near me', 'Plan a route', 'Free overnight spots', 'My badges'],
-    walter: ["What"s the worst thing about RV camping?", "Roast a campground type", "What should I avoid?", "Give it to me straight"],
+    walter: ["What's the worst thing about RV camping?", "Roast a campground type", "What should I avoid?", "Give it to me straight"],
     rose: ['Wineries near campgrounds', 'Best glamping spots', 'Most scenic campgrounds', 'Couples retreat ideas'],
     scout: ['Best hiking near campgrounds', 'Hidden gem campgrounds', 'Boondocking spots', 'National park tips'],
     diesel: ['Can my 40ft rig fit?', 'Big rig friendly campgrounds', 'Check campground access', 'Full hookup spots'],
