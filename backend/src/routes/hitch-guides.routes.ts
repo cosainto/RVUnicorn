@@ -379,7 +379,7 @@ router.get('/roast/:campgroundId', async (req: any, res) => {
       access: countField(reviews, 'accessDifficulty'),
       noise: countField(reviews, 'noise'),
       cell: countField(reviews, 'cellService'),
-    const levelData = countField(reviews, 'levelness');
+      levelness: countField(reviews, 'levelness'),
     };
 
     const prompt = `You are Walter 🎭 — a veteran RVer and lovable curmudgeon. Write a comedic-but-grounded campground roast.
