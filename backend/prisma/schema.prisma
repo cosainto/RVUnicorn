@@ -1080,6 +1080,16 @@ model CampgroundReview {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([campgroundId, userId])
+
+  // Smart Review structured fields (Phase 2)
+  accessDifficulty  String?  // EASY, MODERATE, CHALLENGING
+  levelness         String?  // VERY_LEVEL, MOSTLY_LEVEL, UNEVEN
+  noise             String?  // VERY_QUIET, MODERATE, LOUD
+  cellService       String?  // STRONG, OK, WEAK, NONE
+  bigRigFriendly    String?  // YES, SOME_SITES, NO
+  petFriendly       String?  // YES, NO
+  bestSiteNumber    String?
+  wouldReturn       String?  // DEFINITELY, MAYBE, NO
 }
 
 model CampgroundPhoto {

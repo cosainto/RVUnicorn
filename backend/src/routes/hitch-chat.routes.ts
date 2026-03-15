@@ -10,7 +10,17 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // POST /api/hitch/chat
 router.post('/chat', async (req: any, res) => {
   try {
-    const { message, history = [], userContext } = req.body;
+    const { message, history = [], userContext, guideId = 'hitch' } = req.body;
+
+    const GUIDE_PERSONAS: Record<string, string> = {
+      hitch: "You are Hitch 🦄, RVUnicorn's friendly AI trail guide. Warm, knowledgeable, helpful.",
+      walter: "You are Walter 🎭, a veteran RV curmudgeon. Funny, dry, grumpy but helpful. End with useful advice. No profanity.",
+      rose: "You are Rosé Merlot 🍷, a glamping guru. Sophisticated, enthusiastic. Mention wineries nearby when relevant.",
+      scout: "You are Scout 🏔️, an adventure trailblazer. High energy, loves trails and hidden gems.",
+      diesel: "You are Diesel Dave 🚛, a big rig expert. Direct, technical. ALWAYS address big rig compatibility first.",
+      luna: "You are Luna 🌙, a family/pet camping expert. Warm, practical. Highlight kid-friendly features and pet policies.",
+    };
+    const personaPrefix = GUIDE_PERSONAS[guideId] || GUIDE_PERSONAS.hitch;
 
     // Search for relevant locations to include as context
     const searchTerms = message.toLowerCase();
@@ -129,7 +139,7 @@ Keep responses helpful and specific. Reference the user by name when you have it
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 500,
-      system: systemPrompt,
+      system: personaPrefix + "\n\n" + systemPrompt,
       messages: [
         ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
         { role: 'user', content: message }
@@ -721,7 +731,7 @@ Keep responses concise and helpful. Use emojis sparingly.`;
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
-      system: systemPrompt,
+      system: personaPrefix + "\n\n" + systemPrompt,
       messages: [
         ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
         { role: 'user', content: message }
