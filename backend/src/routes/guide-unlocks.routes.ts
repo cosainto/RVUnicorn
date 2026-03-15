@@ -17,7 +17,7 @@ async function evaluateUnlocks(userId: string) {
   const [reviewCount, followCount, wishlistCount, tripCount] = await Promise.all([
     prisma.campgroundReview.count({ where: { userId } }).catch(() => 0),
     prisma.campgroundFollow.count({ where: { userId } }).catch(() => 0),
-    prisma.wishlist.count({ where: { userId } }).catch(() => 0),
+    prisma.campgroundWishlist.count({ where: { userId } }).catch(() => 0),
     prisma.event.count({ where: { organizerId: userId } }).catch(() => 0),
   ]);
 
@@ -133,7 +133,7 @@ router.post("/chime-in", async (req: any, res) => {
         evaluateUnlocks(userId),
         prisma.user.findUnique({
           where: { id: userId },
-          select: { rvType: true, rvLength: true, campingInterests: true, state: true }
+          select: { rvType: true, rvLength: true, campingInterests: true }
         }).catch(() => null),
       ]);
       unlockedGuides = Object.entries(unlockData).filter(([,v]: any) => v.unlocked).map(([k]) => k);
