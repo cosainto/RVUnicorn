@@ -602,7 +602,7 @@ export default function CampgroundDetailPage() {
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:shadow-emerald-500/30 hover:shadow-md transition-all duration-200"><Calendar className="w-4 h-4" />Book Now<ExternalLink className="w-3 h-3 opacity-60" /></a>}
                 {user && <button onClick={toggleMute} className={`inline-flex items-center justify-center w-9 h-9 rounded-full transition ${isMuted ? 'bg-white/20 text-white/50' : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</button>}
                 {campground?.latitude && campground?.longitude && (
-                  {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} compact />}
+                  {campground.latitude && campground.longitude && {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} compact />}}
                 )}
                 {isAdmin && <Link to={`/business/${campground.id}`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm"><Settings className="w-4 h-4" />Manage</Link>}
               </div>
@@ -1255,7 +1255,7 @@ export default function CampgroundDetailPage() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
             {campground.latitude && campground.longitude && (
-                {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} />}
+                {campground.latitude && campground.longitude && {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} />}}
               )}
           </div>
           <div className="mt-4 pt-4 border-t flex items-center justify-between flex-wrap gap-3">
