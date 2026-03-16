@@ -92,6 +92,38 @@ export default function EventDetailPage() {
   const { user } = useAuth();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInLoading, setCheckInLoading] = useState(false);
+
+  const handleCheckIn = async () => {
+    if (!event?.campground?.id || !user) return;
+    setCheckInLoading(true);
+    try {
+      if (isCheckedIn) {
+        await api.post('/checkin/checkout');
+        setIsCheckedIn(false);
+      } else {
+        await api.post('/checkin', { campgroundId: event.campground.id });
+        setIsCheckedIn(true);
+      }
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed');
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
+
+  // Check active check-in on load
+  useEffect(() => {
+    if (!user) return;
+    api.get('/checkin/active')
+      .then(r => {
+        const active = r.data?.checkIn;
+        if (active && event?.campground?.id) {
+          setIsCheckedIn(active.campgroundId === event.campground.id);
+        }
+      })
+      .catch(() => {});
+  }, [event?.campground?.id, user]);
+
   const [userRvMpg, setUserRvMpg] = useState<number>(10);
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
   const [event, setEvent] = useState<Event | null>(null);
