@@ -1254,10 +1254,9 @@ export default function CampgroundDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-            <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-              <NavigationButtons lat={campground.latitude!} lng={campground.longitude!} name={campground.name} />
-            </div>
-          <div className="mt-4 pt-4 border-t flex items-center justify-between flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
+            {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude!} lng={campground.longitude!} name={campground.name} />}
+          </div>
             <p className="text-sm text-gray-500 italic">Don't just take our word for it — see what others are saying:</p>
             <div className="flex gap-3">
               <a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-orange-400 hover:text-orange-600 text-sm text-gray-600 transition">
