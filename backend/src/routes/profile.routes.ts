@@ -33,6 +33,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const { username } = req.params;
     const currentUserId = (req as any).userId;
 
+    console.log('Profile lookup for:', username);
     const profile = await prisma.user.findFirst({
       where: {
         OR: [
