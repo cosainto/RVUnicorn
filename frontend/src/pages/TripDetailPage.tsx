@@ -3,7 +3,7 @@ import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload } from 'lucide-react';
+import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 // @ts-ignore
