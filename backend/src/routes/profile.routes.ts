@@ -210,8 +210,8 @@ router.put('/:username', authenticateToken, async (req, res) => {
     } = req.body;
 
     // Verify the user is updating their own profile
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
@@ -551,8 +551,8 @@ router.get('/:username/states', async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
@@ -581,8 +581,8 @@ router.get('/:username/stats', async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true, location: true },
     });
@@ -724,8 +724,8 @@ router.get('/:username/feed', optionalAuth, async (req, res) => {
     const { username } = req.params;
     const limit = parseInt(req.query.limit as string) || 10;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
@@ -770,8 +770,8 @@ router.get('/:username/gear', optionalAuth, async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
@@ -871,8 +871,8 @@ router.put('/:username/status', authenticateToken, async (req, res) => {
     const { status, statusEmoji, statusType } = req.body;
 
     // Verify the user is updating their own status
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
@@ -928,8 +928,8 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Verify the user is updating their own status
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       
       select: { id: true },
     });
