@@ -10,6 +10,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const authUserId = (req as any).user.id;
     const userId = (req.query.userId as string) || authUserId;
+    const month  = parseInt(req.query.month as string) || new Date().getMonth() + 1;
     const year   = parseInt(req.query.year  as string) || new Date().getFullYear();
     const start  = new Date(year, month - 1, 1);
     const end    = new Date(year, month,     1);
