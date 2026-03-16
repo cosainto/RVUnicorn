@@ -132,6 +132,7 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
+app.get('/api/version', (req, res) => res.json({ version: '2.0', timestamp: Date.now() }));
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/friends', friendshipRoutes);
