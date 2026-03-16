@@ -1540,23 +1540,6 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
 });
 
 
-import random
-
-const HITCH_LINES = [
-  "Hitch cooked up this picture with AI\u2026 but let's be honest, he didn't actually make the meal. Cook it yourself, upload a photo, and if it looks great we'll replace this image and award you the Camp Kitchen badge! \ud83c\udfd5\ufe0f",
-  "Hitch whipped up this meal shot with AI\u2026 but he definitely didn't fire up the grill. Make it at your campsite, share your photo, and if it looks great we'll swap this image and award you the Camp Kitchen badge!",
-  "Hitch generated this food pic with AI\u2026 but no actual spatula was involved. Cook the recipe for real, upload your version, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch made this image with AI magic\u2026 but he didn't actually cook dinner. Give the recipe a real campsite try, upload your photo, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch served up this picture with AI\u2026 but he never touched the Blackstone. Cook it yourself, send us the real thing, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch built this preview with AI\u2026 but the meal still needs a real campsite chef. Make it, snap it, and if your photo looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch dreamed this one up with AI\u2026 but he didn't actually light the smoker. Cook it for real, upload your masterpiece, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch generated this recipe image with AI\u2026 but this plate has never seen a picnic table. Make the meal at camp, upload your photo, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch mocked up this food photo with AI\u2026 but someone still needs to make the real version. Cook it at your site, share your pic, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch tossed this image together with AI\u2026 but not a single burger was flipped. Make the recipe yourself, upload the proof, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch created this tasty-looking image with AI\u2026 but he hasn't actually made the meal. Cook it for real, show us how it turned out, and if it looks great we'll replace this image and award you the Camp Kitchen badge!",
-  "Hitch brought this recipe to life with AI\u2026 but now it's your turn to make it real. Upload your campsite version, and if it looks great we'll replace this image and award you the Camp Kitchen badge! \ud83d\udd25"
-];
-
 // POST /api/recipes/:id/submit-photo
 router.post('/:id/submit-photo', authenticateToken, async (req: any, res) => {
   try {
