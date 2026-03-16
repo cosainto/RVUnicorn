@@ -28,7 +28,7 @@ const CAMPFIRE_PROMPTS = [
   'Best time of year to visit?',
 ];
 
-export default function AskTheCampfire({ campgroundId, campgroundName }: AskTheCampfireProps) {
+export default function AskTheCampfire({ campgroundId, campgroundName }: AskTheCampfireProps): JSX.Element {
   const [question, setQuestion] = useState('');
   const [result, setResult] = useState<CampfireResult | null>(null);
   const [loading, setLoading] = useState(false);

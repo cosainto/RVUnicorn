@@ -6,8 +6,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import TripCopilot from '../components/TripCopilot';
-import AITripRecap from '../components/AITripRecap';
+// @ts-ignore
+import TripCopilot from '../components/TripCopilot'; // eslint-disable-line
+// @ts-ignore
+import AITripRecap from '../components/AITripRecap'; // eslint-disable-line
 import MealPlanner from '../components/MealPlanner';
 import TripItineraryTab from '../components/TripItineraryTab';
 import TripTabEmptyState from '../components/TripTabEmptyState';

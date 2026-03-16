@@ -9,7 +9,6 @@ import {
   User as UserIcon,
   MapPin,
   Link as LinkIcon,
-  Calendar,
   Edit,
   Camera,
   Tent,
