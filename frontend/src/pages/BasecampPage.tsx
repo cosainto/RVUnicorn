@@ -1013,7 +1013,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     instagramUrl: '',
     twitterUrl: '',
     youtubeUrl: '',
-    $tiktokUrl: '',
+    $$tiktokUrl: '',
     showSocialOnProfile: true,
     showSocialOnCreator: true,
   });

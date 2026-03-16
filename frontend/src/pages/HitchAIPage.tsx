@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import GuideUnlockPanel from '../components/GuideUnlockPanel';
-import NavigationButtons from '../components/NavigationButtons';
+
 import HitchAIAssistant from '../components/HitchAIAssistant';
 import HitchRoutePlanner from '../components/HitchRoutePlanner';
 import HiddenGemFinder from '../components/HiddenGemFinder';
@@ -20,7 +20,7 @@ export default function HitchAIPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <NavigationButtons />
+      
       <div className="mb-6 text-center">
         <div className="flex items-center justify-center gap-3 mb-2">
           <img src="/hitch.png" alt="Hitch" className="w-12 h-12 rounded-full object-cover shadow-lg" />
