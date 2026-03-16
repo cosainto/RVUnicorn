@@ -938,7 +938,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [newCampfirePosts, setNewCampfirePosts] = useState(0);
-  const lastCampfireCheck = React.useRef<string | null>(null);
+  const lastCampfireCheck = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
