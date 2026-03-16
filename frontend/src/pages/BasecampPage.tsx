@@ -63,6 +63,7 @@ import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
 import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
+import CampfireChannel from '../components/CampfireChannel';
 
 interface BasecampProps {
   user: UserType | null;
@@ -918,6 +919,14 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [user?.id]);
 
+  // Load active check-in
+  useEffect(() => {
+    if (!user) return;
+    api.get('/checkin/active')
+      .then(r => setActiveCheckIn(r.data?.checkIn || null))
+      .catch(() => {});
+  }, [user]);
+
   const handleTourComplete = () => {
     if (user) localStorage.setItem('basecampTourDone_' + user.id, 'true');
     setShowTour(false);
@@ -927,6 +936,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [showQuickCapture, setShowQuickCapture] = useState(false);
   // Activity Feed State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
