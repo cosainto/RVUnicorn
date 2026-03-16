@@ -937,6 +937,8 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Activity Feed State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+  const [newCampfirePosts, setNewCampfirePosts] = useState(0);
+  const lastCampfireCheck = React.useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -1817,10 +1819,16 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center gap-2">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   <span className="text-white font-bold text-sm">You're at the campfire 🔥</span>
+                  {newCampfirePosts > 0 && (
+                    <span className="bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                      {newCampfirePosts} new
+                    </span>
+                  )}
                   <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="text-white/80 text-xs hover:text-white ml-auto underline">{activeCheckIn.campground.name} →</a>
                 </div>
                 <div className="p-4">
                   <CampfireChannel
+                    onView={() => setNewCampfirePosts(0)}
                     campgroundId={activeCheckIn.campground.id}
                     campgroundName={activeCheckIn.campground.name}
                     isCheckedIn={true}

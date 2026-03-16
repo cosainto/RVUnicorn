@@ -33,6 +33,7 @@ interface CampfireProps {
   campgroundName: string;
   isCheckedIn?: boolean;
   isAdmin?: boolean;
+  onView?: () => void;
 }
 
 // ─── Post type config ─────────────────────────────────────────
@@ -247,7 +248,7 @@ function HitchPulseCard({ campgroundId }: { campgroundId: string }) {
 }
 
 // ─── Main Campfire component ──────────────────────────────────
-export default function CampfireChannel({ campgroundId, campgroundName, isCheckedIn, isAdmin }: CampfireProps) {
+export default function CampfireChannel({ campgroundId, campgroundName, isCheckedIn, isAdmin, onView }: CampfireProps) {
   const { user } = useAuth();
   const [posts, setPosts] = useState<CampfirePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -273,6 +274,7 @@ export default function CampfireChannel({ campgroundId, campgroundName, isChecke
     try {
       const { data } = await api.get(`/campfire/${campgroundId}/posts`);
       setPosts(data.posts || []);
+    if (onView) onView();
     } catch {}
     finally { setLoading(false); }
   };
