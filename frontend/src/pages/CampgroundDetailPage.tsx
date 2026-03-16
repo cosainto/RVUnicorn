@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import LocationEventsCalendar from '../components/LocationEventsCalendar';
+// DISABLED import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import DraggableBanner from '../components/DraggableBanner'; // keep
 import CheckInButton from '../components/CheckInButton';
 import HitchCampgroundChat from '../components/HitchCampgroundChat';
@@ -21,16 +21,16 @@ import HitchRigCheck from '../components/HitchRigCheck';
 // DISABLED import SmartReviewForm from '../components/SmartReviewForm';
 // DISABLED import CampgroundReportLeaderboard from '../components/CampgroundReportLeaderboard';
 // DISABLED import PredictiveSiteSelector from '../components/PredictiveSiteSelector';
-import RVHerdHereNow from '../components/RVHerdHereNow';
+// DISABLED import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 // DISABLED import CampfireChannel from '../components/CampfireChannel';
-import CampgroundWeather from '../components/CampgroundWeather';
+// DISABLED import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
-import ThingsToDoSection from '../components/ThingsToDoSection';
-import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
-import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
-import HarvestHostsTab from '../components/HarvestHostsTab';
+// DISABLED import ThingsToDoSection from '../components/ThingsToDoSection';
+// DISABLED import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
+// DISABLED import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
+// DISABLED import HarvestHostsTab from '../components/HarvestHostsTab';
 
 const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
   const base = "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
