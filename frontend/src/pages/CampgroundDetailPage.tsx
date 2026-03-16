@@ -23,6 +23,7 @@ import CampgroundReportLeaderboard from '../components/CampgroundReportLeaderboa
 import PredictiveSiteSelector from '../components/PredictiveSiteSelector';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
+import CampfireChannel from '../components/CampfireChannel';
 import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
@@ -207,6 +208,7 @@ const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
   { id: 'map', label: 'Map', icon: Map },
   { id: 'amenities', label: 'Amenities', icon: Check },
+  { id: 'campfire', label: '🔥 Campfire', icon: null },
   { id: 'threads', label: 'Threads', icon: MessageSquare },
   { id: 'news', label: 'News', icon: Megaphone },
   { id: 'events', label: 'Events', icon: Calendar },
@@ -1756,6 +1758,13 @@ export default function CampgroundDetailPage() {
           )}
 
           {/* Stickers Tab */}
+          {activeTab === 'campfire' && campground && (
+            <CampfireChannel
+              campgroundId={campground.id}
+              campgroundName={campground.name}
+              isAdmin={isAdmin}
+            />
+          )}
           {activeTab === 'vibe' && campground && (
             <div className="space-y-4">
               <RigStressScore campgroundId={campground.id} />
