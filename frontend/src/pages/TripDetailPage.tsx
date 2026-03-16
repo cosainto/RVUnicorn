@@ -112,17 +112,6 @@ export default function EventDetailPage() {
   };
 
   // Check active check-in on load
-  useEffect(() => {
-    if (!user) return;
-    api.get('/checkin/active')
-      .then(r => {
-        const active = r.data?.checkIn;
-        if (active && event?.campground?.id) {
-          setIsCheckedIn(active.campgroundId === event.campground.id);
-        }
-      })
-      .catch(() => {});
-  }, [event?.campground?.id, user]);
 
   const [userRvMpg, setUserRvMpg] = useState<number>(10);
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
