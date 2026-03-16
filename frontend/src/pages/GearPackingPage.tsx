@@ -37,7 +37,7 @@ export default function GearPackingPage() {
                     : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
-                <tab.icon className="w-5 h-5" />
+                {tab.icon && <tab.icon className="w-5 h-5" />}
                 {tab.label}
               </button>
             ))}

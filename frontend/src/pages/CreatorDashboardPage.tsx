@@ -298,7 +298,7 @@ export default function CreatorDashboardPage() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
+                  {tab.icon && <tab.icon className="w-4 h-4" />}
                   {tab.label}
                   {tab.badge && (
                     <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded-full">{tab.badge}</span>

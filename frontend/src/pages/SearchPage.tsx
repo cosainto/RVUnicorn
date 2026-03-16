@@ -57,7 +57,7 @@ export default function SearchPage() {
           <div className="flex gap-1 mb-6 overflow-x-auto pb-1 border-b border-gray-100">
             {tabs.map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition whitespace-nowrap ${activeTab === tab.key ? 'text-orange-600 border-b-2 border-orange-500 bg-orange-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
-                <tab.icon className="w-4 h-4" />{tab.label}
+                {tab.icon && <tab.icon className="w-4 h-4" />}{tab.label}
                 {tab.count > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.key ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>{tab.count}</span>}
               </button>
             ))}

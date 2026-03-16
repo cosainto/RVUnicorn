@@ -395,7 +395,7 @@ export default function GroupDetailPage() {
                           : 'border-transparent text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      <tab.icon className="w-4 h-4" />
+                      {tab.icon && <tab.icon className="w-4 h-4" />}
                       {tab.label}
                     </button>
                   ))}

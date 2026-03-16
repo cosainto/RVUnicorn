@@ -336,7 +336,7 @@ export default function BusinessBasecampPage() {
                     accessible ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  {Icon && <Icon className="w-5 h-5" />}
                   <span>{item.label}</span>
                   {!accessible && <span className="ml-auto text-xs">🔒</span>}
                 </button>
