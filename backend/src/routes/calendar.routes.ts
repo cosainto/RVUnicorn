@@ -8,8 +8,8 @@ const prisma = new PrismaClient();
 // GET /api/calendar?month=1-12&year=YYYY
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
-    const month  = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+    const authUserId = (req as any).user.id;
+    const userId = (req.query.userId as string) || authUserId;
     const year   = parseInt(req.query.year  as string) || new Date().getFullYear();
     const start  = new Date(year, month - 1, 1);
     const end    = new Date(year, month,     1);
