@@ -170,6 +170,35 @@ router.post('/autofill', authenticateToken, async (req: any, res) => {
       },
     });
 
+    // Auto-create/join RV model group
+    try {
+      const make = model.make.name.trim();
+      const modelName = model.name.trim();
+      const groupName = `${make} ${modelName} Owners`;
+      const slug = groupName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      let group = await prisma.group.findFirst({ where: { slug } });
+      if (!group) {
+        const systemUser = await prisma.user.findFirst({ where: { email: 'system@rvunicorn.com' }, select: { id: true } }).catch(() => null);
+        group = await prisma.group.create({
+          data: {
+            name: groupName, slug,
+            description: `Community group for ${make} ${modelName} owners. Share tips, mods, and connect with fellow ${modelName} enthusiasts!`,
+            privacy: 'PUBLIC',
+            tags: [make, modelName, 'RV Owners'],
+            createdById: systemUser?.id || req.userId,
+          }
+        });
+        console.log(`Created RV group: ${groupName}`);
+      }
+      await prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId: group.id, userId: req.userId } },
+        create: { groupId: group.id, userId: req.userId, role: 'MEMBER', status: 'ACTIVE' },
+        update: {},
+      });
+    } catch (groupErr: any) {
+      console.error('Auto-group error (non-fatal):', groupErr?.message);
+    }
+
     res.json({ user, appliedModel: model.name });
   } catch (error) {
     console.error('Autofill error:', error);

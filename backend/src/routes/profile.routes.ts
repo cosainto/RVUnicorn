@@ -2,6 +2,34 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
+
+// Helper: auto-join RV model group
+async function autoJoinRvGroup(prisma: any, userId: string, rvMake: string, rvModel: string) {
+  try {
+    if (!rvMake || !rvModel) return;
+    const groupName = `${rvMake.trim()} ${rvModel.trim()} Owners`;
+    const slug = groupName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let group = await prisma.group.findFirst({ where: { slug } });
+    if (!group) {
+      const systemUser = await prisma.user.findFirst({ where: { email: 'system@rvunicorn.com' }, select: { id: true } }).catch(() => null);
+      group = await prisma.group.create({
+        data: {
+          name: groupName, slug,
+          description: `Community group for ${rvMake.trim()} ${rvModel.trim()} owners!`,
+          privacy: 'PUBLIC',
+          tags: [rvMake.trim(), rvModel.trim(), 'RV Owners'],
+          createdById: systemUser?.id || userId,
+        }
+      });
+    }
+    await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId: group.id, userId } },
+      create: { groupId: group.id, userId, role: 'MEMBER', status: 'ACTIVE' },
+      update: {},
+    });
+  } catch (e: any) { console.error('autoJoinRvGroup error:', e?.message); }
+}
+
 const router = Router();
 const prisma = new PrismaClient();
 
