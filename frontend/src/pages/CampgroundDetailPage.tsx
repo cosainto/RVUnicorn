@@ -1255,7 +1255,7 @@ export default function CampgroundDetailPage() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
             {campground.latitude && campground.longitude && (
-                {campground.latitude && campground.longitude && {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude} lng={campground.longitude} name={campground.name} />}}
+                {campground.latitude && campground.longitude && <NavigationButtons lat={campground.latitude!} lng={campground.longitude!} name={campground.name} />}
               )}
           </div>
           <div className="mt-4 pt-4 border-t flex items-center justify-between flex-wrap gap-3">
