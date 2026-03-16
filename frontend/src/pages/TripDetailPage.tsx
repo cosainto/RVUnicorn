@@ -90,6 +90,8 @@ export default function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
   const [userRvMpg, setUserRvMpg] = useState<number>(10);
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
   const [event, setEvent] = useState<Event | null>(null);
@@ -161,6 +163,17 @@ export default function EventDetailPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}T14:00`;
   };
+
+  // Check if user is currently checked in at this campground
+  useEffect(() => {
+    if (!event?.campground?.id || !user) return;
+    api.get('/checkin/active')
+      .then(r => {
+        const active = r.data?.checkIn;
+        setIsCheckedIn(active?.campgroundId === event.campground?.id);
+      })
+      .catch(() => {});
+  }, [event?.campground?.id, user]);
 
   useEffect(() => {
     // Fetch user RV specs for gas calculations
@@ -815,6 +828,20 @@ export default function EventDetailPage() {
                       <div><p className="font-semibold text-gray-900">{event.campground.name}</p><p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p></div>
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><ExternalLink className="w-4 h-4" />View Campground</Link>
+                        {user && event.campground && (() => {
+                          const now = new Date();
+                          const start = new Date(event.startDate);
+                          const end = event.endDate ? new Date(event.endDate) : new Date(event.startDate);
+                          end.setDate(end.getDate() + 1);
+                          const isActive = now >= start && now <= end;
+                          if (!isActive) return null;
+                          return (
+                            <button onClick={handleCheckIn} disabled={checkInLoading}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${isCheckedIn ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-primary-600 text-white hover:bg-primary-700'} disabled:opacity-50`}>
+                              {checkInLoading ? '...' : isCheckedIn ? '🏕️ Check Out' : '📍 Check In Here'}
+                            </button>
+                          );
+                        })()}
                         {!event.isWishlist && <button onClick={handleAddToTravelMap} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Map className="w-4 h-4" />Add to Map</button>}
                         {event.campground.latitude && event.campground.longitude && (
                           <NavigationButtons lat={event.campground.latitude} lng={event.campground.longitude} name={event.campground.name} />
