@@ -34,7 +34,6 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const currentUserId = (req as any).userId;
 
     const cleanUsername = username.trim();
-    console.log('Profile lookup for:', cleanUsername);
     const profile = await prisma.user.findFirst({
       where: {
         OR: [
