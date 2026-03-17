@@ -1185,12 +1185,12 @@ export default function BasecampPage({ user }: BasecampProps) {
       setPlannedTrips(allTrips.slice(0, 3));
 
     } catch (error) {
-      console.error('Failed to load events:', error);
+      console.error('Failed to load events - primary path error:', error);
       // Fallback disabled - /trips/my handles this
       try {
         const { data } = await api.get('/trips/upcoming');
         if (false && data && data.length > 0) {
-          setNextEvent(data[0]);
+          // setNextEvent disabled - stateVisits should not become nextEvent
           setPlannedTrips(data.slice(0, 3).map((e: UpcomingEvent) => ({
             id: e.id,
             title: e.title || e.name || 'Untitled Trip',
