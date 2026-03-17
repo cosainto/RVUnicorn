@@ -286,6 +286,9 @@ model User {
   @@index([email])
   @@index([username])
   campfireMessages CampfireMessage[]
+  triviaAnswers    TriviaAnswer[]
+  triviaLeaderboard TriviaLeaderboard[]
+  triviaWins       TriviaWeek[]     @relation("TriviaWinner")
 }
 
 model Post {
@@ -535,6 +538,7 @@ model Campground {
   @@index([state])
   @@index([name])
   campfireRoom   CampfireRoom?
+  triviaWeeks      TriviaWeek[]
 }
 
 model Stay {
@@ -3713,4 +3717,79 @@ model CampfireMessage {
 
   @@index([roomId])
   @@index([createdAt])
+}
+
+model TriviaWeek {
+  id           String            @id @default(cuid())
+  campgroundId String
+  weekStart    DateTime
+  weekEnd      DateTime
+  hostCharacter String           @default("hitch")
+  theme        String?
+  isActive     Boolean           @default(false)
+  winnerId     String?
+  announcedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  campground   Campground        @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  winner       User?             @relation("TriviaWinner", fields: [winnerId], references: [id])
+  questions    TriviaQuestion[]
+  leaderboard  TriviaLeaderboard[]
+
+  @@index([campgroundId])
+  @@index([isActive])
+  @@index([weekStart])
+}
+
+model TriviaQuestion {
+  id          String        @id @default(cuid())
+  weekId      String
+  dayOfWeek   Int
+  questionNum Int
+  question    String
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  answer      String
+  category    String        @default("general")
+  scheduledAt DateTime
+  askedAt     DateTime?
+  createdAt   DateTime      @default(now())
+  week        TriviaWeek    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  answers     TriviaAnswer[]
+
+  @@index([weekId])
+  @@index([scheduledAt])
+}
+
+model TriviaAnswer {
+  id           String         @id @default(cuid())
+  questionId   String
+  userId       String
+  answer       String
+  isCorrect    Boolean
+  responseTime Int
+  points       Int            @default(0)
+  createdAt    DateTime       @default(now())
+  question     TriviaQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, userId])
+  @@index([questionId])
+  @@index([userId])
+}
+
+model TriviaLeaderboard {
+  id             String     @id @default(cuid())
+  weekId         String
+  userId         String
+  totalPoints    Int        @default(0)
+  correctAnswers Int        @default(0)
+  gamesPlayed    Int        @default(0)
+  updatedAt      DateTime   @updatedAt
+  week           TriviaWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, userId])
+  @@index([weekId, totalPoints])
 }
