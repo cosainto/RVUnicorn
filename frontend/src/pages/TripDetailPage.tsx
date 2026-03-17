@@ -846,7 +846,7 @@ export default function EventDetailPage() {
                   <div className="flex items-center gap-2 mb-3"><MapPin className="w-5 h-5 text-green-600" /><h4 className="font-semibold text-gray-900">Location</h4></div>
                   {event.campground ? (
                     <div className="space-y-3">
-                      <div><p className="font-semibold text-gray-900">{event.campground.name}</p><p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p></div>
+                      <div>{event.campground.id ? <Link to={`/campgrounds/${event.campground.id}`} className="font-semibold text-primary-600 hover:underline">{event.campground.name}</Link> : <p className="font-semibold text-gray-900">{event.campground.name}</p>}<p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p></div>
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><ExternalLink className="w-4 h-4" />View Campground</Link>
                         {user && event.campground && (() => {
