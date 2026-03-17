@@ -1186,10 +1186,10 @@ export default function BasecampPage({ user }: BasecampProps) {
 
     } catch (error) {
       console.error('Failed to load events:', error);
-      // Fallback to /trips/upcoming endpoint
+      // Fallback disabled - /trips/my handles this
       try {
         const { data } = await api.get('/trips/upcoming');
-        if (data && data.length > 0) {
+        if (false && data && data.length > 0) {
           setNextEvent(data[0]);
           setPlannedTrips(data.slice(0, 3).map((e: UpcomingEvent) => ({
             id: e.id,
