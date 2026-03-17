@@ -3,6 +3,8 @@ dotenv.config();
 console.log('🔑 JWT_SECRET loaded:', process.env.JWT_SECRET);
 
 import express from 'express';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import photoRoutes from "./routes/photo.routes";
@@ -103,6 +105,7 @@ import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
+import { registerCampfireSockets } from './campfire/campfire.socket';
 
 
 // import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -112,6 +115,19 @@ import { runMaintenanceCron } from "./cron/maintenance-cron";
 export const prisma = new PrismaClient();
 
 const app = express();
+const httpServer = createServer(app);
+export const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://www.rvunicorn.com',
+      'https://rvunicorn.com',
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -241,7 +257,8 @@ app.get('/health', (req, res) => {
 });
 
 
-app.listen(PORT, () => {
+registerCampfireSockets(io);
+httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

@@ -244,4 +244,48 @@ Write the pulse now (2 sentences max, fun and warm):`,
   }
 });
 
+
+// ── Live Campfire Chat Routes ─────────────────────────────────────────────────
+
+// GET /api/campfire/:campgroundId/room/status
+router.get('/:campgroundId/room/status', authenticateToken, async (req: any, res) => {
+  try {
+    const { campgroundId } = req.params;
+    const [room, checkIns] = await Promise.all([
+      prisma.campfireRoom.findUnique({ where: { campgroundId } }),
+      prisma.checkIn.findMany({
+        where: { campgroundId, isActive: true },
+        include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } },
+        take: 50,
+      }),
+    ]);
+    res.json({
+      isActive: room?.isActive ?? false,
+      checkedInCount: checkIns.length,
+      checkedInUsers: checkIns.map((c: any) => c.user),
+      needsMore: Math.max(0, 3 - checkIns.length),
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to fetch room status' });
+  }
+});
+
+// GET /api/campfire/:campgroundId/room/messages
+router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, res) => {
+  try {
+    const { campgroundId } = req.params;
+    const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
+    if (!room) return res.json({ messages: [] });
+    const messages = await prisma.campfireMessage.findMany({
+      where: { roomId: room.id },
+      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 50,
+    });
+    res.json({ messages });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
 export default router;

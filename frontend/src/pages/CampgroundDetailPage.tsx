@@ -24,6 +24,7 @@ import PredictiveSiteSelector from '../components/PredictiveSiteSelector';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampfireChannel from '../components/CampfireChannel';
+import CampfireChat from '../components/CampfireChat';
 import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
@@ -1757,11 +1758,17 @@ export default function CampgroundDetailPage() {
 
           {/* Stickers Tab */}
           {activeTab === 'campfire' && campground && (
-            <CampfireChannel
-              campgroundId={campground.id}
-              campgroundName={campground.name}
-              isAdmin={isAdmin}
-            />
+            <div className="space-y-6">
+              <CampfireChat
+                campgroundId={campground.id}
+                campgroundName={campground.name}
+              />
+              <CampfireChannel
+                campgroundId={campground.id}
+                campgroundName={campground.name}
+                isAdmin={isAdmin}
+              />
+            </div>
           )}
           {activeTab === 'vibe' && campground && (
             <div className="space-y-4">
