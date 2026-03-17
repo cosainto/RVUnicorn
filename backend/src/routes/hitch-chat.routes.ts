@@ -229,9 +229,62 @@ Keep responses helpful and specific. Reference the user by name when you have it
       .map((b: any) => b.text)
       .join('') || '';
 
+    // Parse special actions from Hitch response
+    let tripCreated = null;
+    let interestsSaved = null;
+    let cleanMessage = aiMessage;
+
+    // Handle <<SAVE_INTERESTS>>
+    const interestsMatch = aiMessage.match(/<<SAVE_INTERESTS>>([\s\S]*?)<<\/SAVE_INTERESTS>>/);
+    if (interestsMatch && userId) {
+      try {
+        const interests = JSON.parse(interestsMatch[1].trim());
+        await prisma.user.update({ where: { id: userId }, data: { campingInterests: { set: interests } } });
+        interestsSaved = interests;
+        cleanMessage = cleanMessage.replace(/<<SAVE_INTERESTS>>[\s\S]*?<<\/SAVE_INTERESTS>>/g, '').trim();
+      } catch(e: any) { console.error('Save interests error:', e?.message); }
+    }
+
+    // Handle <<CREATE_TRIP>>
+    const tripMatch = aiMessage.match(/<<CREATE_TRIP>>([\s\S]*?)<<\/CREATE_TRIP>>/);
+    if (tripMatch && userId) {
+      try {
+        const tripData = JSON.parse(tripMatch[1].trim());
+        let campgroundId = tripData.campgroundId || null;
+        if (!campgroundId && tripData.campgroundName) {
+          const cg = await prisma.campground.findFirst({
+            where: { name: { contains: tripData.campgroundName, mode: 'insensitive' } },
+            select: { id: true }
+          });
+          campgroundId = cg?.id || null;
+        }
+        const event = await prisma.event.create({
+          data: {
+            title: tripData.title || 'RV Trip',
+            description: tripData.description || 'Trip planned with Hitch AI',
+            startDate: new Date(tripData.startDate),
+            endDate: new Date(tripData.endDate),
+            organizerId: userId,
+            campgroundId: campgroundId || undefined,
+            isWishlist: false,
+            privacy: 'PRIVATE',
+          }
+        });
+        tripCreated = { id: event.id, title: event.title };
+        cleanMessage = cleanMessage.replace(/<<CREATE_TRIP>>[\s\S]*?<<\/CREATE_TRIP>>/g, '').trim();
+        cleanMessage += '\n\n✅ Trip created! Your trip "' + event.title + '" has been added to your calendar. [View Trip](/trips/' + event.id + ')';
+      } catch(e: any) {
+        console.error('Create trip error:', e?.message);
+        cleanMessage = cleanMessage.replace(/<<CREATE_TRIP>>[\s\S]*?<<\/CREATE_TRIP>>/g, '').trim();
+        cleanMessage += '\n\n⚠️ I had trouble creating the trip automatically. You can create it manually from your trips page.';
+      }
+    }
+
     res.json({
-      message: aiMessage,
+      message: cleanMessage,
       suggestions: suggestions.slice(0, 4),
+      tripCreated,
+      interestsSaved,
     });
   } catch (e: any) {
     console.error('Hitch chat error:', e?.message, e?.status, e?.error);
