@@ -237,47 +237,35 @@ router.get('/', optionalAuth, async (req, res) => {
       orderBy
     });
 
-    // Enrich recipes with additional data
-    const recipesWithRatings = await Promise.all(
-      recipes.map(async (recipe) => {
-        const ratings = await prisma.recipeRating.findMany({
-          where: { recipeId: recipe.id },
-          select: { rating: true }
-        });
+    // Enrich recipes with additional data - batched to avoid N+1
+    const recipeIds = recipes.map(r => r.id);
 
-        const averageRating = ratings.length > 0
-          ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-          : 0;
+    const [allRatings, allSaved, allLiked] = await Promise.all([
+      prisma.recipeRating.findMany({ where: { recipeId: { in: recipeIds } }, select: { recipeId: true, rating: true } }),
+      currentUserId ? prisma.savedRecipe.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true, favorite: true } }) : Promise.resolve([]),
+      currentUserId ? prisma.recipeLike.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true } }) : Promise.resolve([]),
+    ]);
 
-        const savedRecipe = currentUserId
-          ? await prisma.savedRecipe.findUnique({
-              where: {
-                userId_recipeId: {
-                  userId: currentUserId,
-                  recipeId: recipe.id
-                }
-              }
-            })
-          : null;
+    const ratingsByRecipe = recipeIds.reduce((acc, id) => {
+      const r = allRatings.filter(r => r.recipeId === id);
+      acc[id] = r.length > 0 ? r.reduce((s, x) => s + x.rating, 0) / r.length : 0;
+      return acc;
+    }, {} as Record<string, number>);
+    const savedByRecipe = Object.fromEntries(allSaved.map(s => [s.recipeId, s]));
+    const likedByRecipe = Object.fromEntries(allLiked.map(l => [l.recipeId, true]));
 
-        const userLiked = currentUserId
-          ? await prisma.recipeLike.findUnique({
-              where: {
-                recipeId_userId: {
-                  userId: currentUserId,
-                  recipeId: recipe.id
-                }
-              }
-            })
-          : null;
-
+    const recipesWithRatings = recipes.map((recipe) => {
+        const savedRecipe = savedByRecipe[recipe.id] || null;
+        const averageRating = ratingsByRecipe[recipe.id] || 0;
+        const placeholder = null; // keep structure compatible
+        if (placeholder) {}
         return {
           ...recipe,
           averageRating,
           author: recipe.user,
           isSaved: !!savedRecipe,
           isFavorite: savedRecipe?.favorite || false,
-          isLiked: !!userLiked,
+          isLiked: !!likedByRecipe[recipe.id],
           likeCount: recipe._count.likes,
           commentCount: recipe._count.comments,
           saveCount: recipe._count.savedBy,
