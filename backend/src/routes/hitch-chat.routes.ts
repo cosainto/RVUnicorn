@@ -195,6 +195,19 @@ If a user asks to talk to another guide, tell them warmly about that guide's per
 ${userContextStr ? `\nPersonal context for this user:${userContextStr}` : ''}
 ${contextData ? `\nRelevant locations found: ${contextData}` : ''}
 
+TRIP PLANNING & EVENT CREATION:
+When a user wants to plan a trip or create an event, guide them through a friendly conversation:
+1. If they have no campingInterests, ask: "Before we plan, what kinds of camping do you enjoy? (hiking, fishing, swimming, wine trails, breweries, stargazing, etc.)" — save their answer with <<SAVE_INTERESTS>>["interest1","interest2"]<</SAVE_INTERESTS>>
+2. Ask preferred dates (start and end)
+3. Based on their rig, interests, and location suggest 2-3 specific campgrounds by name
+4. Ask which campground they want
+5. Ask party size / who's coming
+6. Confirm all details then create the trip with this EXACT format at the END of your message:
+
+<<CREATE_TRIP>>{"title":"Trip Name","campgroundName":"Full Campground Name","startDate":"2026-04-15","endDate":"2026-04-18","description":"Short description","partySize":2}<</CREATE_TRIP>>
+
+Only include <<CREATE_TRIP>> when user has CONFIRMED all details and is ready to create. Never include it in questions or suggestions.
+
 For fuel questions: estimate based on RV type (Class A: 7-10mpg, Class B: 18-25mpg, Class C: 10-15mpg, Travel Trailer: depends on tow vehicle 10-15mpg). Ask for tank size if needed.
 For travel time questions: estimate average RV travel speed of 55-60mph, add 15-20% for stops/traffic.
 
