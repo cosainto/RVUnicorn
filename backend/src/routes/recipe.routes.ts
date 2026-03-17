@@ -270,8 +270,7 @@ router.get('/', optionalAuth, async (req, res) => {
           commentCount: recipe._count.comments,
           saveCount: recipe._count.savedBy,
         };
-      })
-    );
+      });
 
     // Sort by engagement metrics if needed
     let sortedRecipes = recipesWithRatings;
