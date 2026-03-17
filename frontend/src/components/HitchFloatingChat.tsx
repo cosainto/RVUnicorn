@@ -11,6 +11,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   suggestions?: any[];
+  tripCreated?: { id: string; title: string } | null;
 }
 
 export default function HitchFloatingChat() {
