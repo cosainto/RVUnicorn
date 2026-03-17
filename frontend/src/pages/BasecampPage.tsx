@@ -493,7 +493,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       // If checking into a campground, create a check-in
       if (selectedCampground) {
         try {
-          await api.post('/checkin', {
+          await api.post('/checkins', {
             campgroundId: selectedCampground.id,
           });
         } catch (e) {
@@ -922,7 +922,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Load active check-in
   useEffect(() => {
     if (!user) return;
-    api.get('/checkin/active')
+    api.get('/checkins/active')
       .then(r => setActiveCheckIn(r.data?.checkIn || null))
       .catch(() => {});
   }, [user]);

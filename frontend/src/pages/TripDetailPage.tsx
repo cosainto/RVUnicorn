@@ -98,10 +98,10 @@ export default function EventDetailPage() {
     setCheckInLoading(true);
     try {
       if (isCheckedIn) {
-        await api.post('/checkin/checkout');
+        await api.delete('/checkins/active');
         setIsCheckedIn(false);
       } else {
-        await api.post('/checkin', { campgroundId: event.campground.id });
+        await api.post('/checkins', { campgroundId: event.campground.id });
         setIsCheckedIn(true);
       }
     } catch (e: any) {
@@ -188,7 +188,7 @@ export default function EventDetailPage() {
   // Check if user is currently checked in at this campground
   useEffect(() => {
     if (!event?.campground?.id || !user) return;
-    api.get('/checkin/active')
+    api.get('/checkins/active')
       .then(r => {
         const active = r.data?.checkIn;
         setIsCheckedIn(active?.campgroundId === event.campground?.id);
