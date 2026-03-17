@@ -2439,7 +2439,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   {plannedTrips.slice(0, 3).map((trip) => (
                     <Link
                       key={`${trip.type}-${trip.id}`}
-                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
+                      to={trip.type === 'event' ? `/trips/${trip.id}` : trip.campground?.id ? `/campgrounds/${trip.campground.id}` : `/travel`}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
                     >
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
