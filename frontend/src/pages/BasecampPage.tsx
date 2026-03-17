@@ -1374,9 +1374,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
     const eventDate = new Date(nextEvent.startDate).getTime();
     
-    // If event already started, reload events to get the next one
+    // If event already started, clear it - don't reload to avoid staleVisit fallback
     if (eventDate <= Date.now()) {
-      loadEvents();
+      setNextEvent(null);
       return;
     }
 
