@@ -195,6 +195,18 @@ If a user asks to talk to another guide, tell them warmly about that guide's per
 ${userContextStr ? `\nPersonal context for this user:${userContextStr}` : ''}
 ${contextData ? `\nRelevant locations found: ${contextData}` : ''}
 
+ROUTE PLANNING:
+When a user wants to plan a route or driving itinerary for an existing trip, guide them:
+1. Ask origin (or use their home location)
+2. Ask destination (or use the trip's campground)  
+3. Ask trip dates and how many driving days
+4. Ask if they want stops — fuel, overnight, attractions, food
+5. Use web search to find campgrounds/stops along the route
+6. Build a day-by-day plan
+
+When confirmed, output at END of message:
+<<PLAN_ROUTE>>{"eventId":"event_id_here","origin":"City, State","destination":"Campground Name, City, State","days":[{"dayNumber":1,"type":"TRAVEL","notes":"Drive from X to Y, ~4 hours","stops":[{"type":"FUEL","customName":"Pilot Travel Center","address":"123 Main St, City, ST"},{"type":"OVERNIGHT","customName":"Campground Name","address":"456 Park Rd, City, ST"}]}]}<</PLAN_ROUTE>>
+
 TRIP PLANNING & EVENT CREATION:
 When a user wants to plan a trip or create an event, guide them through a friendly conversation:
 1. If they have no campingInterests, ask: "Before we plan, what kinds of camping do you enjoy? (hiking, fishing, swimming, wine trails, breweries, stargazing, etc.)" — save their answer with <<SAVE_INTERESTS>>["interest1","interest2"]<</SAVE_INTERESTS>>
@@ -280,11 +292,41 @@ Keep responses helpful and specific. Reference the user by name when you have it
       }
     }
 
+    // Handle <<PLAN_ROUTE>>
+    let routePlanned = null;
+    const routeMatch = cleanMessage.match(/<<PLAN_ROUTE>>([\s\S]*?)<<\/PLAN_ROUTE>>/);
+    if (routeMatch) {
+      try {
+        const routeData = JSON.parse(routeMatch[1].trim());
+        // Save route plan to itinerary if eventId provided
+        if (routeData.eventId && routeData.days) {
+          for (const day of routeData.days) {
+            try {
+              const { data: newDay } = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/itinerary/${routeData.eventId}/days`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': req.headers.authorization || '' },
+                body: JSON.stringify({ dayNumber: day.dayNumber, type: day.type || 'TRAVEL', notes: day.notes }),
+              }).then(r => r.json()).catch(() => ({ data: null }));
+            } catch(e) {}
+          }
+          routePlanned = { eventId: routeData.eventId, days: routeData.days.length };
+        }
+        cleanMessage = cleanMessage.replace(/<<PLAN_ROUTE>>[\s\S]*?<<\/PLAN_ROUTE>>/g, '').trim();
+        if (routePlanned) {
+          cleanMessage += '\n\n🗺️ Route saved to your trip planner! Open the Trip Planner tab to see your itinerary.';
+        }
+      } catch(e: any) {
+        console.error('Plan route error:', e?.message);
+        cleanMessage = cleanMessage.replace(/<<PLAN_ROUTE>>[\s\S]*?<<\/PLAN_ROUTE>>/g, '').trim();
+      }
+    }
+
     res.json({
       message: cleanMessage,
       suggestions: suggestions.slice(0, 4),
       tripCreated,
       interestsSaved,
+      routePlanned,
     });
   } catch (e: any) {
     console.error('Hitch chat error:', e?.message, e?.status, e?.error);
