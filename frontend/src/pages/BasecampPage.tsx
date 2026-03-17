@@ -64,6 +64,7 @@ import CreatorFeed from '../components/CreatorFeed';
 import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
+import CampfireChat from '../components/CampfireChat';
 
 interface BasecampProps {
   user: UserType | null;
@@ -1826,7 +1827,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                   )}
                   <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="text-white/80 text-xs hover:text-white ml-auto underline">{activeCheckIn.campground.name} →</a>
                 </div>
-                <div className="p-4">
+                <div className="p-4 space-y-4">
+                  <CampfireChat
+                    campgroundId={activeCheckIn.campground.id}
+                    campgroundName={activeCheckIn.campground.name}
+                  />
                   <CampfireChannel
                     onView={() => setNewCampfirePosts(0)}
                     campgroundId={activeCheckIn.campground.id}
