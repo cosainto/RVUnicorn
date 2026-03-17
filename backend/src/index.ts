@@ -106,6 +106,7 @@ import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
+import { registerTriviaCrons } from './cron/trivia-cron';
 
 
 // import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -258,6 +259,7 @@ app.get('/health', (req, res) => {
 
 
 registerCampfireSockets(io);
+registerTriviaCrons(io);
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

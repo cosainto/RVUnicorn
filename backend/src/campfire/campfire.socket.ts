@@ -33,6 +33,46 @@ export function registerCampfireSockets(io: Server) {
       });
     });
 
+
+    // Handle trivia answers
+    socket.on('trivia:answer', async (data: { questionId: string; answer: string; answeredAt: string }) => {
+      if (!data.questionId || !data.answer) return;
+      try {
+        const question = await prisma.triviaQuestion.findUnique({ where: { id: data.questionId } });
+        if (!question || !question.askedAt) return;
+
+        const responseTime = Math.floor((new Date(data.answeredAt).getTime() - new Date(question.askedAt).getTime()) / 1000);
+        const isCorrect = question.answer === data.answer;
+        const speedBonus = isCorrect ? (responseTime < 30 ? 5 : responseTime < 90 ? 2 : 0) : 0;
+        const points = isCorrect ? 10 + speedBonus : 0;
+
+        await prisma.triviaAnswer.upsert({
+          where: { questionId_userId: { questionId: data.questionId, userId } },
+          update: { answer: data.answer, isCorrect, responseTime, points },
+          create: { questionId: data.questionId, userId, answer: data.answer, isCorrect, responseTime, points },
+        });
+
+        // Update leaderboard
+        const week = await prisma.triviaWeek.findUnique({ where: { id: question.weekId } });
+        if (week) {
+          await prisma.triviaLeaderboard.upsert({
+            where: { weekId_userId: { weekId: week.id, userId } },
+            update: {
+              totalPoints: { increment: points },
+              correctAnswers: { increment: isCorrect ? 1 : 0 },
+              gamesPlayed: { increment: 1 },
+            },
+            create: { weekId: week.id, userId, totalPoints: points, correctAnswers: isCorrect ? 1 : 0, gamesPlayed: 1 },
+          });
+        }
+
+        // Tell the user their result privately
+        socket.emit('trivia:answer:result', { questionId: data.questionId, isCorrect, points, correctAnswer: question.answer });
+      } catch (e) {
+        console.error('[Campfire] Answer error:', e);
+      }
+    });
+
     socket.on('disconnect', async () => {
       const checkedIn = await getCheckedInUsers(campgroundId);
       campfire.to(campgroundId).emit('presence:update', checkedIn);
