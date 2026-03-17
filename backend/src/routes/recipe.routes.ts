@@ -214,7 +214,7 @@ router.get('/', optionalAuth, async (req, res) => {
 
     const recipes = await prisma.recipe.findMany({
       where: whereClause,
-      take: limit ? parseInt(limit as string) : 100,
+      take: limit ? parseInt(limit as string) : 24,
       include: {
         user: {
           select: {
