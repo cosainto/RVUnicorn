@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
+import CampfireTriviaOverlay from './CampfireTriviaOverlay';
 
 interface ChatUser {
   id: string;
@@ -118,6 +119,9 @@ export default function CampfireChat({ campgroundId, campgroundName }: Props) {
           ))}
         </div>
       )}
+
+      {/* Trivia overlay — appears when a question is active */}
+      <CampfireTriviaOverlay socket={socketRef.current} userId={user?.id || ''} />
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-8">The fire's just getting started… 🔥</div>}
