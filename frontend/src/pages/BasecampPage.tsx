@@ -1126,7 +1126,10 @@ export default function BasecampPage({ user }: BasecampProps) {
       const now = new Date();
       const futureEvents = upcomingEvents.filter((e: UpcomingEvent) => new Date(e.startDate) > now);
       if (futureEvents.length > 0) {
-        setNextEvent(futureEvents[0]);
+        setNextEvent({ ...futureEvents[0], type: 'event' });
+      } else if (stateVisitTrips.length > 0) {
+        // Use first upcoming stateVisit as nextEvent if no real events
+        setNextEvent({ ...stateVisitTrips[0], type: 'stateVisit' } as any);
       } else {
         setNextEvent(null);
       }
