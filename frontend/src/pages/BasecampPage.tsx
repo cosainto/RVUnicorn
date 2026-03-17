@@ -1593,7 +1593,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <Clock className="w-6 h-6" />
                 <div>
                   <p className="text-sm text-blue-100">Countdown to</p>
-                  <Link to={`/trips/${nextEvent.id}`} className="font-bold hover:underline">
+                  <Link to={(nextEvent as any).type === 'stateVisit' && (nextEvent as any).campground?.id ? `/campgrounds/${(nextEvent as any).campground.id}` : `/trips/${nextEvent.id}`} className="font-bold hover:underline">
                     {nextEvent.title || nextEvent.name}
                   </Link>
                   {nextEvent.campground && (
@@ -1736,7 +1736,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* Upcoming Trip Card */}
           {nextEvent ? (
-            <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
+            <Link to={(nextEvent as any).type === 'stateVisit' && (nextEvent as any).campground?.id ? `/campgrounds/${(nextEvent as any).campground.id}` : `/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 bg-blue-100 rounded-lg"><Calendar className="w-4 h-4 text-blue-600" /></div>
                 <span className="text-xs font-medium text-blue-600">Next Trip</span>
