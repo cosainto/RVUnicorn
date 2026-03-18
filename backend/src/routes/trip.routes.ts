@@ -427,6 +427,32 @@ router.post('/', authenticateToken, async (req, res) => {
     // Log activity for friend feed (only for non-private events)
     if (event.privacy !== 'PRIVATE') {
       await logEventCreated(userId, event.id, event.title, event.campgroundId || undefined);
+
+      // Auto-create completed check-in for past trips with a campground
+      if (event.campgroundId && new Date(startDate) < new Date()) {
+        const existing = await prisma.checkIn.findFirst({
+          where: {
+            userId,
+            campgroundId: event.campgroundId,
+            checkInDate: {
+              gte: new Date(new Date(startDate).getTime() - 86400000),
+              lte: new Date(new Date(startDate).getTime() + 86400000),
+            },
+          },
+        });
+        if (!existing) {
+          await prisma.checkIn.create({
+            data: {
+              userId,
+              campgroundId: event.campgroundId,
+              checkInDate: new Date(startDate),
+              checkOutDate: endDate ? new Date(endDate) : new Date(startDate),
+              isActive: false,
+              notes: 'Auto-created from past trip: ' + event.title,
+            },
+          });
+        }
+      }
     }
 
 
