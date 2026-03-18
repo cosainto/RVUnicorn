@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
+import { runTripCheckinReminder } from './trip-checkin-reminder';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -330,6 +331,9 @@ export function registerTriviaCrons(io: any) {
 
   // Sunday 6:05 PM — weekly winner
   cron.schedule('5 18 * * 0', () => announceWeeklyWinner(io), { timezone: 'America/Chicago' });
+
+  // Daily 9:00 AM — trip check-in reminder
+  cron.schedule('0 9 * * *', () => runTripCheckinReminder(), { timezone: 'America/Chicago' });
 
   console.log('[TriviaCron] All trivia crons registered ✅');
 }
