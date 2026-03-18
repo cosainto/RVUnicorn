@@ -54,7 +54,7 @@ export default function CampfireChat({ campgroundId, campgroundName }: Props) {
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
     socket.on('presence:update', (users: ChatUser[]) => {
-      setStatus(prev => prev ? { ...prev, checkedInUsers: users, checkedInCount: users.length, needsMore: Math.max(0, 3 - users.length) } : null);
+      setStatus(prev => prev ? { ...prev, checkedInUsers: users, checkedInCount: users.length, needsMore: 0 } : null);
     });
     socket.on('message:new', (msg: ChatMessage) => setMessages(prev => [...prev, msg]));
     socket.on('room:activated', () => setStatus(prev => prev ? { ...prev, isActive: true } : null));
@@ -83,7 +83,7 @@ export default function CampfireChat({ campgroundId, campgroundName }: Props) {
     );
   }
 
-  if (!status.isActive && status.checkedInCount < 3) {
+  if (false) { // room activates for any checked-in user
     return (
       <div className="rounded-xl border border-orange-200 bg-orange-50 p-6 text-center">
         <div className="text-3xl mb-2">🔥</div>

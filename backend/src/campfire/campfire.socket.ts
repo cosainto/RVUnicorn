@@ -92,7 +92,7 @@ async function getCheckedInUsers(campgroundId: string) {
 async function maybeActivateRoom(campgroundId: string, namespace: any) {
   const count = await prisma.checkIn.count({ where: { campgroundId, isActive: true } });
   const existing = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
-  if (count >= 3 && !existing?.isActive) {
+  if (count >= 1 && !existing?.isActive) {
     const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true } });
     const room = await prisma.campfireRoom.upsert({
       where: { campgroundId },
