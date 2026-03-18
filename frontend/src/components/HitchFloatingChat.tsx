@@ -84,7 +84,22 @@ export default function HitchFloatingChat() {
         guideId: selectedGuideId,
       });
       const reply = { role: 'assistant' as const, content: data.message, suggestions: data.suggestions || [] };
-      setMessages(prev => [...prev, reply]);
+      setMessages(prev => {
+        const updated = [...prev, reply];
+        // Trigger chime-in check after reply lands
+        setTimeout(async () => {
+          try {
+            const chimeRes = await api.post('/guide-unlocks/chime-in', {
+              guideId: selectedGuideId,
+              lastMessage: data.message,
+            });
+            if (chimeRes.data?.chimeIn) {
+              setChimeIns(c => ({ ...c, [updated.length - 1]: chimeRes.data.chimeIn }));
+            }
+          } catch {}
+        }, 800);
+        return updated;
+      });
       if (!open) setUnread(n => n + 1);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I had a hiccup! Try again.' }]);

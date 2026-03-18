@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Send, Loader, MapPin, Star, ThumbsUp, ThumbsDown } from 'lucide-react';
 import api from '../services/api';
+import { useGuideUnlocks } from '../hooks/useGuideUnlocks';
+import { getGuide, DEFAULT_GUIDE_ID } from '../config/hitchGuides';
+import { Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -39,6 +42,9 @@ export default function HitchAIAssistant() {
   const [input, setInput] = useState('');
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [chimeIns, setChimeIns] = useState<Record<number, any>>({});
+  const [selectedGuideId, setSelectedGuideId] = useState(DEFAULT_GUIDE_ID);
+  const { isUnlocked, getProgress } = useGuideUnlocks();
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [userContext, setUserContext] = useState<any>(null);
 
@@ -67,13 +73,28 @@ export default function HitchAIAssistant() {
         message: msg,
         history: newMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
         userContext,
+        guideId: selectedGuideId,
       });
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.message,
-        suggestions: data.suggestions || [],
-      }]);
+      setMessages(prev => {
+        const updated = [...prev, {
+          role: 'assistant' as const,
+          content: data.message,
+          suggestions: data.suggestions || [],
+        }];
+        setTimeout(async () => {
+          try {
+            const chimeRes = await api.post('/guide-unlocks/chime-in', {
+              guideId: selectedGuideId,
+              lastMessage: data.message,
+            });
+            if (chimeRes.data?.chimeIn) {
+              setChimeIns(c => ({ ...c, [updated.length - 1]: chimeRes.data.chimeIn }));
+            }
+          } catch {}
+        }, 800);
+        return updated;
+      });
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -125,6 +146,37 @@ export default function HitchAIAssistant() {
                   </button>
                 </div>
               )}
+              {/* Chime-in bubble */}
+              {msg.role === 'assistant' && chimeIns[i] && (() => {
+                const chime = chimeIns[i];
+                const cg = getGuide(chime.guideId);
+                return (
+                  <div className={`mt-2 rounded-xl border p-2.5 text-xs leading-relaxed ${chime.unlocked ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {cg?.avatarUrl
+                        ? <img src={cg.avatarUrl} className={`w-5 h-5 rounded-full object-cover ${!chime.unlocked ? 'grayscale opacity-50' : ''}`} alt={cg.name} />
+                        : <span className="text-sm">{cg?.emoji}</span>
+                      }
+                      <span className="font-semibold text-gray-600">{cg?.name || chime.guideId}</span>
+                      {!chime.unlocked && <Lock className="w-3 h-3 text-gray-400 ml-auto" />}
+                    </div>
+                    {chime.unlocked ? (
+                      <p className="text-gray-700">{chime.content}</p>
+                    ) : (
+                      <div className="relative">
+                        <p className="text-gray-300 blur-sm select-none pointer-events-none">{chime.content}</p>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <p className="text-xs text-gray-500 font-medium">🔒 Unlock {cg?.name}</p>
+                          {chime.lockProgress && (
+                            <p className="text-xs text-gray-400">{chime.lockProgress.filter((c: any) => c.met).length}/{chime.lockProgress.length} conditions met</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Suggestions */}
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="space-y-2">
