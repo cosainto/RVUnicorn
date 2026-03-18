@@ -525,7 +525,15 @@ Pick top 8. Be specific about why each fits THIS user. Reference their exact RV 
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-    const parsed = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, "").trim());
+    let parsed: any = { matches: [] };
+    try {
+      const clean = text.replace(/```json|```/g, "").trim();
+      const jsonMatch = clean.match(/{[\s\S]*}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { matches: [] };
+    } catch (parseErr: any) {
+      console.error("For-you parse error:", parseErr.message, text.substring(0, 300));
+      return res.json({ matches: [], missingFields });
+    }
     const matches = (parsed.matches || [])
       .map((m: any) => { const c = campgrounds[m.index]; if (!c) return null; return { ...c, matchScore: m.matchScore, matchTier: m.matchTier, whyItFits: m.whyItFits, watchOut: m.watchOut || null, highlights: m.highlights || [] }; })
       .filter(Boolean)
