@@ -1022,3 +1022,45 @@ router.post('/send-weekly-digests', async (req: any, res) => {
 });
 
 export default router;
+
+// POST /api/hitch/road-support
+router.post('/road-support', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const { message, category, history = [] } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { rvType: true, rvLength: true, firstName: true },
+    });
+
+    const categoryContext: Record<string, string> = {
+      fuel: 'You are helping an RV traveler find fuel (gas, diesel, propane). Recommend apps like GasBuddy, Trucker Path, iOverlander. Give practical tips for RV-specific fueling.',
+      breakdown: 'You are helping an RV traveler who may be stranded or broken down. Prioritize safety first. Give calm, step-by-step guidance. Always mention calling roadside assistance if needed.',
+      repair: 'You are an experienced RV mechanic helping with on-the-road repairs. Give clear, safe, step-by-step instructions. Always warn when a repair requires a professional.',
+      emergency: 'You are providing emergency contact information for RV roadside assistance. Key numbers: Good Sam 1-800-847-2869, Coach-Net 1-800-863-3428, AAA 1-800-222-4357, FMCA 1-800-543-3622.',
+    };
+
+    const systemPrompt = `You are Hitch, RVUnicorn's Road & RV Support specialist. 
+${categoryContext[category] || 'You help RV travelers with road and vehicle issues.'}
+User's RV: ${user?.rvType || 'unknown'} (${user?.rvLength || '?'}ft)
+Be concise, practical, and calm. Use bullet points for steps. Keep responses under 200 words.`;
+
+    const historyMessages = history.map((m: any) => ({ role: m.role, content: m.content }));
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      system: systemPrompt,
+      messages: [...historyMessages, { role: 'user', content: message }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    res.json({ response: text });
+  } catch (e: any) {
+    console.error('Road support error:', e?.message);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+export default router;
