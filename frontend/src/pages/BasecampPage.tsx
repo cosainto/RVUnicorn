@@ -1746,6 +1746,32 @@ export default function BasecampPage({ user }: BasecampProps) {
           <div className="lg:col-span-2 space-y-6">
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
+            {activeCheckIn?.campground && (
+              <div className="bg-white rounded-xl border border-orange-200 overflow-hidden mb-4">
+                <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  <span className="text-white font-bold text-sm">You're at the campfire 🔥</span>
+                  {newCampfirePosts > 0 && (
+                    <span className="bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                      {newCampfirePosts} new
+                    </span>
+                  )}
+                  <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="text-white/80 text-xs hover:text-white ml-auto underline">{activeCheckIn.campground.name} →</a>
+                </div>
+                <div className="p-4 space-y-4">
+                  <CampfireChat
+                    campgroundId={activeCheckIn.campground.id}
+                    campgroundName={activeCheckIn.campground.name}
+                  />
+                  <CampfireChannel
+                    onView={() => setNewCampfirePosts(0)}
+                    campgroundId={activeCheckIn.campground.id}
+                    campgroundName={activeCheckIn.campground.name}
+                    isCheckedIn={true}
+                  />
+                </div>
+              </div>
+            )}
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
 
