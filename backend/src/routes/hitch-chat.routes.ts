@@ -114,16 +114,26 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
         if (user) {
           const following = await prisma.friendship.findMany({
             where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'ACCEPTED' },
-            select: { receiver: { select: { id: true, username: true, firstName: true } } },
+            select: {
+              initiatorId: true,
+              receiverId: true,
+              initiator: { select: { id: true, username: true, firstName: true } },
+              receiver: { select: { id: true, username: true, firstName: true } },
+            },
             take: 30,
           }).catch(() => []);
+          // Get the OTHER person in each friendship (not the current user)
+          const friends = following.map((f: any) => {
+            const friend = f.initiatorId === userId ? f.receiver : f.initiator;
+            return friend ? { username: friend.username, name: friend.firstName } : null;
+          }).filter(Boolean);
           resolvedContext = {
             name: user.firstName,
             username: user.username,
             homeState: (user as any).homeState,
             interests: user.campingInterests || [],
             rv: { type: user.rvType, length: user.rvLength, make: user.rvMake, model: user.rvModel, year: user.rvYear, fuelType: user.rvFuelType },
-            friends: following.map((f: any) => ({ username: (f.receiver || f.recipient)?.username, name: (f.receiver || f.recipient)?.firstName })).filter((f: any) => f.username),
+            friends,
           };
         }
       } catch {}
@@ -697,11 +707,18 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
     // Get friends (people the user follows)
     const following = await prisma.friendship.findMany({
       where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'ACCEPTED' },
-      select: { receiver: { select: { id: true, username: true, firstName: true } } },
+      select: {
+        initiatorId: true,
+        receiverId: true,
+        initiator: { select: { id: true, username: true, firstName: true } },
+        receiver: { select: { id: true, username: true, firstName: true } },
+      },
       take: 20,
     }).catch(() => []);
 
-    const friendIds = following.map((f: any) => (f.receiver || f.recipient)?.id).filter(Boolean);
+    const friendIds = following.map((f: any) => {
+      return f.initiatorId === userId ? f.receiver?.id : f.initiator?.id;
+    }).filter(Boolean);
 
     // Get friends' upcoming trips
     const friendTrips = friendIds.length > 0 ? await prisma.event.findMany({
@@ -779,7 +796,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         reviews: c._count.reviews,
         wishlists: c._count.wishlists,
       })),
-      friends: following.map((f: any) => { const r = f.receiver || f.recipient; return { username: r?.username, name: r?.firstName }; }).filter((f: any) => f.username),
+      friends: following.map((f: any) => { const r = f.initiatorId === userId ? f.receiver : f.initiator; return r ? { username: r.username, name: r.firstName } : null; }).filter(Boolean),
       friendTrips: friendTrips.map(t => ({
         id: t.id,
         title: t.title,
