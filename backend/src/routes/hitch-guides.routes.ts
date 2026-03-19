@@ -1021,7 +1021,7 @@ router.post('/send-weekly-digests', async (req: any, res) => {
   }
 });
 
-export default router;
+
 
 // POST /api/hitch/road-support
 router.post('/road-support', authenticateToken, async (req: any, res) => {
