@@ -176,6 +176,37 @@ export async function askNextQuestion(io: any) {
     });
     if (!week) continue;
 
+    // Use sponsored question at Q5 if available
+    if (questionNum === 5 && sponsoredQ) {
+      await prisma.campfireMessage.create({
+        data: {
+          roomId: room.id,
+          isHitch: true,
+          content: `🎁 Bonus Round — this one's worth extra! Powered by ${sponsoredQ.brandName}\n\n${sponsoredQ.question}\n\nA) ${sponsoredQ.optionA}\nB) ${sponsoredQ.optionB}\nC) ${sponsoredQ.optionC}\nD) ${sponsoredQ.optionD}`,
+        },
+      });
+      if (io) {
+        io.of('/campfire').to(room.campgroundId).emit('trivia:sponsored-question', {
+          questionId: sponsoredQ.id,
+          campaignId: sponsoredQ.campaignId,
+          questionNum: 5,
+          total: 10,
+          question: sponsoredQ.question,
+          options: { A: sponsoredQ.optionA, B: sponsoredQ.optionB, C: sponsoredQ.optionC, D: sponsoredQ.optionD },
+          category: 'Bonus Round',
+          brandName: sponsoredQ.brandName,
+          brandLogoUrl: sponsoredQ.brandLogoUrl,
+          brandLandingUrl: sponsoredQ.brandLandingUrl,
+          rewardType: sponsoredQ.rewardType,
+          rewardValue: sponsoredQ.rewardValue,
+          timeLimit: 120,
+          askedAt: new Date().toISOString(),
+          isSponsored: true,
+        });
+      }
+      continue;
+    }
+
     const question = await prisma.triviaQuestion.findFirst({
       where: { weekId: week.id, dayOfWeek, questionNum },
     });

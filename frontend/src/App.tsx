@@ -97,6 +97,7 @@ import SearchPage from './pages/SearchPage';
 import ItineraryPage from './pages/ItineraryPage';
 import AdminBadgeApprovalPage from "./components/AdminBadgeApproval";
 import AdminCampgroundsPage from './pages/AdminCampgroundsPage';
+import AdminSponsorCampaignsPage from './pages/AdminSponsorCampaignsPage';
 import AdminHostListingsPage from './pages/AdminHostListingsPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
@@ -180,7 +181,8 @@ function AppContent() {
 
         <Route path="/basecamp" element={<BasecampPage user={user} />} />
         <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
-        <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
+        <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />
+              <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />} />
           <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
           <Route path="/hosts/new" element={<CreateHostPage />} />
           <Route path="/hitch" element={<PrivateRoute><HitchAIPage /></PrivateRoute>} />

@@ -293,6 +293,12 @@ model User {
   privateTriviaRooms   PrivateTriviaRoom[]   @relation("PrivateTriviaHost")
   privateTriviaWins    PrivateTriviaRoom[]   @relation("PrivateTriviaWinner")
   privateTriviaPlayed  PrivateTriviaParticipant[]
+  campaignsCreated     SponsorCampaign[]    @relation("CampaignCreator")
+  campaignsApproved    SponsorCampaign[]    @relation("CampaignApprover")
+  sponsoredImpressions SponsoredQuestionImpression[] @relation("SponsoredImpressions")
+  sponsoredAnswers     SponsoredQuestionAnswer[]     @relation("SponsoredAnswers")
+  sponsoredRewards     SponsoredRewardGrant[]        @relation("SponsoredRewards")
+  assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
 }
 
 model Post {
@@ -3877,8 +3883,12 @@ model TriviaStreak {
 
 model SponsoredQuestion {
   id          String   @id @default(cuid())
+  campaignId  String?
   brandName   String
   brandLogo   String?
+  status      String   @default("approved")
+  priority    Int      @default(1)
+  internalNotes String?
   question    String
   optionA     String
   optionB     String
@@ -3891,6 +3901,113 @@ model SponsoredQuestion {
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime @default(now())
+  campaign    SponsorCampaign? @relation(fields: [campaignId], references: [id])
+  impressions SponsoredQuestionImpression[]
+  answers     SponsoredQuestionAnswer[]
 
   @@index([isActive])
+  @@index([campaignId])
+}
+
+model SponsorCampaign {
+  id                String                      @id @default(cuid())
+  internalName      String
+  brandName         String
+  brandLogoUrl      String?
+  brandLandingUrl   String?
+  packageType       String                      @default("weekly")
+  status            String                      @default("draft")
+  isActive          Boolean                     @default(false)
+  startDate         DateTime?
+  endDate           DateTime?
+  maxImpressions    Int?
+  maxRewardGrants   Int?
+  selectionWeight   Int                         @default(1)
+  exclusivityType   String?
+  internalNotes     String?
+  createdById       String
+  approvedById      String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  createdBy         User                        @relation("CampaignCreator", fields: [createdById], references: [id])
+  approvedBy        User?                       @relation("CampaignApprover", fields: [approvedById], references: [id])
+  questions         SponsoredQuestion[]
+  impressions       SponsoredQuestionImpression[]
+  answers           SponsoredQuestionAnswer[]
+  rewardGrants      SponsoredRewardGrant[]
+  discountCodes     DiscountCodePool[]
+
+  @@index([isActive])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+model SponsoredQuestionImpression {
+  id                  String          @id @default(cuid())
+  campaignId          String
+  sponsoredQuestionId String
+  campgroundId        String?
+  playerId            String
+  servedAt            DateTime        @default(now())
+  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  question            SponsoredQuestion @relation(fields: [sponsoredQuestionId], references: [id], onDelete: Cascade)
+  player              User            @relation("SponsoredImpressions", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([sponsoredQuestionId])
+  @@index([playerId])
+  @@index([servedAt])
+}
+
+model SponsoredQuestionAnswer {
+  id                  String          @id @default(cuid())
+  campaignId          String
+  sponsoredQuestionId String
+  playerId            String
+  selectedAnswer      String
+  isCorrect           Boolean
+  answeredAt          DateTime        @default(now())
+  responseTimeMs      Int?
+  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  question            SponsoredQuestion @relation(fields: [sponsoredQuestionId], references: [id], onDelete: Cascade)
+  player              User            @relation("SponsoredAnswers", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([playerId])
+}
+
+model SponsoredRewardGrant {
+  id                  String          @id @default(cuid())
+  campaignId          String
+  sponsoredQuestionId String
+  playerId            String
+  rewardType          String
+  rewardValue         String?
+  codeId              String?
+  grantedAt           DateTime        @default(now())
+  status              String          @default("granted")
+  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  player              User            @relation("SponsoredRewards", fields: [playerId], references: [id], onDelete: Cascade)
+  code                DiscountCodePool? @relation(fields: [codeId], references: [id])
+
+  @@index([campaignId])
+  @@index([playerId])
+  @@index([grantedAt])
+}
+
+model DiscountCodePool {
+  id                String          @id @default(cuid())
+  campaignId        String
+  code              String          @unique
+  status            String          @default("available")
+  assignedToId      String?
+  assignedAt        DateTime?
+  redeemedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  campaign          SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  assignedTo        User?           @relation("AssignedCodes", fields: [assignedToId], references: [id])
+  rewardGrant       SponsoredRewardGrant[]
+
+  @@index([campaignId])
+  @@index([status])
 }
