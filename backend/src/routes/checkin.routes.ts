@@ -140,7 +140,7 @@ router.get('/herd/:type/:id', async (req: any, res) => {
   }
 });
 
-export default router;
+
 
 // GET /api/checkins/user/:userId/active - Get another user's active check-in (public)
 router.get('/user/:userId/active', async (req: any, res) => {
