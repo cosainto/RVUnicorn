@@ -299,6 +299,7 @@ model User {
   sponsoredAnswers     SponsoredQuestionAnswer[]     @relation("SponsoredAnswers")
   sponsoredRewards     SponsoredRewardGrant[]        @relation("SponsoredRewards")
   assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
+  sentInvites          Invite[]             @relation("SentInvites")
 }
 
 model Post {
