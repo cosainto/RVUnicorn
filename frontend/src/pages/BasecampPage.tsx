@@ -65,7 +65,7 @@ import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
-import InviteFriends from '../components/InviteFriends'; // invite
+import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
   user: UserType | null;
@@ -3060,6 +3060,8 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           </div>
         </div>
       </div>
+{/* Invite Friends */}
+      <div className="hidden" />
       {/* Packing Modal */}
       <InventoryPackingModal
         isOpen={showPackingModal}
