@@ -45,7 +45,6 @@ import {
   Share2,
   Smile} from 'lucide-react';
 import api from '../services/api';
-import TripCalendarWidget from '../components/TripCalendarWidget';
 import { User as UserType } from '../services/auth.service';
 import TravelMap from '../components/TravelMap';
 import InventoryPackingModal from '../components/InventoryPackingModal';
@@ -61,11 +60,7 @@ import { TrendingHashtags } from '../components/HashtagDisplay';
 import { CreatorToggleSection } from '../components/CreatorComponents';
 import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
-import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
-import CampfireChannel from '../components/CampfireChannel';
-import CampfireChat from '../components/CampfireChat';
-import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
   user: UserType | null;
@@ -134,8 +129,6 @@ interface PlannedTrip {
     state?: string;
   };
   state?: string;
-  siteNumber?: string;
-  attendeeId?: string;
 }
 
 interface MaintenanceStats {
@@ -495,7 +488,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       // If checking into a campground, create a check-in
       if (selectedCampground) {
         try {
-          await api.post('/checkins', {
+          await api.post('/checkin', {
             campgroundId: selectedCampground.id,
           });
         } catch (e) {
@@ -539,6 +532,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const currentStatus = getCurrentStatus();
 
   return (
+    <>
+      {showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
     <div className="space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
@@ -808,6 +803,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -921,14 +917,6 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [user?.id]);
 
-  // Load active check-in
-  useEffect(() => {
-    if (!user) return;
-    api.get('/checkins/active')
-      .then(r => setActiveCheckIn(r.data?.checkIn || null))
-      .catch(() => {});
-  }, [user]);
-
   const handleTourComplete = () => {
     if (user) localStorage.setItem('basecampTourDone_' + user.id, 'true');
     setShowTour(false);
@@ -938,9 +926,6 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [showQuickCapture, setShowQuickCapture] = useState(false);
   // Activity Feed State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
-  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
-  const [newCampfirePosts, setNewCampfirePosts] = useState(0);
-  const lastCampfireCheck = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -951,9 +936,6 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Event Countdown State
   const [nextEvent, setNextEvent] = useState<UpcomingEvent | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  const [siteNumberInput, setSiteNumberInput] = useState('');
-  const [siteNumberSaving, setSiteNumberSaving] = useState(false);
-  const [siteNumberSaved, setSiteNumberSaved] = useState(false);
 
   // Random quote for when no trip is planned
   const [randomQuote] = useState(() => 
@@ -970,7 +952,6 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // RV Info State
   const [rvInfo, setRvInfo] = useState<any>(null);
-  const [coOwnedRVs, setCoOwnedRVs] = useState<any[]>([]);
   const [rvShowcase, setRvShowcase] = useState<any>(null);
   const [rvTab, setRvTab] = useState<'overview' | 'edit' | 'log'>('overview');
   const [rvEditData, setRvEditData] = useState({
@@ -1027,7 +1008,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     instagramUrl: '',
     twitterUrl: '',
     youtubeUrl: '',
-    $$tiktokUrl: '',
+    $tiktokUrl: '',
     showSocialOnProfile: true,
     showSocialOnCreator: true,
   });
@@ -1084,14 +1065,6 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [user?.username]);
 
-  // Sync site number input when nextEvent loads
-  useEffect(() => {
-    if (nextEvent) {
-      const myAttendee = (nextEvent as any).myAttendee;
-      setSiteNumberInput(myAttendee?.siteNumber || '');
-    }
-  }, [nextEvent]);
-
   // Load Events and State Visits (upcoming, wishlist, and next event for countdown)
   const loadEvents = useCallback(async () => {
     try {
@@ -1128,7 +1101,7 @@ export default function BasecampPage({ user }: BasecampProps) {
       const now = new Date();
       const futureEvents = upcomingEvents.filter((e: UpcomingEvent) => new Date(e.startDate) > now);
       if (futureEvents.length > 0) {
-        setNextEvent({ ...futureEvents[0], type: 'event' } as any);
+        setNextEvent(futureEvents[0]);
       } else {
         setNextEvent(null);
       }
@@ -1142,8 +1115,6 @@ export default function BasecampPage({ user }: BasecampProps) {
         location: e.location,
         type: 'event' as const,
         campground: e.campground,
-        siteNumber: e.myAttendee?.siteNumber || '',
-        attendeeId: e.myAttendee?.id || '',
       }));
 
       // Load state visits for future planned trips
@@ -1187,12 +1158,12 @@ export default function BasecampPage({ user }: BasecampProps) {
       setPlannedTrips(allTrips.slice(0, 3));
 
     } catch (error) {
-      console.error('Failed to load events - primary path error:', error);
-      // Fallback disabled - /trips/my handles this
+      console.error('Failed to load events:', error);
+      // Fallback to /trips/upcoming endpoint
       try {
         const { data } = await api.get('/trips/upcoming');
-        if (false && data && data.length > 0) {
-          // setNextEvent disabled - stateVisits should not become nextEvent
+        if (data && data.length > 0) {
+          setNextEvent(data[0]);
           setPlannedTrips(data.slice(0, 3).map((e: UpcomingEvent) => ({
             id: e.id,
             title: e.title || e.name || 'Untitled Trip',
@@ -1223,11 +1194,6 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       // Fetch manual URL from database
       try {
-        // Load co-owned RVs
-        try {
-          const { data: coOwned } = await api.get('/rv/co-owners/shared-with-me');
-          setCoOwnedRVs(coOwned.map((c: any) => c.owner));
-        } catch {}
         if (profile.rvMake) {
           const { data: manualData } = await api.get(`/rv/manual?makeName=${encodeURIComponent(profile.rvMake)}`);
           setRvManualUrl(manualData.manualUrl || null);
@@ -1376,9 +1342,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
     const eventDate = new Date(nextEvent.startDate).getTime();
     
-    // If event already started, clear it - don't reload to avoid staleVisit fallback
+    // If event already started, reload events to get the next one
     if (eventDate <= Date.now()) {
-      setNextEvent(null);
+      loadEvents();
       return;
     }
 
@@ -1567,22 +1533,6 @@ export default function BasecampPage({ user }: BasecampProps) {
     return <LandingPage />;
   }
 
-  const handleSaveSiteNumber = async () => {
-    if (!nextEvent || !(nextEvent as any).myAttendee?.id) return;
-    setSiteNumberSaving(true);
-    try {
-      await api.put(`/events/${nextEvent.id}/attendees/${(nextEvent as any).myAttendee.id}`, {
-        siteNumber: siteNumberInput
-      });
-      setSiteNumberSaved(true);
-      setTimeout(() => setSiteNumberSaved(false), 2000);
-      setPlannedTrips(prev => prev.map(t =>
-        t.id === nextEvent.id ? { ...t, siteNumber: siteNumberInput } : t
-      ));
-    } catch(e) { console.error(e); }
-    setSiteNumberSaving(false);
-  };
-
   return (
     <>
     <div className="min-h-screen bg-gray-50">
@@ -1595,7 +1545,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <Clock className="w-6 h-6" />
                 <div>
                   <p className="text-sm text-blue-100">Countdown to</p>
-                  <Link to={(nextEvent as any).type === 'stateVisit' && (nextEvent as any).campground?.id ? `/campgrounds/${(nextEvent as any).campground.id}` : `/trips/${nextEvent.id}`} className="font-bold hover:underline">
+                  <Link to={`/trips/${nextEvent.id}`} className="font-bold hover:underline">
                     {nextEvent.title || nextEvent.name}
                   </Link>
                   {nextEvent.campground && (
@@ -1620,28 +1570,6 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="text-2xl font-bold">{countdown.seconds}</div>
                   <div className="text-xs text-blue-100">Sec</div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {(nextEvent as any).myAttendee && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
-                    <span className="text-xs text-blue-100 whitespace-nowrap">🏕️ Site</span>
-                    <input
-                      type="text"
-                      value={siteNumberInput}
-                      onChange={e => setSiteNumberInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleSaveSiteNumber()}
-                      placeholder="e.g. 42B"
-                      className="bg-transparent text-white placeholder-blue-200 text-sm font-medium w-20 outline-none border-b border-white/30 focus:border-white"
-                    />
-                    <button
-                      onClick={handleSaveSiteNumber}
-                      disabled={siteNumberSaving}
-                      className="text-xs text-white/70 hover:text-white font-medium"
-                    >
-                      {siteNumberSaved ? '✓' : siteNumberSaving ? '…' : 'Save'}
-                    </button>
-                  </div>
-                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-blue-100">Starting</p>
@@ -1738,7 +1666,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* Upcoming Trip Card */}
           {nextEvent ? (
-            <Link to={(nextEvent as any).type === 'stateVisit' && (nextEvent as any).campground?.id ? `/campgrounds/${(nextEvent as any).campground.id}` : `/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
+            <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 bg-blue-100 rounded-lg"><Calendar className="w-4 h-4 text-blue-600" /></div>
                 <span className="text-xs font-medium text-blue-600">Next Trip</span>
@@ -1815,38 +1743,11 @@ export default function BasecampPage({ user }: BasecampProps) {
           <div className="lg:col-span-2 space-y-6">
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
-            <CampingInterestsWidget username={user?.username || ''} initialInterests={(user as any)?.campingInterests || []} onUpdate={(interests) => { (user as any).campingInterests = interests; }} />
-            {activeCheckIn?.campground && (
-              <div className="bg-white rounded-xl border border-orange-200 overflow-hidden mb-4">
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <span className="text-white font-bold text-sm">You're at the campfire 🔥</span>
-                  {newCampfirePosts > 0 && (
-                    <span className="bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
-                      {newCampfirePosts} new
-                    </span>
-                  )}
-                  <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="text-white/80 text-xs hover:text-white ml-auto underline">{activeCheckIn.campground.name} →</a>
-                </div>
-                <div className="p-4 space-y-4">
-                  <CampfireChat
-                    campgroundId={activeCheckIn.campground.id}
-                    campgroundName={activeCheckIn.campground.name}
-                  />
-                  <CampfireChannel
-                    onView={() => setNewCampfirePosts(0)}
-                    campgroundId={activeCheckIn.campground.id}
-                    campgroundName={activeCheckIn.campground.name}
-                    isCheckedIn={true}
-                  />
-                </div>
-              </div>
-            )}
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
 
 
-          {/* Sidebar */
+          {/* Sidebar */}
           <div className="space-y-6">
             {/* RV Information Card */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -1942,33 +1843,8 @@ export default function BasecampPage({ user }: BasecampProps) {
                     )}
                   </div>
                 ) : (
-                  <div className="mb-4">
-                    <p className="text-gray-500">No RV info added yet</p>
-                    {coOwnedRVs.length === 0 && <a href="/my-rv" className="text-sm text-blue-600 hover:underline">Add your RV →</a>}
-                  </div>
+                  <p className="text-gray-500 mb-4">No RV info added yet</p>
                 )}
-                {/* Co-owned RVs */}
-                {coOwnedRVs.map((rv: any) => (
-                  <div key={rv.id} className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      {rv.profilePicture
-                        ? <img src={rv.profilePicture} className="w-6 h-6 rounded-full object-cover" />
-                        : <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">{rv.firstName?.[0]}</div>
-                      }
-                      <span className="text-xs font-semibold text-blue-700">Shared with {rv.firstName}</span>
-                    </div>
-                    <p className="text-sm font-bold text-gray-800">{rv.rvYear} {rv.rvMake} {rv.rvModel}</p>
-                    {rv.rvType && <p className="text-xs text-gray-500 capitalize">{rv.rvType}</p>}
-                    {rv.rvShowcase?.photos?.length > 0 && (
-                      <div className="grid grid-cols-3 gap-1 mt-2">
-                        {rv.rvShowcase.photos.slice(0,3).map((p: string, i: number) => (
-                          <img key={i} src={p} className="w-full h-16 object-cover rounded-lg" />
-                        ))}
-                      </div>
-                    )}
-                    <a href={`/profile/${rv.username}`} className="text-xs text-blue-600 hover:underline mt-1 inline-block">View full RV →</a>
-                  </div>
-                ))}
 
                 {/* Maintenance Stats */}
                 {maintenanceStats && (
@@ -2445,7 +2321,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   {plannedTrips.slice(0, 3).map((trip) => (
                     <Link
                       key={`${trip.type}-${trip.id}`}
-                      to={trip.type === 'event' ? `/trips/${trip.id}` : trip.campground?.id ? `/campgrounds/${trip.campground.id}` : `/travel`}
+                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
                     >
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
@@ -2457,9 +2333,6 @@ export default function BasecampPage({ user }: BasecampProps) {
                           {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           {trip.campground?.name && ` · ${trip.campground.name}`}
                         </p>
-                        {trip.siteNumber && (
-                          <p className="text-xs text-blue-500 font-medium mt-0.5">🏕️ Site {trip.siteNumber}</p>
-                        )}
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
                     </Link>
@@ -2468,10 +2341,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               </div>
             )}
 
-             
-            {/* ── Trip Calendar ── */}
-            <TripCalendarWidget compact={true} />
-            <Top8Friends username={user?.username} />
+             <Top8Friends username={user?.username} />
 
             {/* Trending Topics */}
             <TrendingHashtags />
@@ -3022,7 +2892,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               )}
             </div>
 
-            {/* Invite Friends */}
             <InviteFriends />
 
             {/* Packing List */}
