@@ -57,6 +57,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   BADGE_EARNED: { icon: '🏅', label: 'earned the badge', color: 'text-yellow-600' },
   STATE_VISITED: { icon: '🗺️', label: 'visited' },
   ATTRACTION_ADDED: { icon: '🎢', label: 'added an attraction' },
+  STARGAZING: { icon: '🌟', label: 'is stargazing at', color: 'text-indigo-400' },
 };
 
 function getActivityIcon(type: string): string {

@@ -300,6 +300,7 @@ model User {
   sponsoredRewards     SponsoredRewardGrant[]        @relation("SponsoredRewards")
   assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
   sentInvites          Invite[]             @relation("SentInvites")
+  stargazingEnabled    Boolean   @default(true)
 }
 
 model Post {

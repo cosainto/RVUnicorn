@@ -156,3 +156,21 @@ router.get('/user/:userId/active', async (req: any, res) => {
     res.json(checkIn);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
+// POST /api/checkins/stargazing/toggle
+router.post('/stargazing/toggle', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { stargazingEnabled: true } });
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { stargazingEnabled: !user?.stargazingEnabled },
+      select: { stargazingEnabled: true },
+    });
+    res.json({ stargazingEnabled: updated.stargazingEnabled });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+export default router;

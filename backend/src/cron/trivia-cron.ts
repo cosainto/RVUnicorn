@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
 import { runTripCheckinReminder } from './trip-checkin-reminder';
+import { runStargazingCron } from './stargazing-cron';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -365,6 +366,9 @@ export function registerTriviaCrons(io: any) {
 
   // Daily 9:00 AM — trip check-in reminder
   cron.schedule('0 9 * * *', () => runTripCheckinReminder(), { timezone: 'America/Chicago' });
+
+  // Daily 9:00 PM — stargazing sky report for checked-in campers
+  cron.schedule('0 21 * * *', () => runStargazingCron(), { timezone: 'America/Chicago' });
 
   console.log('[TriviaCron] All trivia crons registered ✅');
 }

@@ -1,0 +1,159 @@
+import { prisma } from '../prisma';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const STARGAZING_IMAGE = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773960904/rvunicorn/stargazing.png';
+
+function getMoonPhase(date: Date): string {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  let c = 0, e = 0, jd = 0;
+  if (month < 3) { year - 1; c = 365.25 * (year - 1); } else { c = 365.25 * year; }
+  e = 30.6 * month + 0.5;
+  jd = c + e + day - 694039.09;
+  jd /= 29.5305882;
+  const phase = jd - Math.floor(jd);
+  const index = Math.round(phase * 8) % 8;
+  return ['🌑 New Moon', '🌒 Waxing Crescent', '🌓 First Quarter', '🌔 Waxing Gibbous', '🌕 Full Moon', '🌖 Waning Gibbous', '🌗 Last Quarter', '🌘 Waning Crescent'][index];
+}
+
+async function generateSkyReport(lat: number, lng: number, campgroundName: string, date: Date): Promise<string> {
+  const month = date.toLocaleString('default', { month: 'long' });
+  const day = date.getDate();
+  const moonPhase = getMoonPhase(date);
+  const hemisphere = lat >= 0 ? 'Northern' : 'Southern';
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 400,
+    messages: [{
+      role: 'user',
+      content: `You are Hitch, RVUnicorn's stargazing guide. Generate a nightly sky report for campers.
+
+Location: ${campgroundName} (${lat.toFixed(2)}, ${lng.toFixed(2)}) — ${hemisphere} Hemisphere
+Date: ${month} ${day}
+Moon Phase: ${moonPhase}
+
+Write a warm, exciting 3-4 sentence sky report. Include:
+- Moon phase and what that means for visibility
+- 2-3 specific constellations visible tonight from this location/season
+- Any planets visible (be accurate for the season)
+- One fun stargazing tip or notable event if applicable
+
+Keep it friendly, campfire-warm, and specific. Start with the moon phase emoji.`
+    }],
+  });
+
+  return response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+}
+
+export async function runStargazingCron() {
+  console.log('[Stargazing] Running nightly sky update...');
+
+  try {
+    // Find all active check-ins where user has stargazing enabled
+    const activeCheckIns = await prisma.checkIn.findMany({
+      where: { isActive: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            stargazingEnabled: true,
+          },
+        },
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+      },
+    });
+
+    console.log(`[Stargazing] Found ${activeCheckIns.length} active check-ins`);
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    for (const checkIn of activeCheckIns) {
+      if (!checkIn.user.stargazingEnabled) continue;
+      if (!checkIn.campground?.latitude || !checkIn.campground?.longitude) continue;
+
+      try {
+        // Check if we already posted today for this user
+        const existingPost = await prisma.activity.findFirst({
+          where: {
+            userId: checkIn.user.id,
+            type: 'STARGAZING',
+            createdAt: { gte: new Date(todayStr) },
+          },
+        }).catch(() => null);
+
+        if (existingPost) {
+          console.log(`[Stargazing] Already posted today for user ${checkIn.user.id}`);
+          continue;
+        }
+
+        const skyReport = await generateSkyReport(
+          checkIn.campground.latitude,
+          checkIn.campground.longitude,
+          checkIn.campground.name,
+          today
+        );
+
+        if (!skyReport) continue;
+
+        const moonPhase = getMoonPhase(today);
+        const content = `🌟 Tonight's Sky at ${checkIn.campground.name}\n\n${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
+
+        // Post to user's basecamp activity feed
+        await prisma.activity.create({
+          data: {
+            userId: checkIn.user.id,
+            type: 'STARGAZING',
+            content,
+            metadata: {
+              imageUrl: STARGAZING_IMAGE,
+              campgroundId: checkIn.campground.id,
+              campgroundName: checkIn.campground.name,
+              moonPhase,
+              date: todayStr,
+              lat: checkIn.campground.latitude,
+              lng: checkIn.campground.longitude,
+            },
+          },
+        }).catch(async () => {
+          // Fallback: try BasecampActivity if Activity model doesn't support STARGAZING type
+          await prisma.basecampActivity.create({
+            data: {
+              userId: checkIn.user.id,
+              type: 'STARGAZING',
+              content,
+              metadata: {
+                imageUrl: STARGAZING_IMAGE,
+                campgroundId: checkIn.campground.id,
+                campgroundName: checkIn.campground.name,
+                moonPhase,
+                date: todayStr,
+              },
+            },
+          }).catch(console.error);
+        });
+
+        console.log(`[Stargazing] Posted sky report for ${checkIn.user.firstName} at ${checkIn.campground.name}`);
+
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 1000));
+      } catch (e) {
+        console.error(`[Stargazing] Failed for user ${checkIn.user.id}:`, e);
+      }
+    }
+  } catch (e) {
+    console.error('[Stargazing] Cron error:', e);
+  }
+}

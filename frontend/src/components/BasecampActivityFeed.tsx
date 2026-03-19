@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Trash2, ExternalLink, RefreshCw, ThumbsUp, ThumbsDown, Heart, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import StargazingCard from './StargazingCard';
 import ActivityMuteMenu from './ActivityMuteMenu';
 
 interface FeedItem {
@@ -333,6 +334,18 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                     )}
 
                     {/* Show tagged users for recipe shares */}
+                    {item.type === 'STARGAZING' && (() => {
+                      const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {});
+                      return meta.imageUrl ? (
+                        <div className="mt-2">
+                          <StargazingCard
+                            content={item.content || ''}
+                            metadata={meta}
+                          />
+                        </div>
+                      ) : null;
+                    })()}
+
                     {item.type === 'RECIPE_SHARED' && (() => {
                       const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
                       return meta?.taggedUsers && meta.taggedUsers.length > 0 ? (
