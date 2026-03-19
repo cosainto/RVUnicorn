@@ -65,6 +65,7 @@ import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
+import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
   user: UserType | null;
@@ -1845,7 +1846,7 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
 
 
-          {/* Sidebar */}
+          {/* Sidebar */
           <div className="space-y-6">
             {/* RV Information Card */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">

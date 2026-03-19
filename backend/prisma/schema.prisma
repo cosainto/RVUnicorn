@@ -4011,3 +4011,19 @@ model DiscountCodePool {
   @@index([campaignId])
   @@index([status])
 }
+
+model Invite {
+  id          String    @id @default(cuid())
+  senderId    String
+  email       String
+  token       String    @unique
+  status      String    @default("pending")
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  sender      User      @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([senderId])
+  @@index([email])
+}
