@@ -3022,6 +3022,9 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               )}
             </div>
 
+            {/* Invite Friends */}
+            <InviteFriends />
+
             {/* Packing List */}
             <div className="bg-white rounded-lg shadow-md p-4">
               <div className="flex items-center justify-between mb-4">
@@ -3060,8 +3063,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           </div>
         </div>
       </div>
-{/* Invite Friends */}
-      <div className="hidden" />
       {/* Packing Modal */}
       <InventoryPackingModal
         isOpen={showPackingModal}
