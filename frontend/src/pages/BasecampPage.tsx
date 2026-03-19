@@ -61,6 +61,9 @@ import { CreatorToggleSection } from '../components/CreatorComponents';
 import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
 import { useAuth } from '../contexts/AuthContext';
+import CampfireChannel from '../components/CampfireChannel';
+import CampfireChat from '../components/CampfireChat';
+import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
   user: UserType | null;
