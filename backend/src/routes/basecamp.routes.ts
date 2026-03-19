@@ -1917,3 +1917,18 @@ router.get('/campground-official-feed', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to get campground updates' });
   }
 });
+
+// POST /api/basecamp/admin/trigger-stargazing (admin only)
+router.post('/admin/trigger-stargazing', authenticateToken, async (req: any, res) => {
+  const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
+  if (req.user?.id !== WILL_ID) return res.status(403).json({ error: 'Admin only' });
+  try {
+    const { runStargazingCron } = await import('../cron/stargazing-cron');
+    await runStargazingCron();
+    res.json({ success: true, message: 'Stargazing cron triggered!' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+export default router;
