@@ -65,7 +65,7 @@ import CampingInterestsWidget from '../components/CampingInterestsWidget';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
-import InviteFriends from '../components/InviteFriends';
+import InviteFriends from '../components/InviteFriends'; // invite
 
 interface BasecampProps {
   user: UserType | null;
