@@ -1743,7 +1743,7 @@ router.delete('/activity/:id', authenticateToken, async (req, res) => {
   }
 });
 
-export default router;
+
 
 
 // Official Campground Updates - content FROM campgrounds (not user activity)
