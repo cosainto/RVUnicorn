@@ -181,8 +181,8 @@ function AppContent() {
 
         <Route path="/basecamp" element={<BasecampPage user={user} />} />
         <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
-        <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />
-              <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />} />
+        <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
+        <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />
           <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
           <Route path="/hosts/new" element={<CreateHostPage />} />
           <Route path="/hitch" element={<PrivateRoute><HitchAIPage /></PrivateRoute>} />
