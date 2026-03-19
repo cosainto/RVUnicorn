@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import GuideUnlockPanel from '../components/GuideUnlockPanel';
 import RoadSupport from '../components/RoadSupport';
+import PrivateTriviaRoom from '../components/PrivateTriviaRoom';
 
 import HitchAIAssistant from '../components/HitchAIAssistant';
 import HitchRoutePlanner from '../components/HitchRoutePlanner';
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'similar', label: '🦄 Find Similar' },
   { id: 'foryou', label: '👥 For You' },
   { id: 'road', label: '🚨 Road Support' },
+  { id: 'private', label: '🎮 Private Trivia' },
 ];
 
 export default function HitchAIPage() {
@@ -52,6 +54,7 @@ export default function HitchAIPage() {
       {activeTab === 'foryou' && <CampersLikeYou />}
       {activeTab === 'guides' && <GuideUnlockPanel />}
       {activeTab === 'road' && <RoadSupport />}
+      {activeTab === 'private' && <PrivateTriviaRoom />}
     </div>
   );
 }

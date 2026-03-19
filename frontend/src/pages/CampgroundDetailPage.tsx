@@ -25,6 +25,8 @@ import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
+import CampgroundTriviaLeaderboard from '../components/CampgroundTriviaLeaderboard';
+import ToneModeToggle from '../components/ToneModeToggle';
 import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
@@ -1763,6 +1765,8 @@ export default function CampgroundDetailPage() {
                 campgroundId={campground.id}
                 campgroundName={campground.name}
               />
+              <ToneModeToggle campgroundId={campground.id} isHost={isAdmin} />
+              <CampgroundTriviaLeaderboard campgroundId={campground.id} />
               <CampfireChannel
                 campgroundId={campground.id}
                 campgroundName={campground.name}

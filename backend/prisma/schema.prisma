@@ -289,6 +289,10 @@ model User {
   triviaAnswers    TriviaAnswer[]
   triviaLeaderboard TriviaLeaderboard[]
   triviaWins       TriviaWeek[]     @relation("TriviaWinner")
+  triviaStreak         TriviaStreak?
+  privateTriviaRooms   PrivateTriviaRoom[]   @relation("PrivateTriviaHost")
+  privateTriviaWins    PrivateTriviaRoom[]   @relation("PrivateTriviaWinner")
+  privateTriviaPlayed  PrivateTriviaParticipant[]
 }
 
 model Post {
@@ -539,6 +543,7 @@ model Campground {
   @@index([name])
   campfireRoom   CampfireRoom?
   triviaWeeks      TriviaWeek[]
+  campgroundTriviaScores CampgroundTriviaScore[]
 }
 
 model Stay {
@@ -3695,6 +3700,7 @@ model CampfireRoom {
   isActive     Boolean           @default(false)
   activatedAt  DateTime?
   closedAt     DateTime?
+  toneMode     String            @default("friendly")
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   campground   Campground        @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
@@ -3738,6 +3744,7 @@ model TriviaWeek {
   @@index([campgroundId])
   @@index([isActive])
   @@index([weekStart])
+  campgroundScores CampgroundTriviaScore[]
 }
 
 model TriviaQuestion {
@@ -3792,4 +3799,98 @@ model TriviaLeaderboard {
 
   @@unique([weekId, userId])
   @@index([weekId, totalPoints])
+}
+
+model CampgroundTriviaScore {
+  id             String     @id @default(cuid())
+  campgroundId   String
+  weekId         String
+  totalPoints    Int        @default(0)
+  playerCount    Int        @default(0)
+  weekRank       Int?
+  updatedAt      DateTime   @updatedAt
+  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  week           TriviaWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@unique([campgroundId, weekId])
+  @@index([weekId, totalPoints])
+}
+
+model PrivateTriviaRoom {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  hostId        String
+  topic         String    @default("general")
+  isActive      Boolean   @default(true)
+  winnerId      String?
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  host          User      @relation("PrivateTriviaHost", fields: [hostId], references: [id])
+  winner        User?     @relation("PrivateTriviaWinner", fields: [winnerId], references: [id])
+  participants  PrivateTriviaParticipant[]
+  questions     PrivateTriviaQuestion[]
+
+  @@index([code])
+  @@index([hostId])
+  @@index([isActive])
+}
+
+model PrivateTriviaParticipant {
+  id          String            @id @default(cuid())
+  roomId      String
+  userId      String
+  totalPoints Int               @default(0)
+  joinedAt    DateTime          @default(now())
+  room        PrivateTriviaRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+}
+
+model PrivateTriviaQuestion {
+  id          String            @id @default(cuid())
+  roomId      String
+  questionNum Int
+  question    String
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  answer      String
+  category    String            @default("general")
+  askedAt     DateTime?
+  room        PrivateTriviaRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+}
+
+model TriviaStreak {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  lastPlayedAt  DateTime?
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SponsoredQuestion {
+  id          String   @id @default(cuid())
+  brandName   String
+  brandLogo   String?
+  question    String
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  answer      String
+  rewardType  String   @default("points")
+  rewardValue String?
+  isActive    Boolean  @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([isActive])
 }
