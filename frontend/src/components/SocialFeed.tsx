@@ -32,6 +32,7 @@ import { X, ThumbsUp, ThumbsDown,
   Megaphone,
 } from 'lucide-react';
 import api from '../services/api';
+import StargazingCard from './StargazingCard';
 
 
 interface FeedItem {
@@ -173,7 +174,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             try {
               const { data: packingData } = await api.get('/basecamp/feed?page=1&limit=20');
               const packingItems: FeedItem[] = (packingData.feedItems || [])
-                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_CREATED' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment || item.type === 'PHOTO_UPLOADED' || item.isFriendActivity || item.type === 'BADGE_EARNED' || item.activityType === 'BADGE_EARNED')
+                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_CREATED' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment || item.type === 'PHOTO_UPLOADED' || item.isFriendActivity || item.type === 'BADGE_EARNED' || item.activityType === 'BADGE_EARNED' || item.type === 'STARGAZING' || item.activityType === 'STARGAZING')
                 .map((item: any) => ({
                   id: item.id,
                   type: item.type || item.activityType,
@@ -313,6 +314,25 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   };
 
   const getActivityIcon = (item: FeedItem) => {
+    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING') {
+      let meta: any = {};
+      try { meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : (item.metadata || {}); } catch {}
+      return (
+        <div key={item.id} className="mb-4">
+          <StargazingCard
+            content={item.content || ''}
+            metadata={{
+              imageUrl: meta.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773960904/rvunicorn/stargazing.png',
+              walterImage: meta.walterImage || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png',
+              campgroundName: meta.campgroundName || '',
+              moonPhase: meta.moonPhase || '🌟',
+              date: meta.date || new Date().toISOString().split('T')[0],
+            }}
+          />
+        </div>
+      );
+    }
+
     if (item.activityIcon) {
       return <span className="text-lg">{item.activityIcon}</span>;
     }
