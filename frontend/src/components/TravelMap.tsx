@@ -954,6 +954,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false }: Tra
           stateColors={activeLayers.includes('gasPrices') ? getGasPriceColors() : undefined}
           highways={activeLayers.includes('highways') ? getDisplayHighways() : []}
           showHighways={activeLayers.includes('highways')}
+          tripRoute={activeRoute || undefined}
+          userProfilePicture={profilePicture}
           onStateClick={handleStateClick}
           onStateHover={setHoveredState}
           onMarkerClick={(marker: any) => {
