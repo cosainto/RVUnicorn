@@ -106,12 +106,12 @@ router.get('/active', authenticateToken, async (req: any, res) => {
     const checkIn = await prisma.checkIn.findFirst({
       where: { userId, isActive: true },
       include: {
-        campground: { select: { id: true, name: true, imageUrl: true } },
+        campground: { select: { id: true, name: true, imageUrl: true, latitude: true, longitude: true } },
         harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
         overnightSpot: { select: { id: true, name: true, category: true } },
       }
     });
-    res.json(checkIn);
+    res.json({ checkIn });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
