@@ -50,6 +50,8 @@ export default function CampfireTriviaOverlay({ socket, userId }: Props) {
   const [timeLeft, setTimeLeft] = useState(120);
   const [leaderboard, setLeaderboard] = useState<{ board: LeaderboardEntry[]; isFinal: boolean } | null>(null);
   const [winner, setWinner] = useState<Winner | null>(null);
+  const [comeback, setComeback] = useState<string | null>(null);
+  const [redemptionMsg, setRedemptionMsg] = useState<string | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // Listen for trivia events
@@ -76,6 +78,11 @@ export default function CampfireTriviaOverlay({ socket, userId }: Props) {
       setTimeout(() => setShowLeaderboard(false), 15000);
     });
 
+    socket.on('trivia:redemption', (data: any) => {
+      setRedemptionMsg(data.message);
+      setTimeout(() => setRedemptionMsg(null), 8000);
+    });
+
     socket.on('trivia:winner', (w: Winner) => {
       setWinner(w);
       setShowLeaderboard(false);
@@ -84,6 +91,7 @@ export default function CampfireTriviaOverlay({ socket, userId }: Props) {
 
     return () => {
       socket.off('trivia:question');
+      socket.off('trivia:redemption');
       socket.off('trivia:answer:result');
       socket.off('trivia:leaderboard');
       socket.off('trivia:winner');
@@ -165,6 +173,20 @@ export default function CampfireTriviaOverlay({ socket, userId }: Props) {
 
   return (
     <div className="rounded-2xl border-2 border-purple-200 bg-white overflow-hidden">
+      {/* Redemption message */}
+      {redemptionMsg && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-center">
+          <p className="text-white text-xs font-semibold animate-pulse">{redemptionMsg}</p>
+        </div>
+      )}
+
+      {/* Last two questions banner */}
+      {question && question.questionNum >= 9 && (
+        <div className="bg-gradient-to-r from-red-600 to-orange-600 px-4 py-1.5 text-center">
+          <p className="text-white text-xs font-bold">🔥 DOUBLE POINTS — Q{question.questionNum}/10 — COMEBACK TIME!</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3">
         <div className="flex items-center justify-between mb-2">

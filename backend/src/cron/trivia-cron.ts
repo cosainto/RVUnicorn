@@ -228,6 +228,46 @@ export async function askNextQuestion(io: any) {
       },
     });
 
+    // Check for redemption candidates (missed 3+ in a row today)
+    if (io && questionNum > 3) {
+      try {
+        const today = new Date().getDay();
+        const recentAnswers = await prisma.triviaAnswer.findMany({
+          where: {
+            question: { weekId: week.id, dayOfWeek: today },
+            isCorrect: false,
+          },
+          include: { user: { select: { id: true, firstName: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
+        // Find users with 3+ wrong in a row
+        const wrongCounts: Record<string, number> = {};
+        for (const a of recentAnswers) {
+          wrongCounts[a.userId] = (wrongCounts[a.userId] || 0) + 1;
+        }
+        const redemptionUsers = Object.entries(wrongCounts)
+          .filter(([_, count]) => count >= 3)
+          .map(([userId]) => userId);
+
+        if (redemptionUsers.length > 0) {
+          const hitchMessages = [
+            `🎯 Redemption time! This next one is your chance to climb back up the leaderboard!`,
+            `💪 Don't give up now — Q${questionNum} could turn this whole thing around!`,
+            `🔥 The comeback starts HERE. You've got this!`,
+          ];
+          const msg = hitchMessages[Math.floor(Math.random() * hitchMessages.length)];
+          for (const uid of redemptionUsers) {
+            io.of('/campfire').to(room.campgroundId).emit('trivia:redemption', {
+              userId: uid,
+              message: msg,
+              questionNum,
+            });
+          }
+        }
+      } catch {}
+    }
+
     // Broadcast via socket
     if (io) {
       io.of('/campfire').to(room.campgroundId).emit('trivia:question', {

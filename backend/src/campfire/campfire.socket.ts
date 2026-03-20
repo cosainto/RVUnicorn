@@ -44,7 +44,12 @@ export function registerCampfireSockets(io: Server) {
         const responseTime = Math.floor((new Date(data.answeredAt).getTime() - new Date(question.askedAt).getTime()) / 1000);
         const isCorrect = question.answer === data.answer;
         const speedBonus = isCorrect ? (responseTime < 30 ? 5 : responseTime < 90 ? 2 : 0) : 0;
-        const points = isCorrect ? 10 + speedBonus : 0;
+
+        // Comeback mechanic: double points on Q9 and Q10
+        const isLastTwo = question.questionNum >= 9;
+        const basePoints = isCorrect ? 10 + speedBonus : 0;
+        const points = isLastTwo ? basePoints * 2 : basePoints;
+        const isComeback = isLastTwo && isCorrect && points > 0;
 
         await prisma.triviaAnswer.upsert({
           where: { questionId_userId: { questionId: data.questionId, userId } },
@@ -67,7 +72,7 @@ export function registerCampfireSockets(io: Server) {
         }
 
         // Tell the user their result privately
-        socket.emit('trivia:answer:result', { questionId: data.questionId, isCorrect, points, correctAnswer: question.answer });
+        socket.emit('trivia:answer:result', { questionId: data.questionId, isCorrect, points, correctAnswer: question.answer, isComeback, isLastTwo });
       } catch (e) {
         console.error('[Campfire] Answer error:', e);
       }
