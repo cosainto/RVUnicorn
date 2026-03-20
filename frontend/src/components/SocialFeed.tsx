@@ -33,6 +33,7 @@ import { X, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import api from '../services/api';
 import StargazingCard from './StargazingCard';
+import CampfireWinnerCard from './CampfireWinnerCard';
 
 
 interface FeedItem {
@@ -174,7 +175,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
             try {
               const { data: packingData } = await api.get('/basecamp/feed?page=1&limit=20');
               const packingItems: FeedItem[] = (packingData.feedItems || [])
-                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_CREATED' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment || item.type === 'PHOTO_UPLOADED' || item.isFriendActivity || item.type === 'BADGE_EARNED' || item.activityType === 'BADGE_EARNED' || item.type === 'STARGAZING' || item.activityType === 'STARGAZING')
+                .filter((item: any) => item.isPackingActivity || item.isBasecampActivity || item.isFriendRequest || item.isCampingBuddy || item.activityType?.startsWith('PACK_') || item.type?.startsWith('PACK_') || item.type === 'FRIEND_REQUEST' || item.activityType === 'FRIEND_REQUEST' || item.type === 'NEW_CAMPING_BUDDY' || item.activityType === 'NEW_CAMPING_BUDDY' || item.type === 'THREAD_REPLY' || item.type === 'THREAD_CREATED' || item.type === 'THREAD_COMMENT' || item.type === 'THREAD_MENTION' || item.type === 'MEAL_ASSIGNMENT_REQUEST' || item.type === 'MEAL_ASSIGNMENT_RESPONSE' || item.type === 'RECIPE_COMMENT_THREAD' || item.type === 'RECIPE_MENTION' || item.type === 'RECIPE_COMMENTED' || item.isRecipeComment || item.type === 'PHOTO_UPLOADED' || item.isFriendActivity || item.type === 'BADGE_EARNED' || item.activityType === 'BADGE_EARNED' || item.type === 'STARGAZING' || item.activityType === 'STARGAZING' || item.type === 'CAMPFIRE_WINNER' || item.activityType === 'CAMPFIRE_WINNER')
                 .map((item: any) => ({
                   id: item.id,
                   type: item.type || item.activityType,
@@ -314,7 +315,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   };
 
   const getActivityIcon = (item: FeedItem) => {
-    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING') {
+    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING' || item.type === 'CAMPFIRE_WINNER' || item.activityType === 'CAMPFIRE_WINNER') {
       let meta: any = {};
       try { meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : (item.metadata || {}); } catch {}
       return (
@@ -1108,8 +1109,21 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       borderColor = 'border-purple-200';
     }
 
+    // CAMPFIRE_WINNER renders as full card
+    if (item.type === 'CAMPFIRE_WINNER' || item.activityType === 'CAMPFIRE_WINNER') {
+      let meta: any = {};
+      try { meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : (item.metadata || {}); } catch {}
+      return (
+        <CampfireWinnerCard
+          key={item.id}
+          content={item.content || ''}
+          metadata={meta}
+        />
+      );
+    }
+
     // STARGAZING renders as full card
-    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING') {
+    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING' || item.type === 'CAMPFIRE_WINNER' || item.activityType === 'CAMPFIRE_WINNER') {
       let meta: any = {};
       try { meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : (item.metadata || {}); } catch {}
       return (
