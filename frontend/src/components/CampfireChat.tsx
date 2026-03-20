@@ -9,6 +9,7 @@ interface ChatUser {
   firstName?: string;
   lastName?: string;
   profileImage?: string;
+  triviaTitle?: string;
 }
 interface ChatMessage {
   id: string;
@@ -127,6 +128,7 @@ export default function CampfireChat({ campgroundId, campgroundName }: Props) {
             <div key={u.id} className="flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-orange-100 rounded-full px-2 py-1">
               {u.profileImage ? <img src={u.profileImage} className="w-4 h-4 rounded-full object-cover" alt="" /> : <div className="w-4 h-4 rounded-full bg-orange-200 flex items-center justify-center text-[9px]">{(u.firstName || u.username || '?')[0].toUpperCase()}</div>}
               <span>{u.firstName || u.username}</span>
+              {u.triviaTitle && <span className="text-[9px] text-orange-400 ml-0.5">{u.triviaTitle}</span>}
             </div>
           ))}
         </div>

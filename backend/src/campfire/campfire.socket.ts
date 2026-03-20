@@ -73,6 +73,12 @@ export function registerCampfireSockets(io: Server) {
 
         // Tell the user their result privately
         socket.emit('trivia:answer:result', { questionId: data.questionId, isCorrect, points, correctAnswer: question.answer, isComeback, isLastTwo });
+
+        // Update player title
+        const newTitle = await updateTriviaTitle(userId);
+        if (newTitle) {
+          socket.emit('trivia:title:updated', { title: newTitle });
+        }
       } catch (e) {
         console.error('[Campfire] Answer error:', e);
       }

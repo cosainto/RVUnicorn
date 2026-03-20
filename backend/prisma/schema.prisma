@@ -301,6 +301,7 @@ model User {
   assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
   sentInvites          Invite[]             @relation("SentInvites")
   stargazingEnabled    Boolean   @default(true)
+  triviaTitle         String?   
 }
 
 model Post {

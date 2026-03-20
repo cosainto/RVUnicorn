@@ -553,6 +553,14 @@ const [editForm, setEditForm] = useState({
                   )}
                 </h1>
                 <p className="text-gray-600">@{profile.username}</p>
+                {(profile as any).triviaTitle && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <img src="/hitch.png" className="w-4 h-4 rounded-full object-cover" alt="Hitch" />
+                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+                      {(profile as any).triviaTitle}
+                    </span>
+                  </div>
+                )}
               <div className="mt-2 space-y-2">
                 <CurrentlyAtBadge userId={profile.id} isOwnProfile={isOwnProfile} />
                 <CommunityTrustBadge userId={profile.id} />
