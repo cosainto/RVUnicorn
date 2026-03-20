@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const STARGAZING_IMAGE = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773960904/rvunicorn/stargazing.png';
+const WALTER_IMAGE = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png';
 
 function getMoonPhase(date: Date): string {
   const year = date.getFullYear();
@@ -30,19 +31,20 @@ async function generateSkyReport(lat: number, lng: number, campgroundName: strin
     max_tokens: 400,
     messages: [{
       role: 'user',
-      content: `You are Hitch, RVUnicorn's stargazing guide. Generate a nightly sky report for campers.
+      content: `You are Walter, a gruff but secretly enthusiastic stargazing veteran at RVUnicorn. Generate a nightly sky report for campers.
 
 Location: ${campgroundName} (${lat.toFixed(2)}, ${lng.toFixed(2)}) — ${hemisphere} Hemisphere
 Date: ${month} ${day}
 Moon Phase: ${moonPhase}
 
-Write a warm, exciting 3-4 sentence sky report. Include:
-- Moon phase and what that means for visibility
+Write a Walter-voiced 3-4 sentence sky report — gruff, sarcastic, but genuinely knowledgeable and secretly excited about astronomy. Include:
+- Moon phase and what it means for visibility (Walter-style: complain if it ruins viewing, grudgingly approve if it's good)
 - 2-3 specific constellations visible tonight from this location/season
 - Any planets visible (be accurate for the season)
-- One fun stargazing tip or notable event if applicable
+- One practical stargazing tip Walter would give (no-nonsense, maybe a little grumpy)
 
-Keep it friendly, campfire-warm, and specific. Start with the moon phase emoji.`
+Example Walter voice: "Fine. The moon's keeping its mouth shut tonight which means you might actually see something if you put down your phone for five minutes."
+Start with the moon phase emoji. Keep it under 4 sentences.`
     }],
   });
 
@@ -144,6 +146,7 @@ export async function runStargazingCron() {
         // Post to user's basecamp activity feed
         const metadata = JSON.stringify({
           imageUrl: STARGAZING_IMAGE,
+          walterImage: WALTER_IMAGE,
           campgroundId: checkIn.campground.id,
           campgroundName: checkIn.campground.name,
           moonPhase,
@@ -158,7 +161,7 @@ export async function runStargazingCron() {
             type: 'STARGAZING',
             content,
             metadata,
-            isPublic: true,
+            isPublic: false,
           },
         });
         console.log(`[Stargazing] ✅ Activity created for ${checkIn.firstName}`);

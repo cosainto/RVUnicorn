@@ -5,6 +5,7 @@ interface Props {
   content: string;
   metadata: {
     imageUrl: string;
+    walterImage?: string;
     campgroundName: string;
     moonPhase: string;
     date: string;
@@ -56,8 +57,11 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
       {/* Content */}
       <div className="px-4 py-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-sm">🦄</div>
-          <span className="text-indigo-300 text-xs font-semibold">Hitch · Stargazing Guide</span>
+          {metadata.walterImage
+            ? <img src={metadata.walterImage} className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="Walter" />
+            : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-sm">🎭</div>
+          }
+          <span className="text-indigo-300 text-xs font-semibold">Walter · Stargazing Guide</span>
           <span className="text-indigo-600 text-xs ml-auto">{new Date(metadata.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
         </div>
 
