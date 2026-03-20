@@ -90,6 +90,12 @@ export default function HitchAIAssistant() {
             });
             if (chimeRes.data?.chimeIn) {
               setChimeIns(c => ({ ...c, [updated.length - 1]: chimeRes.data.chimeIn }));
+              // If Wallet caused chaos, show apology after 3 seconds
+              if (chimeRes.data.chimeIn.followUp) {
+                setTimeout(() => {
+                  setChimeIns(c => ({ ...c, [updated.length - 1]: { ...chimeRes.data.chimeIn, content: chimeRes.data.chimeIn.followUp.apology, guideId: chimeRes.data.chimeIn.followUp.id, isApology: true } }));
+                }, 3000);
+              }
             }
           } catch {}
         }, 800);

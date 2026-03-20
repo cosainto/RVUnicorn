@@ -2,11 +2,11 @@ import cron from 'node-cron';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
 import { runTripCheckinReminder } from './trip-checkin-reminder';
-import { runStargazingCron } from './stargazing-cron';
+import { runStargazingCron, runWalletChaosCron } from './stargazing-cron';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const CHARACTERS = ['hitch','walter','rose','diesel','scout','luna','pebble'];
+const CHARACTERS = ['hitch','walter','rose','diesel','scout','luna','wallet'];
 const CATEGORIES = ['Camping & RV','Food & Cooking','Nature & Outdoors','General Trivia','Pop Culture (Family)'];
 
 // ── Get week boundaries (Mon 00:00 → Sun 23:59) ──────────────
@@ -361,6 +361,7 @@ async function announceWeeklyWinner(io: any) {
       diesel: `🏆 That's how you do it! @${winner.user.firstName} pulled through like a fully-loaded rig on a flat highway. CAMPFIRE CHAMPION! 🚛`,
       scout: `🏆 From the trailhead to the finish line — @${winner.user.firstName} crushed it this week! Campfire Champion! Keep exploring! 🌲`,
       luna: `🏆 What a beautiful week of trivia. @${winner.user.firstName}, you're this week's Campfire Champion. The whole campground is proud of you! 🌙`,
+      wallet: `🏆 WAIT WAIT WAIT— @${winner.user.firstName} WON?!?! I KNEW IT! I predicted this on day one! Nobody listened to me but I KNEW IT! 🪨💥 CHAMPION!!!`,
       pebble: `🏆 CHAOS. TRIVIA. CHAMPION. @${winner.user.firstName} WON?! THEY ACTUALLY WON! I did NOT see that coming! 🪨🎉`,
     };
 
@@ -409,6 +410,9 @@ export function registerTriviaCrons(io: any) {
 
   // Daily 9:00 PM — stargazing sky report for checked-in campers
   cron.schedule('0 21 * * *', () => runStargazingCron(), { timezone: 'America/Chicago' });
+
+  // Daily noon — Wallet random chaos (2% chance per user)
+  cron.schedule('0 12 * * *', () => runWalletChaosCron(), { timezone: 'America/Chicago' });
 
   console.log('[TriviaCron] All trivia crons registered ✅');
 }

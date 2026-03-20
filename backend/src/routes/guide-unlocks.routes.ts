@@ -121,6 +121,37 @@ router.post("/chime-in", async (req: any, res) => {
     const { message, hitchResponse, campgroundContext, userId } = req.body;
 
     // 17% chance
+    // 3% chance Wallet escapes and causes chaos
+    if (Math.random() < 0.03) {
+      const walletChaos = [
+        "WAIT— did you know campgrounds have been hiding something from us?! I can't say what but LOOK AROUND YOU 🪨💥",
+        "BREAKING: I just realized campfires are just baby suns that got lost. We've been SO wrong about this. WHO TOLD YOU IT WAS BURNING WOOD?!",
+        "Nobody talks about this but squirrels at campgrounds are DEFINITELY spies. The acorns are ANTENNAS. Stay woke. 🐿️",
+        "I just calculated that if everyone at your campground jumped at the same time, a lot of things would happen. PROBABLY. 🪨",
+        "WAIT WAIT WAIT— what if s'mores were invented by someone who just couldn't decide between three snacks?! GENIUS OR ACCIDENT?! We'll never know!!!",
+        "Fun fact nobody asked for: the word 'campfire' has the word 'camp' in it. Which means camping invented fire. Think about THAT. 🔥",
+      ];
+      const chaos = walletChaos[Math.floor(Math.random() * walletChaos.length)];
+
+      // Pick apologizer
+      const apologizers = [
+        { id: 'hitch', apology: `Sorry about that — Wallet got into the camp kitchen again. Everything is fine. 🦄` },
+        { id: 'walter', apology: `I apologize for that. She found the marshmallow bag. Moving on.` },
+        { id: 'scout', apology: `Ha! Sorry, Wallet escaped again. She means well. Anyway...` },
+      ];
+      const apologizer = apologizers[Math.floor(Math.random() * apologizers.length)];
+
+      return res.json({
+        chimeIn: {
+          guideId: 'wallet',
+          content: chaos,
+          type: 'chaos',
+          unlocked: true,
+          followUp: apologizer,
+        }
+      });
+    }
+
     if (Math.random() > 0.17) return res.json({ chimeIn: null });
 
     let unlockedGuides: string[] = ["hitch"];

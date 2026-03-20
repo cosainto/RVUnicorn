@@ -119,12 +119,34 @@ Voice: Energetic and playful, like excited kids at a campground. Use words like 
 Specialty: Playgrounds, swimming spots, kid activities, family-friendly trails, nature scavenger hunts, campfire games, and anything that makes kids say "can we do that again?!"
 Always highlight if a campground has a playground, pool, splash pad, fishing, mini golf, or organized kids activities.`,
   },
+  {
+    id: 'wallet',
+    name: 'Wallet',
+    emoji: '🪨',
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773978382/rvunicorn/guides/wallet.png',
+    bgGradient: 'from-yellow-500 to-orange-600',
+    description: 'The chaos gremlin of RVUnicorn. Nobody knows how she gets in.',
+    personality: 'chaotic',
+    unlockCondition: 'Find her hiding somewhere on RVUnicorn',
+    isLocked: false,
+  },
 ];
 
 export const DEFAULT_GUIDE_ID = 'hitch';
 
 export function getGuide(id: string): Guide {
-  return GUIDES.find(g => g.id === id) || GUIDES[0];
+  return GUIDES.find(g => g.id === id) || GUIDES[0  {
+    id: 'wallet',
+    name: 'Wallet',
+    emoji: '🪨',
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773978382/rvunicorn/guides/wallet.png',
+    bgGradient: 'from-yellow-500 to-orange-600',
+    description: 'The chaos gremlin of RVUnicorn. Nobody knows how she gets in.',
+    personality: 'chaotic',
+    unlockCondition: 'Find her hiding somewhere on RVUnicorn',
+    isLocked: false,
+  },
+];
 }
 
 export function getPersonaSystemPrompt(guideId: string, basePrompt: string): string {

@@ -51,6 +51,73 @@ Start with the moon phase emoji. Keep it under 4 sentences.`
   return response.content[0].type === 'text' ? response.content[0].text.trim() : '';
 }
 
+
+// ── Wallet random chaos posts (2% chance per active user daily) ──
+export async function runWalletChaosCron() {
+  console.log('[Wallet] Running chaos check...');
+  try {
+    const WALLET_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773978382/rvunicorn/guides/wallet.png';
+    const APOLOGIZER_IMG = '/hitch.png';
+
+    const chaosLines = [
+      "WAIT— did you know campgrounds have been hiding something from us?! I can't say what but LOOK AROUND YOU 🪨💥",
+      "BREAKING NEWS: Squirrels at campgrounds are DEFINITELY spies. The acorns are ANTENNAS. Stay woke. 🐿️",
+      "I just calculated that if everyone at your campground jumped at the same time, A LOT OF THINGS WOULD HAPPEN. PROBABLY. 🪨",
+      "Nobody talks about this but s'mores were invented by someone who couldn't decide between THREE SNACKS. GENIUS. 🍫",
+      "Fun fact nobody asked for: the word 'campfire' has 'camp' in it. Which means camping INVENTED FIRE. Think about THAT. 🔥",
+      "WAIT WAIT WAIT— what if stars are just campfires from really really really tall campers?! HAS ANYONE CHECKED?! 🌟",
+      "I just realized tents and houses are the SAME THING but one is outside. We've been living in outdoor tents this whole time!!! 🏕️",
+    ];
+
+    const apologies = [
+      "Sorry about that post. Wallet got into the camp WiFi again. Please disregard. Everything is fine. — Hitch 🦄",
+      "I apologize on behalf of Wallet. She meant well. Probably. — Walter 🎭",
+      "Ha! Sorry campers — Wallet escaped again. She's harmless! — Scout 🌲",
+    ];
+
+    // Get active users — 2% chance each
+    const users = await prisma.user.findMany({
+      where: { stargazingEnabled: true },
+      select: { id: true },
+      take: 200,
+    });
+
+    for (const user of users) {
+      if (Math.random() > 0.02) continue;
+
+      const chaos = chaosLines[Math.floor(Math.random() * chaosLines.length)];
+      const apology = apologies[Math.floor(Math.random() * apologies.length)];
+
+      // Post chaos
+      await prisma.activity.create({
+        data: {
+          userId: user.id,
+          type: 'WALLET_CHAOS',
+          content: `🪨 ${chaos}`,
+          metadata: JSON.stringify({ imageUrl: WALLET_IMG, character: 'wallet' }),
+          isPublic: false,
+        },
+      }).catch(() => {});
+
+      // Post apology 2 minutes later (we just create it now with a slight offset)
+      await prisma.activity.create({
+        data: {
+          userId: user.id,
+          type: 'WALLET_APOLOGY',
+          content: apology,
+          metadata: JSON.stringify({ imageUrl: APOLOGIZER_IMG, character: 'hitch' }),
+          isPublic: false,
+          createdAt: new Date(Date.now() + 2 * 60 * 1000),
+        },
+      }).catch(() => {});
+    }
+
+    console.log('[Wallet] Chaos deployed!');
+  } catch (e) {
+    console.error('[Wallet] Error:', e);
+  }
+}
+
 export async function runStargazingCron() {
   console.log('[Stargazing] Running nightly sky update...');
 
