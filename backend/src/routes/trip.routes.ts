@@ -1375,8 +1375,8 @@ router.get('/active-route/:userId', async (req, res) => {
       }
     });
   } catch (e: any) {
-    console.error('active-route error:', e?.message);
-    res.status(500).json({ error: 'Failed' });
+    console.error('active-route error:', e?.message, e?.stack);
+    res.status(500).json({ error: e?.message || 'Failed' });
   }
 });
 
