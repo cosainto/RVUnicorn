@@ -1304,68 +1304,63 @@ router.delete('/:id/albums/:albumId/unlink', authenticateToken, async (req: any,
 router.get('/active-route/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const today = new Date();
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
 
-    // Find active event (trip happening today)
     const activeEvent = await prisma.event.findFirst({
       where: {
         OR: [
           { organizerId: userId },
           { attendees: { some: { userId } } },
         ],
-        startDate: { lte: today },
-        endDate: { gte: today },
+        startDate: { lte: todayEnd },
+        endDate: { gte: todayStart },
       },
       include: {
-        tripDays: {
+        tripPlans: {
           include: {
-            stops: {
-              where: {
-                latitude: { not: null },
-                longitude: { not: null },
-              },
-              orderBy: { order: 'asc' },
-            },
+            pitStops: { orderBy: { orderIndex: 'asc' } },
           },
-          orderBy: { dayNumber: 'asc' },
         },
-        organizer: { select: { id: true, firstName: true, profilePicture: true } },
+        campground: { select: { name: true, state: true, latitude: true, longitude: true } },
       },
     });
 
     if (!activeEvent) return res.json({ route: null });
 
-    // Build ordered list of stops with coordinates
     const allStops: any[] = [];
-    for (const day of activeEvent.tripDays) {
-      for (const stop of day.stops) {
+
+    for (const plan of (activeEvent as any).tripPlans) {
+      if (plan.startLatitude && plan.startLongitude) {
+        allStops.push({ id: 'start-' + plan.id, name: plan.startLocation || 'Start', latitude: plan.startLatitude, longitude: plan.startLongitude, order: 0 });
+      }
+      for (const stop of plan.pitStops) {
         if (stop.latitude && stop.longitude) {
-          allStops.push({
-            id: stop.id,
-            name: stop.customName || stop.campground?.name || 'Stop',
-            latitude: stop.latitude,
-            longitude: stop.longitude,
-            dayNumber: day.dayNumber,
-            date: new Date(activeEvent.startDate.getTime() + (day.dayNumber - 1) * 86400000),
-            type: stop.type,
-          });
+          allStops.push({ id: stop.id, name: stop.name, latitude: stop.latitude, longitude: stop.longitude, order: stop.orderIndex + 1 });
         }
+      }
+      if (plan.endLatitude && plan.endLongitude) {
+        allStops.push({ id: 'end-' + plan.id, name: plan.endLocation || 'Destination', latitude: plan.endLatitude, longitude: plan.endLongitude, order: 999 });
       }
     }
 
-    if (allStops.length < 2) return res.json({ route: null });
+    // Fallback to campground
+    if (allStops.length === 0 && (activeEvent as any).campground?.latitude) {
+      const cg = (activeEvent as any).campground;
+      allStops.push({ id: 'cg', name: cg.name, latitude: cg.latitude, longitude: cg.longitude, order: 999 });
+    }
 
-    // Calculate current day number
-    const dayNumber = Math.floor((today.getTime() - activeEvent.startDate.getTime()) / 86400000) + 1;
+    allStops.sort((a, b) => a.order - b.order);
 
-    // Find user's current position (first stop of today or last stop of yesterday)
-    const todayStops = allStops.filter(s => s.dayNumber === dayNumber);
-    const currentPosition = todayStops[0] || allStops.filter(s => s.dayNumber < dayNumber).pop() || allStops[0];
+    if (allStops.length === 0) return res.json({ route: null });
 
-    // Split into completed and upcoming segments
-    const currentIdx = allStops.findIndex(s => s.id === currentPosition?.id);
-    const completedStops = allStops.slice(0, currentIdx + 1);
-    const upcomingStops = allStops.slice(currentIdx);
+    const totalDays = Math.max(1, Math.ceil((activeEvent.endDate.getTime() - activeEvent.startDate.getTime()) / 86400000));
+    const dayNumber = Math.floor((todayEnd.getTime() - activeEvent.startDate.getTime()) / 86400000) + 1;
+    const progress = Math.min(Math.max(dayNumber / totalDays, 0), 1);
+    const currentIdx = Math.min(Math.floor(progress * (allStops.length - 1)), allStops.length - 1);
+    const currentPosition = allStops[currentIdx];
+    const completedCoords = allStops.slice(0, currentIdx + 1).map(s => [s.longitude, s.latitude] as [number, number]);
+    const upcomingCoords = allStops.slice(currentIdx).map(s => [s.longitude, s.latitude] as [number, number]);
 
     res.json({
       route: {
@@ -1373,16 +1368,10 @@ router.get('/active-route/:userId', async (req, res) => {
         eventName: activeEvent.title,
         startDate: activeEvent.startDate,
         endDate: activeEvent.endDate,
-        dayNumber,
-        totalDays: activeEvent.tripDays.length,
-        allStops,
-        completedCoords: completedStops.map(s => [s.longitude, s.latitude] as [number, number]),
-        upcomingCoords: upcomingStops.map(s => [s.longitude, s.latitude] as [number, number]),
-        currentPosition: currentPosition ? {
-          latitude: currentPosition.latitude,
-          longitude: currentPosition.longitude,
-          name: currentPosition.name,
-        } : null,
+        dayNumber, totalDays, allStops,
+        completedCoords,
+        upcomingCoords,
+        currentPosition: { latitude: currentPosition.latitude, longitude: currentPosition.longitude, name: currentPosition.name },
       }
     });
   } catch (e: any) {
