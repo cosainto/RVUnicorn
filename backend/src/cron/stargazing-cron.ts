@@ -142,38 +142,26 @@ export async function runStargazingCron() {
         const content = `🌟 Tonight's Sky at ${checkIn.campground.name}\n\n${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
 
         // Post to user's basecamp activity feed
+        const metadata = JSON.stringify({
+          imageUrl: STARGAZING_IMAGE,
+          campgroundId: checkIn.campground.id,
+          campgroundName: checkIn.campground.name,
+          moonPhase,
+          date: todayStr,
+          lat: checkIn.campground.latitude,
+          lng: checkIn.campground.longitude,
+        });
+
         await prisma.activity.create({
           data: {
             userId: checkIn.userId,
             type: 'STARGAZING',
             content,
-            metadata: {
-              imageUrl: STARGAZING_IMAGE,
-              campgroundId: checkIn.campground.id,
-              campgroundName: checkIn.campground.name,
-              moonPhase,
-              date: todayStr,
-              lat: checkIn.campground.latitude,
-              lng: checkIn.campground.longitude,
-            },
+            metadata,
+            isPublic: true,
           },
-        }).catch(async () => {
-          // Fallback: try BasecampActivity if Activity model doesn't support STARGAZING type
-          await prisma.basecampActivity.create({
-            data: {
-              userId: checkIn.userId,
-              type: 'STARGAZING',
-              content,
-              metadata: {
-                imageUrl: STARGAZING_IMAGE,
-                campgroundId: checkIn.campground.id,
-                campgroundName: checkIn.campground.name,
-                moonPhase,
-                date: todayStr,
-              },
-            },
-          }).catch(console.error);
         });
+        console.log(`[Stargazing] ✅ Activity created for ${checkIn.firstName}`);
 
         console.log(`[Stargazing] Posted sky report for ${checkIn.firstName} at ${checkIn.campground.name}`);
 
