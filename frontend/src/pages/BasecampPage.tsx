@@ -925,8 +925,18 @@ export default function BasecampPage({ user }: BasecampProps) {
     setShowTour(false);
   };
   
+  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+  const [newCampfirePosts, setNewCampfirePosts] = useState(0);
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      api.get('/checkins/active')
+        .then(r => setActiveCheckIn(r.data?.checkIn || null))
+        .catch(() => {});
+    }
+  }, [user?.id]);
   // Activity Feed State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
