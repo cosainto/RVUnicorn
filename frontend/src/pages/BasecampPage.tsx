@@ -2339,7 +2339,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                 </div>
               </div>
               <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
-                <TravelMap userId={user.id} isOwnProfile={true} compact={true} />
+                <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
               </div>
             </div>
 

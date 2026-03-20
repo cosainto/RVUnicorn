@@ -111,6 +111,26 @@ router.get('/active', authenticateToken, async (req: any, res) => {
         overnightSpot: { select: { id: true, name: true, category: true } },
       }
     });
+    // Auto-create StateVisit if campground has a state
+    if (checkIn.campground?.state) {
+      const campState = checkIn.campground.state;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const existing = await prisma.stateVisit.findFirst({
+        where: { userId, state: campState, startDate: { gte: today } },
+      }).catch(() => null);
+      if (!existing) {
+        await prisma.stateVisit.create({
+          data: {
+            userId,
+            state: campState,
+            startDate: today,
+            notes: `Auto-created from check-in at ${checkIn.campground.name}`,
+          },
+        }).catch(() => {});
+      }
+    }
+
     res.json({ checkIn });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
