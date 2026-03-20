@@ -173,6 +173,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         where: {
           type: { notIn: ['FRIEND_ADDED', 'MUTUAL_FRIEND_ADDED', 'NEW_CAMPING_BUDDY', 'FRIEND_REQUEST', 'RECIPE_SHARED', 'RECIPE_SHARE_TAG'] },
           OR: [
+            { userId: userId },
             { userId: { in: visibleUserIds }, isPublic: true },
             { campgroundId: { in: unmutedCampgroundIds } },
             { targetUserId: userId },
