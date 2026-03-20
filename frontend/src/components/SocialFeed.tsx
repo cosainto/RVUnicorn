@@ -1108,6 +1108,24 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       borderColor = 'border-purple-200';
     }
 
+    // STARGAZING renders as full card
+    if (item.type === 'STARGAZING' || item.activityType === 'STARGAZING') {
+      let meta: any = {};
+      try { meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : (item.metadata || {}); } catch {}
+      return (
+        <StargazingCard
+          key={item.id}
+          content={item.content || ''}
+          metadata={{
+            imageUrl: meta.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773960904/rvunicorn/stargazing.png',
+            walterImage: meta.walterImage || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png',
+            campgroundName: meta.campgroundName || '',
+            moonPhase: meta.moonPhase || '🌟',
+            date: meta.date || new Date().toISOString().split('T')[0],
+          }}
+        />
+      );
+    }
 
     return (
       <div
