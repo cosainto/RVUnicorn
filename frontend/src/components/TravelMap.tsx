@@ -14,6 +14,7 @@ interface TravelMapProps {
   compact?: boolean;
   userId: string;
   isOwnProfile: boolean;
+  profilePicture?: string;
 }
 
 interface StateVisit {
@@ -217,6 +218,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false }: Tra
   // Basecamp map state - favorites, trips, friends' check-ins
   const [favorites, setFavorites] = useState<any[]>([]);
   const [upcomingTrips, setUpcomingTrips] = useState<any[]>([]);
+  const [activeRoute, setActiveRoute] = useState<any>(null);
   const [friendsCheckins, setFriendsCheckins] = useState<any[]>([]);
   
   // Home location state
@@ -271,6 +273,11 @@ export default function TravelMap({ userId, isOwnProfile, compact = false }: Tra
     if (activeLayers.includes('favorites') && favorites.length === 0) {
       loadFavorites();
     }
+    // Always fetch active route
+    api.get(`/trips/active-route/${userId}`)
+      .then(r => { if (r.data?.route) setActiveRoute(r.data.route); })
+      .catch(() => {});
+
     if (activeLayers.includes('upcomingTrips') && upcomingTrips.length === 0) {
       loadUpcomingTrips();
     }

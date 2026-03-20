@@ -32,6 +32,15 @@ interface USMapSVGProps {
   stateColors?: Record<string, string>; // Custom colors per state (e.g., for gas prices)
   markers?: MapMarker[];
   highways?: HighwayLine[]; // Highway lines to render
+  tripRoute?: {
+    completedCoords: [number, number][];
+    upcomingCoords: [number, number][];
+    currentPosition?: { latitude: number; longitude: number; name: string };
+    eventName?: string;
+    dayNumber?: number;
+    totalDays?: number;
+  };
+  userProfilePicture?: string;
   showHighways?: boolean;
   onStateClick: (state: string) => void;
   onStateHover?: (state: string | null) => void;
@@ -120,6 +129,8 @@ export default function USMapSVG({
   stateColors,
   markers = [],
   highways = [],
+  tripRoute,
+  userProfilePicture,
   showHighways = false,
   onStateClick, 
   onStateHover, 
@@ -195,6 +206,48 @@ export default function USMapSVG({
             })
           }
         </Geographies>
+
+        {/* Render active trip route */}
+        {tripRoute && tripRoute.completedCoords.length > 1 && (
+          <Line
+            from={tripRoute.completedCoords[0]}
+            to={tripRoute.completedCoords[tripRoute.completedCoords.length - 1]}
+            coordinates={tripRoute.completedCoords}
+            stroke="#f97316"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0"
+            fill="none"
+          />
+        )}
+        {tripRoute && tripRoute.upcomingCoords.length > 1 && (
+          <Line
+            from={tripRoute.upcomingCoords[0]}
+            to={tripRoute.upcomingCoords[tripRoute.upcomingCoords.length - 1]}
+            coordinates={tripRoute.upcomingCoords}
+            stroke="#94a3b8"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeDasharray="6,4"
+            fill="none"
+          />
+        )}
+        {/* User position marker on active route */}
+        {tripRoute?.currentPosition && (
+          <Marker coordinates={[tripRoute.currentPosition.longitude, tripRoute.currentPosition.latitude]}>
+            <g transform="translate(-12, -12)">
+              <circle cx="12" cy="12" r="13" fill="#f97316" stroke="white" strokeWidth="2" />
+              {userProfilePicture ? (
+                <image href={userProfilePicture} x="1" y="1" width="22" height="22" clipPath="url(#circle-clip)" style={{borderRadius: '50%'}} />
+              ) : (
+                <text x="12" y="17" textAnchor="middle" fontSize="14">🚐</text>
+              )}
+              <clipPath id="circle-clip">
+                <circle cx="12" cy="12" r="11" />
+              </clipPath>
+            </g>
+          </Marker>
+        )}
 
         {/* Render highway lines */}
         {showHighways && highways.map((highway) => (

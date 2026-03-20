@@ -1070,7 +1070,7 @@ const [editForm, setEditForm] = useState({
               </Link>
             </div>
             {profile && (
-              <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} />
+              <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} profilePicture={(profile as any).profilePicture} />
             )}
           </div>
         </div>

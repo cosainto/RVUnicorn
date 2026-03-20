@@ -1300,16 +1300,95 @@ router.delete('/:id/albums/:albumId/unlink', authenticateToken, async (req: any,
   }
 });
 
-export default router;
-// PATCH /api/trips/:id/banner-position
-router.patch('/:id/banner-position', authenticateToken, async (req: any, res) => {
+// GET /api/trips/active-route/:userId - Get active trip route for profile map
+router.get('/active-route/:userId', async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user?.id;
-    const { bannerPosition } = req.body;
-    const event = await prisma.event.findUnique({ where: { id } });
-    if (!event || event.organizerId !== userId) return res.status(403).json({ error: 'Not authorized' });
-    await prisma.event.update({ where: { id }, data: { bannerPosition } });
-    res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+    const { userId } = req.params;
+    const today = new Date();
+
+    // Find active event (trip happening today)
+    const activeEvent = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { organizerId: userId },
+          { attendees: { some: { userId } } },
+        ],
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+      include: {
+        tripDays: {
+          include: {
+            stops: {
+              where: {
+                latitude: { not: null },
+                longitude: { not: null },
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+          orderBy: { dayNumber: 'asc' },
+        },
+        organizer: { select: { id: true, firstName: true, profilePicture: true } },
+      },
+    });
+
+    if (!activeEvent) return res.json({ route: null });
+
+    // Build ordered list of stops with coordinates
+    const allStops: any[] = [];
+    for (const day of activeEvent.tripDays) {
+      for (const stop of day.stops) {
+        if (stop.latitude && stop.longitude) {
+          allStops.push({
+            id: stop.id,
+            name: stop.customName || stop.campground?.name || 'Stop',
+            latitude: stop.latitude,
+            longitude: stop.longitude,
+            dayNumber: day.dayNumber,
+            date: new Date(activeEvent.startDate.getTime() + (day.dayNumber - 1) * 86400000),
+            type: stop.type,
+          });
+        }
+      }
+    }
+
+    if (allStops.length < 2) return res.json({ route: null });
+
+    // Calculate current day number
+    const dayNumber = Math.floor((today.getTime() - activeEvent.startDate.getTime()) / 86400000) + 1;
+
+    // Find user's current position (first stop of today or last stop of yesterday)
+    const todayStops = allStops.filter(s => s.dayNumber === dayNumber);
+    const currentPosition = todayStops[0] || allStops.filter(s => s.dayNumber < dayNumber).pop() || allStops[0];
+
+    // Split into completed and upcoming segments
+    const currentIdx = allStops.findIndex(s => s.id === currentPosition?.id);
+    const completedStops = allStops.slice(0, currentIdx + 1);
+    const upcomingStops = allStops.slice(currentIdx);
+
+    res.json({
+      route: {
+        eventId: activeEvent.id,
+        eventName: activeEvent.title,
+        startDate: activeEvent.startDate,
+        endDate: activeEvent.endDate,
+        dayNumber,
+        totalDays: activeEvent.tripDays.length,
+        allStops,
+        completedCoords: completedStops.map(s => [s.longitude, s.latitude] as [number, number]),
+        upcomingCoords: upcomingStops.map(s => [s.longitude, s.latitude] as [number, number]),
+        currentPosition: currentPosition ? {
+          latitude: currentPosition.latitude,
+          longitude: currentPosition.longitude,
+          name: currentPosition.name,
+        } : null,
+      }
+    });
+  } catch (e: any) {
+    console.error('active-route error:', e?.message);
+    res.status(500).json({ error: 'Failed' });
+  }
 });
+
+export default router;
