@@ -195,7 +195,7 @@ const getGasPriceColor = (price: number): string => {
   return '#dc2626';
 };
 
-export default function TravelMap({ userId, isOwnProfile, compact = false }: TravelMapProps) {
+export default function TravelMap({ userId, isOwnProfile, compact = false, profilePicture }: TravelMapProps) {
   // Original state
   const [visitedStates, setVisitedStates] = useState<string[]>([]);
   const [plannedStates, setPlannedStates] = useState<string[]>([]);
