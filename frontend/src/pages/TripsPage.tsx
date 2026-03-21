@@ -125,21 +125,24 @@ export default function EventsPage() {
     const prevStop = insertIdx > 0 ? multiStops[insertIdx - 1] : null;
     const nextStop = insertIdx < multiStops.length ? multiStops[insertIdx] : null;
 
+    // Normalize all dates to YYYY-MM-DD for safe string comparison (strips timestamps)
+    const toDate = (d: string) => d ? d.slice(0, 10) : '';
+
     if (prevStop) {
-      const prevEnd = prevStop.departureDate || prevStop.arrivalDate;
-      if (pendingDates.arrivalDate <= prevEnd) {
-        alert(`Arrival date must be after ${prevStop.campgroundName}'s departure (${new Date(prevEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
+      const prevEnd = toDate(prevStop.departureDate || prevStop.arrivalDate);
+      if (toDate(pendingDates.arrivalDate) <= prevEnd) {
+        alert(`Arrival date must be after ${prevStop.campgroundName}'s departure (${new Date(prevEnd + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
         return;
       }
     }
 
-    if (pendingDates.departureDate && pendingDates.departureDate < pendingDates.arrivalDate) {
+    if (pendingDates.departureDate && toDate(pendingDates.departureDate) < toDate(pendingDates.arrivalDate)) {
       alert('Departure date cannot be before arrival date');
       return;
     }
 
-    if (nextStop && pendingDates.departureDate && pendingDates.departureDate >= nextStop.arrivalDate) {
-      alert(`Departure must be before the next stop's arrival (${new Date(nextStop.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
+    if (nextStop && pendingDates.departureDate && toDate(pendingDates.departureDate) >= toDate(nextStop.arrivalDate)) {
+      alert(`Departure must be before the next stop's arrival (${new Date(toDate(nextStop.arrivalDate) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
       return;
     }
 
@@ -812,7 +815,7 @@ export default function EventsPage() {
                                 <p className="text-xs text-amber-600 mb-1">Must be after {new Date(minArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                               )}
                               <input type="date" value={pendingDates.arrivalDate}
-                                min={minArrival}
+                                min={minArrival ? minArrival.slice(0, 10) : undefined}
                                 onChange={e => {
                                   const val = e.target.value;
                                   setPendingDates(p => ({
@@ -830,7 +833,7 @@ export default function EventsPage() {
                               )}
                               <input type="date" value={pendingDates.departureDate}
                                 min={minDeparture}
-                                max={maxDeparture}
+                                max={maxDeparture ? maxDeparture.slice(0, 10) : undefined}
                                 onChange={e => setPendingDates(p => ({ ...p, departureDate: e.target.value }))}
                                 className="input w-full text-sm" />
                             </div>
