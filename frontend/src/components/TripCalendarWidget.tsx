@@ -70,6 +70,13 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
 
   useEffect(()=>{fetchItems();},[fetchItems]);
 
+  // Refresh when user returns to the tab (clears stale deleted trips)
+  useEffect(()=>{
+    const onFocus = () => fetchItems();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  },[fetchItems]);
+
   const daysInMonth=new Date(year,month,0).getDate();
   const firstDay=new Date(year,month-1,1).getDay();
 
