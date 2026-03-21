@@ -665,7 +665,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
           }
         },
         trip: {
-          select: { name: true }
+          select: { title: true }
         }
       },
       orderBy: { startDate: 'asc' }
@@ -686,7 +686,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
           startDate: stay.startDate,
           endDate: stay.endDate,
           isCurrentlyHere,
-          tripTitle: stay.trip?.name || 'Camping Trip',
+          tripTitle: stay.trip?.title || 'Camping Trip',
         });
       }
     });
