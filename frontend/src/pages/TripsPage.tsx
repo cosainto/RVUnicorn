@@ -81,7 +81,71 @@ export default function EventsPage() {
     imageUrl: '',
     attendeeIds: [] as string[],
     privacy: 'PUBLIC',
+    isMultiStop: false,
   });
+
+  // Multi-stop state
+  const [multiStops, setMultiStops] = useState<Array<{
+    campgroundId: string;
+    campgroundName: string;
+    campgroundLocation: string;
+    campgroundState: string;
+    arrivalDate: string;
+    departureDate: string;
+    latitude?: number;
+    longitude?: number;
+  }>>([]);
+  const [stopSearch, setStopSearch] = useState('');
+  const [stopSearchResults, setStopSearchResults] = useState<any[]>([]);
+  const [stopSearching, setStopSearching] = useState(false);
+  const [addingStopAt, setAddingStopAt] = useState<number | null>(null);
+  const [pendingStop, setPendingStop] = useState<any>(null);
+  const [pendingDates, setPendingDates] = useState({ arrivalDate: '', departureDate: '' });
+
+  const searchStops = async (q: string) => {
+    if (q.length < 2) { setStopSearchResults([]); return; }
+    try {
+      setStopSearching(true);
+      const { data } = await api.get(`/campgrounds?search=${encodeURIComponent(q)}&limit=8`);
+      setStopSearchResults(Array.isArray(data) ? data : (data.campgrounds || []));
+    } catch (e) { console.error(e); }
+    finally { setStopSearching(false); }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => searchStops(stopSearch), 350);
+    return () => clearTimeout(t);
+  }, [stopSearch]);
+
+  const addMultiStop = () => {
+    if (!pendingStop || !pendingDates.arrivalDate) return;
+    const newStop = {
+      campgroundId: pendingStop.id,
+      campgroundName: pendingStop.name,
+      campgroundLocation: pendingStop.location || '',
+      campgroundState: pendingStop.state || '',
+      arrivalDate: pendingDates.arrivalDate,
+      departureDate: pendingDates.departureDate,
+      latitude: pendingStop.latitude,
+      longitude: pendingStop.longitude,
+    };
+    if (addingStopAt !== null) {
+      const updated = [...multiStops];
+      updated.splice(addingStopAt, 0, newStop);
+      setMultiStops(updated);
+    } else {
+      setMultiStops(prev => [...prev, newStop]);
+    }
+    setPendingStop(null);
+    setStopSearch('');
+    setStopSearchResults([]);
+    setPendingDates({ arrivalDate: '', departureDate: '' });
+    setAddingStopAt(null);
+  };
+
+  const removeMultiStop = (idx: number) => {
+    setMultiStops(prev => prev.filter((_, i) => i !== idx));
+  };
 
   // Handle wishlist create params
   useEffect(() => {
@@ -230,18 +294,54 @@ export default function EventsPage() {
       return;
     }
 
+    // Multi-stop validation
+    if (formData.isMultiStop && multiStops.length < 2) {
+      alert('Please add at least 2 campground stops for a multi-stop trip');
+      return;
+    }
+
     try {
+      // For multi-stop: use first stop as anchor, last departure as end date
+      const firstStop = formData.isMultiStop ? multiStops[0] : null;
+      const lastStop = formData.isMultiStop ? multiStops[multiStops.length - 1] : null;
+
       const { data } = await api.post('/trips', {
         title: formData.title,
         description: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate || formData.startDate,
-        location: formData.location,
-        campgroundId: formData.destinationType === 'CAMPGROUND' ? formData.campgroundId : null,
+        startDate: formData.isMultiStop ? firstStop!.arrivalDate : formData.startDate,
+        endDate: formData.isMultiStop ? (lastStop!.departureDate || lastStop!.arrivalDate) : (formData.endDate || formData.startDate),
+        location: formData.isMultiStop ? `${firstStop!.campgroundName} → ${lastStop!.campgroundName}` : formData.location,
+        campgroundId: formData.isMultiStop ? firstStop!.campgroundId : (formData.destinationType === 'CAMPGROUND' ? formData.campgroundId : null),
         overnightSpotId: formData.destinationType === 'OVERNIGHT_SPOT' ? formData.overnightSpotId : null,
-        destinationType: formData.destinationType,
+        destinationType: 'CAMPGROUND',
         bannerImage: formData.imageUrl,
       });
+
+      // For multi-stop: create a TripPlan and PitStops for stops 2..N
+      if (formData.isMultiStop && multiStops.length > 1) {
+        try {
+          // Create the trip plan anchored to this event
+          const { data: tripPlan } = await api.post(`/trip-planner/event/${data.id}/plan`, {
+            startLocation: `${firstStop!.campgroundName}, ${firstStop!.campgroundLocation}, ${firstStop!.campgroundState}`,
+            useHometown: false,
+            isDriving: true,
+            arrivalDate: firstStop!.arrivalDate,
+          });
+
+          // Add stops 2..N as campground pit stops
+          for (let i = 1; i < multiStops.length; i++) {
+            const stop = multiStops[i];
+            await api.post(`/trip-planner/trip/${tripPlan.id}/campground-stop`, {
+              campgroundId: stop.campgroundId,
+              arrivalDate: stop.arrivalDate,
+              departureDate: stop.departureDate || null,
+              orderIndex: i - 1,
+            });
+          }
+        } catch (planErr) {
+          console.error('Trip plan creation error (non-fatal):', planErr);
+        }
+      }
 
       // Invite attendees if any selected
       if (formData.attendeeIds.length > 0) {
@@ -252,6 +352,7 @@ export default function EventsPage() {
 
       alert('✅ Event created successfully!');
       setShowCreateModal(false);
+      setMultiStops([]);
       setFormData({
         title: '',
         description: '',
@@ -264,6 +365,7 @@ export default function EventsPage() {
         imageUrl: '',
         attendeeIds: [],
         privacy: 'PUBLIC',
+        isMultiStop: false,
       });
       loadEvents();
       loadDiscoverEvents();
@@ -569,27 +671,151 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* Campground Selector */}
-              <CampgroundSelector
-                selectedCampgroundId={formData.campgroundId}
-                manualLocation={formData.location}
-                onCampgroundSelect={(id, name, location) => {
-                  setFormData({
-                    ...formData,
-                    campgroundId: id,
-                    location: location || name,
-                  });
-                }}
-                onManualLocationChange={(location) => {
-                  setFormData({
-                    ...formData,
-                    campgroundId: null,
-        overnightSpotId: null,
-        destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
-                    location,
-                  });
-                }}
-              />
+              {/* Multi-stop toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">🗺️ Multi-stop road trip?</p>
+                  <p className="text-xs text-gray-500">Add multiple campgrounds with dates</p>
+                </div>
+                <div
+                  onClick={() => { setFormData(f => ({ ...f, isMultiStop: !f.isMultiStop })); setMultiStops([]); }}
+                  className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors ${formData.isMultiStop ? 'bg-primary-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.isMultiStop ? 'translate-x-5' : 'translate-x-0'}`} />
+                </div>
+              </div>
+
+              {/* Single campground selector */}
+              {!formData.isMultiStop && (
+                <CampgroundSelector
+                  selectedCampgroundId={formData.campgroundId}
+                  manualLocation={formData.location}
+                  onCampgroundSelect={(id, name, location) => {
+                    setFormData({ ...formData, campgroundId: id, location: location || name });
+                  }}
+                  onManualLocationChange={(location) => {
+                    setFormData({ ...formData, campgroundId: null, overnightSpotId: null, destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER', location });
+                  }}
+                />
+              )}
+
+              {/* Multi-stop builder */}
+              {formData.isMultiStop && (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-gray-700">Campground Stops</p>
+
+                  {/* Existing stops */}
+                  {multiStops.map((stop, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <span className="text-lg mt-0.5">{idx === 0 ? '🏠' : idx === multiStops.length - 1 ? '🏁' : '🏕️'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">{stop.campgroundName}</p>
+                          <p className="text-xs text-gray-500">{stop.campgroundLocation}{stop.campgroundState ? `, ${stop.campgroundState}` : ''}</p>
+                          <div className="flex gap-3 mt-1 text-xs text-gray-600">
+                            {stop.arrivalDate && <span>📅 Arrive {new Date(stop.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                            {stop.departureDate && <span>→ Leave {new Date(stop.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => removeMultiStop(idx)} className="text-gray-300 hover:text-red-400 p-1 shrink-0">✕</button>
+                      </div>
+                      {/* Insert between stops */}
+                      {idx < multiStops.length - 1 && (
+                        <div className="flex justify-center my-1">
+                          <button
+                            onClick={() => setAddingStopAt(idx + 1)}
+                            className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-300 px-3 py-1 rounded-lg hover:bg-primary-50 transition"
+                          >
+                            + Insert stop here
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Add stop form */}
+                  {(addingStopAt !== null || multiStops.length === 0 || true) && (
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        {addingStopAt !== null ? `Insert stop at position ${addingStopAt + 1}` : 'Add next stop'}
+                      </p>
+                      {/* Campground search */}
+                      {!pendingStop ? (
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={stopSearch}
+                            onChange={e => setStopSearch(e.target.value)}
+                            placeholder="Search campground..."
+                            className="input w-full pl-8 text-sm"
+                          />
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                          {stopSearching && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">...</span>}
+                          {stopSearchResults.length > 0 && (
+                            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
+                              {stopSearchResults.map((cg: any) => (
+                                <button
+                                  key={cg.id}
+                                  onClick={() => { setPendingStop(cg); setStopSearch(''); setStopSearchResults([]); }}
+                                  className="w-full text-left px-3 py-2 hover:bg-primary-50 transition text-sm"
+                                >
+                                  <p className="font-medium text-gray-900 truncate">{cg.name}</p>
+                                  <p className="text-xs text-gray-500">{cg.location}{cg.state ? `, ${cg.state}` : ''}</p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
+                          <span className="text-sm font-medium text-gray-900 flex-1 truncate">{pendingStop.name}</span>
+                          <button onClick={() => setPendingStop(null)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                        </div>
+                      )}
+                      {/* Dates */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Arrival *</label>
+                          <input type="date" value={pendingDates.arrivalDate}
+                            onChange={e => setPendingDates(p => ({ ...p, arrivalDate: e.target.value }))}
+                            className="input w-full text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Departure</label>
+                          <input type="date" value={pendingDates.departureDate}
+                            onChange={e => setPendingDates(p => ({ ...p, departureDate: e.target.value }))}
+                            className="input w-full text-sm" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={addMultiStop}
+                          disabled={!pendingStop || !pendingDates.arrivalDate}
+                          className="btn btn-primary btn-sm flex-1 disabled:opacity-50 text-sm"
+                        >
+                          Add Stop
+                        </button>
+                        {addingStopAt !== null && (
+                          <button
+                            onClick={() => { setAddingStopAt(null); setPendingStop(null); setPendingDates({ arrivalDate: '', departureDate: '' }); }}
+                            className="btn btn-secondary btn-sm text-sm"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {multiStops.length >= 2 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      {multiStops.length} stops · {multiStops[0].arrivalDate && multiStops[multiStops.length-1].departureDate
+                        ? `${new Date(multiStops[0].arrivalDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})} → ${new Date(multiStops[multiStops.length-1].departureDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Image Upload */}
               <ImageUpload
