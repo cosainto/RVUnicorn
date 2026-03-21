@@ -75,17 +75,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
 
   if (!status) return <div className="flex items-center justify-center h-32"><div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" /></div>;
 
-  // User must be checked in to access campfire
-  if (!isUserCheckedIn) {
-    return (
-      <div className="rounded-xl border border-orange-200 bg-orange-50 p-6 text-center">
-        <div className="text-3xl mb-2">🔥</div>
-        <h3 className="font-semibold text-gray-800 mb-1">Campfire Chat</h3>
-        <p className="text-sm text-gray-500 mb-3">You need to be checked in at this campground to join the campfire.</p>
-        <a href="/basecamp" className="inline-block text-xs bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600 transition">Check In to Join</a>
-      </div>
-    );
-  }
+  // Campfire is open to all — no check-in required to read or chat
 
   if (false) { // room activates for any checked-in user
     return (
@@ -180,7 +170,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           type="text" value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Chat with your campsite neighbors…"
-          disabled={!status.isActive || !connected || !isUserCheckedIn}
+          disabled={!connected}
           className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:text-gray-400"
           maxLength={500}
         />
