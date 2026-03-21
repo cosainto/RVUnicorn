@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // POST /api/checkins - Check in to a location
 router.post('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const { campgroundId, harvestHostId, overnightSpotId, siteNumber, notes } = req.body;
 
     if (!campgroundId && !harvestHostId && !overnightSpotId) {
@@ -89,7 +89,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
 // DELETE /api/checkins/active - Check out
 router.delete('/active', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     await prisma.checkIn.updateMany({
       where: { userId, isActive: true },
       data: { isActive: false, checkOutDate: new Date() }
@@ -103,7 +103,7 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
 // GET /api/checkins/active - Get my active check-in
 router.get('/active', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const checkIn = await prisma.checkIn.findFirst({
       where: { userId, isActive: true },
       include: {
@@ -181,7 +181,7 @@ router.get('/user/:userId/active', async (req: any, res) => {
 // POST /api/checkins/stargazing/toggle
 router.post('/stargazing/toggle', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { stargazingEnabled: true } });
     const updated = await prisma.user.update({
       where: { id: userId },
