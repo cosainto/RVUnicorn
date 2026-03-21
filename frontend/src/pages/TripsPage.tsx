@@ -130,7 +130,7 @@ export default function EventsPage() {
 
     if (prevStop) {
       const prevEnd = toDate(prevStop.departureDate || prevStop.arrivalDate);
-      if (toDate(pendingDates.arrivalDate) <= prevEnd) {
+      if (toDate(pendingDates.arrivalDate) < prevEnd) {
         alert(`Arrival date must be after ${prevStop.campgroundName}'s departure (${new Date(prevEnd + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
         return;
       }
