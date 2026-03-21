@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Navigation, Plus, Trash2, Check, X, Loader, Edit2, ExternalLink, AlertCircle } from 'lucide-react';
 import FuelStopPrice from './FuelStopPrice';
+import MultiStopTripPlanner from './MultiStopTripPlanner';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface PitStop { id: string; name: string; stopType: string; location?: string; estimatedDuration?: number; notes?: string; }
@@ -516,22 +517,13 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
             </div>
           )}
 
-          {/* Pit stops */}
-          {tripPlan.pitStops && tripPlan.pitStops.length > 0 && (
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pit Stops</p>
-              <div className="space-y-1.5">
-                {tripPlan.pitStops.map((stop: PitStop) => (
-                  <div key={stop.id} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
-                    <span>{stop.stopType === 'FUEL' ? '⛽' : stop.stopType === 'FOOD' ? '🍔' : stop.stopType === 'REST' ? '😴' : '📍'}</span>
-                    <span className="font-medium flex-1">{stop.name}</span>
-                    {stop.location && <span className="text-xs text-gray-400">{stop.location}</span>}
-                    {stop.estimatedDuration && <span className="text-xs text-gray-400">{stop.estimatedDuration}min</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Multi-Stop Trip Planner */}
+          <div className="px-4 py-4 border-b border-gray-100">
+            <MultiStopTripPlanner
+              tripPlanId={tripPlan.id}
+              onUpdate={onReload}
+            />
+          </div>
         </div>
       ) : (
         /* No trip yet */
