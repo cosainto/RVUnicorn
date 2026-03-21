@@ -553,6 +553,7 @@ model Campground {
   campfireRoom   CampfireRoom?
   triviaWeeks      TriviaWeek[]
   campgroundTriviaScores CampgroundTriviaScore[]
+  pitStops               PitStop[]               @relation("CampgroundPitStops")
 }
 
 model Stay {
@@ -1238,8 +1239,11 @@ model PitStop {
   updatedAt         DateTime       @updatedAt
   harvestHostId     String?
   overnightStopId   String?
+  campgroundId      String?
+  departureDate     DateTime?
   harvestHost       HarvestHost?   @relation(fields: [harvestHostId], references: [id])
   overnightStop     OvernightStop? @relation(fields: [overnightStopId], references: [id])
+  campground        Campground?    @relation("CampgroundPitStops", fields: [campgroundId], references: [id])
   tripPlan          TripPlan       @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
 }
 

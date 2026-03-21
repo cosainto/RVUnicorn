@@ -506,4 +506,172 @@ async function calculateRoute(
   }
 }
 
+
+// GET /api/trip-planner/trip/:tripId/full-itinerary
+router.get('/trip/:tripId/full-itinerary', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const userId = (req as any).userId;
+
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripId },
+      include: {
+        pitStops: {
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            campground: {
+              select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true }
+            }
+          }
+        },
+        event: {
+          include: {
+            campground: {
+              select: { id: true, name: true, location: true, state: true, latitude: true, longitude: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!tripPlan || tripPlan.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const waypoints: any[] = [];
+
+    if (tripPlan.startLocation) {
+      waypoints.push({
+        type: 'HOME',
+        name: tripPlan.startLocation,
+        latitude: tripPlan.startLatitude,
+        longitude: tripPlan.startLongitude,
+        orderIndex: -1,
+        arrivalDate: null,
+        departureDate: null,
+      });
+    }
+
+    for (const stop of tripPlan.pitStops) {
+      waypoints.push({
+        type: stop.stopType,
+        id: stop.id,
+        name: stop.name,
+        location: stop.location,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        orderIndex: stop.orderIndex,
+        arrivalDate: stop.estimatedArrival,
+        departureDate: (stop as any).departureDate,
+        campgroundId: (stop as any).campgroundId,
+        campground: (stop as any).campground,
+        notes: stop.notes,
+        estimatedDuration: stop.estimatedDuration,
+      });
+    }
+
+    const finalCg = tripPlan.event?.campground;
+    if (finalCg?.latitude && finalCg?.longitude) {
+      waypoints.push({
+        type: 'FINAL_DESTINATION',
+        name: finalCg.name,
+        location: `${finalCg.location}, ${finalCg.state}`,
+        latitude: finalCg.latitude,
+        longitude: finalCg.longitude,
+        orderIndex: 9999,
+        arrivalDate: tripPlan.arrivalDate,
+        departureDate: (tripPlan.event as any)?.endDate,
+        campgroundId: finalCg.id,
+        campground: finalCg,
+      });
+    }
+
+    const legs: any[] = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const from = waypoints[i];
+      const to = waypoints[i + 1];
+      if (from.latitude && from.longitude && to.latitude && to.longitude) {
+        const R = 3959;
+        const dLat = (to.latitude - from.latitude) * Math.PI / 180;
+        const dLon = (to.longitude - from.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(from.latitude * Math.PI/180) * Math.cos(to.latitude * Math.PI/180) * Math.sin(dLon/2)**2;
+        const straightLine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const roadMiles = Math.round(straightLine * 1.3);
+        const durationMins = Math.round((roadMiles / 50) * 60);
+        legs.push({ from: i, to: i + 1, distanceMiles: roadMiles, durationMinutes: durationMins });
+      }
+    }
+
+    const totalMiles = legs.reduce((sum: number, l: any) => sum + l.distanceMiles, 0);
+    res.json({ tripPlanId: tripId, waypoints, legs, totalMiles });
+  } catch (error) {
+    console.error('Full itinerary error:', error);
+    res.status(500).json({ error: 'Failed to get itinerary' });
+  }
+});
+
+// POST /api/trip-planner/trip/:tripId/campground-stop
+router.post('/trip/:tripId/campground-stop', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const userId = (req as any).userId;
+    const { campgroundId, arrivalDate, departureDate, notes, orderIndex } = req.body;
+
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripId },
+      include: { pitStops: true }
+    });
+
+    if (!tripPlan || tripPlan.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { id: true, name: true, location: true, state: true, latitude: true, longitude: true }
+    });
+
+    if (!campground) {
+      return res.status(404).json({ error: 'Campground not found' });
+    }
+
+    const insertAt = orderIndex !== undefined ? orderIndex : tripPlan.pitStops.length;
+
+    if (orderIndex !== undefined) {
+      await Promise.all(
+        tripPlan.pitStops
+          .filter((s: any) => s.orderIndex >= insertAt)
+          .map((s: any) => prisma.pitStop.update({ where: { id: s.id }, data: { orderIndex: s.orderIndex + 1 } }))
+      );
+    }
+
+    const pitStop = await prisma.pitStop.create({
+      data: {
+        tripPlanId: tripId,
+        name: campground.name,
+        location: `${campground.location}, ${campground.state}`,
+        latitude: campground.latitude ?? null,
+        longitude: campground.longitude ?? null,
+        stopType: 'CAMPGROUND',
+        campgroundId: campground.id,
+        estimatedArrival: arrivalDate ? new Date(arrivalDate) : null,
+        departureDate: departureDate ? new Date(departureDate) : null,
+        notes: notes || null,
+        orderIndex: insertAt,
+      } as any,
+      include: {
+        campground: {
+          select: { id: true, name: true, location: true, state: true, imageUrl: true }
+        }
+      }
+    });
+
+    res.json(pitStop);
+  } catch (error) {
+    console.error('Add campground stop error:', error);
+    res.status(500).json({ error: 'Failed to add campground stop' });
+  }
+});
+
+
 export default router;
