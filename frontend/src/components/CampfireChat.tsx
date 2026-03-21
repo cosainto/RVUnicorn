@@ -22,12 +22,13 @@ interface ChatMessage {
 interface Props {
   campgroundId: string;
   campgroundName: string;
+  isUserCheckedIn?: boolean;
 }
 
 const API = import.meta.env.VITE_API_URL || '';
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-export default function CampfireChat({ campgroundId, campgroundName }: Props) {
+export default function CampfireChat({ campgroundId, campgroundName, isUserCheckedIn = true }: Props) {
   const { user } = useAuth();
   const [status, setStatus] = useState<{ isActive: boolean; checkedInCount: number; checkedInUsers: ChatUser[]; needsMore: number } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -38,9 +39,11 @@ export default function CampfireChat({ campgroundId, campgroundName }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/campfire/${campgroundId}/room/status`, { credentials: 'include' })
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch(`${API}/api/campfire/${campgroundId}/room/status`, { headers })
       .then(r => r.json()).then(setStatus).catch(console.error);
-    fetch(`${API}/api/campfire/${campgroundId}/room/messages`, { credentials: 'include' })
+    fetch(`${API}/api/campfire/${campgroundId}/room/messages`, { headers })
       .then(r => r.json()).then(d => setMessages(d.messages || [])).catch(console.error);
   }, [campgroundId]);
 
