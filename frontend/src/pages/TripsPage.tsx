@@ -119,6 +119,30 @@ export default function EventsPage() {
 
   const addMultiStop = () => {
     if (!pendingStop || !pendingDates.arrivalDate) return;
+
+    // Validate: arrival must be after previous stop's departure
+    const insertIdx = addingStopAt !== null ? addingStopAt : multiStops.length;
+    const prevStop = insertIdx > 0 ? multiStops[insertIdx - 1] : null;
+    const nextStop = insertIdx < multiStops.length ? multiStops[insertIdx] : null;
+
+    if (prevStop) {
+      const prevEnd = prevStop.departureDate || prevStop.arrivalDate;
+      if (pendingDates.arrivalDate <= prevEnd) {
+        alert(`Arrival date must be after ${prevStop.campgroundName}'s departure (${new Date(prevEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
+        return;
+      }
+    }
+
+    if (pendingDates.departureDate && pendingDates.departureDate < pendingDates.arrivalDate) {
+      alert('Departure date cannot be before arrival date');
+      return;
+    }
+
+    if (nextStop && pendingDates.departureDate && pendingDates.departureDate >= nextStop.arrivalDate) {
+      alert(`Departure must be before the next stop's arrival (${new Date(nextStop.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`);
+      return;
+    }
+
     const newStop = {
       campgroundId: pendingStop.id,
       campgroundName: pendingStop.name,
@@ -773,20 +797,46 @@ export default function EventsPage() {
                         </div>
                       )}
                       {/* Dates */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Arrival *</label>
-                          <input type="date" value={pendingDates.arrivalDate}
-                            onChange={e => setPendingDates(p => ({ ...p, arrivalDate: e.target.value }))}
-                            className="input w-full text-sm" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Departure</label>
-                          <input type="date" value={pendingDates.departureDate}
-                            onChange={e => setPendingDates(p => ({ ...p, departureDate: e.target.value }))}
-                            className="input w-full text-sm" />
-                        </div>
-                      </div>
+                      {(() => {
+                        const insertIdx = addingStopAt !== null ? addingStopAt : multiStops.length;
+                        const prevStop = insertIdx > 0 ? multiStops[insertIdx - 1] : null;
+                        const nextStop = insertIdx < multiStops.length ? multiStops[insertIdx] : null;
+                        const minArrival = prevStop ? (prevStop.departureDate || prevStop.arrivalDate) : undefined;
+                        const minDeparture = pendingDates.arrivalDate || minArrival;
+                        const maxDeparture = nextStop ? nextStop.arrivalDate : undefined;
+                        return (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Arrival *</label>
+                              {minArrival && (
+                                <p className="text-xs text-amber-600 mb-1">Must be after {new Date(minArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                              )}
+                              <input type="date" value={pendingDates.arrivalDate}
+                                min={minArrival}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setPendingDates(p => ({
+                                    arrivalDate: val,
+                                    // Clear departure if it's now before new arrival
+                                    departureDate: p.departureDate && p.departureDate < val ? '' : p.departureDate,
+                                  }));
+                                }}
+                                className="input w-full text-sm" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Departure</label>
+                              {maxDeparture && (
+                                <p className="text-xs text-amber-600 mb-1">Must be before {new Date(maxDeparture).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                              )}
+                              <input type="date" value={pendingDates.departureDate}
+                                min={minDeparture}
+                                max={maxDeparture}
+                                onChange={e => setPendingDates(p => ({ ...p, departureDate: e.target.value }))}
+                                className="input w-full text-sm" />
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <div className="flex gap-2">
                         <button
                           onClick={addMultiStop}
