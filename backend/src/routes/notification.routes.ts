@@ -8,7 +8,20 @@ const prisma = new PrismaClient();
 // SSE: Real-time notification stream
 const clients = new Map<string, Set<any>>();
 
-router.get('/stream', authenticateToken, (req: any, res) => {
+router.get('/stream', (req: any, res) => {
+  // SSE connections can't set Authorization headers — accept token as query param
+  if (!req.headers.authorization && (req.query as any).token) {
+    req.headers.authorization = `Bearer ${(req.query as any).token}`;
+  }
+  // Verify token inline
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) { res.status(401).end(); return; }
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.userId = decoded.userId;
+  } catch { res.status(401).end(); return; }
   const userId = req.userId;
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

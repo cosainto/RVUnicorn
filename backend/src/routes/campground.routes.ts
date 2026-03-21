@@ -702,28 +702,6 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         startDate: { lte: twoWeeksFromNow },
       },
       include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
         user: {
           select: {
             id: true,
