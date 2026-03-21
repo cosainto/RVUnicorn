@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // GET /api/calendar?month=1-12&year=YYYY
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const authUserId = (req as any).user.id;
+    const authUserId = (req as any).userId;
     const userId = (req.query.userId as string) || authUserId;
     const month  = parseInt(req.query.month as string) || new Date().getMonth() + 1;
     const year   = parseInt(req.query.year  as string) || new Date().getFullYear();
@@ -32,7 +32,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       include: { stays: { include: { campground: { select: { id: true, name: true, location: true } } } } },
     });
 
-    // Fetch AI itinerary travel days
+    // Fetch AI itinerary travel days — only for trips linked to a valid event
     const aiTrips = await (prisma as any).trip.findMany({
       where: {
         userId,
@@ -45,6 +45,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         }
       }
     });
+    // Get valid event IDs to filter out orphaned trip days
+    const validEventIds = new Set(events.map((e: any) => e.id));
 
     const items = [
       ...events.map(e => ({
@@ -62,16 +64,18 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         myAttendee: { confirmationNumber: s.confirmationNumber, siteNumber: s.siteNumber, userId },
         attendees: [], color: '#34d399',
       }))),
-      ...aiTrips.flatMap((t: any) => t.days.map((d: any) => ({
-        id: d.id, tripId: t.id, type: 'TRAVEL_DAY',
-        title: t.title || 'Road Trip',
-        dayType: d.type || 'TRAVEL',
-        dayNumber: d.dayNumber,
-        startDate: d.date, endDate: d.date,
-        campground: null, isOrganizer: true,
-        myAttendee: null, attendees: [], color: '#8b5cf6',
-        notes: d.notes,
-      }))),
+      ...aiTrips
+        .filter((t: any) => !t.eventId || validEventIds.has(t.eventId))
+        .flatMap((t: any) => t.days.map((d: any) => ({
+          id: d.id, tripId: t.id, type: 'TRAVEL_DAY',
+          title: t.title || 'Road Trip',
+          dayType: d.type || 'TRAVEL',
+          dayNumber: d.dayNumber,
+          startDate: d.date, endDate: d.date,
+          campground: null, isOrganizer: true,
+          myAttendee: null, attendees: [], color: '#8b5cf6',
+          notes: d.notes,
+        }))),
     ];
     res.json({ items });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch calendar' }); }
@@ -80,7 +84,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 // PATCH /api/calendar/events/:eventId/reservation
 router.patch('/events/:eventId/reservation', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).userId;
     const { eventId } = req.params;
     const { confirmationNumber, siteNumber, notes, targetUserId } = req.body;
     const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -101,7 +105,7 @@ router.patch('/events/:eventId/reservation', authenticateToken, async (req: Requ
 // PATCH /api/calendar/stays/:stayId/reservation
 router.patch('/stays/:stayId/reservation', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).userId;
     const { stayId } = req.params;
     const { confirmationNumber, siteNumber } = req.body;
     const stay = await (prisma as any).stay.findFirst({ where: { id: stayId, trip: { userId } } });
