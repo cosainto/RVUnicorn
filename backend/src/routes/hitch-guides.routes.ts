@@ -148,7 +148,7 @@ NEVER invent facts not supported by the data.`;
 router.get('/rig-stress/:campgroundId', async (req: any, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     const campground = await prisma.campground.findUnique({
       where: { id: campgroundId },
@@ -444,7 +444,7 @@ function countField(arr: any[], field: string): Record<string, number> {
 
 router.get('/for-you', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ error: 'Login required' });
 
     const user = await prisma.user.findUnique({
@@ -648,7 +648,7 @@ Write the summary now (2-3 sentences, warm and celebratory, mention specific num
 router.post('/trip-copilot', async (req: any, res) => {
   try {
     const { origin, destination, campgroundId } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     let userRv: any = null;
     if (userId) {
@@ -718,7 +718,7 @@ Generate 2-4 relevant warnings/tips. Include: rig compatibility warning if campg
 router.get('/site-prediction/:campgroundId', async (req: any, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     const campground = await prisma.campground.findUnique({
       where: { id: campgroundId },
@@ -815,7 +815,7 @@ Write the recap now:`,
 router.post('/onboarding-chat', async (req: any, res) => {
   try {
     const { message, history, step, collectedData } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     const steps = [
       { field: 'rvType',    question: 'What kind of RV?', nextQ: 'Great! And how long is your rig? (in feet, approximate is fine)' },
@@ -1026,7 +1026,7 @@ router.post('/send-weekly-digests', async (req: any, res) => {
 // POST /api/hitch/road-support
 router.post('/road-support', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const { message, category, history = [] } = req.body;
 
     const user = await prisma.user.findUnique({

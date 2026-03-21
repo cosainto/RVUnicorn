@@ -88,7 +88,7 @@ async function evaluateUnlocks(userId: string) {
 // GET /api/guide-unlocks
 router.get("/", authenticateToken, async (req: any, res) => {
   try {
-    const unlocks = await evaluateUnlocks(req.user?.id);
+    const unlocks = await evaluateUnlocks((req as any).userId);
     res.json(unlocks);
   } catch (e: any) {
     res.status(500).json({ error: "Failed" });
@@ -229,7 +229,7 @@ Chime in with 1-2 sentences in your character voice. Options: add useful info Hi
 // Call this after any action that could trigger an unlock (review, checkin, wishlist, follow)
 router.post('/check-and-notify', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     if (!userId) return res.json({ unlocked: [] });
 
     const unlocks = await evaluateUnlocks(userId);

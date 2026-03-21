@@ -55,7 +55,7 @@ router.post("/:campgroundId/posts", authenticateToken, async (req: any, res) => 
   try {
     const { campgroundId } = req.params;
     const { postType = "chat", content, metadata = {} } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const post = await prisma.campgroundPost.create({
@@ -133,7 +133,7 @@ router.post("/:campgroundId/posts", authenticateToken, async (req: any, res) => 
 router.post("/:campgroundId/posts/:postId/like", authenticateToken, async (req: any, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const existing = await prisma.campgroundPostLike.findUnique({ where: { postId_userId: { postId, userId } } });
     if (existing) {
       await prisma.campgroundPostLike.delete({ where: { postId_userId: { postId, userId } } });
@@ -152,7 +152,7 @@ router.post("/:campgroundId/posts/:postId/comments", authenticateToken, async (r
   try {
     const { postId } = req.params;
     const { content } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const comment = await prisma.campgroundPostComment.create({
       data: { postId, userId, content },
       include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
@@ -177,7 +177,7 @@ router.post("/:campgroundId/posts/:postId/rsvp", authenticateToken, async (req: 
 router.delete("/:campgroundId/posts/:postId", authenticateToken, async (req: any, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const post = await prisma.campgroundPost.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ error: "Not found" });
     if (post.authorId !== userId) return res.status(403).json({ error: "Forbidden" });

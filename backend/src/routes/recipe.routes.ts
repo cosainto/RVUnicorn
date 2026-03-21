@@ -1532,7 +1532,7 @@ router.post('/:id/submit-photo', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { photoUrl, caption } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     if (!photoUrl) return res.status(400).json({ error: 'Photo URL required' });
 
@@ -1572,7 +1572,7 @@ router.post('/:id/moderate-photo/:submissionId', authenticateToken, async (req: 
   try {
     const { id, submissionId } = req.params;
     const { approved, note } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     // Update submission status
     await (prisma as any).$executeRaw`

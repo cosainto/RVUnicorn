@@ -198,7 +198,7 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
 router.get("/:videoId", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
 
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -796,7 +796,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
 router.get("/user/:userId", authenticateToken, async (req: any, res) => {
   try {
     const { userId: targetUserId } = req.params;
-    const viewerId = req.user?.id;
+    const viewerId = (req as any).userId;
     const { limit = 20, cursor } = req.query;
 
     const isOwner = targetUserId === viewerId;
@@ -869,7 +869,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
 router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
   try {
     const { userId: targetUserId } = req.params;
-    const viewerId = req.user?.id;
+    const viewerId = (req as any).userId;
 
     const pinnedVideo = await prisma.video.findFirst({
       where: { userId: targetUserId, isPinned: true },

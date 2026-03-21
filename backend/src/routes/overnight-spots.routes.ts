@@ -188,7 +188,7 @@ router.get('/:id', async (req: any, res) => {
 router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     const { rating, wouldReturn, tags, notes, visitDate } = req.body;
 
     if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating 1-5 required' });

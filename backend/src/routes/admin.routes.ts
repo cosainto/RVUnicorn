@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
 function requireWill(req: any, res: Response, next: any) {
-  if (!ADMIN_IDS.includes(req.user?.id)) {
+  if (!ADMIN_IDS.includes((req as any).userId)) {
     return res.status(403).json({ error: 'Not authorized' });
   }
   next();
