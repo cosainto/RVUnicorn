@@ -64,7 +64,7 @@ questionNum: 1-10 per day`;
 }
 
 // ── Monday: Create week + generate questions for all active rooms ─
-async function kickoffNewWeek() {
+export async function kickoffNewWeek() {
   console.log('[TriviaCron] Starting Monday kickoff...');
   const { weekStart, weekEnd } = getWeekBounds(new Date());
   const character = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
@@ -144,7 +144,7 @@ async function kickoffNewWeek() {
 }
 
 // ── Daily 5:25 PM: Warning message ───────────────────────────
-async function postTriviaWarning() {
+export async function postTriviaWarning() {
   const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
   for (const room of rooms) {
     const week = await prisma.triviaWeek.findFirst({
@@ -285,7 +285,7 @@ export async function askNextQuestion(io: any) {
 }
 
 // ── Daily 6:00 PM: Post daily leaderboard ────────────────────
-async function postDailyLeaderboard(io: any) {
+export async function postDailyLeaderboard(io: any) {
   const today = new Date();
   const dayOfWeek = today.getDay();
   const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
