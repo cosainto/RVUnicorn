@@ -47,6 +47,7 @@ import {
 import api from '../services/api';
 import { User as UserType } from '../services/auth.service';
 import TravelMap from '../components/TravelMap';
+import TripCalendarWidget from '../components/TripCalendarWidget';
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import PackingAssignments from '../components/PackingAssignments';
 import QuickCaptureModal from '../components/QuickCaptureModal';
@@ -2339,6 +2340,8 @@ export default function BasecampPage({ user }: BasecampProps) {
                 </div>
               </div>
               <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
+                <TripCalendarWidget compact={true} />
+
                 <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
               </div>
             </div>
