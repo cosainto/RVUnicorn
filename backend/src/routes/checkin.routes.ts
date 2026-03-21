@@ -36,8 +36,6 @@ router.post('/', authenticateToken, async (req: any, res) => {
       include: {
         user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
         campground: { select: { id: true, name: true, imageUrl: true } },
-        harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
-        overnightSpot: { select: { id: true, name: true, category: true } },
       }
     });
 
