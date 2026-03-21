@@ -515,6 +515,12 @@ export default function EventsPage() {
                       <Calendar className="w-16 h-16 text-green-300" />
                     </div>
                   )}
+                  {/* Multi-stop ribbon */}
+                  {event.location?.includes('→') && (
+                    <div className="absolute top-3 left-0 bg-gradient-to-r from-primary-600 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-r-full shadow-md flex items-center gap-1">
+                      🗺️ {event.location.split('→').length}-Stop Road Trip
+                    </div>
+                  )}
                 </div>
 
                 {/* Event Info */}
@@ -522,6 +528,14 @@ export default function EventsPage() {
                   <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
                     {event.title}
                   </h3>
+                  {event.location?.includes('→') && (
+                    <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 text-primary-700 text-xs font-semibold px-2.5 py-1 rounded-full mb-2">
+                      <span>🗺️</span>
+                      <span>Multi-Stop Trip</span>
+                      <span className="text-primary-400">·</span>
+                      <span className="text-primary-500">{event.location.split('→').length} stops</span>
+                    </div>
+                  )}
                   {(activeTab === "discover" || activeTab === "friends") && event.organizer && (
                     <Link 
                       to={`/profile/${event.organizer.username}`}
@@ -569,9 +583,18 @@ export default function EventsPage() {
 
                   <div className="space-y-2 text-sm text-gray-600">
                     {(event.campground || event.location) && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-primary-600" />
-                        {event.campground ? (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-primary-600 mt-0.5 shrink-0" />
+                        {event.location?.includes('→') ? (
+                          <div className="flex flex-col gap-0.5">
+                            {event.location.split('→').map((stop: string, i: number, arr: string[]) => (
+                              <span key={i} className="flex items-center gap-1">
+                                <span className="text-xs">{i === 0 ? '🏁' : i === arr.length - 1 ? '🏁' : '🏕️'}</span>
+                                <span className="truncate">{stop.trim()}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : event.campground ? (
                           <span>{event.campground.name}</span>
                         ) : (
                           <span>{event.location}</span>
