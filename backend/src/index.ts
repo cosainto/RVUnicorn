@@ -113,7 +113,7 @@ import { registerTriviaCrons } from './cron/trivia-cron';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
-// import triviaAdminRoutes from './routes/trivia-admin.routes';
+import triviaAdminRoutes from './routes/trivia-admin.routes';
 
 
 
@@ -251,7 +251,7 @@ app.use('/api/sponsor-campaigns', sponsorCampaignsRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/campground-badges', campgroundBadgesRoutes);
-// app.use('/api/trivia-admin', triviaAdminRoutes);
+app.use('/api/trivia-admin', triviaAdminRoutes);
 app.use("/api/ai-maintenance", aiMaintenanceRouter);
 app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
