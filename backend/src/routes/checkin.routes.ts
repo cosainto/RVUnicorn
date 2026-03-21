@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { logCheckIn } from '../services/activity.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -127,6 +128,45 @@ router.get('/active', authenticateToken, async (req: any, res) => {
             notes: `Auto-created from check-in at ${checkIn.campground.name}`,
           },
         }).catch(() => {});
+      }
+    }
+
+    // Log check-in activity to friend feed
+    if (checkIn.campground) {
+      try {
+        await logCheckIn(userId, checkIn.campground.id, checkIn.campground.name);
+
+        // Notify friends that user checked in
+        const friendships = await prisma.friendship.findMany({
+          where: {
+            status: 'ACCEPTED',
+            OR: [{ initiatorId: userId }, { receiverId: userId }],
+          },
+          select: { initiatorId: true, receiverId: true },
+        });
+
+        const friendIds = friendships.map((f: any) =>
+          f.initiatorId === userId ? f.receiverId : f.initiatorId
+        );
+
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        });
+
+        if (friendIds.length > 0 && user) {
+          await prisma.notification.createMany({
+            data: friendIds.map((friendId: string) => ({
+              userId: friendId,
+              type: 'FRIEND_CHECKIN',
+              content: `${user.firstName} ${user.lastName} checked in at ${checkIn.campground!.name} 🏕️`,
+              link: `/campgrounds/${checkIn.campground!.id}`,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      } catch (activityErr) {
+        console.error('Check-in activity log error (non-fatal):', activityErr);
       }
     }
 
