@@ -1764,6 +1764,7 @@ export default function CampgroundDetailPage() {
               <CampfireChat
                 campgroundId={campground.id}
                 campgroundName={campground.name}
+                isUserCheckedIn={true}
               />
               <ToneModeToggle campgroundId={campground.id} isHost={isAdmin} />
               <CampgroundTriviaLeaderboard campgroundId={campground.id} />
