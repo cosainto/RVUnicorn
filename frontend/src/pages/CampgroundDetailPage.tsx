@@ -1766,13 +1766,7 @@ export default function CampgroundDetailPage() {
                 campgroundName={campground.name}
                 isUserCheckedIn={true}
               />
-              <ToneModeToggle campgroundId={campground.id} isHost={isAdmin} />
               <CampgroundTriviaLeaderboard campgroundId={campground.id} />
-              <CampfireChannel
-                campgroundId={campground.id}
-                campgroundName={campground.name}
-                isAdmin={isAdmin}
-              />
             </div>
           )}
           {activeTab === 'vibe' && campground && (
