@@ -112,7 +112,7 @@ import { registerCampfireSockets } from './campfire/campfire.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 
 
-import campgroundBadgesRoutes from './routes/campground-badges.routes';
+// import campgroundBadgesRoutes from './routes/campground-badges.routes';
 
 
 
@@ -249,7 +249,7 @@ app.use('/api/campfire-phase4', campfirePhase4Routes);
 app.use('/api/sponsor-campaigns', sponsorCampaignsRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/campground-badges', campgroundBadgesRoutes);
+// app.use('/api/campground-badges', campgroundBadgesRoutes);
 app.use("/api/ai-maintenance", aiMaintenanceRouter);
 app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
