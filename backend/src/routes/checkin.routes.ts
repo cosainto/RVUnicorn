@@ -29,7 +29,8 @@ router.post('/', authenticateToken, async (req: any, res) => {
         harvestHostId: harvestHostId || null,
         overnightSpotId: overnightSpotId || null,
         checkInDate: new Date(),
-        siteNumber, notes,
+        siteNumber: siteNumber || null,
+        notes: notes || null,
         isActive: true,
       },
       include: {
