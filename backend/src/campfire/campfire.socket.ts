@@ -20,12 +20,12 @@ export function registerCampfireSockets(io: Server) {
       if (!room?.isActive) return;
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, username: true, profileImage: true, firstName: true, lastName: true },
+        select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true },
       });
       if (!user) return;
       const msg = await prisma.campfireMessage.create({
         data: { roomId: room.id, userId, content: data.content.trim() },
-        include: { user: { select: { id: true, username: true, profileImage: true, firstName: true, lastName: true } } },
+        include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },
       });
       campfire.to(campgroundId).emit('message:new', {
         id: msg.id, content: msg.content, createdAt: msg.createdAt,
@@ -94,7 +94,7 @@ export function registerCampfireSockets(io: Server) {
 async function getCheckedInUsers(campgroundId: string) {
   const checkIns = await prisma.checkIn.findMany({
     where: { campgroundId, isActive: true },
-    include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } },
+    include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
     take: 50,
   });
   return checkIns.map((c: any) => c.user);
