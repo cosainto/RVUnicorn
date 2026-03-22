@@ -121,8 +121,8 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         const data = await res.json();
         if (data.question) {
         // If question has expired, don't show it
-        const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
-        if (elapsed >= data.question.timeLimit) return;
+        const elapsedSec = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
+        if (elapsedSec >= data.question.timeLimit) return;
           setQuestion(data.question);
           setSelected(null);
           setResult(null);
