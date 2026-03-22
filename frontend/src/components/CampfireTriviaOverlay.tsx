@@ -77,7 +77,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setQuestion(null);
         setSelected(null);
         setResult(null);
-      }, 8000);
+      }, 4000);
     });
 
     socket.on('trivia:leaderboard', (data: any) => {
@@ -188,7 +188,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setSelected(null);
         setResult(null);
         setPostQuestionMsg(null);
-      }, 8000);
+      }, 4000);
     };
 
     fetchResults();
@@ -228,7 +228,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
           setQuestion(null);
           setSelected(null);
           setResult(null);
-        }, 8000);
+        }, 4000);
       }
     } catch (e) {
       console.error('Answer submit error:', e);
