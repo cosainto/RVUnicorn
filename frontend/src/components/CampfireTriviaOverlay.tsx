@@ -77,7 +77,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setQuestion(null);
         setSelected(null);
         setResult(null);
-      }, 5000);
+      }, 8000);
     });
 
     socket.on('trivia:leaderboard', (data: any) => {
@@ -149,7 +149,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setQuestion(null);
         setSelected(null);
         setResult(null);
-      }, 3000);
+      }, 8000);
     }
   }, [timeLeft, question, result]);
 
