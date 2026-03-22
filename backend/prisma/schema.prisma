@@ -287,6 +287,9 @@ model User {
   @@index([username])
   campfireMessages CampfireMessage[]
   triviaAnswers    TriviaAnswer[]
+  boardPosts      BoardPost[]
+  boardComments   BoardComment[]
+  boardVotes      BoardVote[]
   triviaLeaderboard TriviaLeaderboard[]
   triviaWins       TriviaWeek[]     @relation("TriviaWinner")
   triviaStreak         TriviaStreak?
@@ -4033,4 +4036,81 @@ model Invite {
   @@index([token])
   @@index([senderId])
   @@index([email])
+}
+
+// ── Community Boards ──────────────────────────────────────────
+
+model Board {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String
+  icon        String
+  color       String      @default("#f97316")
+  isActive    Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  postCount   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  posts       BoardPost[]
+}
+
+model BoardPost {
+  id          String         @id @default(cuid())
+  boardId     String
+  authorId    String
+  title       String
+  body        String
+  postType    String         @default("DISCUSSION") // DISCUSSION, QUESTION, PHOTO, TRIP_REPORT, RECIPE, UPGRADE, HUMOR
+  imageUrl    String?
+  tags        String[]
+  voteScore   Int            @default(0)
+  commentCount Int           @default(0)
+  isPinned    Boolean        @default(false)
+  isClosed    Boolean        @default(false)
+  bestAnswerId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  board       Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments    BoardComment[]
+  votes       BoardVote[]
+
+  @@index([boardId, createdAt])
+  @@index([voteScore])
+}
+
+model BoardComment {
+  id          String        @id @default(cuid())
+  postId      String
+  authorId    String
+  parentId    String?
+  body        String
+  voteScore   Int           @default(0)
+  isBestAnswer Boolean      @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  post        BoardPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent      BoardComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     BoardComment[] @relation("CommentReplies")
+  votes       BoardVote[]
+
+  @@index([postId])
+}
+
+model BoardVote {
+  id        String        @id @default(cuid())
+  userId    String
+  postId    String?
+  commentId String?
+  value     Int           // 1 or -1
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      BoardPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   BoardComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
 }
