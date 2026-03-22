@@ -953,9 +953,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const [showCampfireModal, setShowCampfireModal] = useState(false);
-  const [campfireUnread, setCampfireUnread] = useState(0);
-  const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
+
   // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
   useEffect(() => {
     const check = () => {
