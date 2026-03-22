@@ -255,7 +255,7 @@ router.get('/:campgroundId/room/status', authenticateToken, async (req: any, res
       prisma.campfireRoom.findUnique({ where: { campgroundId } }),
       prisma.checkIn.findMany({
         where: { campgroundId, isActive: true },
-        include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } },
+        include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
         take: 50,
       }),
     ]);
@@ -278,7 +278,7 @@ router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, r
     if (!room) return res.json({ messages: [] });
     const messages = await prisma.campfireMessage.findMany({
       where: { roomId: room.id },
-      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profileImage: true } } },
+      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
       orderBy: { createdAt: 'asc' },
       take: 50,
     });
