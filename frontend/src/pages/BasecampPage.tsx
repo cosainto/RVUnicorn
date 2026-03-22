@@ -953,6 +953,32 @@ export default function BasecampPage({ user }: BasecampProps) {
     return () => clearInterval(interval);
   }, []);
 
+  const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [campfireUnread, setCampfireUnread] = useState(0);
+  const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
+  // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const hours = central.getHours();
+      const minutes = central.getMinutes();
+      const totalMins = hours * 60 + minutes;
+      const triviaTime = 17 * 60 + 30; // 5:30 PM
+      const diff = triviaTime - totalMins;
+      if (diff > 0 && diff <= 30) {
+        setTriviaCountdown(`🎯 Trivia in ${diff}min`);
+      } else if (diff <= 0 && diff > -60) {
+        setTriviaCountdown('🔥 Trivia LIVE');
+      } else {
+        setTriviaCountdown(null);
+      }
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [newCampfirePosts, setNewCampfirePosts] = useState(0);
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
@@ -3032,6 +3058,33 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           </div>
         </div>
       </div>
+      {/* Campfire Chat Modal */}
+      {showCampfireModal && activeCheckIn?.campground && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCampfireModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <div>
+                  <div className="text-white font-bold text-sm">Campfire Chat</div>
+                  <div className="text-orange-100 text-xs">{activeCheckIn.campground.name}</div>
+                </div>
+              </div>
+              <button onClick={() => setShowCampfireModal(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            {/* Chat component */}
+            <div className="flex-1 overflow-hidden">
+              <CampfireChat
+                campgroundId={activeCheckIn.campground.id}
+                campgroundName={activeCheckIn.campground.name}
+                isUserCheckedIn={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Campfire Chat Modal */}
       {showCampfireModal && activeCheckIn?.campground && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCampfireModal(false)}>
