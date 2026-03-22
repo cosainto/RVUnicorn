@@ -396,4 +396,33 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
   }
 });
 
+
+// GET /api/campfire/:campgroundId/question-results/:questionId
+// Returns who got it right/wrong for post-question trash talk
+router.get('/:campgroundId/question-results/:questionId', async (req: Request, res: Response) => {
+  try {
+    const { questionId } = req.params;
+
+    const answers = await (prisma as any).triviaAnswer.findMany({
+      where: { questionId },
+      include: {
+        user: { select: { id: true, firstName: true, username: true } },
+      },
+      orderBy: { responseTime: 'asc' },
+    });
+
+    const correct = answers.filter((a: any) => a.isCorrect);
+    const wrong = answers.filter((a: any) => !a.isCorrect);
+    const question = await (prisma as any).triviaQuestion.findUnique({
+      where: { id: questionId },
+      select: { answer: true, optionA: true, optionB: true, optionC: true, optionD: true },
+    });
+
+    res.json({ correct, wrong, correctAnswer: question?.answer, total: answers.length });
+  } catch (error) {
+    console.error('Question results error:', error);
+    res.status(500).json({ error: 'Failed to get results' });
+  }
+});
+
 export default router;

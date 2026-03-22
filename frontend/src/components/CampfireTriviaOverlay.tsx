@@ -142,19 +142,60 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
   }, [campgroundId, question]);
 
   // Countdown timer
-  // Auto-clear question when timer hits 0
+  const [postQuestionMsg, setPostQuestionMsg] = useState<string | null>(null);
+
+  // When timer hits 0, fetch results and show trash talk
   useEffect(() => {
-    if (timeLeft === 0 && question && !result) {
+    if (timeLeft !== 0 || !question) return;
+
+    const fetchResults = async () => {
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+        const API = (import.meta as any).env?.VITE_API_URL || '';
+        const res = await fetch(`${API}/api/campfire/${campgroundId}/question-results/${question.questionId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+
+        const correctNames = data.correct.map((a: any) => a.user.firstName).slice(0, 3);
+        const wrongNames = data.wrong.map((a: any) => a.user.firstName).slice(0, 2);
+
+        let msg = '';
+        if (data.total === 0) {
+          msg = '🌵 Crickets... nobody answered that one!';
+        } else if (data.correct.length === 0) {
+          const wrongList = wrongNames.join(', ');
+          msg = `😂 Nobody got that one right! ${wrongList ? wrongList + ' tried though...' : ''} The answer was ${data.correctAnswer}.`;
+        } else if (data.wrong.length === 0) {
+          msg = `🔥 Everyone got it right! You're all geniuses around this campfire 🏕️`;
+        } else {
+          const correctList = correctNames.join(', ');
+          const wrongList = wrongNames.length > 0 ? ` Meanwhile ${wrongNames.join(' & ')} are still thinking... 😅` : '';
+          const trashTalks = [
+            `✅ ${correctList} nailed it!${wrongList}`,
+            `🎯 Nice work ${correctList}!${wrongList}`,
+            `🔥 ${correctList} with the right answer!${wrongList}`,
+          ];
+          msg = trashTalks[Math.floor(Math.random() * trashTalks.length)];
+        }
+        setPostQuestionMsg(msg);
+      } catch (e) {
+        console.error('Results fetch error:', e);
+      }
+
       setTimeout(() => {
         setQuestion(null);
         setSelected(null);
         setResult(null);
+        setPostQuestionMsg(null);
       }, 8000);
-    }
-  }, [timeLeft, question, result]);
+    };
+
+    fetchResults();
+  }, [timeLeft, question, campgroundId]);
 
   useEffect(() => {
-    if (!question || selected || timeLeft <= 0) return;
+    if (!question || timeLeft <= 0) return;
     const t = setInterval(() => setTimeLeft(s => {
       if (s <= 1) { clearInterval(t); return 0; }
       return s - 1;
@@ -330,8 +371,15 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         </div>
       )}
 
-      {/* Timed out */}
-      {timeLeft === 0 && !selected && (
+      {/* Post-question trash talk */}
+      {postQuestionMsg && (
+        <div className="mx-4 mb-4 px-4 py-3 rounded-xl text-center text-sm font-medium bg-orange-50 border border-orange-200 text-orange-800">
+          {postQuestionMsg}
+        </div>
+      )}
+
+      {/* Timed out with no answer */}
+      {timeLeft === 0 && !selected && !postQuestionMsg && (
         <div className="mx-4 mb-4 px-4 py-3 rounded-xl text-center text-sm text-gray-500 bg-gray-50 border border-gray-200">
           ⏰ Time's up!
         </div>
