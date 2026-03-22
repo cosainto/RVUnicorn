@@ -329,7 +329,6 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
           C: question.optionC,
           D: question.optionD,
         },
-        answer: question.answer,
         category: question.category,
         timeLimit: 30,
         askedAt: question.askedAt,

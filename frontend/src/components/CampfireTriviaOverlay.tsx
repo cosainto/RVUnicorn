@@ -172,8 +172,9 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     });
   }, [question, selected, socket]);
 
-  const timerPct = (timeLeft / 120) * 100;
-  const timerColor = timeLeft > 60 ? 'bg-green-500' : timeLeft > 30 ? 'bg-amber-500' : 'bg-red-500';
+  const timeLimit = question?.timeLimit || 30;
+  const timerPct = (timeLeft / timeLimit) * 100;
+  const timerColor = timerPct > 60 ? 'bg-green-500' : timerPct > 30 ? 'bg-amber-500' : 'bg-red-500';
 
   // ── Winner announcement ──────────────────────────────────────
   if (winner) {
@@ -250,7 +251,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
             <span className="text-purple-200 text-xs bg-purple-700/50 px-2 py-0.5 rounded-full">{question.category}</span>
           </div>
           <div className={`text-white font-mono font-bold text-sm px-2 py-0.5 rounded-lg ${timeLeft <= 30 ? 'bg-red-500 animate-pulse' : 'bg-purple-700/50'}`}>
-            {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2,'0')}
+            {timeLeft}s
           </div>
         </div>
         {/* Timer bar */}
