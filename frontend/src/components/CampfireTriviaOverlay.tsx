@@ -162,15 +162,37 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     return () => clearInterval(t);
   }, [question, selected, timeLeft]);
 
-  const submitAnswer = useCallback((answer: string) => {
-    if (!question || selected || !socket) return;
+  const submitAnswer = useCallback(async (answer: string) => {
+    if (!question || selected) return;
     setSelected(answer);
-    socket.emit('trivia:answer', {
-      questionId: question.questionId,
-      answer,
-      answeredAt: new Date().toISOString(),
-    });
-  }, [question, selected, socket]);
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      const API = (import.meta as any).env?.VITE_API_URL || '';
+      const res = await fetch(`${API}/api/campfire/${campgroundId}/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          questionId: question.questionId,
+          answer,
+          answeredAt: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (data.isCorrect !== undefined) {
+        setResult(data);
+        setTimeout(() => {
+          setQuestion(null);
+          setSelected(null);
+          setResult(null);
+        }, 8000);
+      }
+    } catch (e) {
+      console.error('Answer submit error:', e);
+    }
+  }, [question, selected, campgroundId]);
 
   const timeLimit = question?.timeLimit || 30;
   const timerPct = (timeLeft / timeLimit) * 100;
@@ -275,8 +297,13 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
           let btnClass = `w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition flex items-center gap-3 `;
 
           if (!selected) {
-            btnClass += `border-gray-200 bg-gray-50 hover:${OPTION_COLORS[key as keyof typeof OPTION_COLORS]} hover:text-white cursor-pointer`;
-          } else if (isCorrect && result) {
+            btnClass += `border-gray-200 bg-gray-50 hover:bg-orange-400 hover:text-white cursor-pointer`;
+          } else if (!result) {
+            // Answer selected but no result yet — just highlight selected, no green/red
+            btnClass += isSelected
+              ? `bg-orange-400 border-orange-500 text-white`
+              : `border-gray-100 bg-gray-50 text-gray-400 cursor-default`;
+          } else if (isCorrect) {
             btnClass += `bg-green-500 border-green-600 text-white`;
           } else if (isWrong) {
             btnClass += `bg-red-500 border-red-600 text-white`;

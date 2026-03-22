@@ -341,4 +341,59 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
 });
 
 
+
+// POST /api/campfire/:campgroundId/answer
+router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const userId = (req as any).userId;
+    const { questionId, answer, answeredAt } = req.body;
+
+    const question = await (prisma as any).triviaQuestion.findUnique({
+      where: { id: questionId },
+      include: { week: true },
+    });
+
+    if (!question) return res.status(404).json({ error: 'Question not found' });
+    if (!question.askedAt) return res.status(400).json({ error: 'Question not active' });
+
+    // Check if already answered
+    const existing = await (prisma as any).triviaAnswer.findFirst({
+      where: { userId, questionId },
+    });
+    if (existing) return res.json({ isCorrect: existing.isCorrect, points: existing.pointsAwarded, correctAnswer: question.answer, alreadyAnswered: true });
+
+    const isCorrect = answer === question.answer;
+    const responseTime = Math.floor((new Date(answeredAt).getTime() - new Date(question.askedAt).getTime()) / 1000);
+    const speedBonus = isCorrect ? Math.max(0, 10 - Math.floor(responseTime / 3)) : 0;
+    const basePoints = isCorrect ? 50 : 0;
+    const isDoublePoints = question.questionNum >= 9;
+    const points = isDoublePoints ? (basePoints + speedBonus) * 2 : basePoints + speedBonus;
+
+    // Save answer
+    await (prisma as any).triviaAnswer.create({
+      data: { userId, questionId, answer, isCorrect, responseTime, pointsAwarded: points },
+    });
+
+    // Update leaderboard
+    const week = question.week;
+    if (week) {
+      await (prisma as any).triviaLeaderboard.upsert({
+        where: { weekId_userId: { weekId: week.id, userId } },
+        create: { weekId: week.id, userId, totalPoints: points, correctAnswers: isCorrect ? 1 : 0, totalAnswers: 1 },
+        update: {
+          totalPoints: { increment: points },
+          correctAnswers: { increment: isCorrect ? 1 : 0 },
+          totalAnswers: { increment: 1 },
+        },
+      });
+    }
+
+    res.json({ isCorrect, points, correctAnswer: question.answer, speedBonus });
+  } catch (error) {
+    console.error('Answer error:', error);
+    res.status(500).json({ error: 'Failed to submit answer' });
+  }
+});
+
 export default router;

@@ -219,13 +219,18 @@ export async function askNextQuestion(io: any) {
       data: { askedAt: now },
     });
 
-    // Save question message to DB
+    // Post trash talk instead of repeating question text
+    const trashTalk = [
+      `🔥 Question ${questionNum} is LIVE — think fast, campers!`,
+      `⏰ Q${questionNum} dropping now — no Googling, we're watching 👀`,
+      `🎯 Q${questionNum} is up! First one to nail it gets bragging rights around the campfire 🔥`,
+      `🤔 Q${questionNum} — this one separates the campers from the glampers!`,
+      `💥 Q${questionNum} incoming! Don't overthink it... or do. Totally up to you. 😏`,
+      `🦄 Q${questionNum} is live! Hitch believes in you. Wallet does not. Prove him wrong.`,
+    ];
+    const msg = trashTalk[Math.floor(Math.random() * trashTalk.length)];
     await prisma.campfireMessage.create({
-      data: {
-        roomId: room.id,
-        isHitch: true,
-        content: `🎯 Question ${questionNum}/10 · ${question.category}\n\n${question.question}\n\nA) ${question.optionA}\nB) ${question.optionB}\nC) ${question.optionC}\nD) ${question.optionD}`,
-      },
+      data: { roomId: room.id, isHitch: true, content: msg },
     });
 
     // Check for redemption candidates (missed 3+ in a row today)
