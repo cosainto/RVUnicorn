@@ -71,7 +71,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     });
 
     socket.on('trivia:answer:result', (r: any) => {
-      setResult(r);
+      setPendingResult(r); // Hold until timer ends
       // Auto-clear after 5 seconds so next question can appear
       setTimeout(() => {
         setQuestion(null);
