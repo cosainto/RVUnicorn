@@ -928,6 +928,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
   const [campfireUnread, setCampfireUnread] = useState(0);
   const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
   // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
@@ -984,7 +985,16 @@ export default function BasecampPage({ user }: BasecampProps) {
   useEffect(() => {
     if (user) {
       api.get('/checkins/active')
-        .then(r => setActiveCheckIn(r.data?.checkIn || null))
+        .then(r => {
+          const checkIn = r.data?.checkIn || null;
+          setActiveCheckIn(checkIn);
+          if (checkIn?.campground?.id) {
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+            fetch(`${import.meta.env.VITE_API_URL || ''}/api/campfire/${checkIn.campground.id}/daily-vibe`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            }).then(r => r.json()).then(d => { if (d.message) setCampfireVibeMsg(d.message); }).catch(() => {});
+          }
+        })
         .catch(() => {});
     }
   }, [user?.id]);

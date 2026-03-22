@@ -451,4 +451,59 @@ router.post('/:campgroundId/chat-message', authenticateToken, async (req: Reques
   }
 });
 
+
+// GET /api/campfire/:campgroundId/daily-vibe
+// AI-generated daily message about what's happening at camp today
+// Cached per campground per day in memory
+const vibeCache: Record<string, { message: string; date: string }> = {};
+
+router.get('/:campgroundId/daily-vibe', async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+
+    // Check cache — only generate once per campground per day
+    const today = new Date().toISOString().split('T')[0];
+    if (vibeCache[campgroundId]?.date === today) {
+      return res.json({ message: vibeCache[campgroundId].message });
+    }
+
+    const campground = await (prisma as any).campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true, city: true, state: true },
+    });
+    if (!campground) return res.json({ message: null });
+
+    const now = new Date();
+    const hour = now.getHours();
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayOfWeek = dayNames[now.getDay()];
+    const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
+    const month = now.getMonth();
+    const season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'fall' : 'winter';
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default();
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [{
+        role: 'user',
+        content: `You are a friendly campfire host at ${campground.name} in ${campground.city}, ${campground.state}. 
+Write a single short, warm, fun message (1-2 sentences max, under 120 characters) about what's happening at camp today.
+It's ${dayOfWeek} ${timeOfDay} in ${season}. Trivia night is at 5:30 PM.
+Be specific to the location and time of day. Sound like a real person, not a bot. No hashtags or emojis at the start.`,
+      }],
+    });
+
+    const message = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+    if (message) vibeCache[campgroundId] = { message, date: today };
+
+    res.json({ message });
+  } catch (error) {
+    console.error('Daily vibe error:', error);
+    res.json({ message: null }); // fail silently
+  }
+});
+
 export default router;
