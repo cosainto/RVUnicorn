@@ -106,9 +106,7 @@ router.get('/active', authenticateToken, async (req: any, res) => {
     const checkIn = await prisma.checkIn.findFirst({
       where: { userId, isActive: true },
       include: {
-        campground: { select: { id: true, name: true, imageUrl: true, latitude: true, longitude: true } },
-        harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
-        overnightSpot: { select: { id: true, name: true, category: true } },
+        campground: { select: { id: true, name: true, imageUrl: true, latitude: true, longitude: true, state: true, location: true } },
       }
     });
     // Auto-create StateVisit if campground has a state
