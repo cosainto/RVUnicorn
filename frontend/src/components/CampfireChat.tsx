@@ -146,7 +146,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
       )}
 
       {/* Trivia overlay — appears when a question is active */}
-      <CampfireTriviaOverlay socket={socketRef.current} userId={user?.id || ''} />
+      <CampfireTriviaOverlay socket={socketRef.current} userId={user?.id || ''} campgroundId={campgroundId} />
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-8">The fire's just getting started… 🔥</div>}

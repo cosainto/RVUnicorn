@@ -288,4 +288,58 @@ router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, r
   }
 });
 
+
+// GET /api/campfire/:campgroundId/active-question
+// Returns the most recently asked question if still within time limit
+router.get('/:campgroundId/active-question', async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+
+    const room = await (prisma as any).campfireRoom.findFirst({
+      where: { campgroundId, isActive: true },
+    });
+    if (!room) return res.json({ question: null });
+
+    const week = await (prisma as any).triviaWeek.findFirst({
+      where: { campgroundId, isActive: true },
+    });
+    if (!week) return res.json({ question: null });
+
+    // Find most recently asked question that is still within time window (30s)
+    const cutoff = new Date(Date.now() - 30000);
+    const question = await (prisma as any).triviaQuestion.findFirst({
+      where: {
+        weekId: week.id,
+        askedAt: { gte: cutoff },
+      },
+      orderBy: { askedAt: 'desc' },
+    });
+
+    if (!question) return res.json({ question: null });
+
+    res.json({
+      question: {
+        questionId: question.id,
+        questionNum: question.questionNum,
+        total: 10,
+        question: question.question,
+        options: {
+          A: question.optionA,
+          B: question.optionB,
+          C: question.optionC,
+          D: question.optionD,
+        },
+        answer: question.answer,
+        category: question.category,
+        timeLimit: 30,
+        askedAt: question.askedAt,
+      }
+    });
+  } catch (error) {
+    console.error('Active question error:', error);
+    res.status(500).json({ error: 'Failed to get active question' });
+  }
+});
+
+
 export default router;

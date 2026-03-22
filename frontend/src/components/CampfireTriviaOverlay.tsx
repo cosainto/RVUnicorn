@@ -28,6 +28,7 @@ interface Winner {
 interface Props {
   socket: any;
   userId: string;
+  campgroundId: string;
 }
 
 const OPTION_COLORS = {
@@ -43,7 +44,7 @@ const RESULT_COLORS = {
   neutral: '',
 };
 
-export default function CampfireTriviaOverlay({ socket, userId }: Props) {
+export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: Props) {
   const [question, setQuestion] = useState<TriviaQuestion | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<{ isCorrect: boolean; points: number; correctAnswer: string } | null>(null);
@@ -97,6 +98,37 @@ export default function CampfireTriviaOverlay({ socket, userId }: Props) {
       socket.off('trivia:winner');
     };
   }, [socket]);
+
+  // Poll for active question every 5 seconds as WebSocket fallback
+  useEffect(() => {
+    if (!campgroundId) return;
+    const poll = async () => {
+      // Only poll if no question is currently showing
+      if (question) return;
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const API = (import.meta as any).env?.VITE_API_URL || '';
+        const res = await fetch(`${API}/api/campfire/${campgroundId}/active-question`, { headers });
+        const data = await res.json();
+        if (data.question) {
+          setQuestion(data.question);
+          setSelected(null);
+          setResult(null);
+          setLeaderboard(null);
+          setShowLeaderboard(false);
+          setWinner(null);
+          const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
+          setTimeLeft(Math.max(0, data.question.timeLimit - elapsed));
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    poll(); // immediate check
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [campgroundId, question]);
 
   // Countdown timer
   useEffect(() => {
