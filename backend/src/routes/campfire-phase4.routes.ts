@@ -35,7 +35,7 @@ router.get('/leaderboard/global', async (req, res) => {
     const campgroundScores = await prisma.campgroundTriviaScore.findMany({
       where: { weekId: week.id },
       include: {
-        campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, bannerImage: true } },
+        campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true } },
       },
       orderBy: { totalPoints: 'desc' },
       take: 20,
