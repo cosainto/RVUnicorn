@@ -46,11 +46,44 @@ export default function CampgroundTriviaLeaderboard({ campgroundId }: Props) {
         </div>
       </div>
 
+      {/* Top campers at this campground */}
+      {myRank && myRank.topPlayers && myRank.topPlayers.length > 0 && (
+        <div className="border-b border-gray-100">
+          <div className="px-4 py-2 bg-orange-50 flex items-center justify-between">
+            <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">🔥 Top Campers This Week</span>
+            {myRank.rank && (
+              <span className="text-xs text-orange-500">Campground rank #{myRank.rank}</span>
+            )}
+          </div>
+          <div className="divide-y divide-gray-50">
+            {myRank.topPlayers.map((player: any, i: number) => (
+              <div key={player.userId} className={`flex items-center gap-3 px-4 py-2.5 ${i === 0 ? 'bg-amber-50' : ''}`}>
+                <div className="w-6 text-center">
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="text-xs font-bold text-gray-400">#{i+1}</span>}
+                </div>
+                {player.user?.profilePicture
+                  ? <img src={player.user.profilePicture} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
+                  : <div className="w-7 h-7 rounded-full bg-orange-200 flex items-center justify-center text-xs font-bold text-orange-700 flex-shrink-0">{player.user?.firstName?.[0] || '?'}</div>
+                }
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-800">{player.user?.firstName} {player.user?.lastName}</div>
+                  <div className="text-xs text-gray-400">@{player.user?.username}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-sm font-bold text-orange-600">{player.totalPoints}</div>
+                  <div className="text-xs text-gray-400">{player.correctAnswers} correct</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* My campground rank banner */}
       {myRank && myRank.rank && (
         <div className="bg-amber-50 border-b border-amber-100 px-4 py-2.5 flex items-center justify-between">
           <div className="text-sm font-semibold text-amber-800">
-            Your campground is ranked #{myRank.rank} of {myRank.totalCampgrounds}
+            Campground ranked #{myRank.rank} of {myRank.totalCampgrounds}
           </div>
           <div className="text-xs text-amber-600">{myRank.totalPoints} pts · {myRank.playerCount} players</div>
         </div>

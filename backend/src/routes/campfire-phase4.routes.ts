@@ -86,7 +86,8 @@ router.get('/leaderboard/:campgroundId', async (req, res) => {
       include: {
         leaderboard: {
           orderBy: { totalPoints: 'desc' },
-          include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
+          take: 10,
+          include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
         },
       },
     });
