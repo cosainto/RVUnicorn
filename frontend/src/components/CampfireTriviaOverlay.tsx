@@ -117,14 +117,17 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         // If question has expired, don't show it
         const elapsedSec = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
         if (elapsedSec >= data.question.timeLimit + 10) return; // extra buffer
-          setQuestion(data.question);
-          setSelected(null);
-          setResult(null);
-          setLeaderboard(null);
-          setShowLeaderboard(false);
-          setWinner(null);
-          const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
-          setTimeLeft(Math.max(0, data.question.timeLimit - elapsed));
+          setQuestion(prev => {
+            if (prev?.questionId === data.question.questionId) return prev; // same question, dont reset
+            setSelected(null);
+            setResult(null);
+            setLeaderboard(null);
+            setShowLeaderboard(false);
+            setWinner(null);
+            const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
+            setTimeLeft(Math.max(0, data.question.timeLimit - elapsed));
+            return data.question;
+          });
         }
       } catch (e) {
         // silent
@@ -133,7 +136,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     poll(); // immediate check
     const interval = setInterval(poll, 5000);
     return () => clearInterval(interval);
-  }, [campgroundId, question]);
+  }, [campgroundId]);
 
   // Countdown timer
   const [postQuestionMsg, setPostQuestionMsg] = useState<string | null>(null);
