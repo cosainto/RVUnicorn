@@ -64,6 +64,7 @@ import CreatorFeed from '../components/CreatorFeed';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
+import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
@@ -3037,9 +3038,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
         </div>
       </div>
       {/* Campfire Chat Modal */}
-
-
-      {/* Campfire Chat Modal */}
       {showCampfireModal && activeCheckIn?.campground && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCampfireModal(false)}>
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
@@ -3054,7 +3052,15 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               </div>
               <button onClick={() => setShowCampfireModal(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
             </div>
-            {/* Chat component */}
+            {/* Trivia card */}
+            <div className="px-4 pt-3 flex-shrink-0">
+              <CampfireTriviaOverlay
+                socket={null}
+                userId={''}
+                campgroundId={activeCheckIn.campground.id}
+              />
+            </div>
+            {/* Chat */}
             <div className="flex-1 overflow-hidden">
               <CampfireChat
                 campgroundId={activeCheckIn.campground.id}
