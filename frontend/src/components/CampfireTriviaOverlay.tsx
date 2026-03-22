@@ -122,7 +122,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         if (data.question) {
         // If question has expired, don't show it
         const elapsedSec = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
-        if (elapsedSec >= data.question.timeLimit) return;
+        if (elapsedSec >= data.question.timeLimit + 10) return; // extra buffer
           setQuestion(data.question);
           setSelected(null);
           setResult(null);
@@ -143,10 +143,13 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
 
   // Countdown timer
   const [postQuestionMsg, setPostQuestionMsg] = useState<string | null>(null);
+  const [pendingResult, setPendingResult] = useState<{ isCorrect: boolean; points: number; correctAnswer: string } | null>(null);
 
   // When timer hits 0, fetch results and show trash talk
   useEffect(() => {
     if (timeLeft !== 0 || !question) return;
+    // Reveal pending result now
+    if (pendingResult) setResult(pendingResult);
 
     const fetchResults = async () => {
       try {
@@ -202,12 +205,13 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setQuestion(null);
         setSelected(null);
         setResult(null);
+        setPendingResult(null);
         setPostQuestionMsg(null);
       }, 5000);
     };
 
     fetchResults();
-  }, [timeLeft, question, campgroundId]);
+  }, [timeLeft, question, campgroundId, pendingResult]);
 
   useEffect(() => {
     if (!question || timeLeft <= 0) return;
@@ -238,8 +242,8 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       });
       const data = await res.json();
       if (data.isCorrect !== undefined) {
-        setResult(data);
-        // Don't clear here - wait for timer to hit 0
+        setPendingResult(data);
+        // Result held until timer hits 0
       }
     } catch (e) {
       console.error('Answer submit error:', e);
