@@ -18,7 +18,12 @@ router.post('/kickoff', authenticateToken, async (req: any, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
   // Run in background — Anthropic call takes too long for HTTP timeout
   res.json({ success: true, message: 'Trivia kickoff started in background — check status in 60 seconds' });
-  kickoffNewWeek().catch(e => console.error('Trivia kickoff error:', e));
+  kickoffNewWeek().then(() => {
+    console.log('[TriviaAdmin] Kickoff completed successfully');
+  }).catch(e => {
+    console.error('[TriviaAdmin] Kickoff FAILED:', e?.message || e);
+    console.error('[TriviaAdmin] Stack:', e?.stack);
+  });
 });
 
 router.post('/ask', authenticateToken, async (req: any, res) => {
