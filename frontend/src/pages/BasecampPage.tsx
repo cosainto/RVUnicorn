@@ -927,6 +927,32 @@ export default function BasecampPage({ user }: BasecampProps) {
   };
   
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+  const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [campfireUnread, setCampfireUnread] = useState(0);
+  const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
+  // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const hours = central.getHours();
+      const minutes = central.getMinutes();
+      const totalMins = hours * 60 + minutes;
+      const triviaTime = 17 * 60 + 30; // 5:30 PM
+      const diff = triviaTime - totalMins;
+      if (diff > 0 && diff <= 30) {
+        setTriviaCountdown(`🎯 Trivia in ${diff}min`);
+      } else if (diff <= 0 && diff > -60) {
+        setTriviaCountdown('🔥 Trivia LIVE');
+      } else {
+        setTriviaCountdown(null);
+      }
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [newCampfirePosts, setNewCampfirePosts] = useState(0);
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
@@ -2966,6 +2992,38 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             {/* Basecamp Activity */}
             <PackUpTasksWidget />
             <WishlistWidget />
+
+            {/* Campfire Chat Button — shows when checked in */}
+            {activeCheckIn?.campground && (
+              <button
+                onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl shadow-md hover:shadow-lg transition-all group"
+              >
+                <div className="relative">
+                  <span className="text-3xl">🔥</span>
+                  {campfireUnread > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {campfireUnread > 9 ? '9+' : campfireUnread}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-white font-bold text-sm">
+                    Campfire Chat — {activeCheckIn.campground.name}
+                  </div>
+                  <div className="text-orange-100 text-xs">
+                    {triviaCountdown || 'Tap to chat with fellow campers 🏕️'}
+                  </div>
+                </div>
+                {triviaCountdown && (
+                  <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                    {triviaCountdown}
+                  </span>
+                )}
+                <span className="text-white/60 group-hover:text-white transition">→</span>
+              </button>
+            )}
+
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
 
@@ -2974,6 +3032,33 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           </div>
         </div>
       </div>
+      {/* Campfire Chat Modal */}
+      {showCampfireModal && activeCheckIn?.campground && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCampfireModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <div>
+                  <div className="text-white font-bold text-sm">Campfire Chat</div>
+                  <div className="text-orange-100 text-xs">{activeCheckIn.campground.name}</div>
+                </div>
+              </div>
+              <button onClick={() => setShowCampfireModal(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            {/* Chat component */}
+            <div className="flex-1 overflow-hidden">
+              <CampfireChat
+                campgroundId={activeCheckIn.campground.id}
+                campgroundName={activeCheckIn.campground.name}
+                isUserCheckedIn={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Packing Modal */}
       <InventoryPackingModal
         isOpen={showPackingModal}
