@@ -1808,30 +1808,31 @@ export default function BasecampPage({ user }: BasecampProps) {
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
             {activeCheckIn?.campground && (
-              <div className="bg-white rounded-xl border border-orange-200 overflow-hidden mb-4">
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <span className="text-white font-bold text-sm">You're at the campfire 🔥</span>
-                  {newCampfirePosts > 0 && (
-                    <span className="bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
-                      {newCampfirePosts} new
+              <button
+                onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
+                className="w-full flex items-center gap-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl px-4 py-3 mb-4 hover:shadow-lg transition-all group text-left"
+              >
+                <div className="relative flex-shrink-0">
+                  <span className="text-4xl">🔥</span>
+                  {(campfireUnread > 0 || newCampfirePosts > 0) && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {campfireUnread + newCampfirePosts > 9 ? '9+' : campfireUnread + newCampfirePosts}
                     </span>
                   )}
-                  <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="text-white/80 text-xs hover:text-white ml-auto underline">{activeCheckIn.campground.name} →</a>
                 </div>
-                <div className="p-4 space-y-4">
-                  <CampfireChat
-                    campgroundId={activeCheckIn.campground.id}
-                    campgroundName={activeCheckIn.campground.name}
-                  />
-                  <CampfireChannel
-                    onView={() => setNewCampfirePosts(0)}
-                    campgroundId={activeCheckIn.campground.id}
-                    campgroundName={activeCheckIn.campground.name}
-                    isCheckedIn={true}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-sm">You're at the Campfire! 🏕️</div>
+                  <div className="text-orange-100 text-xs truncate">
+                    {triviaCountdown || `${activeCheckIn.campground.name} — tap to chat`}
+                  </div>
                 </div>
-              </div>
+                {triviaCountdown && (
+                  <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse flex-shrink-0">
+                    {triviaCountdown}
+                  </span>
+                )}
+                <span className="text-white/70 group-hover:text-white transition flex-shrink-0">→</span>
+              </button>
             )}
             <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
           </div>
@@ -3016,37 +3017,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             {/* Basecamp Activity */}
             <PackUpTasksWidget />
             <WishlistWidget />
-
-            {/* Campfire Chat Button — shows when checked in */}
-            {activeCheckIn?.campground && (
-              <button
-                onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl shadow-md hover:shadow-lg transition-all group"
-              >
-                <div className="relative">
-                  <span className="text-3xl">🔥</span>
-                  {campfireUnread > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                      {campfireUnread > 9 ? '9+' : campfireUnread}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="text-white font-bold text-sm">
-                    Campfire Chat — {activeCheckIn.campground.name}
-                  </div>
-                  <div className="text-orange-100 text-xs">
-                    {triviaCountdown || 'Tap to chat with fellow campers 🏕️'}
-                  </div>
-                </div>
-                {triviaCountdown && (
-                  <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                    {triviaCountdown}
-                  </span>
-                )}
-                <span className="text-white/60 group-hover:text-white transition">→</span>
-              </button>
-            )}
 
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
