@@ -8,6 +8,7 @@ interface TriviaQuestion {
   options: { A: string; B: string; C: string; D: string };
   category: string;
   timeLimit: number;
+  hostCharacter?: string;
   askedAt: string;
 }
 
@@ -30,6 +31,17 @@ interface Props {
   userId: string;
   campgroundId: string;
 }
+
+
+const CHARACTER_IMAGES: Record<string, string> = {
+  hitch: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png',
+  wallet: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218458/rvunicorn/guides/wallet_guide.png',
+  walter: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538549/rvunicorn/guides/walter_guide.png',
+  rose: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538550/rvunicorn/guides/rose_guide.png',
+  scout: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538551/rvunicorn/guides/scout_guide.png',
+  diesel: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538552/rvunicorn/guides/diesel_guide.png',
+  luna: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538554/rvunicorn/guides/luna_guide.png',
+};
 
 export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: Props) {
   const [question, setQuestion] = useState<TriviaQuestion | null>(null);
@@ -276,7 +288,11 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-white text-sm">🎯</span>
+            {CHARACTER_IMAGES[question.hostCharacter || 'hitch'] ? (
+              <img src={CHARACTER_IMAGES[question.hostCharacter || 'hitch']} className="w-7 h-7 rounded-full object-cover border-2 border-white/30" alt="" />
+            ) : (
+              <span className="text-white text-sm">🎯</span>
+            )}
             <span className="text-white text-sm font-semibold">Question {question.questionNum}/{question.total}</span>
             <span className="text-purple-200 text-xs bg-purple-700/50 px-2 py-0.5 rounded-full">{question.category}</span>
           </div>
