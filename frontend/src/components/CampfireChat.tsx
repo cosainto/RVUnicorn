@@ -116,6 +116,10 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   }
 
   return (
+    <div className="space-y-2">
+      {/* Trivia overlay — appears above chat when a question is active */}
+      <CampfireTriviaOverlay socket={socketRef.current} userId={user?.id || ''} campgroundId={campgroundId} />
+
     <div className="rounded-xl border border-orange-200 overflow-hidden bg-white flex flex-col" style={{ height: '500px' }}>
       <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -144,9 +148,6 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           ))}
         </div>
       )}
-
-      {/* Trivia overlay — appears when a question is active */}
-      <CampfireTriviaOverlay socket={socketRef.current} userId={user?.id || ''} campgroundId={campgroundId} />
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-8">The fire's just getting started… 🔥</div>}
@@ -197,6 +198,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
+    </div>
     </div>
   );
 }

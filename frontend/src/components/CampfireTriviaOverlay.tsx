@@ -70,7 +70,15 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       setTimeLeft(Math.max(0, q.timeLimit - elapsed));
     });
 
-    socket.on('trivia:answer:result', (r: any) => setResult(r));
+    socket.on('trivia:answer:result', (r: any) => {
+      setResult(r);
+      // Auto-clear after 5 seconds so next question can appear
+      setTimeout(() => {
+        setQuestion(null);
+        setSelected(null);
+        setResult(null);
+      }, 5000);
+    });
 
     socket.on('trivia:leaderboard', (data: any) => {
       setLeaderboard(data);
@@ -112,6 +120,9 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         const res = await fetch(`${API}/api/campfire/${campgroundId}/active-question`, { headers });
         const data = await res.json();
         if (data.question) {
+        // If question has expired, don't show it
+        const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
+        if (elapsed >= data.question.timeLimit) return;
           setQuestion(data.question);
           setSelected(null);
           setResult(null);
@@ -131,6 +142,17 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
   }, [campgroundId, question]);
 
   // Countdown timer
+  // Auto-clear question when timer hits 0
+  useEffect(() => {
+    if (timeLeft === 0 && question && !result) {
+      setTimeout(() => {
+        setQuestion(null);
+        setSelected(null);
+        setResult(null);
+      }, 3000);
+    }
+  }, [timeLeft, question, result]);
+
   useEffect(() => {
     if (!question || selected || timeLeft <= 0) return;
     const t = setInterval(() => setTimeLeft(s => {
