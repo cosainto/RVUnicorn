@@ -3057,31 +3057,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
         </div>
       </div>
       {/* Campfire Chat Modal */}
-      {showCampfireModal && activeCheckIn?.campground && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCampfireModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Modal header */}
-            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🔥</span>
-                <div>
-                  <div className="text-white font-bold text-sm">Campfire Chat</div>
-                  <div className="text-orange-100 text-xs">{activeCheckIn.campground.name}</div>
-                </div>
-              </div>
-              <button onClick={() => setShowCampfireModal(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
-            </div>
-            {/* Chat component */}
-            <div className="flex-1 overflow-hidden">
-              <CampfireChat
-                campgroundId={activeCheckIn.campground.id}
-                campgroundName={activeCheckIn.campground.name}
-                isUserCheckedIn={true}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Campfire Chat Modal */}
       {showCampfireModal && activeCheckIn?.campground && (
