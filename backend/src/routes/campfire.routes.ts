@@ -372,7 +372,7 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
 
     // Save answer
     await (prisma as any).triviaAnswer.create({
-      data: { userId, questionId, answer, isCorrect, responseTime, pointsAwarded: points },
+      data: { userId, questionId, answer, isCorrect, responseTime, points: points },
     });
 
     // Update leaderboard
@@ -380,11 +380,11 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
     if (week) {
       await (prisma as any).triviaLeaderboard.upsert({
         where: { weekId_userId: { weekId: week.id, userId } },
-        create: { weekId: week.id, userId, totalPoints: points, correctAnswers: isCorrect ? 1 : 0, totalAnswers: 1 },
+        create: { weekId: week.id, userId, totalPoints: points, correctAnswers: isCorrect ? 1 : 0, gamesPlayed: 1 },
         update: {
           totalPoints: { increment: points },
           correctAnswers: { increment: isCorrect ? 1 : 0 },
-          totalAnswers: { increment: 1 },
+          gamesPlayed: { increment: 1 },
         },
       });
     }
