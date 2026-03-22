@@ -52,6 +52,7 @@ import CreatorLeaderboardPage from './pages/CreatorLeaderboardPage';
 import CreatorDashboardPage from './pages/CreatorDashboardPage';
 import CreatorContentEditorPage from './pages/CreatorContentEditorPage';
 import BasecampPage from './pages/BasecampPage';
+import CommunityPage from './pages/CommunityPage';
 import LandingPage from './pages/LandingPage';
 import BusinessBasecampPage from "./pages/BusinessBasecampPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -180,6 +181,8 @@ function AppContent() {
         />
 
         <Route path="/basecamp" element={<BasecampPage user={user} />} />
+        <Route path="/community" element={<CommunityPage />} />
+        <Route path="/community/:slug" element={<CommunityPage />} />
         <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
         <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
         <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />
