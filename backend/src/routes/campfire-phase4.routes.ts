@@ -86,7 +86,7 @@ router.get('/leaderboard/:campgroundId', async (req, res) => {
       include: {
         leaderboard: {
           orderBy: { totalPoints: 'desc' },
-          include: { user: { select: { id: true, firstName: true, username: true, profileImage: true } } },
+          include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
         },
       },
     });
@@ -258,9 +258,9 @@ router.get('/private/:code', authenticateToken, async (req: any, res) => {
     const room = await prisma.privateTriviaRoom.findUnique({
       where: { code: req.params.code.toUpperCase() },
       include: {
-        host: { select: { id: true, firstName: true, username: true, profileImage: true } },
+        host: { select: { id: true, firstName: true, username: true, profilePicture: true } },
         participants: {
-          include: { user: { select: { id: true, firstName: true, username: true, profileImage: true } } },
+          include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
           orderBy: { totalPoints: 'desc' },
         },
         questions: { orderBy: { questionNum: 'asc' } },
