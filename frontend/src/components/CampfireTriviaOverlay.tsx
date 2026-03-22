@@ -158,7 +158,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         console.error('Results error:', e);
       }
 
-      setTimeout(clearQuestion, 5000);
+      setTimeout(clearQuestion, 3000);
     };
 
     run();
@@ -206,7 +206,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       } catch (e) { /* silent */ }
     };
     poll();
-    const interval = setInterval(poll, 5000);
+    const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
   }, [campgroundId, loadQuestion]);
 
