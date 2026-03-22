@@ -179,6 +179,21 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
           msg = trashTalks[Math.floor(Math.random() * trashTalks.length)];
         }
         setPostQuestionMsg(msg);
+
+        // Also post to actual campfire chat
+        try {
+          const token2 = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+          const API2 = (import.meta as any).env?.VITE_API_URL || '';
+          await fetch(`${API2}/api/campfire/${campgroundId}/chat-message`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token2 ? { Authorization: `Bearer ${token2}` } : {}),
+            },
+            body: JSON.stringify({ content: msg }),
+          });
+        } catch (e2) { /* non-fatal */ }
+
       } catch (e) {
         console.error('Results fetch error:', e);
       }
@@ -188,7 +203,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         setSelected(null);
         setResult(null);
         setPostQuestionMsg(null);
-      }, 4000);
+      }, 5000);
     };
 
     fetchResults();
@@ -224,11 +239,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       const data = await res.json();
       if (data.isCorrect !== undefined) {
         setResult(data);
-        setTimeout(() => {
-          setQuestion(null);
-          setSelected(null);
-          setResult(null);
-        }, 4000);
+        // Don't clear here - wait for timer to hit 0
       }
     } catch (e) {
       console.error('Answer submit error:', e);

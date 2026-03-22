@@ -425,4 +425,30 @@ router.get('/:campgroundId/question-results/:questionId', async (req: Request, r
   }
 });
 
+
+// POST /api/campfire/:campgroundId/chat-message (internal - posts Hitch message to chat)
+router.post('/:campgroundId/chat-message', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { content } = req.body;
+
+    const room = await (prisma as any).campfireRoom.findFirst({
+      where: { campgroundId, isActive: true },
+    });
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+
+    const message = await (prisma as any).campfireMessage.create({
+      data: { roomId: room.id, isHitch: true, content },
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+      },
+    });
+
+    res.json(message);
+  } catch (error) {
+    console.error('Chat message error:', error);
+    res.status(500).json({ error: 'Failed to post message' });
+  }
+});
+
 export default router;
