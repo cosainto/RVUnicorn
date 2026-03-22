@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { kickoffNewWeek, askNextQuestion, postTriviaWarning, postDailyLeaderboard } from '../cron/trivia-cron';
+import { kickoffNewWeek, askNextQuestion, forceAskNextQuestion, postTriviaWarning, postDailyLeaderboard } from '../cron/trivia-cron';
 import { prisma } from '../prisma';
 
 const router = Router();
@@ -30,7 +30,7 @@ router.post('/ask', authenticateToken, async (req: any, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
   try {
     const io = req.app.locals.io;
-    await askNextQuestion(io);
+    await forceAskNextQuestion(io);
     res.json({ success: true, message: 'Question posted' });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

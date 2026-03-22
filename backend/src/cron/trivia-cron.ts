@@ -389,6 +389,59 @@ async function announceWeeklyWinner(io: any) {
 }
 
 // ── Register all crons ────────────────────────────────────────
+
+// Force ask next unanswered question regardless of time (admin use)
+export async function forceAskNextQuestion(io: any) {
+  const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
+
+  for (const room of rooms) {
+    const week = await prisma.triviaWeek.findFirst({
+      where: { campgroundId: room.campgroundId, isActive: true },
+    });
+    if (!week) continue;
+
+    // Find next unanswered question in order
+    const question = await prisma.triviaQuestion.findFirst({
+      where: { weekId: week.id, askedAt: null },
+      orderBy: [{ dayOfWeek: 'asc' }, { questionNum: 'asc' }],
+    });
+    if (!question) {
+      console.log(`[TriviaAdmin] No unasked questions for room ${room.campgroundId}`);
+      continue;
+    }
+
+    const now = new Date();
+    await prisma.triviaQuestion.update({
+      where: { id: question.id },
+      data: { askedAt: now },
+    });
+
+    await prisma.campfireMessage.create({
+      data: {
+        roomId: room.id,
+        isHitch: true,
+        content: `🎯 Question ${question.questionNum}/10 · ${question.category}\n\n${question.question}\n\nA) ${question.optionA}\nB) ${question.optionB}\nC) ${question.optionC}\nD) ${question.optionD}`,
+      },
+    });
+
+    if (io) {
+      io.of('/campfire').to(room.campgroundId).emit('trivia:question', {
+        questionId: question.id,
+        questionNum: question.questionNum,
+        total: 10,
+        question: question.question,
+        options: { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD },
+        answer: question.answer,
+        category: question.category,
+        timeLimit: 30,
+        askedAt: now.toISOString(),
+      });
+    }
+
+    console.log(`[TriviaAdmin] Force-asked Q${question.questionNum} for ${room.campgroundId}`);
+  }
+}
+
 export function registerTriviaCrons(io: any) {
   // Monday 5:00 AM — generate this week's questions
   cron.schedule('0 5 * * 1', () => kickoffNewWeek(), { timezone: 'America/Chicago' });
