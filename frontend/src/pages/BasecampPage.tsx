@@ -1833,7 +1833,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <div className="flex-1 min-w-0">
                   <div className="text-white font-bold text-sm">You're at the Campfire! 🏕️</div>
                   <div className="text-orange-100 text-xs truncate">
-                    {triviaCountdown || `${activeCheckIn.campground.name} — tap to chat`}
+                    {campfireVibeMsg || triviaCountdown || `${activeCheckIn.campground.name} — tap to chat`}
                   </div>
                 </div>
                 {triviaCountdown && (
