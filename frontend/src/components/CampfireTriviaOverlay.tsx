@@ -72,12 +72,6 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
 
     socket.on('trivia:answer:result', (r: any) => {
       setPendingResult(r); // Hold until timer ends
-      // Auto-clear after 5 seconds so next question can appear
-      setTimeout(() => {
-        setQuestion(null);
-        setSelected(null);
-        setResult(null);
-      }, 4000);
     });
 
     socket.on('trivia:leaderboard', (data: any) => {
@@ -220,7 +214,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       return s - 1;
     }), 1000);
     return () => clearInterval(t);
-  }, [question, selected, timeLeft]);
+  }, [question, timeLeft]);
 
   const submitAnswer = useCallback(async (answer: string) => {
     if (!question || selected) return;
