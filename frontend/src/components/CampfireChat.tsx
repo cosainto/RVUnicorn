@@ -38,13 +38,20 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadMessages = () => {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
     const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
     fetch(`${API}/api/campfire/${campgroundId}/room/status`, { headers })
       .then(r => r.json()).then(setStatus).catch(console.error);
     fetch(`${API}/api/campfire/${campgroundId}/room/messages`, { headers })
       .then(r => r.json()).then(d => setMessages(d.messages || [])).catch(console.error);
+  };
+
+  useEffect(() => {
+    loadMessages();
+    // Poll every 10 seconds as fallback when WebSocket misses messages
+    const interval = setInterval(loadMessages, 10000);
+    return () => clearInterval(interval);
   }, [campgroundId]);
 
   useEffect(() => {
@@ -61,6 +68,17 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
       setStatus(prev => prev ? { ...prev, checkedInUsers: users, checkedInCount: users.length, needsMore: 0 } : null);
     });
     socket.on('message:new', (msg: ChatMessage) => setMessages(prev => [...prev, msg]));
+    socket.on('trivia:question', (q: any) => {
+      const triviaMsg: ChatMessage = {
+        id: `trivia-${q.questionId}-${Date.now()}`,
+        content: `🎯 Question ${q.questionNum}/10 · ${q.category}\n\n${q.question}\n\nA) ${q.options?.A}\nB) ${q.options?.B}\nC) ${q.options?.C}\nD) ${q.options?.D}`,
+        createdAt: q.askedAt || new Date().toISOString(),
+        isSystem: false,
+        isHitch: true,
+        user: undefined,
+      };
+      setMessages(prev => [...prev, triviaMsg]);
+    });
     socket.on('room:activated', () => setStatus(prev => prev ? { ...prev, isActive: true } : null));
     return () => { socket.disconnect(); };
   }, [campgroundId, user?.id]);
