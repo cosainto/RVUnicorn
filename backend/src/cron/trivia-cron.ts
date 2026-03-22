@@ -416,14 +416,6 @@ export async function forceAskNextQuestion(io: any) {
       data: { askedAt: now },
     });
 
-    await prisma.campfireMessage.create({
-      data: {
-        roomId: room.id,
-        isHitch: true,
-        content: `🎯 Question ${question.questionNum}/10 · ${question.category}\n\n${question.question}\n\nA) ${question.optionA}\nB) ${question.optionB}\nC) ${question.optionC}\nD) ${question.optionD}`,
-      },
-    });
-
     if (io) {
       io.of('/campfire').to(room.campgroundId).emit('trivia:question', {
         questionId: question.id,
@@ -431,7 +423,6 @@ export async function forceAskNextQuestion(io: any) {
         total: 10,
         question: question.question,
         options: { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD },
-        answer: question.answer,
         category: question.category,
         timeLimit: 30,
         askedAt: now.toISOString(),
