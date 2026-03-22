@@ -329,6 +329,7 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
           C: question.optionC,
           D: question.optionD,
         },
+        hostCharacter: week.hostCharacter,
         category: question.category,
         timeLimit: 30,
         askedAt: question.askedAt,
