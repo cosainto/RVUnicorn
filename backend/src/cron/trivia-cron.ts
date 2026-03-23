@@ -541,6 +541,12 @@ export function registerTriviaCrons(io: any) {
   cron.schedule('30,33,36,39,42,45,48,51,54,57 17 * * *', () => askNextQuestion(io), { timezone: 'America/Chicago' });
 
   // Daily 6:00 PM — daily leaderboard
+  // Lunchtime trivia — 12:30 PM
+  cron.schedule('30 12 * * *', async () => {
+    console.log('[Cron] Starting lunchtime trivia...');
+    await kickoffNewWeek().catch(e => console.error('Lunchtime trivia error:', e));
+  }, { timezone: 'America/Chicago' });
+
   cron.schedule('0 18 * * *', () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
 
   // Sunday 6:05 PM — weekly winner
