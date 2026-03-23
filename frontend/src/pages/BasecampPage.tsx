@@ -3066,6 +3066,48 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <PackUpTasksWidget />
             <WishlistWidget />
 
+            {/* Community Discovery Feed */}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🏕️</span>
+                  <span className="font-bold text-sm text-gray-900">From the Community</span>
+                </div>
+                <Link to="/community" className="text-xs text-orange-500 hover:text-orange-600 font-semibold">Browse all →</Link>
+              </div>
+              {communityPosts.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-sm text-gray-500 mb-2">No posts yet — be the first</p>
+                  <Link to="/community" className="text-xs text-orange-500 font-semibold hover:underline">Start a discussion →</Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {communityPosts.map((post: any) => (
+                    <Link key={post.id} to="/community" className="flex gap-3 px-4 py-3 hover:bg-gray-50 transition">
+                      <div className="flex-shrink-0 w-8 text-center pt-0.5">
+                        <span className="text-sm font-bold text-orange-500">{post.voteScore}</span>
+                        <div className="text-[10px] text-gray-400">pts</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {post.board && (
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className="text-xs">{post.board.icon}</span>
+                            <span className="text-xs text-gray-400">{post.board.name}</span>
+                          </div>
+                        )}
+                        <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-snug">{post.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-gray-400">{post.author?.firstName} {post.author?.lastName}</span>
+                          <span className="text-[10px] text-gray-300">·</span>
+                          <span className="text-[10px] text-gray-400">{post.commentCount || 0} comments</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <BasecampActivityFeed maxItems={10} showHeader={true} />
 
 
