@@ -425,6 +425,9 @@ export default function CommunityPage() {
                       {s.icon}{s.label}
                     </button>
                   ))}
+                  <Link to="/badges" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition bg-white text-gray-600 border border-gray-200 hover:border-orange-300">
+                    <Award className="w-3.5 h-3.5" /> Badges
+                  </Link>
                 </div>
 
                 {loading ? (
