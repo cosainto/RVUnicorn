@@ -98,7 +98,7 @@ export default function Navbar() {
   const primaryLinks = [
     { to: '/basecamp', icon: Home, label: 'Basecamp' },
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
-    { to: '/feed', icon: Flame, label: 'Feed' },
+    { to: '/community', icon: Flame, label: 'Community' },
     { to: '/events', icon: Calendar, label: 'Trips' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
     { to: '/itinerary', icon: Map, label: 'Itinerary' },
@@ -372,7 +372,7 @@ export default function Navbar() {
             <MobileSection label="Navigate">
               <MobileLink to="/basecamp" icon={<Home className="w-5 h-5" />} label="Basecamp" active={isActive('/basecamp')} />
               <MobileLink to="/campgrounds" icon={<Tent className="w-5 h-5" />} label="Campgrounds" active={isActive('/campgrounds')} />
-              <MobileLink to="/feed" icon={<Flame className="w-5 h-5" />} label="Feed" active={isActive('/feed')} />
+              <MobileLink to="/community" icon={<Flame className="w-5 h-5" />} label="Community" active={isActive('/community')} />
               <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips & Events" active={isActive('/events')} />
               <MobileLink to="/hitch" icon={<img src="/hitch.png" className="w-5 h-5 rounded-full object-cover" alt="Hitch" />} label="Hitch" active={isActive('/hitch')} />
               <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel & Routes" active={isActive('/travel')} />
