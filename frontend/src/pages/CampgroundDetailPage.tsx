@@ -26,6 +26,7 @@ import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
+import WeatherActivities from '../components/WeatherActivities';
 import CampgroundTriviaLeaderboard from '../components/CampgroundTriviaLeaderboard';
 import ToneModeToggle from '../components/ToneModeToggle';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -1762,6 +1763,13 @@ export default function CampgroundDetailPage() {
           {/* Stickers Tab */}
           {activeTab === 'campfire' && campground && (
             <div className="space-y-6">
+              {campground.latitude && campground.longitude && (
+                <WeatherActivities
+                  lat={campground.latitude}
+                  lon={campground.longitude}
+                  campgroundName={campground.name}
+                />
+              )}
               <CampfireChat
                 campgroundId={campground.id}
                 campgroundName={campground.name}

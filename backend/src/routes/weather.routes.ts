@@ -98,4 +98,48 @@ router.get('/forecast', async (req, res) => {
   }
 });
 
+
+// GET /api/weather/activities
+const activitiesCache: WeatherCache = {};
+router.get('/activities', async (req, res) => {
+  try {
+    const { lat, lon, campgroundName = 'your campground' } = req.query;
+    if (!lat || !lon) return res.status(400).json({ error: 'lat and lon required' });
+    const cacheKey = `activities-${lat},${lon}-${new Date().toDateString()}`;
+    if (activitiesCache[cacheKey] && Date.now() - activitiesCache[cacheKey].timestamp < CACHE_DURATION) {
+      return res.json(activitiesCache[cacheKey].data);
+    }
+    let weatherSummary = 'pleasant camping weather';
+    try {
+      const pr = await fetch(`https://api.weather.gov/points/${lat},${lon}`, { headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' } });
+      if (pr.ok) {
+        const pd = await pr.json();
+        const fu = pd.properties?.forecast;
+        if (fu) {
+          const fr = await fetch(fu, { headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' } });
+          if (fr.ok) {
+            const fd = await fr.json();
+            const p0 = fd.properties?.periods?.[0];
+            if (p0) weatherSummary = `${p0.name}: ${p0.temperature}F, ${p0.shortForecast}, winds ${p0.windSpeed}`;
+          }
+        }
+      }
+    } catch(e) {}
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default();
+    const now = new Date();
+    const tod = now.getHours() < 10 ? 'morning' : now.getHours() < 14 ? 'midday' : now.getHours() < 18 ? 'afternoon' : 'evening';
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+      messages: [{ role: 'user', content: `You are a camping activity advisor at ${campgroundName}. Weather: ${weatherSummary}. Time: ${tod}. Suggest exactly 4 activities. Respond ONLY with JSON array: [{"emoji":"🎣","title":"Go Fishing","reason":"brief reason under 12 words","duration":"2-3 hours"}]` }],
+    });
+    let activities = [];
+    try { activities = JSON.parse(response.content[0].type === 'text' ? response.content[0].text.trim() : '[]'); } catch(e) {
+      activities = [{ emoji: '🚶', title: 'Take a Walk', reason: 'Great time to explore', duration: '30-60 min' }, { emoji: '🔥', title: 'Campfire Time', reason: 'Perfect for gathering around the fire', duration: '1-2 hours' }, { emoji: '📸', title: 'Photography', reason: 'Capture the scenery', duration: '1 hour' }, { emoji: '⭐', title: 'Stargazing', reason: 'Clear skies tonight', duration: 'After dark' }];
+    }
+    const result = { activities, weatherSummary, generatedAt: new Date().toISOString() };
+    activitiesCache[cacheKey] = { data: result, timestamp: Date.now() };
+    res.json(result);
+  } catch(error) { console.error('Activities error:', error); res.status(500).json({ error: 'Failed' }); }
+});
 export default router;
