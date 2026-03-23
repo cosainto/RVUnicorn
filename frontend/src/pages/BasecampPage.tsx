@@ -65,6 +65,7 @@ import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
+import WeatherActivities from '../components/WeatherActivities';
 import InviteFriends from '../components/InviteFriends';
 
 interface BasecampProps {
@@ -1899,6 +1900,16 @@ export default function BasecampPage({ user }: BasecampProps) {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Weather & Activities — shows when checked in */}
+            {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
+              <WeatherActivities
+                lat={activeCheckIn.campground.latitude}
+                lon={activeCheckIn.campground.longitude}
+                campgroundName={activeCheckIn.campground.name}
+                compact={true}
+              />
             )}
 
             {/* RV Information Card */}
