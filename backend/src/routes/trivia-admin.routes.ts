@@ -80,4 +80,13 @@ router.get('/status/:campgroundId', authenticateToken, async (req: any, res) => 
   }
 });
 
+
+router.post('/recipe', authenticateToken, async (req: any, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+  res.json({ success: true, message: 'Recipe posting started in background' });
+  const { postRecipeOfNight } = require('../cron/trivia-cron');
+  postRecipeOfNight().catch((e: any) => console.error('Recipe error:', e));
+});
+
+
 export default router;

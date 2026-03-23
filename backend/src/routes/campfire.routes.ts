@@ -507,4 +507,69 @@ Be specific to the location and time of day. Sound like a real person, not a bot
   }
 });
 
+
+// POST /api/campfire/:campgroundId/recipe-of-night (admin — post tonight's recipe to chat)
+router.post('/:campgroundId/recipe-of-night', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+
+    const room = await (prisma as any).campfireRoom.findFirst({
+      where: { campgroundId, isActive: true },
+    });
+    if (!room) return res.status(404).json({ error: 'No active campfire room' });
+
+    const campground = await (prisma as any).campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true, state: true },
+    });
+
+    const now = new Date();
+    const season = [11,0,1].includes(now.getMonth()) ? 'winter' : [2,3,4].includes(now.getMonth()) ? 'spring' : [5,6,7].includes(now.getMonth()) ? 'summer' : 'fall';
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default();
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `You are Hitch, the friendly RV Unicorn campfire host at ${campground?.name || 'camp'} in ${season}.
+Write a SHORT campfire recipe post for tonight. Format it exactly like this (keep it under 200 words):
+
+🍳 Tonight's Campfire Recipe: [Recipe Name]
+
+[1-2 sentence fun intro]
+
+Ingredients:
+• [item]
+• [item]
+• [item]
+• [item]
+
+Steps:
+1. [step]
+2. [step]
+3. [step]
+
+[Fun closing line with a campfire emoji]
+
+Make it a real, delicious camp recipe. Keep it simple — one pot, foil packet, or cast iron. Be warm and friendly.`
+      }],
+    });
+
+    const content = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+    if (!content) return res.status(500).json({ error: 'Failed to generate recipe' });
+
+    const message = await (prisma as any).campfireMessage.create({
+      data: { roomId: room.id, isHitch: true, content },
+    });
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('Recipe of night error:', error);
+    res.status(500).json({ error: 'Failed to post recipe' });
+  }
+});
+
 export default router;

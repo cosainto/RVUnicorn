@@ -438,6 +438,43 @@ export async function forceAskNextQuestion(io: any) {
   }
 }
 
+
+// ── Daily 6:00 PM: Campfire Recipe of the Night ──────────────
+export async function postRecipeOfNight() {
+  const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
+  for (const room of rooms) {
+    try {
+      const campground = await (prisma as any).campground.findUnique({
+        where: { id: room.campgroundId },
+        select: { name: true, state: true },
+      });
+
+      const now = new Date();
+      const season = [11,0,1].includes(now.getMonth()) ? 'winter' : [2,3,4].includes(now.getMonth()) ? 'spring' : [5,6,7].includes(now.getMonth()) ? 'summer' : 'fall';
+
+      const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: `You are Hitch, the friendly RV Unicorn campfire host at ${campground?.name || 'camp'} in ${season}. Write a SHORT campfire recipe post. Format: 🍳 Tonight's Campfire Recipe: [Name]\n\n[intro]\n\nIngredients:\n• ...\n\nSteps:\n1. ...\n\n[fun closing]. Keep it under 200 words, real and delicious.`,
+        }],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+      if (!content) continue;
+
+      await prisma.campfireMessage.create({
+        data: { roomId: room.id, isHitch: true, content },
+      });
+
+      console.log(`[RecipeCron] Posted recipe for ${room.campgroundId}`);
+    } catch (e) {
+      console.error(`[RecipeCron] Failed for ${room.campgroundId}:`, e);
+    }
+  }
+}
+
 export function registerTriviaCrons(io: any) {
   // Monday 5:00 AM — generate this week's questions
   cron.schedule('0 5 * * 1', () => kickoffNewWeek(), { timezone: 'America/Chicago' });
