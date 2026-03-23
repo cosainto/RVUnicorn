@@ -97,7 +97,7 @@ export default function Navbar() {
 
   const primaryLinks = [
     { to: '/basecamp', icon: Home, label: 'Basecamp' },
-    { to: '/events', icon: Calendar, label: 'Trips' },
+    { to: '/events', icon: Calendar, label: 'My Trips' },
     { to: '/community', icon: Flame, label: 'Community' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
