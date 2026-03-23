@@ -933,6 +933,14 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
   const [campfireUnread, setCampfireUnread] = useState(0);
   const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
+  // Load community posts for discovery feed
+  useEffect(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    fetch((import.meta.env.VITE_API_URL || '') + '/api/boards/posts/all?sort=hot&limit=5', {
+      headers: token ? { Authorization: 'Bearer ' + token } : {},
+    }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch(() => {});
+  }, []);
+
   // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
   useEffect(() => {
     const check = () => {
@@ -956,6 +964,14 @@ export default function BasecampPage({ user }: BasecampProps) {
     return () => clearInterval(interval);
   }, []);
 
+
+  // Load community posts for discovery feed
+  useEffect(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    fetch((import.meta.env.VITE_API_URL || '') + '/api/boards/posts/all?sort=hot&limit=5', {
+      headers: token ? { Authorization: 'Bearer ' + token } : {},
+    }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch(() => {});
+  }, []);
 
   // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
   useEffect(() => {
@@ -990,10 +1006,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         .then(r => {
           const checkIn = r.data?.checkIn || null;
           setActiveCheckIn(checkIn);
-          // Fetch hot community posts for sidebar
-          fetch(`${import.meta.env.VITE_API_URL || ''}/api/boards/posts/all?sort=hot&limit=3`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch(() => {});
+
           if (checkIn?.campground?.id) {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
             fetch(`${import.meta.env.VITE_API_URL || ''}/api/campfire/${checkIn.campground.id}/daily-vibe`, {
