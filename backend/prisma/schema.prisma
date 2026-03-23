@@ -290,6 +290,7 @@ model User {
   boardPosts      BoardPost[]
   boardComments   BoardComment[]
   boardVotes      BoardVote[]
+  wildlifeSightings WildlifeSighting[]
   triviaLeaderboard TriviaLeaderboard[]
   triviaWins       TriviaWeek[]     @relation("TriviaWinner")
   triviaStreak         TriviaStreak?
@@ -557,6 +558,7 @@ model Campground {
   triviaWeeks      TriviaWeek[]
   campgroundTriviaScores CampgroundTriviaScore[]
   pitStops               PitStop[]               @relation("CampgroundPitStops")
+  wildlifeSightings      WildlifeSighting[]
 }
 
 model Stay {
@@ -4113,4 +4115,25 @@ model BoardVote {
   @@unique([userId, commentId])
   @@index([postId])
   @@index([commentId])
+}
+
+// ── Wildlife Sightings ────────────────────────────────────────
+
+model WildlifeSighting {
+  id           String     @id @default(cuid())
+  userId       String
+  campgroundId String
+  animal       String
+  description  String?
+  imageUrl     String?
+  emoji        String     @default("🦌")
+  latitude     Float?
+  longitude    Float?
+  seenAt       DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+
+  @@index([campgroundId, seenAt])
+  @@index([userId])
 }

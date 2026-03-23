@@ -27,6 +27,7 @@ import CampfireChannel from '../components/CampfireChannel';
 import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
+import WildlifeSightings from '../components/WildlifeSightings';
 import CampgroundTriviaLeaderboard from '../components/CampgroundTriviaLeaderboard';
 import ToneModeToggle from '../components/ToneModeToggle';
 import CampgroundWeather from '../components/CampgroundWeather';
@@ -1780,6 +1781,7 @@ export default function CampgroundDetailPage() {
                 userId={user?.id || ''}
                 campgroundId={campground.id}
               />
+              <WildlifeSightings campgroundId={campground.id} />
               <CampgroundTriviaLeaderboard campgroundId={campground.id} />
             </div>
           )}
