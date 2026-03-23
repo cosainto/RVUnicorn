@@ -89,4 +89,12 @@ router.post('/recipe', authenticateToken, async (req: any, res) => {
 });
 
 
+
+router.post('/trails', authenticateToken, async (req: any, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+  res.json({ success: true, message: 'Morning trails posting started' });
+  const { postMorningTrails } = require('../cron/trivia-cron');
+  postMorningTrails().catch((e: any) => console.error('Trails error:', e));
+});
+
 export default router;

@@ -475,6 +475,61 @@ export async function postRecipeOfNight() {
   }
 }
 
+
+// ── Daily 8:00 AM: Morning Trail Suggestions ─────────────────
+export async function postMorningTrails() {
+  const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
+  for (const room of rooms) {
+    try {
+      const campground = await (prisma as any).campground.findUnique({
+        where: { id: room.campgroundId },
+        select: { name: true, state: true, city: true, latitude: true, longitude: true },
+      });
+      if (!campground?.latitude || !campground?.longitude) continue;
+
+      const now = new Date();
+      const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+      const season = [11,0,1].includes(now.getMonth()) ? 'winter' : [2,3,4].includes(now.getMonth()) ? 'spring' : [5,6,7].includes(now.getMonth()) ? 'summer' : 'fall';
+
+      const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 350,
+        messages: [{
+          role: 'user',
+          content: `You are Hitch, the friendly RV Unicorn campfire host. It's ${dayName} morning in ${season} at ${campground.name} near ${campground.city}, ${campground.state} (coordinates: ${campground.latitude}, ${campground.longitude}).
+
+Write a morning trail/activity suggestions post. Format exactly like this:
+
+🌄 Good morning, campers! Happy ${dayName}!
+
+[1 sentence fun morning greeting]
+
+Here's what's worth lacing up your boots for today:
+
+🥾 [Trail/Activity Name] — [distance or duration] — [brief why it's great today]
+🌿 [Trail/Activity Name] — [distance or duration] — [brief why it's great today]  
+🏞️ [Trail/Activity Name] — [distance or duration] — [brief why it's great today]
+
+[Closing tip about best time to go or what to bring]
+
+Keep it under 150 words. Suggest real-sounding trails appropriate for the area and season.`,
+        }],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
+      if (!content) continue;
+
+      await prisma.campfireMessage.create({
+        data: { roomId: room.id, isHitch: true, content },
+      });
+
+      console.log(`[TrailsCron] Posted morning trails for ${room.campgroundId}`);
+    } catch (e) {
+      console.error(`[TrailsCron] Failed for ${room.campgroundId}:`, e);
+    }
+  }
+}
+
 export function registerTriviaCrons(io: any) {
   // Monday 5:00 AM — generate this week's questions
   cron.schedule('0 5 * * 1', () => kickoffNewWeek(), { timezone: 'America/Chicago' });
