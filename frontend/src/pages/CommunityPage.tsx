@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronUp, ChevronDown, MessageSquare, Plus, X, ArrowLeft, Flame, Clock, Trophy } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageSquare, Plus, X, ArrowLeft, Flame, Clock, Trophy, Award } from 'lucide-react';
 
 interface Board {
   id: string;
