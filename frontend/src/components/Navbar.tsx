@@ -101,7 +101,6 @@ export default function Navbar() {
     { to: '/community', icon: Flame, label: 'Community' },
     { to: '/events', icon: Calendar, label: 'Trips' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
-    { to: '/itinerary', icon: Map, label: 'Itinerary' },
     { to: '/travel', icon: Map, label: 'Travel' },
   ];
 
