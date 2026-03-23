@@ -929,6 +929,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
   const [campfireUnread, setCampfireUnread] = useState(0);
   const [triviaCountdown, setTriviaCountdown] = useState<string | null>(null);
@@ -989,6 +990,10 @@ export default function BasecampPage({ user }: BasecampProps) {
         .then(r => {
           const checkIn = r.data?.checkIn || null;
           setActiveCheckIn(checkIn);
+          // Fetch hot community posts for sidebar
+          fetch(`${import.meta.env.VITE_API_URL || ''}/api/boards/posts/all?sort=hot&limit=3`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch(() => {});
           if (checkIn?.campground?.id) {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
             fetch(`${import.meta.env.VITE_API_URL || ''}/api/campfire/${checkIn.campground.id}/daily-vibe`, {
@@ -1851,6 +1856,38 @@ export default function BasecampPage({ user }: BasecampProps) {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Community Card */}
+            {communityPosts.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🔥</span>
+                    <span className="font-bold text-sm text-gray-900">From the Community</span>
+                  </div>
+                  <Link to="/community" className="text-xs text-orange-500 hover:text-orange-600 font-semibold">See all →</Link>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {communityPosts.map((post: any) => (
+                    <Link key={post.id} to="/community" state={{ postId: post.id }}
+                      className="flex gap-3 px-4 py-3 hover:bg-gray-50 transition">
+                      <div className="flex flex-col items-center pt-0.5">
+                        <span className="text-xs font-bold text-orange-500">{post.voteScore}</span>
+                        <span className="text-[10px] text-gray-400">pts</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {post.board && <span className="text-xs">{post.board.icon}</span>}
+                          {post.board && <span className="text-xs text-gray-400">{post.board.name}</span>}
+                        </div>
+                        <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-snug">{post.title}</p>
+                        <span className="text-[10px] text-gray-400">{post.commentCount || 0} comments</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* RV Information Card */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-4">
