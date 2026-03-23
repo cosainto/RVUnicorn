@@ -196,7 +196,7 @@ function AppContent() {
         <Route path="/media-albums" element={<PrivateRoute><MediaAlbumsPage /></PrivateRoute>} />
         <Route path="/media-albums/:id" element={<PrivateRoute><MediaAlbumDetailPage /></PrivateRoute>} />
 
-        <Route path="/feed" element={<FeedPage />} />
+        <Route path="/feed" element={<Navigate to="/community" replace />} />
         <Route path="/hashtag/:tag" element={<HashtagPage />} />
 
         <Route path="/threads/:id" element={<ThreadDetailPage />} />
