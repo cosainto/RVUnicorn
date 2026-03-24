@@ -929,6 +929,10 @@ export default function BasecampPage({ user }: BasecampProps) {
   };
   
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+
+  // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
+  const isCamping  = !!activeCheckIn;
+  const isPlanning = !isCamping;
   const [showCampfireModal, setShowCampfireModal] = useState(false);
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
