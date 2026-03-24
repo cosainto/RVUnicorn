@@ -1742,12 +1742,21 @@ export default function BasecampPage({ user }: BasecampProps) {
 
               {/* Right: Actions */}
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => setShowCampfireModal(true)}
-                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition text-sm shadow-sm"
-                >
-                  🔥 Open Campfire
-                </button>
+                {linkedEvent ? (
+                  
+                    href={`/trips/${linkedEvent.id}`}
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition text-sm shadow-sm"
+                  >
+                    📅 My Trip
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => setShowCampfireModal(true)}
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition text-sm shadow-sm"
+                  >
+                    🔥 Open Campfire
+                  </button>
+                )}
                 <a
                   href={`/campgrounds/${activeCheckIn.campground.id}`}
                   className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-3 py-2 rounded-lg text-sm font-medium transition"
