@@ -3232,6 +3232,16 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
       {isCamping && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
+          {/* Weather snapshot above Tonight at Camp */}
+          {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
+            <WeatherActivities
+              lat={activeCheckIn.campground.latitude}
+              lon={activeCheckIn.campground.longitude}
+              campgroundName={activeCheckIn.campground.name}
+              compact={true}
+            />
+          )}
+
           {/* Tonight at Camp */}
           {activeCheckIn?.campground && (
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl p-4 mb-6">
