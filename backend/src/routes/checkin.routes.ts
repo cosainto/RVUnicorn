@@ -43,24 +43,25 @@ router.post('/', authenticateToken, async (req: any, res) => {
       }
     });
 
-    // Award campground first stay badge
+    // Award campground first stay badge — only on first ever campground check-in
     if (campgroundId) {
       const slug = 'campground-first-stay';
       const badge = await prisma.badge.findUnique({ where: { slug } }).catch(() => null);
       if (badge) {
-        await prisma.userBadge.upsert({
-          where: { userId_badgeId: { userId, badgeId: badge.id } },
-          create: { userId, badgeId: badge.id },
-          update: {}
+        const alreadyHas = await prisma.userBadge.findUnique({
+          where: { userId_badgeId: { userId, badgeId: badge.id } }
         }).catch(() => null);
-        await prisma.notification.create({
-          data: {
-            userId,
-            type: 'BADGE_EARNED',
-            content: `🏕️ You earned the "First Campground Stay" badge!`,
-            link: '/profile',
-          }
-        }).catch(() => null);
+        if (!alreadyHas) {
+          await prisma.userBadge.create({ data: { userId, badgeId: badge.id } }).catch(() => null);
+          await prisma.notification.create({
+            data: {
+              userId,
+              type: 'BADGE_EARNED',
+              content: `🏕️ You earned the "First Campground Stay" badge!`,
+              link: '/profile',
+            }
+          }).catch(() => null);
+        }
       }
     }
 
