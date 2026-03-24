@@ -39,7 +39,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
       },
       include: {
         user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
-        campground: { select: { id: true, name: true, imageUrl: true, bannerImage: true, city: true, state: true, location: true, latitude: true, longitude: true } },
+        campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true, location: true, latitude: true, longitude: true } },
       }
     });
 
