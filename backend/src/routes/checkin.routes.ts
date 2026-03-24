@@ -98,7 +98,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
           startDate:   checkInDate,
           endDate:     eventEnd,
           location:    eventLocation,
-          hostId:      userId,
+          organizerId: userId,
         };
         if (eventBanner)  eventData.bannerImage = eventBanner;
         if (campgroundId) eventData.campgroundId = campgroundId;
