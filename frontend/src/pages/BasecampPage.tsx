@@ -1743,7 +1743,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               {/* Right: Actions */}
               <div className="flex items-center gap-2 flex-wrap">
                 {linkedEvent ? (
-                  
+                  <a
                     href={`/trips/${linkedEvent.id}`}
                     className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition text-sm shadow-sm"
                   >
