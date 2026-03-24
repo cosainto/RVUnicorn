@@ -3296,6 +3296,17 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           {/* Campfire Tab */}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
+              {/* Hitch Pulse — AI campground vibe, always first */}
+              {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
+                <WeatherActivities
+                  lat={activeCheckIn.campground.latitude}
+                  lon={activeCheckIn.campground.longitude}
+                  campgroundName={activeCheckIn.campground.name}
+                  compact={false}
+                />
+              )}
+
+              {/* Embedded Campfire Chat */}
               {activeCheckIn?.campground && (
                 <div className="rounded-xl overflow-hidden border border-orange-200">
                   <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500">
@@ -3323,15 +3334,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   />
                 </div>
               )}
-              {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
-                <WeatherActivities
-                  lat={activeCheckIn.campground.latitude}
-                  lon={activeCheckIn.campground.longitude}
-                  campgroundName={activeCheckIn.campground.name}
-                  compact={false}
-                />
-              )}
-              {/* Campfire Games — Phase 6 */}
+
               {/* Campground Announcements */}
               {activeCheckIn?.campground?.id && (
                 <CampfireChannel campgroundId={activeCheckIn.campground.id} />
@@ -3426,14 +3429,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     )}
                   </div>
                 </div>
-              )}
-
-              {/* Campground Threads */}
-              {activeCheckIn?.campground?.id && (
-                <CampgroundCommunity
-                  campgroundId={activeCheckIn.campground.id}
-                  campgroundName={activeCheckIn.campground.name}
-                />
               )}
 
               {/* News & Events Calendar */}
