@@ -255,6 +255,7 @@ export default function CampgroundDetailPage() {
   const [uploadingMap, setUploadingMap] = useState(false);
 
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
