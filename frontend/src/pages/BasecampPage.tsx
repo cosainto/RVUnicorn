@@ -3301,13 +3301,54 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   compact={false}
                 />
               )}
-              <div className="bg-white rounded-xl border border-gray-100 p-6 text-center">
-                <div className="text-4xl mb-3">🎮</div>
-                <h3 className="font-bold text-gray-900 mb-1">Campfire Games</h3>
-                <p className="text-sm text-gray-500 mb-4">Play with fellow campers at {activeCheckIn?.campground?.name || 'your campground'}</p>
-                <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-full text-xs font-semibold">
-                  🔜 Coming Soon
-                </span>
+              {/* Campfire Games — Phase 6 */}
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🎮</span>
+                    <h3 className="font-bold text-gray-900 text-sm">Campfire Games</h3>
+                    <span className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full font-medium">
+                      {activeCheckIn?.campground?.name || 'Your Campground'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-400">Multiplayer · campground only</span>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { name: 'Campfire Trivia', desc: 'Test your camping & RV knowledge', emoji: '🎯', status: 'live', players: tonightData?.rverCount || 0 },
+                    { name: 'Campground Bingo', desc: 'Spot amenities and earn your card', emoji: '🎲', status: 'coming_soon', players: 0 },
+                    { name: 'Scavenger Hunt', desc: 'Explore the campground together', emoji: '🗺️', status: 'coming_soon', players: 0 },
+                    { name: 'Would You Rather', desc: 'Campfire icebreakers for the group', emoji: '🔥', status: 'coming_soon', players: 0 },
+                  ].map((game) => (
+                    <div key={game.name} className={`flex items-center gap-3 p-3 rounded-xl border transition ${game.status === 'live' ? 'border-orange-200 bg-orange-50/50 hover:bg-orange-50 cursor-pointer' : 'border-gray-100 bg-gray-50/50'}`}
+                      onClick={() => game.status === 'live' && setShowCampfireModal(true)}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${game.status === 'live' ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                        {game.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm text-gray-900">{game.name}</span>
+                          {game.status === 'live' ? (
+                            <span className="text-xs bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-medium animate-pulse">LIVE</span>
+                          ) : (
+                            <span className="text-xs bg-gray-100 text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-full font-medium">Soon</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{game.desc}</p>
+                        {game.status === 'live' && game.players > 0 && (
+                          <p className="text-xs text-orange-600 mt-0.5 font-medium">{game.players} campers available</p>
+                        )}
+                      </div>
+                      {game.status === 'live' && (
+                        <span className="text-orange-400 text-sm flex-shrink-0">→</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-center">
+                  <p className="text-xs text-gray-400">More games coming as we license them — suggestions welcome 🦄</p>
+                </div>
               </div>
             </div>
           )}
