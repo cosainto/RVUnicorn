@@ -3297,22 +3297,31 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
               {activeCheckIn?.campground && (
-                <button
-                  onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
-                  className="w-full flex items-center gap-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl px-5 py-4 hover:shadow-lg transition-all group text-left"
-                >
-                  <span className="text-4xl">🔥</span>
-                  <div className="flex-1">
-                    <div className="text-white font-bold">Open Campfire Chat</div>
-                    <div className="text-orange-100 text-sm">{campfireVibeMsg || `${activeCheckIn.campground.name} — live chat`}</div>
+                <div className="rounded-xl overflow-hidden border border-orange-200">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500">
+                    <div className="flex items-center gap-2 text-white">
+                      <span className="text-lg">🔥</span>
+                      <span className="font-bold text-sm">Campfire Chat</span>
+                      <span className="text-orange-100 text-xs">— {activeCheckIn.campground.name}</span>
+                      {(campfireUnread > 0 || newCampfirePosts > 0) && (
+                        <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                          {campfireUnread + newCampfirePosts} new
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
+                      className="text-white/80 hover:text-white text-xs flex items-center gap-1 transition"
+                      title="Expand to full screen"
+                    >
+                      ⛶ Expand
+                    </button>
                   </div>
-                  {(campfireUnread > 0 || newCampfirePosts > 0) && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {campfireUnread + newCampfirePosts}
-                    </span>
-                  )}
-                  <span className="text-white/70 group-hover:text-white">→</span>
-                </button>
+                  <CampfireChat
+                    campgroundId={activeCheckIn.campground.id}
+                    campgroundName={activeCheckIn.campground.name}
+                  />
+                </div>
               )}
               {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
                 <WeatherActivities
