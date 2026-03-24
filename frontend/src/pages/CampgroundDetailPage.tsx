@@ -267,6 +267,17 @@ export default function CampgroundDetailPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   const [checkInData, setCheckInData] = useState({ checkInDate: new Date().toISOString().split('T')[0], checkOutDate: '', siteNumber: '' });
+
+  const fetchActiveCheckIn = async () => {
+    try {
+      const { data } = await api.get('/checkins/active');
+      setActiveCheckIn(data?.campgroundId ? data : null);
+    } catch { setActiveCheckIn(null); }
+  };
+
+  useEffect(() => {
+    if (user) fetchActiveCheckIn();
+  }, [user]);
   const [inWishlist, setInWishlist] = useState(false);
   const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
   const [reviewData, setReviewData] = useState({ rating: 0, title: '', review: '', visitDate: '' });
@@ -322,6 +333,28 @@ export default function CampgroundDetailPage() {
       setInWishlist(data.inWishlist);
     } catch (e) {
       console.error('Toggle wishlist error:', e);
+    }
+  };
+
+  const isCheckedInHere = activeCheckIn?.campgroundId === campground?.id;
+
+  const handleCheckOut = async () => {
+    if (!confirm('Check out of ' + (campground?.name || 'this campground') + '?')) return;
+    try {
+      await api.delete('/checkins/active');
+      // Update linked event endDate to today
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        await api.patch('/checkins/checkout-event', {
+          campgroundId: campground?.id,
+          endDate: today,
+        });
+      } catch {}
+      setActiveCheckIn(null);
+      loadCampground();
+      alert('✅ Checked out! Your trip dates have been updated.');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to check out');
     }
   };
 
@@ -757,7 +790,13 @@ export default function CampgroundDetailPage() {
                         <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
                       </button>
                     ) : (
+                      {isCheckedInHere ? (
+                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-700 text-white hover:bg-red-600 transition group">
+                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
+                      </button>
+                    ) : (
                       <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }} className="flex-1 justify-center">Check In</ActionButton>
+                    )}
                     )}
                     <ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#b45309' }} className="flex-1 justify-center">Plan a Trip</ActionButton>
                   </div>}
@@ -861,7 +900,13 @@ export default function CampgroundDetailPage() {
                         <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
                       </button>
                     ) : (
+                      {isCheckedInHere ? (
+                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-red-500 transition group">
+                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
+                      </button>
+                    ) : (
                       <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: '#0ea5e9' }} className="flex-1 justify-center">Check In</ActionButton>
+                    )}
                     )}
                     <ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#0369a1' }} className="flex-1 justify-center">Plan a Trip</ActionButton>
                   </div>}
@@ -954,7 +999,13 @@ export default function CampgroundDetailPage() {
                       <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
                     </button>
                   ) : (
-                    <button onClick={() => setShowCheckInModal(true)} className="w-full px-6 py-2 bg-gray-700 text-white font-bold rounded border border-orange-500/50 hover:border-orange-500 transition flex items-center justify-center gap-2"><Calendar className="w-4 h-4" />Check In</button>
+                    {isCheckedInHere ? (
+                      <button onClick={handleCheckOut} className="w-full px-6 py-2 bg-green-700 text-white font-bold rounded border border-green-500/50 hover:bg-red-700 hover:border-red-500 transition flex items-center justify-center gap-2 group">
+                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
+                      </button>
+                    ) : (
+                      <button onClick={() => setShowCheckInModal(true)} className="w-full px-6 py-2 bg-gray-700 text-white font-bold rounded border border-orange-500/50 hover:border-orange-500 transition flex items-center justify-center gap-2"><Calendar className="w-4 h-4" />Check In</button>
+                    )}
                   ))}
                 </div>
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
