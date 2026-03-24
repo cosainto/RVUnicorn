@@ -255,7 +255,6 @@ export default function CampgroundDetailPage() {
   const [uploadingMap, setUploadingMap] = useState(false);
 
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -268,15 +267,12 @@ export default function CampgroundDetailPage() {
 
   const [checkInData, setCheckInData] = useState({ checkInDate: new Date().toISOString().split('T')[0], checkOutDate: '', siteNumber: '' });
 
-  const fetchActiveCheckIn = async () => {
-    try {
-      const { data } = await api.get('/checkins/active');
-      setActiveCheckIn(data?.campgroundId ? data : null);
-    } catch { setActiveCheckIn(null); }
-  };
-
   useEffect(() => {
-    if (user) fetchActiveCheckIn();
+    if (user) {
+      api.get('/checkins/active').then(({ data }) => {
+        setActiveCheckIn(data?.campgroundId ? data : null);
+      }).catch(() => setActiveCheckIn(null));
+    }
   }, [user]);
   const [inWishlist, setInWishlist] = useState(false);
   const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
@@ -339,45 +335,17 @@ export default function CampgroundDetailPage() {
   const isCheckedInHere = activeCheckIn?.campgroundId === campground?.id;
 
   const handleCheckOut = async () => {
-    if (!confirm('Check out of ' + (campground?.name || 'this campground') + '?')) return;
+    if (!window.confirm('Check out of ' + (campground?.name || 'this campground') + '?')) return;
     try {
       await api.delete('/checkins/active');
-      // Update linked event endDate to today
-      const today = new Date().toISOString().split('T')[0];
       try {
-        await api.patch('/checkins/checkout-event', {
-          campgroundId: campground?.id,
-          endDate: today,
-        });
+        const today = new Date().toISOString().split('T')[0];
+        await api.patch('/checkins/checkout-event', { campgroundId: campground?.id, endDate: today });
       } catch {}
       setActiveCheckIn(null);
       loadCampground();
-      alert('✅ Checked out! Your trip dates have been updated.');
-    } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to check out');
-    }
-  };
-
-  const isCheckedInHere = activeCheckIn?.campgroundId === campground?.id;
-
-  const handleCheckOut = async () => {
-    if (!confirm('Check out of ' + (campground?.name || 'this campground') + '?')) return;
-    try {
-      await api.delete('/checkins/active');
-      // Update linked event endDate to today
-      const today = new Date().toISOString().split('T')[0];
-      try {
-        await api.patch('/checkins/checkout-event', {
-          campgroundId: campground?.id,
-          endDate: today,
-        });
-      } catch {}
-      setActiveCheckIn(null);
-      loadCampground();
-      alert('✅ Checked out! Your trip dates have been updated.');
-    } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to check out');
-    }
+      alert('Checked out successfully!');
+    } catch (e: any) { alert(e.response?.data?.error || 'Failed to check out'); }
   };
 
   const handleCheckIn = async () => {
@@ -658,8 +626,6 @@ export default function CampgroundDetailPage() {
                 <div className="w-px bg-white/20 mx-1 self-stretch" />
                 <a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🏕️ Dyrt</a>
                 <a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🌿 Hipcamp</a>
-                <a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">🌲 Campendium</a>
-                <a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">✨ Glamping Hub</a>
                 <a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20 hover:bg-white/20 transition">⛺ Campspot</a>
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto">
@@ -670,9 +636,7 @@ export default function CampgroundDetailPage() {
                       <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
                     </button>
                   ) : (
-                    <button onClick={() => setShowCheckInModal(true)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm">
-                      <Calendar className="w-4 h-4" />Check In
-                    </button>
+                    <button onClick={() => setShowCheckInModal(true)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm"><Calendar className="w-4 h-4" />Check In</button>
                   )}
                   <button onClick={() => navigate(getTripUrl())} className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/25 transition backdrop-blur-sm">
                     <MapPinned className="w-4 h-4" />Plan a Trip
@@ -786,18 +750,12 @@ export default function CampgroundDetailPage() {
                   <div className="w-full"><CampspotBookButton campgroundId={campground.id} campspotSlug={campground.name} variant="rustic" /></div>
                   {user && <div className="flex gap-2">
                     {isCheckedInHere ? (
-                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-700 text-white hover:bg-red-600 transition group">
-                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                      </button>
-                    ) : (
-                      {isCheckedInHere ? (
-                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-700 text-white hover:bg-red-600 transition group">
-                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                      </button>
-                    ) : (
-                      <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }} className="flex-1 justify-center">Check In</ActionButton>
-                    )}
-                    )}
+                    <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-700 text-white hover:bg-red-600 transition group">
+                      <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
+                    </button>
+                  ) : (
+                    <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }} className="flex-1 justify-center">Check In</ActionButton>
+                  )}
                     <ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#b45309' }} className="flex-1 justify-center">Plan a Trip</ActionButton>
                   </div>}
                 </div>
@@ -896,18 +854,12 @@ export default function CampgroundDetailPage() {
                   <div className="w-full"><CampspotBookButton campgroundId={campground.id} campspotSlug={campground.name} variant="coastal" /></div>
                   {user && <div className="flex gap-2">
                     {isCheckedInHere ? (
-                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-red-500 transition group">
-                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                      </button>
-                    ) : (
-                      {isCheckedInHere ? (
-                      <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-red-500 transition group">
-                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                      </button>
-                    ) : (
-                      <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: '#0ea5e9' }} className="flex-1 justify-center">Check In</ActionButton>
-                    )}
-                    )}
+                    <button onClick={handleCheckOut} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-green-500 text-white hover:bg-red-500 transition group">
+                      <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
+                    </button>
+                  ) : (
+                    <ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: '#0ea5e9' }} className="flex-1 justify-center">Check In</ActionButton>
+                  )}
                     <ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#0369a1' }} className="flex-1 justify-center">Plan a Trip</ActionButton>
                   </div>}
                 </div>
@@ -924,7 +876,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow border border-sky-200 text-sky-700 hover:bg-sky-50 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-sky-100"><span className="text-xs text-sky-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌿 Hipcamp</a><a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌲 Campendium</a><a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition">✨ Glamping Hub</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition">⛺ Campspot</a></div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-sky-100"><span className="text-xs text-sky-400 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-3 py-1 bg-white/80 rounded-full text-xs border border-sky-200 text-sky-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -994,19 +946,7 @@ export default function CampgroundDetailPage() {
               <div className="flex gap-3">
                 <div className="flex flex-col gap-2">
                   <div className="w-full"><CampspotBookButton campgroundId={campground.id} campspotSlug={campground.name} variant="adventure" /></div>
-                  {user && (isCheckedInHere ? (
-                    <button onClick={handleCheckOut} className="w-full px-6 py-2 bg-green-700 text-white font-bold rounded border border-green-500/50 hover:bg-red-700 hover:border-red-500 transition flex items-center justify-center gap-2 group">
-                      <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                    </button>
-                  ) : (
-                    {isCheckedInHere ? (
-                      <button onClick={handleCheckOut} className="w-full px-6 py-2 bg-green-700 text-white font-bold rounded border border-green-500/50 hover:bg-red-700 hover:border-red-500 transition flex items-center justify-center gap-2 group">
-                        <MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span>
-                      </button>
-                    ) : (
-                      <button onClick={() => setShowCheckInModal(true)} className="w-full px-6 py-2 bg-gray-700 text-white font-bold rounded border border-orange-500/50 hover:border-orange-500 transition flex items-center justify-center gap-2"><Calendar className="w-4 h-4" />Check In</button>
-                    )}
-                  ))}
+                  {user && (isCheckedInHere ? (<button onClick={handleCheckOut} className="w-full px-6 py-2 bg-green-700 text-white font-bold rounded border border-green-500/50 hover:bg-red-700 transition flex items-center justify-center gap-2 group"><MapPin className="w-4 h-4" /><span className="group-hover:hidden">✅ Checked In</span><span className="hidden group-hover:inline">Check Out</span></button>) : (<button onClick={() => setShowCheckInModal(true)} className="w-full px-6 py-2 bg-gray-700 text-white font-bold rounded border border-orange-500/50 hover:border-orange-500 transition flex items-center justify-center gap-2"><Calendar className="w-4 h-4" />Check In</button>))}
                 </div>
                 {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 transition flex items-center gap-2">Book Now<ExternalLink className="w-3 h-3" /></a>}
                 {user && <button onClick={toggleMute} className={`px-4 py-2 rounded font-bold transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-gray-700 text-gray-300 hover:text-orange-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>}
@@ -1023,7 +963,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition"><Navigation className="w-4 h-4" />Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-300 rounded border border-gray-700 hover:border-orange-500 hover:text-orange-400 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-700"><span className="text-xs text-gray-500 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-orange-500 hover:text-orange-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌿 Hipcamp</a><a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌲 Campendium</a><a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-purple-500 hover:text-purple-400 transition">✨ Glamping Hub</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-blue-500 hover:text-blue-400 transition">⛺ Campspot</a></div>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-700"><span className="text-xs text-gray-500 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-orange-500 hover:text-orange-400 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-green-500 hover:text-green-400 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-1.5 bg-gray-800 text-gray-300 rounded border border-gray-700 text-xs hover:border-blue-500 hover:text-blue-400 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -1094,7 +1034,7 @@ export default function CampgroundDetailPage() {
               {campground.latitude && <a href={`https://www.google.com/maps/dir/?api=1&destination=${campground.latitude},${campground.longitude}`} target="_blank" className="px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition">Directions</a>}
               {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-600 font-light hover:border-gray-900 hover:text-gray-900 transition" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
             </div>
-            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100"><span className="text-xs text-gray-400 tracking-wide uppercase mr-2">Also check</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌿 Hipcamp</a><a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌲 Campendium</a><a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">✨ Glamping Hub</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">⛺ Campspot</a></div>
+            <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100"><span className="text-xs text-gray-400 tracking-wide uppercase mr-2">Also check</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">🌿 Hipcamp</a><a href={`https://www.campspot.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="text-xs px-4 py-2 border border-gray-200 text-gray-500 font-light hover:border-gray-900 hover:text-gray-900 transition">⛺ Campspot</a></div>
           </div>
         </div>
       )}
@@ -1270,7 +1210,7 @@ export default function CampgroundDetailPage() {
                     {campground.storeUrl && <a href={campground.storeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 bg-amber-100 text-amber-800 font-medium rounded hover:bg-amber-200 transition border border-amber-300" title="Camp Store"><ShoppingBag className="w-4 h-4" />Store</a>}
                     {isAdmin && <Link to={`/business/${campground.id}`} className="px-5 py-3 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 transition"><Settings className="w-4 h-4 inline mr-2" />Manage</Link>}
                   </div>
-                    <div className="w-full flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-amber-200"><span className="text-xs text-amber-600 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🌿 Hipcamp</a><a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🌲 Campendium</a><a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">✨ Glamping Hub</a></div>
+                    <div className="w-full flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-amber-200"><span className="text-xs text-amber-600 mr-1">Also check:</span><a href={`https://thedyrt.com/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🏕️ The Dyrt</a><a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-4 py-2 bg-amber-100 text-amber-800 text-xs rounded hover:bg-amber-200 transition border border-amber-300">🌿 Hipcamp</a></div>
                 </div>
               </div>
             </div>
@@ -1428,12 +1368,6 @@ export default function CampgroundDetailPage() {
               </a>
               <a href={`https://www.hipcamp.com/en-US/search?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-green-500 hover:text-green-600 text-sm text-gray-600 transition">
                 <span className="text-base">🌿</span> Hipcamp
-              </a>
-              <a href={`https://www.campendium.com/search?search_query=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-2.5 text-sm border-b border-gray-100 hover:bg-gray-50 text-gray-700 hover:text-green-600 transition">
-                <span className="text-base">🌲</span> Campendium
-              </a>
-              <a href={`https://www.glampinghub.com/search/?q=${encodeURIComponent(campground.name)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-2.5 text-sm border-b border-gray-100 hover:bg-gray-50 text-gray-700 hover:text-purple-600 transition">
-                <span className="text-base">✨</span> Glamping Hub
               </a>
             </div>
           </div>
