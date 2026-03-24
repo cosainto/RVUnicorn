@@ -992,6 +992,8 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [campingTab, setCampingTab] = useState<'campfire' | 'network' | 'camp'>('campfire');
   const [tonightData, setTonightData] = useState<any>(null);
   const [linkedEvent, setLinkedEvent] = useState<any>(null);
+  const [linkedEventMealCount, setLinkedEventMealCount] = useState(0);
+  const [linkedEventActivityCount, setLinkedEventActivityCount] = useState(0);
 
   useEffect(() => {
     if (isCamping && activeCheckIn?.campground?.id) {
@@ -1002,7 +1004,15 @@ export default function BasecampPage({ user }: BasecampProps) {
           e.title?.startsWith('Staying at')
         );
         setLinkedEvent(match || null);
-      }).catch((e) => console.error("checkins/active failed:", e));
+        if (match) {
+          api.get(`/event-meals/${match.id}`).then(({ data }) => {
+            setLinkedEventMealCount((data || []).length);
+          }).catch(() => {});
+          api.get(`/events/${match.id}/activities`).then(({ data }) => {
+            setLinkedEventActivityCount((data || []).length);
+          }).catch(() => {});
+        }
+      }).catch(() => {});
     } else {
       setLinkedEvent(null);
     }
@@ -3320,11 +3330,25 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
                   </div>
                 )}
-                <div className="bg-white/10 rounded-lg p-3 text-center">
-                  <div className="text-xl mb-1">🔕</div>
-                  <div className="text-white/60 text-xs">Quiet Hours</div>
-                  <div className="font-medium text-xs mt-0.5">{tonightData?.quietHoursStart || '10:00 PM'}</div>
-                </div>
+                {linkedEvent && linkedEventMealCount > 0 ? (
+                  <a href={`/trips/${linkedEvent.id}#meals`} className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition block">
+                    <div className="text-xl mb-1">🍽️</div>
+                    <div className="text-white/60 text-xs">Meal Plan</div>
+                    <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventMealCount} meals →</div>
+                  </a>
+                ) : linkedEvent && linkedEventActivityCount > 0 ? (
+                  <a href={`/trips/${linkedEvent.id}#schedule`} className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition block">
+                    <div className="text-xl mb-1">📅</div>
+                    <div className="text-white/60 text-xs">Schedule</div>
+                    <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventActivityCount} items →</div>
+                  </a>
+                ) : (
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-xl mb-1">🔕</div>
+                    <div className="text-white/60 text-xs">Quiet Hours</div>
+                    <div className="font-medium text-xs mt-0.5">{tonightData?.quietHoursStart || '10:00 PM'}</div>
+                  </div>
+                )}
                 <div className="bg-white/10 rounded-lg p-3 text-center">
                   <div className="text-xl mb-1">👥</div>
                   <div className="text-white/60 text-xs">RVers Here</div>
