@@ -179,7 +179,7 @@ router.get('/active', authenticateToken, async (req: any, res) => {
       }
     });
     // Auto-create StateVisit if campground has a state
-    if (checkIn.campground?.state) {
+    if (checkIn?.campground?.state) {
       const campState = checkIn.campground.state;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -199,7 +199,7 @@ router.get('/active', authenticateToken, async (req: any, res) => {
     }
 
     // Log check-in activity to friend feed
-    if (checkIn.campground) {
+    if (checkIn?.campground) {
       try {
         await logCheckIn(userId, checkIn.campground.id, checkIn.campground.name);
 
