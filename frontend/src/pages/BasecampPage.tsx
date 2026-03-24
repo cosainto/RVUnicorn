@@ -3302,14 +3302,15 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           </div>
 
           {/* Hitch Pulse — always visible below tabs */}
-          {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
-            <div className="mb-4">
-              <WeatherActivities
-                lat={activeCheckIn.campground.latitude}
-                lon={activeCheckIn.campground.longitude}
-                campgroundName={activeCheckIn.campground.name}
-                compact={false}
-              />
+          {campfireVibeMsg && (
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl px-5 py-4 mb-2">
+              <div className="flex items-start gap-3">
+                <img src="/hitch.png" alt="Hitch" className="w-9 h-9 rounded-full object-cover flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-white/80 text-xs font-semibold mb-1">🦄 Hitch's Campground Pulse</div>
+                  <p className="text-white text-sm leading-relaxed">{campfireVibeMsg}</p>
+                </div>
+              </div>
             </div>
           )}
 
