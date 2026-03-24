@@ -914,6 +914,57 @@ function getRvManualUrl(make?: string, model?: string, year?: number | string): 
   return `https://www.google.com/search?q=${query}`;
 }
 
+
+// ── Campfire Photo Strip ─────────────────────────────────────────────────────
+function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
+  const [photos, setPhotos] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get(`/photos/event/${eventId}`)
+      .then(({ data }) => setPhotos(data.photos || []))
+      .catch(() => {});
+  }, [eventId]);
+
+  if (photos.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📸</span>
+          <h3 className="font-bold text-gray-900 text-sm">Trip Photos</h3>
+          <span className="text-xs text-gray-400">{eventTitle}</span>
+        </div>
+        <span className="text-xs text-gray-400">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+        {photos.map((photo: any, i: number) => (
+          <a
+            key={photo.id || i}
+            href={photo.albumId ? `/albums/${photo.albumId}` : `/trips/${photo.eventId || ''}`}
+            className="flex-shrink-0 relative group"
+            title={photo.caption || photo.user?.firstName || 'View photo'}
+          >
+            <img
+              src={photo.url}
+              alt={photo.caption || ''}
+              className="w-24 h-24 object-cover rounded-lg border border-gray-100 group-hover:opacity-90 transition"
+            />
+            {photo.user?.profilePicture && (
+              <img
+                src={photo.user.profilePicture}
+                alt=""
+                className="absolute bottom-1 left-1 w-5 h-5 rounded-full border border-white object-cover"
+              />
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function BasecampPage({ user }: BasecampProps) {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
@@ -3345,6 +3396,9 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   />
                 </div>
               )}
+
+              {/* Trip Photo Strip — horizontal scroll */}
+              {linkedEvent && <CampfirePhotoStrip eventId={linkedEvent.id} eventTitle={linkedEvent.title} />}
 
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
