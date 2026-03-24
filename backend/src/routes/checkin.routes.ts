@@ -10,7 +10,10 @@ const prisma = new PrismaClient();
 router.post('/', authenticateToken, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
-    const { campgroundId, harvestHostId, overnightSpotId, siteNumber, notes } = req.body;
+    const { campgroundId, harvestHostId, overnightSpotId, siteNumber, notes,
+            checkInDate: rawCheckIn, checkOutDate: rawCheckOut } = req.body;
+    const checkInDate  = rawCheckIn  ? new Date(rawCheckIn)  : new Date();
+    const checkOutDate = rawCheckOut ? new Date(rawCheckOut) : null;
 
     if (!campgroundId && !harvestHostId && !overnightSpotId) {
       return res.status(400).json({ error: 'Must provide a location to check in to' });
@@ -29,14 +32,14 @@ router.post('/', authenticateToken, async (req: any, res) => {
         campgroundId: campgroundId || null,
         harvestHostId: harvestHostId || null,
         overnightSpotId: overnightSpotId || null,
-        checkInDate: new Date(),
+        checkInDate: checkInDate,
         siteNumber: siteNumber || null,
         notes: notes || null,
         isActive: true,
       },
       include: {
         user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
-        campground: { select: { id: true, name: true, imageUrl: true, state: true, location: true, latitude: true, longitude: true } },
+        campground: { select: { id: true, name: true, imageUrl: true, bannerImage: true, city: true, state: true, location: true, latitude: true, longitude: true } },
       }
     });
 
@@ -77,6 +80,39 @@ router.post('/', authenticateToken, async (req: any, res) => {
           }).catch(() => null);
         }
       }
+    }
+
+    // Auto-create an Event from this check-in
+    try {
+      if (campgroundId && checkIn.campground) {
+        const cg = checkIn.campground as any;
+        const eventLocation = [cg.city, cg.state].filter(Boolean).join(', ') || cg.location || cg.name;
+        const descParts: string[] = [];
+        if (siteNumber) descParts.push(`Site: ${siteNumber}`);
+        if (notes)      descParts.push(notes);
+        const eventBanner = cg.bannerImage || cg.imageUrl || null;
+        const eventEnd    = checkOutDate || checkInDate;
+        const eventData: any = {
+          title:       `Staying at ${cg.name}`,
+          description: descParts.join('\n') || null,
+          startDate:   checkInDate,
+          endDate:     eventEnd,
+          location:    eventLocation,
+          hostId:      userId,
+        };
+        if (eventBanner)  eventData.bannerImage = eventBanner;
+        if (campgroundId) eventData.campgroundId = campgroundId;
+        await prisma.event.create({ data: eventData }).catch((err: any) => {
+          if (err.message?.includes('campgroundId')) {
+            delete eventData.campgroundId;
+            return prisma.event.create({ data: eventData });
+          }
+          throw err;
+        });
+        console.log('[CheckIn] Auto-created event for user ' + userId);
+      }
+    } catch (eventErr: any) {
+      console.error('[CheckIn] Auto-event creation failed:', eventErr.message);
     }
 
     res.json(checkIn);
