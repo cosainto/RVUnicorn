@@ -3294,16 +3294,6 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           {/* Campfire Tab */}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
-              {/* Hitch Pulse — AI campground vibe, always first */}
-              {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
-                <WeatherActivities
-                  lat={activeCheckIn.campground.latitude}
-                  lon={activeCheckIn.campground.longitude}
-                  campgroundName={activeCheckIn.campground.name}
-                  compact={false}
-                />
-              )}
-
               {/* Embedded Campfire Chat */}
               {activeCheckIn?.campground && (
                 <div className="rounded-xl overflow-hidden border border-orange-200">
@@ -3335,6 +3325,16 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
 
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              {/* Hitch Pulse — below chat */}
+              {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
+                <WeatherActivities
+                  lat={activeCheckIn.campground.latitude}
+                  lon={activeCheckIn.campground.longitude}
+                  campgroundName={activeCheckIn.campground.name}
+                  compact={false}
+                />
+              )}
+
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🎮</span>
                     <h3 className="font-bold text-gray-900 text-sm">Campfire Games</h3>

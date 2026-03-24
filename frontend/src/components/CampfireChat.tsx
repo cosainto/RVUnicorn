@@ -116,19 +116,13 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
 
   return (
     <div className="rounded-xl border border-orange-200 overflow-hidden bg-white flex flex-col" style={{ height: '500px' }}>
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between">
+      <div className="px-4 py-2 flex items-center justify-between border-b border-orange-100 bg-orange-50/50">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🔥</span>
-          <div>
-            <div className="text-white font-semibold text-sm">Campfire Chat</div>
-            <div className="text-orange-100 text-xs">{campgroundName}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowUsers(v => !v)} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded-full transition">
+          <button onClick={() => setShowUsers(v => !v)} className="flex items-center gap-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs px-2 py-1 rounded-full transition">
             <span>🏕️</span><span>{status.checkedInCount} here</span>
           </button>
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-300' : 'bg-red-300'}`} />
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
+          {!connected && <span className="text-xs text-red-500">Reconnecting...</span>}
         </div>
       </div>
 
