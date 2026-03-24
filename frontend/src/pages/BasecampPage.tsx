@@ -934,6 +934,17 @@ export default function BasecampPage({ user }: BasecampProps) {
   const isCamping  = !!activeCheckIn;
   const isPlanning = !isCamping;
   const [campingTab, setCampingTab] = useState<'campfire' | 'network' | 'camp'>('campfire');
+  const [tonightData, setTonightData] = useState<any>(null);
+
+  useEffect(() => {
+    if (isCamping && activeCheckIn?.campground?.id) {
+      api.get(`/checkins/tonight/${activeCheckIn.campground.id}`)
+        .then(({ data }) => setTonightData(data))
+        .catch(() => {});
+    } else {
+      setTonightData(null);
+    }
+  }, [isCamping, activeCheckIn?.campground?.id]);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
@@ -3216,17 +3227,17 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                 <div className="bg-white/10 rounded-lg p-3 text-center">
                   <div className="text-xl mb-1">🎯</div>
                   <div className="text-white/60 text-xs">Trivia</div>
-                  <div className="font-medium text-xs mt-0.5">{triviaCountdown || 'Check schedule'}</div>
+                  <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 text-center">
                   <div className="text-xl mb-1">🔕</div>
                   <div className="text-white/60 text-xs">Quiet Hours</div>
-                  <div className="font-medium text-xs mt-0.5">10:00 PM</div>
+                  <div className="font-medium text-xs mt-0.5">{tonightData?.quietHoursStart || '10:00 PM'}</div>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 text-center">
                   <div className="text-xl mb-1">👥</div>
-                  <div className="text-white/60 text-xs">Campers Here</div>
-                  <div className="font-medium text-xs mt-0.5">See Camp tab</div>
+                  <div className="text-white/60 text-xs">RVers Here</div>
+                  <div className="font-medium text-xs mt-0.5">{tonightData?.rverCount ?? '...'} checked in</div>
                 </div>
                 <button
                   onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}

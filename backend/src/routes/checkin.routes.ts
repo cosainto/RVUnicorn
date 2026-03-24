@@ -243,6 +243,48 @@ router.get('/active', authenticateToken, async (req: any, res) => {
   }
 });
 
+
+// GET /api/checkins/tonight/:campgroundId — Tonight at Camp data
+router.get('/tonight/:campgroundId', async (req: any, res) => {
+  try {
+    const { campgroundId } = req.params;
+
+    // How many RVers are currently checked in
+    const rverCount = await prisma.checkIn.count({
+      where: { campgroundId, isActive: true },
+    });
+
+    // Trivia schedule — next trivia at 5:30 PM Central
+    const now = new Date();
+    const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+    const hours = central.getHours();
+    const mins = central.getMinutes();
+    const totalMins = hours * 60 + mins;
+    const triviaTime = 17 * 60 + 30;
+    let triviaStatus = null;
+    const diff = triviaTime - totalMins;
+    if (diff > 0 && diff <= 60) triviaStatus = `In ${diff} min`;
+    else if (diff <= 0 && diff > -60) triviaStatus = 'LIVE now';
+    else if (diff > 60) triviaStatus = '5:30 PM Central';
+
+    // Quiet hours — default 10 PM, override if campground has it set
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true },
+    });
+
+    res.json({
+      campgroundName: campground?.name || '',
+      rverCount,
+      triviaStatus,
+      quietHoursStart: '10:00 PM',
+      quietHoursEnd: '8:00 AM',
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/checkins/herd/:type/:id - Get who's checked in at a location (RV Herd Here Now)
 router.get('/herd/:type/:id', async (req: any, res) => {
   try {
