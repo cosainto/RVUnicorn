@@ -271,7 +271,7 @@ export default function CampgroundDetailPage() {
   useEffect(() => {
     if (user) {
       api.get('/checkins/active').then(({ data }) => {
-        setActiveCheckIn(data?.checkIn?.campground?.id ? data.checkIn : null);
+        console.log("[CheckIn Debug]", JSON.stringify(data)); setActiveCheckIn(data?.checkIn?.campground?.id ? data.checkIn : null);
       }).catch(() => setActiveCheckIn(null));
     }
   }, [user]);
