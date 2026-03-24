@@ -1031,26 +1031,8 @@ export default function BasecampPage({ user }: BasecampProps) {
           api.get(`/event-meals/${match.id}`).then(({ data }) => {
             const meals = data || [];
             setLinkedEventMealCount(meals.length);
-            // Find next upcoming meal
-            const now = new Date();
-            const upcoming = meals
-              .filter((m: any) => {
-                if (!m.scheduledTime && !m.date) return false;
-                const mealDateTime = m.scheduledTime
-                  ? new Date(`${m.date?.split('T')[0] || new Date().toISOString().split('T')[0]}T${m.scheduledTime}`)
-                  : new Date(m.date);
-                return mealDateTime >= now;
-              })
-              .sort((a: any, b: any) => {
-                const aTime = a.scheduledTime
-                  ? new Date(`${a.date?.split('T')[0]}T${a.scheduledTime}`)
-                  : new Date(a.date);
-                const bTime = b.scheduledTime
-                  ? new Date(`${b.date?.split('T')[0]}T${b.scheduledTime}`)
-                  : new Date(b.date);
-                return aTime.getTime() - bTime.getTime();
-              })[0] || meals[0] || null;
-            setNextMeal(upcoming);
+            // API returns meals sorted by scheduledAt asc — just take the first one
+            setNextMeal(meals[0] || null);
           }).catch(() => {});
           api.get(`/events/${match.id}/activities`).then(({ data }) => {
             setLinkedEventActivityCount((data || []).length);
