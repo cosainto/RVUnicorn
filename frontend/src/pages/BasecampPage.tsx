@@ -3301,6 +3301,18 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             </button>
           </div>
 
+          {/* Hitch Pulse — always visible below tabs */}
+          {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
+            <div className="mb-4">
+              <WeatherActivities
+                lat={activeCheckIn.campground.latitude}
+                lon={activeCheckIn.campground.longitude}
+                campgroundName={activeCheckIn.campground.name}
+                compact={false}
+              />
+            </div>
+          )}
+
           {/* Campfire Tab */}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
