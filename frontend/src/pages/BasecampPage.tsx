@@ -63,6 +63,10 @@ import BasecampTour from '../components/BasecampTour';
 import CreatorFeed from '../components/CreatorFeed';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
+import CampgroundCommunity from '../components/CampgroundCommunity';
+import ThingsToDoSection from '../components/ThingsToDoSection';
+import LocationEventsCalendar from '../components/LocationEventsCalendar';
+import MealPlanner from '../components/MealPlanner';
 import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
@@ -935,6 +939,22 @@ export default function BasecampPage({ user }: BasecampProps) {
   const isPlanning = !isCamping;
   const [campingTab, setCampingTab] = useState<'campfire' | 'network' | 'camp'>('campfire');
   const [tonightData, setTonightData] = useState<any>(null);
+  const [linkedEvent, setLinkedEvent] = useState<any>(null);
+
+  useEffect(() => {
+    if (isCamping && activeCheckIn?.campground?.id) {
+      // Find the auto-created event for this check-in
+      api.get('/trips/my').then(({ data }) => {
+        const match = data.find((e: any) =>
+          e.campground?.id === activeCheckIn.campground.id &&
+          e.title?.startsWith('Staying at')
+        );
+        setLinkedEvent(match || null);
+      }).catch(() => {});
+    } else {
+      setLinkedEvent(null);
+    }
+  }, [isCamping, activeCheckIn?.campground?.id]);
 
   useEffect(() => {
     if (isCamping && activeCheckIn?.campground?.id) {
@@ -3302,6 +3322,11 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                 />
               )}
               {/* Campfire Games — Phase 6 */}
+              {/* Campground Announcements */}
+              {activeCheckIn?.campground?.id && (
+                <CampfireChannel campgroundId={activeCheckIn.campground.id} />
+              )}
+
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -3365,14 +3390,14 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
           {/* Camp Tab */}
           {campingTab === 'camp' && (
             <div className="space-y-6">
-              <PackUpTasksWidget />
-              <WishlistWidget />
+
+              {/* Campground shortcuts + map */}
               {activeCheckIn?.campground && (
                 <div className="bg-white rounded-xl border border-gray-100 p-4">
                   <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <span>🏕️</span> Campground Shortcuts
                   </h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <a href={`/campgrounds/${activeCheckIn.campground.id}`} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-700">
                       <MapPin className="w-4 h-4 text-green-600" /> Campground Page
                     </a>
@@ -3381,9 +3406,81 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                         <Navigation className="w-4 h-4 text-blue-600" /> Directions
                       </a>
                     )}
+                    <a href={`/campgrounds/${activeCheckIn.campground.id}#map`} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                      <Map className="w-4 h-4 text-purple-600" /> Map
+                    </a>
+                    {linkedEvent && (
+                      <a href={`/trips/${linkedEvent.id}`} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                        <Calendar className="w-4 h-4 text-orange-600" /> My Trip
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
+
+              {/* Campground Threads */}
+              {activeCheckIn?.campground?.id && (
+                <CampgroundCommunity
+                  campgroundId={activeCheckIn.campground.id}
+                  campgroundName={activeCheckIn.campground.name}
+                />
+              )}
+
+              {/* News & Events Calendar */}
+              {activeCheckIn?.campground?.id && (
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                    <span className="text-base">📅</span>
+                    <h3 className="font-bold text-sm text-gray-900">News & Events</h3>
+                  </div>
+                  <div className="p-4">
+                    <LocationEventsCalendar
+                      campgroundId={activeCheckIn.campground.id}
+                      lat={activeCheckIn.campground.latitude}
+                      lng={activeCheckIn.campground.longitude}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Meal Plan — if linked event exists */}
+              {linkedEvent && (
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                    <span className="text-base">🍽️</span>
+                    <h3 className="font-bold text-sm text-gray-900">Meal Plan</h3>
+                    <span className="text-xs text-gray-400">{linkedEvent.title}</span>
+                  </div>
+                  <div className="p-4">
+                    <MealPlanner
+                      eventId={linkedEvent.id}
+                      startDate={linkedEvent.startDate}
+                      endDate={linkedEvent.endDate}
+                      isOrganizer={linkedEvent.organizerId === user?.id}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* PackUp + Wishlist */}
+              <PackUpTasksWidget />
+              <WishlistWidget />
+
+              {/* Things To Do Nearby */}
+              {activeCheckIn?.campground?.id && (
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                    <span className="text-base">🗺️</span>
+                    <h3 className="font-bold text-sm text-gray-900">Things To Do Nearby</h3>
+                  </div>
+                  <ThingsToDoSection
+                    campgroundId={activeCheckIn.campground.id}
+                    campgroundName={activeCheckIn.campground.name}
+                    eventId={linkedEvent?.id}
+                  />
+                </div>
+              )}
+
             </div>
           )}
 
