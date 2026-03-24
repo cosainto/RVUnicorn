@@ -85,13 +85,13 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolled = useRef(false);
 
-  // Only auto-scroll if user is already near the bottom or just sent a message
+  // Only auto-scroll within the chat container, never scroll the page
   useEffect(() => {
     if (!scrollRef.current || userScrolled.current) return;
     const el = scrollRef.current;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     if (isNearBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages]);
 
