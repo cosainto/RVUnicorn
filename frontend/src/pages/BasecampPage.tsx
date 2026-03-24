@@ -937,7 +937,6 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
   const isCamping  = !!activeCheckIn;
-  console.log('[DEBUG] activeCheckIn:', activeCheckIn, 'isCamping:', !!activeCheckIn);
   const isPlanning = !isCamping;
   const [campingTab, setCampingTab] = useState<'campfire' | 'network' | 'camp'>('campfire');
   const [tonightData, setTonightData] = useState<any>(null);
