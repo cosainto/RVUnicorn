@@ -1684,8 +1684,8 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Event Countdown Banner OR Inspirational Quote */}
-      {nextEvent ? (
+      {/* Event Countdown Banner OR Inspirational Quote — Planning Mode only */}
+      {isPlanning && (nextEvent ? (
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1766,7 +1766,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             </div>
           </div>
         </div>
-      )}
+      ))}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User Status - Collapsed Composer */}
