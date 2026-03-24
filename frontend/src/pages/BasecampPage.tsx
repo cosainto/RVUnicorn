@@ -67,6 +67,7 @@ import CampgroundCommunity from '../components/CampgroundCommunity';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import MealPlanner from '../components/MealPlanner';
+import EventAlbum from '../components/EventAlbum';
 import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
@@ -3460,6 +3461,30 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Trip Photo Album */}
+              {linkedEvent && (
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                    <span className="text-base">📸</span>
+                    <h3 className="font-bold text-sm text-gray-900">Trip Photos</h3>
+                    <span className="text-xs text-gray-400">{linkedEvent.title}</span>
+                  </div>
+                  <div className="p-4">
+                    <EventAlbum
+                      eventId={linkedEvent.id}
+                      canUpload={true}
+                      campgroundName={activeCheckIn?.campground?.name}
+                      eventTitle={linkedEvent.title}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Wildlife Sightings */}
+              {activeCheckIn?.campground?.id && (
+                <WildlifeSightings campgroundId={activeCheckIn.campground.id} />
               )}
 
               {/* PackUp + Wishlist */}
