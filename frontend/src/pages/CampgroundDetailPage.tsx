@@ -333,7 +333,7 @@ export default function CampgroundDetailPage() {
     }
   };
 
-  const isCheckedInHere = (activeCheckIn?.campgroundId || activeCheckIn?.campground?.id) === campground?.id;
+  const isCheckedInHere = activeCheckIn?.campgroundId === campground?.id;
 
   const handleCheckOut = async () => {
     if (!window.confirm('Check out of ' + (campground?.name || 'this campground') + '?')) return;
