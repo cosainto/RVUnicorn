@@ -121,6 +121,39 @@ router.post('/', authenticateToken, async (req: any, res) => {
   }
 });
 
+
+// PATCH /api/checkins/checkout-event — update linked event endDate on early checkout
+router.patch('/checkout-event', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { campgroundId, endDate } = req.body;
+    if (!campgroundId || !endDate) return res.json({ updated: false });
+
+    const end = new Date(endDate);
+
+    // Find the most recent event for this user at this campground
+    const event = await prisma.event.findFirst({
+      where: {
+        organizerId: userId,
+        campgroundId,
+        title: { contains: 'Staying at' },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (event) {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { endDate: end },
+      });
+      return res.json({ updated: true, eventId: event.id });
+    }
+    res.json({ updated: false });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // DELETE /api/checkins/active - Check out
 router.delete('/active', authenticateToken, async (req: any, res) => {
   try {
