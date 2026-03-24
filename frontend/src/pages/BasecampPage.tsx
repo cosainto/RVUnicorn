@@ -1802,7 +1802,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       ))}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {isPlanning && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">)
         {/* User Status - Collapsed Composer */}
         {userProfile && (
           <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
@@ -1844,7 +1844,6 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         )}
 
-        {isPlanning && (<>
         {/* Smart Action Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* Upcoming Trip Card */}
@@ -3228,8 +3227,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
             <CampgroundUpdatesFeed maxItems={10} />
           </div>
         </div>
-      </>)}
-      </div>
+      </div>)}
 
       {/* ── CAMPING MODE LAYOUT ─────────────────────────────────────────── */}
       {isCamping && (
