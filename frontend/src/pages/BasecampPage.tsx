@@ -3304,11 +3304,22 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div className="bg-white/10 rounded-lg p-3 text-center">
-                  <div className="text-xl mb-1">🎯</div>
-                  <div className="text-white/60 text-xs">Trivia</div>
-                  <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
-                </div>
+                {activeCheckIn?.campground?.campgroundMapUrl ? (
+                  <button
+                    onClick={() => window.open(activeCheckIn.campground.campgroundMapUrl, '_blank')}
+                    className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition w-full"
+                  >
+                    <div className="text-xl mb-1">🗺️</div>
+                    <div className="text-white/60 text-xs">Camp Map</div>
+                    <div className="font-medium text-xs mt-0.5 text-orange-300">Tap to view →</div>
+                  </button>
+                ) : (
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-xl mb-1">🎯</div>
+                    <div className="text-white/60 text-xs">Trivia</div>
+                    <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
+                  </div>
+                )}
                 <div className="bg-white/10 rounded-lg p-3 text-center">
                   <div className="text-xl mb-1">🔕</div>
                   <div className="text-white/60 text-xs">Quiet Hours</div>
