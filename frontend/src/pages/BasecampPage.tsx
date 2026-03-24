@@ -995,10 +995,28 @@ export default function BasecampPage({ user }: BasecampProps) {
     if (isCamping) window.scrollTo({ top: 0, behavior: 'instant' });
   }, [isCamping]);
   const [campingTab, setCampingTab] = useState<'campfire' | 'network' | 'camp'>('campfire');
+  const [mealRsvpLoading, setMealRsvpLoading] = useState(false);
+
+  const handleMealRSVP = async (mealId: string, status: string) => {
+    setMealRsvpLoading(true);
+    try {
+      await api.post(`/event-meals/${mealId}/rsvp`, { status });
+      // Refresh nextMeal rsvps
+      if (linkedEvent) {
+        api.get(`/event-meals/${linkedEvent.id}`).then(({ data }) => {
+          const meals = data || [];
+          const updated = meals.find((m: any) => m.id === mealId);
+          if (updated) setNextMeal(updated);
+        }).catch(() => {});
+      }
+    } catch {}
+    setMealRsvpLoading(false);
+  };
   const [tonightData, setTonightData] = useState<any>(null);
   const [linkedEvent, setLinkedEvent] = useState<any>(null);
   const [linkedEventMealCount, setLinkedEventMealCount] = useState(0);
   const [linkedEventActivityCount, setLinkedEventActivityCount] = useState(0);
+  const [nextMeal, setNextMeal] = useState<any>(null);
 
   useEffect(() => {
     if (isCamping && activeCheckIn?.campground?.id) {
@@ -1011,7 +1029,28 @@ export default function BasecampPage({ user }: BasecampProps) {
         setLinkedEvent(match || null);
         if (match) {
           api.get(`/event-meals/${match.id}`).then(({ data }) => {
-            setLinkedEventMealCount((data || []).length);
+            const meals = data || [];
+            setLinkedEventMealCount(meals.length);
+            // Find next upcoming meal
+            const now = new Date();
+            const upcoming = meals
+              .filter((m: any) => {
+                if (!m.scheduledTime && !m.date) return false;
+                const mealDateTime = m.scheduledTime
+                  ? new Date(`${m.date?.split('T')[0] || new Date().toISOString().split('T')[0]}T${m.scheduledTime}`)
+                  : new Date(m.date);
+                return mealDateTime >= now;
+              })
+              .sort((a: any, b: any) => {
+                const aTime = a.scheduledTime
+                  ? new Date(`${a.date?.split('T')[0]}T${a.scheduledTime}`)
+                  : new Date(a.date);
+                const bTime = b.scheduledTime
+                  ? new Date(`${b.date?.split('T')[0]}T${b.scheduledTime}`)
+                  : new Date(b.date);
+                return aTime.getTime() - bTime.getTime();
+              })[0] || meals[0] || null;
+            setNextMeal(upcoming);
           }).catch(() => {});
           api.get(`/events/${match.id}/activities`).then(({ data }) => {
             setLinkedEventActivityCount((data || []).length);
@@ -3344,18 +3383,48 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
                   </div>
                 )}
-                {linkedEvent && linkedEventMealCount > 0 ? (
-                  <a href={`/trips/${linkedEvent.id}#meals`} className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition block">
-                    <div className="text-xl mb-1">🍽️</div>
-                    <div className="text-white/60 text-xs">Meal Plan</div>
-                    <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventMealCount} meals →</div>
-                  </a>
-                ) : linkedEvent && linkedEventActivityCount > 0 ? (
+                {nextMeal ? (() => {
+                  const userRsvp = nextMeal.rsvps?.find((r: any) => r.userId === user?.id);
+                  const mealTime = nextMeal.scheduledTime
+                    ? new Date(`2000-01-01T${nextMeal.scheduledTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    : null;
+                  return (
+                    <div className="bg-white/10 rounded-lg p-3 text-center">
+                      <div className="text-xl mb-1">🍽️</div>
+                      <div className="text-white/60 text-xs capitalize">{nextMeal.mealType || 'Meal'}</div>
+                      <div className="font-medium text-xs mt-0.5">{mealTime || 'Time TBD'}</div>
+                      {!userRsvp ? (
+                        <div className="flex gap-1 mt-2 justify-center">
+                          <button
+                            onClick={() => handleMealRSVP(nextMeal.id, 'going')}
+                            disabled={mealRsvpLoading}
+                            className="bg-green-500/80 hover:bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full transition"
+                          >✓ Join</button>
+                          <button
+                            onClick={() => handleMealRSVP(nextMeal.id, 'not_going')}
+                            disabled={mealRsvpLoading}
+                            className="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-2 py-0.5 rounded-full transition"
+                          >✕ Skip</button>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-[10px] font-semibold text-green-300">
+                          {userRsvp.status === 'going' ? '✓ Joining' : '✕ Skipping'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : linkedEvent && linkedEventActivityCount > 0 ? (
                   <a href={`/trips/${linkedEvent.id}#schedule`} className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition block">
                     <div className="text-xl mb-1">📅</div>
                     <div className="text-white/60 text-xs">Schedule</div>
                     <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventActivityCount} items →</div>
                   </a>
+                ) : linkedEvent ? (
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-xl mb-1">🍽️</div>
+                    <div className="text-white/60 text-xs">Meals</div>
+                    <div className="font-medium text-xs mt-0.5 text-white/50">None planned</div>
+                  </div>
                 ) : (
                   <div className="bg-white/10 rounded-lg p-3 text-center">
                     <div className="text-xl mb-1">🔕</div>
