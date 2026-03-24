@@ -951,7 +951,7 @@ export default function BasecampPage({ user }: BasecampProps) {
           e.title?.startsWith('Staying at')
         );
         setLinkedEvent(match || null);
-      }).catch(() => {});
+      }).catch((e) => console.error("checkins/active failed:", e));
     } else {
       setLinkedEvent(null);
     }
@@ -961,7 +961,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     if (isCamping && activeCheckIn?.campground?.id) {
       api.get(`/checkins/tonight/${activeCheckIn.campground.id}`)
         .then(({ data }) => setTonightData(data))
-        .catch(() => {});
+        .catch((e) => console.error("checkins/active failed:", e));
     } else {
       setTonightData(null);
     }
@@ -976,7 +976,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
     fetch((import.meta.env.VITE_API_URL || '') + '/api/boards/posts/all?sort=hot&limit=5', {
       headers: token ? { Authorization: 'Bearer ' + token } : {},
-    }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch(() => {});
+    }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch((e) => console.error("checkins/active failed:", e));
   }, []);
 
   // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
@@ -1019,10 +1019,10 @@ export default function BasecampPage({ user }: BasecampProps) {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
             fetch(`${import.meta.env.VITE_API_URL || ''}/api/campfire/${checkIn.campground.id}/daily-vibe`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
-            }).then(r => r.json()).then(d => { if (d.message) setCampfireVibeMsg(d.message); }).catch(() => {});
+            }).then(r => r.json()).then(d => { if (d.message) setCampfireVibeMsg(d.message); }).catch((e) => console.error("checkins/active failed:", e));
           }
         })
-        .catch(() => {});
+        .catch((e) => console.error("checkins/active failed:", e));
     }
   }, [user?.id]);
   // Activity Feed State
