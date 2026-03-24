@@ -82,7 +82,11 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     return () => { socket.disconnect(); };
   }, [campgroundId, user?.id]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  const isFirstLoad = useRef(true);
+  useEffect(() => {
+    if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const send = useCallback(() => {
     if (!input.trim() || !socketRef.current) return;
