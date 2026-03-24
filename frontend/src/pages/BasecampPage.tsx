@@ -3378,19 +3378,19 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                       {!userRsvp ? (
                         <div className="flex gap-1 mt-2 justify-center">
                           <button
-                            onClick={() => handleMealRSVP(nextMeal.id, 'going')}
+                            onClick={() => handleMealRSVP(nextMeal.id, 'attending')}
                             disabled={mealRsvpLoading}
                             className="bg-green-500/80 hover:bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full transition"
                           >✓ Join</button>
                           <button
-                            onClick={() => handleMealRSVP(nextMeal.id, 'not_going')}
+                            onClick={() => handleMealRSVP(nextMeal.id, 'not_attending')}
                             disabled={mealRsvpLoading}
                             className="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-2 py-0.5 rounded-full transition"
                           >✕ Skip</button>
                         </div>
                       ) : (
                         <div className="mt-1 text-[10px] font-semibold text-green-300">
-                          {userRsvp.status === 'going' ? '✓ Joining' : '✕ Skipping'}
+                          {userRsvp.status === 'attending' ? '✓ Joining' : '✕ Skipping'}
                         </div>
                       )}
                     </div>
