@@ -32,7 +32,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
         campgroundId: campgroundId || null,
         harvestHostId: harvestHostId || null,
         overnightSpotId: overnightSpotId || null,
-        checkInDate: checkInDate,
+        checkInDate: checkInDate ? new Date(checkInDate) : new Date(),
         siteNumber: siteNumber || null,
         notes: notes || null,
         isActive: true,
