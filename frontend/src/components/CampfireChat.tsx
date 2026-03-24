@@ -82,10 +82,17 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     return () => { socket.disconnect(); };
   }, [campgroundId, user?.id]);
 
-  const isFirstLoad = useRef(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolled = useRef(false);
+
+  // Only auto-scroll if user is already near the bottom or just sent a message
   useEffect(() => {
-    if (isFirstLoad.current) { isFirstLoad.current = false; return; }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!scrollRef.current || userScrolled.current) return;
+    const el = scrollRef.current;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   const send = useCallback(() => {
@@ -142,7 +149,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={scrollRef} onScroll={() => { if (scrollRef.current) { const el = scrollRef.current; userScrolled.current = el.scrollHeight - el.scrollTop - el.clientHeight > 150; } }} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && <div className="text-center text-gray-400 text-sm mt-8">The fire's just getting started… 🔥</div>}
         {messages.map(msg => {
           if (msg.isSystem) return (
