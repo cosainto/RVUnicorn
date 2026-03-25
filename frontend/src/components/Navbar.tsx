@@ -46,21 +46,29 @@ export default function Navbar() {
       // Convert to Central Time
       const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
       const totalMins = central.getHours() * 60 + central.getMinutes();
-      const triviaStart = 19; // TEMP TEST // 5:30 PM
-      const triviaEnd = 18 * 60;         // 6:00 PM
-      const diff = triviaStart - totalMins;
+      // Trivia times in Central (minutes since midnight)
+      const triviaTimes = [
+        7 * 60 + 30,   // 7:30 AM
+        12 * 60 + 25,  // 12:25 PM
+        17 * 60 + 30,  // 5:30 PM
+      ];
+      const triviaDuration = 30; // each session lasts 30 mins
 
-      if (totalMins >= triviaStart && totalMins < triviaEnd) {
-        setTriviaPhase('live');
-      } else if (diff > 0 && diff <= 5) {
-        setTriviaPhase('fast');
-      } else if (diff > 5 && diff <= 15) {
-        setTriviaPhase('medium');
-      } else if (diff > 15 && diff <= 30) {
-        setTriviaPhase('slow');
-      } else {
-        setTriviaPhase('off');
+      let phase: 'off' | 'slow' | 'medium' | 'fast' | 'live' = 'off';
+      for (const start of triviaTimes) {
+        const end = start + triviaDuration;
+        const diff = start - totalMins;
+        if (totalMins >= start && totalMins < end) {
+          phase = 'live'; break;
+        } else if (diff > 0 && diff <= 5) {
+          phase = 'fast'; break;
+        } else if (diff > 5 && diff <= 15) {
+          phase = 'medium'; break;
+        } else if (diff > 15 && diff <= 30) {
+          phase = 'slow'; break;
+        }
       }
+      setTriviaPhase(phase);
     };
     checkTrivia();
     const interval = setInterval(checkTrivia, 15000);
