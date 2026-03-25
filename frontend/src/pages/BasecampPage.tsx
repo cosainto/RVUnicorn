@@ -3374,7 +3374,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                     <div className="bg-white/10 rounded-lg p-3 text-center">
                       <div className="text-xl mb-1">🍽️</div>
                       <a
-                        href={linkedEvent ? `/trips/${linkedEvent.id}#meals` : '#'}
+                        href={linkedEvent ? `/trips/${linkedEvent.id}?scrollTo=meals#meals` : '#'}
                         className="text-white/80 hover:text-white text-xs capitalize font-semibold underline-offset-2 hover:underline transition"
                         onClick={e => e.stopPropagation()}
                       >

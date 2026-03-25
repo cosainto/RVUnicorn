@@ -2,7 +2,7 @@ import ShareButton from '../components/ShareButton';
 import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -118,6 +118,17 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'details');
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('scrollTo') === 'meals') {
+      setTimeout(() => {
+        const el = document.getElementById('meal-calendar');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
+    }
+  }, [location.search]);
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1205,7 +1216,7 @@ export default function EventDetailPage() {
             </div>
           )}
           {activeTab === 'meals' && (
-            <div className="space-y-4">
+            <div id="meal-calendar" className="space-y-4">
               <HitchMealSuggestions
                 eventId={event.id}
                 destination={event.campground?.name || event.location}
