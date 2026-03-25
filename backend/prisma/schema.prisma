@@ -3017,22 +3017,23 @@ model PlaceWishlist {
 }
 
 model EventActivity {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   eventId       String
-  thingToDoId   String
+  thingToDoId   String?
+  title         String?
+  description   String?
   scheduledDate DateTime?
   scheduledTime String?
   duration      Int?
   notes         String?
-  status        String    @default("PLANNED")
+  status        String     @default("PLANNED")
   addedById     String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  addedBy       User      @relation(fields: [addedById], references: [id], onDelete: Cascade)
-  event         Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  thingToDo     ThingToDo @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  addedBy       User       @relation(fields: [addedById], references: [id], onDelete: Cascade)
+  event         Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  thingToDo     ThingToDo? @relation(fields: [thingToDoId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, thingToDoId])
   @@index([eventId])
   @@index([thingToDoId])
 }

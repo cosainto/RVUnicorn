@@ -3606,9 +3606,11 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   </div>
                   <div className="p-4">
                     <LocationEventsCalendar
-                      campgroundId={activeCheckIn.campground.id}
-                      lat={activeCheckIn.campground.latitude}
-                      lng={activeCheckIn.campground.longitude}
+                      locationId={activeCheckIn.campground.id}
+                      locationType="campground"
+                      locationName={activeCheckIn.campground.name}
+                      eventId={linkedEvent?.id}
+                      onActivityAdded={() => {}}
                     />
                   </div>
                 </div>

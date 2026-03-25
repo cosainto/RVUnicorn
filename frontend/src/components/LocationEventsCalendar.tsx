@@ -9,6 +9,8 @@ interface Props {
   locationType: 'campground' | 'host';
   canManage?: boolean;
   locationName?: string;
+  eventId?: string;
+  onActivityAdded?: () => void;
 }
 
 const EVENT_TAGS = ['Live Music', 'Wine Tasting', 'Beer Festival', 'Farm Market', 'Food Trucks', 'Harvest Festival', 'Holiday Event', 'Family Fun', 'Workshop', 'Tour', 'Other'];
@@ -20,9 +22,30 @@ const TAG_ICONS: Record<string, string> = {
   'Tour': '🗺️', 'Other': '📅',
 };
 
-export default function LocationEventsCalendar({ locationId, locationType, canManage = false, locationName }: Props) {
+export default function LocationEventsCalendar({ locationId, locationType, canManage = false, locationName, eventId, onActivityAdded }: Props) {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
+  const [addedActivities, setAddedActivities] = useState<Set<string>>(new Set());
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  const handleAddToSchedule = async (event: any) => {
+    if (!eventId || addedActivities.has(event.id)) return;
+    setAddingId(event.id);
+    try {
+      await api.post(`/events/${eventId}/schedule-item`, {
+        title: event.title,
+        description: event.description,
+        scheduledDate: event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : null,
+        scheduledTime: event.startDate ? new Date(event.startDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : null,
+        notes: event.tags?.length ? `Tags: ${event.tags.join(', ')}` : null,
+      });
+      setAddedActivities(prev => new Set([...prev, event.id]));
+      if (onActivityAdded) onActivityAdded();
+    } catch {
+      alert('Failed to add to schedule');
+    }
+    setAddingId(null);
+  };
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -218,6 +241,19 @@ export default function LocationEventsCalendar({ locationId, locationType, canMa
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {event.isRecurring && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">🔄 Recurring</span>}
+                          {eventId && (
+                            <button
+                              onClick={() => handleAddToSchedule(event)}
+                              disabled={addingId === event.id || addedActivities.has(event.id)}
+                              className={`text-xs px-2.5 py-1 rounded-full font-semibold transition ${
+                                addedActivities.has(event.id)
+                                  ? 'bg-green-100 text-green-700 cursor-default'
+                                  : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                              }`}
+                            >
+                              {addedActivities.has(event.id) ? '✓ Added' : addingId === event.id ? '...' : '+ Schedule'}
+                            </button>
+                          )}
                           {canManage && (
                             <button onClick={() => handleDelete(event.id)}
                               className="opacity-0 group-hover:opacity-100 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
