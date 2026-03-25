@@ -3335,6 +3335,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               lon={activeCheckIn.campground.longitude}
               campgroundName={activeCheckIn.campground.name}
               compact={true}
+              eventId={linkedEvent?.id}
             />
           )}
 

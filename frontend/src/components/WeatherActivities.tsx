@@ -13,11 +13,30 @@ interface Props {
   lon: number;
   campgroundName?: string;
   compact?: boolean;
+  eventId?: string;
 }
 
-export default function WeatherActivities({ lat, lon, campgroundName, compact = false }: Props) {
+export default function WeatherActivities({ lat, lon, campgroundName, compact = false, eventId }: Props) {
   const [weather, setWeather] = useState<any>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [addedToSchedule, setAddedToSchedule] = useState<Set<number>>(new Set());
+  const [addingIdx, setAddingIdx] = useState<number | null>(null);
+
+  const handleAddToSchedule = async (activity: Activity, idx: number) => {
+    if (!eventId || addedToSchedule.has(idx)) return;
+    setAddingIdx(idx);
+    try {
+      await api.post(`/events/${eventId}/schedule-item`, {
+        title: activity.title,
+        description: activity.reason,
+        notes: activity.duration ? `Duration: ${activity.duration}` : undefined,
+      });
+      setAddedToSchedule(prev => new Set([...prev, idx]));
+    } catch {
+      alert('Failed to add to schedule');
+    }
+    setAddingIdx(null);
+  };
   const [loading, setLoading] = useState(true);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [showActivities, setShowActivities] = useState(false);
@@ -117,8 +136,21 @@ export default function WeatherActivities({ lat, lon, campgroundName, compact = 
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm text-gray-900">{a.title}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{a.reason}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{a.duration}</div>
               </div>
-              <span className="text-xs text-gray-400 flex-shrink-0 pt-0.5">{a.duration}</span>
+              {eventId && (
+                <button
+                  onClick={() => handleAddToSchedule(a, i)}
+                  disabled={addingIdx === i || addedToSchedule.has(i)}
+                  className={`text-xs px-2.5 py-1 rounded-full font-semibold flex-shrink-0 transition ${
+                    addedToSchedule.has(i)
+                      ? 'bg-green-100 text-green-700 cursor-default'
+                      : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                  }`}
+                >
+                  {addedToSchedule.has(i) ? '✓ Added' : addingIdx === i ? '...' : '+ Schedule'}
+                </button>
+              )}
             </div>
           ))}
         </div>
