@@ -37,6 +37,47 @@ export default function Navbar() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
+  // Trivia pulse state — tracks minutes until 5:30 PM Central
+  const [triviaPhase, setTriviaPhase] = useState<'off' | 'slow' | 'medium' | 'fast' | 'live'>('off');
+
+  useEffect(() => {
+    const checkTrivia = () => {
+      const now = new Date();
+      // Convert to Central Time
+      const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const totalMins = central.getHours() * 60 + central.getMinutes();
+      const triviaStart = 17 * 60 + 30; // 5:30 PM
+      const triviaEnd = 18 * 60;         // 6:00 PM
+      const diff = triviaStart - totalMins;
+
+      if (totalMins >= triviaStart && totalMins < triviaEnd) {
+        setTriviaPhase('live');
+      } else if (diff > 0 && diff <= 5) {
+        setTriviaPhase('fast');
+      } else if (diff > 5 && diff <= 15) {
+        setTriviaPhase('medium');
+      } else if (diff > 15 && diff <= 30) {
+        setTriviaPhase('slow');
+      } else {
+        setTriviaPhase('off');
+      }
+    };
+    checkTrivia();
+    const interval = setInterval(checkTrivia, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Trivia animation config per phase
+  const triviaAnimConfig = {
+    off:    { animation: 'none',                         bannerShow: false },
+    slow:   { animation: 'triviaPulse 2s ease-in-out infinite',   bannerShow: true  },
+    medium: { animation: 'triviaPulse 1s ease-in-out infinite',   bannerShow: true  },
+    fast:   { animation: 'triviaPulse 0.4s ease-in-out infinite', bannerShow: true  },
+    live:   { animation: 'triviaFlash 0.6s ease-in-out infinite', bannerShow: true  },
+  };
+  const triviaAnim = triviaAnimConfig[triviaPhase];
+  const triviaLabel = triviaPhase === 'live' ? '🔥 TRIVIA LIVE NOW' : triviaPhase === 'fast' ? '⚡ Trivia starting soon!' : triviaPhase === 'medium' ? '🎯 Trivia in ~10 min' : '🎮 Trivia at 5:30 PM CT';
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -106,7 +147,36 @@ export default function Navbar() {
 
   return (
     <>
+    <style>{`
+      @keyframes triviaPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); background: rgba(245,158,11,0.1); color: #f59e0b; }
+        50%       { box-shadow: 0 0 12px 3px rgba(245,158,11,0.6); background: rgba(245,158,11,0.25); color: #fbbf24; }
+      }
+      @keyframes triviaFlash {
+        0%, 100% { box-shadow: 0 0 14px 4px rgba(245,158,11,0.8); background: rgba(245,158,11,0.3); color: #fbbf24; }
+        50%       { box-shadow: 0 0 14px 4px rgba(234,88,12,0.8);  background: rgba(234,88,12,0.25); color: #fb923c; }
+      }
+      @keyframes bannerPulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.7; }
+      }
+    `}</style>
       <nav className="sticky top-0 z-50" style={{ background: 'linear-gradient(135deg, #1a1f2e 0%, #1e2535 50%, #1a1f2e 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05)' }}>
+        {triviaAnim.bannerShow && (
+          <div
+            className="w-full text-center text-xs font-bold py-1 cursor-pointer select-none"
+            style={{
+              background: triviaPhase === 'live'
+                ? 'linear-gradient(90deg, #f59e0b, #ea580c, #f59e0b)'
+                : 'linear-gradient(90deg, #92400e, #b45309, #92400e)',
+              color: '#fff',
+              animation: 'bannerPulse ' + (triviaPhase === 'fast' ? '0.4s' : triviaPhase === 'live' ? '0.6s' : '1.5s') + ' ease-in-out infinite',
+            }}
+            onClick={() => navigate('/community')}
+          >
+            {triviaLabel} — Click to join 🎮
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16 gap-4">
 
@@ -130,11 +200,14 @@ export default function Navbar() {
               {primaryLinks.map(({ to, icon: Icon, label, ...rest }) => {
                 const isHitch = (rest as any).isHitch;
                 const active = isActive(to);
+                const isCampfire = to === '/community';
+                const campfireAnim = isCampfire && triviaPhase !== 'off' ? triviaAnim.animation : 'none';
                 return (
                   <Link key={to} to={to} className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${to === '/hitch' ? 'bg-gradient-to-r from-primary-50 to-purple-50 text-primary-700' : ''}`}
                     style={{
                       color: active ? '#f59e0b' : 'rgba(255,255,255,0.65)',
                       background: active ? 'rgba(245,158,11,0.12)' : 'transparent',
+                      animation: campfireAnim,
                     }}
                     onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}}
                     onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}}
@@ -430,6 +503,7 @@ export default function Navbar() {
           to   { opacity: 1; transform: translateX(0); }
         }
       `}</style>
+    </>
     </>
   );
 }
