@@ -1017,6 +1017,13 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
 router.get('/event/:eventId', async (req: any, res) => {
   try {
     const { eventId } = req.params;
+    // Only return photos from public events
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, privacyLevel: true, organizerId: true }
+    });
+    if (!event) return res.json({ photos: [], photosByUser: [] });
+
     const photos = await prisma.photo.findMany({
       where: { eventId, visibility: 'PUBLIC' },
       include: {

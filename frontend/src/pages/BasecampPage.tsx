@@ -941,7 +941,7 @@ function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTit
         {photos.map((photo: any, i: number) => (
           <a
             key={photo.id || i}
-            href={photo.albumId ? `/albums/${photo.albumId}` : `/trips/${photo.eventId || ''}`}
+            href={`/trips/${eventId}?tab=photos`}
             className="flex-shrink-0 relative group"
             title={photo.caption || photo.user?.firstName || 'View photo'}
           >
