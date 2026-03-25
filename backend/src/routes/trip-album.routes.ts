@@ -199,6 +199,50 @@ router.post('/photos', authenticateToken, async (req, res) => {
     }
 
     res.json(photo);
+
+    // ── Activity log + friend notifications (non-blocking) ──────────────────
+    if (fullEvent && fullEvent.privacy !== 'PRIVATE') {
+      const albumTitle = fullEvent.title
+        + (fullEvent.campground ? ' · ' + fullEvent.campground.name : '');
+
+      logPhotoUploaded(userId, album.id, albumTitle, photo.id, fullEvent.campground || null).catch(() => {});
+
+      prisma.friendship.findMany({
+        where: {
+          status: 'ACCEPTED',
+          OR: [{ initiatorId: userId }, { receiverId: userId }],
+        },
+        select: { initiatorId: true, receiverId: true },
+      }).then((friendships) => {
+        const friendIds = friendships.map((f: any) =>
+          f.initiatorId === userId ? f.receiverId : f.initiatorId
+        );
+        if (friendIds.length === 0) return;
+
+        const uploaderName = photo.user
+          ? (photo.user.firstName + ' ' + photo.user.lastName).trim()
+          : 'Someone';
+
+        const notifContent = fullEvent.campground
+          ? uploaderName + ' added photos to ' + fullEvent.title + ' at ' + fullEvent.campground.name
+          : uploaderName + ' added photos to ' + fullEvent.title;
+
+        return Promise.all(
+          friendIds.map((friendId: string) =>
+            prisma.notification.create({
+              data: {
+                userId: friendId,
+                type: 'FRIEND_EVENT_PHOTO',
+                content: notifContent,
+                link: '/events/' + fullEvent.id,
+              },
+            }).catch(() => {})
+          )
+        );
+      }).catch(() => {});
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
   } catch (error) {
     console.error('Add photo error:', error);
     res.status(500).json({ error: 'Failed to add photo' });
