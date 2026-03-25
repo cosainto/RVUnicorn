@@ -181,7 +181,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16 gap-4">
 
             {/* Logo */}
-            <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group">
+            <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
               <div className="relative">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-105" style={{ boxShadow: '0 2px 12px rgba(245,158,11,0.2)' }}>
                   <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="h-8 w-auto" />
@@ -200,8 +200,7 @@ export default function Navbar() {
               {primaryLinks.map(({ to, icon: Icon, label, ...rest }) => {
                 const isHitch = (rest as any).isHitch;
                 const active = isActive(to);
-                const isCampfire = to === '/community';
-                const campfireAnim = isCampfire && triviaPhase !== 'off' ? triviaAnim.animation : 'none';
+                const campfireAnim = triviaPhase !== 'off' ? triviaAnim.animation : 'none';
                 return (
                   <Link key={to} to={to} className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${to === '/hitch' ? 'bg-gradient-to-r from-primary-50 to-purple-50 text-primary-700' : ''}`}
                     style={{
@@ -228,7 +227,7 @@ export default function Navbar() {
                   onMouseEnter={() => { if (moreTimeoutRef.current) clearTimeout(moreTimeoutRef.current); setMoreOpen(true); }}
                   onMouseLeave={() => { moreTimeoutRef.current = setTimeout(() => setMoreOpen(false), 250); }}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
-                  style={{ color: moreOpen ? '#f59e0b' : 'rgba(255,255,255,0.65)', background: moreOpen ? 'rgba(245,158,11,0.12)' : 'transparent' }}
+                  style={{ color: moreOpen ? '#f59e0b' : 'rgba(255,255,255,0.65)', background: moreOpen ? 'rgba(245,158,11,0.12)' : 'transparent', animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none' }}
                 >
                   <MoreHorizontal className="w-4 h-4" />
                   <span>More</span>
@@ -267,7 +266,7 @@ export default function Navbar() {
               {/* Search */}
               <button onClick={() => setSearchOpen(!searchOpen)}
                 className="hidden sm:flex p-2.5 rounded-lg transition-all duration-200"
-                style={{ color: searchOpen ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: searchOpen ? 'rgba(245,158,11,0.12)' : 'transparent' }}
+                style={{ color: searchOpen ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: searchOpen ? 'rgba(245,158,11,0.12)' : 'transparent', animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none' }}
                 onMouseEnter={e => { if (!searchOpen) { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}}
                 onMouseLeave={e => { if (!searchOpen) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}}
               >
@@ -276,7 +275,7 @@ export default function Navbar() {
 
               {/* Messages */}
               <Link to="/messages" className="relative p-2.5 rounded-lg transition-all duration-200"
-                style={{ color: unreadMessages > 0 ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: unreadMessages > 0 ? 'rgba(245,158,11,0.12)' : 'transparent' }}
+                style={{ color: unreadMessages > 0 ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: unreadMessages > 0 ? 'rgba(245,158,11,0.12)' : 'transparent', animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = unreadMessages > 0 ? 'rgba(245,158,11,0.12)' : 'transparent'; }}
               >
@@ -292,7 +291,7 @@ export default function Navbar() {
               <div ref={notifRef} className="relative">
                 <button onClick={() => setShowNotifications(!showNotifications)}
                   className="relative p-2.5 rounded-lg transition-all duration-200"
-                  style={{ color: unreadCount > 0 ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: unreadCount > 0 ? 'rgba(245,158,11,0.12)' : 'transparent' }}
+                  style={{ color: unreadCount > 0 ? '#f59e0b' : 'rgba(255,255,255,0.55)', background: unreadCount > 0 ? 'rgba(245,158,11,0.12)' : 'transparent', animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = unreadCount > 0 ? 'rgba(245,158,11,0.12)' : 'transparent'; }}
                 >
@@ -503,7 +502,6 @@ export default function Navbar() {
           to   { opacity: 1; transform: translateX(0); }
         }
       `}</style>
-    </>
     </>
   );
 }
