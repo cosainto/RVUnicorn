@@ -946,7 +946,7 @@ function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTit
             title={photo.caption || photo.user?.firstName || 'View photo'}
           >
             <img
-              src={photo.url}
+              src={photo.imageUrl || photo.url}
               alt={photo.caption || ''}
               className="w-24 h-24 object-cover rounded-lg border border-gray-100 group-hover:opacity-90 transition"
             />
