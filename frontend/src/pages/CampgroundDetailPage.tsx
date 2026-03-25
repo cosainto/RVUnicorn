@@ -228,6 +228,16 @@ const ALL_TABS = [
 export default function CampgroundDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Scroll to bottom when arriving via + Things To Do button
+  useEffect(() => {
+    if (location.hash === '#things-to-do') {
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 800);
+    }
+  }, [location.hash]);
   const { user } = useAuth();
   const userInterests = (user as any)?.campingInterests || [];
 
