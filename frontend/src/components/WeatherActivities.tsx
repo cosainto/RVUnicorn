@@ -14,9 +14,10 @@ interface Props {
   campgroundName?: string;
   compact?: boolean;
   eventId?: string;
+  onThingsToDo?: () => void;
 }
 
-export default function WeatherActivities({ lat, lon, campgroundName, compact = false, eventId }: Props) {
+export default function WeatherActivities({ lat, lon, campgroundName, compact = false, eventId, onThingsToDo }: Props) {
   const [weather, setWeather] = useState<any>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [addedToSchedule, setAddedToSchedule] = useState<Set<number>>(new Set());
@@ -80,9 +81,21 @@ export default function WeatherActivities({ lat, lon, campgroundName, compact = 
               <div className="text-xs text-white/80">{w.windSpeed} winds</div>
             </div>
           </div>
-          <button onClick={fetchActivities} className="text-xs bg-white/20 hover:bg-white/30 px-2.5 py-1.5 rounded-lg font-semibold transition">
-            Activities →
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onThingsToDo && (
+              <button
+                onClick={onThingsToDo}
+                className="text-xs bg-white/20 hover:bg-white/30 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1"
+                title="Things To Do Nearby"
+              >
+                <span>+</span>
+                <span>Things To Do</span>
+              </button>
+            )}
+            <button onClick={fetchActivities} className="text-xs bg-white/20 hover:bg-white/30 px-2.5 py-1.5 rounded-lg font-semibold transition">
+              Activities →
+            </button>
+          </div>
         </div>
         {showActivities && (
           <div className="mt-3 space-y-2">

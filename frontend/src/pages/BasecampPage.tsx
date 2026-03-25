@@ -2092,6 +2092,10 @@ export default function BasecampPage({ user }: BasecampProps) {
                 lon={activeCheckIn.campground.longitude}
                 campgroundName={activeCheckIn.campground.name}
                 compact={true}
+                onThingsToDo={() => {
+                  const slug = activeCheckIn.campground?.slug || activeCheckIn.campground?.id;
+                  if (slug) window.location.href = `/campground/${slug}?tab=overview#things-to-do`;
+                }}
               />
             )}
 
@@ -3336,6 +3340,10 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
               campgroundName={activeCheckIn.campground.name}
               compact={true}
               eventId={linkedEvent?.id}
+              onThingsToDo={() => {
+                const slug = activeCheckIn.campground?.slug || activeCheckIn.campground?.id;
+                if (slug) window.location.href = `/campground/${slug}?tab=overview#things-to-do`;
+              }}
             />
           )}
 
