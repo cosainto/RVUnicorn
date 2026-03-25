@@ -987,8 +987,10 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
 
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
-  const isCamping  = !!activeCheckIn;
-  const isPlanning = !isCamping;
+  const isCamping     = !!activeCheckIn;
+  const hasFutureTrip = !isCamping && !!nextEvent;
+  const isDefaultMode = !isCamping && !nextEvent;
+  const isPlanning    = !isCamping; // kept for existing sections
 
   // Scroll to top when camping mode activates
   useEffect(() => {
@@ -1899,6 +1901,170 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         </div>
       ))}
+
+      {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
+      {hasFutureTrip && nextEvent && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-2xl p-5 mb-4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🗺️</span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">Planning Mode</p>
+                  <h3 className="font-bold text-gray-900 text-lg leading-tight">
+                    {nextEvent.title || nextEvent.name}
+                  </h3>
+                  {nextEvent.campground && (
+                    <p className="text-sm text-gray-500">at {nextEvent.campground.name}</p>
+                  )}
+                </div>
+              </div>
+              <Link
+                to={`/trips/${nextEvent.id}`}
+                className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-2 rounded-xl transition"
+              >
+                Open Trip →
+              </Link>
+            </div>
+
+            {/* Quick stats row */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">{countdown.days}</div>
+                <div className="text-xs text-gray-500 font-medium">Days Away</div>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">
+                  {plannedTrips.find(t => t.id === nextEvent.id) ? '✓' : '—'}
+                </div>
+                <div className="text-xs text-gray-500 font-medium">Trip Created</div>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">
+                  {nextEvent.campground ? '⛺' : '📍'}
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  {nextEvent.campground ? 'Campground Set' : 'No Site Yet'}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick action links */}
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/trips/${nextEvent.id}?tab=schedule`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                📅 Schedule
+              </Link>
+              <Link
+                to={`/trips/${nextEvent.id}?tab=packing`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                🎒 Packing
+              </Link>
+              <Link
+                to={`/trips/${nextEvent.id}?tab=meals`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                🍽️ Meals
+              </Link>
+              {nextEvent.campground && (
+                <Link
+                  to={`/campgrounds/${nextEvent.campground.id}`}
+                  className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+                >
+                  🏕️ Campground
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── END TRIP PLANNING MODE PANEL ──────────────────────────── */}
+
+      {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
+      {hasFutureTrip && nextEvent && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-2xl p-5 mb-4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🗺️</span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">Planning Mode</p>
+                  <h3 className="font-bold text-gray-900 text-lg leading-tight">
+                    {nextEvent.title || nextEvent.name}
+                  </h3>
+                  {nextEvent.campground && (
+                    <p className="text-sm text-gray-500">at {nextEvent.campground.name}</p>
+                  )}
+                </div>
+              </div>
+              <Link
+                to={`/trips/${nextEvent.id}`}
+                className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-2 rounded-xl transition"
+              >
+                Open Trip →
+              </Link>
+            </div>
+
+            {/* Quick stats row */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">{countdown.days}</div>
+                <div className="text-xs text-gray-500 font-medium">Days Away</div>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">
+                  {plannedTrips.find(t => t.id === nextEvent.id) ? '✓' : '—'}
+                </div>
+                <div className="text-xs text-gray-500 font-medium">Trip Created</div>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+                <div className="text-2xl font-bold text-primary-700">
+                  {nextEvent.campground ? '⛺' : '📍'}
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  {nextEvent.campground ? 'Campground Set' : 'No Site Yet'}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick action links */}
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/trips/${nextEvent.id}?tab=schedule`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                📅 Schedule
+              </Link>
+              <Link
+                to={`/trips/${nextEvent.id}?tab=packing`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                🎒 Packing
+              </Link>
+              <Link
+                to={`/trips/${nextEvent.id}?tab=meals`}
+                className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+              >
+                🍽️ Meals
+              </Link>
+              {nextEvent.campground && (
+                <Link
+                  to={`/campgrounds/${nextEvent.campground.id}`}
+                  className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition"
+                >
+                  🏕️ Campground
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── END TRIP PLANNING MODE PANEL ──────────────────────────── */}
 
       {isPlanning && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User Status - Collapsed Composer */}
