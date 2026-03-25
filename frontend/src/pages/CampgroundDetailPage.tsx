@@ -1530,8 +1530,16 @@ export default function CampgroundDetailPage() {
                   setActiveTab('overview');
                   setTimeout(() => {
                     const el = document.getElementById('things-to-do-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 100);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else {
+                      // Try again after another tick if tab content hasn't rendered yet
+                      setTimeout(() => {
+                        const el2 = document.getElementById('things-to-do-section');
+                        if (el2) el2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 300);
+                    }
+                  }, 150);
                 }}
               />
               <CampgroundBadgeDisplay campgroundId={campground.id} userId={user?.id} />

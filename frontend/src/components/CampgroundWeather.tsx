@@ -94,7 +94,19 @@ export default function CampgroundWeather({ latitude, longitude, onExploreActivi
   }
 
   if (error || !weather?.current) {
-    return null; // Don't show anything if weather unavailable
+    // No weather data — still show the Explore Activities button if wired up
+    if (!onExploreActivities) return null;
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={onExploreActivities}
+          className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm transition-colors"
+        >
+          <span className="text-base leading-none">+</span>
+          <span>Explore Activities</span>
+        </button>
+      </div>
+    );
   }
 
   const { current, forecast } = weather;
