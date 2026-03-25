@@ -80,7 +80,6 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string; label:
 const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'scenic', 'easy-access', 'reservation-required'];
 
 export default function ThingsToDoSection({ campgroundId, campgroundName, onActivityAdded, isAdmin = false, userInterests = [], eventId }: Props) {
-  console.log('[ThingsToDo] eventId:', eventId);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('discover');
   const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
