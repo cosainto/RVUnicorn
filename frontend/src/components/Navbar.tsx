@@ -46,7 +46,7 @@ export default function Navbar() {
       // Convert to Central Time
       const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
       const totalMins = central.getHours() * 60 + central.getMinutes();
-      const triviaStart = 17 * 60 + 30; // 5:30 PM
+      const triviaStart = 19; // TEMP TEST // 5:30 PM
       const triviaEnd = 18 * 60;         // 6:00 PM
       const diff = triviaStart - totalMins;
 
