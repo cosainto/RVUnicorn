@@ -438,11 +438,23 @@ router.get('/feed', authenticateToken, async (req, res) => {
         include: {
           user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
           album: { select: { id: true, title: true, privacy: true } },
+          campgroundTags: {
+            include: {
+              campground: { select: { id: true, name: true, slug: true } },
+            },
+          },
+          event: { select: { id: true, title: true, startDate: true, privacy: true, campgroundId: true, campground: { select: { id: true, name: true, slug: true } } } },
         },
       });
 
       photos.forEach((photo) => {
         if (blockedUserIds.has(photo.userId)) return;
+        // Resolve campground from event or campgroundTags
+        const photoCampground = photo.event?.campground || photo.campgroundTags?.[0]?.campground || null;
+        const campgroundLink = photoCampground
+          ? (photoCampground.slug ? `/campground/${photoCampground.slug}` : `/campground/${photoCampground.id}`)
+          : null;
+
         allActivities.push({
           id: 'photo-' + photo.id,
           type: 'PHOTO_UPLOADED',
@@ -457,6 +469,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityColor: 'text-purple-600',
           imageUrl: photo.imageUrl,
           photoId: photo.id,
+          campground: photoCampground ? { ...photoCampground, link: campgroundLink } : null,
           isFriendActivity: friendIdSet.has(photo.userId),
           isBasecampActivity: true,
         });

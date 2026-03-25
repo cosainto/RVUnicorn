@@ -1274,6 +1274,22 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         targetLink = '/media-albums/' + activity.albumId;
       }
 
+      // Resolve campground for photo activities via metadata
+      let photoCampground = null;
+      if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
+        try {
+          const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
+          if (meta?.campgroundId && meta?.campgroundName) {
+            photoCampground = {
+              id: meta.campgroundId,
+              name: meta.campgroundName,
+              slug: meta.campgroundSlug || null,
+              link: meta.campgroundSlug ? `/campground/${meta.campgroundSlug}` : `/campground/${meta.campgroundId}`,
+            };
+          }
+        } catch (e) {}
+      }
+
       return {
         id: `activity-${activity.id}`,
         type: config.feedType,
@@ -1288,6 +1304,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         activityType: activity.type,
         activityIcon: config.icon,
         activityLabel: activity.albumId ? 'added a photo to' : config.label,
+        campground: photoCampground,
         campground: activity.campground,
         metadata: activity.metadata,
         imageUrl,

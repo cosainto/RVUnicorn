@@ -119,8 +119,27 @@ export const logCheckIn = (userId: string, campgroundId: string, campgroundName:
 export const logReview = (userId: string, campgroundId: string, campgroundName: string, rating: number) =>
   createActivity({ userId, type: 'CAMPGROUND_REVIEW', campgroundId, title: campgroundName, content: String(rating) + ' stars' });
 
-export const logPhotoUploaded = (userId: string, albumId?: string, albumTitle?: string, photoId?: string) =>
-  createActivity({ userId, type: 'PHOTO_UPLOADED', albumId, photoId, title: albumTitle || 'a photo' });
+export const logPhotoUploaded = (
+  userId: string,
+  albumId?: string,
+  albumTitle?: string,
+  photoId?: string,
+  campground?: { id: string; name: string; slug?: string | null } | null
+) =>
+  createActivity({
+    userId,
+    type: 'PHOTO_UPLOADED',
+    albumId,
+    photoId,
+    title: albumTitle || 'a photo',
+    ...(campground ? {
+      metadata: JSON.stringify({
+        campgroundId: campground.id,
+        campgroundName: campground.name,
+        campgroundSlug: campground.slug || null,
+      }),
+    } : {}),
+  });
 
 export const logAlbumCreated = (userId: string, albumId: string, title: string) =>
   createActivity({ userId, type: 'ALBUM_CREATED', albumId, title });
