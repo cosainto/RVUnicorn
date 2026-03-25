@@ -1,3 +1,4 @@
+import EventPhotoTitle from './EventPhotoTitle';
 import React, { useState } from 'react';
 import { Heart, Eye, Lock, Users, MoreVertical, Pencil, Trash2, Tag } from 'lucide-react';
 import { VisibilityBadge } from './VisibilitySelector';
@@ -344,8 +345,13 @@ export const PhotoLightbox: React.FC<PhotoLightboxProps> = ({
               <p className="text-white font-medium">
                 {photo.user.firstName} {photo.user.lastName}
               </p>
-              {photo.caption && (
-                <p className="text-white/70 text-sm">{photo.caption}</p>
+              {(photo.caption || photo.event) && (
+                <EventPhotoTitle
+                  caption={photo.caption}
+                  campgroundTags={photo.campgroundTags}
+                  event={photo.event}
+                  className="text-white/90 [&_a]:text-white [&_a]:underline [&_.text-gray-400]:text-white/40 [&_.text-gray-500]:text-white/60 [&_.text-gray-700]:text-white/80 [&_.text-gray-900]:text-white"
+                />
               )}
             </div>
           </div>

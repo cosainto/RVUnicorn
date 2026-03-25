@@ -147,8 +147,15 @@ export default function EventAlbum({ eventId, canUpload = false, campgroundName,
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-end p-3">
                   <div className="opacity-0 group-hover:opacity-100 transition w-full">
-                    {photo.caption && (
-                      <p className="text-white text-sm mb-2">{photo.caption}</p>
+                    {(photo.caption || photo.event) && (
+                      <div className="mb-2">
+                        <EventPhotoTitle
+                          caption={photo.caption}
+                          campgroundTags={photo.campgroundTags}
+                          event={photo.event}
+                          className="text-white [&_a]:text-white [&_a]:underline [&_.text-gray-400]:text-white/50 [&_.text-gray-500]:text-white/70 [&_.text-gray-700]:text-white [&_.text-gray-900]:text-white"
+                        />
+                      </div>
                     )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -328,8 +335,13 @@ export default function EventAlbum({ eventId, canUpload = false, campgroundName,
             />
             
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-lg">
-              {selectedPhoto.caption && (
-                <p className="text-white mb-2">{selectedPhoto.caption}</p>
+              {(selectedPhoto.caption || selectedPhoto.event) && (
+                <EventPhotoTitle
+                  caption={selectedPhoto.caption}
+                  campgroundTags={selectedPhoto.campgroundTags}
+                  event={selectedPhoto.event}
+                  className="mb-2 text-white/90 [&_a]:text-white [&_a]:underline [&_.text-gray-400]:text-white/40 [&_.text-gray-500]:text-white/60 [&_.text-gray-700]:text-white/80 [&_.text-gray-900]:text-white"
+                />
               )}
               <div className="flex items-center gap-2">
                 {selectedPhoto.user?.profilePicture ? (
