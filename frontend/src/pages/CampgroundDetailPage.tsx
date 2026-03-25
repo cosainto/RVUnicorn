@@ -1523,7 +1523,17 @@ export default function CampgroundDetailPage() {
           {/* Weather Section - Above Tabs */}
           {campground.latitude && campground.longitude && (
             <div className="p-4 border-b border-gray-200">
-              <CampgroundWeather latitude={campground.latitude} longitude={campground.longitude} />
+              <CampgroundWeather
+                latitude={campground.latitude}
+                longitude={campground.longitude}
+                onExploreActivities={() => {
+                  setActiveTab('overview');
+                  setTimeout(() => {
+                    const el = document.getElementById('things-to-do-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
+                }}
+              />
               <CampgroundBadgeDisplay campgroundId={campground.id} userId={user?.id} />
             </div>
           )}
@@ -1629,7 +1639,9 @@ export default function CampgroundDetailPage() {
               )}
               
               {/* Things to Do Nearby */}
-              <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
+              <div id="things-to-do-section">
+                <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
+              </div>
               {isAdmin && <CampgroundBadgeCreator campgroundId={campground.id} />}
               
               {/* Community - Followers & Campers */}

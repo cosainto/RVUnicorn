@@ -5,6 +5,7 @@ import api from '../services/api';
 interface WeatherProps {
   latitude: number;
   longitude: number;
+  onExploreActivities?: () => void;
 }
 
 interface WeatherData {
@@ -54,7 +55,7 @@ const getSmallWeatherIcon = (forecast: string, isDaytime: boolean) => {
   return isDaytime ? <Sun className="w-5 h-5 text-yellow-500" /> : <Cloud className="w-5 h-5 text-gray-600" />;
 };
 
-export default function CampgroundWeather({ latitude, longitude }: WeatherProps) {
+export default function CampgroundWeather({ latitude, longitude, onExploreActivities }: WeatherProps) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,8 +121,21 @@ export default function CampgroundWeather({ latitude, longitude }: WeatherProps)
             </div>
           </div>
         </div>
-        <div className="text-gray-400 text-sm">
-          {expanded ? '▲' : '▼'}
+        <div className="flex items-center gap-3">
+          {onExploreActivities && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExploreActivities();
+              }}
+              className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm transition-colors"
+              title="Things to Do Nearby"
+            >
+              <span className="text-base leading-none">+</span>
+              <span>Explore Activities</span>
+            </button>
+          )}
+          <span className="text-gray-400 text-sm">{expanded ? '▲' : '▼'}</span>
         </div>
       </div>
 
