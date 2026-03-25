@@ -1074,15 +1074,18 @@ export default function BasecampPage({ user }: BasecampProps) {
       const hours = central.getHours();
       const minutes = central.getMinutes();
       const totalMins = hours * 60 + minutes;
-      const triviaTime = 17 * 60 + 30; // 5:30 PM
-      const diff = triviaTime - totalMins;
-      if (diff > 0 && diff <= 30) {
-        setTriviaCountdown(`🎯 Trivia in ${diff}min`);
-      } else if (diff <= 0 && diff > -60) {
-        setTriviaCountdown('🔥 Trivia LIVE');
-      } else {
-        setTriviaCountdown(null);
+      const triviaSessions = [7 * 60 + 30, 12 * 60 + 25, 17 * 60 + 30];
+      const sessionDuration = 30;
+      let found = false;
+      for (const start of triviaSessions) {
+        const diff = start - totalMins;
+        if (totalMins >= start && totalMins < start + sessionDuration) {
+          setTriviaCountdown('🔥 Trivia LIVE'); found = true; break;
+        } else if (diff > 0 && diff <= 30) {
+          setTriviaCountdown(`🎯 Trivia in ${diff}min`); found = true; break;
+        }
       }
+      if (!found) setTriviaCountdown(null);
     };
     check();
     const interval = setInterval(check, 60000);
@@ -2034,7 +2037,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-sm">You're at the Campfire! 🏕️</div>
+                  <div id="campfire-chat-anchor" className="text-white font-bold text-sm">You're at the Campfire! 🏕️</div>
                   <div className="text-orange-100 text-xs truncate">
                     {campfireVibeMsg || triviaCountdown || `${activeCheckIn.campground.name} — tap to chat`}
                   </div>
@@ -3371,7 +3374,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   <div className="bg-white/10 rounded-lg p-3 text-center">
                     <div className="text-xl mb-1">🎯</div>
                     <div className="text-white/60 text-xs">Trivia</div>
-                    <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '5:30 PM Central'}</div>
+                    <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '7:30 AM · 12:25 PM · 5:30 PM CT'}</div>
                   </div>
                 )}
                 {nextMeal ? (() => {

@@ -120,7 +120,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400">Trivia starts at 5:30 PM once the fire is lit</p>
+        <p className="text-xs text-gray-400">Trivia: 7:30 AM · 12:25 PM · 5:30 PM CT</p>
       </div>
     );
   }

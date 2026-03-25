@@ -112,8 +112,8 @@ async function maybeActivateRoom(campgroundId: string, namespace: any) {
     });
     await prisma.campfireMessage.createMany({
       data: [
-        { roomId: room.id, isSystem: true, content: `🔥 Campfire Chat is live at ${campground?.name || 'this campground'}! Trivia kicks off at 5:30 PM.` },
-        { roomId: room.id, isHitch: true, content: `Hey campers! 🦄 Pull up a chair — the fire's going and trivia starts at 5:30. Until then, chat away!` },
+        { roomId: room.id, isSystem: true, content: `🔥 Campfire Chat is live at ${campground?.name || 'this campground'}! Trivia: 7:30 AM, 12:25 PM & 5:30 PM CT.` },
+        { roomId: room.id, isHitch: true, content: `Hey campers! 🦄 Pull up a chair — the fire's going! Trivia: 7:30 AM, 12:25 PM & 5:30 PM CT. Chat away!` },
       ],
     });
     namespace.to(campgroundId).emit('room:activated', { message: '🔥 Campfire is live! Trivia at 5:30 PM.' });

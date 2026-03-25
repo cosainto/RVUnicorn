@@ -84,7 +84,21 @@ export default function Navbar() {
     live:   { animation: 'triviaFlash 0.6s ease-in-out infinite', bannerShow: true  },
   };
   const triviaAnim = triviaAnimConfig[triviaPhase];
-  const triviaLabel = triviaPhase === 'live' ? '🔥 TRIVIA LIVE NOW' : triviaPhase === 'fast' ? '⚡ Trivia starting soon!' : triviaPhase === 'medium' ? '🎯 Trivia in ~10 min' : '🎮 Trivia at 5:30 PM CT';
+  const triviaTimes24 = [
+    { mins: 447, label: "TEST TIME" },
+    { mins: 12 * 60 + 25, label: '12:25 PM CT' },
+    { mins: 17 * 60 + 30, label: '5:30 PM CT'  },
+  ];
+  const nowCentral = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const nowMins = nowCentral.getHours() * 60 + nowCentral.getMinutes();
+  const nextTrivia = triviaTimes24.find(t => t.mins > nowMins) || triviaTimes24[0];
+  const triviaLabel = triviaPhase === 'live'
+    ? '🔥 TRIVIA LIVE NOW'
+    : triviaPhase === 'fast'
+    ? '⚡ Trivia starting soon!'
+    : triviaPhase === 'medium'
+    ? '🎯 Trivia in ~10 min'
+    : `🎮 Trivia at ${nextTrivia.label}`;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,7 +194,22 @@ export default function Navbar() {
               color: '#fff',
               animation: 'bannerPulse ' + (triviaPhase === 'fast' ? '0.4s' : triviaPhase === 'live' ? '0.6s' : '1.5s') + ' ease-in-out infinite',
             }}
-            onClick={() => navigate('/community')}
+            onClick={() => {
+              const el = document.getElementById('campfire-chat-anchor');
+              if (el) {
+                const y = el.getBoundingClientRect().top + window.scrollY - 60;
+                window.scrollTo({ top: y + 300, behavior: 'smooth' });
+              } else {
+                navigate('/basecamp');
+                setTimeout(() => {
+                  const el2 = document.getElementById('campfire-chat-anchor');
+                  if (el2) {
+                    const y2 = el2.getBoundingClientRect().top + window.scrollY - 60;
+                    window.scrollTo({ top: y2 + 300, behavior: 'smooth' });
+                  }
+                }, 800);
+              }
+            }}
           >
             {triviaLabel} — Click to join 🎮
           </div>

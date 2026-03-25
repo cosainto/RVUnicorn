@@ -132,7 +132,7 @@ export async function kickoffNewWeek() {
         data: {
           roomId: room.id,
           isHitch: true,
-          content: `🎉 New week, new host! I'm ${character} and this week's theme is "${theme}". Trivia starts tonight at 5:30 PM — first question drops in a few hours. Get ready! 🔥`,
+          content: `🎉 New week, new host! I'm ${character} and this week's theme is "${theme}". Trivia runs 3x daily: 7:30 AM, 12:25 PM & 5:30 PM CT. Get ready! 🔥`,
         },
       });
 
@@ -164,10 +164,15 @@ export async function postTriviaWarning() {
 // ── Daily 5:30–6:00 PM: Ask questions ────────────────────────
 export async function askNextQuestion(io: any) {
   const now = new Date();
-  const dayOfWeek = now.getDay();
-  const minutesSince530 = (now.getHours() - 17) * 60 + (now.getMinutes() - 30);
-  const questionNum = Math.floor(minutesSince530 / 3) + 1; // every 3 min
-  if (questionNum < 1 || questionNum > 10) return;
+  const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const dayOfWeek = central.getDay();
+  const totalMins = central.getHours() * 60 + central.getMinutes();
+  const sessions = [{ startH: 7, startM: 30 }, { startH: 12, startM: 25 }, { startH: 17, startM: 30 }];
+  const activeSession = sessions.find(s => { const start = s.startH*60+s.startM; return totalMins>=start && totalMins<start+30; });
+  if (!activeSession) return;
+  const minutesSinceStart = totalMins - (activeSession.startH*60+activeSession.startM);
+  const questionNum = Math.floor(minutesSinceStart/3)+1;
+  if (questionNum<1||questionNum>10) return;
 
   const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
 
@@ -535,9 +540,13 @@ export function registerTriviaCrons(io: any) {
   cron.schedule('0 5 * * 1', () => kickoffNewWeek(), { timezone: 'America/Chicago' });
 
   // Daily 5:25 PM — trivia warning
+  cron.schedule('25 7 * * *',  () => postTriviaWarning(), { timezone: 'America/Chicago' });
+  cron.schedule('20 12 * * *', () => postTriviaWarning(), { timezone: 'America/Chicago' });
   cron.schedule('25 17 * * *', () => postTriviaWarning(), { timezone: 'America/Chicago' });
 
   // Daily 5:30–5:57 PM every 3 min — ask questions
+  cron.schedule('30,33,36,39,42,45,48,51,54,57 7 * * *',  () => askNextQuestion(io), { timezone: 'America/Chicago' });
+  cron.schedule('25,28,31,34,37,40,43,46,49,52 12 * * *', () => askNextQuestion(io), { timezone: 'America/Chicago' });
   cron.schedule('30,33,36,39,42,45,48,51,54,57 17 * * *', () => askNextQuestion(io), { timezone: 'America/Chicago' });
 
   // Daily 6:00 PM — daily leaderboard
@@ -547,7 +556,9 @@ export function registerTriviaCrons(io: any) {
     await kickoffNewWeek().catch(e => console.error('Lunchtime trivia error:', e));
   }, { timezone: 'America/Chicago' });
 
-  cron.schedule('0 18 * * *', () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
+  cron.schedule('0 8 * * *',  () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
+  cron.schedule('55 12 * * *', () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
+  cron.schedule('0 18 * * *',  () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
 
   // Sunday 6:05 PM — weekly winner
   cron.schedule('5 18 * * 0', () => announceWeeklyWinner(io), { timezone: 'America/Chicago' });
