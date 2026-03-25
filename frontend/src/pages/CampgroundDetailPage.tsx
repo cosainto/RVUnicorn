@@ -1,5 +1,5 @@
 import NavigationButtons from '../components/NavigationButtons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation, Leaf,
@@ -234,6 +234,7 @@ export default function CampgroundDetailPage() {
   const [campground, setCampground] = useState<Campground | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const thingsToDoRef = useRef<HTMLDivElement>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const isSiteAdmin = ['wroberts82@yahoo.com'].includes(user?.email?.toLowerCase() || '');
@@ -1529,16 +1530,10 @@ export default function CampgroundDetailPage() {
                 onExploreActivities={() => {
                   setActiveTab('overview');
                   setTimeout(() => {
-                    const el = document.getElementById('things-to-do-section');
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    } else {
-                      setTimeout(() => {
-                        const el2 = document.getElementById('things-to-do-section');
-                        if (el2) el2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }, 300);
+                    if (thingsToDoRef.current) {
+                      thingsToDoRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
-                  }, 150);
+                  }, 200);
                 }}
               />
             )}
@@ -1549,9 +1544,10 @@ export default function CampgroundDetailPage() {
                   onClick={() => {
                     setActiveTab('overview');
                     setTimeout(() => {
-                      const el = document.getElementById('things-to-do-section');
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 150);
+                      if (thingsToDoRef.current) {
+                        thingsToDoRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 200);
                   }}
                   className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm transition-colors"
                 >
@@ -1664,7 +1660,7 @@ export default function CampgroundDetailPage() {
               )}
               
               {/* Things to Do Nearby */}
-              <div id="things-to-do-section">
+              <div ref={thingsToDoRef}>
                 <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
               </div>
               {isAdmin && <CampgroundBadgeCreator campgroundId={campground.id} />}
