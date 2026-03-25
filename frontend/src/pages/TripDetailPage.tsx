@@ -126,7 +126,7 @@ export default function EventDetailPage() {
       setTimeout(() => {
         const el = document.getElementById('meal-calendar');
         if (el) {
-          const y = el.getBoundingClientRect().top + window.scrollY - 80;
+          const y = el.getBoundingClientRect().top + window.scrollY - 20;
           window.scrollTo({ top: y, behavior: 'smooth' });
         }
       }, 500);
