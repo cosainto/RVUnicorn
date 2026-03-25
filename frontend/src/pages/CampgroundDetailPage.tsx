@@ -1521,8 +1521,8 @@ export default function CampgroundDetailPage() {
           "bg-white rounded-lg shadow-lg overflow-hidden"
         }>
           {/* Weather Section - Above Tabs */}
-          {campground.latitude && campground.longitude && (
-            <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            {campground.latitude && campground.longitude && (
               <CampgroundWeather
                 latitude={campground.latitude}
                 longitude={campground.longitude}
@@ -1533,7 +1533,6 @@ export default function CampgroundDetailPage() {
                     if (el) {
                       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     } else {
-                      // Try again after another tick if tab content hasn't rendered yet
                       setTimeout(() => {
                         const el2 = document.getElementById('things-to-do-section');
                         if (el2) el2.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1542,9 +1541,27 @@ export default function CampgroundDetailPage() {
                   }, 150);
                 }}
               />
-              <CampgroundBadgeDisplay campgroundId={campground.id} userId={user?.id} />
-            </div>
-          )}
+            )}
+            {/* Always show Explore Activities if no coordinates */}
+            {(!campground.latitude || !campground.longitude) && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setActiveTab('overview');
+                    setTimeout(() => {
+                      const el = document.getElementById('things-to-do-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 150);
+                  }}
+                  className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm transition-colors"
+                >
+                  <span className="text-base leading-none">+</span>
+                  <span>Explore Activities</span>
+                </button>
+              </div>
+            )}
+            <CampgroundBadgeDisplay campgroundId={campground.id} userId={user?.id} />
+          </div>
           
           <div className={themeStyles.tabs + " overflow-x-auto"}>
             <div className="flex">{ALL_TABS.map(tab => { 
