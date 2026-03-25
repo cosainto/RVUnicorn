@@ -135,13 +135,42 @@ router.post('/photos', authenticateToken, async (req, res) => {
       });
     }
 
-    // Create photo
+    // Fetch full event details to determine privacy + structured caption
+    const fullEvent = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        title: true,
+        privacy: true,
+        startDate: true,
+        campgroundId: true,
+        campground: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    });
+
+    // Build structured caption for non-private events
+    let structuredCaption = caption || '';
+    if (fullEvent && fullEvent.privacy !== 'PRIVATE') {
+      const parts: string[] = [];
+      if (fullEvent.title) parts.push(fullEvent.title);
+      if (fullEvent.campground?.name) parts.push(fullEvent.campground.name);
+      if (fullEvent.startDate) {
+        const d = new Date(fullEvent.startDate);
+        parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+      }
+      if (parts.length > 0) structuredCaption = parts.join(' · ');
+    }
+
+    // Create photo — set eventId so it surfaces in the user's profile gallery
     const photo = await prisma.photo.create({
       data: {
         albumId: album.id,
         userId,
         imageUrl,
-        caption,
+        caption: structuredCaption || caption || '',
+        ...(fullEvent && fullEvent.privacy !== 'PRIVATE' ? { eventId: fullEvent.id } : {}),
       },
       include: {
         user: {
@@ -154,6 +183,20 @@ router.post('/photos', authenticateToken, async (req, res) => {
         },
       },
     });
+
+    // Tag the photo with the campground so the frontend can render a link
+    if (fullEvent?.campground?.id && fullEvent.privacy !== 'PRIVATE') {
+      try {
+        await prisma.photoCampgroundTag.create({
+          data: {
+            photoId: photo.id,
+            campgroundId: fullEvent.campground.id,
+          },
+        });
+      } catch (_e) {
+        // Tag may already exist — non-fatal
+      }
+    }
 
     res.json(photo);
   } catch (error) {

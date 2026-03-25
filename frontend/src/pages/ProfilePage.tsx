@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import EventPhotoTitle from '../components/EventPhotoTitle';
 import DraggableBanner from '../components/DraggableBanner';
 import CurrentlyAtBadge from '../components/CurrentlyAtBadge';
 import CommunityTrustBadge from '../components/CommunityTrustBadge';
