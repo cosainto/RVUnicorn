@@ -117,7 +117,7 @@ export default function EventDetailPage() {
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'details');
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || window.location.hash.replace('#', '') || 'details');
   const location = useLocation();
 
   useEffect(() => {
