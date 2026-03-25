@@ -3665,7 +3665,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
 
               {/* Things To Do Nearby */}
               {activeCheckIn?.campground?.id && (
-                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-xl border border-gray-100">
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                     <span className="text-base">🗺️</span>
                     <h3 className="font-bold text-sm text-gray-900">Things To Do Nearby</h3>
