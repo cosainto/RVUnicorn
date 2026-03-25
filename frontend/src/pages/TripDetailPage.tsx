@@ -117,7 +117,7 @@ export default function EventDetailPage() {
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'details');
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
