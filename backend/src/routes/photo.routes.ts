@@ -1012,4 +1012,25 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
   }
 });
 
+
+// GET /api/photos/event/:eventId - Get all photos for an event
+router.get('/event/:eventId', async (req: any, res) => {
+  try {
+    const { eventId } = req.params;
+    const prismaClient = req.prisma || (await import('../prisma').then(m => m.default));
+    const photos = await prismaClient.photo.findMany({
+      where: { eventId, visibility: 'PUBLIC' },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        album: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json({ photos, photosByUser: [] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
