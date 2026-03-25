@@ -400,4 +400,24 @@ router.post('/photos/bulk-link-event', authenticateToken, async (req, res) => {
   }
 });
 
+
+// GET /api/photo-albums/photos/event/:eventId - Get all photos for an event
+router.get('/photos/event/:eventId', optionalAuth, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const photos = await prisma.photo.findMany({
+      where: { eventId, visibility: 'PUBLIC' },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        album: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json({ photos, photosByUser: [] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
