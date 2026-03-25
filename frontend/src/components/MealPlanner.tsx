@@ -437,12 +437,14 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                                 <div
                                   key={meal.id}
                                   className={`${MEAL_COLORS[mealType]} rounded-lg p-3 border-2 relative group shadow-sm hover:shadow-md transition cursor-pointer`}
-                                  onClick={() => openRSVPModal(meal)}
                                 >
                                   <div className="pr-16">
                                     <h4 className="font-semibold text-sm text-gray-900 mb-1">
-                                      {meal.menuItems.join(', ')}
+                                      {meal.menuItems.join(', ') || meal.recipe?.title || 'Meal'}
                                     </h4>
+                                    {meal.scheduledTime && (
+                                      <p className="text-xs text-gray-600 mb-1">🕐 {new Date(`2000-01-01T${meal.scheduledTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                                    )}
                                     {meal.cook ? (
                                       <p className="text-xs text-gray-700 flex items-center gap-1 mt-1">
                                         <ChefHat className="w-3 h-3" />
@@ -456,7 +458,7 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                                       </div>
                                       {userRSVP && (
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                          userRSVP === 'attending' 
+                                          userRSVP === 'attending'
                                             ? 'bg-green-100 text-green-700'
                                             : userRSVP === 'not_attending'
                                             ? 'bg-red-100 text-red-700'
@@ -467,32 +469,33 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                                       )}
                                     </div>
                                     {meal.notes && (
-                                      <p className="text-xs text-gray-600 mt-1 italic">
-                                        "{meal.notes}"
-                                      </p>
+                                      <p className="text-xs text-gray-600 mt-1 italic">"{meal.notes}"</p>
                                     )}
                                   </div>
-                                  
-                                  {isOrganizer && (
-                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <button
-                                        onClick={() => openEditModal(meal)}
-                                        className="bg-blue-500 text-white p-1 rounded hover:bg-blue-600 transition shadow"
-                                        title="Edit meal"
-                                      >
-                                        <Edit2 className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteMeal(meal.id)}
-                                        className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition shadow"
-                                        title="Delete meal"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
+
+                                  {/* Hover overlay: meal details + RSVP change */}
+                                  <div className="absolute inset-0 bg-white/95 rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex flex-col justify-between"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <div>
+                                      <div className="font-bold text-sm text-gray-900 mb-1">{meal.menuItems.join(', ') || meal.recipe?.title || 'Meal'}</div>
+                                      {meal.scheduledTime && <div className="text-xs text-gray-500 mb-1">🕐 {new Date(`2000-01-01T${meal.scheduledTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>}
+                                      {meal.cook && <div className="text-xs text-gray-600 mb-1">👨‍🍳 {meal.cook.firstName}</div>}
+                                      {meal.ingredients?.length > 0 && <div className="text-xs text-gray-500 mb-1 line-clamp-2">🥗 {meal.ingredients.slice(0,3).join(', ')}{meal.ingredients.length > 3 ? '...' : ''}</div>}
+                                      {meal.notes && <div className="text-xs text-gray-500 italic">"{meal.notes}"</div>}
                                     </div>
-                                  )}
+                                    <div className="flex gap-1 mt-2">
+                                      <button onClick={() => handleRSVP(meal.id, 'attending')} className={`flex-1 text-xs py-1 rounded-lg font-semibold transition ${userRSVP === 'attending' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>✓ Going</button>
+                                      <button onClick={() => handleRSVP(meal.id, 'maybe')} className={`flex-1 text-xs py-1 rounded-lg font-semibold transition ${userRSVP === 'maybe' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}>? Maybe</button>
+                                      <button onClick={() => handleRSVP(meal.id, 'not_attending')} className={`flex-1 text-xs py-1 rounded-lg font-semibold transition ${userRSVP === 'not_attending' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>✗ No</button>
+                                    </div>
+                                    {isOrganizer && (
+                                      <div className="flex gap-1 mt-1 pt-1 border-t border-gray-200">
+                                        <button onClick={() => openEditModal(meal)} className="flex-1 text-xs py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold">Edit</button>
+                                        <button onClick={() => handleDeleteMeal(meal.id)} className="flex-1 text-xs py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">Delete</button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}

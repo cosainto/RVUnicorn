@@ -3373,7 +3373,13 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   return (
                     <div className="bg-white/10 rounded-lg p-3 text-center">
                       <div className="text-xl mb-1">🍽️</div>
-                      <div className="text-white/60 text-xs capitalize">{nextMeal.mealType || 'Meal'}</div>
+                      <a
+                        href={linkedEvent ? `/trips/${linkedEvent.id}#meals` : '#'}
+                        className="text-white/80 hover:text-white text-xs capitalize font-semibold underline-offset-2 hover:underline transition"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {nextMeal.mealType || 'Meal'}
+                      </a>
                       <div className="font-medium text-xs mt-0.5">{mealTime || 'Time TBD'}</div>
                       {!userRsvp ? (
                         <div className="flex gap-1 mt-2 justify-center">
