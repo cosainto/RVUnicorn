@@ -125,7 +125,10 @@ export default function EventDetailPage() {
     if (params.get('scrollTo') === 'meals') {
       setTimeout(() => {
         const el = document.getElementById('meal-calendar');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (el) {
+          const y = el.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
       }, 500);
     }
   }, [location.search]);
