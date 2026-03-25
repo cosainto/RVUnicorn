@@ -32,7 +32,7 @@ const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: str
   RECIPE_COMMENT_REPLY: { icon: '↩️', label: 'replied to your comment on' },
   RECIPE_COMMENT_THREAD: { icon: '💬', label: 'commented on', color: 'text-blue-600' },
   MEAL_PLAN_CREATED: { icon: '🍽️', label: 'planned a meal' },
-  PHOTO_UPLOADED: { icon: '📷', label: 'added photos to', color: 'text-purple-600' },
+  PHOTO_UPLOADED: { icon: '📷', label: 'shared new photos', color: 'text-purple-600' },
   PHOTO_LIKED: { icon: '❤️', label: 'liked a photo in', color: 'text-red-500' },
   PHOTO_COMMENTED: { icon: '💬', label: 'commented on a photo in' },
   ALBUM_CREATED: { icon: '📁', label: 'created a new album', color: 'text-indigo-600' },
@@ -424,13 +424,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
     try {
       const photos = await prisma.photo.findMany({
         where: {
-          OR: [
-            { privacy: "PUBLIC", organizerId: { in: visibleUserIds } },
-            { privacy: "FRIENDS", organizerId: { in: visibleUserIds } },
-            { privacy: "PRIVATE", organizerId: userId },
-          ],
           userId: { in: visibleUserIds },
-          album: { privacy: { in: ['PUBLIC', 'FRIENDS'] } }
+          visibility: { in: ['PUBLIC', 'FRIENDS'] },
+          album: { privacy: { in: ['PUBLIC', 'FRIENDS'] } },
         },
         take: limit,
         skip,
@@ -465,7 +461,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
           createdAt: photo.createdAt,
           activityType: 'PHOTO_UPLOADED',
           activityIcon: '📷',
-          activityLabel: photo.album ? 'added a photo to' : 'added a photo',
+          activityLabel: (photo.event && photo.event.privacy !== 'PRIVATE')
+            ? 'shared trip photos from'
+            : photo.album ? 'shared photos in' : 'shared a photo',
           activityColor: 'text-purple-600',
           imageUrl: photo.imageUrl,
           photoId: photo.id,
