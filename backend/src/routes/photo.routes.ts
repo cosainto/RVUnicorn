@@ -1018,7 +1018,7 @@ router.get('/event/:eventId', async (req: any, res) => {
   try {
     const { eventId } = req.params;
     const photos = await prisma.photo.findMany({
-      where: { eventId, visibility: 'PUBLIC' },
+      where: { eventId },
       include: {
         user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
         album: { select: { id: true, title: true } },
