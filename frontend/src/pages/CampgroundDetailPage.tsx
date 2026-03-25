@@ -1,6 +1,6 @@
 import NavigationButtons from '../components/NavigationButtons';
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin, Phone, Globe, Mail, Calendar, Bookmark, Users, ChevronLeft, Navigation, Leaf,
   Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned, Edit
