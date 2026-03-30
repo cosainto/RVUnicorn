@@ -1068,7 +1068,7 @@ router.post('/road-support', authenticateToken, async (req: any, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { rvType: true, rvLength: true, firstName: true },
+      select: { rvType: true, rvMake: true, rvModel: true, rvLength: true, rvFuelType: true, rvYear: true, firstName: true },
     });
 
     const categoryContext: Record<string, string> = {
@@ -1080,13 +1080,13 @@ router.post('/road-support', authenticateToken, async (req: any, res) => {
 
     const systemPrompt = `You are Hitch, RVUnicorn's Road & RV Support specialist. 
 ${categoryContext[category] || 'You help RV travelers with road and vehicle issues.'}
-User's RV: ${user?.rvType || 'unknown'} (${user?.rvLength || '?'}ft)
+User's RV: ${[user?.rvYear, user?.rvMake, user?.rvModel, user?.rvType].filter(Boolean).join(' ')} (${user?.rvLength || '?'}ft, ${user?.rvFuelType || 'gas'})
 Be concise, practical, and calm. Use bullet points for steps. Keep responses under 200 words.`;
 
     const historyMessages = history.map((m: any) => ({ role: m.role, content: m.content }));
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
       system: systemPrompt,
       messages: [...historyMessages, { role: 'user', content: message }],
