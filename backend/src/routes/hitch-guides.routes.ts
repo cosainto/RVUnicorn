@@ -449,7 +449,14 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { rvType: true, rvLength: true, campingInterests: true, homeState: true }
+      select: {
+        rvType: true, rvMake: true, rvModel: true, rvLength: true,
+        rvMpg: true, rvFuelType: true, rvHeight: true, rvSleeps: true,
+        rvSlideouts: true, rvFeatures: true,
+        campingInterests: true, campingStyles: true, hitchPreferences: true,
+        homeCity: true, homeState: true,
+        travelPartyType: true, hasPets: true, petTypes: true,
+      }
     });
     if (!user) return res.status(404).json({ error: 'Not found' });
 
@@ -457,24 +464,31 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
     if (!user.rvType) missingFields.push('RV type');
     if (!user.rvLength) missingFields.push('RV length');
     if (!(user.campingInterests as string[] || []).length) missingFields.push('camping interests');
+    if (!user.travelPartyType) missingFields.push('travel party type');
 
-    const [wishlisted, checkedIn] = await Promise.all([
+    const [wishlisted, checkedIn, visitedStates] = await Promise.all([
       prisma.campgroundWishlist.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => []),
       prisma.checkIn.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => []),
+      prisma.stateVisit.findMany({ where: { userId }, select: { state: true } }).catch(() => []),
     ]);
     const excludeIds = [...wishlisted.map((w: any) => w.campgroundId), ...checkedIn.map((c: any) => c.campgroundId)].filter(Boolean);
+    const visitedStateNames = visitedStates.map((s: any) => s.state);
 
     const rvLen = user.rvLength ? parseInt(String(user.rvLength)) : null;
     const interests = (user.campingInterests as string[] || []);
-    const wantsPets = interests.some(i => ['pet','dog','cat'].some(k => i.toLowerCase().includes(k)));
-    const wantsWaterfront = interests.some(i => ['waterfront','lake','ocean','river','fishing'].some(k => i.toLowerCase().includes(k)));
+    const styles = (user.campingStyles as string[] || []);
+    const prefs = (user.hitchPreferences as string[] || []);
+    const hasPets = user.hasPets || interests.some(i => ['pet','dog','cat'].some(k => i.toLowerCase().includes(k)));
+    const wantsWaterfront = interests.some(i => ['waterfront','lake','ocean','river','fishing','beach'].some(k => i.toLowerCase().includes(k)));
+    const wantsWifi = prefs.some(i => ['wifi','remote work','work'].some(k => i.toLowerCase().includes(k)));
+    const isFamily = user.travelPartyType === 'FAMILY';
+    const needsBigRig = rvLen ? rvLen >= 35 : false;
 
     const campgrounds = await prisma.campground.findMany({
       where: {
         id: { notIn: excludeIds.length > 0 ? excludeIds : ['__none__'] },
         ...(rvLen ? { OR: [{ maxRvLength: { gte: rvLen - 5 } }, { maxRvLength: null }] } : {}),
-        ...(wantsPets ? { isPetFriendly: true } : {}),
-        ...(wantsWaterfront ? { isWaterfront: true } : {}),
+        ...(hasPets ? { isPetFriendly: true } : {}),
         googleRating: { gte: 3.8 },
       },
       select: {
@@ -482,46 +496,69 @@ router.get('/for-you', authenticateToken, async (req: any, res) => {
         googleRating: true, pricePerNight: true, maxRvLength: true,
         isBigRigFriendly: true, hasPullThrough: true, isPetFriendly: true,
         isWaterfront: true, hasPool: true, hasWifi: true,
-        hasElectricHookup: true, hasFullHookups: true,
+        hasElectricHookup: true, hasFullHookups: true, hasShowers: true,
+        maxAmpService: true,
       },
       orderBy: { googleRating: 'desc' },
-      take: 30,
+      take: 40,
     });
 
     if (campgrounds.length === 0) return res.json({ matches: [], missingFields });
 
-    const campList = campgrounds.slice(0, 15).map((c, i) =>
-      `${i}. ${c.name}, ${c.city} ${c.state} | Rating: ${c.googleRating || "N/A"} | MaxRV: ${c.maxRvLength || "?"}ft | BigRig: ${c.isBigRigFriendly} | PullThrough: ${c.hasPullThrough} | Pet: ${c.isPetFriendly} | Waterfront: ${c.isWaterfront} | Pool: ${c.hasPool}`
-    ).join("\n");
+    // Pre-score locally to pick best 20 candidates for Claude
+    const scored = campgrounds.map(cg => {
+      let score = 50;
+      if (cg.googleRating) score += (Number(cg.googleRating) - 3.8) * 10;
+      if (needsBigRig && cg.isBigRigFriendly) score += 15;
+      if (needsBigRig && cg.hasPullThrough) score += 10;
+      if (hasPets && cg.isPetFriendly) score += 10;
+      if (wantsWaterfront && cg.isWaterfront) score += 15;
+      if (wantsWifi && cg.hasWifi) score += 10;
+      if (isFamily && cg.hasPool) score += 10;
+      if (cg.hasFullHookups) score += 8;
+      if (cg.maxAmpService && cg.maxAmpService >= 50) score += 5;
+      if (visitedStateNames.includes(cg.state)) score -= 5;
+      return { ...cg, preScore: score };
+    }).sort((a: any, b: any) => b.preScore - a.preScore);
+
+    const topCampgrounds = scored.slice(0, 20);
+    const rigDesc = [user.rvType, user.rvMake, user.rvModel, rvLen ? rvLen + 'ft' : null].filter(Boolean).join(' ');
+    const partyDesc = [user.travelPartyType, hasPets ? 'with pets' : null].filter(Boolean).join(', ');
+
+    const campList = topCampgrounds.map((cg: any, i: number) =>
+      i + '. ' + cg.name + ', ' + cg.city + ' ' + cg.state +
+      ' | ' + (cg.googleRating || '?') + 'stars' +
+      ' | MaxRV:' + (cg.maxRvLength || '?') + 'ft' +
+      ' | BigRig:' + cg.isBigRigFriendly +
+      ' | PullThru:' + cg.hasPullThrough +
+      ' | Pets:' + cg.isPetFriendly +
+      ' | Waterfront:' + cg.isWaterfront +
+      ' | Pool:' + cg.hasPool +
+      ' | WiFi:' + cg.hasWifi +
+      ' | FullHookups:' + cg.hasFullHookups +
+      ' | ' + (cg.maxAmpService || '?') + 'amp' +
+      ' | $' + (cg.pricePerNight || '?') + '/night'
+    ).join('\n');
+
+    const prompt = 'You are matching campgrounds to an RV traveler. Return ONLY valid JSON, no markdown.\n\n' +
+      'TRAVELER PROFILE:\n' +
+      '- Rig: ' + (rigDesc || 'Unknown RV') + '\n' +
+      '- MPG: ' + (user.rvMpg || '?') + ' | Fuel: ' + (user.rvFuelType || 'gas') + '\n' +
+      '- Travel party: ' + (partyDesc || 'unknown') + '\n' +
+      '- Home: ' + (user.homeCity || '?') + ', ' + (user.homeState || '?') + '\n' +
+      '- Camping interests: ' + (interests.join(', ') || 'none listed') + '\n' +
+      '- Camping styles: ' + (styles.join(', ') || 'none listed') + '\n' +
+      '- Hitch preferences: ' + (prefs.join(', ') || 'none listed') + '\n' +
+      '- States already visited: ' + (visitedStateNames.slice(0, 10).join(', ') || 'none') + '\n\n' +
+      'CAMPGROUNDS:\n' + campList + '\n\n' +
+      'Return top 8. Reference the exact rig, interests, and party type in whyItFits. Also reason about what the campground AREA is known for (nearby hiking, beaches, national parks, wine country, ski resorts, etc.) and whether that aligns with the user interests. Suggest unvisited states when possible.\n\n' +
+      '{"matches":[{"index":0,"matchScore":92,"matchTier":"Perfect Match","whyItFits":"...","watchOut":"...","highlights":["..."]}]}\n\n' +
+      'matchTier: "Perfect Match"=85-100%, "Great Fit"=65-84%, "Worth Checking Out"=45-64%';
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages: [{
-        role: "user",
-        content: `Match campgrounds to this RV user. Return ONLY valid JSON no markdown.
-
-User: RV=${user.rvType || "unknown"} (${user.rvLength || "?"}ft) | Interests: ${interests.join(", ") || "none"} | State: ${user.homeState || "unknown"}
-
-Campgrounds:
-${campList}
-
-{
-  "matches": [
-    {
-      "index": 0,
-      "matchScore": 92,
-      "matchTier": "Perfect Match",
-      "whyItFits": "Big rig friendly with pull-through sites for your Class A plus waterfront matching your fishing interests",
-      "watchOut": "Books up fast in summer",
-      "highlights": ["Pull-through", "Pet friendly", "Waterfront"]
-    }
-  ]
-}
-
-matchTier: "Perfect Match" (85-100%), "Great Fit" (65-84%), "Worth Checking Out" (45-64%)
-Pick top 8. Be specific about why each fits THIS user. Reference their exact RV size and interests.`
-      }],
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
