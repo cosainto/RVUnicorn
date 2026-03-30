@@ -60,6 +60,7 @@ import SocialFeed from '../components/SocialFeed';
 import { TrendingHashtags } from '../components/HashtagDisplay';
 import { CreatorToggleSection } from '../components/CreatorComponents';
 import BasecampTour from '../components/BasecampTour';
+import DrivingMode from '../components/DrivingMode';
 import CreatorFeed from '../components/CreatorFeed';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
@@ -932,6 +933,24 @@ function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTit
   }, [eventId]);
 
   if (photos.length === 0) return null;
+
+  const [isDriving, setIsDriving] = useState(() => localStorage.getItem('rvunicorn_driving') === 'true');
+
+  // ── Driving Mode full-screen override ──────────────────────────────────
+  if (isDriving) {
+    return (
+      <DrivingMode
+        nextEvent={nextEvent}
+        rvMpg={(user as any)?.rvMpg || undefined}
+        onExit={() => {
+          setIsDriving(false);
+          localStorage.removeItem('rvunicorn_driving');
+          localStorage.removeItem('rvunicorn_drive_start');
+          localStorage.removeItem('rvunicorn_drive_role');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -1892,6 +1911,23 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Start Driving Mode button */}
+      {(hasFutureTrip || isCamping) && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <button
+            onClick={() => { setIsDriving(true); localStorage.setItem('rvunicorn_driving', 'true'); }}
+            className="w-full flex items-center gap-3 bg-white border border-primary-200 rounded-2xl px-4 py-3.5 hover:border-primary-400 hover:shadow-sm transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0 text-xl">🚐</div>
+            <div className="flex-1">
+              <p className="font-bold text-gray-900 text-sm">Start Driving Mode</p>
+              <p className="text-gray-500 text-xs">Fatigue tracker · Navigate · Driver switch</p>
+            </div>
+            <span className="text-primary-400 text-sm font-semibold">Start →</span>
+          </button>
         </div>
       )}
 
