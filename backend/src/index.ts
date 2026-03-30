@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 dotenv.config();
-console.log('🔑 JWT_SECRET loaded:', process.env.JWT_SECRET);
 
 import express from 'express';
 import { createServer } from 'http';
@@ -34,6 +33,8 @@ import mentionRoutes from './routes/mention.routes';
 import roadtripRoutes from './routes/roadtrip.routes';
 import savedTripsRoutes from './routes/saved-trips.routes';
 import drivePlannerRoutes from './routes/drive-planner.routes';
+import supplyRoutes from './routes/supply.routes';
+import householdRoutes from './routes/household.routes';
 import borrowRoutes from './routes/borrow.routes';
 import stickerRoutes from './routes/sticker.routes';
 import jobRoutes from './routes/job.routes';
@@ -110,12 +111,15 @@ import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
+import { updateGasPrices } from "./cron/gas-price-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
 import triviaAdminRoutes from './routes/trivia-admin.routes';
+import roadTripsRoutes from './routes/road-trips.routes';
+import tripSubeventsRoutes from './routes/trip-subevents.routes';
 
 
 
@@ -209,6 +213,14 @@ app.use('/api/saved-trips', savedTripsRoutes);
 app.use('/api/gas-prices', gasPricesRoutes);
 app.use("/api/event-meals", tripMealRoutes);
 app.use("/api/drive-planner", drivePlannerRoutes);
+app.use("/api/supply", supplyRoutes);
+import scrapbookRoutes from "./routes/scrapbook.routes";
+app.use("/api/scrapbook", scrapbookRoutes);
+import tripStoryRoutes from './routes/trip-story.routes';
+app.use("/api/trip-story", tripStoryRoutes);
+import tripStoryRoutes from './routes/trip-story.routes';
+app.use("/api/trip-story", tripStoryRoutes);
+app.use("/api/household", householdRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/photo-tags", photoTagsRoutes);
 app.use("/api/social", socialRoutes);
@@ -260,6 +272,8 @@ app.use("/api/ai-maintenance", aiMaintenanceRouter);
 app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
 app.use("/api/overnight-spots", overnightSpotsRoutes);
+app.use("/api/road-trips", roadTripsRoutes);
+app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 
 
 
@@ -285,6 +299,11 @@ const CRON_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 setInterval(runMaintenanceCron, CRON_INTERVAL);
 // Also run once 30 seconds after server start
 setTimeout(runMaintenanceCron, 30000);
+
+// Gas price cron — runs on startup + every 7 days
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+updateGasPrices(); // run immediately on startup
+setInterval(updateGasPrices, SEVEN_DAYS_MS);
 // force prisma regen Thu Mar 12 19:02:31 CDT 2026
 // force prisma regen Thu Mar 12 19:14:38 CDT 2026
 // 1773629719

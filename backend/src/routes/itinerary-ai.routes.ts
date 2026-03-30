@@ -152,7 +152,7 @@ Last day type should be ARRIVAL if destination is specific.`;
 router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { title, description, startDate, suggestion } = req.body;
+    const { title, description, startDate, suggestion, eventId } = req.body;
 
     const trip = await prisma.trip.create({
       data: {
@@ -161,7 +161,8 @@ router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
         description: description || suggestion.description,
         startDate: suggestion.recommendedDepartureDate ? new Date(suggestion.recommendedDepartureDate) : startDate ? new Date(startDate) : null,
         status: 'PLANNING',
-        visibility: 'PRIVATE'
+        visibility: 'PRIVATE',
+        ...(eventId ? { eventId } : {}),
       }
     });
 

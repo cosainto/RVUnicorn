@@ -5,12 +5,13 @@ import { authenticateToken } from '../middleware/auth.middleware';
 const router = Router();
 const prisma = new PrismaClient();
 
-// GET /api/itinerary - Get all trips for current user
+// GET /api/itinerary - Get all trips for current user (optionally filtered by eventId)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
+    const { eventId } = req.query;
     const trips = await prisma.trip.findMany({
-      where: { userId },
+      where: { userId, ...(eventId ? { eventId: eventId as string } : {}) },
       include: {
         days: {
           include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } }, orderBy: { order: 'asc' } } },
@@ -86,7 +87,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         }
       } catch(e) {}
 
-      const fuelResults = nearbyFuel.map(s => ({
+      const fuelResults = nearby.map(s => ({
           id: s.id,
           name: `${s.chain}${s.city ? ' - ' + s.city + (s.state ? ', ' + s.state : '') : ''}`,
           address: s.address,
@@ -105,7 +106,29 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
           source: 'rvunicorn',
         }));
 
-      return res.json(fuelResults);
+      // If our DB has results, return them
+      if (fuelResults.length > 0) return res.json(fuelResults);
+
+      // Fallback: Google Places for gas stations
+      try {
+        const keyword = type === 'WALMART' ? 'walmart' : 'gas station truck stop fuel';
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_KEY}`;
+        const response = await fetch(url);
+        const gData = await response.json() as any;
+        const googleResults = (gData.results || []).slice(0, 5).map((p: any) => ({
+          id: p.place_id,
+          name: p.name,
+          address: p.vicinity,
+          latitude: p.geometry.location.lat,
+          longitude: p.geometry.location.lng,
+          distanceMiles: dist(p.geometry.location.lat, p.geometry.location.lng),
+          rating: p.rating,
+          isOpen: p.opening_hours?.open_now,
+          tags: ['⛽ Fuel', p.opening_hours?.open_now ? '🟢 Open now' : ''].filter(Boolean),
+          source: 'google',
+        }));
+        return res.json(googleResults);
+      } catch(e) { return res.json([]); }
     }
 
     if (type === 'FOOD') {

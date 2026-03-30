@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { logActivityAdded, logActivityCompleted } from '../services/activity.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -85,6 +86,31 @@ router.post('/events/:eventId/activities', authenticateToken, async (req, res) =
       }
     });
     
+    // Fire basecamp activity log (non-blocking)
+    const activityTitle = activity.thingToDo?.title || activity.title || 'an activity';
+    logActivityAdded(userId, eventId, activityTitle).catch(() => {});
+
+    // Notify event attendees
+    prisma.eventAttendee.findMany({
+      where: { eventId, status: { in: ['ATTENDING', 'GOING'] } },
+      select: { userId: true }
+    }).then(attendees => {
+      const adder = activity.addedBy;
+      const name = adder ? `${adder.firstName} ${adder.lastName}`.trim() : 'Someone';
+      return Promise.all(
+        attendees
+          .filter(a => a.userId !== userId)
+          .map(a => prisma.notification.create({
+            data: {
+              userId: a.userId,
+              type: 'SCHEDULE_ACTIVITY_ADDED',
+              content: `${name} added "${activityTitle}" to the trip schedule`,
+              link: `/trips/${eventId}?tab=schedule`,
+            }
+          }).catch(() => {}))
+      );
+    }).catch(() => {});
+
     res.json(activity);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -131,6 +157,12 @@ router.patch('/events/:eventId/activities/:activityId', authenticateToken, async
       }
     });
     
+    // Fire completion log if status changed to COMPLETED (non-blocking)
+    if (status === 'COMPLETED') {
+      const actTitle = activity.thingToDo?.title || 'an activity';
+      logActivityCompleted(userId, eventId, actTitle).catch(() => {});
+    }
+
     res.json(activity);
   } catch (error) {
     console.error('Update event activity error:', error);

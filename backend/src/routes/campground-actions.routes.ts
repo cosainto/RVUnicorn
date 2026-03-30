@@ -3,6 +3,8 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 // GET /api/campground-actions/:campgroundId/status - Get all action statuses
 router.get('/:campgroundId/status', authenticateToken, async (req, res) => {
@@ -108,6 +110,36 @@ router.get('/favorites', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to get favorites' });
+  }
+});
+
+// GET /api/campground-actions/wishlist — get user's wishlisted campgrounds
+router.get('/wishlist', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const items = await prisma.campgroundWishlist.findMany({
+      where: { userId },
+      include: { campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, latitude: true, longitude: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(items);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/campground-actions/wishlist — get user's wishlisted campgrounds
+router.get('/wishlist', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const items = await prisma.campgroundWishlist.findMany({
+      where: { userId },
+      include: { campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, latitude: true, longitude: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(items);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

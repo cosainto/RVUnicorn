@@ -4,11 +4,9 @@ import { runAIAnalysis } from "../routes/ai-maintenance";
 const prisma = new PrismaClient();
 
 export async function runMaintenanceCron() {
-  console.log("[MaintenanceCron] Starting nightly AI maintenance check...");
-
   try {
     // Find all RVs with AI monitoring enabled
-    const rvs = await (prisma as any).rV.findMany({
+    const rvs = await (prisma as any).rV?.findMany?.({
       where: { aiMaintenanceEnabled: true },
       select: { id: true, userId: true, make: true, model: true, year: true },
     });

@@ -139,7 +139,7 @@ router.post(
       const notifyIds = [
         event.userId,
         ...event.attendees.map(a => a.userId),
-      ].filter(id => id !== userId);
+      ].filter((id): id is string => !!id && id !== userId);
 
       if (notifyIds.length > 0) {
         const dateLabel = new Date(date).toLocaleDateString('en-US', { 

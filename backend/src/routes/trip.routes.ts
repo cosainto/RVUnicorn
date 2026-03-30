@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { logEventCreated, logEventJoined } from '../services/activity.service';
 import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { logRsvpUpdated } from '../services/activity.service';
 import { prisma } from '../index';
 
 const router = Router();
@@ -130,6 +131,12 @@ router.get('/my', authenticateToken, async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -159,6 +166,26 @@ router.get('/my', authenticateToken, async (req, res) => {
           select: {
             attendees: true,
             meals: true,
+          },
+        },
+        roadTrip: {
+          select: {
+            id: true,
+            title: true,
+            color: true,
+            font: true,
+            stops: {
+              orderBy: [{ stopNumber: 'asc' }, { startDate: 'asc' }],
+              select: {
+                id: true,
+                title: true,
+                stopNumber: true,
+                startDate: true,
+                endDate: true,
+                campground: { select: { id: true, name: true, city: true, state: true } },
+              },
+            },
+            _count: { select: { stops: true } },
           },
         },
       },
@@ -313,6 +340,12 @@ router.get('/:id', async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -326,7 +359,14 @@ router.get('/:id', async (req, res) => {
           },
         },
         attendees: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            siteNumber: true,
+            confirmationNumber: true,
+            siteVisibility: true,
+            notes: true,
             user: {
               select: {
                 id: true,
@@ -334,6 +374,14 @@ router.get('/:id', async (req, res) => {
                 lastName: true,
                 username: true,
                 profilePicture: true,
+                rvType: true,
+                rvMake: true,
+                rvModel: true,
+                rvYear: true,
+                rvMpg: true,
+                rvPhotoUrl: true,
+                rvShowcase: { select: { photos: true } },
+                householdId: true,
               },
             },
           },
@@ -356,6 +404,26 @@ router.get('/:id', async (req, res) => {
             meals: true,
           },
         },
+        roadTrip: {
+          select: {
+            id: true,
+            title: true,
+            color: true,
+            font: true,
+            stops: {
+              orderBy: [{ stopNumber: 'asc' }, { startDate: 'asc' }],
+              select: {
+                id: true,
+                title: true,
+                stopNumber: true,
+                startDate: true,
+                endDate: true,
+                campground: { select: { id: true, name: true, city: true, state: true } },
+              },
+            },
+            _count: { select: { stops: true } },
+          },
+        },
       },
     });
 
@@ -366,8 +434,8 @@ router.get('/:id', async (req, res) => {
     // Log activity for friend feed (only for non-private events)
     res.json(event);
   } catch (error) {
-    console.error('Get event error:', error);
-    res.status(500).json({ error: 'Failed to fetch event' });
+    console.error('Get event error:', error?.message || error);
+    res.status(500).json({ error: 'Failed to fetch event', detail: String(error?.message || error) });
   }
 });
 
@@ -406,6 +474,12 @@ router.post('/', authenticateToken, async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -418,6 +492,44 @@ router.post('/', authenticateToken, async (req, res) => {
         },
       },
     });
+
+    // Auto-add organizer as ATTENDING
+    await prisma.eventAttendee.upsert({
+      where: { eventId_userId: { eventId: event.id, userId } },
+      create: { eventId: event.id, userId, status: 'ATTENDING' },
+      update: { status: 'ATTENDING' },
+    }).catch(() => {});
+
+    // Auto-handle household partner
+    const organizer = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { householdId: true },
+    });
+    if (organizer?.householdId) {
+      const partner = await prisma.user.findFirst({
+        where: { householdId: organizer.householdId, id: { not: userId } },
+        select: { id: true },
+      });
+      if (partner) {
+        const isFuture = new Date(startDate) >= new Date();
+        await prisma.eventAttendee.upsert({
+          where: { eventId_userId: { eventId: event.id, userId: partner.id } },
+          create: { eventId: event.id, userId: partner.id, status: isFuture ? 'ATTENDING' : 'PENDING' },
+          update: {},
+        }).catch(() => {});
+        if (!isFuture) {
+          await prisma.notification.create({
+            data: {
+              userId: partner.id,
+              type: 'TRIP_INVITE',
+              content: 'Your travel partner added a trip — are you going?',
+              link: `/trips/${event.id}`,
+              senderId: userId,
+            },
+          }).catch(() => {});
+        }
+      }
+    }
 
     // Auto-create StateVisit for organizer
     if (event.campground) {
@@ -512,6 +624,76 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/events/:id - Update event
+
+// PUT /api/trips/:id/my-site — save user's campsite details for this event
+router.put('/:id/my-site', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+    const { id: eventId } = req.params;
+    const { siteNumber, confirmationNumber, notes, siteVisibility } = req.body;
+
+    // Upsert attendee record with site details
+    const attendee = await prisma.eventAttendee.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: {
+        eventId,
+        userId,
+        status: 'ATTENDING',
+        siteNumber: siteNumber || null,
+        confirmationNumber: confirmationNumber || null,
+        notes: notes || null,
+        siteVisibility: siteVisibility || 'PRIVATE',
+      },
+      update: {
+        siteNumber: siteNumber || null,
+        confirmationNumber: confirmationNumber || null,
+        notes: notes || null,
+        siteVisibility: siteVisibility || 'PRIVATE',
+      },
+    });
+    res.json({ attendee, message: 'Campsite details saved' });
+  } catch (e: any) {
+    console.error('[Trip] my-site error:', e?.message);
+    res.status(500).json({ error: 'Failed to save campsite details' });
+  }
+});
+
+
+
+// PUT /api/trips/:id/my-site — save user's campsite details for this event
+router.put('/:id/my-site', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+    const { id: eventId } = req.params;
+    const { siteNumber, confirmationNumber, notes, siteVisibility } = req.body;
+
+    // Upsert attendee record with site details
+    const attendee = await prisma.eventAttendee.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: {
+        eventId,
+        userId,
+        status: 'ATTENDING',
+        siteNumber: siteNumber || null,
+        confirmationNumber: confirmationNumber || null,
+        notes: notes || null,
+        siteVisibility: siteVisibility || 'PRIVATE',
+      },
+      update: {
+        siteNumber: siteNumber || null,
+        confirmationNumber: confirmationNumber || null,
+        notes: notes || null,
+        siteVisibility: siteVisibility || 'PRIVATE',
+      },
+    });
+    res.json({ attendee, message: 'Campsite details saved' });
+  } catch (e: any) {
+    console.error('[Trip] my-site error:', e?.message);
+    res.status(500).json({ error: 'Failed to save campsite details' });
+  }
+});
+
+
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
@@ -552,6 +734,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -634,7 +822,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
-        organizer: { select: { firstName: true, lastName: true } },
+        organizer: { select: {
+          id: true, firstName: true, lastName: true, username: true,
+          profilePicture: true, householdId: true,
+          rvYear: true, rvMake: true, rvModel: true, rvPhotoUrl: true,
+          rvShowcase: { select: { photos: true } },
+        }},
         group: { select: { id: true, name: true } },
         attendees: { select: { userId: true } },
       },
@@ -687,6 +880,17 @@ router.get('/:id/attendees', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Optional auth — extract userId from token if present, but don't block unauthenticated
+    let requesterId: string | null = null;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-to-something-secure') as any;
+        requesterId = decoded.userId || decoded.id || null;
+      } catch { /* invalid/expired token — treat as unauthenticated */ }
+    }
+
     const attendees = await prisma.eventAttendee.findMany({
       where: { eventId: id },
       include: {
@@ -697,13 +901,78 @@ router.get('/:id/attendees', async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
           },
         },
       },
       orderBy: { createdAt: 'asc' },
     });
 
-    res.json(attendees);
+    if (!requesterId) {
+      // Unauthenticated — strip all campsite details
+      const stripped = attendees.map(a => ({
+        ...a,
+        siteNumber: null,
+        notes: null,
+        user: { ...a.user, householdId: undefined },
+      }));
+      return res.json(stripped);
+    }
+
+    // Get requester's accepted friend IDs (both directions)
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ initiatorId: requesterId }, { receiverId: requesterId }],
+      },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds = new Set(
+      friendships.map(f => f.initiatorId === requesterId ? f.receiverId : f.initiatorId)
+    );
+
+    // Get requester's householdId
+    const requester = await prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { householdId: true },
+    });
+    const requesterHouseholdId = requester?.householdId ?? null;
+
+    // Apply visibility rules per attendee
+    const result = attendees.map(a => {
+      const attendeeUserId = a.userId;
+      const attendeeHouseholdId = (a.user as any).householdId ?? null;
+      const visibility = a.siteVisibility || 'PRIVATE';
+
+      let canSeeCampsite = false;
+
+      if (attendeeUserId === requesterId) {
+        // Always see your own
+        canSeeCampsite = true;
+      } else if (visibility === 'EVENT') {
+        // Any event attendee can see
+        canSeeCampsite = true;
+      } else if (visibility === 'FRIENDS') {
+        // Friends or same household
+        const sameHousehold =
+          requesterHouseholdId &&
+          attendeeHouseholdId &&
+          requesterHouseholdId === attendeeHouseholdId;
+        canSeeCampsite = friendIds.has(attendeeUserId) || !!sameHousehold;
+      }
+      // PRIVATE: only self (handled above)
+
+      const { householdId: _hid, ...userWithoutHousehold } = a.user as any;
+
+      return {
+        ...a,
+        user: userWithoutHousehold,
+        siteNumber: canSeeCampsite ? a.siteNumber : null,
+        notes: canSeeCampsite ? a.notes : null,
+      };
+    });
+
+    res.json(result);
   } catch (error) {
     console.error('Get attendees error:', error);
     res.status(500).json({ error: 'Failed to fetch attendees' });
@@ -1108,6 +1377,12 @@ router.get('/discover', async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -1183,6 +1458,12 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
             lastName: true,
             username: true,
             profilePicture: true,
+            householdId: true,
+            rvYear: true,
+            rvMake: true,
+            rvModel: true,
+            rvPhotoUrl: true,
+            rvShowcase: { select: { photos: true } },
           },
         },
         campground: {
@@ -1377,6 +1658,98 @@ router.get('/active-route/:userId', async (req, res) => {
   } catch (e: any) {
     console.error('active-route error:', e?.message, e?.stack);
     res.status(500).json({ error: e?.message || 'Failed' });
+  }
+});
+
+
+// POST /api/events/:id/duplicate - Duplicate a trip
+router.post('/:id/duplicate', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const { copyAttendees = false } = req.body;
+
+    const source = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        tripPackItems: true,
+        supplyItems: true,
+        attendees: { where: { status: { in: ['ATTENDING', 'going'] } } },
+      },
+    });
+
+    if (!source) return res.status(404).json({ error: 'Trip not found' });
+    if (source.organizerId !== userId) return res.status(403).json({ error: 'Only the organizer can duplicate this trip' });
+
+    // Create new event — clear dates, keep everything else
+    const newEvent = await prisma.event.create({
+      data: {
+        title: source.title + ' (Copy)',
+        description: source.description,
+        location: source.location,
+        campgroundId: source.campgroundId,
+        organizerId: userId,
+        startDate: source.startDate,
+        endDate: source.endDate,
+        privacy: source.privacy,
+        tags: source.tags,
+        destinationType: source.destinationType,
+        bannerImage: source.bannerImage,
+      },
+    });
+
+    // Always add organizer as attendee
+    await prisma.eventAttendee.create({
+      data: { eventId: newEvent.id, userId, status: 'ATTENDING' },
+    });
+
+    // Optionally copy attendees
+    if (copyAttendees && source.attendees.length > 0) {
+      const otherAttendees = source.attendees.filter(a => a.userId !== userId);
+      if (otherAttendees.length > 0) {
+        await prisma.eventAttendee.createMany({
+          data: otherAttendees.map(a => ({
+            eventId: newEvent.id,
+            userId: a.userId,
+            status: 'PENDING',
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Copy pack list items
+    if (source.tripPackItems.length > 0) {
+      await prisma.tripPackItem.createMany({
+        data: source.tripPackItems.map(item => ({
+          eventId: newEvent.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          isRequired: item.isRequired,
+          addedById: userId,
+        })),
+      });
+    }
+
+    // Copy supply items
+    if (source.supplyItems.length > 0) {
+      await (prisma as any).supplyItem.createMany({
+        data: source.supplyItems.map((item: any) => ({
+          eventId: newEvent.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unit: item.unit,
+          addedById: userId,
+        })),
+      });
+    }
+
+    res.json({ event: newEvent, message: 'Trip duplicated successfully' });
+  } catch (error) {
+    console.error('Duplicate trip error:', error);
+    res.status(500).json({ error: 'Failed to duplicate trip' });
   }
 });
 

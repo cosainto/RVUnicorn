@@ -48,13 +48,14 @@ function rvParkyUrl(lat?: number|null, lng?: number|null, name?: string) {
 const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
 const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
 
-export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, tripPlan, tripLoading, onEditTrip, onReload }: {
+export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
-  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string;
+  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string;
 }) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
+  // tripEventId is used to filter itinerary to this specific event
   const [showHitch, setShowHitch] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
@@ -87,11 +88,19 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   });
 
   useEffect(() => { if (homeLocation) setAiForm(f=>({...f,startLocation:homeLocation})); }, [homeLocation]);
+  // Override start/destination when coming from road trip "Customize My Drive" link
+  useEffect(() => {
+    if (plannerFrom) setAiForm(f => ({ ...f, startLocation: plannerFrom }));
+  }, [plannerFrom]);
+  useEffect(() => {
+    if (plannerTo) setAiForm(f => ({ ...f, destination: plannerTo }));
+  }, [plannerTo]);
   useEffect(() => { if (campground) setAiForm(f=>({...f,destination:campDest})); }, [campground]);
   useEffect(() => { if (arrivalDate) setAiForm(f=>({...f,arrivalDate})); }, [arrivalDate]);
 
   useEffect(() => {
-    api.get('/itinerary').then(({data}) => { if (data.length>0) setTrip(data[0]); }).catch(()=>{}).finally(()=>setLoadingItinerary(false));
+    const url = tripEventId ? '/itinerary?eventId=' + tripEventId : '/itinerary';
+    api.get(url).then(({data}) => { if (data.length>0) setTrip(data[0]); }).catch(()=>{}).finally(()=>setLoadingItinerary(false));
   }, []);
 
   // ── GPS Live Mode ────────────────────────────────────────────────────────
@@ -161,16 +170,41 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   };
 
   const fetchRecommendations = async (stop: TripStop, dayId: string) => {
-    const lat = stop.campground?.latitude || stop.latitude;
-    const lng = stop.campground?.longitude || stop.longitude;
-    if (!lat || !lng) return;
+    let lat: number | null | undefined = stop.campground?.latitude || stop.latitude;
+    let lng: number | null | undefined = stop.campground?.longitude || stop.longitude;
+
+    console.log('[Recs] stop:', stop.customName || stop.campground?.name, 'lat:', lat, 'lng:', lng, 'address:', stop.address);
+
+    // Geocode address if no coords
+    if (!lat || !lng) {
+      const q = stop.address || stop.customName || (stop.campground?.name);
+      console.log('[Recs] geocoding:', q);
+      if (q) {
+        try {
+          const { data: geo } = await api.get('/drive-planner/geocode', { params: { q } });
+          const pos = geo?.items?.[0]?.position;
+          console.log('[Recs] geocode result:', pos);
+          if (pos) { lat = pos.lat; lng = pos.lng; }
+        } catch(e) { console.log('[Recs] geocode failed:', e); }
+      }
+    }
+
+    if (!lat || !lng) {
+      console.log('[Recs] no coords found, aborting');
+      setRecommendations({ stopId: stop.id, items: [], loading: false });
+      return;
+    }
+
     setRecommendations({ stopId: stop.id, items: [], loading: true });
     try {
+      console.log('[Recs] fetching with lat:', lat, 'lng:', lng, 'type:', stop.type);
       const { data } = await api.get('/itinerary/recommendations', {
         params: { lat, lng, type: stop.type, mealPref: aiForm.mealPref, fuelType: rvFuelType || 'gas' }
       });
+      console.log('[Recs] results:', data?.length, data);
       setRecommendations({ stopId: stop.id, items: data, loading: false });
     } catch(e) {
+      console.log('[Recs] fetch error:', e);
       setRecommendations({ stopId: stop.id, items: [], loading: false });
     }
   };
@@ -244,6 +278,10 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
 
 
+  const [justGenerated, setJustGenerated] = useState(false);
+  const [editingStop, setEditingStop] = useState<{dayId: string; stop: any} | null>(null);
+  const [editStopForm, setEditStopForm] = useState({ customName: '', address: '', notes: '', type: '' });
+
   const generateAI = async () => {
     setAiLoading(true); setAiError('');
     try {
@@ -258,10 +296,13 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         rvFuelType: rvFuelType || 'gas',
       });
       const { data: newTrip } = await api.post('/itinerary-ai/create-from-suggestion', {
-        title: eventTitle ? `Itinerary for ${eventTitle}` : suggestion.title, suggestion,
+        title: eventTitle ? `Itinerary for ${eventTitle}` : suggestion.title,
+        suggestion,
+        eventId: tripEventId || eventId,
       });
       setTrip(newTrip);
       setShowHitch(false);
+      setJustGenerated(true);
     } catch (e) { setAiError('Failed to generate. Try again.'); }
     setAiLoading(false);
   };
@@ -299,6 +340,29 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     } catch(e) {}
   };
 
+  const openEditStop = (dayId: string, stop: any) => {
+    setEditingStop({ dayId, stop });
+    setEditStopForm({
+      customName: stop.customName || stop.campground?.name || '',
+      address: stop.address || '',
+      notes: stop.notes || '',
+      type: stop.type || 'WAYPOINT',
+    });
+  };
+
+  const saveStopEdit = async () => {
+    if (!trip || !editingStop) return;
+    const { dayId, stop } = editingStop;
+    try {
+      const { data } = await api.put(`/itinerary/${trip.id}/days/${dayId}/stops/${stop.id}`, {
+        ...stop, customName: editStopForm.customName, address: editStopForm.address,
+        notes: editStopForm.notes, type: editStopForm.type,
+      });
+      setTrip(t => t ? {...t, days:t.days.map(d=>d.id===dayId?{...d,stops:d.stops.map(s=>s.id===stop.id?data:s)}:d)} : t);
+      setEditingStop(null);
+    } catch(e) { alert('Failed to save'); }
+  };
+
   const toggleConfirmed = async (dayId: string, stop: TripStop) => {
     if (!trip) return;
     try {
@@ -319,7 +383,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   if (tripLoading) return <div className="flex justify-center py-12"><Loader className="w-6 h-6 animate-spin text-primary-400" /></div>;
 
   return (
-    <div className="space-y-4">
+    <div id="trip-planner-section" className="space-y-4">
 
       {/* ── Route Summary ────────────────────────────────────────── */}
       {tripPlan ? (
@@ -383,17 +447,35 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
           </div>
 
           {/* Hitch AI banner */}
-          <div className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors ${showHitch ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
-            onClick={() => setShowHitch(v=>!v)}>
-            <img src="/hitch.png" alt="Hitch" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">Ask Hitch to plan my route</p>
-              <p className="text-xs text-gray-400">AI-powered day-by-day itinerary with overnight stops</p>
+          {!showHitch ? (
+            <div className="px-4 py-4 border-b border-gray-100">
+              <button
+                onClick={() => setShowHitch(true)}
+                className="w-full relative flex items-center gap-3 px-5 py-3.5 rounded-2xl text-white font-semibold text-sm overflow-hidden shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 50%, #f97316 100%)', backgroundSize: '200% 200%', animation: 'hitchGlow 3s ease infinite' }}
+              >
+                <style>{`@keyframes hitchGlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }`}</style>
+                {/* Subtle shimmer */}
+                <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity" />
+                <img src="/hitch.png" alt="Hitch" className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-white/40" />
+                <div className="flex-1 text-left">
+                  <p className="font-bold text-white leading-tight">Ask Hitch to Plan My Drive</p>
+                  <p className="text-xs text-orange-100 font-normal mt-0.5">Day-by-day itinerary · rest stops · fuel · overnight stays</p>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-lg">✨</div>
+              </button>
             </div>
-            <div className={`relative w-10 h-5 rounded-full transition-colors ${showHitch ? 'bg-primary-500' : 'bg-gray-200'}`}>
-              <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${showHitch ? 'translate-x-5' : 'translate-x-0'}`} />
+          ) : (
+            <div className="px-4 pt-3 pb-1 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img src="/hitch.png" alt="Hitch" className="w-6 h-6 rounded-full object-cover" />
+                <p className="text-sm font-bold text-gray-800">Hitch AI Route Planner</p>
+              </div>
+              <button onClick={() => setShowHitch(false)} className="text-xs text-gray-400 hover:text-gray-600 transition px-2 py-1 rounded-lg hover:bg-gray-100">
+                ✕ Close
+              </button>
             </div>
-          </div>
+          )}
 
           {/* Hitch AI form */}
           {showHitch && (
@@ -621,56 +703,17 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                 </div>
               </div>
 
-              {/* Share panel */}
-              {showSharePanel && (
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-4">
-                  {/* Travel companions */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 mb-2">👥 Travel Companions</p>
-                    <p className="text-xs text-gray-400 mb-3">People in your RV can view and edit this itinerary</p>
-                    <div className="flex gap-2 mb-3">
-                      <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && inviteCompanion()}
-                        placeholder="RVUnicorn username" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400" />
-                      <button onClick={inviteCompanion} disabled={inviteLoading || !inviteUsername.trim()}
-                        className="bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600 disabled:opacity-50">
-                        {inviteLoading ? '...' : 'Add'}
-                      </button>
+              {/* Post-generation save confirmation */}
+              {justGenerated && (
+                <div className="mx-4 mb-3 px-4 py-3 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">✅</span>
+                    <div>
+                      <p className="text-sm font-bold text-green-800">Itinerary saved!</p>
+                      <p className="text-xs text-green-600">Edit any stop, day, or detail below — changes save automatically.</p>
                     </div>
-                    {inviteMsg && <p className={`text-xs mb-2 ${inviteMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>{inviteMsg}</p>}
-                    {companions.length > 0 && (
-                      <div className="space-y-1.5">
-                        {companions.map(m => (
-                          <div key={m.userId} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                            {m.user?.profileImage ? <img src={m.user.profileImage} className="w-6 h-6 rounded-full object-cover" /> : <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-xs text-primary-600 font-bold">{m.user?.firstName?.[0]}</div>}
-                            <span className="text-sm text-gray-700 flex-1">{m.user?.firstName} {m.user?.lastName} <span className="text-gray-400">@{m.user?.username}</span></span>
-                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">{m.role}</span>
-                            <button onClick={() => removeCompanion(m.userId)} className="text-gray-300 hover:text-red-400 p-1"><X className="w-3 h-3"/></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  {/* Share link */}
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-sm font-semibold text-gray-800 mb-1">🔗 Read-only share link</p>
-                    <p className="text-xs text-gray-400 mb-3">Anyone with this link can view your itinerary</p>
-                    {shareUrl ? (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <input readOnly value={shareUrl} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs bg-gray-50 text-gray-600" />
-                          <button onClick={() => navigator.clipboard.writeText(shareUrl)}
-                            className="border border-gray-200 text-gray-500 px-3 py-2 rounded-xl text-xs hover:bg-gray-50">Copy</button>
-                        </div>
-                        <button onClick={revokeShare} className="text-xs text-red-400 hover:text-red-600">Revoke link</button>
-                      </div>
-                    ) : (
-                      <button onClick={generateShareLink}
-                        className="text-sm border border-gray-200 text-gray-600 px-4 py-2 rounded-xl hover:bg-gray-50 flex items-center gap-2">
-                        🔗 Generate share link
-                      </button>
-                    )}
-                  </div>
+                  <button onClick={() => setJustGenerated(false)} className="text-green-400 hover:text-green-600 text-lg leading-none">✕</button>
                 </div>
               )}
 
@@ -724,6 +767,31 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                       </button>
                     )}
                   </div>
+
+                  {/* Send via text or email */}
+                  {shareUrl && (
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-sm font-semibold text-gray-800 mb-1">📤 Send to someone</p>
+                      <p className="text-xs text-gray-400 mb-3">Share your itinerary via text or email</p>
+                      <div className="flex gap-2">
+                        <a
+                          href={`sms:?&body=${encodeURIComponent('Check out my RV trip itinerary! ' + shareUrl)}`}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition"
+                        >
+                          💬 Text
+                        </a>
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent('My RV Trip Itinerary')}&body=${encodeURIComponent('Hey! Check out my RV trip itinerary: ' + shareUrl)}`}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition"
+                        >
+                          ✉️ Email
+                        </a>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2 text-center">
+                        SMS via Twilio coming soon — tap Text to use your device's default messages app for now
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -817,7 +885,10 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                                   Skip
                                 </button>
                               )}
-                              <button onClick={()=>deleteStop(day.id,stop.id)} className="p-1 text-gray-300 hover:text-red-400 rounded-lg">
+                              <button onClick={() => openEditStop(day.id, stop)} className="p-1 text-gray-300 hover:text-blue-400 rounded-lg" title="Edit stop">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              </button>
+                              <button onClick={()=>deleteStop(day.id,stop.id)} className="p-1 text-gray-300 hover:text-red-400 rounded-lg" title="Delete stop">
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
@@ -852,6 +923,60 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
             className="inline-flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600">
             <img src="/hitch.png" className="w-4 h-4 rounded-full"/> Ask Hitch to plan it
           </button>
+        </div>
+      )}
+
+      {/* Edit Stop Modal */}
+      {editingStop && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-primary-500 to-primary-400 rounded-t-2xl" />
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900">Edit Stop</h3>
+                <button onClick={() => setEditingStop(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Stop Type</label>
+                  <select value={editStopForm.type} onChange={e => setEditStopForm(f => ({...f, type: e.target.value}))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary-400">
+                    <option value="FUEL">⛽ Fuel Stop</option>
+                    <option value="FOOD">🍔 Food</option>
+                    <option value="OVERNIGHT">🏕️ Overnight</option>
+                    <option value="REST">😴 Rest Stop</option>
+                    <option value="ATTRACTION">🎡 Attraction</option>
+                    <option value="WALMART">🛒 Walmart</option>
+                    <option value="WAYPOINT">📍 Waypoint</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Name</label>
+                  <input value={editStopForm.customName} onChange={e => setEditStopForm(f => ({...f, customName: e.target.value}))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
+                    placeholder="Stop name" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Address / Location</label>
+                  <input value={editStopForm.address} onChange={e => setEditStopForm(f => ({...f, address: e.target.value}))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
+                    placeholder="City, ST" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
+                  <textarea value={editStopForm.notes} onChange={e => setEditStopForm(f => ({...f, notes: e.target.value}))}
+                    rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400 resize-none"
+                    placeholder="Any notes about this stop..." />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setEditingStop(null)}
+                  className="flex-1 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={saveStopEdit}
+                  className="flex-1 py-2.5 text-sm font-semibold text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition">Save</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

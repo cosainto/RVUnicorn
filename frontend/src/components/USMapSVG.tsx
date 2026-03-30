@@ -1,3 +1,4 @@
+import React from 'react';
 import { ComposableMap, Geographies, Geography, Marker, Line } from 'react-simple-maps';
 
 interface MapMarker {
@@ -24,6 +25,16 @@ interface HighwayLine {
   name: string;
   color: string;
   coordinates: [number, number][]; // [longitude, latitude]
+}
+
+// Wrap Marker to prevent bad coordinates from crashing the whole map
+class SafeMarkerBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() { return this.state.hasError ? null : this.props.children; }
 }
 
 interface USMapSVGProps {
@@ -221,20 +232,60 @@ export default function USMapSVG({
           />
         )}
         {tripRoute && tripRoute.upcomingCoords.length > 1 && (
-          <Line
-            from={tripRoute.upcomingCoords[0]}
-            to={tripRoute.upcomingCoords[tripRoute.upcomingCoords.length - 1]}
-            coordinates={tripRoute.upcomingCoords}
-            stroke="#94a3b8"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeDasharray="6,4"
-            fill="none"
-          />
+          <>
+            {/* Glow effect behind the route */}
+            <Line
+              from={tripRoute.upcomingCoords[0]}
+              to={tripRoute.upcomingCoords[tripRoute.upcomingCoords.length - 1]}
+              coordinates={tripRoute.upcomingCoords}
+              stroke="#fb923c"
+              strokeWidth={6}
+              strokeLinecap="round"
+              strokeDasharray="0"
+              fill="none"
+              strokeOpacity={0.25}
+            />
+            {/* Main route line */}
+            <Line
+              from={tripRoute.upcomingCoords[0]}
+              to={tripRoute.upcomingCoords[tripRoute.upcomingCoords.length - 1]}
+              coordinates={tripRoute.upcomingCoords}
+              stroke="#f97316"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeDasharray="8,5"
+              fill="none"
+            />
+          </>
         )}
+        {/* Stop markers along the route */}
+        {tripRoute && tripRoute.allStops && tripRoute.allStops
+          .filter((s: any) => s.latitude && s.longitude && !isNaN(Number(s.latitude)) && !isNaN(Number(s.longitude)))
+          .map((stop: any, idx: number) => (
+            <SafeMarkerBoundary key={`stop-${idx}`}>
+              <Marker
+                key={`stop-marker-${idx}`}
+                coordinates={[Number(stop.longitude), Number(stop.latitude)]}
+              >
+                <circle cx={0} cy={0} r={5} fill="#f97316" stroke="#fff" strokeWidth={2} />
+                <text
+                  x={0}
+                  y={-10}
+                  textAnchor="middle"
+                  fontSize={8}
+                  fill="#1e293b"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {idx === 0 || idx === (tripRoute.allStops.length - 1) ? '🏠' : `${idx}`}
+                </text>
+              </Marker>
+            </SafeMarkerBoundary>
+          ))
+        }
         {/* User position marker on active route */}
-        {tripRoute?.currentPosition && (
-          <Marker coordinates={[tripRoute.currentPosition.longitude, tripRoute.currentPosition.latitude]}>
+        {tripRoute?.currentPosition && tripRoute.currentPosition.longitude && tripRoute.currentPosition.latitude && !isNaN(Number(tripRoute.currentPosition.longitude)) && !isNaN(Number(tripRoute.currentPosition.latitude)) && (
+          <Marker coordinates={[Number(tripRoute.currentPosition.longitude), Number(tripRoute.currentPosition.latitude)]}>
             <g transform="translate(-12, -12)">
               <circle cx="12" cy="12" r="13" fill="#f97316" stroke="white" strokeWidth="2" />
               {userProfilePicture ? (
@@ -263,10 +314,11 @@ export default function USMapSVG({
         ))}
         
         {/* Render markers/pins */}
-        {markers.map((marker) => (
+        {markers.filter(m => m.latitude && m.longitude && !isNaN(Number(m.latitude)) && !isNaN(Number(m.longitude)) && Number(m.latitude) !== 0 && Number(m.longitude) !== 0).map((marker) => (
+          <SafeMarkerBoundary key={marker.id}>
           <Marker 
-            key={marker.id} 
-            coordinates={[marker.longitude, marker.latitude]}
+            key={`m-${marker.id}`}
+            coordinates={[Number(marker.longitude), Number(marker.latitude)]}
             onClick={() => onMarkerClick?.(marker)}
           >
             <g style={{ cursor: onMarkerClick ? 'pointer' : 'default' }}>
@@ -379,6 +431,7 @@ export default function USMapSVG({
             </g>
             <title>{marker.name}</title>
           </Marker>
+          </SafeMarkerBoundary>
         ))}
       </ComposableMap>
       

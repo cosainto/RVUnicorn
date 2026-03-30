@@ -346,15 +346,31 @@ Keep responses helpful and specific. Reference the user by name when you have it
   }
 });
 
-export default router;
-
 // POST /api/hitch/packing-suggestions
 router.post('/packing-suggestions', async (req: any, res) => {
   try {
-    const { destination, startDate, endDate, groupSize, rvType, interests = [] } = req.body;
+    const { eventId, destination, startDate, endDate, groupSize, rvType, interests = [], activities = [] } = req.body;
     const nights = startDate && endDate
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 3;
+
+    // Fetch scheduled activities from DB if eventId provided
+    let scheduledActivities: string[] = activities;
+    if (eventId && scheduledActivities.length === 0) {
+      try {
+        const dbActivities = await prisma.eventActivity.findMany({
+          where: { eventId },
+          select: { title: true, thingToDo: { select: { name: true, type: true } } },
+        });
+        scheduledActivities = dbActivities.map((a: any) =>
+          a.thingToDo?.name || a.title || ''
+        ).filter(Boolean);
+      } catch {}
+    }
+
+    const activityContext = scheduledActivities.length > 0
+      ? `\nScheduled activities on this trip: ${scheduledActivities.join(', ')}\nIMPORTANT: Include a dedicated "Activity Gear" category with specific items for each of these activities (e.g. hiking → trekking poles, trail snacks, blister pads; swimming → towels, swimsuit, waterproof bag; fishing → rod, tackle box, fishing license; biking → helmet, bike lock, repair kit; kayaking → dry bag, paddle gloves, water shoes).`
+      : '';
 
     const prompt = `You are an expert RV packer. Generate a practical packing list for an RV trip.
 Trip details:
@@ -362,7 +378,7 @@ Trip details:
 - Duration: ${nights} nights
 - Group size: ${groupSize || 2} people
 - RV type: ${rvType || 'Class C motorhome'}
-- Interests: ${interests.join(', ') || 'general camping'}
+- Interests: ${interests.join(', ') || 'general camping'}${activityContext}
 
 Return ONLY valid JSON in this exact format, no markdown, no extra text:
 {
@@ -375,12 +391,13 @@ Return ONLY valid JSON in this exact format, no markdown, no extra text:
   ]
 }
 
-Include 6-8 categories like: Kitchen & Food, Bedding & Comfort, Clothing, Safety & Tools, Entertainment, Hygiene, Documents & Tech, Kids/Pets (if relevant).
-Each category should have 4-8 specific, practical items. Be specific to RV travel, not generic camping.`;
+Include 6-8 categories. Always include: Kitchen & Food, Bedding & Comfort, Clothing, Safety & Tools, Hygiene, Documents & Tech.
+If activities were provided, add an Activity Gear category with specific gear for those activities.
+Each category should have 4-8 specific, practical items tailored to RV travel.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -393,6 +410,8 @@ Each category should have 4-8 specific, practical items. Be specific to RV trave
     res.status(500).json({ error: 'Failed to generate packing list' });
   }
 });
+
+export default router;
 
 // POST /api/hitch/meal-suggestions
 router.post('/meal-suggestions', async (req: any, res) => {
@@ -749,7 +768,6 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         user: { select: { username: true, firstName: true } },
         campground: { select: { name: true, state: true } },
         harvestHost: { select: { name: true } },
-        overnightSpot: { select: { name: true } },
       },
       take: 5,
     }) : [];
@@ -811,8 +829,8 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
       })),
       friendCheckIns: friendCheckIns.map(c => ({
         user: c.user.firstName || c.user.username,
-        location: c.campground?.name || (c.harvestHost as any)?.name || (c.overnightSpot as any)?.name,
-        type: c.campground ? 'campground' : c.harvestHost ? 'host' : 'spot',
+        location: c.campground?.name || (c.harvestHost as any)?.name,
+        type: c.campground ? 'campground' : 'host',
       })),
     });
   } catch (e: any) {

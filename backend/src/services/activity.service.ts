@@ -39,7 +39,10 @@ export type ActivityType =
   | 'TRIP_PLANNED'
   | 'GEAR_REVIEW'
   | 'RV_UPDATED'
-  | 'MUTUAL_FRIEND_ADDED';
+  | 'MUTUAL_FRIEND_ADDED'
+  | 'ACTIVITY_ADDED'
+  | 'ACTIVITY_COMPLETED'
+  | 'RSVP_UPDATED';
 
 interface CreateActivityParams {
   userId: string;
@@ -174,6 +177,15 @@ export const logRVShowcaseUpdated = (userId: string, photoCount: number) =>
 // NEW Friend Activity Functions
 export const logEventCreated = (userId: string, eventId: string, title: string, campgroundId?: string) =>
   createActivity({ userId, type: 'EVENT_CREATED', eventId, campgroundId, title });
+
+export const logActivityAdded = (userId: string, eventId: string, activityTitle: string) =>
+  createActivity({ userId, type: 'ACTIVITY_ADDED', eventId, title: activityTitle });
+
+export const logActivityCompleted = (userId: string, eventId: string, activityTitle: string) =>
+  createActivity({ userId, type: 'ACTIVITY_COMPLETED', eventId, title: activityTitle });
+
+export const logRsvpUpdated = (userId: string, eventId: string, activityTitle: string, status: string) =>
+  createActivity({ userId, type: 'RSVP_UPDATED', eventId, title: activityTitle, content: status });
 
 export const logEventJoined = (userId: string, eventId: string, title: string) =>
   createActivity({ userId, type: 'EVENT_JOINED', eventId, title });
@@ -385,6 +397,9 @@ export default {
   logAttractionAdded,
   logRVShowcaseUpdated,
   logEventCreated,
+  logActivityAdded,
+  logActivityCompleted,
+  logRsvpUpdated,
   logEventJoined,
   logEventUpdated,
   logRecipeLiked,

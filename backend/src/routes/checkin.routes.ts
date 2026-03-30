@@ -342,5 +342,53 @@ router.post('/stargazing/toggle', authenticateToken, async (req: any, res) => {
   }
 });
 
+
+// GET /api/checkins/nearby-friends
+router.get('/nearby-friends', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const friendships = await prisma.friendship.findMany({
+      where: { status: 'ACCEPTED', OR: [{ initiatorId: userId }, { receiverId: userId }] },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds: string[] = friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { householdId: true } });
+    if (me?.householdId) {
+      const hm = await prisma.user.findMany({ where: { householdId: me.householdId, id: { not: userId } }, select: { id: true } });
+      hm.forEach((m: any) => { if (!friendIds.includes(m.id)) friendIds.push(m.id); });
+    }
+    if (friendIds.length === 0) return res.json([]);
+    const checkins = await prisma.checkIn.findMany({
+      where: { userId: { in: friendIds }, isActive: true },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        campground: { select: { id: true, name: true, state: true, latitude: true, longitude: true } },
+      },
+      orderBy: { checkInDate: 'desc' },
+    });
+    const myCI = await prisma.checkIn.findFirst({
+      where: { userId, isActive: true },
+      include: { campground: { select: { latitude: true, longitude: true, id: true } } },
+    });
+    const result = checkins.map((c: any) => {
+      let distanceMiles = null;
+      if (myCI?.campground?.latitude && myCI?.campground?.longitude && c.campground?.latitude && c.campground?.longitude) {
+        const R = 3958.8;
+        const lat1 = myCI.campground.latitude * Math.PI / 180;
+        const lat2 = c.campground.latitude * Math.PI / 180;
+        const dLat = (c.campground.latitude - myCI.campground.latitude) * Math.PI / 180;
+        const dLon = (c.campground.longitude - myCI.campground.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+        distanceMiles = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+      }
+      return { ...c, distanceMiles, sameCampground: !!(myCI?.campgroundId && myCI.campgroundId === c.campgroundId) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Nearby friends error:', error);
+    res.status(500).json({ error: 'Failed to fetch nearby campers' });
+  }
+});
+
 export default router;
 

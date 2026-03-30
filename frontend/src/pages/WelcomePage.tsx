@@ -39,7 +39,8 @@ export default function WelcomePage() {
   }, [user, navigate]);
 
   const handleComplete = async () => {
-    navigate('/');
+    // Chain into Rig Profile setup after general onboarding
+    navigate('/rv-setup');
   };
 
   const handleSkip = async () => {

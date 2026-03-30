@@ -7,6 +7,8 @@ interface EventScheduleProps {
   eventId: string;
   eventStartDate: string;
   eventEndDate: string;
+  campgroundLat?: number;
+  campgroundLng?: number;
 }
 
 interface Subevent {
@@ -109,7 +111,7 @@ const MEAL_TIMES: Record<string, string> = {
   SNACK: '3:00 PM',
 };
 
-export default function EventSchedule({ eventId, eventStartDate, eventEndDate }: EventScheduleProps) {
+export default function EventSchedule({ eventId, eventStartDate, eventEndDate, campgroundLat, campgroundLng }: EventScheduleProps) {
   const { user } = useAuth();
   const [subevents, setSubevents] = useState<Subevent[]>([]);
   const [activities, setActivities] = useState<EventActivity[]>([]);
@@ -121,6 +123,73 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
   const [updatingActivityId, setUpdatingActivityId] = useState<string | null>(null);
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [showMeals, setShowMeals] = useState(true);
+  const [weatherByDate, setWeatherByDate] = useState<Record<string, any>>({});
+
+  // Outdoor activity types that need weather warnings
+  const OUTDOOR_TYPES = ['HIKE', 'SWIM', 'RANGER_TALK'];
+
+  // Fetch weather for a given date if campground lat/lng available
+  const fetchWeatherForDate = async (dateStr: string, lat: number, lon: number) => {
+    if (weatherByDate[dateStr]) return; // already fetched
+    try {
+      const { data } = await api.get('/weather/forecast', { params: { lat, lon } });
+      const periods: any[] = data.periods || [];
+      // Find the period matching this date
+      const match = periods.find((p: any) => {
+        const pDate = new Date(p.startTime).toISOString().split('T')[0];
+        return pDate === dateStr;
+      });
+      if (match) {
+        setWeatherByDate(prev => ({ ...prev, [dateStr]: match }));
+      }
+    } catch {}
+  };
+
+  // Parse a weather period and return any warnings for outdoor activities
+  const getWeatherWarning = (period: any): { level: 'danger' | 'caution'; icon: string; message: string } | null => {
+    if (!period) return null;
+    const forecast = (period.shortForecast || '').toLowerCase();
+    const detailedForecast = (period.detailedForecast || '').toLowerCase();
+    const windSpeed = parseInt((period.windSpeed || '0').split(' ')[0]) || 0;
+    const temp = period.temperature || 70;
+    const full = forecast + ' ' + detailedForecast;
+
+    if (full.includes('thunder') || full.includes('tornado') || full.includes('severe'))
+      return { level: 'danger', icon: '⛈️', message: 'Severe weather expected — consider rescheduling this activity.' };
+    if (full.includes('hurricane') || full.includes('tropical storm'))
+      return { level: 'danger', icon: '🌀', message: 'Tropical storm warning — outdoor activities not advised.' };
+    if (full.includes('heavy rain') || full.includes('heavy shower'))
+      return { level: 'danger', icon: '🌧️', message: 'Heavy rain expected — this outdoor activity may be affected.' };
+    if (windSpeed >= 30)
+      return { level: 'danger', icon: '💨', message: 'High winds expected (' + windSpeed + ' mph) — use caution for outdoor activities.' };
+    if (temp >= 100)
+      return { level: 'danger', icon: '🌡️', message: 'Extreme heat (' + temp + '°F) — stay hydrated and limit sun exposure.' };
+    if (temp <= 20)
+      return { level: 'danger', icon: '🥶', message: 'Extreme cold (' + temp + '°F) — dress in layers and watch for ice.' };
+    if (full.includes('rain') || full.includes('shower') || full.includes('drizzle'))
+      return { level: 'caution', icon: '🌦️', message: 'Rain in the forecast — pack a rain jacket for this activity.' };
+    if (windSpeed >= 20)
+      return { level: 'caution', icon: '💨', message: 'Breezy conditions (' + windSpeed + ' mph) — secure loose items.' };
+    if (temp >= 90)
+      return { level: 'caution', icon: '☀️', message: 'Hot day (' + temp + '°F) — bring extra water and sunscreen.' };
+    if (full.includes('fog') || full.includes('smoke') || full.includes('haze'))
+      return { level: 'caution', icon: '🌫️', message: 'Reduced visibility expected — use caution on trails.' };
+    return null;
+  };
+  const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(`dismissedGaps_${eventId}`);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const dismissGap = (key: string) => {
+    setDismissedGaps(prev => {
+      const next = new Set([...prev, key]);
+      try { localStorage.setItem(`dismissedGaps_${eventId}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
   
   const [formData, setFormData] = useState({
     title: '',
@@ -286,6 +355,126 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
 
   const getActivityTypeInfo = (type: string) => {
     return ACTIVITY_TYPES.find(t => t.value === type) || ACTIVITY_TYPES[ACTIVITY_TYPES.length - 1];
+  };
+
+  // Parse "HH:MM" or "H:MM AM/PM" to minutes since midnight
+  const parseTimeToMinutes = (t: string): number => {
+    if (!t) return -1;
+    const lower = t.toLowerCase();
+    const isPM = lower.includes('pm');
+    const isAM = lower.includes('am');
+    const clean = t.replace(/[apm ]/gi, '').trim();
+    const [hStr, mStr] = clean.split(':');
+    let h = parseInt(hStr) || 0;
+    const m = parseInt(mStr) || 0;
+    if (isPM && h !== 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return h * 60 + m;
+  };
+
+  // Get gaps >= 45 min between timed items on a day
+  const getGapsForDay = (daySubevents: any[], dayActivities: any[]) => {
+    const timed: { startMin: number; endMin: number; label: string }[] = [];
+
+    daySubevents.forEach(se => {
+      const start = parseTimeToMinutes(se.startTime);
+      if (start < 0) return;
+      const end = se.endTime ? parseTimeToMinutes(se.endTime) : start + 60;
+      timed.push({ startMin: start, endMin: end, label: se.title });
+    });
+
+    dayActivities.forEach(a => {
+      const start = parseTimeToMinutes(a.scheduledTime);
+      if (start < 0) return;
+      const end = start + (a.duration || 60);
+      timed.push({ startMin: start, endMin: end, label: a.title });
+    });
+
+    timed.sort((a, b) => a.startMin - b.startMin);
+
+    const gaps: { afterLabel: string; gapMinutes: number; startMin: number; endMin: number }[] = [];
+    for (let i = 0; i < timed.length - 1; i++) {
+      const gap = timed[i + 1].startMin - timed[i].endMin;
+      if (gap >= 45) {
+        gaps.push({
+          afterLabel: timed[i].label,
+          gapMinutes: gap,
+          startMin: timed[i].endMin,
+          endMin: timed[i + 1].startMin,
+        });
+      }
+    }
+    return gaps;
+  };
+
+  const formatMinutes = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}min`;
+    return m === 0 ? `${h}hr` : `${h}hr ${m}min`;
+  };
+
+  const formatMinToTime = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  // Estimate drive time between two location strings (heuristic, no API)
+  const estimateDriveMinutes = (from: string, to: string): number => {
+    if (!from || !to) return 0;
+    const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9 ]/g, '');
+    const a = normalize(from);
+    const b = normalize(to);
+    if (a === b) return 0;
+    // Same first word (e.g. same campground area) = short drive
+    const aWords = a.split(' ');
+    const bWords = b.split(' ');
+    const commonWords = aWords.filter(w => w.length > 3 && bWords.includes(w));
+    if (commonWords.length >= 2) return 10;
+    if (commonWords.length === 1) return 20;
+    return 35; // Different locations = estimate 35 min
+  };
+
+  // Get drive blocks between consecutive timed items with different locations
+  const getDriveBlocksForDay = (daySubevents: any[], dayActivities: any[]) => {
+    const timed: { startMin: number; endMin: number; label: string; location: string }[] = [];
+
+    daySubevents.forEach(se => {
+      const start = parseTimeToMinutes(se.startTime);
+      if (start < 0) return;
+      const end = se.endTime ? parseTimeToMinutes(se.endTime) : start + 60;
+      if (se.location) timed.push({ startMin: start, endMin: end, label: se.title, location: se.location });
+    });
+
+    dayActivities.forEach(a => {
+      const start = parseTimeToMinutes(a.scheduledTime);
+      if (start < 0) return;
+      const end = start + (a.duration || 60);
+      if (a.location) timed.push({ startMin: start, endMin: end, label: a.title, location: a.location });
+    });
+
+    timed.sort((a, b) => a.startMin - b.startMin);
+
+    const blocks: { fromLabel: string; toLabel: string; fromLocation: string; toLocation: string; afterMin: number; estimatedMins: number }[] = [];
+    for (let i = 0; i < timed.length - 1; i++) {
+      const from = timed[i];
+      const to = timed[i + 1];
+      const driveEstimate = estimateDriveMinutes(from.location, to.location);
+      if (driveEstimate > 0) {
+        blocks.push({
+          fromLabel: from.label,
+          toLabel: to.label,
+          fromLocation: from.location,
+          toLocation: to.location,
+          afterMin: from.endMin,
+          estimatedMins: driveEstimate,
+        });
+      }
+    }
+    return blocks;
   };
 
   // Get items for a specific date
@@ -454,6 +643,11 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
           .map((date, idx) => {
             const dateStr = date.toISOString().split('T')[0];
             const { subevents: daySubevents, activities: dayActivities, meals: dayMeals } = getItemsForDate(date);
+            // Prefetch weather for days with outdoor activities
+            const hasOutdoor = daySubevents.some((s: any) => OUTDOOR_TYPES.includes(s.activityType));
+            if (hasOutdoor && campgroundLat && campgroundLng && !weatherByDate[dateStr]) {
+              fetchWeatherForDate(dateStr, campgroundLat, campgroundLng);
+            }
             const hasItems = daySubevents.length > 0 || dayActivities.length > 0 || dayMeals.length > 0;
             
             // Sort meals by type order
@@ -462,6 +656,21 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
               return order.indexOf(a.mealType) - order.indexOf(b.mealType);
             });
             
+            // Get weather for this day if available
+            const dayWeatherData = weatherByDate[dateStr];
+            const dayIcon = dayWeatherData ? (() => {
+              const f = (dayWeatherData.shortForecast || '').toLowerCase();
+              const t = dayWeatherData.temperature || 70;
+              if (f.includes('thunder')) return '⛈️';
+              if (f.includes('snow')) return '❄️';
+              if (f.includes('rain') || f.includes('shower')) return '🌧️';
+              if (f.includes('fog')) return '🌫️';
+              if (f.includes('cloud') || f.includes('overcast')) return '☁️';
+              if (f.includes('partly')) return '⛅';
+              if (t >= 90) return '🌡️';
+              return '☀️';
+            })() : null;
+
             return (
               <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
                 {/* Day Header */}
@@ -473,8 +682,14 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
                         <span className="text-lg font-bold leading-none">{date.getDate()}</span>
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                           {date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                          {dayIcon && dayWeatherData && (
+                            <span className="flex items-center gap-1 text-sm font-normal text-gray-500">
+                              {dayIcon} {dayWeatherData.temperature}°{dayWeatherData.temperatureUnit}
+                              <span className="text-xs">· {dayWeatherData.shortForecast?.split(' ').slice(0,3).join(' ')}</span>
+                            </span>
+                          )}
                         </h4>
                         <p className="text-sm text-gray-500">
                           {daySubevents.length + dayActivities.length} {daySubevents.length + dayActivities.length === 1 ? 'activity' : 'activities'}
@@ -507,6 +722,78 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
                 <div className="p-4">
                   {hasItems ? (
                     <div className="space-y-3">
+                      {/* Smart Gap Detection */}
+                      {(() => {
+                        const gaps = getGapsForDay(daySubevents, dayActivities);
+                        if (gaps.length === 0) return null;
+                        return gaps.map((gap, gi) => {
+                          const gapKey = `${dateStr}-${gap.startMin}`;
+                          if (dismissedGaps.has(gapKey)) return null;
+                          return (
+                          <div key={`gap-${gi}`} className="flex items-center gap-3 px-3 py-2.5 bg-amber-50 border border-amber-200 border-dashed rounded-xl">
+                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-base">⏳</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-amber-800">
+                                {formatMinutes(gap.gapMinutes)} free — {formatMinToTime(gap.startMin)} to {formatMinToTime(gap.endMin)}
+                              </p>
+                              <p className="text-xs text-amber-600">Nothing scheduled in this window — want to add something?</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const hh = Math.floor(gap.startMin / 60).toString().padStart(2, '0');
+                                const mm = (gap.startMin % 60).toString().padStart(2, '0');
+                                setFormData({ title: '', description: '', date: dateStr, startTime: `${hh}:${mm}`, endTime: '', activityType: 'OTHER', location: '' });
+                                setShowCreateModal(true);
+                              }}
+                              className="flex-shrink-0 text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg border border-amber-300 transition whitespace-nowrap"
+                            >
+                              + Fill Gap
+                            </button>
+                            <button
+                              onClick={() => dismissGap(`${dateStr}-${gap.startMin}`)}
+                              title="Don't show this again"
+                              className="flex-shrink-0 text-xs text-amber-400 hover:text-amber-600 px-2 py-1.5 rounded-lg hover:bg-amber-100 transition"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          );
+                        });
+                      })()}
+                      {/* Drive Blocks */}
+                      {(() => {
+                        const driveBlocks = getDriveBlocksForDay(daySubevents, dayActivities);
+                        if (driveBlocks.length === 0) return null;
+                        return driveBlocks.map((block, bi) => {
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(block.fromLocation)}&destination=${encodeURIComponent(block.toLocation)}`;
+                          return (
+                            <div key={`drive-${bi}`} className="flex items-center gap-3 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+                              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                <span className="text-base">🚗</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-blue-800">
+                                  ~{block.estimatedMins} min drive
+                                </p>
+                                <p className="text-xs text-blue-600 truncate">
+                                  {block.fromLocation} → {block.toLocation}
+                                </p>
+                              </div>
+                              <a
+                                href={mapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-shrink-0 text-xs font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-lg border border-blue-300 transition whitespace-nowrap"
+                              >
+                                Directions →
+                              </a>
+                            </div>
+                          );
+                        });
+                      })()}
+
                       {/* Meals (if showing) */}
                       {sortedMeals.map((meal) => (
                         <div key={meal.id} className="bg-amber-50 rounded-lg p-3 border border-amber-200">
@@ -545,8 +832,28 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate }:
                           const activityType = getActivityTypeInfo(subevent.activityType);
                           const userRSVP = getUserRSVP(subevent);
                           
+                          // Get weather warning for outdoor activities
+                          const isOutdoor = OUTDOOR_TYPES.includes(subevent.activityType);
+                          const dayWeather = isOutdoor ? weatherByDate[subevent.date.split('T')[0]] : null;
+                          const weatherWarning = isOutdoor ? getWeatherWarning(dayWeather) : null;
+
                           return (
                             <div key={subevent.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-primary-200 transition">
+                              {/* Hitch Weather Warning */}
+                              {weatherWarning && (
+                                <div className={`flex items-start gap-2 mb-3 px-3 py-2 rounded-lg text-xs font-medium ${
+                                  weatherWarning.level === 'danger'
+                                    ? 'bg-red-50 border border-red-200 text-red-800'
+                                    : 'bg-amber-50 border border-amber-200 text-amber-800'
+                                }`}>
+                                  <span className="text-base flex-shrink-0">{weatherWarning.icon}</span>
+                                  <div>
+                                    <span className="font-bold">Hitch Weather Alert: </span>
+                                    {weatherWarning.message}
+                                    {dayWeather && <span className="ml-1 opacity-70">({dayWeather.shortForecast}, {dayWeather.temperature}°{dayWeather.temperatureUnit})</span>}
+                                  </div>
+                                </div>
+                              )}
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">

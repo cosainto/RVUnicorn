@@ -69,7 +69,7 @@ export default function TravelMapPage() {
 
         <div className="p-6">
           {activeTab === 'map' && (
-            <TravelMap userId={user.id} isOwnProfile={true} />
+            <TravelMap userId={user.id} isOwnProfile={true} showTripFilter={true} />
           )}
           {activeTab === 'attractions' && <Attractions />}
           {activeTab === 'trips' && <DrivePlanner />}

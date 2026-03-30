@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, Plus, Search, Edit, Trash2 } from 'lucide-react';
@@ -7,6 +8,11 @@ import ImageUpload from '../components/ImageUpload';
 import CampgroundSelector from '../components/CampgroundSelector';
 
 interface Event {
+  roadTripId?: string;
+  roadTripColor?: string;
+  roadTripTitle?: string;
+  stopNumber?: number;
+  roadTrip?: { id: string; title: string; color: string; font: string; _count?: { stops: number } };
   organizer?: {
     id: string;
     firstName: string;
@@ -49,6 +55,72 @@ interface Friend {
   profilePicture?: string;
 }
 
+function RoadTripsEmbed() {
+  const [roadTrips, setRoadTrips] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    import('../services/api').then(({ default: api }) => {
+      api.get('/road-trips')
+        .then(({ data }) => { setRoadTrips(data); setLoading(false); })
+        .catch(() => setLoading(false));
+    });
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" /></div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Multi-Stop Trips</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Plan a route across multiple campgrounds</p>
+        </div>
+        <a href="/road-trips" className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition shadow-sm">
+          + New Road Trip
+        </a>
+      </div>
+      {roadTrips.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+          <div className="text-5xl mb-3">🚐</div>
+          <p className="font-semibold text-gray-700 mb-1">No multi-stop trips yet</p>
+          <p className="text-sm text-gray-400 mb-5">Plan a road trip across multiple campgrounds</p>
+          <a href="/road-trips" className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition">
+            Plan Your First Road Trip
+          </a>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {roadTrips.map((rt: any) => (
+            <a key={rt.id} href={`/road-trips/${rt.id}`}
+              className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition group">
+              <div className="h-2 rounded-t-2xl" style={{ background: rt.color || '#f97316' }} />
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition">{rt.title}</h3>
+                  <span className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                    {rt.stops?.length || 0} stops
+                  </span>
+                </div>
+                {rt.description && <p className="text-xs text-gray-500 mb-3 line-clamp-1">{rt.description}</p>}
+                <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+                  {rt.stops?.slice(0, 3).map((stop: any, i: number) => (
+                    <span key={stop.id} className="flex items-center gap-1">
+                      {i > 0 && <span className="text-gray-300">→</span>}
+                      📍 {stop.campground?.name?.split(' ')[0] || stop.title?.split(' ')[0] || 'Stop'}
+                    </span>
+                  ))}
+                  {rt.stops?.length > 3 && <span className="text-gray-400">+{rt.stops.length - 3} more</span>}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EventsPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
@@ -58,7 +130,9 @@ export default function EventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [overnightSpotResults, setOvernightSpotResults] = useState<any[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "discover" | "friends">("upcoming");
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "discover" | "friends" | "roadtrips" | "wishlist">("upcoming");
+  const [wishlistEvents, setWishlistEvents] = React.useState<any[]>([]);
+  const [wishlistLoading, setWishlistLoading] = React.useState(false);
   const [discoverEvents, setDiscoverEvents] = useState<Event[]>([]);
   const [friendsEvents, setFriendsEvents] = useState<Event[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -214,6 +288,25 @@ export default function EventsPage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab === 'wishlist' && wishlistEvents.length === 0) {
+      setWishlistLoading(true);
+      api.get('/campground-actions/wishlist')
+        .then(({ data }) => {
+          // Transform CampgroundWishlist items into displayable format
+          const items = (Array.isArray(data) ? data : []).map((item: any) => ({
+            id: item.id,
+            title: item.campground?.name || 'Wishlist Item',
+            campground: item.campground,
+            isWishlist: true,
+          }));
+          setWishlistEvents(items);
+        })
+        .catch(() => {})
+        .finally(() => setWishlistLoading(false));
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     filterEvents();
   }, [events, discoverEvents, friendsEvents, searchQuery, activeTab]);
 
@@ -276,13 +369,17 @@ export default function EventsPage() {
       filtered = discoverEvents;
     } else if (activeTab === "friends") {
       filtered = friendsEvents;
+    } else if (activeTab === "wishlist") {
+      filtered = filtered.filter(e => e.isWishlist);
     } else if (activeTab === "upcoming") {
       filtered = filtered.filter(e => {
+        if (e.isWishlist) return false;
         const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
         return endDate >= today;
       });
     } else {
       filtered = filtered.filter(e => {
+        if (e.isWishlist) return false;
         const endDate = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
         return endDate < today;
       });
@@ -477,8 +574,79 @@ export default function EventsPage() {
         >
           🌎 Discover
         </button>
+        <button
+          onClick={() => setActiveTab("roadtrips")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "roadtrips" ? "bg-orange-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          🚐 Multi-Stop Trips
+        </button>
+        <button
+          onClick={() => setActiveTab("wishlist")}
+          className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === "wishlist" ? "bg-amber-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}
+        >
+          🧞 Wishlist
+        </button>
       </div>
 
+      {/* Multi-Stop Trips tab */}
+      {activeTab === "roadtrips" && (
+        <RoadTripsEmbed />
+      )}
+
+      {/* Wishlist tab */}
+      {activeTab === "wishlist" && (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">🧞 My Wishlist</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Campgrounds and destinations you want to visit</p>
+            </div>
+          </div>
+          {wishlistLoading ? (
+            <div className="flex items-center justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" /></div>
+          ) : wishlistEvents.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+              <div className="text-5xl mb-3">🧞</div>
+              <p className="font-semibold text-gray-700 mb-1">Your wishlist is empty</p>
+              <p className="text-sm text-gray-400 mb-5">Browse campgrounds and add them to your wishlist for later</p>
+              <a href="/campgrounds" className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition">
+                Browse Campgrounds
+              </a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {wishlistEvents.map((event: any) => (
+                <a key={event.id} href={`/trips/${event.id}`}
+                  className="bg-white rounded-2xl border border-amber-200 overflow-hidden hover:shadow-md transition group">
+                  {event.campground?.imageUrl && (
+                    <img src={event.campground.imageUrl} alt="" className="w-full h-32 object-cover" />
+                  )}
+                  <div className="p-4">
+                    <div className="flex items-start gap-2 mb-1">
+                      <span className="text-amber-500 flex-shrink-0">🧞</span>
+                      <h3 className="font-bold text-gray-900 group-hover:text-amber-600 transition text-sm leading-tight">{event.title}</h3>
+                    </div>
+                    {event.campground && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        📍 {event.campground.name}{event.campground.city ? `, ${event.campground.city}` : ''}{event.campground.state ? `, ${event.campground.state}` : ''}
+                      </p>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <a href={`/trips/${event.id}?createFromWishlist=true`}
+                        className="flex-1 text-center text-xs py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition font-medium"
+                        onClick={e => e.stopPropagation()}>
+                        Plan This Trip
+                      </a>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(activeTab !== "roadtrips" && activeTab !== "wishlist") && (<>
       {/* Search */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="relative">
@@ -500,6 +668,7 @@ export default function EventsPage() {
             <div
               key={event.id}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition group relative"
+              style={event.roadTrip ? { borderLeft: `4px solid ${event.roadTrip.color}` } : {}}
             >
               <Link to={event.isStateVisit ? `/travel-map` : `/trips/${event.id}`}>
                 {/* Event Image */}
@@ -528,6 +697,16 @@ export default function EventsPage() {
                   <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
                     {event.title}
                   </h3>
+                  {event.roadTrip && (
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: event.roadTrip.color }} />
+                      <span className="text-xs font-semibold truncate" style={{ color: event.roadTrip.color }}>
+                        {event.roadTrip.title}
+                        {event.stopNumber && ` · Stop ${event.stopNumber}`}
+                        {event.roadTrip._count && ` of ${event.roadTrip._count.stops}`}
+                      </span>
+                    </div>
+                  )}
                   {event.location?.includes('→') && (
                     <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 text-primary-700 text-xs font-semibold px-2.5 py-1 rounded-full mb-2">
                       <span>🗺️</span>
@@ -986,6 +1165,7 @@ export default function EventsPage() {
           </div>
         </div>
       )}
+    </>)}
     </div>
   );
 }

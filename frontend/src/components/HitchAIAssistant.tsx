@@ -6,7 +6,7 @@ import { getGuide, DEFAULT_GUIDE_ID } from '../config/hitchGuides';
 import { Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,7 +32,7 @@ const QUICK_PROMPTS = [
   "What breweries welcome RV guests near the Rocky Mountains?",
 ];
 
-export default function HitchAIAssistant() {
+export default function HitchAIAssistant({ initialMessage }: { initialMessage?: string } = {}) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -53,6 +53,13 @@ export default function HitchAIAssistant() {
       api.get('/hitch/user-context').then(r => setUserContext(r.data)).catch(() => {});
     }
   }, [user]);
+
+  // Auto-send initialMessage once on mount
+  useEffect(() => {
+    if (initialMessage) {
+      setTimeout(() => sendMessage(initialMessage), 300);
+    }
+  }, []);
 
   const sendFeedback = async (index: number, rating: 'up' | 'down', question: string, answer: string) => {
     setFeedback(f => ({ ...f, [index]: rating }));

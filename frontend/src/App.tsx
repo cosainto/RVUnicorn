@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import api from './services/api';
 import ToastProvider from './components/ToastProvider';
 import RVOnboardingFlow from './components/RVOnboardingFlow';
+import TripStoryPage from './pages/TripStoryPage';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
@@ -23,6 +24,8 @@ import TripsPage from './pages/TripsPage';
 import MyRVPage from "./pages/MyRVPage";
 import TripEditPage from './pages/TripEditPage';
 import TripDetailPage from './pages/TripDetailPage';
+import RoadTripsPage from './pages/RoadTripsPage';
+import RoadTripDetailPage from './pages/RoadTripDetailPage';
 import CampgroundsPage from './pages/CampgroundsPage';
 import AlbumsPage from './pages/AlbumsPage';
 import AlbumDetailPage from './pages/AlbumDetailPage';
@@ -59,6 +62,7 @@ import SettingsPage from "./pages/SettingsPage";
 import DrivePlanner from './components/DrivePlanner';
 import EnhancedDrivePlanner from './components/EnhancedDrivePlanner';
 import PrivacySettingsPage from './pages/PrivacySettingsPage';
+import HouseholdSettingsPage from './pages/HouseholdSettingsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import SMSTermsPage from './pages/SMSTermsPage';
 import BlockedUsersPage from './pages/BlockedUsersPage';
@@ -200,6 +204,7 @@ function AppContent() {
         <Route path="/hashtag/:tag" element={<HashtagPage />} />
 
         <Route path="/threads/:id" element={<ThreadDetailPage />} />
+        <Route path="/settings/household" element={<PrivateRoute><HouseholdSettingsPage /></PrivateRoute>} />
         <Route path="/settings/privacy" element={<PrivacySettingsPage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/sms-terms" element={<SMSTermsPage />} />
@@ -294,6 +299,22 @@ function AppContent() {
           element={
             <PrivateRoute>
               <TripDetailPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/road-trips"
+          element={
+            <PrivateRoute>
+              <RoadTripsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/road-trips/:id"
+          element={
+            <PrivateRoute>
+              <RoadTripDetailPage />
             </PrivateRoute>
           }
         />
@@ -399,6 +420,7 @@ function AppContent() {
           }
         />
         <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
+        <Route path="/trips/:eventId/story" element={<TripStoryPage />} />
         <Route path="/rv-setup" element={<PrivateRoute><div className="min-h-screen bg-gray-50 py-8 px-4"><RVOnboardingFlow /></div></PrivateRoute>} />
         <Route path="/notifications" element={<PrivateRoute><NotificationCenterPage /></PrivateRoute>} />
         <Route path="/admin/badges" element={<PrivateRoute><AdminBadgeApprovalPage /></PrivateRoute>} />

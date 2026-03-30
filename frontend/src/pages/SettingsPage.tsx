@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Settings, Eye, EyeOff, Save, Shield, UserX, Activity, 
+  Settings, Eye, EyeOff, Save, Shield, UserX, Activity, Users,
   Trash2, ChevronRight, Lock, Bell, Mail, Phone, Key, Check, AlertCircle, MapPin
 } from 'lucide-react';
 import api from '../services/api';
@@ -295,6 +295,7 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Privacy & Security</h2>
         </div>
         <nav className="divide-y divide-gray-100">
+          <SettingsLink to="/settings/household" icon={<Users className="w-5 h-5 text-orange-500" />} iconBg="bg-orange-50" label="Household" desc="Link with your travel partner" />
           <SettingsLink to="/settings/privacy" icon={<Shield className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="Privacy Settings" desc="Control who can see your information" />
           <SettingsLink to="/settings/blocked" icon={<UserX className="w-5 h-5 text-red-500" />} iconBg="bg-red-50" label="Blocked Users" desc="Manage users you've blocked" />
           <SettingsLink to="/settings/muted" icon={<EyeOff className="w-5 h-5 text-purple-500" />} iconBg="bg-purple-50" label="Muted & Snoozed" desc="Manage snoozed users, events, and campgrounds" />

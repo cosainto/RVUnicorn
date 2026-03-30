@@ -3,7 +3,7 @@ import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign} from 'lucide-react';
+import { Calendar, ShoppingCart, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 // @ts-ignore
@@ -23,7 +23,10 @@ import EventPackList from '../components/EventPackList';
 import PackUp from "../components/PackUp";
 import InventoryPackingModal from '../components/InventoryPackingModal';
 import EventSchedule from '../components/EventSchedule';
+import EventWeatherStrip from '../components/EventWeatherStrip';
+import SupplyList from '../components/SupplyList';
 import EventAlbum from '../components/EventAlbum';
+import TripScrapbook from '../components/TripScrapbook';
 import SmartStops from '../components/SmartStops';
 import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
@@ -122,6 +125,19 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    if (params.get('scrollTo') === 'planner') {
+      setActiveTab('trip');
+      if (params.get('from')) setPlannerFrom(params.get('from')!);
+      if (params.get('to')) setPlannerTo(params.get('to')!);
+      setTimeout(() => {
+        const plannerEl = document.getElementById('trip-planner-section');
+        if (plannerEl) {
+          plannerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+      }, 400);
+    }
     if (params.get('scrollTo') === 'meals') {
       setTimeout(() => {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -129,6 +145,8 @@ export default function EventDetailPage() {
     }
   }, [location.search]);
   const [showPackingModal, setShowPackingModal] = useState(false);
+  const [plannerFrom, setPlannerFrom] = useState<string>('');
+  const [plannerTo, setPlannerTo] = useState<string>('');
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [tripAlbums, setTripAlbums] = useState<any[]>([]);
@@ -152,6 +170,10 @@ export default function EventDetailPage() {
   const [showPitStopModal, setShowPitStopModal] = useState(false);
   const [editingFrom, setEditingFrom] = useState(false);
   const [editFromValue, setEditFromValue] = useState('');
+  const [siteForm, setSiteForm] = useState({ siteNumber: '', confirmationNumber: '', notes: '', siteVisibility: 'PRIVATE' });
+  const [savingSite, setSavingSite] = useState(false);
+  const [siteMsg, setSiteMsg] = useState('');
+  const [showSiteForm, setShowSiteForm] = useState(false);
   const [tripForm, setTripForm] = useState({
     startLocation: '',
     useHometown: true,
@@ -172,6 +194,7 @@ export default function EventDetailPage() {
 
   const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
+  const [packRefreshKey, setPackRefreshKey] = useState(0);
   const [discoveredStops, setDiscoveredStops] = useState<any>({ attractions: [], restaurants: [], gasStations: [] });
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [copyForm, setCopyForm] = useState({
@@ -291,10 +314,10 @@ export default function EventDetailPage() {
         arrivalDate: arrivalStr,
       });
     } else {
-      // Default for new trip
+      // Default for new trip — use plannerFrom if coming from road trip link
       setTripForm({
-        startLocation: '',
-        useHometown: true,
+        startLocation: plannerFrom || '',
+        useHometown: !plannerFrom,
         isDriving: true,
         ridingWithId: '',
         routePreference: 'FASTEST',
@@ -395,6 +418,20 @@ export default function EventDetailPage() {
       alert(error.response?.data?.error || 'Failed to delete pit stop');
     }
   };
+
+  const saveSiteDetails = async () => {
+    setSavingSite(true);
+    try {
+      await api.put(`/trips/${event.id}/my-site`, siteForm);
+      setSiteMsg('Campsite details saved ✅');
+      setTimeout(() => setSiteMsg(''), 3000);
+      setShowSiteForm(false);
+    } catch (e: any) {
+      setSiteMsg(e?.response?.data?.error || 'Failed to save');
+    } finally { setSavingSite(false); }
+  };
+
+
 
   const handleDeleteEvent = async () => {
     if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
@@ -626,6 +663,22 @@ export default function EventDetailPage() {
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
 
   const isOrganizer = user?.id === event.organizerId;
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [copyAttendees, setCopyAttendees] = useState(false);
+
+  const handleDuplicate = async () => {
+    setDuplicating(true);
+    try {
+      const { data } = await api.post(`/events/${event.id}/duplicate`, { copyAttendees });
+      setShowDuplicateModal(false);
+      navigate(`/trips/${data.event.id}`);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to duplicate trip');
+    } finally {
+      setDuplicating(false);
+    }
+  };
   const isPastTrip = event?.endDate ? new Date(event.endDate) < new Date() : event?.startDate ? new Date(event.startDate) < new Date() : false;
 
   const handlePrivacyChange = async (newPrivacy: string) => {
@@ -670,12 +723,50 @@ export default function EventDetailPage() {
     { id: 'photos', label: 'Photos', icon: Image },
     { id: 'meals', label: 'Meal Plan', icon: ChefHat },
     { id: 'pack', label: 'Pack List', icon: Package },
+    { id: 'supply', label: 'Supply List', icon: Package },
     { id: 'packup', label: 'Pack Up', icon: Check },
     { id: 'cost', label: '💰 Trip Cost', icon: DollarSign },
+    { id: 'scrapbook', label: '📌 Scrapbook', icon: BookOpen },
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Road Trip Banner */}
+      {event.roadTrip && (
+        <div className="mb-4 rounded-xl overflow-hidden shadow-md">
+          <div className="px-4 py-3 flex items-center justify-between text-white text-sm font-semibold"
+            style={{ background: 'linear-gradient(135deg, ' + event.roadTrip.color + ', ' + event.roadTrip.color + 'cc)' }}>
+          <div className="flex items-center gap-2">
+            <span>🗺️</span>
+            <span>Part of <span className="underline">{event.roadTrip.title}</span></span>
+            {event.stopNumber && event.roadTrip._count && (
+              <span className="opacity-80">· Stop {event.stopNumber} of {event.roadTrip._count.stops}</span>
+            )}
+          </div>
+          <a href={`/road-trips/${event.roadTrip.id}`}
+            className="text-white/90 hover:text-white text-xs border border-white/30 px-3 py-1 rounded-lg hover:bg-white/10 transition">
+            View Road Trip →
+          </a>
+          </div>
+          {/* Inline stop list in banner */}
+          {event.roadTrip.stops && event.roadTrip.stops.length > 1 && (
+            <div className="flex overflow-x-auto scrollbar-hide px-3 py-2 gap-2 bg-black/20">
+              {event.roadTrip.stops.map((stop: any, i: number) => (
+                <a key={stop.id} href={'/trips/' + stop.id}
+                  className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ' +
+                    (stop.id === event.id ? 'bg-white text-gray-900' : 'bg-white/20 text-white hover:bg-white/30')}>
+                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: stop.id === event.id ? event.roadTrip.color : 'transparent', border: stop.id === event.id ? 'none' : '1px solid white' }}>
+                    {stop.stopNumber || i + 1}
+                  </span>
+                  {stop.campground?.name?.split(' ').slice(0, 2).join(' ') || stop.title?.split(' ')[0]}
+                  {stop.startDate && <span className="opacity-70 ml-1">{new Date(stop.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <button onClick={() => navigate('/events')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
         <ArrowLeft className="w-5 h-5 mr-2" />Back to Events
       </button>
@@ -762,6 +853,95 @@ export default function EventDetailPage() {
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center gap-1 text-gray-600"><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
               </div>
+
+              {/* Weather strip */}
+              {event.campground?.latitude && event.campground?.longitude && (
+                <div className="mt-4">
+                  <EventWeatherStrip
+                    latitude={event.campground.latitude}
+                    longitude={event.campground.longitude}
+                    startDate={event.startDate}
+                    endDate={event.endDate || event.startDate}
+                  />
+                </div>
+              )}
+
+              {/* Attendee RV strip — compact, above tabs — household members share one card */}
+              {event.organizer && (() => {
+                // Build combined list: organizer + attendees (deduplicated)
+                const organizerEntry = { id: 'organizer', user: event.organizer, status: 'ATTENDING' };
+                const attendeeList = event.attendees || [];
+                const allEntries = [organizerEntry, ...attendeeList];
+                const active = allEntries.filter((a: any) =>
+                  !['invited','INVITED','not_going','NOT_GOING'].includes(a.status) &&
+                  a.user?.id !== undefined
+                ).filter((a: any, idx: number, arr: any[]) =>
+                  arr.findIndex(b => b.user?.id === a.user?.id) === idx
+                );
+                // Group by householdId — household members share one card
+                const seen = new Set<string>();
+                const groups: any[][] = [];
+                active.forEach((a: any) => {
+                  const u = a.user;
+                  if (!u || seen.has(u.id)) return;
+                  seen.add(u.id);
+                  if (u.householdId) {
+                    const partner = active.find((b: any) => b.user?.householdId === u.householdId && b.user?.id !== u.id);
+                    if (partner && !seen.has(partner.user.id)) {
+                      seen.add(partner.user.id);
+                      groups.push([a, partner]);
+                      return;
+                    }
+                  }
+                  groups.push([a]);
+                });
+                return (
+                  <div className="mt-4 flex items-center gap-3 flex-wrap">
+                    {groups.map((group, gi) => {
+                      const users = group.map(a => a.user);
+                      const u = users[0];
+                      const isHousehold = users.length > 1;
+                      const rvLabel = [u.rvYear, u.rvMake, u.rvModel].filter(Boolean).join(' ');
+                      const rvPhoto = u.rvShowcase?.photos?.[0] || u.rvPhotoUrl || null;
+                      return (
+                        <div key={gi} className="flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition" style={{ minWidth: '140px' }}>
+                          {/* RV photo */}
+                          <div className="relative block">
+                            {rvPhoto
+                              ? <img src={rvPhoto} alt={rvLabel} className="w-full h-24 object-cover" />
+                              : <div className="w-full h-24 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-4xl">🚐</div>
+                            }
+                            {/* Household badge */}
+                            {isHousehold && (
+                              <span className="absolute top-1.5 right-1.5 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">🏕️ Household</span>
+                            )}
+                          </div>
+                          {/* Profile info */}
+                          <div className="flex items-center gap-2 px-2.5 py-2">
+                            {/* Overlapping profile pics for household */}
+                            <div className={`flex flex-shrink-0 ${isHousehold ? '-space-x-2' : ''}`}>
+                              {users.map(u2 => (
+                                <Link key={u2.id} to={'/profile/' + u2.username}>
+                                  {u2.profilePicture
+                                    ? <img src={u2.profilePicture} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-white shadow-sm" />
+                                    : <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold border-2 border-white">{u2.firstName?.[0]}</div>
+                                  }
+                                </Link>
+                              ))}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-gray-900 truncate">
+                                {isHousehold ? users.map(u2 => u2.firstName).join(' & ') : `${u.firstName} ${u.lastName}`}
+                              </p>
+                              {rvLabel && <p className="text-xs text-gray-400 truncate">{rvLabel}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()} 
             </div>
             <div className="flex gap-2">
               {!isOrganizer && user && (
@@ -772,6 +952,7 @@ export default function EventDetailPage() {
               {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag People' : 'Invite'}</button>}
               {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
               {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
+              {isOrganizer && <button onClick={() => setShowDuplicateModal(true)} className="btn btn-sm flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"><Copy className="w-4 h-4" />Duplicate</button>}
               {isOrganizer && (
                 <select
                   value={(event as any).privacy || 'PUBLIC'}
@@ -806,7 +987,8 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md mb-6">
+      <div className="bg-white rounded-lg shadow-md mb-6"
+        style={event.roadTrip ? { borderTop: '4px solid ' + event.roadTrip.color, borderRadius: '8px' } : {}}>
         <div className="border-b border-gray-200">
           <div className="flex gap-4 px-6 overflow-x-auto">
             {tabs.map((tab) => (
@@ -831,12 +1013,228 @@ export default function EventDetailPage() {
 
               <EventSettingsPanel eventId={event.id} isOrganizer={isOrganizer} />
 
+              {/* Road Trip Section */}
+              {isOrganizer && !event.roadTrip && (
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 border border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white flex items-center gap-2">🚐 Planning Multiple Stops?</h4>
+                      <p className="text-sm text-slate-400 mt-0.5">Chain multiple campground stops into one epic journey</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { data: rt } = await api.post('/road-trips', {
+                            title: event.title + ' Road Trip',
+                            color: '#f97316',
+                            font: 'playfair',
+                          });
+                          await api.post('/road-trips/' + rt.id + '/stops', { eventId: event.id });
+                          window.location.href = '/road-trips/' + rt.id;
+                        } catch (e) { alert('Failed to create road trip'); }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-bold rounded-xl hover:opacity-90 transition shadow-lg whitespace-nowrap"
+                    >
+                      ➕ Add More Campground Stops
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Road Trip stops display */}
+              {event.roadTrip && event.roadTrip.stops && event.roadTrip.stops.length >= 1 && (
+                <div className="rounded-xl overflow-hidden border border-gray-200">
+                  <div className="px-4 py-3 flex items-center justify-between"
+                    style={{ backgroundColor: event.roadTrip.color + '15', borderBottom: '1px solid ' + event.roadTrip.color + '30' }}>
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                      🗺️ {event.roadTrip.title}
+                    </h4>
+                    <a href={'/road-trips/' + event.roadTrip.id}
+                      className="text-xs font-semibold hover:underline" style={{ color: event.roadTrip.color }}>
+                      Manage Road Trip →
+                    </a>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {event.roadTrip.stops.map((stop: any, i: number) => (
+                      <a key={stop.id} href={'/trips/' + stop.id}
+                        className={'flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition ' + (stop.id === event.id ? 'bg-orange-50' : '')}>
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          style={{ backgroundColor: event.roadTrip.color }}>
+                          {stop.stopNumber || i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={'text-sm font-semibold truncate ' + (stop.id === event.id ? 'text-orange-700' : 'text-gray-900')}>
+                            {stop.id === event.id ? '📍 ' : ''}{stop.campground?.name || stop.title}
+                          </p>
+                          {stop.campground?.city && (
+                            <p className="text-xs text-gray-400">{stop.campground.city}, {stop.campground.state}</p>
+                          )}
+                        </div>
+                        {stop.startDate && (
+                          <p className="text-xs text-gray-400 flex-shrink-0">
+                            {new Date(stop.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        )}
+                        {stop.id === event.id && (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0"
+                            style={{ backgroundColor: event.roadTrip.color }}>You are here</span>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {event.description && (
                 <div className="bg-gray-50 rounded-xl p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 About This Event</h3>
                   <p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>
                 </div>
               )}
+
+              {/* My Campsite Details */}
+              {(userAttendee || isOrganizer) && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">⛺</span>
+                      <h3 className="text-base font-bold text-gray-900">My Campsite Details</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        {siteForm.siteVisibility === 'PRIVATE' ? '🔒 Only me' : siteForm.siteVisibility === 'EVENT' ? '👥 Event members' : '👫 Friends'}
+                      </span>
+                    </div>
+                    <button onClick={() => setShowSiteForm(!showSiteForm)}
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                      {showSiteForm ? 'Cancel' : (siteForm.siteNumber || siteForm.confirmationNumber) ? 'Edit' : '+ Add Details'}
+                    </button>
+                  </div>
+
+                  {/* Display saved info */}
+                  {!showSiteForm && (siteForm.siteNumber || siteForm.confirmationNumber || siteForm.notes) && (
+                    <div className="space-y-1.5">
+                      {siteForm.siteNumber && <p className="text-sm text-gray-700">🏕️ Site: <span className="font-semibold">{siteForm.siteNumber}</span></p>}
+                      {siteForm.confirmationNumber && <p className="text-sm text-gray-700">🎫 Confirmation: <span className="font-semibold">{siteForm.confirmationNumber}</span></p>}
+                      {siteForm.notes && <p className="text-sm text-gray-600 italic">{siteForm.notes}</p>}
+                    </div>
+                  )}
+                  {!showSiteForm && !siteForm.siteNumber && !siteForm.confirmationNumber && !siteForm.notes && (
+                    <p className="text-sm text-gray-400">No campsite details added yet</p>
+                  )}
+
+                  {/* Edit form */}
+                  {showSiteForm && (
+                    <div className="space-y-3 mt-2">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 mb-1 block">Site / Spot #</label>
+                          <input type="text" placeholder="e.g. A42" value={siteForm.siteNumber}
+                            onChange={e => setSiteForm(f => ({...f, siteNumber: e.target.value}))}
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-600 mb-1 block">Confirmation #</label>
+                          <input type="text" placeholder="e.g. RES12345" value={siteForm.confirmationNumber}
+                            onChange={e => setSiteForm(f => ({...f, confirmationNumber: e.target.value}))}
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
+                        <textarea placeholder="Access code, check-in instructions, etc." value={siteForm.notes}
+                          onChange={e => setSiteForm(f => ({...f, notes: e.target.value}))}
+                          rows={2} className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">🔒 Who can see this?</label>
+                        <select value={siteForm.siteVisibility} onChange={e => setSiteForm(f => ({...f, siteVisibility: e.target.value}))}
+                          className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                          <option value="PRIVATE">🔒 Only me</option>
+                          <option value="EVENT">👥 Everyone in this event</option>
+                          <option value="FRIENDS">👫 My friends</option>
+                        </select>
+                      </div>
+                      {siteMsg && <p className="text-sm text-green-600 font-medium">{siteMsg}</p>}
+                      <button onClick={saveSiteDetails} disabled={savingSite}
+                        className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">
+                        {savingSite ? 'Saving...' : 'Save Campsite Details'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+
+              {/* Who's Coming moved to header above tabs */}
+              {false && event.attendees && event.attendees.length > 0 && (() => {
+                const active = event.attendees.filter((a: any) => !['invited','INVITED','not_going','NOT_GOING'].includes(a.status));
+                if (active.length === 0) return null;
+                return (
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900">👥 Who's Coming</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">{active.filter((a: any) => ['going','ATTENDING'].includes(a.status)).length} confirmed</span>
+                        {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="text-xs text-primary-600 hover:underline font-medium">{isPastTrip ? 'Tag People' : '+ Invite'}</button>}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {active.map((a: any) => {
+                        const u = a.user;
+                        if (!u) return null;
+                        const rvLabel = [u.rvYear, u.rvMake, u.rvModel].filter(Boolean).join(' ');
+                        const rvPhoto = u.rvShowcase?.photos?.[0] || u.rvPhotoUrl || null;
+                        const isOrg = a.userId === event.organizerId;
+                        return (
+                          <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                            {/* Profile pic */}
+                            <Link to={'/profile/' + u.username} className="flex-shrink-0">
+                              {u.profilePicture
+                                ? <img src={u.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                : <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold">{u.firstName?.[0]}</div>
+                              }
+                            </Link>
+                            {/* Name + RV info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Link to={'/profile/' + u.username} className="text-sm font-semibold text-gray-900 hover:underline">{u.firstName} {u.lastName}</Link>
+                                {isOrg && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Organizer</span>}
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${['going','ATTENDING'].includes(a.status) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                  {['going','ATTENDING'].includes(a.status) ? '✓ Going' : '? Maybe'}
+                                </span>
+                              </div>
+                              {rvLabel && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-xs text-gray-500">🚐 {rvLabel}{u.rvMpg ? ' · ' + u.rvMpg + ' MPG' : ''}</p>
+                                </div>
+                              )}
+                              {(rvPhoto || rvLabel) && (
+                                <Link to={'/profile/' + u.username + '#my-rv'} title={"View " + u.firstName + "'s RV"} className="inline-block mt-1.5">
+                                  {rvPhoto
+                                    ? <img src={rvPhoto} alt={rvLabel} className="w-32 h-20 rounded-xl object-cover border border-gray-200 hover:border-primary-400 hover:shadow-md transition" />
+                                    : <div className="w-32 h-20 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center border border-gray-200 hover:border-primary-400 transition gap-1">
+                                        <span className="text-3xl">🚐</span>
+                                        <span className="text-xs text-gray-400">View RV</span>
+                                      </div>
+                                  }
+                                </Link>
+                              )}
+                            </div>
+                            {a.siteVisibility === 'EVENT' && (a.siteNumber || a.confirmationNumber) && a.userId !== user?.id && (
+                              <div className="mt-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800 w-full">
+                                {a.siteNumber && <p>🏕️ Site: <span className="font-semibold">{a.siteNumber}</span></p>}
+                                {a.confirmationNumber && <p>🎫 Conf: <span className="font-semibold">{a.confirmationNumber}</span></p>}
+                              </div>
+                            )}
+                            {isOrganizer && a.userId !== event.organizerId && (
+                              <button onClick={() => handleRemoveAttendee(a.id)} className="text-gray-300 hover:text-red-400 transition text-xs flex-shrink-0">✕</button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
@@ -903,28 +1301,7 @@ export default function EventDetailPage() {
                 />
               )}
 
-              {event.attendees && event.attendees.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">👥 Attendees ({event.attendees.length})</h3>
-                    {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag More People' : 'Invite More'}</button>}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {event.attendees.map((attendee) => (
-                      <div key={attendee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                        <Link to={`/profile/${attendee.user.username}`} className="flex items-center gap-3 flex-1">
-                          {attendee.user.profilePicture ? <img src={`${attendee.user.profilePicture}`} alt="" className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center"><span className="text-primary-700 font-semibold">{attendee.user.firstName[0]}</span></div>}
-                          <div>
-                            <p className="font-semibold text-gray-900">{attendee.user.firstName} {attendee.user.lastName}{attendee.userId === event.organizerId && <span className="ml-2 text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Organizer</span>}</p>
-                            <p className="text-sm text-gray-600">{attendee.status === 'going' && '✅ Going'}{attendee.status === 'maybe' && '🤔 Maybe'}{attendee.status === 'not_going' && '❌ Not Going'}{attendee.status === 'invited' && '📨 Invited'}</p>
-                          </div>
-                        </Link>
-                        {isOrganizer && attendee.userId !== event.organizerId && <button onClick={() => handleRemoveAttendee(attendee.id)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+{/* Old attendees section removed — consolidated into Who's Coming above */}
               {event.campground && (
                 <div className="border-t pt-6">
                   <div className="flex items-center gap-2 mb-1">
@@ -947,7 +1324,10 @@ export default function EventDetailPage() {
           {activeTab === 'trip' && (
             <div className="space-y-4">
               <TripPlannerTab
+                plannerFrom={plannerFrom || undefined}
+                plannerTo={plannerTo || undefined}
                 eventId={id}
+                tripEventId={id}
                 eventTitle={event?.title}
                 homeLocation={userHomeLocation || ''}
                 campground={event?.campground}
@@ -1146,9 +1526,15 @@ export default function EventDetailPage() {
               />
             </div>
           )}
+          {activeTab === 'supply' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <SupplyList eventId={event.id} />
+            </div>
+          )}
+
           {activeTab === 'schedule' && (
             <div className="space-y-8">
-              <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} />
+              <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} campgroundLat={event.campground?.latitude} campgroundLng={event.campground?.longitude} />
               {event.campground && (
                 <div className="border-t pt-8">
                   <ThingsToDoSection 
@@ -1241,9 +1627,16 @@ export default function EventDetailPage() {
                 startDate={event.startDate}
                 endDate={event.endDate}
                 groupSize={(event.attendees?.length || 0) + 1}
+                onAddItems={() => setPackRefreshKey(k => k + 1)}
               />
-              <EventPackList eventId={event.id} />
+              <EventPackList eventId={event.id} refreshKey={packRefreshKey} />
             </div>
+          )}
+          {activeTab === 'scrapbook' && (
+            <TripScrapbook
+              eventId={event.id}
+              canPin={isOrganizer || userAttendee?.status === 'going' || userAttendee?.status === 'ATTENDING'}
+            />
           )}
           {activeTab === 'packup' && (
             <div className="space-y-4">
@@ -1628,6 +2021,51 @@ export default function EventDetailPage() {
                   😤 5 More Minutes
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Duplicate Trip Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Duplicate Trip</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Creates a copy of <span className="font-medium text-gray-700">"{event.title}"</span> with the same campground, pack list, and supply list.
+            </p>
+
+            <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 mb-5">
+              <input
+                type="checkbox"
+                checked={copyAttendees}
+                onChange={e => setCopyAttendees(e.target.checked)}
+                className="w-4 h-4 text-primary-600 rounded"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Copy attendees</p>
+                <p className="text-xs text-gray-500">Re-invite current attendees (they'll get PENDING status)</p>
+              </div>
+            </label>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDuplicate}
+                disabled={duplicating}
+                className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              >
+                {duplicating ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                {duplicating ? 'Duplicating...' : 'Duplicate Trip'}
+              </button>
             </div>
           </div>
         </div>

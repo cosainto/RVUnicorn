@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import GuideUnlockPanel from '../components/GuideUnlockPanel';
 import RoadSupport from '../components/RoadSupport';
 import PrivateTriviaRoom from '../components/PrivateTriviaRoom';
@@ -20,7 +21,9 @@ const TABS = [
 ];
 
 export default function HitchAIPage() {
-  const [activeTab, setActiveTab] = useState('chat');
+  const [searchParams] = useSearchParams();
+  const promptParam = searchParams.get('prompt') || undefined;
+  const [activeTab, setActiveTab] = useState(promptParam ? 'chat' : 'chat');
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -45,7 +48,7 @@ export default function HitchAIPage() {
 
       {activeTab === 'chat' && (
         <div style={{ height: '65vh' }}>
-          <HitchAIAssistant />
+          <HitchAIAssistant initialMessage={promptParam} />
         </div>
       )}
       {activeTab === 'route' && <HitchRoutePlanner />}

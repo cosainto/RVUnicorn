@@ -284,6 +284,7 @@ export default function Navbar() {
                       <DropItem to="/creators" onClick={() => setMoreOpen(false)} icon={<Play className="w-4 h-4" />} iconBg="#f5f3ff" iconColor="#8b5cf6" label="Creator Pages" desc="Videos & content" />
                     </DropSection>
                     <DropSection label="Tools">
+                      <DropItem to="/road-trips" onClick={() => setMoreOpen(false)} icon={<Map className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Road Trips" desc="Multi-stop adventures" />
                       <DropItem to="/gear" onClick={() => setMoreOpen(false)} icon={<Package className="w-4 h-4" />} iconBg="#f0fdf4" iconColor="#22c55e" label="Gear" desc="Marketplace" />
                       <DropItem to="/packing" onClick={() => setMoreOpen(false)} icon={<Backpack className="w-4 h-4" />} iconBg="#eff6ff" iconColor="#3b82f6" label="Packing Lists" desc="Trip checklists" />
                       <DropItem to="/rv-log" onClick={() => setMoreOpen(false)} icon={<Wrench className="w-4 h-4" />} iconBg="#fffbeb" iconColor="#f59e0b" label="RV Log" desc="Maintenance tracker" />

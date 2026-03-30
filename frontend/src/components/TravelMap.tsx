@@ -12,9 +12,12 @@ import interstateRoutes, { InterstateRoute } from '../data/interstateRoutes';
 
 interface TravelMapProps {
   compact?: boolean;
+  showTripFilter?: boolean;
   userId: string;
   isOwnProfile: boolean;
   profilePicture?: string;
+  initialRoute?: any;       // pre-built route (skips active-route fetch)
+  newStateHighlights?: string[]; // state codes to highlight as "new"
 }
 
 interface StateVisit {
@@ -186,6 +189,7 @@ const VISIBILITY_OPTIONS = [
 
 type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins';
 
+// Gas thresholds (national avg ~$3.30)
 const getGasPriceColor = (price: number): string => {
   if (price < 2.90) return '#22c55e';
   if (price < 3.10) return '#84cc16';
@@ -195,7 +199,21 @@ const getGasPriceColor = (price: number): string => {
   return '#dc2626';
 };
 
-export default function TravelMap({ userId, isOwnProfile, compact = false, profilePicture }: TravelMapProps) {
+// Diesel thresholds (national avg ~$3.80, runs ~$0.50 higher than gas)
+const getDieselPriceColor = (price: number): string => {
+  if (price < 3.40) return '#22c55e';
+  if (price < 3.60) return '#84cc16';
+  if (price < 3.80) return '#eab308';
+  if (price < 4.10) return '#f97316';
+  if (price < 4.50) return '#ef4444';
+  return '#dc2626';
+};
+
+const getFuelPriceColor = (price: number, fuelType: 'regular' | 'diesel'): string => {
+  return fuelType === 'diesel' ? getDieselPriceColor(price) : getGasPriceColor(price);
+};
+
+export default function TravelMap({ userId, isOwnProfile, compact = false, showTripFilter = false, profilePicture, initialRoute, newStateHighlights = [] }: TravelMapProps) {
   // Original state
   const [visitedStates, setVisitedStates] = useState<string[]>([]);
   const [plannedStates, setPlannedStates] = useState<string[]>([]);
@@ -238,6 +256,9 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
   const [selectedGasStation, setSelectedGasStation] = useState<GasStation | null>(null);
   const [selectedRestStop, setSelectedRestStop] = useState<RestStop | null>(null);
   const [selectedInterstate, setSelectedInterstate] = useState<string>('');
+  const [selectedTripId, setSelectedTripId] = useState<string>('');
+  const [selectedTripRoute, setSelectedTripRoute] = useState<any>(null);
+  const [loadingTripRoute, setLoadingTripRoute] = useState(false);
   const [loadingRoadtrip, setLoadingRoadtrip] = useState(true);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [fuelType, setFuelType] = useState<'regular' | 'diesel'>('diesel');
@@ -259,12 +280,18 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
   useEffect(() => {
     loadTravelMap();
     loadHomeLocation();
+    loadUpcomingTrips(); // load on mount so trip filter dropdown is always populated
     if (isOwnProfile) {
       loadFriends();
       loadAlbums();
       loadEvents();
     }
   }, [userId]);
+
+  // Sync initialRoute prop -> activeRoute state whenever it arrives
+  useEffect(() => {
+    if (initialRoute) setActiveRoute(initialRoute);
+  }, [initialRoute]);
 
   useEffect(() => {
     if (activeLayers.includes('gasPrices') && gasPrices.length === 0) {
@@ -273,10 +300,14 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
     if (activeLayers.includes('favorites') && favorites.length === 0) {
       loadFavorites();
     }
-    // Always fetch active route
-    api.get(`/trips/active-route/${userId}`)
-      .then(r => { if (r.data?.route) setActiveRoute(r.data.route); })
-      .catch(() => {});
+    // Use provided route or fetch active route
+    if (initialRoute) {
+      setActiveRoute(initialRoute);
+    } else {
+      api.get(`/trips/active-route/${userId}`)
+        .then(r => { if (r.data?.route) setActiveRoute(r.data.route); })
+        .catch(() => {});
+    }
 
     if (activeLayers.includes('upcomingTrips') && upcomingTrips.length === 0) {
       loadUpcomingTrips();
@@ -287,10 +318,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
   }, [activeLayers, selectedInterstate]);
 
   useEffect(() => {
-    if (selectedInterstate && (activeLayers.includes('gasStations') || activeLayers.includes('restStops'))) {
+    if (activeLayers.includes('gasStations') || activeLayers.includes('restStops')) {
       loadRoadtripResources();
     }
-  }, [selectedInterstate, activeLayers]);
+  }, [selectedInterstate, selectedTripRoute, activeLayers]);
 
   const loadFavorites = async () => {
     try {
@@ -303,29 +334,44 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
 
   const loadUpcomingTrips = async () => {
     try {
-      const { data } = await api.get('/trips/my');
-      const events = Array.isArray(data) ? data : [];
-      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      const upcoming = events.filter((e: any) => {
-        if (e.isWishlist) return false;
-        const startDate = new Date(e.startDate);
-        startDate.setHours(0, 0, 0, 0);
-        return startDate >= today;
-      });
-      
-      const transformed = upcoming.map((e: any) => ({
-        id: e.id,
-        name: e.title,
-        title: e.title,
-        startDate: e.startDate,
-        endDate: e.endDate,
-        campground: e.campground,
-      }));
-      
-      setUpcomingTrips(transformed);
+
+      // Load both single events AND road trips in parallel
+      const [eventsRes, roadTripsRes] = await Promise.all([
+        api.get('/trips/my').catch(() => ({ data: [] })),
+        api.get('/road-trips').catch(() => ({ data: [] })),
+      ]);
+
+      const events = Array.isArray(eventsRes.data) ? eventsRes.data : [];
+      const upcoming = events
+        .filter((e: any) => {
+          if (e.isWishlist) return false;
+          const startDate = new Date(e.startDate);
+          startDate.setHours(0, 0, 0, 0);
+          return startDate >= today;
+        })
+        .map((e: any) => ({
+          id: e.id,
+          name: e.title,
+          title: e.title,
+          startDate: e.startDate,
+          endDate: e.endDate,
+          campground: e.campground,
+          type: 'event',
+        }));
+
+      const roadTrips = (Array.isArray(roadTripsRes.data) ? roadTripsRes.data : [])
+        .filter((rt: any) => rt.stops?.length >= 2)
+        .map((rt: any) => ({
+          id: rt.id,
+          name: '🚐 ' + rt.title,
+          title: rt.title,
+          startDate: rt.stops?.[0]?.startDate || null,
+          type: 'roadtrip',
+        }));
+
+      setUpcomingTrips([...roadTrips, ...upcoming]);
     } catch (error) {
       console.error('Load upcoming trips error:', error);
     }
@@ -431,21 +477,92 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
   const loadRoadtripResources = async () => {
     try {
       setLoadingRoadtrip(true);
-      const params = selectedInterstate ? `?interstate=${selectedInterstate}` : '';
-      
-      // Load gas stations and rest stops separately
+      // If a trip is selected, filter stops to bounding box of that trip's route
+      let params = '';
+      if (selectedTripRoute?.allStops?.length >= 2) {
+        const lats = selectedTripRoute.allStops.map((s: any) => s.latitude).filter(Boolean);
+        const lngs = selectedTripRoute.allStops.map((s: any) => s.longitude).filter(Boolean);
+        const minLat = Math.min(...lats) - 1;
+        const maxLat = Math.max(...lats) + 1;
+        const minLng = Math.min(...lngs) - 1;
+        const maxLng = Math.max(...lngs) + 1;
+        params = `?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`;
+      } else if (selectedInterstate) {
+        params = `?interstate=${encodeURIComponent(selectedInterstate)}`;
+      }
       const [stationsRes, stopsRes] = await Promise.all([
-        api.get(`/roadtrip/gas-stations${params}`),
-        api.get(`/roadtrip/rest-stops${params}`)
+        activeLayers.includes('gasStations') ? api.get(`/roadtrip/gas-stations${params}`) : Promise.resolve({ data: gasStations }),
+        activeLayers.includes('restStops') ? api.get(`/roadtrip/rest-stops${params}`) : Promise.resolve({ data: restStops }),
       ]);
-      
-      setGasStations(stationsRes.data || []);
-      setRestStops(stopsRes.data || []);
+      if (activeLayers.includes('gasStations')) setGasStations(stationsRes.data || []);
+      if (activeLayers.includes('restStops')) setRestStops(stopsRes.data || []);
     } catch (error) {
       console.error('Load roadtrip resources error:', error);
     } finally {
       setLoadingRoadtrip(false);
     }
+  };
+
+  const handleTripSelect = async (tripId: string) => {
+    setSelectedTripId(tripId);
+    if (!tripId) {
+      setSelectedTripRoute(null);
+      setActiveRoute(initialRoute || null);
+      return;
+    }
+    setLoadingTripRoute(true);
+    const selectedTrip = upcomingTrips.find((t: any) => t.id === tripId);
+    try {
+      let route = null;
+      if (selectedTrip?.type === 'roadtrip') {
+        const { data } = await api.get(`/road-trips/${tripId}/map-route`);
+        if (data.route) route = data.route;
+      } else if (selectedTrip?.campground?.latitude) {
+        // Single event with campground — can't draw a route, just mark on map
+        route = {
+          eventName: selectedTrip.name,
+          allStops: [{ id: selectedTrip.id, name: selectedTrip.name, latitude: selectedTrip.campground.latitude, longitude: selectedTrip.campground.longitude, order: 0 }],
+          completedCoords: [],
+          upcomingCoords: [],
+          currentPosition: { latitude: selectedTrip.campground.latitude, longitude: selectedTrip.campground.longitude, name: selectedTrip.name },
+        };
+      }
+
+      if (route) {
+        // For future trips, all coords go in upcomingCoords so the dashed line shows
+        // USMapSVG needs at least 2 points to draw a line
+        const allCoords = route.allStops
+          ?.filter((s: any) => s.latitude && s.longitude)
+          .map((s: any) => [s.longitude, s.latitude] as [number, number]) || [];
+
+        const fixedRoute = {
+          ...route,
+          completedCoords: route.completedCoords?.length >= 2 ? route.completedCoords : [],
+          upcomingCoords: allCoords.length >= 2 ? allCoords : (route.upcomingCoords || []),
+        };
+
+        setSelectedTripRoute(fixedRoute);
+        setActiveRoute(fixedRoute);
+
+        // Immediately load stops filtered to this route's bounding box
+        if (activeLayers.includes('gasStations') || activeLayers.includes('restStops')) {
+          const lats = fixedRoute.allStops?.map((s: any) => s.latitude).filter(Boolean) || [];
+          const lngs = fixedRoute.allStops?.map((s: any) => s.longitude).filter(Boolean) || [];
+          if (lats.length >= 2) {
+            const params = `?minLat=${Math.min(...lats) - 1}&maxLat=${Math.max(...lats) + 1}&minLng=${Math.min(...lngs) - 1}&maxLng=${Math.max(...lngs) + 1}`;
+            const [stationsRes, stopsRes] = await Promise.all([
+              activeLayers.includes('gasStations') ? api.get(`/roadtrip/gas-stations${params}`) : Promise.resolve({ data: [] }),
+              activeLayers.includes('restStops') ? api.get(`/roadtrip/rest-stops${params}`) : Promise.resolve({ data: [] }),
+            ]);
+            if (activeLayers.includes('gasStations')) setGasStations(stationsRes.data || []);
+            if (activeLayers.includes('restStops')) setRestStops(stopsRes.data || []);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Trip route fetch failed:', e);
+    }
+    setLoadingTripRoute(false);
   };
 
   const loadCampgrounds = async (stateCode: string) => {
@@ -591,9 +708,20 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
     const colors: Record<string, string> = {};
     gasPrices.forEach(price => {
       const priceValue = fuelType === 'diesel' ? price.dieselPrice : price.regularPrice;
-      colors[price.stateCode] = getGasPriceColor(priceValue);
+      colors[price.stateCode] = getFuelPriceColor(priceValue, fuelType);
     });
     return colors;
+  };
+
+  const getStateColors = (): Record<string, string> | undefined => {
+    if (activeLayers.includes('gasPrices')) return getGasPriceColors();
+    // Highlight new (never-visited) states on the trip route in teal
+    if (newStateHighlights.length > 0) {
+      const colors: Record<string, string> = {};
+      newStateHighlights.forEach(s => { colors[s] = '#93c5fd'; }); // planned blue — matches map legend
+      return colors;
+    }
+    return undefined;
   };
 
   // Get highways to display
@@ -616,21 +744,35 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
         type: "campground" as const,
         isVisited: !isPlannedVisit(v.startDate),
       })) : []),
-    ...(activeLayers.includes('gasStations') ? gasStations.map(s => ({
-      id: `gas-${s.id}`,
-      name: s.name,
-      latitude: s.latitude,
-      longitude: s.longitude,
-      type: "gasStation" as const,
-      brand: s.brand,
-    })) : []),
-    ...(activeLayers.includes('restStops') ? restStops.map(s => ({
-      id: `rest-${s.id}`,
-      name: s.name,
-      latitude: s.latitude,
-      longitude: s.longitude,
-      type: "restStop" as const,
-    })) : []),
+    ...(activeLayers.includes('gasStations') ? gasStations
+      .filter(s => {
+        const lat = Number(s.latitude);
+        const lng = Number(s.longitude);
+        return s.latitude && s.longitude && !isNaN(lat) && !isNaN(lng)
+          && lat >= 18 && lat <= 72 && lng >= -180 && lng <= -60;
+      })
+      .map(s => ({
+        id: `gas-${s.id}`,
+        name: s.name,
+        latitude: Number(s.latitude),
+        longitude: Number(s.longitude),
+        type: "gasStation" as const,
+        brand: s.brand,
+      })) : []),
+    ...(activeLayers.includes('restStops') ? restStops
+      .filter(s => {
+        const lat = Number(s.latitude);
+        const lng = Number(s.longitude);
+        return s.latitude && s.longitude && !isNaN(lat) && !isNaN(lng)
+          && lat >= 18 && lat <= 72 && lng >= -180 && lng <= -60;
+      })
+      .map(s => ({
+        id: `rest-${s.id}`,
+        name: s.name,
+        latitude: Number(s.latitude),
+        longitude: Number(s.longitude),
+        type: "restStop" as const,
+      })) : []),
     // Favorites markers
     ...(activeLayers.includes('favorites') ? favorites
       .filter(f => f.latitude && f.longitude)
@@ -819,29 +961,26 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
                 </button>
               </div>
               
-              {/* Price Legend */}
+              {/* Price Legend — thresholds differ for gas vs diesel */}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-gray-600">Price:</span>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
-                  <span>&lt;$2.90</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div>
-                  <span>$2.90-3.10</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div>
-                  <span>$3.10-3.30</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
-                  <span>$3.30-3.50</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-                  <span>&gt;$3.50</span>
-                </div>
+                <span className="text-gray-600">{fuelType === 'diesel' ? 'Diesel' : 'Gas'} Price:</span>
+                {fuelType === 'diesel' ? (
+                  <>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div><span>&lt;$3.40</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div><span>$3.40-3.60</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div><span>$3.60-3.80</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div><span>$3.80-4.10</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div><span>&gt;$4.10</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div><span>&lt;$2.90</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div><span>$2.90-3.10</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div><span>$3.10-3.30</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div><span>$3.30-3.50</span></div>
+                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div><span>&gt;$3.50</span></div>
+                  </>
+                )}
               </div>
 
               {/* Price Stats */}
@@ -872,27 +1011,40 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
             </div>
           )}
 
-          {/* Interstate Filter */}
-          {(activeLayers.includes('gasStations') || activeLayers.includes('restStops') || activeLayers.includes('highways')) && (
+          {/* Trip Route Filter - only on full Travel Map page */}
+          {showTripFilter && (activeLayers.includes('gasStations') || activeLayers.includes('restStops') || activeLayers.includes('highways')) && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm font-medium text-gray-700">Filter by Interstate:</span>
-                <select
-                  value={selectedInterstate}
-                  onChange={(e) => setSelectedInterstate(e.target.value)}
-                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">All Interstates</option>
-                  <option value="I-5">I-5 (West Coast)</option>
-                  <option value="I-10">I-10 (Southern)</option>
-                  <option value="I-35">I-35 (Central)</option>
-                  <option value="I-40">I-40 (Route 66)</option>
-                  <option value="I-75">I-75 (Southeast)</option>
-                  <option value="I-80">I-80 (Northern)</option>
-                  <option value="I-90">I-90 (Longest)</option>
-                  <option value="I-95">I-95 (East Coast)</option>
-                </select>
-                {loadingRoadtrip && <span className="text-sm text-gray-500">Loading...</span>}
+              <div className="flex items-start gap-3 flex-col">
+                <div className="flex items-center gap-3 flex-wrap w-full">
+                  <span className="text-sm font-medium text-gray-700 flex-shrink-0">🗺️ Filter by Trip:</span>
+                  <select
+                    value={selectedTripId}
+                    onChange={(e) => handleTripSelect(e.target.value)}
+                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white min-w-0"
+                  >
+                    <option value="">— Show all stops —</option>
+                    {upcomingTrips.map((trip: any) => (
+                      <option key={trip.id} value={trip.id}>
+                        🏕️ {trip.name || trip.title}
+                        {trip.startDate ? ` · ${new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {(loadingRoadtrip || loadingTripRoute) && (
+                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  )}
+                </div>
+                {selectedTripRoute && (
+                  <p className="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg w-full">
+                    ✓ Showing fuel stops, rest areas, and truck stops along your route corridor
+                    {selectedTripRoute.eventName && <span className="font-semibold"> for {selectedTripRoute.eventName}</span>}
+                  </p>
+                )}
+                {!selectedTripId && (
+                  <p className="text-xs text-gray-400">
+                    Select a trip to filter stops along your route, or browse all stops on the map.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -951,7 +1103,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, profi
           markers={mapMarkers}
           visitedStates={activeLayers.includes('visits') ? visitedStates : []}
           plannedStates={activeLayers.includes('visits') ? plannedStates : []}
-          stateColors={activeLayers.includes('gasPrices') ? getGasPriceColors() : undefined}
+          stateColors={getStateColors()}
           highways={activeLayers.includes('highways') ? getDisplayHighways() : []}
           showHighways={activeLayers.includes('highways')}
           tripRoute={activeRoute || undefined}

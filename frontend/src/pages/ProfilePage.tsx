@@ -146,6 +146,8 @@ const [editForm, setEditForm] = useState({
     profilePicture: '',
     coverPhoto: '',
     bannerPosition: '50% 50%',
+    rvMpg: '' as string | number,
+    rvFuelType: '',
   });
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState('');
@@ -846,6 +848,52 @@ const [editForm, setEditForm] = useState({
           {/* Top 8 Friends */}
       <Top8Friends username={username} />
 
+          {/* RV Tour */}
+          <div id="my-rv" className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Tent className="w-5 h-5 text-orange-600" />
+                RV Tour
+              </h2>
+              {isOwnProfile && (
+                <button onClick={() => setShowRVShowcaseEdit(true)}
+                  className="text-xs text-primary-600 hover:underline font-medium flex items-center gap-1">
+                  <span>✏️</span> Edit
+                </button>
+              )}
+            </div>
+            {rvShowcase && (rvShowcase.photos?.length > 0 || rvShowcase.videoUrl) ? (
+              <div className="space-y-3">
+                {rvShowcase.videoUrl && (
+                  <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                    <video src={rvShowcase.videoUrl} controls className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {rvShowcase.photos && rvShowcase.photos.length > 0 && (
+                  <div className={`grid gap-2 ${rvShowcase.photos.length === 1 ? 'grid-cols-1' : rvShowcase.photos.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    {rvShowcase.photos.map((photo: string, idx: number) => (
+                      <img key={idx} src={photo} alt={`RV photo ${idx + 1}`}
+                        className="aspect-square object-cover rounded-lg hover:opacity-90 transition cursor-pointer" />
+                    ))}
+                  </div>
+                )}
+                {rvShowcase.title && <p className="text-sm font-semibold text-gray-800">{rvShowcase.title}</p>}
+                {rvShowcase.description && <p className="text-sm text-gray-600">{rvShowcase.description}</p>}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-5xl mb-3">🚐</div>
+                <p className="text-sm text-gray-500">No RV tour yet</p>
+                {isOwnProfile && (
+                  <button onClick={() => setShowRVShowcaseEdit(true)}
+                    className="mt-3 text-sm text-primary-600 hover:underline">
+                    Add your RV photos & video →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Photo Albums */}
                     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
                       <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -1182,6 +1230,38 @@ const [editForm, setEditForm] = useState({
                   className="input w-full"
                   placeholder="https://yourwebsite.com"
                 />
+              </div>
+
+              {/* RV Details */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">🚐 RV Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fuel Type</label>
+                    <select
+                      value={editForm.rvFuelType}
+                      onChange={(e) => setEditForm({ ...editForm, rvFuelType: e.target.value })}
+                      className="input w-full"
+                    >
+                      <option value="">Select...</option>
+                      <option value="gas">Gas</option>
+                      <option value="diesel">Diesel</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">MPG</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      step="0.1"
+                      value={editForm.rvMpg}
+                      onChange={(e) => setEditForm({ ...editForm, rvMpg: e.target.value })}
+                      className="input w-full"
+                      placeholder="e.g. 8"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

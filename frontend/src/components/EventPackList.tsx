@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface EventPackListProps {
   eventId: string;
-  isOrganizer: boolean;
+  isOrganizer?: boolean;
+  refreshKey?: number;
 }
 
 interface PackItem {
@@ -33,14 +34,17 @@ const CATEGORIES = [
   { name: 'Entertainment', icon: '🎮', color: 'bg-green-50 border-green-200' },
   { name: 'Personal Items', icon: '🎒', color: 'bg-yellow-50 border-yellow-200' },
   { name: 'Other', icon: '📦', color: 'bg-pink-50 border-pink-200' },
+  { name: 'AI Suggested', icon: '✨', color: 'bg-indigo-50 border-indigo-200' },
 ];
 
-export default function EventPackList({ eventId, isOrganizer }: EventPackListProps) {
+export default function EventPackList({ eventId, isOrganizer, refreshKey = 0 }: EventPackListProps) {
   const { user } = useAuth();
   const [items, setItems] = useState<PackItem[]>([]);
   const [attendees, setAttendees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
   const [editingItem, setEditingItem] = useState<PackItem | null>(null);
   
   const [formData, setFormData] = useState({
@@ -51,21 +55,40 @@ export default function EventPackList({ eventId, isOrganizer }: EventPackListPro
     notes: '',
   });
 
+
   useEffect(() => {
     loadItems();
     loadAttendees();
-  }, [eventId]);
+  }, [eventId, refreshKey]);
 
   const loadItems = async () => {
     try {
       setLoading(true);
+      console.log('[PackList] Loading items for eventId:', eventId, 'refreshKey:', refreshKey);
       const { data } = await api.get(`/trip-packing/event/${eventId}`);
-      setItems(data.items || []);
+      console.log('[PackList] Got items:', data.items?.length, data.items);
+      setItems((data.items || []).map((item: any) => ({ ...item, isChecked: item.isPacked ?? item.isChecked ?? false })));
       if (data.attendees) setAttendees(data.attendees);
-    } catch (error) {
-      console.error('Load pack items error:', error);
+    } catch (error: any) {
+      console.error('[PackList] Load error:', error?.response?.status, error?.response?.data || error?.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const importFromPersonal = async () => {
+    setImporting(true);
+    setImportMsg('');
+    try {
+      const { data } = await api.post(`/trip-packing/import-personal/${eventId}`);
+      setImportMsg(data.message || `Imported ${data.imported} items`);
+      if (data.imported > 0) await loadItems();
+      setTimeout(() => setImportMsg(''), 4000);
+    } catch (e: any) {
+      setImportMsg(e?.response?.data?.error || 'Import failed');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -184,20 +207,68 @@ export default function EventPackList({ eventId, isOrganizer }: EventPackListPro
 
   if (!loading && items.length === 0) {
     return (
+      <>
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
         <div className="text-6xl mb-4">🎒</div>
         <h3 className="text-xl font-bold text-gray-800 mb-2">Your pack list is empty!</h3>
         <p className="text-gray-500 max-w-sm mb-6">Don't be that person who forgets the bug spray. Add items to your pack list so nothing gets left behind.</p>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={importFromPersonal} disabled={importing}
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:border-primary-400 hover:bg-primary-50 text-gray-700 font-medium px-4 py-2.5 rounded-xl transition">
+            {importing ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Package className="w-4 h-4 text-primary-600" />}
+            Import My Gear
+          </button>
+          <button onClick={openAddModal}
+            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2.5 rounded-xl transition">
+            <Plus className="w-4 h-4" /> Add Item
+          </button>
+        </div>
+        {importMsg && (
+          <div className="px-4 py-2 rounded-xl text-sm font-medium mb-4 bg-green-50 text-green-700 border border-green-200">{importMsg}</div>
+        )}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left">
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 Pro Tips</p>
           <ul className="space-y-1 text-sm text-amber-800">
+            <li>• Use Import My Gear to copy your personal gear list instantly</li>
             <li>• Add items by category to stay organized</li>
             <li>• Check items off as you pack them</li>
-            <li>• Share the list so everyone knows what to bring</li>
-            <li>• Save your list as a template for next time</li>
           </ul>
         </div>
       </div>
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Add Item</h3>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <input autoFocus type="text" placeholder="Item name" value={formData.name}
+                onChange={e => setFormData(f => ({...f, name: e.target.value}))}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+              <select value={formData.category} onChange={e => setFormData(f => ({...f, category: e.target.value}))}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm">
+                {CATEGORIES.map(cat => <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>)}
+              </select>
+              <input type="number" min="1" placeholder="Quantity" value={formData.quantity}
+                onChange={e => setFormData(f => ({...f, quantity: parseInt(e.target.value) || 1}))}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm" />
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50">Cancel</button>
+              <button onClick={async () => {
+                if (!formData.name.trim()) return;
+                try {
+                  await api.post('/trip-packing', { eventId, customName: formData.name, customCategory: formData.category, quantity: formData.quantity });
+                  setShowModal(false);
+                  await loadItems();
+                } catch(e) { console.error(e); }
+              }} className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700">Add Item</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
     );
   }
 
@@ -225,14 +296,35 @@ export default function EventPackList({ eventId, isOrganizer }: EventPackListPro
             </p>
           </div>
         </div>
-        <button
-          onClick={openAddModal}
-          className="btn btn-primary flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Item
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={importFromPersonal}
+            disabled={importing}
+            title="Copy your personal gear list into this trip"
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:border-primary-400 hover:bg-primary-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition"
+          >
+            {importing
+              ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              : <Package className="w-4 h-4 text-primary-600" />
+            }
+            Import My Gear
+          </button>
+          <button
+            onClick={openAddModal}
+            className="btn btn-primary flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Item
+          </button>
+        </div>
       </div>
+
+      {/* Import message */}
+      {importMsg && (
+        <div className={`px-4 py-2 rounded-xl text-sm font-medium mb-3 ${importMsg.toLowerCase().includes('fail') || importMsg.toLowerCase().includes('no ') ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+          {importMsg}
+        </div>
+      )}
 
       {/* Progress Bar */}
       {getTotalItems() > 0 && (
@@ -254,6 +346,36 @@ export default function EventPackList({ eventId, isOrganizer }: EventPackListPro
 
       {/* Categories */}
       <div className="space-y-4">
+        {(() => {
+          const knownCategoryNames = CATEGORIES.map(c => c.name);
+          const unknownItems = items.filter(item => !knownCategoryNames.includes(item.category));
+          return unknownItems.length > 0 ? (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-slate-50 border-b-2 border-slate-200 p-4 flex items-center gap-3">
+                <span className="text-3xl">🧳</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Added Items</h3>
+                  <p className="text-xs text-gray-600">{unknownItems.filter(i => i.isChecked).length} of {unknownItems.length} packed</p>
+                </div>
+              </div>
+              <div className="p-4 space-y-2">
+                {unknownItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" checked={item.isChecked} onChange={() => handleToggleCheck(item)}
+                        className="w-5 h-5 rounded accent-primary-600 cursor-pointer" />
+                      <span className={`text-sm font-medium ${item.isChecked ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.name}</span>
+                      {item.quantity > 1 && <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">×{item.quantity}</span>}
+                    </div>
+                    <button onClick={() => handleDeleteItem(item.id)} className="text-gray-300 hover:text-red-400 transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
         {CATEGORIES.map((category) => {
           const categoryItems = getItemsByCategory(category.name);
           

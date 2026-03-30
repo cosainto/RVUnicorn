@@ -122,7 +122,7 @@ router.get('/event/:eventId', authenticateToken, async (req: any, res) => {
         packedBy: { select: { id: true, firstName: true, lastName: true } },
         createdBy: { select: { id: true, firstName: true, lastName: true } }
       },
-      orderBy: [{ isPacked: 'asc' }, { customCategory: 'asc' }, { createdAt: 'asc' }]
+      orderBy: [{ customCategory: 'asc' }, { createdAt: 'asc' }]
     });
 
     const total = items.length;
@@ -499,5 +499,71 @@ router.get('/my-assignments', authenticateToken, async (req: any, res) => {
     res.status(500).json({ error: 'Failed to fetch assignments' });
   }
 });
+
+// POST /api/trip-packing/import-personal/:eventId
+// Copies user's personal pack items into the event packing list (skips dupes)
+router.post('/import-personal/:eventId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+
+    // Verify user has access to event
+    const event = await prisma.event.findFirst({
+      where: {
+        id: eventId,
+        OR: [{ organizerId: userId }, { attendees: { some: { userId } } }],
+      },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    // Get personal pack items (not event-specific ones — general items)
+    const personalItems = await prisma.personalPackItem.findMany({
+      where: { userId, eventId: null },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
+
+    if (personalItems.length === 0) {
+      return res.json({ imported: 0, message: 'No personal gear items found. Add items to My Gear first.' });
+    }
+
+    // Get existing event pack items to avoid duplicates
+    const existing = await prisma.tripPackItem.findMany({
+      where: { eventId, createdById: userId },
+      select: { customName: true },
+    });
+    const existingNames = new Set(existing.map(i => i.customName?.toLowerCase().trim()));
+
+    // Import items that don't already exist
+    let imported = 0;
+    for (const item of personalItems) {
+      const nameLower = item.name.toLowerCase().trim();
+      if (existingNames.has(nameLower)) continue;
+      await prisma.tripPackItem.create({
+        data: {
+          eventId,
+          createdById: userId,
+          customName: item.name,
+          customCategory: item.category || 'General',
+          quantity: item.quantity || 1,
+          notes: item.notes || null,
+          isPacked: false,
+        },
+      });
+      imported++;
+    }
+
+    res.json({
+      imported,
+      skipped: personalItems.length - imported,
+      message: imported > 0
+        ? `Imported ${imported} items from your gear list`
+        : 'All your gear items are already in this packing list',
+    });
+  } catch (e: any) {
+    console.error('[TripPacking] import-personal error:', e?.message);
+    res.status(500).json({ error: 'Failed to import personal items' });
+  }
+});
+
 
 export default router;
