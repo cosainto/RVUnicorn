@@ -32,7 +32,7 @@ const QUICK_PROMPTS = [
   "What breweries welcome RV guests near the Rocky Mountains?",
 ];
 
-export default function HitchAIAssistant({ initialMessage }: { initialMessage?: string } = {}) {
+export default function HitchAIAssistant({ initialMessage = undefined }: { initialMessage?: string }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
