@@ -659,13 +659,15 @@ export default function EventDetailPage() {
     return { text: `In ${diffDays} days`, color: diffDays <= 7 ? 'text-blue-600' : 'text-gray-600' };
   };
 
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [copyAttendees, setCopyAttendees] = useState(false);
+  const [openPhases, setOpenPhases] = useState<Set<string>>(new Set(['plan']));
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
 
   const isOrganizer = user?.id === event.organizerId;
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
-  const [copyAttendees, setCopyAttendees] = useState(false);
 
   const handleDuplicate = async () => {
     setDuplicating(true);
@@ -716,18 +718,11 @@ export default function EventDetailPage() {
 
   const daysUntil = getDaysUntilEvent();
 
-  const tabs = [
-    { id: 'details', label: 'Details', icon: Calendar },
-    { id: 'trip', label: 'Trip Planner', icon: Car },
-    { id: 'schedule', label: 'Schedule', icon: Clock },
-    { id: 'photos', label: 'Photos', icon: Image },
-    { id: 'meals', label: 'Meal Plan', icon: ChefHat },
-    { id: 'pack', label: 'Pack List', icon: Package },
-    { id: 'supply', label: 'Supply List', icon: Package },
-    { id: 'packup', label: 'Pack Up', icon: Check },
-    { id: 'cost', label: '💰 Trip Cost', icon: DollarSign },
-    { id: 'scrapbook', label: '📌 Scrapbook', icon: BookOpen },
-  ];
+  const togglePhase = (id: string) => setOpenPhases(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -987,20 +982,30 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md mb-6"
-        style={event.roadTrip ? { borderTop: '4px solid ' + event.roadTrip.color, borderRadius: '8px' } : {}}>
-        <div className="border-b border-gray-200">
-          <div className="flex gap-4 px-6 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 py-4 px-2 border-b-2 transition whitespace-nowrap ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                {tab.icon && <tab.icon className="w-5 h-5" />}{tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-6">
-          {activeTab === 'details' && (
+      <div className="space-y-3 mb-6">
+        {[
+          { id: 'plan',     emoji: '🗺️', label: 'Plan',    desc: 'Campground, dates, route, attendees',  bg: '#EAF3DE', color: '#3B6D11' },
+          { id: 'travel',   emoji: '🚐', label: 'Travel',  desc: 'Route, drive time, gas stops',          bg: '#FAEEDA', color: '#854F0B' },
+          { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: '#E6F1FB', color: '#185FA5' },
+          { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
+          { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
+        ].map(phase => (
+          <div key={phase.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: phase.bg }}>
+                  <span style={{ color: phase.color }}>{phase.emoji}</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{phase.label}</p>
+                  <p className="text-xs text-gray-500">{phase.desc}</p>
+                </div>
+              </div>
+              <span className="text-gray-400 text-xs ml-4">{openPhases.has(phase.id) ? '▲' : '▼'}</span>
+            </button>
+            {openPhases.has(phase.id) && (
+              <div className="border-t border-gray-100 p-5 bg-gray-50/30 space-y-6">
+          {openPhases.has(phase.id) && phase.id === 'plan' && (
             <div className="space-y-6">
               {isOrganizer && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -1321,7 +1326,7 @@ export default function EventDetailPage() {
             </div>
           )}
 
-          {activeTab === 'trip' && (
+          {openPhases.has(phase.id) && phase.id === 'travel' && (
             <div className="space-y-4">
               <TripPlannerTab
                 plannerFrom={plannerFrom || undefined}
@@ -1516,7 +1521,7 @@ export default function EventDetailPage() {
             </div>
           )}
 
-          {activeTab === 'cost' && (
+          {openPhases.has(phase.id) && phase.id === 'plan' && (
             <div className="p-4">
               <HitchTripCostEstimator
                 eventId={event.id}
@@ -1526,13 +1531,13 @@ export default function EventDetailPage() {
               />
             </div>
           )}
-          {activeTab === 'supply' && (
+          {openPhases.has(phase.id) && phase.id === 'prepare' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <SupplyList eventId={event.id} />
             </div>
           )}
 
-          {activeTab === 'schedule' && (
+          {openPhases.has(phase.id) && phase.id === 'camp' && (
             <div className="space-y-8">
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} campgroundLat={event.campground?.latitude} campgroundLng={event.campground?.longitude} />
               {event.campground && (
@@ -1547,7 +1552,7 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'photos' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status === 'going'} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
+          {openPhases.has(phase.id) && phase.id === 'remember' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status === 'going'} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
             <TripTabEmptyState
               icon="📸"
               title="No photos yet — be the first!"
@@ -1555,7 +1560,7 @@ export default function EventDetailPage() {
               tips={["Add photos before, during, and after the trip", "Tag fellow campers in your shots", "Photos here are shared with all attendees"]}
             />
           } />}
-          {activeTab === 'albums' && (
+          {openPhases.has(phase.id) && phase.id === 'remember' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Trip Albums</h3>
@@ -1600,7 +1605,7 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
-          {activeTab === 'meals' && (
+          {openPhases.has(phase.id) && phase.id === 'prepare' && (
             <div id="meal-calendar" className="space-y-4">
               <HitchMealSuggestions
                 eventId={event.id}
@@ -1619,7 +1624,7 @@ export default function EventDetailPage() {
           } />
             </div>
           )}
-          {activeTab === 'pack' && (
+          {openPhases.has(phase.id) && phase.id === 'prepare' && (
             <div className="space-y-4">
               <HitchPackingSuggestions
                 eventId={event.id}
@@ -1632,19 +1637,22 @@ export default function EventDetailPage() {
               <EventPackList eventId={event.id} refreshKey={packRefreshKey} />
             </div>
           )}
-          {activeTab === 'scrapbook' && (
+          {openPhases.has(phase.id) && phase.id === 'remember' && (
             <TripScrapbook
               eventId={event.id}
               canPin={isOrganizer || userAttendee?.status === 'going' || userAttendee?.status === 'ATTENDING'}
             />
           )}
-          {activeTab === 'packup' && (
+          {openPhases.has(phase.id) && phase.id === 'camp' && (
             <div className="space-y-4">
               <HitchTripSummary event={event} />
               <PackUp eventId={event.id} eventTitle={event.title} endDate={event.endDate || event.startDate} />
             </div>
           )}
-        </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
 
