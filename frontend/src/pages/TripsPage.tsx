@@ -628,7 +628,7 @@ export default function EventsPage() {
                     </div>
                     {event.campground && (
                       <p className="text-xs text-gray-500 mt-1">
-                        📍 {event.campground.name}{event.campground.city ? `, ${event.campground.city}` : ''}{event.campground.state ? `, ${event.campground.state}` : ''}
+                        📍 <Link to={`/campgrounds/${event.campground.id}`} className="hover:underline text-primary-600" onClick={e => e.stopPropagation()}>{event.campground.name}</Link>{event.campground.city ? `, ${event.campground.city}` : ''}{event.campground.state ? `, ${event.campground.state}` : ''}
                       </p>
                     )}
                     <div className="mt-3 flex gap-2">
@@ -774,7 +774,7 @@ export default function EventsPage() {
                             ))}
                           </div>
                         ) : event.campground ? (
-                          <span>{event.campground.name}</span>
+                          <Link to={`/campgrounds/${event.campground.id}`} className="hover:underline text-primary-600" onClick={e => e.stopPropagation()}>{event.campground.name}</Link>
                         ) : (
                           <span>{event.location}</span>
                         )}

@@ -1840,7 +1840,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold leading-tight">
-                      {activeCheckIn.campground.name}
+                      <Link to={`/campgrounds/${activeCheckIn.campground.id}`} className="hover:underline">{activeCheckIn.campground.name}</Link>
                     </h2>
                     <span className="text-xs bg-green-500/50 border border-green-400/40 px-2 py-0.5 rounded-full font-medium">
                       ✅ Checked In
@@ -3021,7 +3021,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                         <p className="text-sm font-medium text-gray-900 truncate">{trip.title}</p>
                         <p className="text-xs text-gray-500">
                           {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {trip.campground?.name && ` · ${trip.campground.name}`}
+                          {trip.campground?.name && <><span> · </span><Link to={`/campgrounds/${trip.campground.id}`} className="hover:underline text-primary-600" onClick={e => e.stopPropagation()}>{trip.campground.name}</Link></>}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
@@ -3692,7 +3692,7 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                 <span className="text-xl">🔥</span>
                 <h3 className="font-bold text-lg">Tonight at Camp</h3>
                 <span className="text-xs bg-orange-500/30 border border-orange-400/30 px-2 py-0.5 rounded-full text-orange-200">
-                  {activeCheckIn.campground.name}
+                  <Link to={`/campgrounds/${activeCheckIn.campground.id}`} className="hover:underline text-primary-600">{activeCheckIn.campground.name}</Link>
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
