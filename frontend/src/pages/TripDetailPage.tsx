@@ -3,7 +3,7 @@ import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
-import { Calendar, ShoppingCart, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign} from 'lucide-react';
+import { Calendar, ShoppingCart, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign, CalendarDays} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 // @ts-ignore
@@ -716,6 +716,67 @@ export default function EventDetailPage() {
     }
   };
 
+  const exportToCalendar = () => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toICS = (d: Date) =>
+      d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) +
+      'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
+
+    const start = new Date(event.startDate);
+    const end = event.endDate ? new Date(event.endDate) : new Date(event.startDate);
+    // For all-day events, end date in .ics must be the day AFTER
+    end.setDate(end.getDate() + 1);
+
+    const location = [
+      event.campground?.name,
+      event.campground?.location,
+      event.campground?.state,
+    ].filter(Boolean).join(', ') || event.location || '';
+
+    const description = [
+      event.description || '',
+      event.campground ? `Campground: ${event.campground.name}` : '',
+      `Organized by ${event.organizer?.firstName || 'RVUnicorn'}`,
+      `View trip: ${window.location.href}`,
+    ].filter(Boolean).join('\n');
+
+    const uid = `rvunicorn-${event.id}@rvunicorn.com`;
+    const now = toICS(new Date());
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//RVUnicorn//Trip Export//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${now}`,
+      `DTSTART;VALUE=DATE:${start.getUTCFullYear()}${pad(start.getUTCMonth()+1)}${pad(start.getUTCDate())}`,
+      `DTEND;VALUE=DATE:${end.getUTCFullYear()}${pad(end.getUTCMonth()+1)}${pad(end.getUTCDate())}`,
+      `SUMMARY:${event.title}`,
+      location ? `LOCATION:${location.split(',').join('\\,')}` : '',
+      `DESCRIPTION:${description.split(String.fromCharCode(10)).join('\\n').split(',').join('\\,')}`,
+      'BEGIN:VALARM',
+      'TRIGGER:-P1D',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:Reminder: ${event.title} starts tomorrow!`,
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const daysUntil = getDaysUntilEvent();
 
   const togglePhase = (id: string) => setOpenPhases(prev => {
@@ -946,6 +1007,7 @@ export default function EventDetailPage() {
               )}
               {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag People' : 'Invite'}</button>}
               {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
+              <button onClick={exportToCalendar} className="btn btn-secondary btn-sm flex items-center gap-2" title="Export to Apple/Google Calendar"><CalendarDays className="w-4 h-4" />Add to Calendar</button>
               {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
               {isOrganizer && <button onClick={() => setShowDuplicateModal(true)} className="btn btn-sm flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"><Copy className="w-4 h-4" />Duplicate</button>}
               {isOrganizer && (
