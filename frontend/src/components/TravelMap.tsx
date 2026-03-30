@@ -187,7 +187,7 @@ const VISIBILITY_OPTIONS = [
   { value: 'PRIVATE', label: 'Private', icon: Lock, color: 'text-gray-600', bg: 'bg-gray-100', description: 'Only you can see' },
 ];
 
-type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins';
+type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins' | 'freeOvernight';
 
 // Gas thresholds (national avg ~$3.30)
 const getGasPriceColor = (price: number): string => {
@@ -253,6 +253,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [gasPrices, setGasPrices] = useState<GasPrice[]>([]);
   const [gasStations, setGasStations] = useState<GasStation[]>([]);
   const [restStops, setRestStops] = useState<RestStop[]>([]);
+  const [freeOvernightSpots, setFreeOvernightSpots] = useState<any[]>([]);
   const [selectedGasStation, setSelectedGasStation] = useState<GasStation | null>(null);
   const [selectedRestStop, setSelectedRestStop] = useState<RestStop | null>(null);
   const [selectedInterstate, setSelectedInterstate] = useState<string>('');
@@ -318,6 +319,11 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   }, [activeLayers, selectedInterstate]);
 
   useEffect(() => {
+    if (activeLayers.includes('freeOvernight') && freeOvernightSpots.length === 0) {
+      api.get('/overnight-spots/near?lat=39.5&lng=-98.35&radius=2000&limit=300')
+        .then(({ data }) => setFreeOvernightSpots(data || []))
+        .catch(() => {});
+    }
     if (activeLayers.includes('gasStations') || activeLayers.includes('restStops')) {
       loadRoadtripResources();
     }
@@ -773,6 +779,19 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         longitude: Number(s.longitude),
         type: "restStop" as const,
       })) : []),
+    ...(activeLayers.includes('freeOvernight') ? freeOvernightSpots
+      .filter(s => s.latitude && s.longitude
+        && s.latitude >= 18 && s.latitude <= 72
+        && s.longitude >= -180 && s.longitude <= -60)
+      .map(s => ({
+        id: `free-${s.id}`,
+        name: s.name,
+        latitude: Number(s.latitude),
+        longitude: Number(s.longitude),
+        type: "freeOvernight" as const,
+        category: s.category,
+        notes: s.notes,
+      })) : []),
     // Favorites markers
     ...(activeLayers.includes('favorites') ? favorites
       .filter(f => f.latitude && f.longitude)
@@ -917,6 +936,16 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             >
               <Tent className="w-6 h-6" />
               <span className="text-sm font-medium">Upcoming Trips</span>
+            </button>
+
+            <button
+              onClick={() => toggleLayer('freeOvernight')}
+              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                activeLayers.includes('freeOvernight') ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <span className="text-2xl leading-none">🌙</span>
+              <span className="text-sm font-medium">Free Overnight</span>
             </button>
 
             <button
@@ -1114,6 +1143,13 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             if (marker.type === 'gasStation') {
               const station = gasStations.find(s => s.id === marker.id.replace('gas-', ''));
               if (station) setSelectedGasStation(station);
+            } else if (marker.type === 'freeOvernight') {
+              // Show info in a simple alert or future modal
+              const spot = freeOvernightSpots.find(s => `free-${s.id}` === marker.id);
+              if (spot) {
+                const amenities = [spot.hasWifi && 'WiFi', spot.hasDump && 'Dump', spot.hasWater && 'Water'].filter(Boolean).join(', ');
+                alert(`🌙 ${spot.name}\n${spot.category || 'Free Overnight'}\n${spot.notes || ''}\n${amenities ? 'Amenities: ' + amenities : 'No amenities listed'}`);
+              }
             } else if (marker.type === 'restStop') {
               const stop = restStops.find(s => s.id === marker.id.replace('rest-', ''));
               if (stop) setSelectedRestStop(stop);
