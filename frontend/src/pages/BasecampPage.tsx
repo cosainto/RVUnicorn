@@ -934,23 +934,6 @@ function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTit
 
   if (photos.length === 0) return null;
 
-  const [isDriving, setIsDriving] = useState(() => localStorage.getItem('rvunicorn_driving') === 'true');
-
-  // ── Driving Mode full-screen override ──────────────────────────────────
-  if (isDriving) {
-    return (
-      <DrivingMode
-        nextEvent={nextEvent}
-        rvMpg={(user as any)?.rvMpg || undefined}
-        onExit={() => {
-          setIsDriving(false);
-          localStorage.removeItem('rvunicorn_driving');
-          localStorage.removeItem('rvunicorn_drive_start');
-          localStorage.removeItem('rvunicorn_drive_role');
-        }}
-      />
-    );
-  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -1013,6 +996,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
   const isCamping  = !!activeCheckIn;
+  const [isDriving, setIsDriving] = useState(() => localStorage.getItem('rvunicorn_driving') === 'true');
   const isPlanning = !isCamping; // kept for existing sections
 
 
@@ -1166,6 +1150,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // Derived mode flags (computed after nextEvent is declared)
   const hasFutureTrip = !isCamping && !!nextEvent;
+
   const isDefaultMode = !isCamping && !nextEvent;
 
   // Load enriched Planning Mode data when nextEvent changes
@@ -1820,6 +1805,22 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   if (!user) {
     return <LandingPage />;
+  }
+
+
+  if (isDriving) {
+    return (
+      <DrivingMode
+        nextEvent={nextEvent}
+        rvMpg={(user as any)?.rvMpg || undefined}
+        onExit={() => {
+          setIsDriving(false);
+          localStorage.removeItem('rvunicorn_driving');
+          localStorage.removeItem('rvunicorn_drive_start');
+          localStorage.removeItem('rvunicorn_drive_role');
+        }}
+      />
+    );
   }
 
   return (
