@@ -114,6 +114,7 @@ import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { updateGasPrices } from "./cron/gas-price-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
+import pushRoutes from './routes/push.routes';
 import { runRoadChatCleanup } from './cron/road-chat-cleanup.cron';
 import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';

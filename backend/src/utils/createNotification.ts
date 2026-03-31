@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { pushNotification } from '../routes/notification.routes';
+import { sendWebPush } from './webPush';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +32,12 @@ export async function createNotification(opts: NotifyOptions) {
       },
     });
     pushNotification(opts.userId, notification);
+    // Also send web push for users not currently on the page
+    sendWebPush(opts.userId, {
+      title: 'RVUnicorn 🦄',
+      body: opts.content,
+      url: opts.link || '/basecamp',
+    }).catch(() => {});
     return notification;
   } catch (e) {
     console.error('Failed to create notification:', e);

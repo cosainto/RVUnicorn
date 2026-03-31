@@ -44,7 +44,8 @@
         "pg": "^8.19.0",
         "resend": "^6.9.3",
         "socket.io": "^4.8.3",
-        "twilio": "^5.11.1"
+        "twilio": "^5.11.1",
+        "web-push": "^3.6.7"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",
@@ -54,6 +55,7 @@
         "@types/multer": "^2.0.0",
         "@types/node": "^20.10.5",
         "@types/node-cron": "^3.0.11",
+        "@types/web-push": "^3.6.4",
         "dotenv-cli": "^11.0.0",
         "prisma": "^5.7.0",
         "puppeteer": "^24.37.5",
