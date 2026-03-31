@@ -890,7 +890,11 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             </button>
             {showRoadChat && (
               <div style={{ height: 340 }}>
-                <RoadChat />
+                <RoadChat
+                  campgroundId={nextEvent?.campground?.id}
+                  campgroundName={nextEvent?.campground?.name}
+                  tripComplete={!!(nextEvent?.endDate && new Date(nextEvent.endDate) < new Date())}
+                />
               </div>
             )}
           </div>
@@ -1187,7 +1191,11 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             </button>
             {showRoadChat && (
               <div style={{ height: 380 }}>
-                <RoadChat />
+                <RoadChat
+                  campgroundId={nextEvent?.campground?.id}
+                  campgroundName={nextEvent?.campground?.name}
+                  tripComplete={!!(nextEvent?.endDate && new Date(nextEvent.endDate) < new Date())}
+                />
               </div>
             )}
           </div>
