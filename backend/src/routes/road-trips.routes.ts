@@ -398,15 +398,28 @@ router.post('/:id/stops', authenticateToken, async (req: any, res) => {
 // DELETE /api/road-trips/:id/stops/:eventId — remove a stop from road trip
 router.delete('/:id/stops/:eventId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const roadTrip = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!roadTrip) return res.status(404).json({ error: 'Road trip not found' });
     await prisma.event.update({
       where: { id: req.params.eventId },
       data: { roadTripId: null, stopNumber: null },
     });
+    // Renumber remaining stops in order
+    const remaining = await prisma.event.findMany({
+      where: { roadTripId: req.params.id },
+      orderBy: [{ stopNumber: 'asc' }, { startDate: 'asc' }],
+      select: { id: true },
+    });
+    await Promise.all(
+      remaining.map((e: any, i: number) =>
+        prisma.event.update({ where: { id: e.id }, data: { stopNumber: i + 1 } })
+      )
+    );
     res.json({ success: true });
   } catch (e: any) {
+    console.error('[RoadTrips] DELETE stop error:', e);
     res.status(500).json({ error: 'Failed to remove stop' });
   }
 });

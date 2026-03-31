@@ -1153,6 +1153,14 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   const isDefaultMode = !isCamping && !nextEvent;
 
+  // Listen for localStorage changes (e.g. rig nudge dismiss) to trigger re-render
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1);
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
+
   // Load enriched Planning Mode data when nextEvent changes
   useEffect(() => {
     if (!hasFutureTrip || !nextEvent) { setPlanningData(null); return; }
@@ -1915,9 +1923,59 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Start Driving Mode button */}
+      {/* Pre-Trip Intelligence + Start Driving Mode */}
       {(hasFutureTrip || isCamping) && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
+          {hasFutureTrip && nextEvent && (() => {
+            const rvMpg = (user as any)?.rvMpg || 8;
+            const daysUntil = nextEvent.startDate ? Math.ceil((new Date(nextEvent.startDate).getTime() - Date.now()) / 86400000) : null;
+            const weather = planningData?.weather;
+            const hour = new Date().getHours();
+            const isNightDrive = hour >= 20 || hour < 6;
+            const risks: string[] = [];
+            if (isNightDrive) risks.push('🌙 Night driving detected');
+            if (daysUntil !== null && daysUntil === 0) risks.push('⚡ Drive day — take breaks every 2h');
+            try {
+              const hist = JSON.parse(localStorage.getItem('rvu_drive_history') || '[]');
+              const yesterday = hist[hist.length - 1];
+              if (yesterday?.hours > 6) risks.push(`😴 You drove ${yesterday.hours.toFixed(1)}h yesterday`);
+            } catch {}
+            return (
+              <div className="bg-blue-950 border border-blue-800 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-base">🛡️</span>
+                  <p className="text-sm font-bold text-blue-200">Pre-Trip Intelligence</p>
+                  {daysUntil !== null && (
+                    <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${daysUntil === 0 ? 'bg-green-700 text-green-100' : 'bg-blue-800 text-blue-200'}`}>
+                      {daysUntil === 0 ? 'Drive day!' : `${daysUntil}d away`}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-blue-900/50 rounded-xl p-2 text-center">
+                    <p className="text-lg">⏱️</p>
+                    <p className="text-xs text-blue-300 mt-0.5">Break every</p>
+                    <p className="text-sm font-bold text-white">2 hrs</p>
+                  </div>
+                  <div className="bg-blue-900/50 rounded-xl p-2 text-center">
+                    <p className="text-lg">⛽</p>
+                    <p className="text-xs text-blue-300 mt-0.5">Your MPG</p>
+                    <p className="text-sm font-bold text-white">{rvMpg} mpg</p>
+                  </div>
+                  <div className="bg-blue-900/50 rounded-xl p-2 text-center">
+                    <p className="text-lg">{weather ? (weather.shortForecast?.toLowerCase().includes('rain') ? '🌧️' : '☀️') : '🌡️'}</p>
+                    <p className="text-xs text-blue-300 mt-0.5">At camp</p>
+                    <p className="text-sm font-bold text-white">{weather ? `${weather.temperature}°` : '—'}</p>
+                  </div>
+                </div>
+                {risks.length > 0 ? (
+                  <div className="space-y-1">{risks.map((r, i) => <p key={i} className="text-xs text-amber-300">{r}</p>)}</div>
+                ) : (
+                  <p className="text-xs text-green-400">✅ No risk flags — have a great drive!</p>
+                )}
+              </div>
+            );
+          })()}
           <button
             onClick={() => { setIsDriving(true); localStorage.setItem('rvunicorn_driving', 'true'); }}
             className="w-full flex items-center gap-3 bg-white border border-primary-200 rounded-2xl px-4 py-3.5 hover:border-primary-400 hover:shadow-sm transition-all text-left"
@@ -1925,7 +1983,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0 text-xl">🚐</div>
             <div className="flex-1">
               <p className="font-bold text-gray-900 text-sm">Start Driving Mode</p>
-              <p className="text-gray-500 text-xs">Fatigue tracker · Navigate · Driver switch</p>
+              <p className="text-gray-500 text-xs">Guardian Mode · Fatigue score · Co-pilot</p>
             </div>
             <span className="text-primary-400 text-sm font-semibold">Start →</span>
           </button>
@@ -2316,6 +2374,44 @@ export default function BasecampPage({ user }: BasecampProps) {
                   ))}
                 </div>
                 <a href="/hitch" className="flex items-center justify-center gap-2 w-full py-2.5 bg-white text-primary-700 rounded-xl text-sm font-bold hover:bg-white/90 transition"><span>🦄</span> Open Hitch AI</a>
+              </div>
+            )}
+
+            {/* Rig Profile Setup Nudge — show when no RV type set */}
+            {!(user as any)?.rvType && !localStorage.getItem('rvu_rig_nudge_dismissed') && (
+              <div className="bg-white border-2 border-dashed border-orange-300 rounded-2xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center flex-shrink-0 text-2xl">🚐</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-sm mb-1">Set up your Rig Profile</p>
+                    <p className="text-gray-500 text-xs mb-3 leading-relaxed">
+                      Add your RV details once — Hitch uses them for campsite filters, gas cost estimates, Guardian Mode fatigue tracking, and personalized trip planning.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {['📐 Length & type','⛽ MPG & fuel','🗺️ Campsite filters','🛡️ Guardian Mode'].map(item => (
+                        <span key={item} className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full">{item}</span>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/my-rv"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition"
+                      >
+                        🚐 Set Up My Rig
+                      </a>
+                      <button
+                        onClick={() => {
+                          localStorage.setItem('rvu_rig_nudge_dismissed', '1');
+                          // Force re-render by dispatching a storage event
+                          window.dispatchEvent(new Event('storage'));
+                        }}
+                        className="px-3 py-2.5 text-gray-400 hover:text-gray-600 text-xs transition"
+                      >
+                        Later
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {activeCheckIn?.campground && (

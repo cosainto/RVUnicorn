@@ -483,7 +483,8 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
     const daySubevents = subevents.filter(se => se.date.split('T')[0] === dateStr);
     const dayActivities = activities.filter(a => a.scheduledDate && a.scheduledDate.split('T')[0] === dateStr);
     const dayMeals = showMeals ? meals.filter(m => m.scheduledAt || m.date && m.scheduledAt || m.date.split('T')[0] === dateStr) : [];
-    return { subevents: daySubevents, activities: dayActivities, meals: dayMeals };
+    const dayWorkBlocks = showWorkBlocks ? workBlocks.filter(wb => wb.date.split('T')[0] === dateStr) : [];
+    return { subevents: daySubevents, activities: dayActivities, meals: dayMeals, workBlocks: dayWorkBlocks };
   };
 
   const totalScheduleItems = subevents.length + activities.length;
@@ -642,13 +643,13 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
           .filter(date => !selectedDate || date.toISOString().split('T')[0] === selectedDate)
           .map((date, idx) => {
             const dateStr = date.toISOString().split('T')[0];
-            const { subevents: daySubevents, activities: dayActivities, meals: dayMeals } = getItemsForDate(date);
+            const { subevents: daySubevents, activities: dayActivities, meals: dayMeals, workBlocks: dayWorkBlocks } = getItemsForDate(date) as any;
             // Prefetch weather for days with outdoor activities
             const hasOutdoor = daySubevents.some((s: any) => OUTDOOR_TYPES.includes(s.activityType));
             if (hasOutdoor && campgroundLat && campgroundLng && !weatherByDate[dateStr]) {
               fetchWeatherForDate(dateStr, campgroundLat, campgroundLng);
             }
-            const hasItems = daySubevents.length > 0 || dayActivities.length > 0 || dayMeals.length > 0;
+            const hasItems = daySubevents.length > 0 || dayActivities.length > 0 || dayMeals.length > 0 || (dayWorkBlocks && dayWorkBlocks.length > 0);
             
             // Sort meals by type order
             const sortedMeals = [...dayMeals].sort((a, b) => {
@@ -762,6 +763,21 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
                           );
                         });
                       })()}
+                      {/* Work Blocks */}
+                      {dayWorkBlocks && dayWorkBlocks.length > 0 && showWorkBlocks && (
+                        <div className="space-y-1 mb-3">
+                          {dayWorkBlocks.map((wb: any) => (
+                            <div key={wb.id} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                              <span className="text-sm">💼</span>
+                              <div className="flex-1">
+                                <span className="text-xs font-semibold text-amber-800">{wb.user.firstName} working</span>
+                                <span className="text-xs text-amber-600 ml-1">{wb.startTime} – {wb.endTime}</span>
+                                {wb.note && <span className="text-xs text-amber-500 ml-1">· {wb.note}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {/* Drive Blocks */}
                       {(() => {
                         const driveBlocks = getDriveBlocksForDay(daySubevents, dayActivities);
@@ -1184,6 +1200,52 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+    {/* Add Work Block Modal */}
+      {showAddWorkBlock && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+            <h3 className="font-bold text-gray-900 text-lg mb-4">💼 Add Work Hours</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Date</label>
+                <input type="date" value={workBlockForm.date}
+                  onChange={e => setWorkBlockForm(f => ({ ...f, date: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Start</label>
+                  <input type="time" value={workBlockForm.startTime}
+                    onChange={e => setWorkBlockForm(f => ({ ...f, startTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">End</label>
+                  <input type="time" value={workBlockForm.endTime}
+                    onChange={e => setWorkBlockForm(f => ({ ...f, endTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Note (optional)</label>
+                <input type="text" placeholder="e.g. Client calls, Deep work" value={workBlockForm.note}
+                  onChange={e => setWorkBlockForm(f => ({ ...f, note: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowAddWorkBlock(false)}
+                className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+                Cancel
+              </button>
+              <button onClick={handleAddWorkBlock}
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold transition">
+                Save Work Hours
+              </button>
             </div>
           </div>
         </div>

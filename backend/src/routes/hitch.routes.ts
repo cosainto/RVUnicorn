@@ -261,4 +261,69 @@ router.get('/preferences', authenticateToken, async (req: Request, res: Response
   } catch { res.status(500).json({ error: 'Failed' }); }
 });
 
+
+router.post('/drive-debrief', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const {
+      grade = 'B',
+      driveHours = 0,
+      stopMins = 0,
+      breakCount = 0,
+      longestStretchHours = 0,
+      fatigueScore = 0,
+      alertnessChecks = [],
+      timeOfDay = '',
+    } = req.body;
+
+    const userId = (req as any).userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true },
+    });
+    const name = user?.firstName || 'driver';
+
+    const gradeDescriptions: Record<string, string> = {
+      A: 'outstanding — regular breaks, no late-night driving, fatigue well managed',
+      B: 'solid with only minor lapses in break timing',
+      C: 'had one long stretch or some late-night driving that added fatigue risk',
+      D: 'included unsafe patterns — long stretches without stopping or critically high fatigue',
+    };
+
+    const prompt = [
+      `You are Hitch, the RVUnicorn co-pilot AI. Give a warm, personal safety debrief to ${name} for their drive.`,
+      `Drive stats: ${driveHours} hours total, ${stopMins} min in breaks, ${breakCount} stops, longest stretch ${longestStretchHours}h, fatigue score at exit ${fatigueScore}/100.`,
+      `Drive grade: ${grade} — ${gradeDescriptions[grade] || 'unknown'}.`,
+      alertnessChecks.length > 0
+        ? `Alertness checks: ${JSON.stringify(alertnessChecks.slice(-5))}.`
+        : '',
+      timeOfDay ? `They drove during: ${timeOfDay}.` : '',
+      `Give exactly 3 sentences: (1) acknowledge their grade warmly and specifically, (2) one concrete observation about their break pattern, (3) one specific actionable tip for their next drive.`,
+      `Keep it friendly, brief, and personal. Do not use bullet points or headers. Do not repeat the grade letter.`,
+    ].filter(Boolean).join(' ');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    const data = await response.json() as any;
+    const debrief = data?.content?.[0]?.text || 'Great drive! Remember to keep breaks consistent on your next trip.';
+
+    res.json({ grade, debrief });
+  } catch (err) {
+    console.error('drive-debrief error:', err);
+    res.status(500).json({ grade: 'B', debrief: 'Great drive! Remember to rest well before your next trip.' });
+  }
+});
+
+
 export default router;

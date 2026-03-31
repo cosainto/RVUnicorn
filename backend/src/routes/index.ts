@@ -24,6 +24,7 @@ import tripCommentsRoutes from './trip-comments.routes';
 import mediaAlbumsRoutes from './media-albums.routes';
 import campgroundMessagingRoutes from "./campground-messaging.routes";
 import calendarRoutes from './calendar.routes';
+import driveSessionsRoutes from './drive-sessions.routes';
 
 dotenv.config();
 

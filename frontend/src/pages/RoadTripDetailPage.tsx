@@ -50,8 +50,9 @@ export default function RoadTripDetailPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [campgroundResults, setCampgroundResults] = useState<any[]>([]);
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
+  const [harvestHostResults, setHarvestHostResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const [stopTab, setStopTab] = useState<'events' | 'campgrounds' | 'wishlist'>('events');
+  const [stopTab, setStopTab] = useState<'events' | 'campgrounds' | 'wishlist' | 'harvest'>('events');
   const [driveInfos, setDriveInfos] = useState<Record<string, DriveInfo>>({});
   const [loadingDrive, setLoadingDrive] = useState(false); // kept for reorder flow only
   const [generatingPlans, setGeneratingPlans] = useState(false);
@@ -197,6 +198,30 @@ export default function RoadTripDetailPage() {
       });
       await addStop(newEvent.id);
     } catch { alert('Failed to create stop from campground'); }
+  };
+
+  const searchHarvestHosts = async (q: string) => {
+    if (!q || q.length < 2) { setHarvestHostResults([]); return; }
+    setSearching(true);
+    try {
+      const { data } = await api.get(`/harvest-hosts?search=${encodeURIComponent(q)}&limit=10`);
+      setHarvestHostResults(data?.hosts || data || []);
+    } catch { setHarvestHostResults([]); }
+    setSearching(false);
+  };
+
+  const addHarvestHostStop = async (host: any) => {
+    try {
+      const { data: newEvent } = await api.post('/events', {
+        title: host.name,
+        location: host.city ? `${host.city}, ${host.state}` : (host.state || host.address || ''),
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        isWishlist: true,
+        description: `🍇 Harvest Host stay at ${host.name}${host.hostType ? ' (' + host.hostType + ')' : ''}`,
+      });
+      await addStop(newEvent.id);
+    } catch { alert('Failed to create Harvest Host stop'); }
   };
 
   const removeStop = (stop: any) => {
@@ -927,10 +952,17 @@ export default function RoadTripDetailPage() {
                   className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-4">
-                {(['events', 'campgrounds', 'wishlist'] as const).map(tab => (
-                  <button key={tab} onClick={() => { setStopTab(tab); setSearchQuery(''); setSearchResults([]); setCampgroundResults([]); if (tab === 'wishlist') loadWishlist(); }}
+                {(['events', 'campgrounds', 'harvest', 'wishlist'] as const).map(tab => (
+                  <button key={tab} onClick={() => {
+                    setStopTab(tab);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setCampgroundResults([]);
+                    setHarvestHostResults([]);
+                    if (tab === 'wishlist') loadWishlist();
+                  }}
                     className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${stopTab === tab ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {tab === 'events' ? '📅 My Events' : tab === 'campgrounds' ? '🏕️ Campgrounds' : '🧞 Wishlist'}
+                    {tab === 'events' ? '📅 Events' : tab === 'campgrounds' ? '🏕️ Camps' : tab === 'harvest' ? '🍇 Harvest' : '🧞 Wishlist'}
                   </button>
                 ))}
               </div>
@@ -938,8 +970,13 @@ export default function RoadTripDetailPage() {
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input value={searchQuery}
-                    onChange={e => { setSearchQuery(e.target.value); stopTab === 'events' ? searchEvents(e.target.value) : searchCampgrounds(e.target.value); }}
-                    placeholder={stopTab === 'events' ? 'Search your events...' : 'Search campgrounds...'}
+                    onChange={e => {
+                      setSearchQuery(e.target.value);
+                      if (stopTab === 'events') searchEvents(e.target.value);
+                      else if (stopTab === 'campgrounds') searchCampgrounds(e.target.value);
+                      else if (stopTab === 'harvest') searchHarvestHosts(e.target.value);
+                    }}
+                    placeholder={stopTab === 'events' ? 'Search your events...' : stopTab === 'campgrounds' ? 'Search campgrounds...' : 'Search Harvest Hosts, wineries, farms...'}
                     className="input w-full pl-9" autoFocus />
                 </div>
               )}
@@ -972,6 +1009,25 @@ export default function RoadTripDetailPage() {
                   ))}
                   {!searchQuery && <p className="text-sm text-gray-400 text-center py-4">Search any campground to add as a stop</p>}
                   {searchQuery && !searching && campgroundResults.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No campgrounds found</p>}
+                </div>
+              )}
+              {stopTab === 'harvest' && (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {harvestHostResults.map((host: any) => (
+                    <button key={host.id} onClick={() => addHarvestHostStop(host)}
+                      className="w-full text-left p-3 rounded-xl border border-green-200 hover:border-green-300 hover:bg-green-50 transition flex items-center gap-3">
+                      {host.imageUrl
+                        ? <img src={host.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        : <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 text-lg">🍇</div>
+                      }
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{host.name}</p>
+                        <p className="text-xs text-gray-500">{host.hostType && <span className="capitalize">{host.hostType} · </span>}{host.city ? `${host.city}, ` : ''}{host.state}</p>
+                      </div>
+                    </button>
+                  ))}
+                  {!searchQuery && <p className="text-sm text-gray-400 text-center py-4">Search wineries, farms, breweries and more</p>}
+                  {searchQuery && !searching && harvestHostResults.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No Harvest Hosts found</p>}
                 </div>
               )}
               {stopTab === 'wishlist' && (

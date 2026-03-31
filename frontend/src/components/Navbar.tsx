@@ -5,7 +5,7 @@ import {
   Home, Flame, MapPin, Calendar, Map, Camera, UtensilsCrossed,
   Package, Wrench, Users, UsersRound, MessageCircle, Award,
   Shield, Sparkles, Play, Briefcase, Backpack, Heart, MoreHorizontal,
-  Tent, BookOpen, Star
+  Tent, BookOpen, Star, Route
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -161,6 +161,7 @@ export default function Navbar() {
   const primaryLinks = [
     { to: '/basecamp', icon: Home, label: 'Basecamp' },
     { to: '/events', icon: Calendar, label: 'Trips' },
+    { to: '/road-trips', icon: Route, label: 'Road Trips' },
     { to: '/community', icon: Flame, label: 'Community' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
@@ -483,6 +484,7 @@ export default function Navbar() {
               <MobileLink to="/campgrounds" icon={<Tent className="w-5 h-5" />} label="Campgrounds" active={isActive('/campgrounds')} />
               <MobileLink to="/community" icon={<Flame className="w-5 h-5" />} label="Community" active={isActive('/community')} />
               <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips & Events" active={isActive('/events')} />
+              <MobileLink to="/road-trips" icon={<Route className="w-5 h-5" />} label="Road Trips" active={isActive('/road-trips')} />
               <MobileLink to="/hitch" icon={<img src="/hitch.png" className="w-5 h-5 rounded-full object-cover" alt="Hitch" />} label="Hitch" active={isActive('/hitch')} />
               <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel & Routes" active={isActive('/travel')} />
             </MobileSection>

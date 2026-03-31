@@ -40,6 +40,7 @@ model User {
   rvDescription                                   String?
   hitchPreferences                                String[]
   rvFeatures                                      String[]
+  workBlocks                                      WorkBlock[]
   rvLength                                        Int?
   rvMpg                                           Float?
   rvPhotoUrl                                      String?
@@ -318,6 +319,7 @@ model User {
   sentInvites          Invite[]             @relation("SentInvites")
   stargazingEnabled    Boolean   @default(true)
   triviaTitle         String?   
+  driveSessions           DriveSession[]
 }
 
 model Post {
@@ -627,6 +629,7 @@ model Event {
   commentMutes      EventCommentMute[]
   subevents         EventSubevent[]
   meals             EventMeal[]
+  workBlocks        WorkBlock[]
   subtabPrivacy     EventSubtabPrivacy[]
   mutedBy           MutedEntity[]
   personalPackItems PersonalPackItem[]
@@ -4304,3 +4307,36 @@ model TripStory {
   @@index([eventId])
 }
 
+
+model WorkBlock {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  date      String
+  startTime String
+  endTime   String
+  note      String?
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DriveSession {
+  id                  String   @id @default(cuid())
+  userId              String
+  startTime           DateTime @default(now())
+  endTime             DateTime?
+  totalDriveSeconds   Int      @default(0)
+  totalStopSeconds    Int      @default(0)
+  breakCount          Int      @default(0)
+  longestStretchSecs  Int      @default(0)
+  fatigueScoreAtEnd   Int      @default(0)
+  grade               String   @default("B")
+  alertnessChecks     String[] @default([])
+  eventId             String?
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventId])
+}
