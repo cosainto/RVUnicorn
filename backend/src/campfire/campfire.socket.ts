@@ -1,6 +1,8 @@
 import { Server, Socket } from 'socket.io';
 import { prisma } from '../prisma';
 
+const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
+
 export function registerCampfireSockets(io: Server) {
   const campfire = io.of('/campfire');
 
@@ -32,23 +34,30 @@ export function registerCampfireSockets(io: Server) {
         isSystem: false, isHitch: false, user: msg.user,
       });
 
-      // @Hitch mention — respond via AI
+      // @Hitch mention — conversational AI with memory
       if (/@hitch/i.test(data.content)) {
         setTimeout(async () => {
           try {
             const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
             const question = data.content.replace(/@hitch/gi, '').trim();
-            const prompt = `You are Hitch, the RVUnicorn unicorn AI co-pilot. ${user.firstName} at ${campground?.name || 'a campground'}${campground?.state ? ' in ' + campground.state : ''} asked: "${question}"
-
-Reply in 1-2 friendly sentences. Be helpful and RV-specific. Keep it under 200 chars.`;
+            if (!question) return;
+            const histKey = `campfire:${userId}`;
+            const history = hitchConversations.get(histKey) || [];
+            const ctxNote = `${user.firstName} at ${campground?.name || 'a campground'}${campground?.state ? ', ' + campground.state : ''}`;
+            history.push({ role: 'user' as const, content: `[${ctxNote}]: ${question}` });
             const res = await fetch('https://api.anthropic.com/v1/messages', {
               method: 'POST',
               headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: 'You are Hitch, the friendly unicorn AI co-pilot for RVUnicorn, a social platform for RV enthusiasts. Help RVers with: campground tips, route planning, driving safety, RV maintenance, campfire recipes, outdoor activities, weather, road conditions, and community questions. Personality: warm, encouraging, occasionally playful. Rules: keep responses to 1-3 sentences. Always be appropriate and family-friendly. If asked about anything unrelated to RV life, travel, outdoors, or community, gently redirect. Never discuss politics, violence, adult content, or anything harmful. Remember conversation context for follow-up questions.',
+                messages: history.slice(-10) }),
             });
             const aiData = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
+              history.push({ role: 'assistant', content: reply });
+              if (history.length > 20) history.splice(0, 2);
+              hitchConversations.set(histKey, history);
               const hitchMsg = await prisma.campfireMessage.create({
                 data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true },
                 include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },

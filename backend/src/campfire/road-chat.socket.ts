@@ -110,6 +110,8 @@ function reviewQ(stage: string): string {
   return opts[Math.floor(Math.random() * opts.length)];
 }
 
+const roadHitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
+
 export function registerRoadChatSockets(io: Server) {
   const roadChat = io.of('/road-chat');
   const recentMessages: string[] = [];
@@ -171,23 +173,29 @@ export function registerRoadChatSockets(io: Server) {
       recentMessages.push(`${user.firstName}: ${text}`);
       if (recentMessages.length > 20) recentMessages.shift();
 
-      // @Hitch mention in Road Chat
+      // @Hitch mention — conversational with memory
       if (/@hitch/i.test(text)) {
         setTimeout(async () => {
           try {
             const question = text.replace(/@hitch/gi, '').trim();
-            const driverCtx = activeDrivers.size > 1 ? `There are ${activeDrivers.size} RVers on the road right now.` : '';
-            const prompt = `You are Hitch, the RVUnicorn unicorn AI co-pilot. ${user!.firstName} asked while driving: "${question}"
-${driverCtx}
-Reply in 1-2 friendly sentences. Be helpful, RV-specific, and safety-conscious. Under 200 chars.`;
+            if (!question) return;
+            const histKey = `road:${user!.id}`;
+            const history = roadHitchConversations.get(histKey) || [];
+            const ctxNote = activeDrivers.size > 1 ? ` (${activeDrivers.size} RVers on road)` : ' (driving)';
+            history.push({ role: 'user' as const, content: `[${user!.firstName}${ctxNote}]: ${question}` });
             const res = await fetch('https://api.anthropic.com/v1/messages', {
               method: 'POST',
               headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: 'You are Hitch, the friendly unicorn AI co-pilot for RVUnicorn, a social platform for RV enthusiasts. Help RVers with: campground tips, route planning, driving safety, RV maintenance, campfire recipes, outdoor activities, weather, road conditions, and community questions. Personality: warm, encouraging, occasionally playful. Rules: keep responses to 1-3 sentences. Always be appropriate and family-friendly. If asked about anything unrelated to RV life, travel, outdoors, or community, gently redirect. Never discuss politics, violence, adult content, or anything harmful. Remember conversation context for follow-up questions.',
+                messages: history.slice(-10) }),
             });
             const aiData = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
+              history.push({ role: 'assistant', content: reply });
+              if (history.length > 20) history.splice(0, 2);
+              roadHitchConversations.set(histKey, history);
               roadChat.to(ROOM).emit('message:new', {
                 id: `hitch-reply-${Date.now()}`, content: `🦄 ${reply}`,
                 isSystem: false, isCharacter: true, characterName: 'Hitch',
