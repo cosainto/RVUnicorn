@@ -74,18 +74,23 @@ function isChimeWindow(): boolean {
 function scheduleChimeIn(roadChat: any, recentMessages: string[]) {
   const delay = (Math.floor(Math.random() * 12) + 8) * 60 * 1000;
   setTimeout(async () => {
-    if (!isChimeWindow() || activeDrivers.size === 0 || Date.now() - lastChimeAt < 8 * 60 * 1000) {
+    if (!isChimeWindow() || activeDrivers.size === 0 || activeDrivers.size >= 3 || Date.now() - lastChimeAt < 8 * 60 * 1000) {
       scheduleChimeIn(roadChat, recentMessages); return;
     }
     const char = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
     const msg = await generateChimeIn(char, { driverCount: activeDrivers.size, recentMessages });
     if (!msg) { scheduleChimeIn(roadChat, recentMessages); return; }
     lastChimeAt = Date.now();
+    const chimeTime = new Date();
     roadChat.to(ROOM).emit('message:new', {
       id: `chime-${Date.now()}`, content: `${char.emoji} ${msg}`, isSystem: false,
-      isCharacter: true, characterName: char.name, createdAt: new Date().toISOString(),
+      isCharacter: true, characterName: char.name, createdAt: chimeTime.toISOString(),
       user: { id: `char-${char.name}`, firstName: char.name, profilePicture: null },
     });
+    try {
+      const expiresAt = new Date(chimeTime.getTime() + 48 * 60 * 60 * 1000);
+      await prisma.roadChatLog.create({ data: { isCharacter: true, characterName: char.name, content: msg, expiresAt } });
+    } catch {}
     scheduleChimeIn(roadChat, recentMessages);
   }, delay);
 }
@@ -166,12 +171,18 @@ export function registerRoadChatSockets(io: Server) {
     socket.on('message:send', async (data: { content: string }) => {
       if (!data.content?.trim() || !user) return;
       const text = data.content.trim().slice(0, 300);
+      const msgTime = new Date();
       roadChat.to(ROOM).emit('message:new', {
         id: `msg-${Date.now()}-${user.id}`, content: text, isSystem: false,
-        createdAt: new Date().toISOString(), user: { id: user.id, firstName: user.firstName, profilePicture: user.profilePicture },
+        createdAt: msgTime.toISOString(), user: { id: user.id, firstName: user.firstName, profilePicture: user.profilePicture },
       });
       recentMessages.push(`${user.firstName}: ${text}`);
       if (recentMessages.length > 20) recentMessages.shift();
+      // Log to DB for analytics (48h expiry)
+      try {
+        const expiresAt = new Date(msgTime.getTime() + 48 * 60 * 60 * 1000);
+        await prisma.roadChatLog.create({ data: { userId: user.id, firstName: user.firstName, content: text, isCharacter: false, expiresAt } });
+      } catch {}
 
       // @Hitch mention — conversational with memory
       if (/@hitch/i.test(text)) {

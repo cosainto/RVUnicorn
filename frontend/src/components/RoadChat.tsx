@@ -22,6 +22,15 @@ const CHAR_COLORS: Record<string, string> = {
   'Ranger Rick': 'bg-green-950 border border-green-700 text-green-100',
 };
 
+function formatMsgTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (isToday) return time;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + time;
+}
+
 export default function RoadChat({ campgroundId, campgroundName, tripComplete }: RoadChatProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<RoadMessage[]>([]);
@@ -80,6 +89,7 @@ export default function RoadChat({ campgroundId, campgroundName, tripComplete }:
                 <div className={`max-w-[85%] rounded-2xl rounded-bl-sm px-3 py-2 ${cls}`}>
                   <p className="text-[10px] font-bold mb-1 opacity-70">{msg.user.firstName}</p>
                   <p className="text-sm leading-snug">{msg.content}</p>
+                  <p className="text-[10px] opacity-50 mt-1">{formatMsgTime(msg.createdAt)}</p>
                 </div>
               </div>
             );
@@ -97,6 +107,7 @@ export default function RoadChat({ campgroundId, campgroundName, tripComplete }:
                 <div className={`px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-800 text-gray-100 rounded-bl-sm'}`}>
                   {msg.content}
                 </div>
+                <p className="text-[10px] text-gray-600 px-1">{formatMsgTime(msg.createdAt)}</p>
               </div>
             </div>
           );

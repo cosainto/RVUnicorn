@@ -4340,3 +4340,17 @@ model DriveSession {
   @@index([userId])
   @@index([eventId])
 }
+
+model RoadChatLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  firstName     String?
+  isCharacter   Boolean  @default(false)
+  characterName String?
+  content       String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@index([createdAt])
+  @@index([expiresAt])
+}
