@@ -171,6 +171,34 @@ export function registerRoadChatSockets(io: Server) {
       recentMessages.push(`${user.firstName}: ${text}`);
       if (recentMessages.length > 20) recentMessages.shift();
 
+      // @Hitch mention in Road Chat
+      if (/@hitch/i.test(text)) {
+        setTimeout(async () => {
+          try {
+            const question = text.replace(/@hitch/gi, '').trim();
+            const driverCtx = activeDrivers.size > 1 ? `There are ${activeDrivers.size} RVers on the road right now.` : '';
+            const prompt = `You are Hitch, the RVUnicorn unicorn AI co-pilot. ${user!.firstName} asked while driving: "${question}"
+${driverCtx}
+Reply in 1-2 friendly sentences. Be helpful, RV-specific, and safety-conscious. Under 200 chars.`;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+            });
+            const aiData = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              roadChat.to(ROOM).emit('message:new', {
+                id: `hitch-reply-${Date.now()}`, content: `🦄 ${reply}`,
+                isSystem: false, isCharacter: true, characterName: 'Hitch',
+                createdAt: new Date().toISOString(),
+                user: { id: 'char-Hitch', firstName: 'Hitch', profilePicture: null },
+              });
+            }
+          } catch (e) { console.error('[RoadChat @Hitch] error:', e); }
+        }, 1000);
+      }
+
       const rs = reviewSessions.get(socket.id);
       if (rs && rs.stage !== 'done') {
         setTimeout(async () => {

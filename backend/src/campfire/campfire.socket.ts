@@ -31,6 +31,36 @@ export function registerCampfireSockets(io: Server) {
         id: msg.id, content: msg.content, createdAt: msg.createdAt,
         isSystem: false, isHitch: false, user: msg.user,
       });
+
+      // @Hitch mention — respond via AI
+      if (/@hitch/i.test(data.content)) {
+        setTimeout(async () => {
+          try {
+            const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
+            const question = data.content.replace(/@hitch/gi, '').trim();
+            const prompt = `You are Hitch, the RVUnicorn unicorn AI co-pilot. ${user.firstName} at ${campground?.name || 'a campground'}${campground?.state ? ' in ' + campground.state : ''} asked: "${question}"
+
+Reply in 1-2 friendly sentences. Be helpful and RV-specific. Keep it under 200 chars.`;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+            });
+            const aiData = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const hitchMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true },
+                include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: hitchMsg.id, content: hitchMsg.content, createdAt: hitchMsg.createdAt,
+                isSystem: false, isHitch: true, user: hitchMsg.user,
+              });
+            }
+          } catch (e) { console.error('[Campfire @Hitch] error:', e); }
+        }, 1000);
+      }
     });
 
 

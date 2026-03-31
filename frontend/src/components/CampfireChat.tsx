@@ -188,7 +188,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
         <input
           type="text" value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Chat with your campsite neighbors…"
+          placeholder="Chat with your campsite neighbors… · @Hitch for AI"
           disabled={!connected}
           className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:text-gray-400"
           maxLength={500}
