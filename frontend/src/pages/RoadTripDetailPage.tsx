@@ -62,6 +62,11 @@ export default function RoadTripDetailPage() {
   const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
   const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
   const [removeModalStop, setRemoveModalStop] = useState<any | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
   const [removeModalLoading, setRemoveModalLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [homeLocation, setHomeLocation] = useState<string>('');
@@ -183,7 +188,7 @@ export default function RoadTripDetailPage() {
       await loadRoadTrip();
       setShowAddStop(false);
       setSearchQuery(''); setSearchResults([]); setCampgroundResults([]);
-    } catch { alert('Failed to add stop'); }
+    } catch { showToast('Failed to add stop', 'error'); }
   };
 
   const addCampgroundStop = async (campground: any) => {
@@ -197,7 +202,7 @@ export default function RoadTripDetailPage() {
         isWishlist: true,
       });
       await addStop(newEvent.id);
-    } catch { alert('Failed to create stop from campground'); }
+    } catch { showToast('Failed to add campground stop', 'error'); }
   };
 
   const searchHarvestHosts = async (q: string) => {
@@ -221,7 +226,7 @@ export default function RoadTripDetailPage() {
         description: `🍇 Harvest Host stay at ${host.name}${host.hostType ? ' (' + host.hostType + ')' : ''}`,
       });
       await addStop(newEvent.id);
-    } catch { alert('Failed to create Harvest Host stop'); }
+    } catch { showToast('Failed to add Harvest Host stop', 'error'); }
   };
 
   const removeStop = (stop: any) => {
@@ -235,7 +240,7 @@ export default function RoadTripDetailPage() {
       await api.delete(`/road-trips/${id}/stops/${removeModalStop.id}`);
       setRemoveModalStop(null);
       await loadRoadTrip();
-    } catch { alert('Failed to remove stop'); }
+    } catch { showToast('Failed to remove stop', 'error'); }
     finally { setRemoveModalLoading(false); }
   };
 
@@ -250,7 +255,7 @@ export default function RoadTripDetailPage() {
       ]);
       setRemoveModalStop(null);
       await loadRoadTrip();
-    } catch { alert('Failed to move stop to wishlist'); }
+    } catch { showToast('Failed to move to wishlist', 'error'); }
     finally { setRemoveModalLoading(false); }
   };
 
@@ -274,7 +279,7 @@ export default function RoadTripDetailPage() {
         stopOrder: reordered.map((s: any) => ({ eventId: s.id, stopNumber: s.stopNumber }))
       });
       calculateAllDriveTimes(reordered);
-    } catch { alert('Failed to save new order'); await loadRoadTrip(); }
+    } catch { showToast('Failed to save order', 'error'); await loadRoadTrip(); }
   };
 
   const handleSaveHomeLocation = async () => {
@@ -326,7 +331,7 @@ export default function RoadTripDetailPage() {
         return updated;
       });
       setShowMpgModal(false);
-    } catch(e) { alert('Failed to save'); }
+    } catch(e) { showToast('Failed to save', 'error'); }
     setSavingMpg(false);
   };
 
@@ -349,6 +354,14 @@ export default function RoadTripDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl text-sm font-semibold shadow-lg ${
+          toast.type === 'success' ? 'bg-green-700 text-white' : 'bg-red-700 text-white'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
       {/* Hero Banner */}
       <div className={`bg-gradient-to-r ${gradient} text-white`}>
         <div className="max-w-4xl mx-auto px-4 py-10">

@@ -177,6 +177,11 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
 
   // ── Stats & Debrief ───────────────────────────────────────────────────────
   const [showStats, setShowStats] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
   const [aiDebrief, setAiDebrief] = useState('');
   const [loadingDebrief, setLoadingDebrief] = useState(false);
 
@@ -494,18 +499,17 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
   // Passenger co-pilot actions
   const passengerSuggestStop = () => {
     localStorage.setItem(LS.passengerSuggest, 'Your passenger thinks you should stop soon.');
-    alert('Stop suggestion sent to driver!');
+    showToast('Stop suggestion sent to driver 💬');
   };
 
   const passengerFlagFatigue = () => {
     localStorage.setItem(LS.passengerFlag, String(Date.now()));
-    alert('Fatigue flag sent — system sensitivity increased for 30 min.');
+    showToast('Fatigue flag sent — sensitivity increased 😴', 'info');
   };
 
   const passengerSoftOverride = () => {
-    if (window.confirm('Send a stop request to the driver? They will need to confirm.')) {
-      localStorage.setItem(LS.passengerOverride, '1');
-    }
+    localStorage.setItem(LS.passengerOverride, '1');
+    showToast('Override request sent to driver ⚡', 'info');
   };
 
   // Destination helpers
@@ -615,6 +619,17 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
           <button onClick={handleExitWithStats} className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1.5">Exit</button>
         </div>
       </div>
+
+      {/* ── Toast notification ──────────────────────────────────────────────── */}
+      {toast && (
+        <div className={`fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl text-sm font-semibold shadow-lg transition-all ${
+          toast.type === 'success' ? 'bg-green-700 text-green-100' :
+          toast.type === 'info' ? 'bg-blue-800 text-blue-100' :
+          'bg-red-800 text-red-100'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
 
       {/* ══════════════════════════ DRIVER MODE ══════════════════════════════ */}
       {role === 'driver' && (
@@ -1078,7 +1093,7 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                       </div>
                       <button onClick={() => {
                         localStorage.setItem(LS.passengerSuggest, `Passenger found a stop: ${s.name} (${s.distanceMiles} mi away)`);
-                        alert('Stop sent to driver!');
+                        showToast('Stop sent to driver! 🗺️');
                       }} className="text-xs bg-purple-700 hover:bg-purple-600 text-white px-2 py-1 rounded-lg transition">
                         Send →
                       </button>
