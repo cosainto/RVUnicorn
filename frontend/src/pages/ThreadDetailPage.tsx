@@ -258,6 +258,9 @@ export default function ThreadDetailPage() {
   const [replyContent, setReplyContent] = useState('');
   const [postImage, setPostImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [hitchLoading, setHitchLoading] = useState(false);
+  const [hitchReply, setHitchReply] = useState<string | null>(null);
+
   const [showIgnoreMenu, setShowIgnoreMenu] = useState(false);
   const [isIgnored, setIsIgnored] = useState(false);
   const [ignoreExpiresAt, setIgnoreExpiresAt] = useState<string | null>(null);
@@ -305,6 +308,16 @@ export default function ThreadDetailPage() {
       setNewPost('');
       setPostImage('');
       loadThread();
+      // @Hitch mention — get AI reply
+      if (/@hitch/i.test(newPost)) {
+        setHitchLoading(true);
+        try {
+          const question = newPost.replace(/@hitch/gi, '').trim();
+          const res = await api.post('/hitch/quick-message', { message: `Community thread question: "${question}"\n\nReply helpfully in 1-3 sentences about RV life, travel, or camping.` });
+          setHitchReply(res.data?.response || res.data?.message || '');
+          setTimeout(() => setHitchReply(null), 15000);
+        } catch {} finally { setHitchLoading(false); }
+      }
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to post');
     } finally {

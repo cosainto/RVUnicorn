@@ -83,6 +83,9 @@ export default function MyRVPage() {
   const [saving, setSaving] = useState(false);
   const [coOwners, setCoOwners] = useState<any[]>([]);
   const [coOwnerSearch, setCoOwnerSearch] = useState('');
+  const [driveHistory, setDriveHistory] = useState<any[]>([]);
+  const [loadingDrives, setLoadingDrives] = useState(false);
+
   const [coOwnerResults, setCoOwnerResults] = useState<any[]>([]);
   const [coOwnerSearching, setCoOwnerSearching] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
@@ -274,6 +277,18 @@ export default function MyRVPage() {
 
     } catch (e: any) { alert(e.response?.data?.error || 'Failed to add co-owner'); }
   };
+
+  useEffect(() => {
+    const fetchDrives = async () => {
+      setLoadingDrives(true);
+      try {
+        const { data } = await api.get('/drive-sessions');
+        setDriveHistory(data.sessions || []);
+      } catch {}
+      setLoadingDrives(false);
+    };
+    fetchDrives();
+  }, []);
 
   const removeCoOwner = async (coOwnerId: string) => {
     if (!confirm('Remove this co-owner?')) return;
@@ -863,6 +878,41 @@ export default function MyRVPage() {
       {/* Custom Enhancements */}
       <RvEnhancements />
 
+
+      {/* Drive History */}
+      {driveHistory.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">🛡️ Guardian Mode — Drive History</h3>
+          <div className="space-y-3">
+            {driveHistory.slice(0, 5).map((session: any) => {
+              const gradeColor = session.grade === 'A' ? 'text-green-600 bg-green-50 border-green-200'
+                : session.grade === 'B' ? 'text-blue-600 bg-blue-50 border-blue-200'
+                : session.grade === 'C' ? 'text-yellow-600 bg-yellow-50 border-yellow-200'
+                : 'text-red-600 bg-red-50 border-red-200';
+              const driveHrs = (session.totalDriveSeconds / 3600).toFixed(1);
+              const stopMins = Math.round(session.totalStopSeconds / 60);
+              const date = new Date(session.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              return (
+                <div key={session.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border-2 flex-shrink-0 ${gradeColor}`}>
+                    {session.grade}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{date}</p>
+                    <p className="text-xs text-gray-500">{driveHrs}h driven · {stopMins}min breaks · {session.breakCount} stop{session.breakCount !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-gray-400">Fatigue</p>
+                    <p className={`text-sm font-bold ${session.fatigueScoreAtEnd >= 76 ? 'text-red-500' : session.fatigueScoreAtEnd >= 51 ? 'text-orange-500' : session.fatigueScoreAtEnd >= 26 ? 'text-yellow-500' : 'text-green-500'}`}>
+                      {session.fatigueScoreAtEnd}/100
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Save Button */}
       <div className="flex justify-end">
