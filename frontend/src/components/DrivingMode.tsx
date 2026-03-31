@@ -510,23 +510,82 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
 
   // Destination helpers
   const dest = nextEvent?.campground;
-  // Deep link helpers — try native app first, fall back to web
-  const openWaze = dest?.latitude ? () => {
-    const native = `waze://ul?ll=${dest.latitude},${dest.longitude}&navigate=yes`;
-    const web    = `https://waze.com/ul?ll=${dest.latitude},${dest.longitude}&navigate=yes`;
-    const a = document.createElement('a'); a.href = native; a.click();
-    setTimeout(() => { window.open(web, '_blank'); }, 1500);
-  } : null;
+  const GMAPS_KEY = 'AIzaSyDjozGrpxhprpPOF2aktbZi051sDyqTXSk';
+  const [showInlineMap, setShowInlineMap] = useState(false);
+  const [userGeoStr, setUserGeoStr] = useState('current+location');
+  const [roadTripStops, setRoadTripStops] = useState<Array<{ id: string; title: string; latitude?: number; longitude?: number; stopNumber?: number }>>([]);
 
-  const openGoogle = dest?.latitude ? () => {
-    const native = `comgooglemaps://?daddr=${dest.latitude},${dest.longitude}&directionsmode=driving`;
-    const web    = `https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}&travelmode=driving`;
-    const a = document.createElement('a'); a.href = native; a.click();
-    setTimeout(() => { window.open(web, '_blank'); }, 1500);
-  } : null;
+  // Get current GPS position for map origin
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setUserGeoStr(`${pos.coords.latitude},${pos.coords.longitude}`),
+        () => setUserGeoStr('current+location'),
+        { timeout: 5000 }
+      );
+    }
+  }, []);
 
-  const navUrl    = dest?.latitude ? `waze://ul?ll=${dest.latitude},${dest.longitude}&navigate=yes` : null;
-  const googleUrl = dest?.latitude ? `https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}&travelmode=driving` : null;
+  // Fetch road trip stops for this event so we can build a multi-waypoint route
+  useEffect(() => {
+    if (!nextEvent?.id) return;
+    const fetchStops = async () => {
+      try {
+        // Check if this event is part of a road trip
+        const res = await api.get(`/events/${nextEvent.id}`);
+        const ev = res.data;
+        if (!ev?.roadTripId) return;
+        // Fetch all stops for this road trip
+        const rtRes = await api.get(`/road-trips/${ev.roadTripId}`);
+        const stops = rtRes.data?.stops || [];
+        // Map each stop to lat/lng via its campground
+        const withCoords = stops
+          .filter((s: any) => s.campground?.latitude && s.campground?.longitude)
+          .map((s: any) => ({
+            id: s.id,
+            title: s.campground?.name || s.title,
+            latitude: s.campground.latitude,
+            longitude: s.campground.longitude,
+            stopNumber: s.stopNumber,
+          }))
+          .sort((a: any, b: any) => (a.stopNumber || 0) - (b.stopNumber || 0));
+        if (withCoords.length > 0) setRoadTripStops(withCoords);
+      } catch {
+        // Not a road trip event or fetch failed — single destination fallback
+      }
+    };
+    fetchStops();
+  }, [nextEvent?.id]);
+
+  // Build Google Maps embed URL — multi-waypoint if road trip, single dest otherwise
+  const buildMapUrl = () => {
+    if (roadTripStops.length > 1) {
+      // Multi-stop route: origin → waypoints → final destination
+      const stops = roadTripStops;
+      const destination = `${stops[stops.length - 1].latitude},${stops[stops.length - 1].longitude}`;
+      const waypoints = stops.slice(0, -1).map(s => `${s.latitude},${s.longitude}`).join('|');
+      return `https://www.google.com/maps/embed/v1/directions?key=${GMAPS_KEY}&origin=${userGeoStr}&destination=${destination}&waypoints=${encodeURIComponent(waypoints)}&mode=driving`;
+    }
+    if (dest?.latitude) {
+      return `https://www.google.com/maps/embed/v1/directions?key=${GMAPS_KEY}&origin=${userGeoStr}&destination=${dest.latitude},${dest.longitude}&mode=driving`;
+    }
+    return null;
+  };
+
+  const inlineMapUrl = buildMapUrl();
+  const wazeUrl = (() => {
+    if (roadTripStops.length > 0) {
+      // Waze to next unvisited stop (first stop in list)
+      const next = roadTripStops[0];
+      return `https://waze.com/ul?ll=${next.latitude},${next.longitude}&navigate=yes`;
+    }
+    return dest?.latitude ? `https://waze.com/ul?ll=${dest.latitude},${dest.longitude}&navigate=yes` : null;
+  })();
+
+  // Map label
+  const mapStopLabel = roadTripStops.length > 1
+    ? `${roadTripStops.length}-stop Road Trip Route`
+    : dest?.name || 'Destination';
 
   // Drive grade helper (used in two places)
   const getDriveGrade = () =>
@@ -649,16 +708,13 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                   View Stops
                 </button>
                 {nearbyStops[0]?.latitude && (
-                  <button onClick={() => {
-                    const s = nearbyStops[0];
-                    const native = `waze://ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
-                    const web = `https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
-                    const a = document.createElement('a'); a.href = native; a.click();
-                    setTimeout(() => window.open(web, '_blank'), 1500);
-                  }}
-                    className="flex-1 py-2 bg-blue-700 hover:bg-blue-600 rounded-xl text-xs font-bold text-center transition">
-                    Navigate →
-                  </button>
+                  <a
+                    href={`https://waze.com/ul?ll=${nearbyStops[0].latitude},${nearbyStops[0].longitude}&navigate=yes`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex-1 py-2 bg-blue-700 hover:bg-blue-600 rounded-xl text-xs font-bold text-center transition"
+                  >
+                    Waze →
+                  </a>
                 )}
               </div>
             </div>
@@ -725,17 +781,20 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
               <p className="text-xs text-gray-500 mb-2">Destination</p>
               <p className="font-bold text-lg mb-3">{dest.name}</p>
               <div className="grid grid-cols-2 gap-2">
-                {openWaze && (
-                  <button onClick={openWaze}
-                    className="flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold transition">
-                    <Navigation className="w-4 h-4" /> Waze
+                {inlineMapUrl && (
+                  <button
+                    onClick={() => setShowInlineMap(v => !v)}
+                    className="flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold transition"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    {showInlineMap ? 'Hide Map' : roadTripStops.length > 1 ? `Show ${roadTripStops.length}-Stop Route` : 'Show Route Map'}
                   </button>
                 )}
-                {openGoogle && (
-                  <button onClick={openGoogle}
-                    className="flex items-center justify-center gap-2 py-3 bg-blue-800 hover:bg-blue-900 rounded-xl text-sm font-bold transition">
-                    <MapPin className="w-4 h-4" /> Google Maps
-                  </button>
+                {wazeUrl && (
+                  <a href={wazeUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-bold transition">
+                    <span className="text-base">🗺️</span> Open Waze
+                  </a>
                 )}
                 {dest.phone && (
                   <a href={`tel:${dest.phone}`}
@@ -744,6 +803,26 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                   </a>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ── Inline Route Map ────────────────────────────────────────── */}
+          {showInlineMap && inlineMapUrl && (
+            <div className="rounded-2xl overflow-hidden border border-blue-700">
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800">
+                <p className="text-xs text-gray-400 font-medium">🗺️ {mapStopLabel}</p>
+                <button onClick={() => setShowInlineMap(false)} className="text-gray-500 hover:text-gray-300 text-xs">✕</button>
+              </div>
+              <iframe
+                src={inlineMapUrl}
+                width="100%"
+                height="320"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Route Map"
+              />
             </div>
           )}
 
@@ -827,12 +906,11 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                         <p className="text-xs text-gray-500">{s.category} · {s.distanceMiles} mi</p>
                       </div>
                       {s.latitude && (
-                        <button onClick={() => {
-                          const native = `waze://ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
-                          const web = `https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
-                          const a = document.createElement('a'); a.href = native; a.click();
-                          setTimeout(() => window.open(web, '_blank'), 1500);
-                        }} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg transition">Go →</button>
+                        <a
+                          href={`https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg transition"
+                        >Waze →</a>
                       )}
                     </div>
                   ))}
@@ -1023,11 +1101,36 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
               <p className="text-xs text-gray-500 mb-1">Heading to</p>
               <p className="font-bold">{nextEvent.campground?.name || nextEvent.title}</p>
-              {openWaze && (
-                <button onClick={openWaze}
-                  className="mt-3 flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
-                  <Navigation className="w-4 h-4" /> Open Navigation
-                </button>
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                {inlineMapUrl && (
+                  <button
+                    onClick={() => setShowInlineMap(v => !v)}
+                    className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    {showInlineMap ? 'Hide Map' : 'Show Route Map'}
+                  </button>
+                )}
+                {wazeUrl && (
+                  <a href={wazeUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200">
+                    🗺️ Open Waze
+                  </a>
+                )}
+              </div>
+              {showInlineMap && inlineMapUrl && (
+                <div className="mt-3 rounded-xl overflow-hidden border border-gray-700">
+                  <iframe
+                    src={inlineMapUrl}
+                    width="100%"
+                    height="260"
+                    style={{ border: 0, display: 'block' }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Route Map"
+                  />
+                </div>
               )}
             </div>
           )}
