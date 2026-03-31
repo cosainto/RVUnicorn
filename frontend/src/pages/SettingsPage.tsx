@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -331,6 +332,39 @@ export default function SettingsPage() {
               {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save</>}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* ── Push Notifications ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Push Notifications</h2>
+          {subscribed && <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Enabled</span>}
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-500 mb-4">Get notified about friend requests, messages, trip updates, and campfire activity — even when the app is closed.</p>
+          {permission === 'denied' ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+              <p className="font-semibold mb-1">Notifications blocked</p>
+              <p className="text-amber-600">Click the lock icon in your browser address bar and allow notifications for this site.</p>
+            </div>
+          ) : subscribed ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Push notifications are on</p>
+                <p className="text-xs text-gray-400">You'll receive alerts even when the app is closed</p>
+              </div>
+              <button onClick={unsubscribe} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Turn Off</button>
+            </div>
+          ) : (
+            <button onClick={subscribe} disabled={pushLoading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition">
+              {pushLoading
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Enabling...</>
+                : <><Bell className="w-4 h-4" />Enable Push Notifications</>}
+            </button>
+          )}
         </div>
       </div>
 
