@@ -179,6 +179,15 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
   // ── Stats & Debrief ───────────────────────────────────────────────────────
   const [showStats, setShowStats] = useState(false);
   const [showRoadChat, setShowRoadChat] = useState(role === 'passenger');
+  const [showSpendNight, setShowSpendNight] = useState(false);
+  const [showEmergency, setShowEmergency] = useState(false);
+  const [spendNightSpots, setSpendNightSpots] = useState<any[]>([]);
+  const [loadingSpendNight, setLoadingSpendNight] = useState(false);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [alertSent, setAlertSent] = useState(false);
+  const [userGps, setUserGps] = useState<{lat: number; lng: number} | null>(null);
+
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -377,6 +386,48 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
       doFetch(nextEvent?.campground?.latitude || 39.5, nextEvent?.campground?.longitude || -98.35);
     }
   }, [nextEvent]);
+
+  const loadSpendNightSpots = useCallback(async () => {
+    setLoadingSpendNight(true);
+    const doFetch = async (lat: number, lng: number) => {
+      setUserGps({ lat, lng });
+      try {
+        const { data } = await api.get(`/overnight-spots/near?lat=${lat}&lng=${lng}&radius=50&limit=10`);
+        setSpendNightSpots(data || []);
+      } catch {}
+      setLoadingSpendNight(false);
+    };
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => doFetch(pos.coords.latitude, pos.coords.longitude),
+        () => doFetch(nextEvent?.campground?.latitude || 39.5, nextEvent?.campground?.longitude || -98.35),
+        { timeout: 5000 }
+      );
+    } else {
+      doFetch(nextEvent?.campground?.latitude || 39.5, nextEvent?.campground?.longitude || -98.35);
+    }
+  }, [nextEvent]);
+
+  const loadFriends = useCallback(async () => {
+    try {
+      const { data } = await api.get('/friendship?status=accepted&limit=20');
+      setFriends(data?.friends || data || []);
+    } catch {}
+  }, []);
+
+  const sendOvernightAlert = async (spot: any) => {
+    if (selectedFriends.length === 0) return;
+    try {
+      await api.post('/notifications/bulk', {
+        userIds: selectedFriends,
+        type: 'DRIVE_OVERNIGHT_ALERT',
+        title: 'Safe for the night 🏕️',
+        message: `is spending the night at ${spot.name}. They wanted you to know they are safe.`,
+      });
+      setAlertSent(true);
+      setTimeout(() => { setAlertSent(false); setShowSpendNight(false); setSelectedFriends([]); }, 2000);
+    } catch {}
+  };
 
   // Cache safety data on drive start for offline use
   useEffect(() => {
@@ -855,7 +906,7 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
           )}
 
           {/* ── Quick actions ────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button onClick={isStopped ? handleResumeDriving : handleStopDriving}
               className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition ${
                 isStopped ? 'bg-green-900 border-green-700 hover:bg-green-800' : 'bg-gray-900 border-gray-800 hover:bg-gray-800'
@@ -868,11 +919,16 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
               <RotateCcw className="w-6 h-6 text-blue-400" />
               <span className="text-xs text-gray-400">Switch Driver</span>
             </button>
-            <a href="tel:18008472869"
+            <button onClick={() => { setShowSpendNight(true); loadSpendNightSpots(); loadFriends(); }}
               className="flex flex-col items-center gap-2 py-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-800 transition">
+              <span className="text-2xl">🌙</span>
+              <span className="text-xs text-gray-400">Spend Night</span>
+            </button>
+            <button onClick={() => setShowEmergency(true)}
+              className="flex flex-col items-center gap-2 py-4 bg-red-950 hover:bg-red-900 rounded-2xl border border-red-800 transition">
               <AlertTriangle className="w-6 h-6 text-red-400" />
-              <span className="text-xs text-gray-400">Roadside</span>
-            </a>
+              <span className="text-xs text-red-400">Emergency</span>
+            </button>
           </div>
 
           {/* ── Road Chat (driver — collapsed by default for safety) ──────── */}
@@ -1217,10 +1273,137 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
           <div className="bg-red-950 rounded-2xl p-4 border border-red-800 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-red-300">Emergency?</p>
-              <p className="text-xs text-red-500">Good Sam · Coach-Net</p>
+              <p className="text-xs text-red-500">Good Sam · Coach-Net · 911</p>
             </div>
-            <a href="tel:911" className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-bold transition">
-              Call 911
+            <button onClick={() => setShowEmergency(true)} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-bold transition">
+              Open
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Spend the Night Modal ───────────────────────────────────────────── */}
+      {showSpendNight && (
+        <div className="fixed inset-0 bg-black/85 z-50 flex flex-col">
+          <div className="flex items-center justify-between px-4 pt-6 pb-4 border-b border-gray-800">
+            <div>
+              <p className="text-lg font-bold text-white">🌙 Spend the Night</p>
+              <p className="text-xs text-gray-400">Free overnight spots within 50 miles</p>
+            </div>
+            <button onClick={() => { setShowSpendNight(false); setSelectedFriends([]); setAlertSent(false); }} className="text-gray-500 hover:text-gray-300">✕</button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {loadingSpendNight ? (
+              <div className="text-center py-12 text-gray-500">Finding spots near you...</div>
+            ) : spendNightSpots.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">No spots found nearby</div>
+            ) : spendNightSpots.map(spot => (
+              <div key={spot.id} className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <p className="font-bold text-white text-sm">{spot.name}</p>
+                    <p className="text-xs text-gray-400">{spot.category} · {spot.distanceMiles} mi away</p>
+                    {spot.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{spot.description}</p>}
+                  </div>
+                  {spot.latitude && (
+                    <a href={`https://waze.com/ul?ll=${spot.latitude},${spot.longitude}&navigate=yes`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex-shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition">Navigate</a>
+                  )}
+                </div>
+                {/* Friend alert */}
+                {friends.length > 0 && (
+                  <div className="border-t border-gray-800 pt-3">
+                    <p className="text-xs text-gray-400 mb-2">Alert friends you're safe here:</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {friends.slice(0, 8).map((f: any) => (
+                        <button key={f.id || f.userId}
+                          onClick={() => {
+                            const fid = f.id || f.userId;
+                            setSelectedFriends(prev => prev.includes(fid) ? prev.filter(x => x !== fid) : [...prev, fid]);
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition ${
+                            selectedFriends.includes(f.id || f.userId) ? 'bg-green-700 text-green-100' : 'bg-gray-800 text-gray-300'
+                          }`}>
+                          {f.profilePicture
+                            ? <img src={f.profilePicture} className="w-4 h-4 rounded-full object-cover" alt="" />
+                            : <span className="text-xs">{(f.firstName || '?')[0]}</span>
+                          }
+                          {f.firstName}
+                        </button>
+                      ))}
+                    </div>
+                    {selectedFriends.length > 0 && (
+                      <button onClick={() => sendOvernightAlert(spot)}
+                        className={`w-full py-2.5 rounded-xl text-sm font-bold transition ${
+                          alertSent ? 'bg-green-700 text-green-100' : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}>
+                        {alertSent ? '✅ Alert Sent!' : `Send Safety Alert to ${selectedFriends.length} friend${selectedFriends.length !== 1 ? 's' : ''}`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Emergency Modal ──────────────────────────────────────────────────── */}
+      {showEmergency && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col">
+          <div className="flex items-center justify-between px-4 pt-6 pb-4">
+            <p className="text-xl font-black text-red-400">🚨 Emergency</p>
+            <button onClick={() => setShowEmergency(false)} className="text-gray-500 hover:text-gray-300 text-lg">✕</button>
+          </div>
+          <div className="flex-1 px-4 space-y-3">
+            {/* 911 */}
+            <a href="tel:911" className="flex items-center justify-between w-full p-5 bg-red-600 hover:bg-red-700 rounded-2xl transition">
+              <div>
+                <p className="text-2xl font-black text-white">Call 911</p>
+                <p className="text-sm text-red-200">Police · Fire · Ambulance</p>
+              </div>
+              <span className="text-4xl">📞</span>
+            </a>
+            {/* Find nearest police */}
+            {userGps && (
+              <a href={`https://www.google.com/maps/search/police+station/@${userGps.lat},${userGps.lng},13z`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between w-full p-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-700 transition">
+                <div>
+                  <p className="font-bold text-white">Find Nearest Police</p>
+                  <p className="text-xs text-gray-400">Opens Google Maps</p>
+                </div>
+                <span className="text-2xl">👮</span>
+              </a>
+            )}
+            {/* Find nearest fire */}
+            {userGps && (
+              <a href={`https://www.google.com/maps/search/fire+station/@${userGps.lat},${userGps.lng},13z`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between w-full p-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-700 transition">
+                <div>
+                  <p className="font-bold text-white">Find Nearest Fire Station</p>
+                  <p className="text-xs text-gray-400">Opens Google Maps</p>
+                </div>
+                <span className="text-2xl">🚒</span>
+              </a>
+            )}
+            {/* Good Sam */}
+            <a href="tel:18008472869" className="flex items-center justify-between w-full p-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-700 transition">
+              <div>
+                <p className="font-bold text-white">Good Sam Roadside</p>
+                <p className="text-xs text-gray-400">1-800-847-2869</p>
+              </div>
+              <span className="text-2xl">🛻</span>
+            </a>
+            {/* Coach-Net */}
+            <a href="tel:18008632428" className="flex items-center justify-between w-full p-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-700 transition">
+              <div>
+                <p className="font-bold text-white">Coach-Net Roadside</p>
+                <p className="text-xs text-gray-400">1-800-863-2428</p>
+              </div>
+              <span className="text-2xl">🔧</span>
             </a>
           </div>
         </div>
