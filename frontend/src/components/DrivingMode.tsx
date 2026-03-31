@@ -178,7 +178,7 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
 
   // ── Stats & Debrief ───────────────────────────────────────────────────────
   const [showStats, setShowStats] = useState(false);
-  const [showRoadChat, setShowRoadChat] = useState(false);
+  const [showRoadChat, setShowRoadChat] = useState(role === 'passenger');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ msg, type });
