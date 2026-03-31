@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Navigation, Fuel, AlertTriangle, RotateCcw, MapPin, Phone, Bell, Shield } from 'lucide-react';
 import api from '../services/api';
+import RoadChat from './RoadChat';
 import { useAuth } from '../contexts/AuthContext';
 
 // ── Fatigue images (Cloudinary) ───────────────────────────────────────────────
@@ -177,6 +178,7 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
 
   // ── Stats & Debrief ───────────────────────────────────────────────────────
   const [showStats, setShowStats] = useState(false);
+  const [showRoadChat, setShowRoadChat] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -873,6 +875,26 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             </a>
           </div>
 
+          {/* ── Road Chat (driver — collapsed by default for safety) ──────── */}
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+            <button
+              onClick={() => setShowRoadChat(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span>🚐</span>
+                <p className="text-sm font-bold text-white">Road Chat</p>
+                <span className="text-xs text-amber-500 font-semibold">Passenger use recommended</span>
+              </div>
+              <span className="text-gray-500 text-xs">{showRoadChat ? '▲' : '▼'}</span>
+            </button>
+            {showRoadChat && (
+              <div style={{ height: 340 }}>
+                <RoadChat />
+              </div>
+            )}
+          </div>
+
           {/* ── Stop Planner Modal ───────────────────────────────────────── */}
           {showStopPlanner && (
             <div className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4">
@@ -1149,6 +1171,26 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
               )}
             </div>
           )}
+
+          {/* ── Road Chat ────────────────────────────────────────────────── */}
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+            <button
+              onClick={() => setShowRoadChat(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🚐</span>
+                <p className="text-sm font-bold text-white">Road Chat</p>
+                <span className="text-xs text-gray-500">All drivers on RVUnicorn</span>
+              </div>
+              <span className="text-gray-500 text-xs">{showRoadChat ? '▲' : '▼'}</span>
+            </button>
+            {showRoadChat && (
+              <div style={{ height: 380 }}>
+                <RoadChat />
+              </div>
+            )}
+          </div>
 
           {/* ── Entertainment ────────────────────────────────────────────── */}
           <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">

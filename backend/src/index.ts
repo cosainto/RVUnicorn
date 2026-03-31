@@ -114,6 +114,7 @@ import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { updateGasPrices } from "./cron/gas-price-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
+import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 
 
@@ -287,6 +288,7 @@ app.get('/health', (req, res) => {
 
 
 registerCampfireSockets(io);
+registerRoadChatSockets(io);
 registerTriviaCrons(io);
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
