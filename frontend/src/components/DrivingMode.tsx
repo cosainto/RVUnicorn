@@ -97,6 +97,7 @@ interface DrivingModeProps {
   nextEvent?: { title: string; campground?: { name: string; latitude?: number; longitude?: number; phone?: string } } | null;
   rvMpg?: number;
   onExit: () => void;
+  onMinimize?: () => void;
 }
 
 // ── localStorage key constants ────────────────────────────────────────────────
@@ -115,7 +116,7 @@ const LS = {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
+export default function DrivingMode({ nextEvent, onExit, onMinimize }: DrivingModeProps) {
   useAuth(); // session context
 
   // ── Core session ──────────────────────────────────────────────────────────
@@ -669,6 +670,14 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
           >
             {role === 'driver' ? '🚐 Driver' : '🗺️ Passenger'}
           </button>
+          {onMinimize && (role === 'passenger' || isStopped) && (
+            <button
+              onClick={onMinimize}
+              className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition"
+            >
+              ← Basecamp
+            </button>
+          )}
           <button onClick={handleExitWithStats} className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1.5">Exit</button>
         </div>
       </div>

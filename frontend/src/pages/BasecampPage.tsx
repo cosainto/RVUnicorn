@@ -997,7 +997,37 @@ export default function BasecampPage({ user }: BasecampProps) {
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
   const isCamping  = !!activeCheckIn;
   const [isDriving, setIsDriving] = useState(() => localStorage.getItem('rvunicorn_driving') === 'true');
+  const [drivingMinimized, setDrivingMinimized] = useState(false);
+  const [proximityAlertShown, setProximityAlertShown] = useState(false);
+  const [proximityToast, setProximityToast] = useState(false);
+
   const isPlanning = !isCamping; // kept for existing sections
+
+  // Proximity alert — watch GPS when driving, alert when ~1hr from campground
+  useEffect(() => {
+    if (!isDriving || !nextEvent?.campground || proximityAlertShown) return;
+    const cg = nextEvent.campground as any;
+    if (!cg?.latitude || !cg?.longitude) return;
+    const check = () => {
+      navigator.geolocation?.getCurrentPosition(pos => {
+        const lat1 = pos.coords.latitude * Math.PI / 180;
+        const lat2 = (cg.latitude as number) * Math.PI / 180;
+        const dLat = lat2 - lat1;
+        const dLng = ((cg.longitude as number) - pos.coords.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+        const miles = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        if (miles <= 55 && !proximityAlertShown) {
+          setProximityAlertShown(true);
+          setProximityToast(true);
+          setTimeout(() => setProximityToast(false), 12000);
+        }
+      }, undefined, { timeout: 5000 });
+    };
+    const interval = setInterval(check, 5 * 60 * 1000); // check every 5 min
+    check();
+    return () => clearInterval(interval);
+  }, [isDriving, nextEvent?.campground, proximityAlertShown]);
+
 
 
   // Scroll to top when camping mode activates
@@ -1816,13 +1846,16 @@ export default function BasecampPage({ user }: BasecampProps) {
   }
 
 
-  if (isDriving) {
+  if (isDriving && !drivingMinimized) {
     return (
       <DrivingMode
         nextEvent={nextEvent}
         rvMpg={(user as any)?.rvMpg || undefined}
+        onMinimize={() => setDrivingMinimized(true)}
         onExit={() => {
           setIsDriving(false);
+          setDrivingMinimized(false);
+          setProximityAlertShown(false);
           localStorage.removeItem('rvunicorn_driving');
           localStorage.removeItem('rvunicorn_drive_start');
           localStorage.removeItem('rvunicorn_drive_role');
@@ -1920,6 +1953,48 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Return to Driving Mode banner (minimized) ─────────────────── */}
+      {isDriving && drivingMinimized && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-900 border-b border-blue-700 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🚐</span>
+            <div>
+              <p className="text-sm font-bold text-white">Guardian Mode Active</p>
+              <p className="text-xs text-blue-300">Your drive is still being tracked</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setDrivingMinimized(false)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition"
+          >
+            Return →
+          </button>
+        </div>
+      )}
+
+      {/* ── Proximity alert toast ─────────────────────────────────────── */}
+      {proximityToast && nextEvent && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-green-800 border border-green-600 rounded-2xl px-5 py-4 shadow-xl max-w-sm w-full mx-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl flex-shrink-0">🏕️</span>
+            <div className="flex-1">
+              <p className="font-bold text-white text-sm">Almost there!</p>
+              <p className="text-green-200 text-xs mt-0.5">
+                You're within ~1 hour of {(nextEvent.campground as any)?.name || nextEvent.title}.
+                Consider calling ahead to confirm your site.
+              </p>
+            </div>
+            <button onClick={() => setProximityToast(false)} className="text-green-400 hover:text-white flex-shrink-0">✕</button>
+          </div>
+          {(nextEvent.campground as any)?.phone && (
+            <a href={`tel:${(nextEvent.campground as any).phone}`}
+              className="mt-3 flex items-center justify-center gap-2 w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-xl transition">
+              📞 Call {(nextEvent.campground as any)?.name}
+            </a>
+          )}
         </div>
       )}
 
