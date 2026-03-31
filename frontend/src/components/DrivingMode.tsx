@@ -510,7 +510,22 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
 
   // Destination helpers
   const dest = nextEvent?.campground;
-  const navUrl    = dest?.latitude ? `https://waze.com/ul?ll=${dest.latitude},${dest.longitude}&navigate=yes` : null;
+  // Deep link helpers — try native app first, fall back to web
+  const openWaze = dest?.latitude ? () => {
+    const native = `waze://ul?ll=${dest.latitude},${dest.longitude}&navigate=yes`;
+    const web    = `https://waze.com/ul?ll=${dest.latitude},${dest.longitude}&navigate=yes`;
+    const a = document.createElement('a'); a.href = native; a.click();
+    setTimeout(() => { window.open(web, '_blank'); }, 1500);
+  } : null;
+
+  const openGoogle = dest?.latitude ? () => {
+    const native = `comgooglemaps://?daddr=${dest.latitude},${dest.longitude}&directionsmode=driving`;
+    const web    = `https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}&travelmode=driving`;
+    const a = document.createElement('a'); a.href = native; a.click();
+    setTimeout(() => { window.open(web, '_blank'); }, 1500);
+  } : null;
+
+  const navUrl    = dest?.latitude ? `waze://ul?ll=${dest.latitude},${dest.longitude}&navigate=yes` : null;
   const googleUrl = dest?.latitude ? `https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}&travelmode=driving` : null;
 
   // Drive grade helper (used in two places)
@@ -580,6 +595,30 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             </div>
           )}
 
+          {/* ── Driver Co-Pilot Chat Feed (read-only) ───────────────────── */}
+          {(() => {
+            let msgs: { text: string; from: string; ts: number }[] = [];
+            try { msgs = JSON.parse(localStorage.getItem('rvu_copilot_chat') || '[]'); } catch {}
+            if (msgs.length === 0) return null;
+            return (
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+                <p className="text-xs text-gray-500 uppercase tracking-wide px-4 pt-3 pb-2 flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5" /> Co-Pilot Messages
+                </p>
+                <div className="px-4 pb-3 space-y-2 max-h-32 overflow-y-auto">
+                  {msgs.slice(-6).map((m, i) => (
+                    <div key={i} className="flex gap-2">
+                      <div className="max-w-[90%] rounded-2xl px-3 py-2 text-xs bg-purple-900 text-purple-100">
+                        <p className="font-semibold text-[10px] mb-0.5 opacity-70">🗺️ Passenger</p>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── Passenger suggestion card ────────────────────────────────── */}
           {passengerSuggestion && (
             <div className="bg-purple-950 border border-purple-600 rounded-2xl p-3 flex items-center justify-between gap-3">
@@ -610,11 +649,16 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                   View Stops
                 </button>
                 {nearbyStops[0]?.latitude && (
-                  <a href={`https://waze.com/ul?ll=${nearbyStops[0].latitude},${nearbyStops[0].longitude}&navigate=yes`}
-                    target="_blank" rel="noopener noreferrer"
+                  <button onClick={() => {
+                    const s = nearbyStops[0];
+                    const native = `waze://ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
+                    const web = `https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
+                    const a = document.createElement('a'); a.href = native; a.click();
+                    setTimeout(() => window.open(web, '_blank'), 1500);
+                  }}
                     className="flex-1 py-2 bg-blue-700 hover:bg-blue-600 rounded-xl text-xs font-bold text-center transition">
                     Navigate →
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
@@ -681,17 +725,17 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
               <p className="text-xs text-gray-500 mb-2">Destination</p>
               <p className="font-bold text-lg mb-3">{dest.name}</p>
               <div className="grid grid-cols-2 gap-2">
-                {navUrl && (
-                  <a href={navUrl} target="_blank" rel="noopener noreferrer"
+                {openWaze && (
+                  <button onClick={openWaze}
                     className="flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold transition">
                     <Navigation className="w-4 h-4" /> Waze
-                  </a>
+                  </button>
                 )}
-                {googleUrl && (
-                  <a href={googleUrl} target="_blank" rel="noopener noreferrer"
+                {openGoogle && (
+                  <button onClick={openGoogle}
                     className="flex items-center justify-center gap-2 py-3 bg-blue-800 hover:bg-blue-900 rounded-xl text-sm font-bold transition">
                     <MapPin className="w-4 h-4" /> Google Maps
-                  </a>
+                  </button>
                 )}
                 {dest.phone && (
                   <a href={`tel:${dest.phone}`}
@@ -783,9 +827,12 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
                         <p className="text-xs text-gray-500">{s.category} · {s.distanceMiles} mi</p>
                       </div>
                       {s.latitude && (
-                        <a href={`https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg transition">Go →</a>
+                        <button onClick={() => {
+                          const native = `waze://ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
+                          const web = `https://waze.com/ul?ll=${s.latitude},${s.longitude}&navigate=yes`;
+                          const a = document.createElement('a'); a.href = native; a.click();
+                          setTimeout(() => window.open(web, '_blank'), 1500);
+                        }} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg transition">Go →</button>
                       )}
                     </div>
                   ))}
@@ -851,24 +898,82 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             </div>
           </div>
 
-          {/* ── Co-Pilot Actions ─────────────────────────────────────────── */}
-          <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5" /> Co-Pilot Actions
-            </p>
-            <div className="space-y-2">
-              <button onClick={passengerSuggestStop}
-                className="w-full py-3 bg-blue-950 hover:bg-blue-900 border border-blue-700 rounded-xl text-sm font-bold text-blue-200 transition">
-                💬 Suggest a Stop to Driver
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { setPassengerFindingStops(true); setShowStops(true); loadNearbyStops(); }}
-                  className="py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-200 transition">
-                  🗺️ Find Stops for Us
+          {/* ── Co-Pilot Chat Feed ───────────────────────────────────────── */}
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+              <p className="text-xs text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5" /> Co-Pilot Chat
+              </p>
+            </div>
+
+            {/* Message feed */}
+            <div className="px-4 py-3 space-y-2 max-h-48 overflow-y-auto">
+              {(() => {
+                // Collect all cross-mode messages from localStorage for display
+                const msgs: { text: string; from: string; ts: number }[] = [];
+                try {
+                  const stored = localStorage.getItem('rvu_copilot_chat');
+                  if (stored) msgs.push(...JSON.parse(stored));
+                } catch {}
+                if (msgs.length === 0) {
+                  return <p className="text-xs text-gray-600 text-center py-3 italic">No messages yet — use the buttons below to communicate with the driver</p>;
+                }
+                return msgs.slice(-12).map((m, i) => (
+                  <div key={i} className={`flex gap-2 ${m.from === 'passenger' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${
+                      m.from === 'passenger' ? 'bg-purple-800 text-purple-100 rounded-br-sm' :
+                      m.from === 'driver' ? 'bg-blue-900 text-blue-100 rounded-bl-sm' :
+                      'bg-gray-800 text-gray-300'
+                    }`}>
+                      <p className="font-semibold text-[10px] mb-0.5 opacity-70">
+                        {m.from === 'passenger' ? '🗺️ You' : m.from === 'driver' ? '🚐 Driver' : '🛡️ System'}
+                      </p>
+                      {m.text}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* Quick action buttons as compact chips */}
+            <div className="px-4 pb-4 pt-2 border-t border-gray-800">
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => {
+                  const msg = { text: 'Suggesting we stop soon 🛑', from: 'passenger', ts: Date.now() };
+                  try {
+                    const prev = JSON.parse(localStorage.getItem('rvu_copilot_chat') || '[]');
+                    localStorage.setItem('rvu_copilot_chat', JSON.stringify([...prev, msg].slice(-20)));
+                  } catch {}
+                  passengerSuggestStop();
+                }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 border border-blue-700 rounded-xl text-xs font-semibold text-blue-200 transition">
+                  💬 Suggest Stop
                 </button>
-                <button onClick={passengerSoftOverride}
-                  className="py-3 bg-orange-950 hover:bg-orange-900 border border-orange-700 rounded-xl text-xs font-bold text-orange-300 transition">
-                  ⚡ Request Override
+                <button onClick={() => {
+                  const msg = { text: 'Flagging fatigue — please be careful 😴', from: 'passenger', ts: Date.now() };
+                  try {
+                    const prev = JSON.parse(localStorage.getItem('rvu_copilot_chat') || '[]');
+                    localStorage.setItem('rvu_copilot_chat', JSON.stringify([...prev, msg].slice(-20)));
+                  } catch {}
+                  passengerFlagFatigue();
+                }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-yellow-900 hover:bg-yellow-800 border border-yellow-700 rounded-xl text-xs font-semibold text-yellow-200 transition">
+                  😴 Flag Fatigue
+                </button>
+                <button onClick={() => { setPassengerFindingStops(true); setShowStops(true); loadNearbyStops(); }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-semibold text-gray-200 transition">
+                  🗺️ Find Stops
+                </button>
+                <button onClick={() => {
+                  const msg = { text: 'Requesting override — please pull over ⚡', from: 'passenger', ts: Date.now() };
+                  try {
+                    const prev = JSON.parse(localStorage.getItem('rvu_copilot_chat') || '[]');
+                    localStorage.setItem('rvu_copilot_chat', JSON.stringify([...prev, msg].slice(-20)));
+                  } catch {}
+                  passengerSoftOverride();
+                }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-950 hover:bg-orange-900 border border-orange-700 rounded-xl text-xs font-semibold text-orange-300 transition">
+                  ⚡ Override
                 </button>
               </div>
             </div>
@@ -918,11 +1023,11 @@ export default function DrivingMode({ nextEvent, onExit }: DrivingModeProps) {
             <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
               <p className="text-xs text-gray-500 mb-1">Heading to</p>
               <p className="font-bold">{nextEvent.campground?.name || nextEvent.title}</p>
-              {navUrl && (
-                <a href={navUrl} target="_blank" rel="noopener noreferrer"
+              {openWaze && (
+                <button onClick={openWaze}
                   className="mt-3 flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
                   <Navigation className="w-4 h-4" /> Open Navigation
-                </a>
+                </button>
               )}
             </div>
           )}
