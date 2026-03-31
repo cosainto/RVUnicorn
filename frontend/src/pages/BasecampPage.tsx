@@ -1000,6 +1000,10 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [drivingMinimized, setDrivingMinimized] = useState(false);
   const [proximityAlertShown, setProximityAlertShown] = useState(false);
   const [proximityToast, setProximityToast] = useState(false);
+  const [showProximityCheckIn, setShowProximityCheckIn] = useState(false);
+  const [proximitySiteNumber, setProximitySiteNumber] = useState('');
+  const [proximityCheckingIn, setProximityCheckingIn] = useState(false);
+  const [proximityCheckedIn, setProximityCheckedIn] = useState(false);
 
   const isPlanning = !isCamping; // kept for existing sections
 
@@ -1019,6 +1023,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         if (miles <= 55 && !proximityAlertShown) {
           setProximityAlertShown(true);
           setProximityToast(true);
+          setShowProximityCheckIn(true);
           setTimeout(() => setProximityToast(false), 12000);
         }
       }, undefined, { timeout: 5000 });
@@ -1975,26 +1980,79 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* ── Proximity alert toast ─────────────────────────────────────── */}
-      {proximityToast && nextEvent && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-green-800 border border-green-600 rounded-2xl px-5 py-4 shadow-xl max-w-sm w-full mx-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl flex-shrink-0">🏕️</span>
-            <div className="flex-1">
-              <p className="font-bold text-white text-sm">Almost there!</p>
-              <p className="text-green-200 text-xs mt-0.5">
-                You're within ~1 hour of {(nextEvent.campground as any)?.name || nextEvent.title}.
-                Consider calling ahead to confirm your site.
-              </p>
+      {/* ── Proximity Check-In Modal ─────────────────────────────────── */}
+      {showProximityCheckIn && nextEvent && !proximityCheckedIn && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🏕️</span>
+                  <div>
+                    <p className="font-black text-white text-lg leading-tight">Almost there!</p>
+                    <p className="text-green-100 text-xs">~1 hour from your campground</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowProximityCheckIn(false)} className="text-white/70 hover:text-white">✕</button>
+              </div>
             </div>
-            <button onClick={() => setProximityToast(false)} className="text-green-400 hover:text-white flex-shrink-0">✕</button>
+            <div className="px-5 py-5 space-y-4">
+              <div>
+                <p className="font-bold text-gray-900 text-base">{(nextEvent.campground as any)?.name || nextEvent.title}</p>
+                <p className="text-sm text-gray-500">Ready to check in when you arrive?</p>
+              </div>
+              {/* Site number */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Your Site Number <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  value={proximitySiteNumber}
+                  onChange={e => setProximitySiteNumber(e.target.value)}
+                  placeholder="e.g. 42, A14, Loop B"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+              </div>
+              {/* Call campground */}
+              {(nextEvent.campground as any)?.phone && (
+                <a href={`tel:${(nextEvent.campground as any).phone}`}
+                  className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium">
+                  📞 Call to confirm: {(nextEvent.campground as any).phone}
+                </a>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowProximityCheckIn(false)}
+                  className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                >
+                  Check In Later
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!(nextEvent.campground as any)?.id) return;
+                    setProximityCheckingIn(true);
+                    try {
+                      await api.post('/checkins', {
+                        campgroundId: (nextEvent.campground as any).id,
+                        siteNumber: proximitySiteNumber || null,
+                      });
+                      setProximityCheckedIn(true);
+                      setShowProximityCheckIn(false);
+                      // Refresh check-in status
+                      const { data } = await api.get('/checkins/active');
+                      setActiveCheckIn(data?.checkIn || null);
+                    } catch (e) {
+                      console.error('Proximity check-in failed:', e);
+                    }
+                    setProximityCheckingIn(false);
+                  }}
+                  disabled={proximityCheckingIn}
+                  className="flex-1 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-xl text-sm font-bold transition"
+                >
+                  {proximityCheckingIn ? 'Checking in...' : "🏕️ Check In Now"}
+                </button>
+              </div>
+            </div>
           </div>
-          {(nextEvent.campground as any)?.phone && (
-            <a href={`tel:${(nextEvent.campground as any).phone}`}
-              className="mt-3 flex items-center justify-center gap-2 w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-xl transition">
-              📞 Call {(nextEvent.campground as any)?.name}
-            </a>
-          )}
         </div>
       )}
 
