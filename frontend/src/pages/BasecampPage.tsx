@@ -1125,9 +1125,10 @@ export default function BasecampPage({ user }: BasecampProps) {
     }).then(r => r.json()).then(d => { if (d.posts) setCommunityPosts(d.posts); }).catch((e) => console.error("checkins/active failed:", e));
   }, []);
 
-  // Trivia countdown — show alert when within 30 mins of 5:30 PM Central
+  // Trivia countdown — only show when checked in at a campground
   useEffect(() => {
     const check = () => {
+      if (!activeCheckIn?.campground) { setTriviaCountdown(null); return; }
       const now = new Date();
       const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
       const hours = central.getHours();
@@ -1149,7 +1150,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     check();
     const interval = setInterval(check, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeCheckIn]);
 
 
 

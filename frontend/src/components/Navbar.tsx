@@ -37,22 +37,51 @@ export default function Navbar() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Trivia pulse state — tracks minutes until 5:30 PM Central
+  // Active check-in state — trivia only shows when checked in
+  const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+  const [triviaIgnored, setTriviaIgnored] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/checkins/active')
+      .then(r => setActiveCheckIn(r.data?.checkIn || null))
+      .catch(() => {});
+  }, [user]);
+
+  // Check if trivia is ignored via localStorage
+  useEffect(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const ignoredDate = localStorage.getItem('rvunicorn_trivia_ignore_date');
+    const ignoredCheckIn = localStorage.getItem('rvunicorn_trivia_ignore_checkin');
+    if (ignoredDate === todayStr) { setTriviaIgnored(true); return; }
+    if (ignoredCheckIn && activeCheckIn?.id === ignoredCheckIn) { setTriviaIgnored(true); return; }
+    setTriviaIgnored(false);
+  }, [activeCheckIn]);
+
+  const handleIgnoreTrivia = (mode: 'today' | 'trip') => {
+    if (mode === 'today') {
+      localStorage.setItem('rvunicorn_trivia_ignore_date', new Date().toISOString().slice(0, 10));
+    } else if (mode === 'trip' && activeCheckIn?.id) {
+      localStorage.setItem('rvunicorn_trivia_ignore_checkin', activeCheckIn.id);
+    }
+    setTriviaIgnored(true);
+  };
+
+  // Trivia pulse state — only active when checked in and not ignored
   const [triviaPhase, setTriviaPhase] = useState<'off' | 'slow' | 'medium' | 'fast' | 'live'>('off');
 
   useEffect(() => {
     const checkTrivia = () => {
+      if (!activeCheckIn?.campground || triviaIgnored) { setTriviaPhase('off'); return; }
       const now = new Date();
-      // Convert to Central Time
       const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
       const totalMins = central.getHours() * 60 + central.getMinutes();
-      // Trivia times in Central (minutes since midnight)
       const triviaTimes = [
         7 * 60 + 30,   // 7:30 AM
         12 * 60 + 25,  // 12:25 PM
         17 * 60 + 30,  // 5:30 PM
       ];
-      const triviaDuration = 30; // each session lasts 30 mins
+      const triviaDuration = 30;
 
       let phase: 'off' | 'slow' | 'medium' | 'fast' | 'live' = 'off';
       for (const start of triviaTimes) {
@@ -73,7 +102,7 @@ export default function Navbar() {
     checkTrivia();
     const interval = setInterval(checkTrivia, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeCheckIn, triviaIgnored]);
 
   // Trivia animation config per phase
   const triviaAnimConfig = {
@@ -187,7 +216,7 @@ export default function Navbar() {
       <nav className="sticky top-0 z-50" style={{ background: 'linear-gradient(135deg, #1a1f2e 0%, #1e2535 50%, #1a1f2e 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05)' }}>
         {triviaAnim.bannerShow && (
           <div
-            className="w-full text-center text-xs font-bold py-1 cursor-pointer select-none"
+            className="w-full flex items-center justify-center text-xs font-bold py-1 select-none relative"
             style={{
               background: triviaPhase === 'live'
                 ? 'linear-gradient(90deg, #f59e0b, #ea580c, #f59e0b)'
@@ -195,24 +224,51 @@ export default function Navbar() {
               color: '#fff',
               animation: 'bannerPulse ' + (triviaPhase === 'fast' ? '0.4s' : triviaPhase === 'live' ? '0.6s' : '1.5s') + ' ease-in-out infinite',
             }}
-            onClick={() => {
-              const el = document.getElementById('campfire-chat-anchor');
-              if (el) {
-                const y = el.getBoundingClientRect().top + window.scrollY - 60;
-                window.scrollTo({ top: y + 300, behavior: 'smooth' });
-              } else {
-                navigate('/basecamp');
-                setTimeout(() => {
-                  const el2 = document.getElementById('campfire-chat-anchor');
-                  if (el2) {
-                    const y2 = el2.getBoundingClientRect().top + window.scrollY - 60;
-                    window.scrollTo({ top: y2 + 300, behavior: 'smooth' });
-                  }
-                }, 800);
-              }
-            }}
           >
-            {triviaLabel} — Click to join 🎮
+            <span
+              className="cursor-pointer flex-1 text-center"
+              onClick={() => {
+                const el = document.getElementById('campfire-chat-anchor');
+                if (el) {
+                  const y = el.getBoundingClientRect().top + window.scrollY - 60;
+                  window.scrollTo({ top: y + 300, behavior: 'smooth' });
+                } else {
+                  navigate('/basecamp');
+                  setTimeout(() => {
+                    const el2 = document.getElementById('campfire-chat-anchor');
+                    if (el2) {
+                      const y2 = el2.getBoundingClientRect().top + window.scrollY - 60;
+                      window.scrollTo({ top: y2 + 300, behavior: 'smooth' });
+                    }
+                  }, 800);
+                }
+              }}
+            >
+              {triviaLabel} — Click to join 🎮
+            </span>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center group">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleIgnoreTrivia('today'); }}
+                className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/20 text-white/60 hover:text-white transition"
+                title="Dismiss"
+              >
+                <X className="w-3 h-3" />
+              </button>
+              <div className="hidden group-hover:block absolute right-0 top-full mt-1 bg-gray-900 rounded-lg shadow-xl border border-gray-700 py-1 min-w-[160px] z-50">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleIgnoreTrivia('today'); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition"
+                >
+                  Ignore for today
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleIgnoreTrivia('trip'); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-gray-800 transition"
+                >
+                  Ignore for this trip
+                </button>
+              </div>
+            </div>
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4">
