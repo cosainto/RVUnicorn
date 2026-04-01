@@ -1257,6 +1257,59 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
+  // Weather alert fetch — NWS API for next trip destination or home
+  useEffect(() => {
+    const fetchWeatherAlert = async () => {
+      try {
+        let lat: number | null = null;
+        let lng: number | null = null;
+
+        // Use next trip's campground coords if available
+        if (nextEvent?.campground?.latitude && nextEvent?.campground?.longitude) {
+          lat = Number(nextEvent.campground.latitude);
+          lng = Number(nextEvent.campground.longitude);
+        } else {
+          // No trip coords — skip alert check
+          return;
+        }
+
+        if (!lat || !lng) return;
+
+        const res = await fetch(
+          `https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lng.toFixed(4)}&limit=5`,
+          { headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' } }
+        );
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const SEVERE = new Set(['Extreme', 'Severe']);
+        const URGENT = new Set(['Immediate', 'Expected']);
+
+        const alert = (data.features || []).find((f: any) => {
+          const p = f.properties;
+          return SEVERE.has(p.severity) || URGENT.has(p.urgency);
+        });
+
+        if (alert) {
+          const p = alert.properties;
+          setWeatherAlert({
+            event: p.event || 'Weather Alert',
+            headline: (p.headline || p.description || '').slice(0, 120),
+            severity: p.severity || 'Severe',
+          });
+        } else {
+          setWeatherAlert(null);
+        }
+      } catch {
+        setWeatherAlert(null);
+      }
+    };
+
+    fetchWeatherAlert();
+    const interval = setInterval(fetchWeatherAlert, 60 * 60 * 1000); // refresh hourly
+    return () => clearInterval(interval);
+  }, [nextEvent?.campground?.latitude, nextEvent?.campground?.longitude]);
+
   // Random quote for when no trip is planned
   const [randomQuote] = useState(() => 
     INSPIRATIONAL_QUOTES[Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length)]
@@ -1296,6 +1349,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [rvManualUrl, setRvManualUrl] = useState<string | null>(null);
   const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats | null>(null);
+  const [weatherAlert, setWeatherAlert] = useState<{ event: string; headline: string; severity: string } | null>(null);
 
   // Packing List State
   const [packItems, setPackItems] = useState<PackItem[]>([]);
@@ -1312,6 +1366,24 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
   const [editingLinks, setEditingLinks] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
+  const [feedTab, setFeedTab] = useState<'friends' | 'community' | 'campgrounds'>('friends');
+  const [friendsHasNew, setFriendsHasNew] = useState(false);
+  const [communityHasNew, setCommunityHasNew] = useState(false);
+
+  // Pick the tab with the most recent post on load + set unread dots
+  useEffect(() => {
+    if (feedItems.length === 0 && communityPosts.length === 0) return;
+    const friendsLatest = feedItems[0]?.createdAt ? new Date(feedItems[0].createdAt).getTime() : 0;
+    const communityLatest = communityPosts[0]?.createdAt ? new Date(communityPosts[0].createdAt).getTime() : 0;
+    const lastViewed = parseInt(localStorage.getItem('rvu_feed_last_viewed') || '0');
+    if (friendsLatest > lastViewed) setFriendsHasNew(true);
+    if (communityLatest > lastViewed) setCommunityHasNew(true);
+    if (friendsLatest >= communityLatest && feedItems.length > 0) {
+      setFeedTab('friends');
+    } else if (communityLatest > friendsLatest && communityPosts.length > 0) {
+      setFeedTab('community');
+    }
+  }, [feedItems.length, communityPosts.length]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Stickers/Badges State
@@ -2458,8 +2530,20 @@ export default function BasecampPage({ user }: BasecampProps) {
         {/* Smart Action Cards — prioritized, mutually exclusive */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 
-          {/* Slot 1: Trip → if overdue maintenance + no trip, surface RV health urgency here instead */}
-          {nextEvent ? (
+          {/* Slot 1: Weather alert overrides everything → Trip → RV Health urgency → Ask Hitch */}
+          {weatherAlert ? (
+            <div className="bg-gradient-to-br from-red-600 to-red-700 border-2 border-red-800 rounded-xl p-4 shadow-md col-span-1">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-red-500 rounded-lg"><AlertTriangle className="w-4 h-4 text-white" /></div>
+                <span className="text-xs font-bold text-red-100">⚠️ Weather Alert</span>
+              </div>
+              <p className="font-bold text-white text-sm">{weatherAlert.event}</p>
+              {weatherAlert.headline && (
+                <p className="text-xs text-red-100 mt-1 line-clamp-2">{weatherAlert.headline}</p>
+              )}
+              <p className="text-xs text-red-200 mt-1.5">Near your next destination</p>
+            </div>
+          ) : nextEvent ? (
             <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 bg-blue-100 rounded-lg"><Calendar className="w-4 h-4 text-blue-600" /></div>
@@ -2636,7 +2720,101 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <span className="text-white/70 group-hover:text-white transition flex-shrink-0">→</span>
               </button>
             )}
-            <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
+            {/* ── Feed Tabs: Friends / Community / Campgrounds ── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Tab Headers */}
+              <div className="flex border-b border-gray-100">
+                {(['friends', 'community', 'campgrounds'] as const).map(tab => {
+                  const labels: Record<string, string> = {
+                    friends: '👥 Friends',
+                    community: '🏕️ Community',
+                    campgrounds: '📍 Campgrounds',
+                  };
+                  const hasNew = (tab === 'friends' && friendsHasNew) || (tab === 'community' && communityHasNew);
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setFeedTab(tab);
+                        localStorage.setItem('rvu_feed_last_viewed', Date.now().toString());
+                        if (tab === 'friends') setFriendsHasNew(false);
+                        if (tab === 'community') setCommunityHasNew(false);
+                      }}
+                      className={`flex-1 relative px-4 py-3 text-sm font-medium transition border-b-2 ${
+                        feedTab === tab
+                          ? 'border-primary-600 text-primary-700 bg-primary-50/50'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {labels[tab]}
+                      {hasNew && feedTab !== tab && (
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Friends Tab */}
+              {feedTab === 'friends' && (
+                <div className="p-4">
+                  <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={true} />
+                </div>
+              )}
+
+              {/* Community Tab */}
+              {feedTab === 'community' && (
+                <div className="p-4">
+                  {communityPosts.length === 0 ? (
+                    <div className="text-center py-12">
+                      <span className="text-4xl mb-3 block">🏕️</span>
+                      <p className="text-gray-500 text-sm mb-2">No community posts yet</p>
+                      <Link to="/community" className="text-sm text-primary-600 font-semibold hover:underline">Start a discussion →</Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {communityPosts.map((post: any) => (
+                        <Link key={post.id} to="/community" className="flex gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition">
+                          <div className="flex-shrink-0 w-8 text-center pt-0.5">
+                            <span className="text-sm font-bold text-orange-500">{post.voteScore}</span>
+                            <div className="text-[10px] text-gray-400">pts</div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {post.board && (
+                              <div className="flex items-center gap-1 mb-0.5">
+                                <span className="text-xs">{post.board.icon}</span>
+                                <span className="text-xs text-gray-400">{post.board.name}</span>
+                              </div>
+                            )}
+                            <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">{post.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-gray-400">{post.author?.firstName} {post.author?.lastName}</span>
+                              <span className="text-[10px] text-gray-300">·</span>
+                              <span className="text-[10px] text-gray-400">{post.commentCount || 0} comments</span>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                      <Link to="/community" className="flex items-center justify-center gap-1 py-3 text-sm text-primary-600 font-semibold hover:underline">
+                        Browse all community posts →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Campgrounds Tab */}
+              {feedTab === 'campgrounds' && (
+                <div className="p-4">
+                  <CampgroundUpdatesFeed maxItems={10} />
+                  <div className="mt-4 text-center">
+                    <Link to="/campgrounds" className="text-sm text-primary-600 font-semibold hover:underline">
+                      Follow campgrounds to see their updates here →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
 
