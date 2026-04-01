@@ -80,6 +80,25 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   const [rigEditMode, setRigEditMode] = useState(false);
   const [customBuildStep, setCustomBuildStep] = useState(0); // for "Other" make flow
 
+  // Hitch micro-comments
+  const [hitchComment, setHitchComment] = useState('');
+  const [slideDir, setSlideDir] = useState<'right' | 'left'>('right');
+  const [sliding, setSliding] = useState(false);
+  const prevStepRef = useRef(0);
+
+  const HITCH_AVATAR = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png';
+
+  // Slide transition on step change
+  useEffect(() => {
+    if (step !== prevStepRef.current) {
+      setSlideDir(step > prevStepRef.current ? 'right' : 'left');
+      setSliding(true);
+      const t = setTimeout(() => setSliding(false), 300);
+      prevStepRef.current = step;
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
   // Co-traveler
   const [coTravelerMode, setCoTravelerMode] = useState<'search' | 'invite' | 'qr' | null>(null);
   const [coTravelerQuery, setCoTravelerQuery] = useState('');
@@ -228,7 +247,10 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
       const { data } = await api.post('/rv/lookup', { year: rigYear, make: rigMake, model: rigModel });
       setRigSpecs(data.specs);
       setRigStockImage(data.stockImage || RIG_TYPE_IMAGES[data.specs?.rvType] || null);
-      if (data.specs?.rvType) setRvType(data.specs.rvType);
+      if (data.specs?.rvType) {
+        setRvType(data.specs.rvType);
+        setHitchComment(hitchRigComments[data.specs.rvType] || `A ${data.specs.rvType} — solid choice! Let me check those specs...`);
+      }
       if (data.specs?.confidence === 'low' || rigMake === 'Other') setCustomBuildStep(1);
     } catch { setRigSpecs(null); setCustomBuildStep(1); }
     finally { setRigLooking(false); }
@@ -259,10 +281,22 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   };
 
   // Persona-aware navigation
+  const hitchRigComments: Record<string, string> = {
+    'Class A': "Nice rig 👀 — a Class A opens up a lot of premium spots that smaller rigs can't access",
+    'Class B': "Van life! You'll go places most RVers can only dream about 🌲",
+    'Class C': "Great all-arounder — the C is the sweet spot of the RV world",
+    'Fifth Wheel': "Fifth wheels are the kings of comfort. That pin weight though... 😅",
+    'Travel Trailer': "Classic choice. You've got the most campground options of anyone",
+    'Tent': "Old school respect 🏕️ — you're the real campers",
+    'Van': "Van life! You'll go places most RVers can only dream about 🌲",
+    'Bus': "Nice rig 👀 — a bus conversion opens up a world of possibilities",
+    'Other': "Custom builds are the best builds — every one is unique 🛠️",
+  };
+
   const handlePersonaNext = () => {
-    if (userPersona === 'owner') setStep(1);
-    else if (userPersona === 'dreamer') setStep(4); // skip rig, go to co-traveler
-    else if (userPersona === 'renter') setStep(1); // simplified rig step
+    if (userPersona === 'owner') { setHitchComment("Let's get your rig dialed in — this is the fun part 🚐"); setStep(1); }
+    else if (userPersona === 'dreamer') { setHitchComment("No rig yet? No problem — let's find your people first 🌟"); setStep(4); }
+    else if (userPersona === 'renter') { setHitchComment("Smart — rentals let you try before you buy 🔑"); setStep(1); }
   };
 
   // Save persona on completion
@@ -275,11 +309,31 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto relative">
+      <style>{`
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes hitchPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        @keyframes hitchBubbleIn { from { opacity: 0; transform: translateY(8px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .slide-in-right { animation: slideInRight 0.3s ease-out; }
+        .slide-in-left { animation: slideInLeft 0.3s ease-out; }
+        .hitch-pulse { animation: hitchPulse 2s ease-in-out infinite; }
+        .hitch-bubble-in { animation: hitchBubbleIn 0.4s ease-out; }
+      `}</style>
+
+      {/* Hitch speech bubble — shown when there's a comment */}
+      {hitchComment && step > 0 && (
+        <div className="mb-4 flex items-start gap-3 hitch-bubble-in">
+          <img src={HITCH_AVATAR} alt="Hitch" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border-2 border-orange-200 hitch-pulse" />
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-orange-800 flex-1">
+            {hitchComment}
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════ STEP 0: PERSONA */}
       {step === 0 && (
-        <div>
+        <div className={sliding ? (slideDir === 'right' ? 'slide-in-right' : 'slide-in-left') : ''}>
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
               <span>🦄</span> Hitch says...
@@ -321,21 +375,29 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
         </div>
       )}
 
-      {/* Progress Bar — only show on steps 1-4 */}
+      {/* Progress brain + step dots — only show on steps 1-4 */}
       {step >= 1 && (
-      <div className="flex items-center gap-2 mb-8">
-        {(userPersona === 'dreamer' ? [4] : userPersona === 'renter' ? [1, 4] : [1, 2, 3, 4]).map((s, i, arr) => (
-          <div key={s} className="flex-1 flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              s <= step ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-400'
-            }`}>
-              {s < step ? <Check className="w-4 h-4" /> : i + 1}
+      <div className="mb-6">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <img src={HITCH_AVATAR} alt="" className="w-6 h-6 rounded-full object-cover hitch-pulse" />
+          <span className="text-xs text-gray-400 font-medium">
+            {step === 1 ? 'Hitch is learning your rig...' : step === 2 ? 'Building your profile...' : step === 3 ? 'Finding your matches...' : 'Almost there...'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {(userPersona === 'dreamer' ? [4] : userPersona === 'renter' ? [1, 4] : [1, 2, 3, 4]).map((s, i, arr) => (
+            <div key={s} className="flex-1 flex items-center">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                s <= step ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-400'
+              }`}>
+                {s < step ? <Check className="w-3 h-3" /> : i + 1}
+              </div>
+              {i < arr.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 rounded transition-all ${s < step ? 'bg-primary-600' : 'bg-gray-200'}`} />
+              )}
             </div>
-            {i < arr.length - 1 && (
-              <div className={`flex-1 h-1 mx-1 rounded transition-all ${s < step ? 'bg-primary-600' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       )}
 
@@ -458,8 +520,10 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
               <div className="grid grid-cols-2 gap-3">
                 {[['🚐','Van/Class B'],['🚌','Bus/Class A'],['🚍','Class C'],['🏠','Fifth Wheel'],['🚗','Travel Trailer'],['⛺','Other']].map(([emoji, label]) => (
                   <button key={label} onClick={() => {
-                    setRigSpecs((s: any) => ({ ...(s || {}), rvType: label.split('/')[0] }));
-                    setRvType(label.split('/')[0]);
+                    const type = label.split('/')[0];
+                    setRigSpecs((s: any) => ({ ...(s || {}), rvType: type }));
+                    setRvType(type);
+                    setHitchComment(hitchRigComments[type] || "Nice — let's get the details right 📋");
                     setCustomBuildStep(2);
                   }} className="flex items-center gap-2 p-4 rounded-xl border-2 border-gray-200 hover:border-primary-500 transition text-left">
                     <span className="text-xl">{emoji}</span>
@@ -722,7 +786,7 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
 
       {/* ══════════════════════════════════ STEP 4: CO-PILOT */}
       {step === 4 && (
-        <div>
+        <div className={sliding ? (slideDir === 'right' ? 'slide-in-right' : 'slide-in-left') : ''}>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Do you travel with a co-pilot?</h2>
           <p className="text-gray-500 mb-6">Link with someone already on RVUnicorn to share your rig profile</p>
 
