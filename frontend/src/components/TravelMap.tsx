@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, Heart, Navigation, Tent, 
+import {
+  MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, Heart, Navigation, Tent,
   Eye, EyeOff, UserCheck, Lock, Copy, ExternalLink,
   Fuel, Coffee, ParkingCircle, Layers, DollarSign, Route,
-  ShowerHead, Store, Truck, Dog, Wifi, Droplet, RefreshCw
+  ShowerHead, Store, Truck, Dog, Wifi, Droplet, RefreshCw, Send
 } from 'lucide-react';
 import api from '../services/api';
 import USMapSVG from './USMapSVG';
@@ -262,6 +262,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [loadingTripRoute, setLoadingTripRoute] = useState(false);
   const [loadingRoadtrip, setLoadingRoadtrip] = useState(true);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
+  const [shoutoutTarget, setShoutoutTarget] = useState<{ user: any; campgroundId?: string; campgroundName?: string } | null>(null);
+  const [shoutoutMsg, setShoutoutMsg] = useState('');
+  const [shoutoutSending, setShoutoutSending] = useState(false);
+  const [shoutoutSent, setShoutoutSent] = useState(false);
   const [fuelType, setFuelType] = useState<'regular' | 'diesel'>('diesel');
   const [updatingPrices, setUpdatingPrices] = useState(true);
   const [priceStats, setPriceStats] = useState<any>(null);
@@ -1153,8 +1157,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             } else if (marker.type === 'restStop') {
               const stop = restStops.find(s => s.id === marker.id.replace('rest-', ''));
               if (stop) setSelectedRestStop(stop);
-            } else if (marker.type === 'friendCheckin' && marker.user?.username) {
-              navigate(`/profile/${marker.user.username}`);
+            } else if (marker.type === 'friendCheckin' && marker.user) {
+              const checkin = friendsCheckins.find((c: any) => c.userId === marker.user?.id || c.user?.id === marker.user?.id);
+              setShoutoutTarget({
+                user: marker.user,
+                campgroundId: checkin?.campgroundId || checkin?.campground?.id,
+                campgroundName: marker.name?.replace(`${marker.user.firstName || ''} at `, '') || checkin?.campground?.name,
+              });
+              setShoutoutMsg('');
+              setShoutoutSent(false);
             }
           }}
           isInteractive={true}
@@ -1181,6 +1192,76 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           </div>
         )}
       </div>
+
+      {/* Shoutout Popover */}
+      {shoutoutTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShoutoutTarget(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {shoutoutTarget.user.profilePicture ? (
+                  <img src={shoutoutTarget.user.profilePicture} className="w-10 h-10 rounded-full object-cover border-2 border-white/50" alt="" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">{shoutoutTarget.user.firstName?.[0] || '?'}</div>
+                )}
+                <div>
+                  <div className="text-white font-semibold">{shoutoutTarget.user.firstName} {shoutoutTarget.user.lastName}</div>
+                  {shoutoutTarget.campgroundName && <div className="text-emerald-100 text-xs">📍 {shoutoutTarget.campgroundName}</div>}
+                </div>
+              </div>
+              <button onClick={() => setShoutoutTarget(null)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5">
+              {shoutoutSent ? (
+                <div className="text-center py-4">
+                  <div className="text-3xl mb-2">📍</div>
+                  <p className="font-semibold text-gray-800">Shoutout sent!</p>
+                  <p className="text-sm text-gray-500 mt-1">{shoutoutTarget.user.firstName} will see it on their Basecamp</p>
+                  <div className="flex gap-2 mt-4">
+                    <button onClick={() => setShoutoutTarget(null)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Done</button>
+                    <button onClick={() => navigate(`/profile/${shoutoutTarget.user.username}`)} className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-600 transition">View Profile</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <textarea
+                    value={shoutoutMsg}
+                    onChange={e => setShoutoutMsg(e.target.value)}
+                    placeholder={`Say hey to ${shoutoutTarget.user.firstName}...`}
+                    rows={3}
+                    maxLength={280}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-xs text-gray-400">{shoutoutMsg.length}/280</span>
+                    <button
+                      onClick={async () => {
+                        if (!shoutoutMsg.trim()) return;
+                        setShoutoutSending(true);
+                        try {
+                          await api.post('/basecamp-activity/shoutout', {
+                            targetUserId: shoutoutTarget.user.id,
+                            campgroundId: shoutoutTarget.campgroundId,
+                            message: shoutoutMsg.trim(),
+                          });
+                          setShoutoutSent(true);
+                        } catch (e) { console.error(e); }
+                        finally { setShoutoutSending(false); }
+                      }}
+                      disabled={!shoutoutMsg.trim() || shoutoutSending}
+                      className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 transition"
+                    >
+                      <Send className="w-4 h-4" />
+                      {shoutoutSending ? 'Sending...' : 'Send Shoutout'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gas Stations List */}
       {activeLayers.includes('gasStations') && gasStations.length > 0 && (

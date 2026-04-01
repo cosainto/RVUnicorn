@@ -110,6 +110,7 @@ import inviteRoutes from './routes/invite.routes';
 import itineraryRoutes from './routes/itinerary.routes';
 import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
+import campMarketRoutes from './routes/camp-market.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { updateGasPrices } from "./cron/gas-price-cron";
@@ -277,6 +278,7 @@ app.use("/api/ai-maintenance", aiMaintenanceRouter);
 app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
 app.use("/api/overnight-spots", overnightSpotsRoutes);
+app.use("/api/camp-market", campMarketRoutes);
 app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 

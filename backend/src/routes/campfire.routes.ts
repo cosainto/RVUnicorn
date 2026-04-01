@@ -390,7 +390,47 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
       });
     }
 
-    res.json({ isCorrect, points, correctAnswer: question.answer, speedBonus });
+    // Update streak (once per calendar day)
+    let streak = { currentStreak: 1, longestStreak: 1 };
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const existing_streak = await (prisma as any).triviaStreak.findUnique({ where: { userId } });
+      if (existing_streak) {
+        const lastPlayed = existing_streak.lastPlayedAt ? new Date(existing_streak.lastPlayedAt) : null;
+        const lastPlayedDay = lastPlayed ? new Date(lastPlayed.getFullYear(), lastPlayed.getMonth(), lastPlayed.getDate()) : null;
+
+        if (lastPlayedDay && lastPlayedDay.getTime() === today.getTime()) {
+          // Already played today — no streak change
+          streak = { currentStreak: existing_streak.currentStreak, longestStreak: existing_streak.longestStreak };
+        } else if (lastPlayedDay && lastPlayedDay.getTime() === yesterday.getTime()) {
+          // Consecutive day — extend streak
+          const newCurrent = existing_streak.currentStreak + 1;
+          const newLongest = Math.max(existing_streak.longestStreak, newCurrent);
+          await (prisma as any).triviaStreak.update({
+            where: { userId },
+            data: { currentStreak: newCurrent, longestStreak: newLongest, lastPlayedAt: new Date() },
+          });
+          streak = { currentStreak: newCurrent, longestStreak: newLongest };
+        } else {
+          // Streak broken — reset to 1
+          await (prisma as any).triviaStreak.update({
+            where: { userId },
+            data: { currentStreak: 1, longestStreak: Math.max(existing_streak.longestStreak, 1), lastPlayedAt: new Date() },
+          });
+          streak = { currentStreak: 1, longestStreak: Math.max(existing_streak.longestStreak, 1) };
+        }
+      } else {
+        await (prisma as any).triviaStreak.create({
+          data: { userId, currentStreak: 1, longestStreak: 1, lastPlayedAt: new Date() },
+        });
+      }
+    } catch (e) { console.error('Streak update error:', e); }
+
+    res.json({ isCorrect, points, correctAnswer: question.answer, speedBonus, streak });
   } catch (error) {
     console.error('Answer error:', error);
     res.status(500).json({ error: 'Failed to submit answer' });

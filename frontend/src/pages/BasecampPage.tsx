@@ -74,6 +74,7 @@ import CampfireChat from '../components/CampfireChat';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
 import SupplyList from '../components/SupplyList';
+import CampMarket from '../components/CampMarket';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -2478,6 +2479,11 @@ export default function BasecampPage({ user }: BasecampProps) {
             </div>
 
           </div>
+          {nextEvent.campground?.id && (
+            <div className="mt-4">
+              <CampMarket campgroundId={nextEvent.campground.id} compact />
+            </div>
+          )}
         </div>
       )}
       {/* ── END TRIP PLANNING MODE PANEL ──────────────────────────── */}
@@ -3938,6 +3944,9 @@ export default function BasecampPage({ user }: BasecampProps) {
           {/* Network Tab */}
           {campingTab === 'network' && (
             <div className="space-y-6">
+              {activeCheckIn?.campground?.id && (
+                <CampMarket campgroundId={activeCheckIn.campground.id} />
+              )}
               <SocialFeed username={user?.username || ""} isOwnProfile={true} includePacking={false} />
               <BasecampActivityFeed maxItems={10} showHeader={true} />
               <CampgroundUpdatesFeed maxItems={10} />

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronUp, ChevronDown, MessageSquare, Plus, X, ArrowLeft, Flame, Clock, Trophy, Award } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageSquare, Plus, X, ArrowLeft, Flame, Clock, Trophy, Award, Search } from 'lucide-react';
 
 interface Board {
   id: string;
@@ -323,6 +323,9 @@ export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Post[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     api.get('/boards').then(({ data }) => setBoards(data.boards));
@@ -335,6 +338,23 @@ export default function CommunityPage() {
       setActiveBoard(null);
     }
   }, [slug]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const endpoint = slug ? `/boards/${slug}/posts` : '/boards/posts/all';
+        const { data } = await api.get(endpoint, { params: { search: searchQuery.trim() } });
+        setSearchResults(data.posts);
+      } catch (e) { console.error(e); }
+      finally { setSearching(false); }
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, slug]);
 
   const loadPosts = useCallback(async (cursor?: string) => {
     setLoading(true);
@@ -353,6 +373,8 @@ export default function CommunityPage() {
 
   useEffect(() => {
     setSelectedPostId(null);
+    setSearchQuery('');
+    setSearchResults(null);
     loadPosts();
   }, [loadPosts]);
 
@@ -409,8 +431,52 @@ export default function CommunityPage() {
 
           {/* Main content */}
           <div className="flex-1 min-w-0">
+            {/* Search bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setSelectedPostId(null); }}
+                placeholder={activeBoard ? `Search ${activeBoard.name}...` : 'Search all posts...'}
+                className="w-full pl-10 pr-9 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
             {selectedPostId ? (
               <PostDetail postId={selectedPostId} onBack={() => setSelectedPostId(null)} />
+            ) : searchResults !== null ? (
+              /* Search results */
+              searching ? (
+                <div className="space-y-3">
+                  {[1,2,3].map(i => <div key={i} className="h-24 bg-white rounded-xl border border-gray-100 animate-pulse" />)}
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                  <div className="text-4xl mb-3">🔍</div>
+                  <p className="font-semibold text-gray-800 mb-1">No posts found for "{searchQuery}"</p>
+                  <p className="text-sm text-gray-500 mb-4">Be the first to start this conversation!</p>
+                  {user && (
+                    <button onClick={() => { setShowCreate(true); }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition">
+                      Create Post
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500 font-semibold">
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}"{activeBoard ? ` in ${activeBoard.name}` : ' across all boards'}
+                  </p>
+                  {searchResults.map(post => (
+                    <PostCard key={post.id} post={post} showBoard={!slug} onClick={() => setSelectedPostId(post.id)} />
+                  ))}
+                </div>
+              )
             ) : (
               <>
                 {/* Sort tabs */}

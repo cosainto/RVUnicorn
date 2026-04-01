@@ -14,11 +14,17 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/posts/all', async (req: Request, res: Response) => {
   try {
-    const { sort = 'hot', limit = '20', cursor } = req.query;
+    const { sort = 'hot', limit = '20', cursor, search } = req.query;
     const take = Math.min(Number(limit), 50);
-    const orderBy: any = sort === 'new' ? { createdAt: 'desc' } : sort === 'top' ? { voteScore: 'desc' } : [{ voteScore: 'desc' }, { createdAt: 'desc' }];
+    const searchStr = search ? String(search).trim() : '';
+    const orderBy: any = searchStr
+      ? [{ voteScore: 'desc' }, { createdAt: 'desc' }]
+      : sort === 'new' ? { createdAt: 'desc' } : sort === 'top' ? { voteScore: 'desc' } : [{ voteScore: 'desc' }, { createdAt: 'desc' }];
+    const where: any = searchStr
+      ? { OR: [{ title: { contains: searchStr, mode: 'insensitive' } }, { body: { contains: searchStr, mode: 'insensitive' } }] }
+      : {};
     const posts = await (prisma as any).boardPost.findMany({
-      orderBy, take, ...(cursor ? { skip: 1, cursor: { id: String(cursor) } } : {}),
+      where, orderBy, take, ...(cursor ? { skip: 1, cursor: { id: String(cursor) } } : {}),
       include: {
         author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
         board: { select: { id: true, name: true, slug: true, icon: true, color: true } },
@@ -117,15 +123,23 @@ router.get('/:slug', async (req: Request, res: Response) => {
 
 router.get('/:slug/posts', async (req: Request, res: Response) => {
   try {
-    const { sort = 'hot', limit = '20', cursor } = req.query;
+    const { sort = 'hot', limit = '20', cursor, search } = req.query;
     const board = await (prisma as any).board.findUnique({ where: { slug: req.params.slug } });
     if (!board) return res.status(404).json({ error: 'Board not found' });
     const take = Math.min(Number(limit), 50);
-    const orderBy: any = sort === 'new' ? { createdAt: 'desc' } : sort === 'top' ? { voteScore: 'desc' } : [{ isPinned: 'desc' }, { voteScore: 'desc' }, { createdAt: 'desc' }];
+    const searchStr = search ? String(search).trim() : '';
+    const orderBy: any = searchStr
+      ? [{ voteScore: 'desc' }, { createdAt: 'desc' }]
+      : sort === 'new' ? { createdAt: 'desc' } : sort === 'top' ? { voteScore: 'desc' } : [{ isPinned: 'desc' }, { voteScore: 'desc' }, { createdAt: 'desc' }];
+    const where: any = { boardId: board.id };
+    if (searchStr) {
+      where.OR = [{ title: { contains: searchStr, mode: 'insensitive' } }, { body: { contains: searchStr, mode: 'insensitive' } }];
+    }
     const posts = await (prisma as any).boardPost.findMany({
-      where: { boardId: board.id }, orderBy, take, ...(cursor ? { skip: 1, cursor: { id: String(cursor) } } : {}),
+      where, orderBy, take, ...(cursor ? { skip: 1, cursor: { id: String(cursor) } } : {}),
       include: {
         author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        board: { select: { id: true, name: true, slug: true, icon: true, color: true } },
         _count: { select: { comments: true, votes: true } },
       },
     });

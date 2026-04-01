@@ -55,6 +55,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [winner, setWinner] = useState<Winner | null>(null);
   const [redemptionMsg, setRedemptionMsg] = useState<string | null>(null);
+  const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
 
   // Use refs to avoid stale closures
   const questionRef = useRef<TriviaQuestion | null>(null);
@@ -63,6 +64,39 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
 
   const API = (import.meta as any).env?.VITE_API_URL || '';
   const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+
+  // Fetch streak on mount
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`${API}/api/campfire-phase4/streak/${userId}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(r => r.json())
+      .then(data => { if (data.currentStreak !== undefined) setStreak(data); })
+      .catch(() => {});
+  }, [userId]);
+
+  const fetchSessionLeaderboard = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/campfire-phase4/leaderboard/${campgroundId}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.topPlayers?.length) {
+        setLeaderboard({
+          board: data.topPlayers.map((p: any, i: number) => ({
+            rank: i + 1,
+            name: p.user?.firstName || 'Camper',
+            points: p.totalPoints,
+            correct: p.correctAnswers,
+          })),
+          isFinal: false,
+        });
+        setShowLeaderboard(true);
+        setTimeout(() => setShowLeaderboard(false), 15000);
+      }
+    } catch (e) { console.error('Leaderboard fetch error:', e); }
+  }, [campgroundId]);
 
   const clearQuestion = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -166,11 +200,15 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         console.error('Results error:', e);
       }
 
-      setTimeout(clearQuestion, 3000);
+      const isLastQuestion = question.questionNum >= question.total;
+      setTimeout(() => {
+        clearQuestion();
+        if (isLastQuestion) fetchSessionLeaderboard();
+      }, 3000);
     };
 
     run();
-  }, [timeLeft, question, pendingResult, campgroundId, clearQuestion]);
+  }, [timeLeft, question, pendingResult, campgroundId, clearQuestion, fetchSessionLeaderboard]);
 
   // Socket events
   useEffect(() => {
@@ -234,6 +272,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       });
       const data = await res.json();
       if (data.isCorrect !== undefined) setPendingResult(data);
+      if (data.streak) setStreak(data.streak);
     } catch (e) { console.error('Answer error:', e); }
   }, [selected, campgroundId]);
 
@@ -274,6 +313,15 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
             </div>
           ))}
         </div>
+        {streak && streak.currentStreak > 0 && (
+          <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+            <span>🔥</span>
+            <span className="font-semibold text-amber-600">{streak.currentStreak}-day streak</span>
+            {streak.longestStreak > streak.currentStreak && (
+              <span className="text-xs text-gray-400">· Best: {streak.longestStreak}d</span>
+            )}
+          </div>
+        )}
         <button onClick={() => setShowLeaderboard(false)} className="w-full mt-3 text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
       </div>
     );
@@ -328,8 +376,15 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
             <span className="text-white text-sm font-semibold">Question {question.questionNum}/{question.total}</span>
             <span className="text-purple-200 text-xs bg-purple-700/50 px-2 py-0.5 rounded-full">{question.category}</span>
           </div>
-          <div className={`text-white font-mono font-bold text-sm px-2 py-0.5 rounded-lg ${timeLeft <= 10 ? 'bg-red-500 animate-pulse' : 'bg-purple-700/50'}`}>
-            {timeLeft}s
+          <div className="flex items-center gap-2">
+            {streak && streak.currentStreak > 1 && (
+              <div className="flex items-center gap-1 bg-amber-500/80 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
+                <span>🔥</span><span>{streak.currentStreak}d</span>
+              </div>
+            )}
+            <div className={`text-white font-mono font-bold text-sm px-2 py-0.5 rounded-lg ${timeLeft <= 10 ? 'bg-red-500 animate-pulse' : 'bg-purple-700/50'}`}>
+              {timeLeft}s
+            </div>
           </div>
         </div>
         <div className="h-1.5 bg-purple-800/50 rounded-full overflow-hidden">
@@ -376,6 +431,9 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
           {result.isCorrect
             ? `✅ Correct! +${result.points} points${result.points > 50 ? ' ⚡ Speed bonus!' : ''}`
             : `❌ The answer was ${result.correctAnswer}`}
+          {streak && streak.currentStreak > 1 && (
+            <div className="text-xs mt-1 text-amber-600 font-medium">🔥 {streak.currentStreak}-day streak{streak.currentStreak === streak.longestStreak && streak.currentStreak > 2 ? ' — new record!' : ''}</div>
+          )}
         </div>
       )}
 

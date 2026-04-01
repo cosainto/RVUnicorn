@@ -79,6 +79,40 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
   }
 });
 
+// POST /api/basecamp-activity/shoutout
+router.post('/shoutout', authenticateToken, async (req: any, res) => {
+  try {
+    const actorId = req.user.id;
+    const { targetUserId, campgroundId, message } = req.body;
+    if (!targetUserId || !message?.trim()) return res.status(400).json({ error: 'targetUserId and message required' });
+    if (targetUserId === actorId) return res.status(400).json({ error: 'Cannot shoutout yourself' });
+
+    const [target, campground] = await Promise.all([
+      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, firstName: true } }),
+      campgroundId ? prisma.campground.findUnique({ where: { id: campgroundId }, select: { id: true, name: true } }) : null,
+    ]);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    const activity = await prisma.basecampActivity.create({
+      data: {
+        userId: targetUserId,
+        actorId,
+        type: 'MAP_SHOUTOUT',
+        entityType: 'USER',
+        entityId: actorId,
+        entityName: campground?.name || 'the map',
+        metadata: { message: message.trim(), campgroundId: campground?.id, campgroundName: campground?.name },
+      },
+      include: { actor: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+
+    res.json({ success: true, activity });
+  } catch (error) {
+    console.error('Shoutout error:', error);
+    res.status(500).json({ error: 'Failed to send shoutout' });
+  }
+});
+
 function formatMessage(activity: any): string {
   const actor = activity.actor?.firstName || 'Someone';
   const meta = (activity.metadata as any) || {};
@@ -94,6 +128,7 @@ function formatMessage(activity: any): string {
     case 'PACK_ITEM_ADDED': return `${actor} added "${item}" to the packing list`;
     case 'PACK_LIST_COMPLETE': return `🎉 ${entity} is fully packed!`;
     case 'CREATOR_VIDEO_UPLOAD': return `${actor} uploaded a new video: "${entity}" - Go check it out! 🎬`;
+    case 'MAP_SHOUTOUT': return `${actor} left you a shoutout from the map! 📍 "${meta.message || ''}"`;
     default: return `Activity in ${entity}`;
   }
 }
@@ -107,7 +142,8 @@ function getIcon(type: string): string {
     'PACK_ITEM_UNPACKED': '↩️',
     'PACK_ITEM_ADDED': '➕',
     'PACK_LIST_COMPLETE': '🎉',
-    'CREATOR_VIDEO_UPLOAD': '🎬'
+    'CREATOR_VIDEO_UPLOAD': '🎬',
+    'MAP_SHOUTOUT': '📍'
   };
   return icons[type] || '📦';
 }
@@ -119,6 +155,7 @@ function getLink(activity: any): string {
   }
   if (activity.entityType === 'TRIP') return `/travel?trip=${activity.entityId}`;
   if (activity.entityType === 'CREATOR_CONTENT') return `/creators/${(activity.metadata as any)?.creatorUsername || 'unknown'}/content/${activity.entityId}`;
+  if (activity.type === 'MAP_SHOUTOUT') return `/profile/${activity.entityId}`;
   return '/basecamp';
 }
 

@@ -585,5 +585,16 @@ export function registerTriviaCrons(io: any) {
   // Daily noon — Wallet random chaos (2% chance per user)
   cron.schedule('0 12 * * *', () => runWalletChaosCron(), { timezone: 'America/Chicago' });
 
+  // Daily midnight — expire camp market listings
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      const { count } = await prisma.campMarketListing.updateMany({
+        where: { isActive: true, expiresAt: { lt: new Date() } },
+        data: { isActive: false },
+      });
+      if (count > 0) console.log(`[CampMarket] Expired ${count} listings`);
+    } catch (e) { console.error('[CampMarket] Expire cron error:', e); }
+  }, { timezone: 'America/Chicago' });
+
   console.log('[TriviaCron] All trivia crons registered ✅');
 }
