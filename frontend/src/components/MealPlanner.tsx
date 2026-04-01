@@ -111,6 +111,51 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
   const [recipeSource, setRecipeSource] = useState<RecipeSource>('manual');
   const [selectedRecipe, setSelectedRecipe] = useState<string>('');
   const [recipeSearch, setRecipeSearch] = useState('');
+  const [addingToSupply, setAddingToSupply] = useState<string | null>(null);
+  const [supplyAddSuccess, setSupplyAddSuccess] = useState<string | null>(null);
+
+  const handleQuickAddToSupply = async (meal: any) => {
+    if (!meal.ingredients?.length) return;
+    setAddingToSupply(meal.id);
+    try {
+      // Fetch existing supply items to check for duplicates
+      const { data: existing } = await api.get(`/supply/${meal.eventId}`);
+      const existingTitles = new Set((existing || []).map((i: any) => i.title.toLowerCase().trim()));
+
+      const newItems = meal.ingredients.filter((ing: string) =>
+        !existingTitles.has(ing.toLowerCase().trim())
+      );
+
+      const duplicates = meal.ingredients.length - newItems.length;
+
+      if (newItems.length === 0) {
+        setSupplyAddSuccess(`${meal.id}:dupe`);
+        setTimeout(() => setSupplyAddSuccess(null), 3000);
+        return;
+      }
+
+      // Add each new ingredient as a supply item
+      await Promise.all(
+        newItems.map((ingredient: string) =>
+          api.post(`/supply/${meal.eventId}`, {
+            title: ingredient,
+            quantity: '1',
+            priority: 'NORMAL',
+          })
+        )
+      );
+
+      const msg = duplicates > 0
+        ? `${meal.id}:partial:${newItems.length}:${duplicates}`
+        : `${meal.id}:ok:${newItems.length}`;
+      setSupplyAddSuccess(msg);
+      setTimeout(() => setSupplyAddSuccess(null), 4000);
+    } catch (e) {
+      console.error('Quick add failed:', e);
+    } finally {
+      setAddingToSupply(null);
+    }
+  };
   const [notifyAttendees, setNotifyAttendees] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -481,7 +526,28 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                                       <div className="font-bold text-sm text-gray-900 mb-1">{meal.menuItems.join(', ') || meal.recipe?.title || 'Meal'}</div>
                                       {meal.scheduledTime && <div className="text-xs text-gray-500 mb-1">🕐 {new Date(`2000-01-01T${meal.scheduledTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>}
                                       {meal.cook && <div className="text-xs text-gray-600 mb-1">👨‍🍳 {meal.cook.firstName}</div>}
-                                      {meal.ingredients?.length > 0 && <div className="text-xs text-gray-500 mb-1 line-clamp-2">🥗 {meal.ingredients.slice(0,3).join(', ')}{meal.ingredients.length > 3 ? '...' : ''}</div>}
+                                      {meal.ingredients?.length > 0 && (
+                                        <div className="mb-1">
+                                          <div className="text-xs text-gray-500 line-clamp-2">🥗 {meal.ingredients.slice(0,3).join(', ')}{meal.ingredients.length > 3 ? '...' : ''}</div>
+                                          <button
+                                            onClick={() => handleQuickAddToSupply({ ...meal, eventId: eventId })}
+                                            disabled={addingToSupply === meal.id}
+                                            className="mt-1 flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-2 py-0.5 rounded-full transition disabled:opacity-50"
+                                          >
+                                            {addingToSupply === meal.id ? (
+                                              <span>Adding...</span>
+                                            ) : supplyAddSuccess?.startsWith(meal.id + ':ok') ? (
+                                              <span>✓ {supplyAddSuccess.split(':')[2]} items added to Supply List!</span>
+                                            ) : supplyAddSuccess?.startsWith(meal.id + ':partial') ? (
+                                              <span>✓ {supplyAddSuccess.split(':')[2]} added ({supplyAddSuccess.split(':')[3]} already on list)</span>
+                                            ) : supplyAddSuccess?.startsWith(meal.id + ':dupe') ? (
+                                              <span>All ingredients already on Supply List ✓</span>
+                                            ) : (
+                                              <span>🛒 Add ingredients to Supply List</span>
+                                            )}
+                                          </button>
+                                        </div>
+                                      )}
                                       {meal.notes && <div className="text-xs text-gray-500 italic">"{meal.notes}"</div>}
                                     </div>
                                     <div className="flex gap-1 mt-2">
