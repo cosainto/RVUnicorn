@@ -2228,6 +2228,9 @@ export default function BasecampPage({ user }: BasecampProps) {
               </div>
             );
           })()}
+          {hasFutureTrip && nextEvent?.campground?.id && (
+            <CampMarket campgroundId={nextEvent.campground.id} compact />
+          )}
           <button
             onClick={() => { setIsDriving(true); localStorage.setItem('rvunicorn_driving', 'true'); }}
             className="w-full flex items-center gap-3 bg-white border border-primary-200 rounded-2xl px-4 py-3.5 hover:border-primary-400 hover:shadow-sm transition-all text-left"

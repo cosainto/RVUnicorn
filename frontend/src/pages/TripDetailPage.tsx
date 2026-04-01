@@ -32,6 +32,7 @@ import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import EventSettingsPanel from '../components/EventSettingsPanel';
+import CampMarket from '../components/CampMarket';
 
 interface Event {
   id: string;
@@ -940,6 +941,13 @@ export default function EventDetailPage() {
                     startDate={event.startDate}
                     endDate={event.endDate || event.startDate}
                   />
+                </div>
+              )}
+
+              {/* Camp Market at destination */}
+              {event.campground?.id && (
+                <div className="mt-4">
+                  <CampMarket campgroundId={event.campground.id} compact />
                 </div>
               )}
 
