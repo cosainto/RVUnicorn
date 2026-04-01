@@ -2096,6 +2096,61 @@ export default function EventDetailPage() {
         </div>
       )}
       {/* Duplicate Trip Modal */}
+      {/* Transfer Ownership Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Transfer Trip Ownership</h2>
+            <p className="text-sm text-gray-500 mb-4">Select an attendee to become the new trip organizer. You will lose the ability to delete or edit this trip.</p>
+            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              {event.attendees
+                ?.filter((a: any) => a.userId !== user?.id && a.status === 'going')
+                .map((a: any) => (
+                  <button
+                    key={a.userId}
+                    onClick={() => setTransferToUser({ id: a.userId, firstName: a.user.firstName, lastName: a.user.lastName })}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition ${
+                      transferToUser?.id === a.userId
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {a.user.profilePicture ? (
+                      <img src={a.user.profilePicture} className="w-9 h-9 rounded-full object-cover" alt="" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
+                        {a.user.firstName[0]}
+                      </div>
+                    )}
+                    <div className="text-left">
+                      <p className="font-semibold text-sm text-gray-900">{a.user.firstName} {a.user.lastName}</p>
+                      <p className="text-xs text-gray-400">@{a.user.username}</p>
+                    </div>
+                    {transferToUser?.id === a.userId && (
+                      <span className="ml-auto text-primary-600 text-xs font-bold">Selected ✓</span>
+                    )}
+                  </button>
+                ))}
+            </div>
+            {event.attendees?.filter((a: any) => a.userId !== user?.id && a.status === 'going').length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">No confirmed attendees to transfer to. Invite someone first.</p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { setShowTransferModal(false); setTransferToUser(null); }} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+                Cancel
+              </button>
+              <button
+                onClick={handleTransferOrganizer}
+                disabled={!transferToUser || transferring}
+                className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+              >
+                {transferring ? 'Transferring...' : 'Transfer Ownership'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">

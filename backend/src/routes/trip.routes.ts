@@ -814,6 +814,49 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/events/:id - Delete event
+// PUT /api/events/:id/transfer-organizer — transfer event ownership
+router.put('/:id/transfer-organizer', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const { newOrganizerId } = req.body;
+
+    if (!newOrganizerId) return res.status(400).json({ error: 'newOrganizerId is required' });
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: { attendees: { select: { userId: true } } },
+    });
+
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.organizerId !== userId) return res.status(403).json({ error: 'Only the organizer can transfer ownership' });
+
+    // New organizer must be an attendee
+    const isAttendee = event.attendees.some((a: any) => a.userId === newOrganizerId);
+    if (!isAttendee) return res.status(400).json({ error: 'New organizer must be an attendee of this event' });
+
+    await prisma.event.update({
+      where: { id },
+      data: { organizerId: newOrganizerId },
+    });
+
+    // Notify new organizer
+    await (prisma as any).notification.create({
+      data: {
+        userId: newOrganizerId,
+        type: 'EVENT_ORGANIZER_TRANSFER',
+        content: `You are now the organizer of "${event.title}"`,
+        link: `/trips/${id}`,
+      },
+    }).catch(() => {});
+
+    res.json({ message: 'Organizer transferred successfully' });
+  } catch (error) {
+    console.error('Transfer organizer error:', error);
+    res.status(500).json({ error: 'Failed to transfer organizer' });
+  }
+});
+
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;

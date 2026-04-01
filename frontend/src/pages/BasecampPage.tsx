@@ -552,7 +552,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
 
   return (
     <>
-      {showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
+      {typeof showTour !== 'undefined' && showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
     <div className="space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
