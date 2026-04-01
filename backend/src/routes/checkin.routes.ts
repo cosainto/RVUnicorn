@@ -159,10 +159,28 @@ router.patch('/checkout-event', authenticateToken, async (req: any, res) => {
 router.delete('/active', authenticateToken, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
+
+    // Find active check-in before deactivating (need campgroundId for market cleanup)
+    const activeCheckIn = await prisma.checkIn.findFirst({
+      where: { userId, isActive: true },
+      select: { campgroundId: true },
+    });
+
     await prisma.checkIn.updateMany({
       where: { userId, isActive: true },
       data: { isActive: false, checkOutDate: new Date() }
     });
+
+    // Deactivate any Camp Market listings at this campground
+    if (activeCheckIn?.campgroundId) {
+      try {
+        await prisma.campMarketListing.updateMany({
+          where: { userId, campgroundId: activeCheckIn.campgroundId, isActive: true },
+          data: { isActive: false },
+        });
+      } catch (e) { console.error('Camp market cleanup on checkout failed:', e); }
+    }
+
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
