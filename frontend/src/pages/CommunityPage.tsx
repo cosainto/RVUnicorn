@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -313,6 +313,7 @@ function PostDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
 export default function CommunityPage() {
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth() as any;
 
   const [boards, setBoards] = useState<Board[]>([]);
@@ -323,7 +324,7 @@ export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [searchResults, setSearchResults] = useState<Post[] | null>(null);
   const [searching, setSearching] = useState(false);
 
@@ -342,9 +343,11 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults(null);
+      setSearchParams(prev => { prev.delete('q'); return prev; }, { replace: true });
       return;
     }
     const timeout = setTimeout(async () => {
+      setSearchParams(prev => { prev.set('q', searchQuery.trim()); return prev; }, { replace: true });
       setSearching(true);
       try {
         const endpoint = slug ? `/boards/${slug}/posts` : '/boards/posts/all';
