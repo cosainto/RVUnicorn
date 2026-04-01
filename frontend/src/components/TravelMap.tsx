@@ -262,6 +262,9 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [loadingTripRoute, setLoadingTripRoute] = useState(false);
   const [loadingRoadtrip, setLoadingRoadtrip] = useState(true);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
+  const [stateDetail, setStateDetail] = useState<any>(null);
+  const [stateDetailLoading, setStateDetailLoading] = useState(false);
+  const [stateDetailError, setStateDetailError] = useState<string | null>(null);
   const [shoutoutTarget, setShoutoutTarget] = useState<{ user: any; campgroundId?: string; campgroundName?: string } | null>(null);
   const [shoutoutMsg, setShoutoutMsg] = useState('');
   const [shoutoutSending, setShoutoutSending] = useState(false);
@@ -621,16 +624,31 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
     );
   };
 
-  const handleStateClick = (stateCode: string) => {
+  const handleStateClick = async (stateCode: string) => {
     if (activeLayers.includes('gasPrices')) {
       const price = gasPrices.find(p => p.stateCode === stateCode);
       if (price) {
-        // Show in state modal instead
         setSelectedState(stateCode);
         return;
       }
     }
     setSelectedState(stateCode);
+    setStateDetail(null);
+    setStateDetailError(null);
+
+    // Fetch detailed drill-down for visited states
+    if (visitedStates.includes(stateCode) || plannedStates.includes(stateCode)) {
+      setStateDetailLoading(true);
+      try {
+        const { data } = await api.get(`/travel-map/${userId}/state/${stateCode}`);
+        setStateDetail(data);
+      } catch (e: any) {
+        const errMsg = e.response?.data?.message || e.response?.data?.error;
+        if (e.response?.status === 403) {
+          setStateDetailError(errMsg || "This user's travel map is private");
+        }
+      } finally { setStateDetailLoading(false); }
+    }
   };
 
   const handleAddVisit = () => {
@@ -1506,12 +1524,21 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                 </button>
               )}
 
-              {getStateVisits(selectedState).length > 0 ? (
+              {stateDetailError ? (
+                <div className="text-center py-8">
+                  <Lock className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                  <p className="text-gray-500 text-sm">{stateDetailError}</p>
+                </div>
+              ) : stateDetailLoading ? (
+                <div className="space-y-3">
+                  {[1,2].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" />)}
+                </div>
+              ) : (stateDetail?.visits || getStateVisits(selectedState)).length > 0 ? (
                 <div className="space-y-4">
                   <h3 className="font-semibold text-gray-900">
                     {isOwnProfile ? 'Your visits:' : 'Trips:'}
                   </h3>
-                  {getStateVisits(selectedState).map((visit) => (
+                  {(stateDetail?.visits || getStateVisits(selectedState)).map((visit: any) => (
                     <div key={visit.id} className={`rounded-lg p-4 border-2 ${isPlannedVisit(visit.startDate) ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -1533,8 +1560,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                                   notes: visit.notes || '',
                                   campsiteId: visit.campsiteId || '',
                                   eventId: visit.eventId || '',
-                                  attendeeIds: visit.attendees?.map(a => a.user.id) || [],
-                                  albumIds: visit.albums?.map(a => a.id) || [],
+                                  attendeeIds: visit.attendees?.map((a: any) => a.user?.id || a.id) || [],
+                                  albumIds: visit.albums?.map((a: any) => a.id) || [],
                                   visibility: visit.visibility || 'PUBLIC',
                                 });
                                 loadCampgrounds(visit.state);
@@ -1553,20 +1580,30 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                             </button>
                           </div>
                         ) : (
-                          visit.eventId ? (
+                          (visit.event?.id || visit.eventId) ? (
                             <Link
-                              to={`/trips/${visit.eventId}`}
+                              to={`/trips/${visit.event?.id || visit.eventId}`}
                               className="flex items-center gap-1 text-sm bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg"
                             >
                               <Eye className="w-4 h-4" />
-                              View Trip Details
+                              View Trip
                             </Link>
                           ) : null
                         )}
                       </div>
-                      {/* Event title if available */}
+                      {/* Event title + cover */}
                       {visit.event && (
-                        <h4 className="font-medium text-gray-900 mb-2">{visit.event.title}</h4>
+                        <div className="flex items-center gap-3 mb-2">
+                          {visit.event.coverImage && (
+                            <img src={visit.event.coverImage} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="" />
+                          )}
+                          <div>
+                            <Link to={`/trips/${visit.event.id}`} className="font-medium text-gray-900 hover:text-primary-600 transition">
+                              {visit.event.title}
+                            </Link>
+                            {visit.event.location && <p className="text-xs text-gray-400">{visit.event.location}</p>}
+                          </div>
+                        </div>
                       )}
                       {/* Attendees */}
                       {visit.attendees && visit.attendees.length > 0 && (
@@ -1574,11 +1611,11 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           <Users className="w-4 h-4" />
                           <span>{visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"}</span>
                           <div className="flex -space-x-2">
-                            {visit.attendees.slice(0, 5).map((a) => (
+                            {visit.attendees.slice(0, 5).map((a: any) => (
                               <img
-                                key={a.user.id}
-                                src={a.user.profilePicture || "/default-avatar.png"}
-                                alt={a.user.username}
+                                key={a.user?.id || a.id}
+                                src={a.user?.profilePicture || a.profilePicture || "/default-avatar.png"}
+                                alt=""
                                 className="w-6 h-6 rounded-full border-2 border-white"
                               />
                             ))}
@@ -1588,34 +1625,50 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           </div>
                         </div>
                       )}
-                      {visit.campsite && (
+                      {(visit.campsite) && (
                         <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="text-primary-600 hover:text-primary-700 flex items-center gap-2 mb-2">
                           <MapPin className="w-4 h-4" />
                           {visit.campsite.name}
                         </Link>
                       )}
                       {visit.notes && <p className="text-gray-700 text-sm">{visit.notes}</p>}
-                      {/* Show albums if available */}
+                      {/* Album thumbnails grid */}
                       {visit.albums && visit.albums.length > 0 && (
                         <div className="mt-3 pt-3 border-t">
                           <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                             <Image className="w-4 h-4" /> Albums ({visit.albums.length})
                           </p>
-                          <div className="flex gap-2 flex-wrap">
-                            {visit.albums.map((album) => (
+                          <div className="grid grid-cols-3 gap-2">
+                            {visit.albums.map((album: any) => (
                               <Link
                                 key={album.id}
-                                to={`/albums/${album.id}`}
-                                className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1"
+                                to={`/media-albums/${album.id}`}
+                                className="group relative rounded-lg overflow-hidden aspect-square bg-gray-100 hover:ring-2 hover:ring-primary-400 transition"
                               >
-                                {album.photos && album.photos[0] && (
-                                  <img src={album.photos[0].imageUrl} className="w-6 h-6 rounded object-cover" />
+                                {(album.coverPhoto || album.photos?.[0]?.imageUrl) ? (
+                                  <img src={album.coverPhoto || album.photos[0].imageUrl} className="w-full h-full object-cover" alt="" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-300"><Image className="w-8 h-8" /></div>
                                 )}
-                                {album.title} ({album._count?.photos || 0})
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+                                  <p className="text-white text-xs font-medium truncate">{album.title}</p>
+                                  <p className="text-white/70 text-[10px]">{album.photoCount || album._count?.photos || 0} photos</p>
+                                </div>
                               </Link>
                             ))}
                           </div>
                         </div>
+                      )}
+                      {/* Copy trip button for non-owners */}
+                      {!isOwnProfile && (
+                        <button
+                          onClick={() => handleCopyTrip(visit)}
+                          disabled={copyingTrip === visit.id}
+                          className="mt-2 flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 transition"
+                        >
+                          <Copy className="w-3 h-3" />
+                          {copyingTrip === visit.id ? 'Copying...' : 'Copy to my map'}
+                        </button>
                       )}
                     </div>
                   ))}

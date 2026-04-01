@@ -147,6 +147,137 @@ router.get('/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/travel-map/:userId/state/:stateCode — detailed state visit drill-down
+router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
+  try {
+    const { userId, stateCode } = req.params;
+
+    // Optional auth
+    let viewerId: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.substring(7), process.env.JWT_SECRET) as any;
+        viewerId = decoded.userId;
+      } catch {}
+    }
+
+    const isOwnProfile = viewerId === userId;
+
+    // Check travel map privacy
+    if (!isOwnProfile) {
+      const prefs = await prisma.userPreferences.findUnique({ where: { userId } });
+      const travelPrivacy = prefs?.showTravelMap || 'FRIENDS';
+      const isFriend = viewerId ? await areFriends(viewerId, userId) : false;
+
+      if (travelPrivacy === 'PRIVATE') {
+        return res.status(403).json({ error: 'private', message: "This user's travel map is private" });
+      }
+      if (travelPrivacy === 'FRIENDS' && !isFriend) {
+        return res.status(403).json({ error: 'friends_only', message: "This user's travel map is visible to friends only" });
+      }
+    }
+
+    // Determine visibility filter
+    const isFriend = !isOwnProfile && viewerId ? await areFriends(viewerId, userId) : false;
+    let visibilityFilter: any = {};
+    if (!isOwnProfile) {
+      visibilityFilter = isFriend
+        ? { visibility: { in: ['PUBLIC', 'FRIENDS'] } }
+        : { visibility: 'PUBLIC' };
+    }
+
+    // Album privacy filter
+    const albumPrivacyValues = isOwnProfile
+      ? undefined
+      : isFriend
+        ? ['PUBLIC', 'FRIENDS', 'FRIENDS_ONLY']
+        : ['PUBLIC'];
+
+    const stateVisits = await prisma.stateVisit.findMany({
+      where: { userId, state: stateCode.toUpperCase(), ...visibilityFilter },
+      include: {
+        campsite: {
+          select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true },
+        },
+        event: {
+          select: {
+            id: true, title: true, startDate: true, endDate: true, coverImage: true, location: true, privacy: true,
+            photoAlbums: {
+              where: albumPrivacyValues ? { privacy: { in: albumPrivacyValues } } : undefined,
+              select: {
+                id: true, title: true, coverPhotoUrl: true, privacy: true,
+                _count: { select: { photos: true } },
+                photos: { take: 1, select: { imageUrl: true } },
+              },
+            },
+          },
+        },
+        albums: {
+          include: {
+            album: {
+              select: {
+                id: true, title: true, coverPhotoUrl: true, privacy: true,
+                _count: { select: { photos: true } },
+                photos: { take: 1, select: { imageUrl: true } },
+              },
+            },
+          },
+        },
+        attendees: {
+          include: {
+            attendee: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+          },
+        },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    // Filter albums by privacy and transform
+    const visits = stateVisits.map(visit => {
+      const visitAlbums = visit.albums
+        .map(a => a.album)
+        .filter(a => !albumPrivacyValues || albumPrivacyValues.includes(a.privacy));
+      const eventAlbums = visit.event?.photoAlbums || [];
+      // Merge and deduplicate
+      const allAlbums = [...visitAlbums];
+      for (const ea of eventAlbums) {
+        if (!allAlbums.find(a => a.id === ea.id)) allAlbums.push(ea);
+      }
+
+      return {
+        id: visit.id,
+        state: visit.state,
+        startDate: visit.startDate,
+        endDate: visit.endDate,
+        notes: visit.notes,
+        visibility: visit.visibility,
+        campsite: visit.campsite,
+        event: visit.event ? {
+          id: visit.event.id,
+          title: visit.event.title,
+          startDate: visit.event.startDate,
+          endDate: visit.event.endDate,
+          coverImage: visit.event.coverImage,
+          location: visit.event.location,
+        } : null,
+        attendees: visit.attendees.map(a => a.attendee),
+        albums: allAlbums.map(a => ({
+          id: a.id,
+          title: a.title,
+          coverPhoto: a.coverPhotoUrl || a.photos?.[0]?.imageUrl || null,
+          photoCount: a._count?.photos || 0,
+        })),
+      };
+    });
+
+    res.json({ stateCode: stateCode.toUpperCase(), visits, isOwnProfile, isFriend });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch state details' });
+  }
+});
+
 // Copy a trip to your own travel map
 router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res: Response) => {
   try {
