@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import RigCard from './RigCard';
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -1012,10 +1013,42 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
             isDreamer={userPersona === 'dreamer' || userPersona === 'renter'}
             onComplete={async () => {
               await savePersona();
-              if (onComplete) onComplete();
-              else navigate('/basecamp');
+              setHitchComment('');
+              setStep(7);
             }}
           />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════ STEP 7: RIG CARD */}
+      {step === 7 && (
+        <div className={sliding ? 'slide-in-right' : ''}>
+          <div className="text-center mb-6">
+            <div className="text-3xl mb-2">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900">Your rig is officially on the grid!</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              Share with your RV community to find fellow {rigMake || authUser?.rvMake || 'RV'} owners
+            </p>
+          </div>
+          <div className="flex justify-center mb-4">
+            <RigCard
+              rig={{
+                firstName: authUser?.firstName,
+                username: authUser?.username,
+                rvYear: rigYear ? parseInt(rigYear) : authUser?.rvYear,
+                rvMake: rigMake || authUser?.rvMake,
+                rvModel: rigModel || authUser?.rvModel,
+                rvType: rigSpecs?.rvType || rvType || authUser?.rvType,
+                rvLength: rigSpecs?.lengthFt || authUser?.rvLength,
+                rvSleeps: rigSpecs?.sleeps || authUser?.rvSleeps,
+                rvSlideouts: rigSpecs?.slideoutCount,
+                homeCity: authUser?.homeCity,
+                homeState: authUser?.homeState,
+                profilePicture: authUser?.profilePicture,
+              }}
+              onSkip={() => { if (onComplete) onComplete(); else navigate('/basecamp'); }}
+            />
+          </div>
         </div>
       )}
     </div>

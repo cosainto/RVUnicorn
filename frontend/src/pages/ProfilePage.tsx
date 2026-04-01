@@ -5,6 +5,7 @@ import CurrentlyAtBadge from '../components/CurrentlyAtBadge';
 import CommunityTrustBadge from '../components/CommunityTrustBadge';
 import HitchProfileSummary from '../components/HitchProfileSummary';
 import CampMarketProfile from '../components/CampMarketProfile';
+import RigCard from '../components/RigCard';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -100,6 +101,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [coPilot, setCoPilot] = useState<any>(null);
+  const [showRigCard, setShowRigCard] = useState(false);
   const [friendshipStatus, setFriendshipStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED'>('NONE');
   const [friendshipId, setFriendshipId] = useState<string | null>(null);
   const [isInitiator, setIsInitiator] = useState(false);
@@ -635,6 +637,13 @@ const [editForm, setEditForm] = useState({
                     )}
                     <span className="text-sm font-medium">{coPilot.firstName} {coPilot.lastName}</span>
                   </Link>
+                )}
+
+                {/* Rig Card button */}
+                {isOwnProfile && (profile as any)?.rvMake && (
+                  <button onClick={() => setShowRigCard(true)} className="mt-2 text-xs text-orange-600 hover:text-orange-700 font-medium">
+                    🎴 Generate Rig Card
+                  </button>
                 )}
 
                 {/* Stats */}
@@ -1406,6 +1415,42 @@ const [editForm, setEditForm] = useState({
                   loadRVShowcase();
     loadUserGroups();
     loadPendingClaims();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rig Card Modal */}
+      {showRigCard && profile && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowRigCard(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center">
+              <RigCard
+                rig={{
+                  firstName: profile.firstName,
+                  username: profile.username,
+                  rvYear: (profile as any).rvYear,
+                  rvMake: (profile as any).rvMake,
+                  rvModel: (profile as any).rvModel,
+                  rvType: (profile as any).rvType,
+                  rvLength: (profile as any).rvLength,
+                  rvSleeps: (profile as any).rvSleeps,
+                  rvSlideouts: (profile as any).rvSlideouts,
+                  homeCity: (profile as any).homeCity,
+                  homeState: (profile as any).homeState,
+                  profilePicture: (profile as any).profilePicture,
+                }}
+                onSkip={() => setShowRigCard(false)}
+                onPostToFeed={async (blob) => {
+                  try {
+                    const formData = new FormData();
+                    formData.append('image', blob, 'rig-card.png');
+                    formData.append('content', `Check out my rig! 🚐 ${(profile as any).rvYear || ''} ${(profile as any).rvMake || ''} ${(profile as any).rvModel || ''}`);
+                    await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                    setShowRigCard(false);
+                  } catch {}
                 }}
               />
             </div>
