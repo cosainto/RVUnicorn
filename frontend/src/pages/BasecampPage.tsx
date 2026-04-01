@@ -1105,7 +1105,6 @@ export default function BasecampPage({ user }: BasecampProps) {
           const skyPost = (data.feedItems || []).find((item: any) => item.type === 'STARGAZING' || item.activityType === 'STARGAZING');
           setTonightSkyPost(skyPost || null);
         })
-        .catch(() => {});
         .catch((e) => console.error("checkins/active failed:", e));
     } else {
       setTonightData(null);
