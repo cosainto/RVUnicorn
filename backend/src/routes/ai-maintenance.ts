@@ -244,7 +244,7 @@ async function createMaintenanceNotification(userId: string, rv: any, rec: any) 
       data: {
         userId,
         type: "MAINTENANCE_REMINDER",
-        title: `${rec.urgency === "critical" ? "🚨" : "🔧"} Maintenance Due: ${rec.serviceType}`,
+        
         message: `Hitch thinks your ${rv.rvYear || ""} ${rv.rvMake || ""} ${rv.rvModel || ""} needs a ${rec.serviceType}. ${rec.reason}`,
         data: JSON.stringify({ rvId: rv.id, serviceType: rec.serviceType, urgency: rec.urgency }),
         content: `Hitch thinks your ${rv.rvYear || ""} ${rv.rvMake || ""} ${rv.rvModel || ""} needs a ${rec.serviceType}. ${rec.reason}`,

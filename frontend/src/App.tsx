@@ -64,6 +64,7 @@ import EnhancedDrivePlanner from './components/EnhancedDrivePlanner';
 import PrivacySettingsPage from './pages/PrivacySettingsPage';
 import HouseholdSettingsPage from './pages/HouseholdSettingsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 import SMSTermsPage from './pages/SMSTermsPage';
 import BlockedUsersPage from './pages/BlockedUsersPage';
 import MutedSettingsPage from './pages/MutedSettingsPage';
