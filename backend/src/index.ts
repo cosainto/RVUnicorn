@@ -112,6 +112,7 @@ import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import campMarketRoutes from './routes/camp-market.routes';
 import sitemapRoutes from './routes/sitemap.routes';
+import rigConnectionRoutes from './routes/rig-connection.routes';
 import quizRoutes from './routes/quiz.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
@@ -284,6 +285,7 @@ app.use("/api/itinerary", itineraryRoutes);
 app.use("/api/itinerary-ai", itineraryAiRoutes);
 app.use("/api/overnight-spots", overnightSpotsRoutes);
 app.use("/api/camp-market", campMarketRoutes);
+app.use("/api/rig-connection", rigConnectionRoutes);
 app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 

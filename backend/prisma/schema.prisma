@@ -328,6 +328,8 @@ model User {
   campMarketReviews       CampMarketFeedback[]  @relation("CampMarketReviewer")
   campMarketFeedback      CampMarketFeedback[]  @relation("CampMarketReviewee")
   campMarketStats         CampMarketStats?
+  rigConnectionsRequested RigConnection[]  @relation("RigConnectionRequester")
+  rigConnectionsReceived  RigConnection[]  @relation("RigConnectionReceiver")
 }
 
 model Post {
@@ -4458,4 +4460,19 @@ model QuizLead {
   userId          String?
 
   @@index([email])
+}
+
+model RigConnection {
+  id              String   @id @default(cuid())
+  requesterId     String
+  receiverId      String
+  status          String   @default("PENDING")
+  rigData         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  requester       User     @relation("RigConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver        User     @relation("RigConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId, status])
 }

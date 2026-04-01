@@ -193,12 +193,15 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   // Send link request
   const sendLinkRequest = async (targetUserId: string) => {
     try {
-      await api.post('/rv/link/request', { targetUserId, message: `I travel in the same ${rvType || 'RV'}!` });
+      // Find the user's username for the rig connection request
+      const target = coTravelerResults.find(u => u.id === targetUserId);
+      if (target) {
+        await api.post('/rig-connection/request', { username: target.username });
+      } else {
+        await api.post('/rv/link/request', { targetUserId, message: `I travel in the same ${rvType || 'RV'}!` });
+      }
       setLinkSent(true);
-      setTimeout(() => setLinkSent(false), 3000);
-    } catch (e) {
-      console.error('Link request failed:', e);
-    }
+    } catch {}
   };
 
   const copyInvite = () => {
@@ -717,13 +720,43 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
         </div>
       )}
 
-      {/* ══════════════════════════════════ STEP 4: CO-TRAVELER */}
+      {/* ══════════════════════════════════ STEP 4: CO-PILOT */}
       {step === 4 && (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Travel with someone?</h2>
-          <p className="text-gray-500 mb-6">Link your accounts to share vehicle info and plan trips together</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Do you travel with a co-pilot?</h2>
+          <p className="text-gray-500 mb-6">Link with someone already on RVUnicorn to share your rig profile</p>
 
-          {/* Link Methods */}
+          {/* Initial choice — show if not yet searching */}
+          {!coTravelerMode && !linkSent && (
+            <div className="space-y-3 mb-6">
+              <button onClick={() => setCoTravelerMode('search')}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 hover:border-primary-500 transition text-left">
+                <span className="text-2xl">👫</span>
+                <div><p className="font-bold text-gray-900">Yes, find them</p><p className="text-xs text-gray-500">Search by name or username</p></div>
+              </button>
+              <button onClick={async () => { await savePersona(); if (onComplete) onComplete(); else navigate('/basecamp'); }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition text-left">
+                <span className="text-2xl">🧑</span>
+                <div><p className="font-bold text-gray-900">No, just me</p><p className="text-xs text-gray-500">You can always add a co-pilot later</p></div>
+              </button>
+              <button onClick={async () => { await savePersona(); if (onComplete) onComplete(); else navigate('/basecamp'); }}
+                className="w-full text-sm text-gray-400 hover:text-gray-600 text-center mt-2">
+                Skip for now
+              </button>
+            </div>
+          )}
+
+          {/* Co-pilot request sent confirmation */}
+          {linkSent && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center mb-6">
+              <div className="text-3xl mb-2">✅</div>
+              <p className="font-bold text-green-800">Request sent!</p>
+              <p className="text-sm text-green-700 mt-1">You'll get their rig data once they confirm. In the meantime, your rig is set up with what you entered.</p>
+            </div>
+          )}
+
+          {/* Link Methods — keep invite/QR for legacy support */}
+          {coTravelerMode && !linkSent && (
           <div className="grid grid-cols-3 gap-3 mb-6">
             <button
               onClick={() => setCoTravelerMode('search')}
@@ -753,6 +786,7 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
               <p className="text-sm font-medium">QR Code</p>
             </button>
           </div>
+          )}
 
           {/* Search by username */}
           {coTravelerMode === 'search' && (

@@ -99,6 +99,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [coPilot, setCoPilot] = useState<any>(null);
   const [friendshipStatus, setFriendshipStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED'>('NONE');
   const [friendshipId, setFriendshipId] = useState<string | null>(null);
   const [isInitiator, setIsInitiator] = useState(false);
@@ -240,6 +241,11 @@ const [editForm, setEditForm] = useState({
       if (user && !isOwnProfile && data.id) {
         checkFriendshipStatus(data.id);
       }
+      // Load co-pilot
+      api.get(`/rig-connection/co-pilot/${data.id}`)
+        .then(r => { if (r.data?.coPilot) setCoPilot(r.data.coPilot); })
+        .catch(() => {});
+
       // Load user badges
       try {
         // Extract co-owned RV data from profile
@@ -616,6 +622,19 @@ const [editForm, setEditForm] = useState({
                       {profile.rvType && ` - ${profile.rvType}`}
                     </span>
                   </div>
+                )}
+
+                {/* Co-Pilot */}
+                {coPilot && (
+                  <Link to={`/profile/${coPilot.username}`} className="flex items-center gap-2 mt-2 text-gray-600 hover:text-primary-600 transition">
+                    <span className="text-sm">👫 Co-pilot:</span>
+                    {coPilot.profilePicture ? (
+                      <img src={coPilot.profilePicture} className="w-5 h-5 rounded-full object-cover" alt="" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-primary-200 flex items-center justify-center text-xs font-bold text-primary-700">{coPilot.firstName?.[0]}</div>
+                    )}
+                    <span className="text-sm font-medium">{coPilot.firstName} {coPilot.lastName}</span>
+                  </Link>
                 )}
 
                 {/* Stats */}
