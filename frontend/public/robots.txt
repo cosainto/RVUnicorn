@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rvunicorn.com/api/sitemap.xml
+
+Disallow: /api/
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications

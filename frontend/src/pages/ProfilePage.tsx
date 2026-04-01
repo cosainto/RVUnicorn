@@ -6,6 +6,7 @@ import CommunityTrustBadge from '../components/CommunityTrustBadge';
 import HitchProfileSummary from '../components/HitchProfileSummary';
 import CampMarketProfile from '../components/CampMarketProfile';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import {
   Plus,
   User as UserIcon,
@@ -429,6 +430,14 @@ const [editForm, setEditForm] = useState({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {profile && (
+        <Helmet>
+          <title>{profile.firstName} {profile.lastName} (@{profile.username}) — RVUnicorn</title>
+          <meta name="description" content={`Follow ${profile.firstName}'s RV adventures on RVUnicorn.${profile._count?.posts ? ` ${profile._count.posts} posts.` : ''}${profile._count?.friends ? ` ${profile._count.friends} friends.` : ''}`} />
+          <meta property="og:title" content={`${profile.firstName} ${profile.lastName} — RVUnicorn`} />
+          {profile.profilePicture && <meta property="og:image" content={profile.profilePicture} />}
+        </Helmet>
+      )}
       {/* Cover Image */}
       <div 
         className="badge-container h-48 sm:h-64 md:h-80 bg-gradient-to-br from-green-400 to-blue-500 relative"

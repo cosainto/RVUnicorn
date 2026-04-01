@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -387,6 +388,10 @@ export default function CommunityPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{activeBoard ? `${activeBoard.name} — RV Community | RVUnicorn` : 'RV Community — RVUnicorn'}</title>
+        <meta name="description" content={activeBoard ? `${activeBoard.description} Join thousands of RV campers discussing ${activeBoard.name} on RVUnicorn.` : 'The RV Unicorn community — share, learn, and laugh with fellow RV campers.'} />
+      </Helmet>
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

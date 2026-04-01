@@ -2,6 +2,7 @@ import FeedPage from './pages/FeedPage';
 import ThreadDetailPage from './pages/ThreadDetailPage';
 import TripCalendarWidget from './components/TripCalendarWidget';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ToastProvider from './components/ToastProvider';
@@ -438,14 +439,24 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-        <HitchFloatingChat />
-    </Router>
-    </AuthProvider>
+    <HelmetProvider>
+      <Helmet>
+        <title>RVUnicorn — The Social Platform for RV Campers</title>
+        <meta name="description" content="RVUnicorn is the social platform for RV enthusiasts. Discover campgrounds, plan road trips, connect with fellow campers, and track your adventures across America." />
+        <meta property="og:title" content="RVUnicorn — The Social Platform for RV Campers" />
+        <meta property="og:description" content="Discover campgrounds, plan road trips, connect with fellow campers, and track your adventures across America." />
+        <meta property="og:image" content="https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/Logo_RVUnicorn.png" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <AuthProvider>
+        <Router>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+          <HitchFloatingChat />
+        </Router>
+      </AuthProvider>
+    </HelmetProvider>
   );
 }
 

@@ -6,6 +6,7 @@ import {
   Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned, Edit
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import DraggableBanner from '../components/DraggableBanner'; // keep
@@ -559,7 +560,27 @@ export default function CampgroundDetailPage() {
 
   return (
     <div className={themeStyles.container + ' ' + themeStyles.fontStyle} style={{ '--accent-color': accentColor } as React.CSSProperties}>
-      
+      {campground && (
+        <Helmet>
+          <title>{campground.name} — RVUnicorn Campground Reviews & RV Info</title>
+          <meta name="description" content={`${campground.name}${campground.city ? ` in ${campground.city}, ${campground.state}` : campground.state ? ` in ${campground.state}` : ''}. Read RV camper reviews, see photos, check amenities and get RV-specific info including hookups, pull-through sites, and big rig access.`} />
+          <meta property="og:title" content={`${campground.name} — RVUnicorn`} />
+          <meta property="og:description" content={`${campground.name}${campground.city ? ` in ${campground.city}, ${campground.state}` : ''}. RV camper reviews, photos, and amenities.`} />
+          {campground.imageUrl && <meta property="og:image" content={campground.imageUrl} />}
+          <meta property="og:url" content={`https://rvunicorn.com/campgrounds/${campground.id}`} />
+          <script type="application/ld+json">{JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Campground",
+            "name": campground.name,
+            "description": campground.description || `${campground.name} campground`,
+            "image": campground.imageUrl || undefined,
+            "url": `https://rvunicorn.com/campgrounds/${campground.id}`,
+            ...(campground.latitude && campground.longitude ? { "geo": { "@type": "GeoCoordinates", "latitude": campground.latitude, "longitude": campground.longitude } } : {}),
+            ...(campground.city || campground.state ? { "address": { "@type": "PostalAddress", "addressLocality": campground.city, "addressRegion": campground.state, "addressCountry": "US" } } : {}),
+          })}</script>
+        </Helmet>
+      )}
+
       {/* MODERN THEME: Full-bleed hero with overlay content */}
       {isModern && (
         <div className="relative">
