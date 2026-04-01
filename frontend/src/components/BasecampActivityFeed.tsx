@@ -28,6 +28,7 @@ interface FeedItem {
   activityColor?: string;
   campground?: { id: string; name: string; state?: string };
   imageUrl?: string;
+  videoUrl?: string;
   isFriendActivity?: boolean;
   hasMutualFriendInteraction?: boolean;
   isPackingActivity?: boolean;

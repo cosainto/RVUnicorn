@@ -110,10 +110,8 @@ router.post('/', authenticateToken, async (req: any, res) => {
           }
           throw err;
         });
-        console.log('[CheckIn] Auto-created event for user ' + userId);
       }
     } catch (eventErr: any) {
-      console.error('[CheckIn] Auto-event creation failed:', eventErr.message);
     }
 
     res.json(checkIn);
@@ -178,7 +176,7 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
           where: { userId, campgroundId: activeCheckIn.campgroundId, isActive: true },
           data: { isActive: false },
         });
-      } catch (e) { console.error('Camp market cleanup on checkout failed:', e); }
+      } catch (e) { }
     }
 
     res.json({ success: true });
@@ -252,7 +250,6 @@ router.get('/active', authenticateToken, async (req: any, res) => {
           });
         }
       } catch (activityErr) {
-        console.error('Check-in activity log error (non-fatal):', activityErr);
       }
     }
 
@@ -403,7 +400,6 @@ router.get('/nearby-friends', authenticateToken, async (req, res) => {
     });
     res.json(result);
   } catch (error) {
-    console.error('Nearby friends error:', error);
     res.status(500).json({ error: 'Failed to fetch nearby campers' });
   }
 });

@@ -99,7 +99,6 @@ router.get('/', authenticateToken, async (req: any, res) => {
     });
     res.json(roadTrips);
   } catch (e: any) {
-    console.error('[RoadTrips] GET / error:', e);
     res.status(500).json({ error: 'Failed to fetch road trips', detail: e?.message });
   }
 });
@@ -206,7 +205,6 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
             };
           }
         } catch (driveErr: any) {
-          console.error('[RoadTrip] getDriveTime failed:', driveErr?.response?.data || driveErr?.message);
         }
       };
 
@@ -385,7 +383,6 @@ router.post('/:id/stops', authenticateToken, async (req: any, res) => {
           }
         }
       } catch (planErr) {
-        console.error('[RoadTrip] TripPlan auto-inject failed (non-fatal):', planErr);
       }
     }
 
@@ -419,7 +416,6 @@ router.delete('/:id/stops/:eventId', authenticateToken, async (req: any, res) =>
     );
     res.json({ success: true });
   } catch (e: any) {
-    console.error('[RoadTrips] DELETE stop error:', e);
     res.status(500).json({ error: 'Failed to remove stop' });
   }
 });
@@ -529,7 +525,6 @@ router.post('/drive-time', authenticateToken, async (req: any, res) => {
       gasCostText,
     });
   } catch (e: any) {
-    console.error('[RoadTrips] drive-time error:', e?.response?.data || e?.message);
     res.status(500).json({ error: 'Could not calculate drive time' });
   }
 });
@@ -720,7 +715,6 @@ Stop types: FUEL, FOOD, OVERNIGHT, REST, ATTRACTION, WAYPOINT, WALMART`;
 
         results.push({ stopId: stop.id, stopTitle: stop.title, status: 'planned', startLocation, destination, totalMiles: suggestion.totalMiles });
       } catch (legErr: any) {
-        console.error('[RoadTrip] Leg planning failed for stop', stop.id, legErr.message);
         results.push({ stopId: stop.id, status: 'error', reason: legErr.message });
       }
     }
@@ -732,7 +726,6 @@ Stop types: FUEL, FOOD, OVERNIGHT, REST, ATTRACTION, WAYPOINT, WALMART`;
       message: 'Routes planned for ' + plannedCount + '/' + sortedStops.length + ' legs.'
     });
   } catch (e: any) {
-    console.error('[RoadTrips] generate-plans error:', e);
     res.status(500).json({ error: 'Failed to generate trip plans' });
   }
 });
@@ -836,7 +829,6 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
       tripStates,
     });
   } catch (e: any) {
-    console.error('[RoadTrip] map-route error:', e?.message);
     res.status(500).json({ error: 'Failed to build map route' });
   }
 });
@@ -940,7 +932,6 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
       tripStates,
     });
   } catch (e: any) {
-    console.error('[RoadTrip] map-route error:', e?.message);
     res.status(500).json({ error: 'Failed to build map route' });
   }
 });

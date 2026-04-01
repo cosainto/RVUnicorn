@@ -215,7 +215,6 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/mentions', mentionRoutes);
 app.use('/api/roadtrip', roadtripRoutes);
 app.use('/api/saved-trips', savedTripsRoutes);
-app.use('/api/saved-trips', savedTripsRoutes);
 app.use('/api/gas-prices', gasPricesRoutes);
 app.use("/api/event-meals", tripMealRoutes);
 app.use("/api/drive-planner", drivePlannerRoutes);

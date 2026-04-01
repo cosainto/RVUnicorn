@@ -45,7 +45,6 @@ router.get("/:campgroundId/posts", optionalAuth, async (req: any, res) => {
 
     res.json({ posts: postsWithRsvp });
   } catch (e: any) {
-    console.error("Campfire posts error:", e?.message);
     res.status(500).json({ error: "Failed" });
   }
 });
@@ -124,7 +123,6 @@ router.post("/:campgroundId/posts", authenticateToken, async (req: any, res) => 
       }, 10 * 60 * 1000); // 10 minutes
     }
   } catch (e: any) {
-    console.error("Create post error:", e?.message);
     res.status(500).json({ error: "Failed" });
   }
 });
@@ -239,7 +237,6 @@ Write the pulse now (2 sentences max, fun and warm):`,
     const pulse = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     res.json({ pulse, camperCount });
   } catch (e: any) {
-    console.error("Pulse error:", e?.message);
     res.json({ pulse: "", camperCount: 0 });
   }
 });
@@ -336,7 +333,6 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
       }
     });
   } catch (error) {
-    console.error('Active question error:', error);
     res.status(500).json({ error: 'Failed to get active question' });
   }
 });
@@ -428,11 +424,10 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
           data: { userId, currentStreak: 1, longestStreak: 1, lastPlayedAt: new Date() },
         });
       }
-    } catch (e) { console.error('Streak update error:', e); }
+    } catch (e) { }
 
     res.json({ isCorrect, points, correctAnswer: question.answer, speedBonus, streak });
   } catch (error) {
-    console.error('Answer error:', error);
     res.status(500).json({ error: 'Failed to submit answer' });
   }
 });
@@ -461,7 +456,6 @@ router.get('/:campgroundId/question-results/:questionId', async (req: Request, r
 
     res.json({ correct, wrong, correctAnswer: question?.answer, total: answers.length });
   } catch (error) {
-    console.error('Question results error:', error);
     res.status(500).json({ error: 'Failed to get results' });
   }
 });
@@ -487,7 +481,6 @@ router.post('/:campgroundId/chat-message', authenticateToken, async (req: Reques
 
     res.json(message);
   } catch (error) {
-    console.error('Chat message error:', error);
     res.status(500).json({ error: 'Failed to post message' });
   }
 });
@@ -542,7 +535,6 @@ Be specific to the location and time of day. Sound like a real person, not a bot
 
     res.json({ message });
   } catch (error) {
-    console.error('Daily vibe error:', error);
     res.json({ message: null }); // fail silently
   }
 });
@@ -607,7 +599,6 @@ Make it a real, delicious camp recipe. Keep it simple — one pot, foil packet, 
 
     res.json({ success: true, message });
   } catch (error) {
-    console.error('Recipe of night error:', error);
     res.status(500).json({ error: 'Failed to post recipe' });
   }
 });

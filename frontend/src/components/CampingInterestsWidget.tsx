@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 
 const CAMPING_INTERESTS = [
   { value: 'hiking', label: '🥾 Hiking & Trails' },

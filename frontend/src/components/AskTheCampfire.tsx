@@ -52,7 +52,6 @@ export default function AskTheCampfire({ campgroundId, campgroundName }: AskTheC
   };
 
   const shareResult = () => {
-  const shareResult = () => {
     if (!result) return;
     const discussion = result.discussion.map(m => `${getGuide(m.guideId).emoji} ${getGuide(m.guideId).name}: "${m.content}"`).join('\n\n');
     const text = `🔥 Ask the Campfire about ${campgroundName}:\n\nQ: ${result.question}\n\n${discussion}\n\n🏕️ Campfire Takeaway: ${result.takeaway}\n\nvia RVUnicorn`;
@@ -150,5 +149,4 @@ export default function AskTheCampfire({ campgroundId, campgroundName }: AskTheC
       )}
     </div>
   );
-}
 }

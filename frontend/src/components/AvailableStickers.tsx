@@ -93,7 +93,7 @@ export default function AvailableStickers({ campgroundId }: AvailableStickersPro
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stickers.map((sticker) => {
-          const isAtCapacity = sticker.isLimited && sticker.maxEarners && sticker._count.awards >= sticker.maxEarners;
+          const isAtCapacity = !!(sticker.isLimited && sticker.maxEarners && sticker._count.awards >= sticker.maxEarners);
           const spotsLeft = sticker.isLimited && sticker.maxEarners ? sticker.maxEarners - sticker._count.awards : null;
 
           return (
