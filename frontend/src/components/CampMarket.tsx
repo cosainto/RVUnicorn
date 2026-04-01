@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send } from 'lucide-react';
+import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { CampMarketRepBadge } from './CampMarketProfile';
+import CampMarketFeedbackModal from './CampMarketFeedbackModal';
 
 interface Listing {
   id: string;
@@ -12,9 +14,17 @@ interface Listing {
   imageUrl: string | null;
   siteNumber: string | null;
   isFree: boolean;
+  completedBuyerId?: string | null;
   expiresAt: string;
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
+  _count?: { interests: number };
+}
+
+interface InterestedBuyer {
+  id: string;
+  buyerId: string;
+  buyer: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
 }
 
 interface Props {
@@ -30,6 +40,18 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [interestSent, setInterestSent] = useState<Set<string>>(new Set());
 
+  // Mark as Sold modal
+  const [soldListingId, setSoldListingId] = useState<string | null>(null);
+  const [interestedBuyers, setInterestedBuyers] = useState<InterestedBuyer[]>([]);
+  const [loadingBuyers, setLoadingBuyers] = useState(false);
+  const [completingWith, setCompletingWith] = useState<string | null>(null);
+
+  // Feedback modal
+  const [feedbackListing, setFeedbackListing] = useState<{ id: string; title: string; otherName: string; otherPic?: string } | null>(null);
+
+  // Pending feedback banner
+  const [pendingFeedback, setPendingFeedback] = useState<any[]>([]);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -43,6 +65,14 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [campgroundId]);
+
+  // Load pending feedback
+  useEffect(() => {
+    if (!user) return;
+    api.get('/camp-market/pending-feedback/me')
+      .then(({ data }) => setPendingFeedback(data.pending || []))
+      .catch(() => {});
+  }, [user]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,6 +117,28 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
       await api.post(`/camp-market/listing/${listing.id}/interest`);
       setInterestSent(prev => new Set(prev).add(listing.id));
     } catch (e) { console.error(e); }
+  };
+
+  const openMarkSold = async (listingId: string) => {
+    setSoldListingId(listingId);
+    setLoadingBuyers(true);
+    try {
+      const { data } = await api.get(`/camp-market/listing/${listingId}/interests`);
+      setInterestedBuyers(data.interests || []);
+    } catch (e) { console.error(e); }
+    finally { setLoadingBuyers(false); }
+  };
+
+  const completeSale = async (buyerId: string) => {
+    if (!soldListingId) return;
+    setCompletingWith(buyerId);
+    try {
+      await api.post(`/camp-market/listing/${soldListingId}/complete`, { buyerId });
+      setListings(prev => prev.filter(l => l.id !== soldListingId));
+      setSoldListingId(null);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to complete sale');
+    } finally { setCompletingWith(null); }
   };
 
   if (loading) return <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />;
@@ -148,6 +200,25 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
         <p className="text-orange-100 text-xs mt-1">Buy, sell, or share with fellow campers</p>
       </div>
 
+      {/* Pending feedback banner */}
+      {pendingFeedback.length > 0 && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between">
+          <p className="text-xs text-amber-800 font-medium">
+            <span className="mr-1">⏰</span>
+            You have {pendingFeedback.length} feedback request{pendingFeedback.length !== 1 ? 's' : ''} pending
+          </p>
+          <button
+            onClick={() => {
+              const p = pendingFeedback[0];
+              if (p) setFeedbackListing({ id: p.listingId, title: p.title, otherName: p.otherParty.firstName || 'Camper', otherPic: p.otherParty.profilePicture });
+            }}
+            className="text-xs text-amber-700 font-semibold hover:text-amber-900"
+          >
+            Leave Feedback
+          </button>
+        </div>
+      )}
+
       {/* Listings */}
       <div className="p-4">
         {listings.length === 0 ? (
@@ -189,6 +260,7 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                         )}
                         <span className="text-xs text-gray-500">{listing.user.firstName}</span>
                       </div>
+                      <CampMarketRepBadge userId={listing.user.id} />
                       {listing.siteNumber && (
                         <span className="flex items-center gap-1 text-xs text-gray-400">
                           <MapPin className="w-3 h-3" /> Site {listing.siteNumber}
@@ -212,12 +284,20 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                         )
                       )}
                       {user && user.id === listing.user.id && (
-                        <button
-                          onClick={() => handleDelete(listing.id)}
-                          className="text-xs text-red-400 hover:text-red-600 transition"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openMarkSold(listing.id)}
+                            className="flex items-center gap-1 text-xs bg-green-50 text-green-600 hover:bg-green-100 px-2.5 py-1 rounded-lg font-semibold transition"
+                          >
+                            <CheckCircle className="w-3 h-3" /> Mark as Sold
+                          </button>
+                          <button
+                            onClick={() => handleDelete(listing.id)}
+                            className="text-xs text-red-400 hover:text-red-600 transition"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -227,6 +307,54 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
           </div>
         )}
       </div>
+
+      {/* Mark as Sold Modal */}
+      {soldListingId && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSoldListingId(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900">Mark as Sold</h2>
+              <button onClick={() => setSoldListingId(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5">
+              {loadingBuyers ? (
+                <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+              ) : interestedBuyers.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No one has expressed interest yet.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-3">Select who you completed the trade with:</p>
+                  <div className="space-y-2">
+                    {interestedBuyers.map(interest => (
+                      <button
+                        key={interest.id}
+                        onClick={() => completeSale(interest.buyerId)}
+                        disabled={completingWith !== null}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition text-left disabled:opacity-50"
+                      >
+                        {interest.buyer.profilePicture ? (
+                          <img src={interest.buyer.profilePicture} className="w-8 h-8 rounded-full object-cover" alt="" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-orange-200 flex items-center justify-center text-sm font-bold text-orange-700">{interest.buyer.firstName[0]}</div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-800">{interest.buyer.firstName} {interest.buyer.lastName}</p>
+                          <p className="text-xs text-gray-400">@{interest.buyer.username}</p>
+                        </div>
+                        {completingWith === interest.buyerId ? (
+                          <span className="text-xs text-green-600">Completing...</span>
+                        ) : (
+                          <CheckCircle className="w-5 h-5 text-gray-300" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Listing Modal */}
       {showForm && (
@@ -297,6 +425,20 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackListing && (
+        <CampMarketFeedbackModal
+          listingId={feedbackListing.id}
+          listingTitle={feedbackListing.title}
+          otherPartyName={feedbackListing.otherName}
+          otherPartyPicture={feedbackListing.otherPic}
+          onClose={() => setFeedbackListing(null)}
+          onSubmitted={() => {
+            setPendingFeedback(prev => prev.filter(p => p.listingId !== feedbackListing.id));
+          }}
+        />
       )}
     </div>
   );

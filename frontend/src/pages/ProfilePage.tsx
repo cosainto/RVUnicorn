@@ -4,6 +4,7 @@ import DraggableBanner from '../components/DraggableBanner';
 import CurrentlyAtBadge from '../components/CurrentlyAtBadge';
 import CommunityTrustBadge from '../components/CommunityTrustBadge';
 import HitchProfileSummary from '../components/HitchProfileSummary';
+import CampMarketProfile from '../components/CampMarketProfile';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -624,6 +625,7 @@ const [editForm, setEditForm] = useState({
                   <p className="text-gray-700 mt-4 whitespace-pre-wrap">{profile.bio}</p>
                 )}
                 {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}
+                {profile?.id && <div className="mt-4"><CampMarketProfile userId={profile.id} /></div>}
 
 
                 {/* Location & Website */}

@@ -585,14 +585,55 @@ export function registerTriviaCrons(io: any) {
   // Daily noon — Wallet random chaos (2% chance per user)
   cron.schedule('0 12 * * *', () => runWalletChaosCron(), { timezone: 'America/Chicago' });
 
-  // Daily midnight — expire camp market listings
+  // Daily midnight — expire camp market listings + send feedback reminders
   cron.schedule('0 0 * * *', async () => {
     try {
+      // Expire active listings past their date
       const { count } = await prisma.campMarketListing.updateMany({
         where: { isActive: true, expiresAt: { lt: new Date() } },
         data: { isActive: false },
       });
       if (count > 0) console.log(`[CampMarket] Expired ${count} listings`);
+
+      // Send feedback reminders for listings that expired in the last 24h with completed buyers
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentlyExpired = await prisma.campMarketListing.findMany({
+        where: {
+          completedBuyerId: { not: null },
+          expiresAt: { gte: yesterday, lt: new Date() },
+        },
+        include: {
+          user: { select: { id: true, firstName: true } },
+          interests: { include: { buyer: { select: { id: true, firstName: true } } } },
+        },
+      });
+
+      for (const listing of recentlyExpired) {
+        const feedbackDeadline = new Date(listing.expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const deadlineStr = feedbackDeadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        // Notify seller
+        await prisma.basecampActivity.create({
+          data: {
+            userId: listing.userId, actorId: listing.completedBuyerId!,
+            type: 'CAMP_MARKET_FEEDBACK_REMINDER', entityType: 'CAMP_MARKET', entityId: listing.id,
+            entityName: listing.title,
+            metadata: { feedbackDeadline: feedbackDeadline.toISOString(), message: `How did your trade go? Leave feedback before ${deadlineStr}` },
+          },
+        }).catch(() => {});
+
+        // Notify buyer
+        await prisma.basecampActivity.create({
+          data: {
+            userId: listing.completedBuyerId!, actorId: listing.userId,
+            type: 'CAMP_MARKET_FEEDBACK_REMINDER', entityType: 'CAMP_MARKET', entityId: listing.id,
+            entityName: listing.title,
+            metadata: { feedbackDeadline: feedbackDeadline.toISOString(), message: `How did your trade go? Leave feedback before ${deadlineStr}` },
+          },
+        }).catch(() => {});
+      }
+
+      if (recentlyExpired.length > 0) console.log(`[CampMarket] Sent feedback reminders for ${recentlyExpired.length} listings`);
     } catch (e) { console.error('[CampMarket] Expire cron error:', e); }
   }, { timezone: 'America/Chicago' });
 

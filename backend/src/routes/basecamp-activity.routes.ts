@@ -129,6 +129,8 @@ function formatMessage(activity: any): string {
     case 'PACK_LIST_COMPLETE': return `🎉 ${entity} is fully packed!`;
     case 'CREATOR_VIDEO_UPLOAD': return `${actor} uploaded a new video: "${entity}" - Go check it out! 🎬`;
     case 'MAP_SHOUTOUT': return `${actor} left you a shoutout from the map! 📍 "${meta.message || ''}"`;
+    case 'CAMP_MARKET_FEEDBACK_REQUEST': return `Your trade "${entity}" is complete! Leave feedback for ${meta.buyerName || meta.sellerName || 'the other party'}.`;
+    case 'CAMP_MARKET_FEEDBACK_REMINDER': return meta.message || `How did your trade for "${entity}" go? Leave feedback!`;
     default: return `Activity in ${entity}`;
   }
 }
@@ -143,7 +145,9 @@ function getIcon(type: string): string {
     'PACK_ITEM_ADDED': '➕',
     'PACK_LIST_COMPLETE': '🎉',
     'CREATOR_VIDEO_UPLOAD': '🎬',
-    'MAP_SHOUTOUT': '📍'
+    'MAP_SHOUTOUT': '📍',
+    'CAMP_MARKET_FEEDBACK_REQUEST': '🛒',
+    'CAMP_MARKET_FEEDBACK_REMINDER': '⏰'
   };
   return icons[type] || '📦';
 }
