@@ -470,7 +470,8 @@ export default function MealPlanner({ eventId, startDate, endDate, isOrganizer }
                     return (
                       <div
                         key={date}
-                        className="w-48 flex-shrink-0 p-2 border-r border-gray-200 min-h-[140px] hover:bg-gray-50 transition"
+                        className="w-48 flex-shrink-0 p-2 border-r border-gray-200 min-h-[140px] hover:bg-gray-50 transition cursor-pointer"
+                        onClick={() => isOrganizer && openAddModal(date, mealType)}
                       >
                         {dateMeals.length > 0 ? (
                           <div className="space-y-2">
