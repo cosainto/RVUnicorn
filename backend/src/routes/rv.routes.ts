@@ -131,6 +131,68 @@ router.get('/manual', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// MAGIC RIG REVEAL — AI-powered spec lookup
+// ═══════════════════════════════════════════════════════════════
+
+// POST /api/rv/lookup — AI-lookup specs for a year/make/model
+router.post('/lookup', async (req, res) => {
+  try {
+    const { year, make, model } = req.body;
+    if (!make || !model) return res.status(400).json({ error: 'make and model required' });
+
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `You are an RV specifications expert. For a ${year || ''} ${make} ${model} RV, provide realistic typical specs as JSON. If you don't know the exact model, provide reasonable estimates for this type and manufacturer. Always return ONLY valid JSON, no markdown:\n{"lengthFt":0,"heightFt":0,"weightLbs":0,"sleeps":0,"freshWaterGal":0,"grayWaterGal":0,"blackWaterGal":0,"hasSlideouts":false,"slideoutCount":0,"rvType":"Travel Trailer","hasSolar":false,"hasResidentialFridge":false,"isGoodForBigRigs":false,"mpg":0,"hitchWeight":0,"confidence":"high"}`,
+      }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    const specs = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+    // Try to find a stock image from our DB
+    const dbModel = await prisma.rVModel.findFirst({
+      where: {
+        name: { contains: model, mode: 'insensitive' },
+        make: { name: { contains: make, mode: 'insensitive' } },
+      },
+      select: { stockImage: true, type: true },
+    });
+
+    res.json({
+      specs: {
+        lengthFt: specs.lengthFt || null,
+        heightFt: specs.heightFt || null,
+        weightLbs: specs.weightLbs || null,
+        sleeps: specs.sleeps || null,
+        freshWaterGal: specs.freshWaterGal || null,
+        grayWaterGal: specs.grayWaterGal || null,
+        blackWaterGal: specs.blackWaterGal || null,
+        hasSlideouts: specs.hasSlideouts || false,
+        slideoutCount: specs.slideoutCount || 0,
+        rvType: specs.rvType || 'Travel Trailer',
+        hasSolar: specs.hasSolar || false,
+        hasResidentialFridge: specs.hasResidentialFridge || false,
+        isGoodForBigRigs: specs.isGoodForBigRigs || false,
+        mpg: specs.mpg || null,
+        hitchWeight: specs.hitchWeight || null,
+        confidence: specs.confidence || (make.toLowerCase() === 'other' ? 'low' : 'medium'),
+      },
+      stockImage: dbModel?.stockImage || null,
+      year, make, model,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to lookup rig specs' });
+  }
+});
+
 // AUTOFILL — apply model specs to user profile
 // ═══════════════════════════════════════════════════════════════
 

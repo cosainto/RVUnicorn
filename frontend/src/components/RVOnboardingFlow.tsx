@@ -70,6 +70,16 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   const [autofilling, setAutofilling] = useState(false);
   const [autofilled, setAutofilled] = useState(false);
 
+  // Magic Rig Reveal state
+  const [rigYear, setRigYear] = useState(String(new Date().getFullYear()));
+  const [rigMake, setRigMake] = useState('');
+  const [rigModel, setRigModel] = useState('');
+  const [rigSpecs, setRigSpecs] = useState<any>(null);
+  const [rigLooking, setRigLooking] = useState(false);
+  const [rigStockImage, setRigStockImage] = useState<string | null>(null);
+  const [rigEditMode, setRigEditMode] = useState(false);
+  const [customBuildStep, setCustomBuildStep] = useState(0); // for "Other" make flow
+
   // Co-traveler
   const [coTravelerMode, setCoTravelerMode] = useState<'search' | 'invite' | 'qr' | null>(null);
   const [coTravelerQuery, setCoTravelerQuery] = useState('');
@@ -200,6 +210,51 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   // ═══════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════
+  const RIG_MAKES = ['Airstream','Coachmen','Forest River','Grand Design','Jayco','Keystone','Monaco','Newmar','Thor','Tiffin','Winnebago','Other'];
+
+  const RIG_TYPE_IMAGES: Record<string, string> = {
+    'Class A': 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png',
+    'Class B': 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png',
+    'Class C': 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png',
+  };
+
+  const handleRigLookup = async () => {
+    if (!rigMake || !rigModel) return;
+    setRigLooking(true);
+    try {
+      const { data } = await api.post('/rv/lookup', { year: rigYear, make: rigMake, model: rigModel });
+      setRigSpecs(data.specs);
+      setRigStockImage(data.stockImage || RIG_TYPE_IMAGES[data.specs?.rvType] || null);
+      if (data.specs?.rvType) setRvType(data.specs.rvType);
+      if (data.specs?.confidence === 'low' || rigMake === 'Other') setCustomBuildStep(1);
+    } catch { setRigSpecs(null); setCustomBuildStep(1); }
+    finally { setRigLooking(false); }
+  };
+
+  const handleConfirmRig = async () => {
+    try {
+      const username = authUser?.username;
+      if (!username) return;
+      await api.put(`/profile/${username}`, {
+        rvType: rigSpecs?.rvType || rvType || undefined,
+        rvMake: rigMake !== 'Other' ? rigMake : undefined,
+        rvModel: rigModel || undefined,
+        rvYear: rigYear ? parseInt(rigYear) : undefined,
+        rvLength: rigSpecs?.lengthFt || undefined,
+        rvHeight: rigSpecs?.heightFt || undefined,
+        rvWeight: rigSpecs?.weightLbs || undefined,
+        rvSleeps: rigSpecs?.sleeps || undefined,
+        rvSlideouts: rigSpecs?.slideoutCount || undefined,
+        rvMpg: rigSpecs?.mpg || undefined,
+        rvFreshWaterGal: rigSpecs?.freshWaterGal || undefined,
+        rvGreyWaterGal: rigSpecs?.grayWaterGal || undefined,
+        rvBlackWaterGal: rigSpecs?.blackWaterGal || undefined,
+        userPersona,
+      });
+    } catch {}
+    setStep(4);
+  };
+
   // Persona-aware navigation
   const handlePersonaNext = () => {
     if (userPersona === 'owner') setStep(1);
@@ -281,76 +336,179 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
       </div>
       )}
 
-      {/* ══════════════════════════════════ STEP 1: RV TYPE */}
-      {step === 1 && (
+      {/* ══════════════════════════════════ STEP 1: MAGIC RIG REVEAL */}
+      {step === 1 && !rigSpecs && !rigLooking && customBuildStep === 0 && (
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {userPersona === 'renter' ? 'What type of rig do you usually rent?' : 'What kind of rig do you have?'}
+            {userPersona === 'renter' ? 'What type of rig do you usually rent?' : "Let's find your rig"}
           </h2>
           <p className="text-gray-500 mb-6">
-            {userPersona === 'renter' ? 'This helps us personalize your experience' : 'Select your RV type to get started'}
+            {userPersona === 'renter' ? 'This helps us personalize your experience' : 'Tell us what you drive and Hitch will look up the specs'}
           </p>
 
-          {/* Quick Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              ref={searchRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Or search any make/model directly..."
-              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Year</label>
+              <input type="number" value={rigYear} onChange={e => setRigYear(e.target.value)} min="1970" max="2027" placeholder="2024"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Make</label>
+              <select value={rigMake} onChange={e => setRigMake(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white">
+                <option value="">Select manufacturer...</option>
+                {RIG_MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Model</label>
+              <input type="text" value={rigModel} onChange={e => setRigModel(e.target.value)} placeholder="e.g. Montana 3761FL"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
           </div>
 
-          {/* Search Results */}
-          {searchQuery.length >= 2 && (searchResults.makes.length > 0 || searchResults.models.length > 0) && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-lg mb-4 max-h-64 overflow-y-auto">
-              {searchResults.models.map(model => (
-                <button
-                  key={model.id}
-                  onClick={() => {
-                    setSelectedModel(model);
-                    setRvType(model.type);
-                    setSearchQuery('');
-                    setStep(3);
-                  }}
-                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 border-b border-gray-50 text-left"
-                >
-                  <Truck className="w-5 h-5 text-primary-500 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-gray-900">{model.make?.name} {model.name}</p>
-                    <p className="text-xs text-gray-500">{model.type} · {model.lengthFt}ft · Sleeps {model.sleeps}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                </button>
-              ))}
+          <button onClick={handleRigLookup} disabled={!rigMake || !rigModel}
+            className="mt-6 w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-40 transition flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4" /> Reveal My Rig
+          </button>
+
+          <button onClick={() => setStep(4)} className="mt-3 w-full text-sm text-gray-400 hover:text-gray-600 text-center">
+            Skip — I'll add this later
+          </button>
+        </div>
+      )}
+
+      {/* ── Rig Lookup Loading */}
+      {step === 1 && rigLooking && (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-4 animate-bounce">🔍</div>
+          <p className="text-gray-700 font-medium animate-pulse">Looking up your {rigYear} {rigMake} {rigModel}...</p>
+          <p className="text-sm text-gray-400 mt-2">Hitch is checking the specs database</p>
+        </div>
+      )}
+
+      {/* ── Magic Rig Reveal Screen */}
+      {step === 1 && rigSpecs && !rigLooking && customBuildStep === 0 && (
+        <div>
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">We think your {rigYear} {rigMake} {rigModel} has:</h2>
+          </div>
+
+          {rigStockImage && (
+            <div className="rounded-2xl overflow-hidden mb-4 bg-gray-100 h-40 flex items-center justify-center">
+              <img src={rigStockImage} alt="" className="h-full object-contain" />
             </div>
           )}
 
-          {/* Type Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {types.map(type => (
-              <button
-                key={type}
-                onClick={() => { setRvType(type); setStep(userPersona === 'renter' ? 4 : 2); }}
-                className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-                  rvType === type ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Truck className="w-6 h-6 text-primary-600 mb-2" />
-                <p className="font-semibold text-gray-900 text-sm">{type}</p>
-              </button>
-            ))}
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2.5 mb-4">
+            {[
+              rigSpecs.rvType && ['🚐', `${rigSpecs.rvType}`],
+              rigSpecs.lengthFt && ['📏', `${rigSpecs.lengthFt} ft length`],
+              rigSpecs.weightLbs && ['⚖️', `${rigSpecs.weightLbs.toLocaleString()} lbs`],
+              rigSpecs.sleeps && ['🛏️', `Sleeps ${rigSpecs.sleeps}`],
+              rigSpecs.slideoutCount > 0 && ['🏠', `${rigSpecs.slideoutCount} slide-out${rigSpecs.slideoutCount > 1 ? 's' : ''}`],
+              rigSpecs.freshWaterGal && ['💧', `${rigSpecs.freshWaterGal} gal fresh water`],
+              rigSpecs.mpg && ['⛽', `~${rigSpecs.mpg} MPG`],
+              rigSpecs.hasSolar && ['☀️', 'Solar equipped'],
+              rigSpecs.hasResidentialFridge && ['🧊', 'Residential fridge'],
+              rigSpecs.isGoodForBigRigs && ['🦺', 'Big rig friendly'],
+            ].filter(Boolean).map((item, i) => {
+              const [emoji, label] = item as [string, string];
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-sm font-medium text-green-800 flex-1">{label}</span>
+                  {rigEditMode ? (
+                    <input
+                      defaultValue={label.split(' ').find(s => !isNaN(Number(s))) || ''}
+                      className="w-20 text-xs border border-green-300 rounded px-2 py-1 text-right"
+                    />
+                  ) : (
+                    <Check className="w-4 h-4 text-green-500" />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <button
-            onClick={() => setStep(4)}
-            className="mt-6 text-sm text-gray-400 hover:text-gray-600"
-          >
-            Skip — I'll add this later
+          <button onClick={handleConfirmRig}
+            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2 mb-3">
+            <Check className="w-5 h-5" /> That's my rig!
           </button>
+          <button onClick={() => setRigEditMode(!rigEditMode)}
+            className="w-full text-sm text-gray-500 hover:text-gray-700 text-center">
+            {rigEditMode ? 'Done editing' : "Something's off — let me fix it"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Custom Build Path (for "Other" or low-confidence) */}
+      {step === 1 && customBuildStep > 0 && (
+        <div>
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-orange-800">🦄 Looks like {rigMake === 'Other' ? 'a custom build' : "a unique rig"} — Hitch will ask you a few quick questions!</p>
+          </div>
+
+          {customBuildStep === 1 && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">What type of rig is it?</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[['🚐','Van/Class B'],['🚌','Bus/Class A'],['🚍','Class C'],['🏠','Fifth Wheel'],['🚗','Travel Trailer'],['⛺','Other']].map(([emoji, label]) => (
+                  <button key={label} onClick={() => {
+                    setRigSpecs((s: any) => ({ ...(s || {}), rvType: label.split('/')[0] }));
+                    setRvType(label.split('/')[0]);
+                    setCustomBuildStep(2);
+                  }} className="flex items-center gap-2 p-4 rounded-xl border-2 border-gray-200 hover:border-primary-500 transition text-left">
+                    <span className="text-xl">{emoji}</span>
+                    <span className="font-semibold text-sm text-gray-800">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customBuildStep === 2 && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">How long is your rig?</h2>
+              <div className="grid grid-cols-3 gap-3">
+                {[['< 20ft', 18], ['20-25ft', 23], ['25-30ft', 28], ['30-35ft', 33], ['35-40ft', 38], ['40ft+', 42]].map(([label, val]) => (
+                  <button key={label} onClick={() => {
+                    setRigSpecs((s: any) => ({ ...(s || {}), lengthFt: val }));
+                    setCustomBuildStep(3);
+                  }} className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary-500 transition text-center font-semibold text-sm">{label as string}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customBuildStep === 3 && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Sleeps how many?</h2>
+              <div className="grid grid-cols-4 gap-3">
+                {[1,2,3,4,5,6,7,8].map(n => (
+                  <button key={n} onClick={() => {
+                    setRigSpecs((s: any) => ({ ...(s || {}), sleeps: n }));
+                    setCustomBuildStep(4);
+                  }} className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary-500 transition text-center font-bold text-lg">{n}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customBuildStep === 4 && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Has solar panels?</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[['☀️ Yes', true], ['❌ No', false]].map(([label, val]) => (
+                  <button key={String(val)} onClick={() => {
+                    setRigSpecs((s: any) => ({ ...(s || {}), hasSolar: val }));
+                    setCustomBuildStep(0); // back to reveal
+                    if (!rigSpecs?.confidence) setRigSpecs((s: any) => ({ ...s, confidence: 'custom' }));
+                  }} className="p-4 rounded-xl border-2 border-gray-200 hover:border-primary-500 transition text-center font-semibold">{label as string}</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
