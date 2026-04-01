@@ -25,6 +25,7 @@ model User {
   rvModel                                         String?
   rvType                                          String?
   rvYear                                          Int?
+  userPersona                                     String?
   website                                         String?
   facebookUrl                                     String?
   instagramUrl                                    String?

@@ -237,6 +237,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
       hasPets,
       petTypes,
       campingInterests,
+      userPersona,
     } = req.body;
 
     // Verify the user is updating their own profile
@@ -310,6 +311,7 @@ router.put('/:username', authenticateToken, async (req, res) => {
         rvDescription: rvDescription !== undefined ? rvDescription : undefined,
         rvFeatures: rvFeatures !== undefined ? rvFeatures : undefined,
         campingInterests: campingInterests !== undefined ? campingInterests : undefined,
+        userPersona: userPersona !== undefined ? userPersona : undefined,
         rvMpg: rvMpg !== undefined ? (rvMpg ? parseFloat(rvMpg) : null) : undefined,
         rvFuelGal: rvFuelGal !== undefined ? (rvFuelGal ? parseFloat(rvFuelGal) : null) : undefined,
         rvFuelType: rvFuelType !== undefined ? rvFuelType : undefined,

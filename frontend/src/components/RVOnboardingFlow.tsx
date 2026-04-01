@@ -5,6 +5,7 @@ import {
   Copy, QrCode, Mail, X, Sparkles, ArrowRight, UserPlus, Share2
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -51,7 +52,9 @@ interface UserResult {
 // ═══════════════════════════════════════════════════════════════
 export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => void }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Type, 2: Make, 3: Model/Autofill, 4: Co-traveler
+  const { user: authUser } = useAuth() as any;
+  const [step, setStep] = useState(0); // 0: Persona, 1: Type, 2: Make, 3: Model/Autofill, 4: Co-traveler
+  const [userPersona, setUserPersona] = useState<'owner' | 'dreamer' | 'renter' | ''>('');
   const [rvType, setRvType] = useState('');
   const [selectedMake, setSelectedMake] = useState<RVMake | null>(null);
   const [selectedModel, setSelectedModel] = useState<RVModel | null>(null);
@@ -197,34 +200,96 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
   // ═══════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════
+  // Persona-aware navigation
+  const handlePersonaNext = () => {
+    if (userPersona === 'owner') setStep(1);
+    else if (userPersona === 'dreamer') setStep(4); // skip rig, go to co-traveler
+    else if (userPersona === 'renter') setStep(1); // simplified rig step
+  };
+
+  // Save persona on completion
+  const savePersona = async () => {
+    if (!userPersona) return;
+    try {
+      const username = authUser?.username;
+      if (username) await api.put(`/profile/${username}`, { userPersona });
+    } catch {}
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Progress Bar */}
+
+      {/* ══════════════════════════════════ STEP 0: PERSONA */}
+      {step === 0 && (
+        <div>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <span>🦄</span> Hitch says...
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Hey{authUser?.firstName ? ` ${authUser.firstName}` : ''}! Before we fire up the campfire —
+            </h2>
+            <p className="text-gray-500">Where are you on your RV journey?</p>
+          </div>
+
+          <div className="space-y-3">
+            {([
+              ['owner', '🚐', "I own a rig", "Let's get your setup on the road"],
+              ['dreamer', '🔍', "I'm shopping or dreaming", "Browse, save dream rigs, no specs needed"],
+              ['renter', '🔑', "I rent or borrow", "Plan trips without the ownership hassle"],
+            ] as const).map(([val, emoji, title, subtitle]) => (
+              <button
+                key={val}
+                onClick={() => setUserPersona(val)}
+                className={`w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition text-left ${userPersona === val ? 'border-orange-500 bg-orange-50 shadow-sm' : 'border-gray-200 bg-white hover:border-orange-300'}`}
+              >
+                <span className="text-3xl">{emoji}</span>
+                <div className="flex-1">
+                  <p className={`font-bold text-base ${userPersona === val ? 'text-orange-700' : 'text-gray-900'}`}>{title}</p>
+                  <p className="text-sm text-gray-500">{subtitle}</p>
+                </div>
+                {userPersona === val && <Check className="w-6 h-6 text-orange-500 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handlePersonaNext}
+            disabled={!userPersona}
+            className="mt-8 w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-40 transition flex items-center justify-center gap-2"
+          >
+            Continue <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Progress Bar — only show on steps 1-4 */}
+      {step >= 1 && (
       <div className="flex items-center gap-2 mb-8">
-        {[1, 2, 3, 4].map(s => (
+        {(userPersona === 'dreamer' ? [4] : userPersona === 'renter' ? [1, 4] : [1, 2, 3, 4]).map((s, i, arr) => (
           <div key={s} className="flex-1 flex items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
               s <= step ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-400'
             }`}>
-              {s < step ? <Check className="w-4 h-4" /> : s}
+              {s < step ? <Check className="w-4 h-4" /> : i + 1}
             </div>
-            {s < 4 && (
+            {i < arr.length - 1 && (
               <div className={`flex-1 h-1 mx-1 rounded transition-all ${s < step ? 'bg-primary-600' : 'bg-gray-200'}`} />
             )}
           </div>
         ))}
       </div>
-
-      {/* Step Labels */}
-      <div className="flex justify-between text-[10px] text-gray-400 mb-6 px-1">
-        <span>Type</span><span>Make</span><span>Model</span><span>Co-Traveler</span>
-      </div>
+      )}
 
       {/* ══════════════════════════════════ STEP 1: RV TYPE */}
       {step === 1 && (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">What kind of rig do you have?</h2>
-          <p className="text-gray-500 mb-6">Select your RV type to get started</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {userPersona === 'renter' ? 'What type of rig do you usually rent?' : 'What kind of rig do you have?'}
+          </h2>
+          <p className="text-gray-500 mb-6">
+            {userPersona === 'renter' ? 'This helps us personalize your experience' : 'Select your RV type to get started'}
+          </p>
 
           {/* Quick Search */}
           <div className="relative mb-4">
@@ -269,7 +334,7 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
             {types.map(type => (
               <button
                 key={type}
-                onClick={() => { setRvType(type); setStep(2); }}
+                onClick={() => { setRvType(type); setStep(userPersona === 'renter' ? 4 : 2); }}
                 className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
                   rvType === type ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
                 }`}
@@ -655,9 +720,17 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
             </div>
           )}
 
+          {/* Dreamer welcome message */}
+          {userPersona === 'dreamer' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+              <p className="text-sm text-orange-800">🦄 <strong>No rig yet? No problem!</strong> Let's find your dream setup and connect you with owners while you shop.</p>
+            </div>
+          )}
+
           {/* Complete */}
           <button
-            onClick={() => {
+            onClick={async () => {
+              await savePersona();
               if (onComplete) onComplete();
               else navigate('/basecamp');
             }}
