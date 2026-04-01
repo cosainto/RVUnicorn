@@ -121,6 +121,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
   const [submittingComment, setSubmittingComment] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [shareModalItem, setShareModalItem] = useState<FeedItem | null>(null);
   const [handlePrompt, setHandlePrompt] = useState<{ platform: string; field: string } | null>(null);
   const [handleInput, setHandleInput] = useState('');
@@ -1643,11 +1644,73 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         </div>
       ) : (
         <div className="space-y-4">
-          {feedItems.map((item) =>
-            item.type === 'CAMPGROUND_POST'
-              ? renderCampgroundPost(item)
-              : renderActivityItem(item)
-          )}
+          {(() => {
+            const SYSTEM_TYPES = new Set(['STARGAZING', 'WALLET_CHAOS', 'WALLET_APOLOGY']);
+            const grouped: Array<{ type: 'item'; item: any } | { type: 'group'; key: string; items: any[] }> = [];
+            let i = 0;
+            while (i < feedItems.length) {
+              const item = feedItems[i];
+              if (SYSTEM_TYPES.has(item.type) || SYSTEM_TYPES.has(item.activityType)) {
+                const group: any[] = [item];
+                let j = i + 1;
+                while (j < feedItems.length && (SYSTEM_TYPES.has(feedItems[j].type) || SYSTEM_TYPES.has(feedItems[j].activityType))) {
+                  group.push(feedItems[j]);
+                  j++;
+                }
+                if (group.length === 1) {
+                  grouped.push({ type: 'item', item });
+                } else {
+                  grouped.push({ type: 'group', key: `grp-${item.id}`, items: group });
+                }
+                i = j;
+              } else {
+                grouped.push({ type: 'item', item });
+                i++;
+              }
+            }
+
+            return grouped.map(entry => {
+              if (entry.type === 'group') {
+                const { key, items } = entry;
+                const isExpanded = expandedGroups.has(key);
+                const hasStargazing = items.some((i: any) => i.type === 'STARGAZING' || i.activityType === 'STARGAZING');
+                const emoji = hasStargazing ? '🔭' : '🪨';
+                const label = hasStargazing
+                  ? `Walter posted ${items.length} sky report${items.length > 1 ? 's' : ''} this week`
+                  : `${items.length} character update${items.length > 1 ? 's' : ''}`;
+
+                return (
+                  <div key={key} className="rounded-xl border border-gray-100 bg-gray-50 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedGroups(prev => {
+                        const next = new Set(prev);
+                        if (next.has(key)) next.delete(key); else next.add(key);
+                        return next;
+                      })}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition text-left"
+                    >
+                      <span className="text-lg">{emoji}</span>
+                      <p className="flex-1 text-sm text-gray-600 font-medium">{label}</p>
+                      <span className="text-xs text-gray-400 flex-shrink-0">{isExpanded ? 'Collapse ▲' : 'Tap to read ▼'}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="divide-y divide-gray-100 border-t border-gray-100">
+                        {items.map((item: any) => (
+                          <div key={item.id} className="px-4 py-3">
+                            {item.type === 'CAMPGROUND_POST' ? renderCampgroundPost(item) : renderActivityItem(item)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              const { item } = entry;
+              return item.type === 'CAMPGROUND_POST'
+                ? renderCampgroundPost(item)
+                : renderActivityItem(item);
+            });
+          })()}
 
           {hasMore && (
             <div className="text-center pt-4">

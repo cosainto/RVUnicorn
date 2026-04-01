@@ -62,6 +62,7 @@ import { CreatorToggleSection } from '../components/CreatorComponents';
 import BasecampTour from '../components/BasecampTour';
 import DrivingMode from '../components/DrivingMode';
 import CreatorFeed from '../components/CreatorFeed';
+import StargazingCard from '../components/StargazingCard';
 import { useAuth } from '../contexts/AuthContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampgroundCommunity from '../components/CampgroundCommunity';
@@ -1061,6 +1062,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     setMealRsvpLoading(false);
   };
   const [tonightData, setTonightData] = useState<any>(null);
+  const [tonightSkyPost, setTonightSkyPost] = useState<any>(null);
   const [linkedEvent, setLinkedEvent] = useState<any>(null);
   const [linkedEventMealCount, setLinkedEventMealCount] = useState(0);
   const [linkedEventActivityCount, setLinkedEventActivityCount] = useState(0);
@@ -1096,9 +1098,18 @@ export default function BasecampPage({ user }: BasecampProps) {
     if (isCamping && activeCheckIn?.campground?.id) {
       api.get(`/checkins/tonight/${activeCheckIn.campground.id}`)
         .then(({ data }) => setTonightData(data))
+
+      // Load today's Walter stargazing post for Campfire tab
+      api.get('/basecamp/feed?page=1&limit=30')
+        .then(({ data }) => {
+          const skyPost = (data.feedItems || []).find((item: any) => item.type === 'STARGAZING' || item.activityType === 'STARGAZING');
+          setTonightSkyPost(skyPost || null);
+        })
+        .catch(() => {});
         .catch((e) => console.error("checkins/active failed:", e));
     } else {
       setTonightData(null);
+      setTonightSkyPost(null);
     }
   }, [isCamping, activeCheckIn?.campground?.id]);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
@@ -2630,8 +2641,146 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
 
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* ── SIDEBAR — 5 Clean Modules ─────────────────────────────── */}
+          <div className="space-y-4">
+
+            {/* ── 1. My RV ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🚐</span>
+                  <h3 className="font-bold text-sm text-gray-900">My RV</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {maintenanceStats?.overdueCount > 0 ? (
+                    <span className="flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                      <AlertTriangle className="w-3 h-3" /> {maintenanceStats.overdueCount} overdue
+                    </span>
+                  ) : maintenanceStats?.upcomingCount > 0 ? (
+                    <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                      <Truck className="w-3 h-3" /> {maintenanceStats.upcomingCount} upcoming
+                    </span>
+                  ) : maintenanceStats ? (
+                    <span className="flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                      ✓ All good
+                    </span>
+                  ) : null}
+                  <Link to="/my-rv" className="text-xs text-primary-600 font-medium hover:underline">View →</Link>
+                </div>
+              </div>
+              {rvInfo?.rvMake ? (
+                <div className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    {rvShowcase?.photos?.[0] ? (
+                      <img src={rvShowcase.photos[0]} className="w-16 h-12 rounded-lg object-cover flex-shrink-0" alt="RV" />
+                    ) : (
+                      <div className="w-16 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"><span className="text-2xl">🚐</span></div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{rvInfo.rvYear} {rvInfo.rvMake} {rvInfo.rvModel}</p>
+                      {rvInfo.rvType && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{rvInfo.rvType?.replace('_', ' ')}</span>}
+                    </div>
+                  </div>
+                  {maintenanceStats && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-lg font-bold text-gray-700">{maintenanceStats.totalRecords}</p><p className="text-[10px] text-gray-400">Records</p></div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center"><p className={`text-lg font-bold ${maintenanceStats.overdueCount > 0 ? 'text-red-600' : 'text-gray-700'}`}>{maintenanceStats.overdueCount}</p><p className="text-[10px] text-gray-400">Overdue</p></div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-lg font-bold text-blue-600">{maintenanceStats.upcomingCount}</p><p className="text-[10px] text-gray-400">Upcoming</p></div>
+                    </div>
+                  )}
+                  {maintenanceStats?.overdueCount > 0 && (
+                    <Link to="/maintenance" className="flex items-center gap-2 w-full bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700 font-semibold hover:bg-red-100 transition">
+                      <AlertTriangle className="w-3 h-3" />
+                      View {maintenanceStats.overdueCount} overdue item{maintenanceStats.overdueCount > 1 ? 's' : ''}
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 text-center"><p className="text-sm text-gray-500 mb-2">No rig set up yet</p><Link to="/my-rv" className="text-xs text-primary-600 font-semibold hover:underline">Set up your rig →</Link></div>
+              )}
+            </div>
+
+            {/* ── 2. Travel Map ─────────────────────────────────────── */}
+            {nextEvent && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 font-medium mb-1">
+                <span>📍</span>
+                <span>Next stop: <span className="font-semibold">{nextEvent.title || nextEvent.name}</span> in {countdown.days}d</span>
+              </div>
+            )}
+            {/* Travel Map - Compact */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="p-4 pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-primary-600" />
+                    Travel Map
+                  </h3>
+                  <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                    Full Map →
+                  </Link>
+                </div>
+                {/* Compact Stats */}
+                <div className="flex items-center gap-3 mb-3 text-xs">
+                  <span className="flex items-center gap-1 text-primary-600 font-semibold">
+                    <MapPin className="w-3 h-3" /> {visitedStatesCount} states
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-500">{50 - visitedStatesCount} to go</span>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-emerald-600 font-medium">{Math.round((visitedStatesCount / 50) * 100)}%</span>
+                </div>
+              </div>
+              <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
+                <TripCalendarWidget compact={true} />
+
+                <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
+              </div>
+            </div>
+
+
+            {/* ── 3. Upcoming Trips ─────────────────────────────────── */}
+            {/* Upcoming Trips - Compact */}
+            {plannedTrips.length > 0 && (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      Upcoming Trips
+                      <span className="text-xs font-normal text-gray-400">({plannedTrips.length})</span>
+                    </h3>
+                    <Link to="/trips" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All</Link>
+                  </div>
+                </div>
+                <div className="px-4 pb-4 space-y-2">
+                  {plannedTrips.slice(0, 3).map((trip) => (
+                    <Link
+                      key={`${trip.type}-${trip.id}`}
+                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{trip.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {trip.campground?.name && <><span> · </span><Link to={`/campgrounds/${trip.campground.id}`} className="hover:underline text-primary-600" onClick={e => e.stopPropagation()}>{trip.campground.name}</Link></>}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+            {/* ── 4. Friends ────────────────────────────────────────── */}
+             <Top8Friends username={user?.username} />
+
+            {/* ── 5. Camping Nearby ─────────────────────────────────── */}
             {/* Nearby Campers Card */}
             {nearbyCampers.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -3245,704 +3394,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               )}
             </div>
               
-            {/* Travel Map - Compact */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-4 pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-primary-600" />
-                    Travel Map
-                  </h3>
-                  <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
-                    Full Map →
-                  </Link>
-                </div>
-                {/* Compact Stats */}
-                <div className="flex items-center gap-3 mb-3 text-xs">
-                  <span className="flex items-center gap-1 text-primary-600 font-semibold">
-                    <MapPin className="w-3 h-3" /> {visitedStatesCount} states
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-gray-500">{50 - visitedStatesCount} to go</span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-emerald-600 font-medium">{Math.round((visitedStatesCount / 50) * 100)}%</span>
-                </div>
-              </div>
-              <div className="px-2 pb-2" style={{ minHeight: '320px' }}>
-                <TripCalendarWidget compact={true} />
 
-                <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
-              </div>
-            </div>
-
-            {/* Upcoming Trips - Compact */}
-            {plannedTrips.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4 pb-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      Upcoming Trips
-                      <span className="text-xs font-normal text-gray-400">({plannedTrips.length})</span>
-                    </h3>
-                    <Link to="/trips" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View All</Link>
-                  </div>
-                </div>
-                <div className="px-4 pb-4 space-y-2">
-                  {plannedTrips.slice(0, 3).map((trip) => (
-                    <Link
-                      key={`${trip.type}-${trip.id}`}
-                      to={trip.type === 'event' ? `/trips/${trip.id}` : `/travel`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{trip.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {trip.campground?.name && <><span> · </span><Link to={`/campgrounds/${trip.campground.id}`} className="hover:underline text-primary-600" onClick={e => e.stopPropagation()}>{trip.campground.name}</Link></>}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-             <Top8Friends username={user?.username} />
-
-            {/* Trending Topics */}
-            <TrendingHashtags />
-
-            {/* Social Links Widget */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <button
-                onClick={() => setEditingSocial(!editingSocial)}
-                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <LinkIcon className="w-5 h-5 text-indigo-500" />
-                  <h3 className="font-bold text-gray-800">My Social Links</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Show existing link icons when collapsed */}
-                  {!editingSocial && hasSocialLinks && (
-                    <div className="flex items-center gap-1">
-                      {socialLinks.website && (
-                        <Globe className="w-4 h-4 text-gray-400" />
-                      )}
-                      {socialLinks.facebookUrl && (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                      )}
-                      {socialLinks.instagramUrl && (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                      )}
-                      {socialLinks.twitterUrl && (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      )}
-                      {socialLinks.youtubeUrl && (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                      )}
-                      {socialLinks.tiktokUrl && (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                      )}
-                    </div>
-                  )}
-                  {!editingSocial && !hasSocialLinks && (
-                    <span className="text-xs text-gray-400">Add links</span>
-                  )}
-                  {editingSocial ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-              </button>
-
-              {/* Expanded Edit View */}
-              {editingSocial && (
-                <div className="px-4 pb-4 space-y-3">
-                  {/* Website */}
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                    <input
-                      type="url"
-                      value={socialLinks.website}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, website: e.target.value })}
-                      placeholder="Website URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Facebook */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                    <input
-                      type="url"
-                      value={socialLinks.facebookUrl}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, facebookUrl: e.target.value })}
-                      placeholder="Facebook URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Instagram */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-pink-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                    <input
-                      type="url"
-                      value={socialLinks.instagramUrl}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, instagramUrl: e.target.value })}
-                      placeholder="Instagram URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Twitter/X */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-800 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    <input
-                      type="url"
-                      value={socialLinks.twitterUrl}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, twitterUrl: e.target.value })}
-                      placeholder="X (Twitter) URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* YouTube */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                    <input
-                      type="url"
-                      value={socialLinks.youtubeUrl}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, youtubeUrl: e.target.value })}
-                      placeholder="YouTube URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* TikTok */}
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-800 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                    <input
-                      type="url"
-                      value={socialLinks.tiktokUrl}
-                      onChange={(e) => setSocialLinks({ ...socialLinks, tiktokUrl: e.target.value })}
-                      placeholder="TikTok URL"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Visibility Toggles */}
-                  <div className="border-t border-gray-200 pt-3 mt-3 space-y-3">
-                    <p className="text-sm font-medium text-gray-700">Show social links on:</p>
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <span className="text-sm text-gray-600">My Profile Page</span>
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          checked={socialLinks.showSocialOnProfile}
-                          onChange={(e) => setSocialLinks({ ...socialLinks, showSocialOnProfile: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                      </div>
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <span className="text-sm text-gray-600">My Creator Page</span>
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          checked={socialLinks.showSocialOnCreator}
-                          onChange={(e) => setSocialLinks({ ...socialLinks, showSocialOnCreator: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                      </div>
-                    </label>
-                  </div>
-
-
-                  {/* Save Button */}
-                  <button
-                    onClick={saveSocialLinks}
-                    disabled={savingSocial}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {savingSocial ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Save Links
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Compact Link View (when has links and not editing) */}
-              {!editingSocial && hasSocialLinks && (
-                <div className="px-4 pb-4 flex flex-wrap gap-2">
-                  {socialLinks.website && (
-                    <a
-                      href={socialLinks.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-                    >
-                      <Globe className="w-4 h-4" />
-                      <span>Website</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                  {socialLinks.facebookUrl && (
-                    <a
-                      href={buildSocialUrl(socialLinks.facebookUrl, "facebook")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded-full text-sm text-blue-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                      <span>Facebook</span>
-                    </a>
-                  )}
-                  {socialLinks.instagramUrl && (
-                    <a
-                      href={buildSocialUrl(socialLinks.instagramUrl, "instagram")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-pink-100 hover:bg-pink-200 rounded-full text-sm text-pink-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                      <span>Instagram</span>
-                    </a>
-                  )}
-                  {socialLinks.twitterUrl && (
-                    <a
-                      href={buildSocialUrl(socialLinks.twitterUrl, "twitter")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      <span>X</span>
-                    </a>
-                  )}
-                  {socialLinks.youtubeUrl && (
-                    <a
-                      href={buildSocialUrl(socialLinks.youtubeUrl, "youtube")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 rounded-full text-sm text-red-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                      <span>YouTube</span>
-                    </a>
-                  )}
-                  {socialLinks.tiktokUrl && (
-                    <a
-                      href={buildSocialUrl(socialLinks.tiktokUrl, "tiktok")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                      <span>TikTok</span>
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Recipe Box Widget */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <button
-                onClick={() => setRecipeBoxExpanded(!recipeBoxExpanded)}
-                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <ChefHat className="w-5 h-5 text-orange-500" />
-                  <h3 className="font-bold text-gray-800">My Recipe Box</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!recipeBoxExpanded && savedRecipes.length > 0 && (
-                    <span className="text-sm text-gray-400">{savedRecipes.length} saved</span>
-                  )}
-                  {!recipeBoxExpanded && savedRecipes.length === 0 && (
-                    <span className="text-xs text-gray-400">Add recipes</span>
-                  )}
-                  {recipeBoxExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-              </button>
-
-              {/* Expanded View */}
-              {recipeBoxExpanded && (
-                <div className="px-4 pb-4">
-                  {savedRecipes.length === 0 ? (
-                    <div className="text-center py-4">
-                      <ChefHat className="w-10 h-10 mx-auto mb-2 text-gray-200" />
-                      <p className="text-sm text-gray-400">No saved recipes yet</p>
-                      <Link 
-                        to="/recipes" 
-                        className="text-xs text-orange-500 hover:text-orange-600 mt-2 inline-block"
-                      >
-                        Browse recipes to save →
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {savedRecipes.map((saved) => (
-                        <Link
-                          key={saved.id}
-                          to={`/recipes/${saved.recipe.id}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-orange-50 transition-colors group"
-                        >
-                          {saved.recipe.imageUrl ? (
-                            <img
-                              src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `${saved.recipe.imageUrl}`}
-                              alt={saved.recipe.title}
-                              className="w-12 h-12 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <img src="/Recipe_default.png" alt="Recipe"
-                              className="w-12 h-12 rounded-lg object-cover bg-orange-50" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1">
-                              <p className="font-medium text-gray-800 truncate group-hover:text-orange-600 transition-colors">
-                                {saved.recipe.title}
-                              </p>
-                              {saved.favorite && (
-                                <Heart className="w-4 h-4 text-red-500 fill-red-500 flex-shrink-0" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                              {saved.recipe.prepTime && saved.recipe.cookTime && (
-                                <span>{saved.recipe.prepTime + saved.recipe.cookTime} min</span>
-                              )}
-                              {saved.recipe.author && (
-                                <span>by {saved.recipe.author.firstName}</span>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-orange-500" />
-                        </Link>
-                      ))}
-                      
-                      <Link
-                        to="/recipes?tab=saved"
-                        className="block text-center text-sm text-orange-600 hover:text-orange-700 mt-2 pt-2 border-t border-gray-100"
-                      >
-                        View all saved recipes →
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Compact View - show mini recipe thumbnails when collapsed */}
-              {!recipeBoxExpanded && savedRecipes.length > 0 && (
-                <div className="px-4 pb-4 flex items-center gap-2">
-                  {savedRecipes.slice(0, 4).map((saved) => (
-                    <Link
-                      key={saved.id}
-                      to={`/recipes/${saved.recipe.id}`}
-                      className="relative group"
-                      title={saved.recipe.title}
-                    >
-                      {saved.recipe.imageUrl ? (
-                        <img
-                          src={saved.recipe.imageUrl.startsWith('http') ? saved.recipe.imageUrl : `${saved.recipe.imageUrl}`}
-                          alt={saved.recipe.title}
-                          className="w-10 h-10 rounded-lg object-cover hover:scale-110 transition-transform"
-                        />
-                      ) : (
-                        <img src="/Recipe_default.png" alt="Recipe" className="w-10 h-10 rounded-lg object-cover bg-orange-50 hover:scale-110 transition-transform" />
-                      )}
-                      {saved.favorite && (
-                        <Heart className="absolute -top-1 -right-1 w-3 h-3 text-red-500 fill-red-500" />
-                      )}
-                    </Link>
-                  ))}
-                  {savedRecipes.length > 4 && (
-                    <Link
-                      to="/recipes?tab=saved"
-                      className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-sm text-gray-500 hover:bg-gray-200 transition-colors"
-                    >
-                      +{savedRecipes.length - 4}
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-            
-
-            {/* Badge Bulletin Board */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-500" />
-                  My Badges
-                </h3>
-                <span className="text-sm text-gray-500">{userBadges.length + userStickers.length} earned</span>
-              </div>
-
-              {userBadges.length === 0 && userStickers.length === 0 ? (
-                <div className="text-center py-6">
-                  <Award className="w-12 h-12 mx-auto mb-2 text-gray-200" />
-                  <p className="text-sm text-gray-400">No badges earned yet</p>
-                  <p className="text-xs text-gray-300 mt-1">Complete activities to earn badges!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {/* Platform Badges */}
-                  {userBadges.slice(0, 8).map((badge) => (
-                    <div
-                      key={badge.id}
-                      className="relative group cursor-pointer"
-                      title={`${badge.name}
-${badge.description || ''}
-Earned: ${new Date(badge.earnedAt).toLocaleDateString()}`}
-                    >
-                      <div className="aspect-square rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 flex items-center justify-center hover:scale-110 transition-transform hover:shadow-lg overflow-hidden">
-                        {badge.imageUrl ? (
-                          <img 
-                            src={badge.imageUrl} 
-                            alt={badge.name} 
-                            className="w-full h-full object-cover" 
-                          />
-                        ) : (
-                          <Award className="w-6 h-6 text-amber-400" />
-                        )}
-                      </div>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                        {badge.name}
-                      </div>
-
-                    </div>
-                  ))}
-                  
-                  {/* Campground Stickers */}
-                  {userStickers.slice(0, Math.max(0, 8 - userBadges.length)).map((us) => (
-                    <div
-                      key={us.id}
-                      className="relative group cursor-pointer"
-                      title={`${us.sticker.name}
-${us.sticker.description || ''}
-Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
-                    >
-                      <div className="aspect-square rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 flex items-center justify-center hover:scale-110 transition-transform hover:shadow-lg">
-                        {us.sticker.emoji ? (
-                          <span className="text-2xl">{us.sticker.emoji}</span>
-                        ) : us.sticker.imageUrl ? (
-                          <img src={us.sticker.imageUrl} alt={us.sticker.name} className="w-8 h-8 object-contain" />
-                        ) : (
-                          <Star className="w-6 h-6 text-green-400" />
-                        )}
-                      </div>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                        {us.sticker.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {(userBadges.length + userStickers.length) > 8 && (
-                <Link
-                  to="/badges"
-                  className="block text-center text-sm text-amber-600 hover:text-amber-700 mt-3"
-                >
-                  View all {userBadges.length + userStickers.length} badges →
-                </Link>
-              )}
-              {userBadges.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <button
-                    onClick={() => {
-                      const url = 'https://rvunicorn-production.up.railway.app/badges';
-                      const text = 'Check out my camping badges on RVUnicorn!';
-                      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url) + '&quote=' + encodeURIComponent(text), '_blank', 'width=600,height=400');
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-lg text-sm font-medium transition"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share Badges
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* My Groups */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-500" />
-                  My Groups
-                </h3>
-                <Link to="/groups" className="text-blue-500 hover:text-blue-600 text-sm">
-                  All Groups
-                </Link>
-              </div>
-
-              {userGroups.length === 0 ? (
-                <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src="/images/Find_Your_Herd_Default_Poppy.png" 
-                    alt="Find your herd" 
-                    className="w-full h-full object-cover"
-                  />
-                  <Link
-                    to="/groups"
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
-                  >
-                    <span className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Find Your Herd
-                    </span>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {userGroups.slice(0, 5).map((group) => (
-                    <Link
-                      key={group.id}
-                      to={`/groups/${group.slug || group.id}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 transition-colors group"
-                    >
-                      {(group.coverPhoto || group.imageUrl) ? (
-                        <img
-                          src={(group.coverPhoto || group.imageUrl)?.startsWith('http') ? (group.coverPhoto || group.imageUrl) : `${group.coverPhoto || group.imageUrl}`}
-                          alt={group.name}
-                          className="w-10 h-10 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-blue-500" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
-                          {group.name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {group._count?.members || group.memberCount || 0} members
-                        </p>
-                      </div>
-                      {group.unreadCount && group.unreadCount > 0 ? (
-                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                          {group.unreadCount}
-                        </span>
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {userGroups.length > 5 && (
-                <Link
-                  to="/groups"
-                  className="block text-center text-sm text-blue-600 hover:text-blue-700 mt-3"
-                >
-                  View all {userGroups.length} groups →
-                </Link>
-              )}
-            </div>
-
-            <InviteFriends />
-
-            {/* Packing List */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Package className="w-5 h-5 text-green-600" />
-                  Packing List
-                </h3>
-                <button
-                  onClick={() => setShowPackingModal(true)}
-                  className="text-sm text-green-600 hover:text-green-700 font-medium"
-                >
-                  Manage →
-                </button>
-              </div>
-              <div className="text-center py-4">
-                <button
-                  onClick={() => setShowPackingModal(true)}
-                  className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition"
-                >
-                  📦 Inventory & Packing
-                </button>
-              </div>
-            </div>
-
-            {/* Packing Assignments */}
-            <PackingAssignments />
-
-            {/* Basecamp Activity */}
-            <PackUpTasksWidget />
-            <WishlistWidget />
-
-            {/* Community Discovery Feed */}
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🏕️</span>
-                  <span className="font-bold text-sm text-gray-900">From the Community</span>
-                </div>
-                <Link to="/community" className="text-xs text-orange-500 hover:text-orange-600 font-semibold">Browse all →</Link>
-              </div>
-              {communityPosts.length === 0 ? (
-                <div className="px-4 py-6 text-center">
-                  <p className="text-sm text-gray-500 mb-2">No posts yet — be the first</p>
-                  <Link to="/community" className="text-xs text-orange-500 font-semibold hover:underline">Start a discussion →</Link>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {communityPosts.map((post: any) => (
-                    <Link key={post.id} to="/community" className="flex gap-3 px-4 py-3 hover:bg-gray-50 transition">
-                      <div className="flex-shrink-0 w-8 text-center pt-0.5">
-                        <span className="text-sm font-bold text-orange-500">{post.voteScore}</span>
-                        <div className="text-[10px] text-gray-400">pts</div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {post.board && (
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <span className="text-xs">{post.board.icon}</span>
-                            <span className="text-xs text-gray-400">{post.board.name}</span>
-                          </div>
-                        )}
-                        <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-snug">{post.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-gray-400">{post.author?.firstName} {post.author?.lastName}</span>
-                          <span className="text-[10px] text-gray-300">·</span>
-                          <span className="text-[10px] text-gray-400">{post.commentCount || 0} comments</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <BasecampActivityFeed maxItems={10} showHeader={true} />
-
-
-            {/* Campground Updates */}
-            <CampgroundUpdatesFeed maxItems={10} />
           </div>
         </div>
       </div>)}
@@ -4182,6 +3634,33 @@ Earned: ${new Date(us.earnedAt).toLocaleDateString()}`}
                   <p className="text-xs text-gray-400">More games coming as we license them — suggestions welcome 🦄</p>
                 </div>
               </div>
+
+              {/* ── Tonight's Sky — Walter stargazing card ── */}
+              {tonightSkyPost && (() => {
+                let meta: any = {};
+                try { meta = typeof tonightSkyPost.metadata === 'string' ? JSON.parse(tonightSkyPost.metadata) : (tonightSkyPost.metadata || {}); } catch {}
+                return (
+                  <div className="bg-white rounded-xl border border-indigo-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-indigo-100 flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50">
+                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png" className="w-7 h-7 rounded-full object-cover" alt="Walter" />
+                      <span className="font-bold text-sm text-indigo-900">Tonight's Sky</span>
+                      <span className="text-xs text-indigo-400 ml-auto">{meta.moonPhase || '🌟'}</span>
+                    </div>
+                    <div className="p-4">
+                      <StargazingCard
+                        content={tonightSkyPost.content || ''}
+                        metadata={{
+                          imageUrl: meta.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773960904/rvunicorn/stargazing.png',
+                          walterImage: meta.walterImage || 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png',
+                          campgroundName: meta.campgroundName || activeCheckIn?.campground?.name || '',
+                          moonPhase: meta.moonPhase || '🌟',
+                          date: meta.date || new Date().toISOString().split('T')[0],
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

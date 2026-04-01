@@ -51,6 +51,37 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const SYSTEM_TYPES = new Set(['STARGAZING', 'WALLET_CHAOS', 'WALLET_APOLOGY']);
+
+  // Group consecutive system posts into collapsed cards
+  const groupedFeed = React.useMemo(() => {
+    const result: Array<{ type: 'item'; item: FeedItem } | { type: 'group'; key: string; groupType: string; items: FeedItem[] }> = [];
+    let i = 0;
+    while (i < feedItems.length) {
+      const item = feedItems[i];
+      if (SYSTEM_TYPES.has(item.type)) {
+        // Collect all consecutive items of any system type
+        const group: FeedItem[] = [item];
+        let j = i + 1;
+        while (j < feedItems.length && SYSTEM_TYPES.has(feedItems[j].type)) {
+          group.push(feedItems[j]);
+          j++;
+        }
+        if (group.length === 1) {
+          result.push({ type: 'item', item });
+        } else {
+          result.push({ type: 'group', key: `group-${item.id}`, groupType: item.type, items: group });
+        }
+        i = j;
+      } else {
+        result.push({ type: 'item', item });
+        i++;
+      }
+    }
+    return result;
+  }, [feedItems]);
 
   const loadFeed = useCallback(async () => {
     try {
@@ -186,7 +217,57 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
         </div>
       ) : (
         <div className="space-y-3">
-          {feedItems.map(item => (
+          {groupedFeed.map(entry => {
+            // ── Grouped system posts (Walter, Wallet) ──────────────────
+            if (entry.type === 'group') {
+              const { key, items } = entry;
+              const isExpanded = expandedGroups.has(key);
+              const firstItem = items[0];
+              const isStargazing = items.some(i => i.type === 'STARGAZING');
+              const emoji = isStargazing ? '🔭' : '🪨';
+              const label = isStargazing
+                ? `Walter posted ${items.length} sky report${items.length > 1 ? 's' : ''} this week`
+                : `${items.length} character update${items.length > 1 ? 's' : ''}`;
+
+              return (
+                <div key={key} className="rounded-xl border border-gray-100 bg-gray-50 overflow-hidden">
+                  <button
+                    onClick={() => setExpandedGroups(prev => {
+                      const next = new Set(prev);
+                      if (next.has(key)) next.delete(key); else next.add(key);
+                      return next;
+                    })}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition text-left"
+                  >
+                    <span className="text-lg">{emoji}</span>
+                    <p className="flex-1 text-sm text-gray-600 font-medium">{label}</p>
+                    <span className="text-xs text-gray-400">{isExpanded ? 'Collapse ▲' : 'Tap to read ▼'}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="divide-y divide-gray-100 border-t border-gray-100">
+                      {items.map(item => (
+                        <div key={item.id} className="px-4 py-3">
+                          {item.type === 'STARGAZING' && (() => {
+                            const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {});
+                            return meta.imageUrl ? (
+                              <StargazingCard content={item.content || ''} metadata={meta} />
+                            ) : <p className="text-sm text-gray-700 whitespace-pre-line">{item.content}</p>;
+                          })()}
+                          {(item.type === 'WALLET_CHAOS' || item.type === 'WALLET_APOLOGY') && (
+                            <p className="text-sm text-gray-700">{item.content}</p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">{formatTime(item.createdAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ── Regular feed item ──────────────────────────────────────
+            const item = entry.item;
+            return (
             <div key={item.id} className={`p-3 rounded-lg border transition ${!item.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
               {/* Friend Request */}
               {item.isFriendRequest && (
@@ -442,7 +523,8 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
