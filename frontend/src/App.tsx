@@ -207,6 +207,7 @@ function AppContent() {
         <Route path="/settings/household" element={<PrivateRoute><HouseholdSettingsPage /></PrivateRoute>} />
         <Route path="/settings/privacy" element={<PrivacySettingsPage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
           <Route path="/sms-terms" element={<SMSTermsPage />} />
         <Route path="/settings/blocked" element={<BlockedUsersPage />} />
         <Route path="/settings/muted" element={<MutedSettingsPage />} />
