@@ -1368,7 +1368,42 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [composerExpanded, setComposerExpanded] = useState(false);
   const [feedTab, setFeedTab] = useState<'friends' | 'community' | 'campgrounds'>('friends');
   const [friendsHasNew, setFriendsHasNew] = useState(false);
+  const [postTripNudge, setPostTripNudge] = useState<{ tripName: string } | null>(null);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [communityHasNew, setCommunityHasNew] = useState(false);
+
+  // Detect post-trip nudge: trip ended in last 7 days, no post since
+  useEffect(() => {
+    const dismissed = localStorage.getItem('rvu_nudge_dismissed_until');
+    if (dismissed && parseInt(dismissed) > Date.now()) {
+      setNudgeDismissed(true);
+      return;
+    }
+
+    if (!plannedTrips.length) return;
+
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    const recentTrip = plannedTrips.find(trip => {
+      if (!trip.endDate) return false;
+      const end = new Date(trip.endDate).getTime();
+      return end < now && now - end < sevenDaysMs;
+    });
+
+    if (!recentTrip) return;
+
+    // Check if user has posted since trip ended
+    const tripEnd = new Date(recentTrip.endDate!).getTime();
+    const hasPostedSince = feedItems.some(item => {
+      const itemTime = new Date(item.createdAt).getTime();
+      return itemTime > tripEnd && item.actor?.id === user?.id;
+    });
+
+    if (!hasPostedSince) {
+      setPostTripNudge({ tripName: recentTrip.title || recentTrip.name || 'your recent trip' });
+    }
+  }, [plannedTrips.length, feedItems.length, user?.id]);
 
   // Pick the tab with the most recent post on load + set unread dots
   useEffect(() => {
@@ -2629,13 +2664,72 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
 
         {/* Creator Mode Section */}
-        <div className="mb-8">
-          <CreatorToggleSection
-            isCreator={userProfile?.isCreator || false}
-            username={user?.username || ""}
-            onToggle={async () => { await refreshUser(); loadRVInfo(); }}
-          />
-        </div>
+        {/* ── Creator Milestone Nudge — contextual, not a marketing card ── */}
+        {!nudgeDismissed && (
+          <div className="mb-6">
+            {postTripNudge ? (
+              // Post-trip nudge — highest conversion moment
+              <div className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl px-4 py-3">
+                <span className="text-2xl flex-shrink-0">📸</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">You just got back from {postTripNudge.tripName}!</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Share a tip or photo — help the next camper who goes there.</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Link
+                    to={`/profile/${user?.username}`}
+                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition"
+                  >
+                    Share →
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('rvu_nudge_dismissed_until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+                      setNudgeDismissed(true);
+                      setPostTripNudge(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-xs transition"
+                  >
+                    Later
+                  </button>
+                </div>
+              </div>
+            ) : userProfile?.isCreator ? (
+              // Active creator — show slim stats, not a pitch
+              <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+                <span className="text-lg flex-shrink-0">🎬</span>
+                <p className="flex-1 text-sm text-gray-600">
+                  <span className="font-semibold text-gray-900">Creator Mode on</span> — your content is reaching the community.
+                </p>
+                <Link to={`/creators/${user?.username}`} className="text-xs text-primary-600 font-semibold hover:underline flex-shrink-0">
+                  View stats →
+                </Link>
+              </div>
+            ) : (
+              // Default slim prompt — not a full card
+              <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+                <span className="text-lg flex-shrink-0">📸</span>
+                <p className="flex-1 text-sm text-gray-500">
+                  Share your RV story with the community →
+                </p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Link to={`/profile/${user?.username}`} className="text-xs text-primary-600 font-semibold hover:underline">
+                    Post something
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('rvu_nudge_dismissed_until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+                      setNudgeDismissed(true);
+                    }}
+                    className="text-gray-300 hover:text-gray-500 text-xs transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left 2 Columns */}
           <div className="lg:col-span-2 space-y-6">
