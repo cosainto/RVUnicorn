@@ -798,12 +798,12 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
                 <span className="text-2xl">👫</span>
                 <div><p className="font-bold text-gray-900">Yes, find them</p><p className="text-xs text-gray-500">Search by name or username</p></div>
               </button>
-              <button onClick={async () => { await savePersona(); if (onComplete) onComplete(); else navigate('/basecamp'); }}
+              <button onClick={() => { setHitchComment("Solo adventurer — respect! Let's find your tribe 🌲"); setStep(5); }}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition text-left">
                 <span className="text-2xl">🧑</span>
                 <div><p className="font-bold text-gray-900">No, just me</p><p className="text-xs text-gray-500">You can always add a co-pilot later</p></div>
               </button>
-              <button onClick={async () => { await savePersona(); if (onComplete) onComplete(); else navigate('/basecamp'); }}
+              <button onClick={() => { setStep(5); }}
                 className="w-full text-sm text-gray-400 hover:text-gray-600 text-center mt-2">
                 Skip for now
               </button>
@@ -983,19 +983,303 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
             </div>
           )}
 
-          {/* Complete */}
+          {/* Continue to Find Your People */}
           <button
-            onClick={async () => {
+            onClick={() => { setHitchComment("Now let's find your tribe! 🏕️"); setStep(5); }}
+            className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition flex items-center justify-center gap-2"
+          >
+            {linkSent ? 'Continue' : coTravelerMode ? 'Continue' : 'Skip — I travel solo'} <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════ STEP 5: FIND YOUR PEOPLE */}
+      {step === 5 && (
+        <div className={sliding ? (slideDir === 'right' ? 'slide-in-right' : 'slide-in-left') : ''}>
+          <FindYourPeople
+            authUser={authUser}
+            rigMake={rigMake || (authUser as any)?.rvMake}
+            onFollow={(userId: string) => { api.post('/friends/request', { userId }).catch(() => {}); }}
+            onContinue={() => { setHitchComment(userPersona === 'dreamer' ? "Where are you dreaming of going? 🌟" : "One more thing — where was your favorite stay? 🏕️"); setStep(6); }}
+          />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════ STEP 6: FAVORITE CAMPGROUND */}
+      {step === 6 && (
+        <div className={sliding ? (slideDir === 'right' ? 'slide-in-right' : 'slide-in-left') : ''}>
+          <FavoriteCampgroundBridge
+            isDreamer={userPersona === 'dreamer' || userPersona === 'renter'}
+            onComplete={async () => {
               await savePersona();
               if (onComplete) onComplete();
               else navigate('/basecamp');
             }}
-            className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition flex items-center justify-center gap-2"
-          >
-            {coTravelerMode ? 'Finish Setup' : 'Skip — I travel solo'} <ArrowRight className="w-4 h-4" />
-          </button>
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Find Your People sub-component
+// ═══════════════════════════════════════════════════════════════
+function FindYourPeople({ authUser, rigMake, onFollow, onContinue }: {
+  authUser: any; rigMake?: string;
+  onFollow: (userId: string) => void; onContinue: () => void;
+}) {
+  const [nearbyUsers, setNearbyUsers] = useState<any[]>([]);
+  const [sameRigUsers, setSameRigUsers] = useState<any[]>([]);
+  const [sameRigTotal, setSameRigTotal] = useState(0);
+  const [followed, setFollowed] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [nearby, rig] = await Promise.all([
+          authUser?.homeState ? api.get(`/users/nearby?state=${authUser.homeState}&limit=5`) : null,
+          rigMake ? api.get(`/users/same-rig?make=${encodeURIComponent(rigMake)}&limit=5`) : null,
+        ]);
+        if (nearby?.data?.users) setNearbyUsers(nearby.data.users);
+        if (rig?.data) { setSameRigUsers(rig.data.users); setSameRigTotal(rig.data.total); }
+      } catch {}
+      setLoading(false);
+    };
+    load();
+  }, [authUser?.homeState, rigMake]);
+
+  const handleFollow = (userId: string) => {
+    onFollow(userId);
+    setFollowed(prev => new Set(prev).add(userId));
+  };
+
+  const followAll = () => {
+    [...nearbyUsers, ...sameRigUsers].forEach(u => { if (!followed.has(u.id)) handleFollow(u.id); });
+  };
+
+  const UserCard = ({ user }: { user: any }) => (
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-200">
+      {user.profilePicture ? (
+        <img src={user.profilePicture} className="w-10 h-10 rounded-full object-cover" alt="" />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-700">{user.firstName?.[0] || '?'}</div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-900 text-sm truncate">{user.firstName} {user.lastName}</p>
+        <p className="text-xs text-gray-500 truncate">
+          {user.homeState && `${user.homeState} · `}{user.rvMake || user.rvType || ''}
+        </p>
+      </div>
+      <button
+        onClick={() => handleFollow(user.id)}
+        disabled={followed.has(user.id)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${followed.has(user.id) ? 'bg-green-100 text-green-700' : 'bg-primary-600 text-white hover:bg-primary-700'}`}
+      >
+        {followed.has(user.id) ? '✓ Following' : 'Follow'}
+      </button>
+    </div>
+  );
+
+  if (loading) return <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}</div>;
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Find Your People</h2>
+      <p className="text-gray-500 mb-6">Connect with campers who share your style</p>
+
+      {nearbyUsers.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 mb-2">🏠 RVers near you</h3>
+          <div className="space-y-2">{nearbyUsers.map(u => <UserCard key={u.id} user={u} />)}</div>
+        </div>
+      )}
+
+      {sameRigUsers.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-bold text-gray-700 mb-2">🚐 {sameRigTotal} people with a {rigMake} on RVUnicorn</h3>
+          <div className="space-y-2">{sameRigUsers.map(u => <UserCard key={u.id} user={u} />)}</div>
+        </div>
+      )}
+
+      {nearbyUsers.length === 0 && sameRigUsers.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          <p className="text-3xl mb-2">🌲</p>
+          <p className="text-sm">You're one of the first here — more campers are joining every day!</p>
+        </div>
+      )}
+
+      <div className="space-y-2 mt-6">
+        {(nearbyUsers.length + sameRigUsers.length) > 2 && (
+          <button onClick={followAll} className="w-full py-2.5 bg-primary-100 text-primary-700 rounded-xl font-semibold text-sm hover:bg-primary-200 transition">
+            Follow All ({nearbyUsers.length + sameRigUsers.length})
+          </button>
+        )}
+        <button onClick={onContinue} className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition flex items-center justify-center gap-2">
+          Continue <ArrowRight className="w-4 h-4" />
+        </button>
+        <button onClick={onContinue} className="w-full text-sm text-gray-400 hover:text-gray-600 text-center">Skip for now</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Favorite Campground Bridge sub-component
+// ═══════════════════════════════════════════════════════════════
+function FavoriteCampgroundBridge({ isDreamer, onComplete }: { isDreamer: boolean; onComplete: () => void }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any>(null);
+  const [regulars, setRegulars] = useState<any[]>([]);
+  const [regularsTotal, setRegularsTotal] = useState(0);
+  const [hitchMsg, setHitchMsg] = useState('');
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const HITCH_AVATAR = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png';
+
+  const handleSearch = (q: string) => {
+    setQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.length < 2) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get(`/campgrounds?search=${encodeURIComponent(q)}&limit=5`);
+        setResults(data.campgrounds || data || []);
+      } catch { setResults([]); }
+    }, 300);
+  };
+
+  const handleSelect = async (campground: any) => {
+    setSelected(campground);
+    setQuery('');
+    setResults([]);
+
+    // Mark as visited or wishlisted
+    try {
+      if (!isDreamer) {
+        await api.post('/travel-map/visits', {
+          state: campground.state,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date().toISOString().split('T')[0],
+          campsiteId: campground.id,
+          notes: 'Added during onboarding',
+          visibility: 'PUBLIC',
+        });
+      } else {
+        await api.post(`/campgrounds/${campground.id}/favorite`).catch(() => {});
+      }
+    } catch {}
+
+    // Fetch regulars
+    try {
+      const { data } = await api.get(`/campgrounds/${campground.id}/regulars`);
+      setRegulars(data.regulars || []);
+      setRegularsTotal(data.total || 0);
+      if (data.total > 0) {
+        setHitchMsg(`Great choice! ${data.total} regulars there would love to connect with you 🏕️`);
+      } else {
+        setHitchMsg(`${campground.name} looks amazing — you might be the first to check in from RVUnicorn!`);
+      }
+    } catch {}
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">
+        {isDreamer ? 'Where are you dreaming of going?' : 'Where was your favorite stay?'}
+      </h2>
+      <p className="text-gray-500 mb-6">
+        {isDreamer ? "Save it and we'll connect you with campers who've been there" : 'Pick a campground and meet fellow regulars'}
+      </p>
+
+      {!selected ? (
+        <div>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={e => handleSearch(e.target.value)}
+              placeholder="Search campgrounds..."
+              className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+              autoFocus
+            />
+          </div>
+
+          {results.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-lg max-h-64 overflow-y-auto">
+              {results.map((cg: any) => (
+                <button key={cg.id} onClick={() => handleSelect(cg)}
+                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 border-b border-gray-50 text-left">
+                  {cg.imageUrl ? (
+                    <img src={cg.imageUrl} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" alt="" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 text-lg">🏕️</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">{cg.name}</p>
+                    <p className="text-xs text-gray-500">{cg.city ? `${cg.city}, ` : ''}{cg.state}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div>
+          {/* Selected campground card */}
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-3 mb-3">
+              {selected.imageUrl ? (
+                <img src={selected.imageUrl} className="w-14 h-14 rounded-xl object-cover" alt="" />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-green-200 flex items-center justify-center text-2xl">🏕️</div>
+              )}
+              <div>
+                <p className="font-bold text-gray-900">{selected.name}</p>
+                <p className="text-sm text-gray-500">{selected.city ? `${selected.city}, ` : ''}{selected.state}</p>
+              </div>
+            </div>
+            <p className="text-xs text-green-700">{isDreamer ? '💚 Added to your wishlist' : '✅ Added to your travel map'}</p>
+          </div>
+
+          {/* Regulars */}
+          {regulars.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">{regularsTotal} other campers love {selected.name}</p>
+              <div className="flex -space-x-2 mb-2">
+                {regulars.slice(0, 5).map((u: any) => (
+                  u.profilePicture ? (
+                    <img key={u.id} src={u.profilePicture} className="w-8 h-8 rounded-full border-2 border-white object-cover" alt="" />
+                  ) : (
+                    <div key={u.id} className="w-8 h-8 rounded-full border-2 border-white bg-primary-200 flex items-center justify-center text-xs font-bold text-primary-700">{u.firstName?.[0]}</div>
+                  )
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hitch comment */}
+          {hitchMsg && (
+            <div className="flex items-start gap-3 mb-4 hitch-bubble-in">
+              <img src={HITCH_AVATAR} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-orange-800">{hitchMsg}</div>
+            </div>
+          )}
+
+          <button onClick={() => setSelected(null)} className="text-xs text-gray-400 hover:text-gray-600 mb-3 block">Choose a different campground</button>
+        </div>
+      )}
+
+      <div className="mt-6 space-y-2">
+        <button onClick={onComplete} className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition flex items-center justify-center gap-2">
+          {selected ? "Let's go! 🚐" : 'Continue'} <ArrowRight className="w-4 h-4" />
+        </button>
+        <button onClick={onComplete} className="w-full text-sm text-gray-400 hover:text-gray-600 text-center">Skip</button>
+      </div>
     </div>
   );
 }

@@ -756,6 +756,27 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
   }
 });
 
+// GET /api/campgrounds/:id/regulars — top 5 most frequent visitors
+router.get('/:id/regulars', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const checkIns = await prisma.checkIn.groupBy({
+      by: ['userId'],
+      where: { campgroundId: id },
+      _count: { userId: true },
+      orderBy: { _count: { userId: 'desc' } },
+      take: 5,
+    });
+    if (checkIns.length === 0) return res.json({ regulars: [], total: 0 });
+    const users = await prisma.user.findMany({
+      where: { id: { in: checkIns.map(c => c.userId) } },
+      select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+    });
+    const total = await prisma.checkIn.groupBy({ by: ['userId'], where: { campgroundId: id }, _count: { userId: true } });
+    res.json({ regulars: users, total: total.length });
+  } catch { res.json({ regulars: [], total: 0 }); }
+});
+
 export default router;
 
 
