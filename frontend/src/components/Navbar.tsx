@@ -350,6 +350,7 @@ export default function Navbar() {
                       <DropItem to="/friends" onClick={() => setMoreOpen(false)} icon={<Users className="w-4 h-4" />} iconBg="#eef2ff" iconColor="#6366f1" label="Friends" desc="Camping buddies" />
                       <DropItem to="/groups" onClick={() => setMoreOpen(false)} icon={<UsersRound className="w-4 h-4" />} iconBg="#f0fdfa" iconColor="#14b8a6" label="Groups" desc="Community groups" />
                       <DropItem to="/jobs" onClick={() => setMoreOpen(false)} icon={<Briefcase className="w-4 h-4" />} iconBg="#f8fafc" iconColor="#64748b" label="Jobs" desc="RV & camping careers" />
+                      <DropItem to="/find-my-campground" onClick={() => setMoreOpen(false)} icon={<span className="text-sm">🎯</span>} iconBg="#fffbeb" iconColor="#f59e0b" label="Find My Campground" desc="AI quiz — no account needed" />
                     </DropSection>
                   </div>
                 )}

@@ -102,6 +102,7 @@ import AdminBadgeApprovalPage from "./components/AdminBadgeApproval";
 import AdminCampgroundsPage from './pages/AdminCampgroundsPage';
 import AdminSponsorCampaignsPage from './pages/AdminSponsorCampaignsPage';
 import AdminHostListingsPage from './pages/AdminHostListingsPage';
+import CampgroundQuizPage from './pages/CampgroundQuizPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -148,6 +149,7 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
         <Route
           path="/feed"
           element={

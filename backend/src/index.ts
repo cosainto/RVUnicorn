@@ -112,6 +112,7 @@ import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import campMarketRoutes from './routes/camp-market.routes';
 import sitemapRoutes from './routes/sitemap.routes';
+import quizRoutes from './routes/quiz.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { updateGasPrices } from "./cron/gas-price-cron";
@@ -164,8 +165,9 @@ app.use(express.json());
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Sitemap (public, before auth)
+// Public routes (no auth required)
 app.use('/api/sitemap.xml', sitemapRoutes);
+app.use('/api/quiz', quizRoutes);
 
 // Routes
 app.get('/api/version', (req, res) => res.json({ version: '2.0', timestamp: Date.now() }));

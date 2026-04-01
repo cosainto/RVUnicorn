@@ -664,6 +664,17 @@ export default function LandingPage() {
               </Link>
             </div>
 
+            <Link to="/find-my-campground" className="block max-w-md mx-auto lg:mx-0 mb-8 p-4 rounded-2xl border border-amber-500/30 hover:border-amber-400/60 transition" style={{ background: 'rgba(245,158,11,.08)' }}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎯</span>
+                <div>
+                  <p className="font-bold text-white text-sm">Find your perfect campground</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,.5)' }}>Answer 5 quick questions — no account needed</p>
+                </div>
+                <span className="ml-auto text-amber-400 font-semibold text-sm">Start →</span>
+              </div>
+            </Link>
+
             <div className="flex flex-wrap justify-center lg:justify-start gap-8 md:gap-12">
               {[
                 ['11,000+', 'Campgrounds'],

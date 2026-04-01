@@ -4441,3 +4441,20 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+model QuizLead {
+  id              String    @id @default(cuid())
+  email           String?
+  firstName       String?
+  rvType          String?
+  travelStyle     String?
+  vibe            String?
+  priorities      String[]
+  states          String[]
+  createdAt       DateTime  @default(now())
+  emailSentAt     DateTime?
+  convertedAt     DateTime?
+  userId          String?
+
+  @@index([email])
+}
