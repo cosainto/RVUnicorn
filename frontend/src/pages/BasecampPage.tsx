@@ -1200,6 +1200,55 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   const isDefaultMode = !isCamping && !nextEvent;
 
+  // New user detection
+  const isNewUser = user && user.createdAt && (Date.now() - new Date(user.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000);
+  const welcomeDismissed = localStorage.getItem('rvu_welcome_dismissed') === 'true';
+  const completionDismissed = localStorage.getItem('rvu_completion_dismissed') === 'true';
+  const [quizPicks, setQuizPicks] = useState<any[]>([]);
+  const [creatingDraft, setCreatingDraft] = useState(false);
+
+  // Load quiz picks from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('rvu_quiz_recommendations');
+      if (stored) setQuizPicks(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  // Profile completion score
+  const completionScore = user ? [
+    user.profilePicture ? 20 : 0,
+    (user as any)?.rvType ? 20 : 0,
+    (user as any)?.homeState ? 10 : 0,
+    nextEvent ? 20 : 0,
+    (profile as any)?._count?.friends > 0 ? 15 : 0,
+    user.bio ? 15 : 0,
+  ].reduce((a, b) => a + b, 0) : 0;
+
+  const missingItems = user ? [
+    !user.profilePicture && { emoji: '📸', label: 'Add a profile photo', link: `/profile/${user.username}` },
+    !(user as any)?.rvType && { emoji: '🚐', label: 'Complete your rig setup', link: '/rv-setup' },
+    !nextEvent && { emoji: '🗺️', label: 'Plan your first trip', link: '/trips' },
+    !((profile as any)?._count?.friends > 0) && { emoji: '👥', label: 'Find your first friend', link: '/community' },
+    !user.bio && { emoji: '✏️', label: 'Write a bio', link: `/profile/${user.username}` },
+    !(user as any)?.homeState && { emoji: '📍', label: 'Set your home state', link: `/profile/${user.username}` },
+  ].filter(Boolean) : [];
+
+  const handleCreateDraftTrip = async (campground?: any) => {
+    setCreatingDraft(true);
+    try {
+      const title = campground ? `My First Trip to ${campground.name}` : 'My First Trip';
+      const { data } = await api.post('/events', {
+        title,
+        campgroundId: campground?.id,
+        status: 'DRAFT',
+        startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      navigate(`/trips/${data.id || data.event?.id}`);
+    } catch { navigate('/trips'); }
+    finally { setCreatingDraft(false); }
+  };
+
   // Listen for localStorage changes (e.g. rig nudge dismiss) to trigger re-render
   const [, forceUpdate] = useState(0);
   useEffect(() => {
@@ -2536,6 +2585,49 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         )}
 
+        {/* ── Welcome Banner for New Users ── */}
+        {isNewUser && !welcomeDismissed && isDefaultMode && (
+          <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-5 mb-4 relative overflow-hidden">
+            <button onClick={() => { localStorage.setItem('rvu_welcome_dismissed', 'true'); forceUpdate(n => n + 1); }}
+              className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="flex items-center gap-4">
+              <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png" className="w-14 h-14 rounded-full border-2 border-white/30 object-cover flex-shrink-0" alt="" />
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-lg">Welcome to the campfire, {user?.firstName || 'friend'}! 🔥</p>
+                <p className="text-orange-100 text-sm">Hitch is fired up and ready to roll.</p>
+                <button onClick={() => handleCreateDraftTrip(quizPicks[0])} disabled={creatingDraft}
+                  className="mt-3 inline-flex items-center gap-2 bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-50 transition shadow-sm">
+                  🚐 {creatingDraft ? 'Creating...' : 'Plan your first trip →'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Quiz Recommendations for New Users ── */}
+        {quizPicks.length > 0 && isDefaultMode && (
+          <div className="mb-4">
+            <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
+              🎯 Hitch's picks for you
+            </h3>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {quizPicks.slice(0, 8).map((cg: any) => (
+                <Link key={cg.id} to={`/campgrounds/${cg.id}`}
+                  className="flex-shrink-0 w-44 bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition">
+                  <div className="h-24 bg-gray-100">
+                    {cg.imageUrl ? <img src={cg.imageUrl} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-2xl">🏕️</div>}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="font-semibold text-gray-900 text-xs truncate">{cg.name}</p>
+                    <p className="text-[10px] text-gray-400">{cg.state}</p>
+                    {cg.reason && <p className="text-[10px] text-orange-600 mt-1 line-clamp-2 italic">"{cg.reason}"</p>}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Today on RVUnicorn — personalized pill strip (Default Mode only) ── */}
         {isDefaultMode && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
@@ -2922,8 +3014,38 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
 
 
-          {/* ── SIDEBAR — 5 Clean Modules ─────────────────────────────── */}
+          {/* ── SIDEBAR ─────────────────────────────────────────── */}
           <div className="space-y-4">
+
+            {/* ── Profile Completion Score ─────────────────────────── */}
+            {completionScore < 80 && !completionDismissed && (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative w-12 h-12 flex-shrink-0">
+                    <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
+                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f59e0b" strokeWidth="3"
+                        strokeDasharray={`${completionScore * 0.9745} 97.45`} strokeLinecap="round" />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">{completionScore}%</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-gray-900">Complete your profile</p>
+                    <p className="text-xs text-gray-400">{missingItems.length} item{missingItems.length !== 1 ? 's' : ''} remaining</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {(missingItems as any[]).map((item: any, i: number) => (
+                    <Link key={i} to={item.link} className="flex items-center gap-2 text-xs text-gray-600 hover:text-primary-600 transition py-1">
+                      <span>{item.emoji}</span>
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+                <button onClick={() => { localStorage.setItem('rvu_completion_dismissed', 'true'); forceUpdate(n => n + 1); }}
+                  className="mt-3 text-[10px] text-gray-400 hover:text-gray-600">Don't show this again</button>
+              </div>
+            )}
 
             {/* ── 1. My RV ─────────────────────────────────────────── */}
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">

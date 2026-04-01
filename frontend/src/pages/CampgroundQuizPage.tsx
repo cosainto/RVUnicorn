@@ -69,6 +69,7 @@ export default function CampgroundQuizPage() {
     try {
       const { data } = await api.post('/quiz/recommendations', { rvType, travelStyle, vibe, priorities, states });
       setResults(data.recommendations || []);
+      try { localStorage.setItem('rvu_quiz_recommendations', JSON.stringify(data.recommendations || [])); } catch {}
     } catch { setResults([]); }
     finally { clearInterval(interval); setLoading(false); }
   };

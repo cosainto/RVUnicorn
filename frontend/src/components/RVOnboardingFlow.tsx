@@ -1049,6 +1049,23 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
               onSkip={() => { if (onComplete) onComplete(); else navigate('/basecamp'); }}
             />
           </div>
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={async () => {
+                try {
+                  const { data } = await api.post('/events', {
+                    title: `My First Trip${rigMake ? ` in the ${rigMake}` : ''}`,
+                    status: 'DRAFT',
+                    startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                  });
+                  navigate(`/trips/${data.id || data.event?.id}`);
+                } catch { if (onComplete) onComplete(); else navigate('/basecamp'); }
+              }}
+              className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-semibold transition"
+            >
+              🗺️ Start planning my first trip →
+            </button>
+          </div>
         </div>
       )}
     </div>
