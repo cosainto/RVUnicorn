@@ -48,6 +48,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     // Get valid event IDs to filter out orphaned trip days
     const validEventIds = new Set(events.map((e: any) => e.id));
 
+    // Build a map of eventId -> event date range for driving day validation
+    const eventDateMap = new Map(events.map((e: any) => [e.id, { start: new Date(e.startDate), end: new Date(e.endDate) }]));
+
     const items = [
       ...events.map(e => ({
         id: e.id, type: 'EVENT', title: e.title,
@@ -65,17 +68,59 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         attendees: [], color: '#34d399',
       }))),
       ...aiTrips
-        .filter((t: any) => !t.eventId || validEventIds.has(t.eventId))
-        .flatMap((t: any) => t.days.map((d: any) => ({
-          id: d.id, tripId: t.id, type: 'TRAVEL_DAY',
-          title: t.title || 'Road Trip',
-          dayType: d.type || 'TRAVEL',
-          dayNumber: d.dayNumber,
-          startDate: d.date, endDate: d.date,
-          campground: null, isOrganizer: true,
-          myAttendee: null, attendees: [], color: '#8b5cf6',
-          notes: d.notes,
-        }))),
+        .filter((t: any) => t.eventId && validEventIds.has(t.eventId))
+        .flatMap((t: any) => {
+          const eventRange = eventDateMap.get(t.eventId);
+          return t.days
+            .filter((d: any) => {
+              if (!eventRange) return false;
+              const dayDate = new Date(d.date);
+              // Only show driving days within the linked event's date range
+              return dayDate >= eventRange.start && dayDate <= eventRange.end;
+            })
+            .map((d: any) => ({
+              id: d.id, tripId: t.id, type: 'TRAVEL_DAY',
+              title: t.title || 'Road Trip',
+              dayType: d.type || 'TRAVEL',
+              dayNumber: d.dayNumber,
+              startDate: d.date, endDate: d.date,
+              campground: null, isOrganizer: true,
+              myAttendee: null, attendees: [], color: '#8b5cf6',
+              hasRoute: true,
+              notes: d.notes,
+            }));
+        }),
+      // Estimated travel days — one day before event start, only for events with no linked route
+      ...(() => {
+        const eventsWithRoute = new Set(aiTrips.filter((t: any) => t.eventId).map((t: any) => t.eventId));
+        return events
+          .filter((e: any) => !eventsWithRoute.has(e.id))
+          .map((e: any) => {
+            const eventStart = new Date(e.startDate);
+            const travelDay = new Date(eventStart);
+            travelDay.setDate(travelDay.getDate() - 1);
+            // Only include if travel day falls within the calendar month being fetched
+            if (travelDay < start || travelDay >= end) return null;
+            return {
+              id: `est-travel-${e.id}`,
+              tripId: e.id,
+              type: 'TRAVEL_DAY',
+              title: e.title,
+              dayType: 'ESTIMATED',
+              dayNumber: 0,
+              startDate: travelDay.toISOString(),
+              endDate: travelDay.toISOString(),
+              campground: null,
+              isOrganizer: e.organizerId === userId,
+              myAttendee: null,
+              attendees: [],
+              color: '#3b82f6',
+              hasRoute: false,
+              notes: 'Estimated travel day — add a route to confirm',
+            };
+          })
+          .filter(Boolean);
+      })(),
     ];
     res.json({ items });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch calendar' }); }

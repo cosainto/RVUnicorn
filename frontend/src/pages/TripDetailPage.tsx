@@ -433,6 +433,27 @@ export default function EventDetailPage() {
 
 
 
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferToUser, setTransferToUser] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
+  const [transferring, setTransferring] = useState(false);
+
+  const handleTransferOrganizer = async () => {
+    if (!transferToUser) return;
+    if (!confirm(`Transfer trip ownership to ${transferToUser.firstName} ${transferToUser.lastName}? You will lose organizer rights.`)) return;
+    setTransferring(true);
+    try {
+      await api.put(`/events/${id}/transfer-organizer`, { newOrganizerId: transferToUser.id });
+      alert(`Ownership transferred to ${transferToUser.firstName}!`);
+      setShowTransferModal(false);
+      setTransferToUser(null);
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to transfer ownership');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const handleDeleteEvent = async () => {
     if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
     try {

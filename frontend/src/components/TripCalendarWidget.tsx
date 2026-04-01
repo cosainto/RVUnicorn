@@ -9,12 +9,14 @@ interface Attendee {
   user: { id: string; username: string; firstName: string; lastName: string; profilePicture?: string };
 }
 interface CalendarItem {
-  id: string; tripId?: string; type: 'EVENT'|'STAY'; title: string;
+  id: string; tripId?: string; type: 'EVENT'|'STAY'|'TRAVEL_DAY'; title: string;
   startDate: string; endDate: string;
   campground?: { id: string; name: string; location: string };
   isOrganizer: boolean;
   myAttendee?: { confirmationNumber?: string; siteNumber?: string; notes?: string; userId?: string };
   attendees: Attendee[]; color: string;
+  hasRoute?: boolean;
+  dayType?: string;
 }
 interface Props { compact?: boolean; userId?: string; }
 
@@ -39,8 +41,10 @@ const isReturnDay = (hits: CalendarItem[], dateStr: string): boolean => {
   });
 };
 
-const isDrivingDay = (hits: CalendarItem[]): boolean => {
-  return hits.some(h => h.type === 'TRAVEL_DAY');
+const isDrivingDay = (hits: CalendarItem[]): 'route' | 'estimated' | false => {
+  const travelDay = hits.find(h => h.type === 'TRAVEL_DAY');
+  if (!travelDay) return false;
+  return travelDay.hasRoute ? 'route' : 'estimated';
 };
 
 export default function TripCalendarWidget({ compact=false, userId }: Props) {
@@ -195,14 +199,21 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
               <button key={day} onClick={()=>{
                   if(hits.length===1) {
                     const h=hits[0];
-                    navigate(h.type==='STAY' ? `/trips/${h.tripId||h.id}` : `/trips/${h.id}`);
+                    // Don't navigate for estimated travel days — they have fake IDs
+                    if (h.id.startsWith('est-travel-')) {
+                      setSelDay(day); setSelected(hits);
+                    } else {
+                      navigate(h.type==='STAY' ? `/trips/${h.tripId||h.id}` : `/trips/${h.id}`);
+                    }
                   } else {
                     setSelDay(day);setSelected(hits.length?hits:null);
                   }
                 }}
                 style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'32px',borderRadius:'8px',border:'none',cursor:'pointer',fontSize:'11px',fontWeight:hits.length?700:400,background:isToday?'#f59e0b':hits.length?'#eff6ff':'transparent',color:isToday?'#fff':hits.length?'#1d4ed8':'#374151'}}>
                 {hits.length > 0 ? (
-                  <span style={{fontSize:'13px',title:'Click to view'}}>{isDrivingDay(hits) ? '🚗' : getDayEmoji(hits) || ''}</span>
+                  <span style={{fontSize:'13px'}}>
+                    {isDrivingDay(hits) === 'estimated' ? '🔵🚗' : isDrivingDay(hits) === 'route' ? '🚗' : getDayEmoji(hits) || ''}
+                  </span>
                 ) : (
                   <span>{day}</span>
                 )}
@@ -221,8 +232,8 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
         </div>
       ))}
       <div style={{padding:'8px 16px',borderTop:'1px solid #f3f4f6',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div style={{display:'flex',gap:'8px',fontSize:'11px',color:'#9ca3af'}}>
-          <span>⛺ camping</span><span>🚗 driving</span><span>🏠 return home</span>
+        <div style={{display:'flex',gap:'8px',fontSize:'11px',color:'#9ca3af',flexWrap:'wrap'}}>
+          <span>⛺ camping</span><span>🚗 driving</span><span>🔵🚗 est. travel</span><span>🏠 return home</span>
         </div>
         <button onClick={()=>navigate('/calendar')} style={{fontSize:'11px',fontWeight:600,color:'#f59e0b',border:'none',background:'none',cursor:'pointer'}}>View all →</button>
       </div>
@@ -236,7 +247,13 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
             <div key={item.id} style={{marginBottom:'8px',borderRadius:'12px',padding:'12px',background:'#f9fafb',border:`1px solid ${item.color}44`}}>
               <div style={{fontSize:'13px',fontWeight:700,color:'#111827',marginBottom:'4px'}}>{item.title}</div>
               {item.campground&&<div style={{fontSize:'11px',color:'#6b7280',marginBottom:'8px'}}>{item.campground.name}</div>}
-              <ResCard item={item} attendee={item.myAttendee} isMe={true}/>
+              {item.id.startsWith('est-travel-') ? (
+                <div style={{fontSize:'12px',color:'#3b82f6',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'8px',padding:'8px'}}>
+                  🔵🚗 Estimated travel day — <button onClick={()=>navigate(`/trips/${item.tripId}`)} style={{color:'#2563eb',fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:0}}>add a route to confirm dates →</button>
+                </div>
+              ) : (
+                <ResCard item={item} attendee={item.myAttendee} isMe={true}/>
+              )}
             </div>
           ))}
           {(!selected || !selected.length) && (
