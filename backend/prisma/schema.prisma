@@ -318,6 +318,7 @@ model User {
   assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
   sentInvites          Invite[]             @relation("SentInvites")
   stargazingEnabled    Boolean   @default(true)
+  smsWeatherAlerts     Boolean   @default(false)
   triviaTitle         String?   
   driveSessions           DriveSession[]
   pushSubscriptions       PushSubscription[]

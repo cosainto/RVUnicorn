@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
 import { runTripCheckinReminder } from './trip-checkin-reminder';
 import { runStargazingCron, runWalletChaosCron } from './stargazing-cron';
+import { runWeatherAlertCron } from './weather-alert-cron';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -174,6 +175,14 @@ export async function askNextQuestion(io: any) {
   const questionNum = Math.floor(minutesSinceStart/3)+1;
   if (questionNum<1||questionNum>10) return;
 
+  // Fetch sponsored question for Q5 (may be null if none active)
+  const sponsoredQ = questionNum === 5
+    ? await (prisma as any).sponsorQuestion?.findFirst({
+        where: { isActive: true },
+        include: { campaign: { select: { brandName: true, brandLogoUrl: true, brandLandingUrl: true } } },
+      }).catch(() => null)
+    : null;
+
   const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
 
   for (const room of rooms) {
@@ -224,16 +233,15 @@ export async function askNextQuestion(io: any) {
       data: { askedAt: now },
     });
 
-    // Post trash talk instead of repeating question text
-    const trashTalk = [
-      `🔥 Question ${questionNum} is LIVE — think fast, campers!`,
-      `⏰ Q${questionNum} dropping now — no Googling, we're watching 👀`,
-      `🎯 Q${questionNum} is up! First one to nail it gets bragging rights around the campfire 🔥`,
-      `🤔 Q${questionNum} — this one separates the campers from the glampers!`,
-      `💥 Q${questionNum} incoming! Don't overthink it... or do. Totally up to you. 😏`,
-      `🦄 Q${questionNum} is live! Hitch believes in you. Wallet does not. Prove him wrong.`,
+    // Post "Tap to play" invite in chat — question text stays in the popup card only
+    const invites = [
+      `🎯 Trivia time! Think you know your stuff? Tap to play →`,
+      `🔥 Q${questionNum} is live — think you've got what it takes? Tap to play →`,
+      `⏰ Question ${questionNum} of 10 is up! Tap to play →`,
+      `🦄 Hitch has a question for you. Tap to play →`,
+      `🤔 Q${questionNum} — campers vs glampers. Tap to play →`,
     ];
-    const msg = trashTalk[Math.floor(Math.random() * trashTalk.length)];
+    const msg = invites[Math.floor(Math.random() * invites.length)];
     await prisma.campfireMessage.create({
       data: { roomId: room.id, isHitch: true, content: msg },
     });
@@ -565,6 +573,11 @@ export function registerTriviaCrons(io: any) {
 
   // Daily 9:00 AM — trip check-in reminder
   cron.schedule('0 9 * * *', () => runTripCheckinReminder(), { timezone: 'America/Chicago' });
+
+  // Hourly — NWS severe weather alerts for checked-in campers (SMS)
+  cron.schedule('0 * * * *', async () => {
+    runWeatherAlertCron().catch(e => console.error('[WeatherAlert] Cron error:', e));
+  }, { timezone: 'America/Chicago' });
 
   // Daily 9:00 PM — stargazing sky report for checked-in campers
   cron.schedule('0 21 * * *', () => runStargazingCron(), { timezone: 'America/Chicago' });

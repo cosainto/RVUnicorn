@@ -1007,6 +1007,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   const isPlanning = !isCamping; // kept for existing sections
 
+  // Event Countdown State (declared early — used in proximity useEffect below)
+  const [nextEvent, setNextEvent] = useState<UpcomingEvent | null>(null);
+
   // Proximity alert — watch GPS when driving, alert when ~1hr from campground
   useEffect(() => {
     if (!isDriving || !nextEvent?.campground || proximityAlertShown) return;
@@ -1169,9 +1172,6 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Top 8 Friends State
   const [topFriends, setTopFriends] = useState<Friend[]>([]);
   const [nearbyCampers, setNearbyCampers] = useState<any[]>([]);
-
-  // Event Countdown State
-  const [nextEvent, setNextEvent] = useState<UpcomingEvent | null>(null);
 
   // Trip Planning Mode — enriched data
   const [planningData, setPlanningData] = useState<{
@@ -2409,9 +2409,46 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         )}
 
-        {/* Smart Action Cards */}
+        {/* ── Today on RVUnicorn — personalized pill strip (Default Mode only) ── */}
+        {isDefaultMode && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide">
+            {nextEvent && (
+              <Link
+                to={`/trips/${nextEvent.id}`}
+                className="flex-shrink-0 flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition"
+              >
+                <Calendar className="w-3 h-3" />
+                {nextEvent.title || nextEvent.name} in {countdown.days}d
+              </Link>
+            )}
+            {maintenanceStats?.overdue > 0 && (
+              <Link
+                to="/travel?tab=rv-log"
+                className="flex-shrink-0 flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-full px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+              >
+                <Truck className="w-3 h-3" />
+                {maintenanceStats.overdue} maintenance overdue
+              </Link>
+            )}
+            {(user as any)?.rvType && (
+              <span className="flex-shrink-0 flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-xs font-medium text-gray-600">
+                🚐 {(user as any).rvType}
+              </span>
+            )}
+            <Link
+              to="/community"
+              className="flex-shrink-0 flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
+            >
+              <Users className="w-3 h-3" />
+              Community
+            </Link>
+          </div>
+        )}
+
+        {/* Smart Action Cards — prioritized, mutually exclusive */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {/* Upcoming Trip Card */}
+
+          {/* Slot 1: Trip → if overdue maintenance + no trip, surface RV health urgency here instead */}
           {nextEvent ? (
             <Link to={`/trips/${nextEvent.id}`} className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">
@@ -2421,37 +2458,57 @@ export default function BasecampPage({ user }: BasecampProps) {
               <p className="font-semibold text-gray-900 text-sm truncate">{nextEvent.title || nextEvent.name}</p>
               <p className="text-xs text-gray-500 mt-0.5">{countdown.days}d {countdown.hours}h away</p>
             </Link>
-          ) : (
-            <Link to="/trips" className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 border-dashed rounded-xl p-4 hover:shadow-md transition group">
+          ) : maintenanceStats?.overdue > 0 ? (
+            <Link to="/travel?tab=rv-log" className="bg-gradient-to-br from-red-50 to-amber-50 border-2 border-red-200 rounded-xl p-4 hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 bg-blue-100 rounded-lg"><CalendarPlus className="w-4 h-4 text-blue-600" /></div>
-                <span className="text-xs font-medium text-blue-600">No Trips</span>
+                <div className="p-1.5 bg-red-100 rounded-lg"><Truck className="w-4 h-4 text-red-600" /></div>
+                <span className="text-xs font-medium text-red-600">Fix Before Next Trip</span>
+              </div>
+              <p className="font-semibold text-red-700 text-sm">{maintenanceStats.overdue} items overdue</p>
+              <p className="text-xs text-red-500 mt-0.5">Tap to view log ⚠️</p>
+            </Link>
+          ) : (
+            <Link to="/hitch" className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 border-dashed rounded-xl p-4 hover:shadow-md transition group">
+              <div className="flex items-center gap-2 mb-2">
+                <img src="/hitch.png" alt="Hitch" className="w-5 h-5 rounded-full object-cover" />
+                <span className="text-xs font-medium text-blue-600">No Trips Yet</span>
               </div>
               <p className="font-semibold text-gray-900 text-sm">Plan your next adventure</p>
-              <p className="text-xs text-blue-500 mt-0.5 group-hover:underline">Get started →</p>
+              <p className="text-xs text-blue-500 mt-0.5 group-hover:underline">Ask Hitch →</p>
             </Link>
           )}
 
-          {/* Unread Messages Card */}
-          <Link to="/messages" className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 hover:shadow-md transition group">
+          {/* Slot 2: Friends Activity — replaces static Messages link */}
+          <Link to="/network" className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 hover:shadow-md transition group">
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-purple-100 rounded-lg"><MessageSquare className="w-4 h-4 text-purple-600" /></div>
-              <span className="text-xs font-medium text-purple-600">Messages</span>
+              <div className="p-1.5 bg-purple-100 rounded-lg"><Users className="w-4 h-4 text-purple-600" /></div>
+              <span className="text-xs font-medium text-purple-600">Friends</span>
             </div>
-            <p className="font-semibold text-gray-900 text-sm">Check conversations</p>
-            <p className="text-xs text-purple-500 mt-0.5 group-hover:underline">Open inbox →</p>
+            <p className="font-semibold text-gray-900 text-sm">Friends Activity</p>
+            <p className="text-xs text-purple-500 mt-0.5 group-hover:underline">See what's new →</p>
           </Link>
 
-          {/* RV Health Card */}
-          <Link to="/travel?tab=rv-log" className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 hover:shadow-md transition group">
+          {/* Slot 3: RV Health — color shifts red when overdue */}
+          <Link
+            to="/travel?tab=rv-log"
+            className={`rounded-xl p-4 hover:shadow-md transition group border ${
+              maintenanceStats?.overdue > 0
+                ? 'bg-gradient-to-br from-red-50 to-amber-50 border-red-200'
+                : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100'
+            }`}
+          >
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-amber-100 rounded-lg"><Truck className="w-4 h-4 text-amber-600" /></div>
-              <span className="text-xs font-medium text-amber-600">RV Health</span>
+              <div className={`p-1.5 rounded-lg ${maintenanceStats?.overdue > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
+                <Truck className={`w-4 h-4 ${maintenanceStats?.overdue > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+              </div>
+              <span className={`text-xs font-medium ${maintenanceStats?.overdue > 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                RV Health
+              </span>
             </div>
             {maintenanceStats?.overdue > 0 ? (
               <>
-                <p className="font-semibold text-amber-700 text-sm">{maintenanceStats.overdue} items overdue</p>
-                <p className="text-xs text-amber-500 mt-0.5">Needs attention ⚠️</p>
+                <p className="font-semibold text-red-700 text-sm">{maintenanceStats.overdue} items overdue</p>
+                <p className="text-xs text-red-500 mt-0.5">Needs attention ⚠️</p>
               </>
             ) : maintenanceStats?.upcoming > 0 ? (
               <>
@@ -2466,7 +2523,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             )}
           </Link>
 
-          {/* Explore Card */}
+          {/* Slot 4: Explore */}
           <Link to="/campgrounds" className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 hover:shadow-md transition group">
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 bg-green-100 rounded-lg"><Tent className="w-4 h-4 text-green-600" /></div>
@@ -2490,24 +2547,19 @@ export default function BasecampPage({ user }: BasecampProps) {
           <div className="lg:col-span-2 space-y-6">
             {/* What's New — Activity Feeds (moved above map) */}
             <CreatorFeed limit={6} showHeader={true} />
-            {/* Plan My Trip Card */}
+            {/* Hitch ambient nudge — iMessage-suggestion energy, no trip planned */}
             {isDefaultMode && (
-              <div className="bg-gradient-to-br from-primary-600 to-indigo-600 rounded-2xl p-5 text-white">
-                <div className="flex items-center gap-3 mb-3">
-                  <img src="/hitch.png" alt="Hitch" className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
-                  <div>
-                    <p className="font-bold text-lg leading-tight">Plan My Trip</p>
-                    <p className="text-white/70 text-xs">Let Hitch find your next adventure</p>
-                  </div>
-                </div>
-                <p className="text-white/80 text-sm mb-4">Tell Hitch where you want to go and get a full trip — campground, route, and activities — in seconds.</p>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {[{label:"Weekend getaway",prompt:"Plan a relaxing weekend RV trip within 3 hours of my home"},{label:"National Park trip",prompt:"Plan a 5-day National Park RV trip with the best scenic routes"},{label:"Beach camping",prompt:"Find the best beach campgrounds for an RV within a day drive"},{label:"Mountains & hiking",prompt:"Plan a mountain RV trip with great hiking near the campground"}].map(({label,prompt})=>(
-                    <a key={label} href={"/hitch?prompt="+encodeURIComponent(prompt)} className="flex items-center justify-center text-center px-3 py-2 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-medium text-white transition">{label}</a>
-                  ))}
-                </div>
-                <a href="/hitch" className="flex items-center justify-center gap-2 w-full py-2.5 bg-white text-primary-700 rounded-xl text-sm font-bold hover:bg-white/90 transition"><span>🦄</span> Open Hitch AI</a>
-              </div>
+              <Link
+                to="/hitch"
+                className="group flex items-center gap-3 bg-white border border-gray-100 hover:border-indigo-200 rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
+              >
+                <img src="/hitch.png" alt="Hitch" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                <p className="flex-1 text-sm text-gray-600 group-hover:text-indigo-700 transition-colors">
+                  <span className="font-semibold text-gray-900">Hitch</span> — no trip on the calendar yet.{' '}
+                  <span className="text-indigo-500 group-hover:underline">Want to plan one?</span>
+                </p>
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+              </Link>
             )}
 
             {/* Rig Profile Setup Nudge — show when no RV type set */}

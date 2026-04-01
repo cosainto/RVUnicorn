@@ -45,6 +45,7 @@ const CHARACTER_IMAGES: Record<string, string> = {
 
 export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: Props) {
   const [question, setQuestion] = useState<TriviaQuestion | null>(null);
+  const [teaserQuestion, setTeaserQuestion] = useState<TriviaQuestion | null>(null); // held until user taps
   const [selected, setSelected] = useState<string | null>(null);
   const [pendingResult, setPendingResult] = useState<{ isCorrect: boolean; points: number; correctAnswer: string } | null>(null);
   const [result, setResult] = useState<{ isCorrect: boolean; points: number; correctAnswer: string } | null>(null);
@@ -69,6 +70,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     timerExpiredRef.current = false;
     questionRef.current = null;
     setQuestion(null);
+    setTeaserQuestion(null);
     setSelected(null);
     setResult(null);
     setPendingResult(null);
@@ -76,10 +78,8 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     setTimeLeft(30);
   }, []);
 
-  const loadQuestion = useCallback((q: TriviaQuestion) => {
-    // Don't reload same question
-    if (questionRef.current?.questionId === q.questionId) return;
-
+  // Opens the full question card and starts the timer
+  const openQuestion = useCallback((q: TriviaQuestion) => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerExpiredRef.current = false;
     questionRef.current = q;
@@ -87,6 +87,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     const elapsed = Math.floor((Date.now() - new Date(q.askedAt).getTime()) / 1000);
     const remaining = Math.max(0, q.timeLimit - elapsed);
 
+    setTeaserQuestion(null);
     setQuestion(q);
     setSelected(null);
     setResult(null);
@@ -94,9 +95,8 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     setPostQuestionMsg(null);
     setTimeLeft(remaining);
 
-    if (remaining <= 0) return; // already expired
+    if (remaining <= 0) return;
 
-    // Start countdown
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -108,6 +108,14 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
       });
     }, 1000);
   }, []);
+
+  // Receives question from socket/poll — shows teaser first, not the full card
+  const loadQuestion = useCallback((q: TriviaQuestion) => {
+    if (questionRef.current?.questionId === q.questionId) return;
+    // If already open (user tapped) don't re-tease
+    if (question?.questionId === q.questionId) return;
+    setTeaserQuestion(q);
+  }, [question]);
 
   // When timer hits 0, reveal result and fetch trash talk
   useEffect(() => {
@@ -168,6 +176,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
   useEffect(() => {
     if (!socket) return;
     socket.on('trivia:question', loadQuestion);
+    socket.on('trivia:sponsored-question', loadQuestion);
     socket.on('trivia:leaderboard', (data: any) => {
       setLeaderboard(data);
       setShowLeaderboard(true);
@@ -181,6 +190,7 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
     });
     return () => {
       socket.off('trivia:question');
+      socket.off('trivia:sponsored-question');
       socket.off('trivia:leaderboard');
       socket.off('trivia:winner');
       socket.off('trivia:redemption');
@@ -266,6 +276,28 @@ export default function CampfireTriviaOverlay({ socket, userId, campgroundId }: 
         </div>
         <button onClick={() => setShowLeaderboard(false)} className="w-full mt-3 text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
       </div>
+    );
+  }
+
+  // Teaser banner — shown when question arrives but user hasn't tapped yet
+  if (!question && teaserQuestion) {
+    const elapsed = Math.floor((Date.now() - new Date(teaserQuestion.askedAt).getTime()) / 1000);
+    const remaining = Math.max(0, teaserQuestion.timeLimit - elapsed);
+    if (remaining <= 0) return null; // expired before they tapped
+    return (
+      <button
+        onClick={() => openQuestion(teaserQuestion)}
+        className="w-full flex items-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl px-4 py-3 hover:from-purple-700 hover:to-indigo-700 transition-all group text-left shadow-md"
+      >
+        <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 text-lg">🎯</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-semibold text-sm">Trivia time! Think you know your stuff?</p>
+          <p className="text-purple-200 text-xs mt-0.5">Q{teaserQuestion.questionNum}/{teaserQuestion.total} · {teaserQuestion.category} · {remaining}s left</p>
+        </div>
+        <div className="text-white/70 group-hover:text-white text-sm font-medium flex-shrink-0">
+          Tap to play →
+        </div>
+      </button>
     );
   }
 

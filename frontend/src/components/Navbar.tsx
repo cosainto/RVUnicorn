@@ -161,7 +161,7 @@ export default function Navbar() {
   const primaryLinks = [
     { to: '/basecamp', icon: Home, label: 'Basecamp' },
     { to: '/events', icon: Calendar, label: 'Trips' },
-    { to: '/road-trips', icon: Route, label: 'Road Trips' },
+    { to: '/road-trips', icon: Route, label: 'Journeys' },
     { to: '/community', icon: Flame, label: 'Community' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
     { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
@@ -285,7 +285,7 @@ export default function Navbar() {
                       <DropItem to="/creators" onClick={() => setMoreOpen(false)} icon={<Play className="w-4 h-4" />} iconBg="#f5f3ff" iconColor="#8b5cf6" label="Creator Pages" desc="Videos & content" />
                     </DropSection>
                     <DropSection label="Tools">
-                      <DropItem to="/road-trips" onClick={() => setMoreOpen(false)} icon={<Map className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Road Trips" desc="Multi-stop adventures" />
+                      <DropItem to="/road-trips" onClick={() => setMoreOpen(false)} icon={<Map className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Journeys" desc="Multi-stop adventures" />
                       <DropItem to="/gear" onClick={() => setMoreOpen(false)} icon={<Package className="w-4 h-4" />} iconBg="#f0fdf4" iconColor="#22c55e" label="Gear" desc="Marketplace" />
                       <DropItem to="/packing" onClick={() => setMoreOpen(false)} icon={<Backpack className="w-4 h-4" />} iconBg="#eff6ff" iconColor="#3b82f6" label="Packing Lists" desc="Trip checklists" />
                       <DropItem to="/rv-log" onClick={() => setMoreOpen(false)} icon={<Wrench className="w-4 h-4" />} iconBg="#fffbeb" iconColor="#f59e0b" label="RV Log" desc="Maintenance tracker" />
@@ -484,7 +484,7 @@ export default function Navbar() {
               <MobileLink to="/campgrounds" icon={<Tent className="w-5 h-5" />} label="Campgrounds" active={isActive('/campgrounds')} />
               <MobileLink to="/community" icon={<Flame className="w-5 h-5" />} label="Community" active={isActive('/community')} />
               <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips & Events" active={isActive('/events')} />
-              <MobileLink to="/road-trips" icon={<Route className="w-5 h-5" />} label="Road Trips" active={isActive('/road-trips')} />
+              <MobileLink to="/road-trips" icon={<Route className="w-5 h-5" />} label="Journeys" active={isActive('/road-trips')} />
               <MobileLink to="/hitch" icon={<img src="/hitch.png" className="w-5 h-5 rounded-full object-cover" alt="Hitch" />} label="Hitch" active={isActive('/hitch')} />
               <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel & Routes" active={isActive('/travel')} />
             </MobileSection>

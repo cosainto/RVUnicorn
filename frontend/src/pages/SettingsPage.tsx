@@ -42,6 +42,9 @@ export default function SettingsPage() {
   });
   const [emailPrefsSaving, setEmailPrefsSaving] = useState(false);
   const [emailPrefsMsg, setEmailPrefsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [smsWeatherAlerts, setSmsWeatherAlerts] = useState(false);
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsMsg, setSmsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => { loadSettings(); }, []);
 
@@ -62,6 +65,7 @@ export default function SettingsPage() {
         emailOnTripUpdate: data.emailOnTripUpdate !== false,
         emailOnMention: data.emailOnMention !== false,
       });
+      setSmsWeatherAlerts(data.smsWeatherAlerts === true);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -80,6 +84,20 @@ export default function SettingsPage() {
       setEmailPrefsMsg({ type: 'error', text: 'Failed to save preferences' });
     } finally {
       setEmailPrefsSaving(false);
+    }
+  };
+
+  const saveSmsPrefs = async () => {
+    setSmsSaving(true);
+    setSmsMsg(null);
+    try {
+      await api.put(`/profile/${user?.username}`, { smsWeatherAlerts });
+      setSmsMsg({ type: 'success', text: 'SMS preferences saved!' });
+      setTimeout(() => setSmsMsg(null), 3000);
+    } catch {
+      setSmsMsg({ type: 'error', text: 'Failed to save SMS preferences' });
+    } finally {
+      setSmsSaving(false);
     }
   };
 
@@ -365,6 +383,48 @@ export default function SettingsPage() {
                 : <><Bell className="w-4 h-4" />Enable Push Notifications</>}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ── SMS Notifications ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <span className="text-lg">📱</span>
+          <h2 className="text-lg font-semibold text-gray-900">SMS Notifications</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500">Text alerts for time-sensitive situations when you're at a campground.</p>
+
+          {!phone && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+              ⚠️ Add a phone number in your contact info above to enable SMS alerts.
+            </div>
+          )}
+
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Severe weather alerts</p>
+              <p className="text-xs text-gray-400">Tornado warnings, flash floods, extreme storms at your campground</p>
+            </div>
+            <button
+              onClick={() => setSmsWeatherAlerts(v => !v)}
+              disabled={!phone}
+              className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 " + (smsWeatherAlerts ? 'bg-primary-600' : 'bg-gray-200')}
+            >
+              <span className={"inline-block h-4 w-4 transform rounded-full bg-white transition-transform " + (smsWeatherAlerts ? 'translate-x-6' : 'translate-x-1')} />
+            </button>
+          </div>
+
+          {smsMsg && (
+            <div className={"flex items-center gap-2 p-3 rounded-lg text-sm font-medium " + (smsMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200')}>
+              {smsMsg.text}
+            </div>
+          )}
+
+          <button onClick={saveSmsPrefs} disabled={smsSaving || !phone}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition disabled:opacity-50 mt-2">
+            {smsSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save SMS Preferences</>}
+          </button>
         </div>
       </div>
 

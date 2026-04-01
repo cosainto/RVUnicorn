@@ -122,9 +122,11 @@ export async function runStargazingCron() {
   console.log('[Stargazing] Running nightly sky update...');
 
   try {
-    const now = new Date();
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
-    // Find active check-ins
+    // ── Only active check-ins (not calendar trips) ───────────────────────
+    // Calendar trip users are NOT checked in — they don't get the feed post.
     const activeCheckIns = await prisma.checkIn.findMany({
       where: { isActive: true },
       include: {
@@ -133,112 +135,120 @@ export async function runStargazingCron() {
       },
     });
 
-    // Also find users with calendar trips happening today
-    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
-    const todayEnd = new Date(now); todayEnd.setHours(23,59,59,999);
-    const calendarTrips = await prisma.event.findMany({
-      where: {
-        startDate: { lte: todayEnd },
-        endDate: { gte: todayStart },
-        campgroundId: { not: null },
-      },
-      include: {
-        campground: { select: { id: true, name: true, latitude: true, longitude: true } },
-        organizer: { select: { id: true, firstName: true, stargazingEnabled: true } },
-        attendees: {
-          include: { user: { select: { id: true, firstName: true, stargazingEnabled: true } } },
-        },
-      },
-    });
+    if (activeCheckIns.length === 0) {
+      console.log('[Stargazing] No active check-ins. Skipping.');
+      return;
+    }
 
-    // Build unified list of user+campground pairs (deduplicated)
-    const seen = new Set<string>();
-    const entries: { userId: string; firstName: string; stargazingEnabled: boolean; campground: any }[] = [];
-
+    // ── Group check-ins by campground ────────────────────────────────────
+    const byCampground = new Map<string, { campground: any; users: { userId: string; firstName: string; stargazingEnabled: boolean }[] }>();
     for (const c of activeCheckIns) {
       if (!c.campground?.latitude || !c.campground?.longitude) continue;
-      const key = `${c.user.id}-${c.campground.id}`;
-      if (!seen.has(key)) { seen.add(key); entries.push({ userId: c.user.id, firstName: c.user.firstName, stargazingEnabled: c.user.stargazingEnabled ?? true, campground: c.campground }); }
-    }
-
-    for (const trip of calendarTrips) {
-      const campground = trip.campground;
-      if (!campground?.latitude || !campground?.longitude) continue;
-      const users = [trip.organizer, ...trip.attendees.map((a: any) => a.user)].filter(Boolean);
-      for (const u of users) {
-        const key = `${u.id}-${campground.id}`;
-        if (!seen.has(key)) { seen.add(key); entries.push({ userId: u.id, firstName: u.firstName, stargazingEnabled: u.stargazingEnabled ?? true, campground }); }
+      const cgId = c.campground.id;
+      if (!byCampground.has(cgId)) {
+        byCampground.set(cgId, { campground: c.campground, users: [] });
       }
+      byCampground.get(cgId)!.users.push({
+        userId: c.user.id,
+        firstName: c.user.firstName,
+        stargazingEnabled: c.user.stargazingEnabled ?? true,
+      });
     }
 
-    console.log(`[Stargazing] Found ${entries.length} user-campground pairs to post for`);
+    console.log(`[Stargazing] ${byCampground.size} campground(s) with active check-ins`);
 
-    // Replace activeCheckIns loop with entries loop
-    const activeCheckIns2 = entries;
-
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-
-    for (const checkIn of activeCheckIns2) {
-      if (!checkIn.stargazingEnabled) continue;
-      if (!checkIn.campground?.latitude || !checkIn.campground?.longitude) continue;
-
+    // ── One sky report generated per campground (shared) ─────────────────
+    for (const [cgId, { campground, users }] of byCampground) {
       try {
-        // Check if we already posted today for this user
-        const existingPost = await prisma.activity.findFirst({
-          where: {
-            userId: checkIn.userId,
-            type: 'STARGAZING',
-            createdAt: { gte: new Date(todayStr) },
-          },
-        }).catch(() => null);
+        const enabledUsers = users.filter(u => u.stargazingEnabled);
+        if (enabledUsers.length === 0) continue;
 
-        if (existingPost) {
-          console.log(`[Stargazing] Already posted today for user ${checkIn.userId}`);
-          continue;
-        }
-
+        // Generate ONE sky report for this campground
         const skyReport = await generateSkyReport(
-          checkIn.campground.latitude,
-          checkIn.campground.longitude,
-          checkIn.campground.name,
+          campground.latitude,
+          campground.longitude,
+          campground.name,
           today
         );
-
         if (!skyReport) continue;
 
         const moonPhase = getMoonPhase(today);
-        const content = `🌟 Tonight's Sky at ${checkIn.campground.name}\n\n${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
-
-        // Post to user's basecamp activity feed
+        const content = `🌟 Tonight's Sky at \${campground.name}\n\n\${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
         const metadata = JSON.stringify({
           imageUrl: STARGAZING_IMAGE,
           walterImage: WALTER_IMAGE,
-          campgroundId: checkIn.campground.id,
-          campgroundName: checkIn.campground.name,
+          campgroundId: campground.id,
+          campgroundName: campground.name,
           moonPhase,
           date: todayStr,
-          lat: checkIn.campground.latitude,
-          lng: checkIn.campground.longitude,
+          lat: campground.latitude,
+          lng: campground.longitude,
         });
 
-        await prisma.activity.create({
-          data: {
-            userId: checkIn.userId,
-            type: 'STARGAZING',
-            content,
-            metadata,
-            isPublic: false,
-          },
-        });
-        console.log(`[Stargazing] ✅ Activity created for ${checkIn.firstName}`);
+        // ── Post activity to each checked-in user's feed (1/day dedup) ──
+        for (const u of enabledUsers) {
+          const existing = await prisma.activity.findFirst({
+            where: {
+              userId: u.userId,
+              type: 'STARGAZING',
+              createdAt: { gte: new Date(todayStr) },
+            },
+          }).catch(() => null);
 
-        console.log(`[Stargazing] Posted sky report for ${checkIn.firstName} at ${checkIn.campground.name}`);
+          if (existing) {
+            console.log(`[Stargazing] Already posted today for \${u.firstName}`);
+            continue;
+          }
 
-        // Small delay to avoid rate limiting
-        await new Promise(r => setTimeout(r, 1000));
+          await prisma.activity.create({
+            data: {
+              userId: u.userId,
+              type: 'STARGAZING',
+              content,
+              metadata,
+              isPublic: false,
+            },
+          });
+          console.log(`[Stargazing] ✅ Feed post created for \${u.firstName} at \${campground.name}`);
+        }
+
+        // ── Campfire Chat drop — only when 2+ users checked in here ─────
+        if (users.length >= 2) {
+          const room = await (prisma as any).campfireRoom.findFirst({
+            where: { campgroundId: cgId, isActive: true },
+          }).catch(() => null);
+
+          if (room) {
+            // Dedup: don't re-post Walter to chat if already done today
+            const existingChatPost = await (prisma as any).campfireMessage.findFirst({
+              where: {
+                roomId: room.id,
+                isSystem: true,
+                createdAt: { gte: new Date(todayStr) },
+                content: { contains: 'Tonight\'s Sky' },
+              },
+            }).catch(() => null);
+
+            if (!existingChatPost) {
+              const chatContent = `🔭 **Walter here.** \${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
+              await (prisma as any).campfireMessage.create({
+                data: {
+                  roomId: room.id,
+                  isSystem: true,
+                  isHitch: false,
+                  content: chatContent,
+                  userId: null,
+                },
+              });
+              console.log(`[Stargazing] 💬 Walter dropped into campfire chat at \${campground.name} (\${users.length} campers)`);
+            }
+          }
+        }
+
+        // Small delay between campgrounds to avoid API rate limits
+        await new Promise(r => setTimeout(r, 1500));
       } catch (e) {
-        console.error(`[Stargazing] Failed for user ${checkIn.userId}:`, e);
+        console.error(`[Stargazing] Failed for campground \${cgId}:`, e);
       }
     }
   } catch (e) {
