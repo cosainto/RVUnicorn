@@ -4,6 +4,7 @@ import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logRsvpUpdated } from '../services/activity.service';
 import { prisma } from '../index';
+import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 
 const router = Router();
 
@@ -534,6 +535,11 @@ router.post('/', authenticateToken, async (req, res) => {
     // Auto-create StateVisit for organizer
     if (event.campground) {
       await createStateVisitForUser(userId, event, event.campground);
+    }
+
+    // Trigger Campfire Tip prompts for friends who visited this campground
+    if (event.campgroundId && new Date(startDate) >= new Date()) {
+      triggerTipPromptsForTrip(event.id, userId, event.campgroundId).catch(() => {});
     }
 
     // Log activity for friend feed (only for non-private events)

@@ -82,6 +82,50 @@ function SupplyListCompact({ eventId }: { eventId: string }) {
 }
 import InviteFriends from '../components/InviteFriends';
 
+// Friends heading somewhere you know — sidebar card
+function FriendsTipPromptCard() {
+  const [matches, setMatches] = useState<any[]>([]);
+  useEffect(() => {
+    api.get('/events?friendTrips=true&upcoming=true&limit=10')
+      .then(async ({ data }) => {
+        const trips = data.events || data || [];
+        const myCheckins = await api.get('/checkins/history?limit=100').catch(() => ({ data: [] }));
+        const myIds = new Set((myCheckins.data || []).map((c: any) => c.campgroundId));
+        const found = trips.filter((t: any) => t.campgroundId && myIds.has(t.campgroundId)).slice(0, 3);
+        setMatches(found);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (matches.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+        <span className="text-base">🔥</span>
+        <h3 className="font-bold text-sm text-gray-900">Friends going somewhere you know</h3>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {matches.map((trip: any) => (
+          <div key={trip.id} className="px-4 py-2.5 flex items-center gap-3">
+            {trip.organizer?.profilePicture ? (
+              <img src={trip.organizer.profilePicture} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-orange-200 flex items-center justify-center text-xs font-bold text-orange-700 flex-shrink-0">{trip.organizer?.firstName?.[0] || '?'}</div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-800 truncate">{trip.organizer?.firstName} → {trip.campground?.name || trip.title}</p>
+            </div>
+            <Link to={`/campgrounds/${trip.campgroundId}?tip=true`} className="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold hover:bg-orange-200 transition flex-shrink-0">
+              Drop a tip
+            </Link>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface BasecampProps {
   user: UserType | null;
 }
@@ -3213,6 +3257,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             {/* ── 4. Friends ────────────────────────────────────────── */}
              <Top8Friends username={user?.username} />
+
+            {/* ── 4b. Friends Going Somewhere You Know ────────────── */}
+            <FriendsTipPromptCard />
 
             {/* ── 5. Camping Nearby ─────────────────────────────────── */}
             {/* Nearby Campers Card */}

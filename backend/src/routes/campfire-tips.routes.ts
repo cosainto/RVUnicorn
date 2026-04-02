@@ -252,4 +252,108 @@ router.post('/match-trip', authenticateToken, async (req: any, res: Response) =>
   }
 });
 
+// ── GET /api/campfire-tips/draft/:campgroundId — AI-generated draft tip ──
+router.get('/draft/:campgroundId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    const { campgroundId } = req.params;
+
+    const [campground, checkIns, review, userProfile] = await Promise.all([
+      prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true, city: true } }),
+      prisma.checkIn.findMany({ where: { userId, campgroundId }, orderBy: { createdAt: 'desc' }, take: 5 }),
+      prisma.campgroundReview.findFirst({ where: { userId, campgroundId } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { rvType: true, rvMake: true, rvLength: true } }),
+    ]);
+
+    if (!campground) return res.status(404).json({ error: 'Campground not found' });
+
+    const visitCount = checkIns.length;
+    const lastVisit = checkIns[0]?.createdAt;
+    const reviewSnippet = review?.review?.slice(0, 200) || '';
+    const bestSite = review?.bestSiteNumber || '';
+
+    const prompt = `You are Hitch, a friendly RV campground expert. Generate a helpful 3-4 bullet point tip for ${campground.name} in ${campground.city || ''}, ${campground.state || ''}.
+
+Context:
+- Author visited ${visitCount} time(s)${lastVisit ? `, most recently ${new Date(lastVisit).toLocaleDateString()}` : ''}
+- Rig: ${userProfile?.rvType || 'unknown'} ${userProfile?.rvMake || ''} ${userProfile?.rvLength ? `(${userProfile.rvLength}ft)` : ''}
+${reviewSnippet ? `- Their review: "${reviewSnippet}"` : ''}
+${bestSite ? `- Recommended site: ${bestSite}` : ''}
+
+Write 3-4 concise bullet points starting with an emoji. Be specific and practical. Return plain text only.`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const draft = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+    res.json({ draft, visitCount, lastVisit });
+  } catch {
+    res.status(500).json({ error: 'Failed to generate draft' });
+  }
+});
+
+// ── Exported function: trigger tip prompts when a trip is created ──
+export async function triggerTipPromptsForTrip(tripId: string, creatorId: string, campgroundId: string) {
+  try {
+    const [campground, creator, friendships] = await Promise.all([
+      prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true } }),
+      prisma.user.findUnique({ where: { id: creatorId }, select: { firstName: true, rvType: true } }),
+      prisma.friendship.findMany({
+        where: { OR: [{ initiatorId: creatorId }, { receiverId: creatorId }], status: 'accepted' },
+        select: { initiatorId: true, receiverId: true },
+      }),
+    ]);
+    if (!campground || !creator) return;
+
+    const friendIds = friendships.map(f => f.initiatorId === creatorId ? f.receiverId : f.initiatorId);
+    if (friendIds.length === 0) return;
+
+    // Score candidates
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+    const candidates: { userId: string; score: number; visitCount: number; lastVisit: Date | null }[] = [];
+
+    for (const friendId of friendIds) {
+      const [checkIns, review, friend] = await Promise.all([
+        prisma.checkIn.findMany({ where: { userId: friendId, campgroundId }, select: { createdAt: true } }),
+        prisma.campgroundReview.findFirst({ where: { userId: friendId, campgroundId } }),
+        prisma.user.findUnique({ where: { id: friendId }, select: { rvType: true } }),
+      ]);
+      if (checkIns.length === 0) continue;
+
+      let score = checkIns.length * 40;
+      const lastVisit = checkIns.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.createdAt;
+      if (lastVisit && lastVisit > sixMonthsAgo) score += 20;
+      if (review) score += 20;
+      if (friend?.rvType === creator.rvType && creator.rvType) score += 20;
+
+      if (score >= 40) candidates.push({ userId: friendId, score, visitCount: checkIns.length, lastVisit });
+    }
+
+    const top3 = candidates.sort((a, b) => b.score - a.score).slice(0, 3);
+
+    for (const candidate of top3) {
+      const friend = await prisma.user.findUnique({ where: { id: candidate.userId }, select: { firstName: true } });
+      const timeAgo = candidate.lastVisit
+        ? `${Math.floor((Date.now() - candidate.lastVisit.getTime()) / (30 * 24 * 60 * 60 * 1000))} months ago`
+        : 'a while back';
+
+      await prisma.notification.create({
+        data: {
+          userId: candidate.userId,
+          type: 'CAMPFIRE_TIP_PROMPT',
+          content: `${creator.firstName} is heading to ${campground.name}! You stayed there ${candidate.visitCount > 1 ? `${candidate.visitCount} times` : timeAgo}. Got a tip to share?`,
+          link: `/campgrounds/${campgroundId}?tip=true`,
+          category: 'SOCIAL',
+          actorId: creatorId,
+          actorName: creator.firstName,
+          metadata: { tripId, campgroundId, campgroundName: campground.name },
+        },
+      });
+    }
+  } catch {}
+}
+
 export default router;

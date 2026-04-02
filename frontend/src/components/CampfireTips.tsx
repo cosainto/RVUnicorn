@@ -48,6 +48,27 @@ export default function CampfireTips({ campgroundId, tripId, campgroundName, com
   const [submitting, setSubmitting] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
+
+  // Auto-open composer if ?tip=true in URL
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('tip=true') && user) {
+      setShowComposer(true);
+      loadDraft();
+    }
+  }, [user]);
+
+  const loadDraft = async () => {
+    setDraftLoading(true);
+    try {
+      const { data } = await api.get(`/campfire-tips/draft/${campgroundId}`);
+      if (data.draft) {
+        setComposerContent(data.draft);
+        setComposerTitle('');
+      }
+    } catch {}
+    finally { setDraftLoading(false); }
+  };
 
   useEffect(() => {
     const endpoint = tripId ? `/campfire-tips/trip/${tripId}` : `/campfire-tips/${campgroundId}`;
@@ -121,7 +142,7 @@ export default function CampfireTips({ campgroundId, tripId, campgroundName, com
           {tips.length > 0 && <span className="bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">{tips.length}</span>}
         </div>
         {user && (
-          <button onClick={() => { setShowComposer(true); if (suggestions.length === 0) loadSuggestions(); }}
+          <button onClick={() => { setShowComposer(true); if (!composerContent) loadDraft(); if (suggestions.length === 0) loadSuggestions(); }}
             className="flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-xs font-semibold transition">
             <Send className="w-3 h-3" /> Share a Tip
           </button>
@@ -136,8 +157,11 @@ export default function CampfireTips({ campgroundId, tripId, campgroundName, com
             <button onClick={() => setShowComposer(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
           </div>
 
+          {/* AI Draft loading */}
+          {draftLoading && <p className="text-xs text-orange-600 animate-pulse mb-3">🔥 Hitch is drafting a tip based on your visits...</p>}
+
           {/* AI Suggestions */}
-          {loadingSuggestions && <p className="text-xs text-orange-600 animate-pulse mb-3">Hitch is thinking of suggestions...</p>}
+          {loadingSuggestions && !draftLoading && <p className="text-xs text-orange-600 animate-pulse mb-3">Hitch is thinking of suggestions...</p>}
           {suggestions.length > 0 && (
             <div className="space-y-2 mb-3">
               <p className="text-xs text-gray-500 font-medium flex items-center gap-1"><Sparkles className="w-3 h-3" /> Quick suggestions:</p>
