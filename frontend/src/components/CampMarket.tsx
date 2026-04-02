@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send, CheckCircle, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { CampMarketRepBadge } from './CampMarketProfile';
@@ -258,7 +259,7 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                         ) : (
                           <div className="w-5 h-5 rounded-full bg-orange-200 flex items-center justify-center text-xs font-bold text-orange-700">{listing.user.firstName[0]}</div>
                         )}
-                        <span className="text-xs text-gray-500">{listing.user.firstName}</span>
+                        <Link to={`/profile/${listing.user.username}`} className="text-xs text-gray-500 font-medium hover:text-orange-600 hover:underline transition">{listing.user.firstName}</Link>
                       </div>
                       <CampMarketRepBadge userId={listing.user.id} />
                       {listing.siteNumber && (
@@ -272,16 +273,24 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       {user && user.id !== listing.user.id && (
-                        interestSent.has(listing.id) ? (
-                          <span className="text-xs text-green-600 font-medium">Sent!</span>
-                        ) : (
-                          <button
-                            onClick={() => handleInterest(listing)}
-                            className="flex items-center gap-1 text-xs bg-orange-50 text-orange-600 hover:bg-orange-100 px-2.5 py-1 rounded-lg font-semibold transition"
+                        <>
+                          {interestSent.has(listing.id) ? (
+                            <span className="text-xs text-green-600 font-medium">Sent!</span>
+                          ) : (
+                            <button
+                              onClick={() => handleInterest(listing)}
+                              className="flex items-center gap-1 text-xs bg-orange-50 text-orange-600 hover:bg-orange-100 px-2.5 py-1 rounded-lg font-semibold transition"
+                            >
+                              <Send className="w-3 h-3" /> I'm Interested
+                            </button>
+                          )}
+                          <Link
+                            to={`/profile/${listing.user.username}`}
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition"
                           >
-                            <Send className="w-3 h-3" /> I'm Interested
-                          </button>
-                        )
+                            <MessageCircle className="w-3 h-3" /> Message
+                          </Link>
+                        </>
                       )}
                       {user && user.id === listing.user.id && (
                         <div className="flex items-center gap-2">
