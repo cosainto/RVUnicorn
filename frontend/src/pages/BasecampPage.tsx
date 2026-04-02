@@ -4174,12 +4174,12 @@ export default function BasecampPage({ user }: BasecampProps) {
                 try { meta = typeof tonightSkyPost.metadata === 'string' ? JSON.parse(tonightSkyPost.metadata) : (tonightSkyPost.metadata || {}); } catch {}
                 return (
                   <div className="bg-white rounded-xl border border-indigo-100 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-indigo-100 flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50">
-                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png" className="w-7 h-7 rounded-full object-cover" alt="Walter" />
-                      <span className="font-bold text-sm text-indigo-900">Tonight's Sky</span>
-                      <span className="text-xs text-indigo-400 ml-auto">{meta.moonPhase || '🌟'}</span>
+                    <div className="px-3 py-2 border-b border-indigo-100 flex items-center gap-1.5 bg-gradient-to-r from-indigo-50 to-purple-50">
+                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773969595/rvunicorn/walter-stargazing.png" className="w-5 h-5 rounded-full object-cover" alt="Walter" />
+                      <span className="font-bold text-xs text-indigo-900">Tonight's Sky</span>
+                      <span className="text-[10px] text-indigo-400 ml-auto">{meta.moonPhase || '🌟'}</span>
                     </div>
-                    <div className="p-4">
+                    <div className="p-2">
                       <StargazingCard
                         content={tonightSkyPost.content || ''}
                         metadata={{

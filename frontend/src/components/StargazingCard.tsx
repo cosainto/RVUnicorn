@@ -30,58 +30,54 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
   const lines = content.split('\n').filter(Boolean);
   const title = lines[0];
   const body = lines.slice(1).join('\n').trim();
+  // Show only first ~200 chars to keep card compact
+  const truncatedBody = body.length > 200 ? body.slice(0, 200) + '…' : body;
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-indigo-800/40" style={{
+    <div className="rounded-xl overflow-hidden border border-indigo-800/40" style={{
       background: 'linear-gradient(135deg, #0f0c29, #1a1a3e, #0d1b3e)',
     }}>
-      {/* Star image */}
-      <div className="relative">
+      {/* Star image — compact */}
+      <div className="relative h-24">
         <img
           src={metadata.imageUrl}
           alt="Stargazing"
-          className="w-full object-cover"
-          style={{ maxHeight: '200px' }}
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0c29] via-transparent to-transparent" />
-        <div className="absolute bottom-3 left-4">
-          <span className="text-2xl">{metadata.moonPhase?.split(' ')[0]}</span>
-        </div>
-        <div className="absolute top-3 right-3">
-          <span className="bg-indigo-900/70 backdrop-blur-sm text-indigo-200 text-xs px-2.5 py-1 rounded-full border border-indigo-700/50">
-            🌟 Tonight's Sky
-          </span>
+        <div className="absolute bottom-2 left-3">
+          <span className="text-lg">{metadata.moonPhase?.split(' ')[0]}</span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-4 py-4">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="px-3 py-2.5">
+        <div className="flex items-center gap-1.5 mb-1.5">
           {metadata.walterImage
-            ? <img src={metadata.walterImage} className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="Walter" />
-            : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-sm">🎭</div>
+            ? <img src={metadata.walterImage} className="w-4 h-4 rounded-full object-cover flex-shrink-0" alt="Walter" />
+            : <div className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">🎭</div>
           }
-          <span className="text-indigo-300 text-xs font-semibold">Walter · Stargazing Guide</span>
-          <span className="text-indigo-600 text-xs ml-auto">{new Date(metadata.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          <span className="text-indigo-300 text-[10px] font-semibold">Walter · Stargazing Guide</span>
+          <span className="text-indigo-600 text-[10px] ml-auto">{new Date(metadata.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
         </div>
 
-        <h3 className="text-white font-bold text-sm mb-2">{title}</h3>
-        <p className="text-indigo-200 text-sm leading-relaxed">{body}</p>
+        <h3 className="text-white font-bold text-xs mb-1">{title}</h3>
+        <p className="text-indigo-200 text-[11px] leading-snug">{truncatedBody}</p>
 
-        <div className="mt-3 pt-3 border-t border-indigo-800/40 flex items-center justify-between">
-          <span className="text-indigo-400 text-xs">{metadata.moonPhase}</span>
+        <div className="mt-2 pt-2 border-t border-indigo-800/40 flex items-center justify-between">
+          <span className="text-indigo-400 text-[10px]">{metadata.moonPhase}</span>
           {!showConfirm ? (
             <button
               onClick={() => setShowConfirm(true)}
-              className="text-indigo-600 hover:text-indigo-400 text-xs transition"
+              className="text-indigo-600 hover:text-indigo-400 text-[10px] transition"
             >
               Stop updates
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-indigo-400 text-xs">Stop stargazing updates?</span>
-              <button onClick={handleOptOut} className="text-red-400 hover:text-red-300 text-xs font-medium transition">Yes</button>
-              <button onClick={() => setShowConfirm(false)} className="text-indigo-400 hover:text-indigo-300 text-xs transition">No</button>
+              <span className="text-indigo-400 text-[10px]">Stop updates?</span>
+              <button onClick={handleOptOut} className="text-red-400 hover:text-red-300 text-[10px] font-medium transition">Yes</button>
+              <button onClick={() => setShowConfirm(false)} className="text-indigo-400 hover:text-indigo-300 text-[10px] transition">No</button>
             </div>
           )}
         </div>
