@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
 import SunCalc from 'suncalc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,10 +27,11 @@ interface GoldenHourData {
 // ─── Character Avatars (placeholder) ──────────────────────────────────────────
 // TODO: Replace placeholder circles with real character art when available
 
-function CharacterAvatar({ initial, color }: { initial: string; color: string }) {
+function CharacterAvatar({ initial, color, size = 'sm' }: { initial: string; color: string; size?: 'sm' | 'xs' }) {
+  const cls = size === 'xs' ? 'w-4 h-4 text-[9px]' : 'w-5 h-5 text-[10px]';
   return (
     <div
-      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+      className={`${cls} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}
       style={{ background: color }}
     >
       {initial}
@@ -62,55 +63,55 @@ function getSeason(month: number): 'spring' | 'summer' | 'fall' | 'winter' {
 
 const WILDLIFE_DATA: Record<string, Record<string, { animals: string[]; tip: string }>> = {
   spring: {
-    northern: { animals: ['Black Bear (emerging)', 'Moose calves', 'Bald Eagle nesting', 'Wild Turkey'], tip: 'Bears are waking hungry — secure food and trash at all times.' },
-    southern: { animals: ['Alligator (active)', 'Armadillo', 'White-tailed Deer fawns', 'Painted Bunting'], tip: 'Gators are on the move during warm spells — keep distance near water.' },
-    western: { animals: ['Mule Deer', 'Mountain Lion', 'Hummingbirds arriving', 'Rattlesnake'], tip: 'Rattlesnakes emerge with warm ground temps — watch your step on trails.' },
-    eastern: { animals: ['White-tailed Deer', 'Red Fox kits', 'Osprey returning', 'Box Turtle'], tip: 'Fox dens may be near campsites — keep dogs leashed at dawn and dusk.' },
+    northern: { animals: ['Black Bear (emerging)', 'Moose calves', 'Bald Eagle nesting', 'Wild Turkey'], tip: 'Bears are waking hungry — secure food and trash.' },
+    southern: { animals: ['Alligator (active)', 'Armadillo', 'White-tailed Deer fawns', 'Painted Bunting'], tip: 'Gators on the move — keep distance near water.' },
+    western: { animals: ['Mule Deer', 'Mountain Lion', 'Hummingbirds arriving', 'Rattlesnake'], tip: 'Rattlesnakes emerge with warmth — watch your step.' },
+    eastern: { animals: ['White-tailed Deer', 'Red Fox kits', 'Osprey returning', 'Box Turtle'], tip: 'Fox dens near campsites — leash dogs at dawn/dusk.' },
   },
   summer: {
-    northern: { animals: ['Black Bear', 'Moose', 'Loon', 'Mosquitoes (peak)'], tip: 'Moose are surprisingly aggressive in summer — give them 50+ yards.' },
-    southern: { animals: ['Alligator', 'Coral Snake', 'Fireflies', 'Armadillo'], tip: 'Highest snake activity — use a flashlight on night walks.' },
-    western: { animals: ['Elk herds', 'Black Bear', 'Marmot', 'Rattlesnake'], tip: 'Elk rut begins late summer — bulls can be extremely aggressive.' },
-    eastern: { animals: ['Black Bear', 'Copperhead', 'Fireflies', 'White-tailed Deer'], tip: 'Bear encounters peak as they forage before fall — bear canisters are essential.' },
+    northern: { animals: ['Black Bear', 'Moose', 'Loon', 'Mosquitoes (peak)'], tip: 'Moose are aggressive in summer — give 50+ yards.' },
+    southern: { animals: ['Alligator', 'Coral Snake', 'Fireflies', 'Armadillo'], tip: 'Peak snake activity — flashlight on night walks.' },
+    western: { animals: ['Elk herds', 'Black Bear', 'Marmot', 'Rattlesnake'], tip: 'Elk rut begins late summer — bulls are aggressive.' },
+    eastern: { animals: ['Black Bear', 'Copperhead', 'Fireflies', 'White-tailed Deer'], tip: 'Bear encounters peak — bear canisters essential.' },
   },
   fall: {
-    northern: { animals: ['Moose (rut)', 'Black Bear (gorging)', 'Bald Eagle', 'Gray Wolf'], tip: 'Moose rut is underway — bulls are unpredictable, give extra space.' },
-    southern: { animals: ['Monarch migration', 'White-tailed Deer (rut)', 'Sandhill Crane'], tip: 'Deer rut means more deer on roads — extra caution driving at dusk.' },
-    western: { animals: ['Elk (bugling)', 'Grizzly Bear (gorging)', 'Bighorn Sheep', 'Bald Eagle'], tip: 'Bears are in hyperphagia — eating 20 hours a day. Triple-check food storage.' },
-    eastern: { animals: ['Black Bear', 'White-tailed Deer (rut)', 'Turkey', 'Hawk migration'], tip: 'Hunting season is open in many areas — wear blaze orange on hikes.' },
+    northern: { animals: ['Moose (rut)', 'Black Bear (gorging)', 'Bald Eagle', 'Gray Wolf'], tip: 'Moose rut underway — bulls are unpredictable.' },
+    southern: { animals: ['Monarch migration', 'White-tailed Deer (rut)', 'Sandhill Crane'], tip: 'Deer rut = more on roads — caution at dusk.' },
+    western: { animals: ['Elk (bugling)', 'Grizzly Bear (gorging)', 'Bighorn Sheep', 'Bald Eagle'], tip: 'Bears in hyperphagia — triple-check food storage.' },
+    eastern: { animals: ['Black Bear', 'White-tailed Deer (rut)', 'Turkey', 'Hawk migration'], tip: 'Hunting season open — wear blaze orange on hikes.' },
   },
   winter: {
-    northern: { animals: ['Snowy Owl', 'Bald Eagle', 'Coyote', 'Snowshoe Hare'], tip: 'Wildlife is stressed by cold — observe from a distance and never feed.' },
-    southern: { animals: ['Manatee (warm springs)', 'Whooping Crane', 'Bald Eagle', 'Bobcat'], tip: 'Manatees gather at warm springs — kayak slowly and keep your distance.' },
-    western: { animals: ['Bald Eagle', 'Elk (wintering)', 'Bighorn Sheep', 'Mule Deer'], tip: 'Elk herds descend to valleys — great viewing but stay in your vehicle.' },
-    eastern: { animals: ['Bald Eagle', 'Coyote', 'Deer (yarding)', 'Great Horned Owl'], tip: 'Great Horned Owls start nesting now — listen for hoots at dusk.' },
+    northern: { animals: ['Snowy Owl', 'Bald Eagle', 'Coyote', 'Snowshoe Hare'], tip: 'Wildlife stressed by cold — observe from distance.' },
+    southern: { animals: ['Manatee (warm springs)', 'Whooping Crane', 'Bald Eagle', 'Bobcat'], tip: 'Manatees at warm springs — kayak slowly.' },
+    western: { animals: ['Bald Eagle', 'Elk (wintering)', 'Bighorn Sheep', 'Mule Deer'], tip: 'Elk descend to valleys — stay in your vehicle.' },
+    eastern: { animals: ['Bald Eagle', 'Coyote', 'Deer (yarding)', 'Great Horned Owl'], tip: 'Great Horned Owls nesting — listen at dusk.' },
   },
 };
 
 const FORAGING_DATA: Record<string, Record<string, { finds: string[]; tip: string }>> = {
   spring: {
-    northern: { finds: ['Ramps (wild leeks)', 'Fiddlehead ferns', 'Morel mushrooms', 'Dandelion greens'], tip: 'Morels appear 1-2 weeks after the last frost near dying elms and tulip poplars.' },
-    southern: { finds: ['Blackberry blossoms', 'Chickweed', 'Wild onion', 'Redbud flowers'], tip: 'Redbud flowers are edible and make beautiful trail-side salads.' },
-    western: { finds: ['Miner\'s lettuce', 'Wild asparagus', 'Morel mushrooms', 'Stinging nettle'], tip: 'Miner\'s lettuce is vitamin-C rich and grows on shady slopes.' },
-    eastern: { finds: ['Ramps', 'Morel mushrooms', 'Violet flowers', 'Pawpaw blossoms'], tip: 'Ramps have a short season — harvest leaves only, leave the bulb to regrow.' },
+    northern: { finds: ['Ramps (wild leeks)', 'Fiddlehead ferns', 'Morel mushrooms', 'Dandelion greens'], tip: 'Morels appear 1-2 weeks after last frost near dying elms.' },
+    southern: { finds: ['Blackberry blossoms', 'Chickweed', 'Wild onion', 'Redbud flowers'], tip: 'Redbud flowers are edible — great in trail-side salads.' },
+    western: { finds: ['Miner\'s lettuce', 'Wild asparagus', 'Morel mushrooms', 'Stinging nettle'], tip: 'Miner\'s lettuce is vitamin-C rich on shady slopes.' },
+    eastern: { finds: ['Ramps', 'Morel mushrooms', 'Violet flowers', 'Pawpaw blossoms'], tip: 'Ramps have a short season — harvest leaves only.' },
   },
   summer: {
-    northern: { finds: ['Wild blueberries', 'Chanterelle mushrooms', 'Thimbleberry', 'Wild mint'], tip: 'Chanterelles love mossy oak forests after summer rain — never eat uncertain fungi.' },
-    southern: { finds: ['Muscadine grapes', 'Passion fruit', 'Blackberry', 'Elderflower'], tip: 'Muscadines ripen on the vine — look for bronze or purple clusters along fence rows.' },
-    western: { finds: ['Huckleberry', 'Wild strawberry', 'Pine nuts', 'Elderberry'], tip: 'Huckleberries grow at elevation — and bears want them too, so make noise.' },
-    eastern: { finds: ['Blackberry', 'Wineberry', 'Chanterelle mushrooms', 'Sumac berries'], tip: 'Staghorn sumac berries make a refreshing lemonade-like drink — avoid white-berried sumac.' },
+    northern: { finds: ['Wild blueberries', 'Chanterelle mushrooms', 'Thimbleberry', 'Wild mint'], tip: 'Chanterelles love mossy oak forests after rain.' },
+    southern: { finds: ['Muscadine grapes', 'Passion fruit', 'Blackberry', 'Elderflower'], tip: 'Muscadines ripen on vine — look along fence rows.' },
+    western: { finds: ['Huckleberry', 'Wild strawberry', 'Pine nuts', 'Elderberry'], tip: 'Huckleberries at elevation — bears want them too.' },
+    eastern: { finds: ['Blackberry', 'Wineberry', 'Chanterelle mushrooms', 'Sumac berries'], tip: 'Staghorn sumac makes a lemonade-like drink.' },
   },
   fall: {
-    northern: { finds: ['Hen of the woods', 'Cranberry', 'Wild apple', 'Hickory nuts'], tip: 'Hen of the woods (maitake) fruits at the base of oaks — a prized find.' },
-    southern: { finds: ['Persimmon', 'Pawpaw', 'Pecan', 'Muscadine grapes'], tip: 'Wait for persimmons to fall — unripe ones are astringent enough to ruin your day.' },
-    western: { finds: ['Pine nuts', 'Juniper berries', 'Wild grape', 'Manzanita berries'], tip: 'Piñon pine nut harvest is a tradition — look for open cones in September.' },
-    eastern: { finds: ['Pawpaw', 'Persimmon', 'Hen of the woods', 'Black walnut'], tip: 'Pawpaws taste like tropical custard — look for them along creek banks.' },
+    northern: { finds: ['Hen of the woods', 'Cranberry', 'Wild apple', 'Hickory nuts'], tip: 'Hen of the woods fruits at the base of oaks.' },
+    southern: { finds: ['Persimmon', 'Pawpaw', 'Pecan', 'Muscadine grapes'], tip: 'Wait for persimmons to fall — unripe ones are brutal.' },
+    western: { finds: ['Pine nuts', 'Juniper berries', 'Wild grape', 'Manzanita berries'], tip: 'Piñon pine nut harvest — look for open cones.' },
+    eastern: { finds: ['Pawpaw', 'Persimmon', 'Hen of the woods', 'Black walnut'], tip: 'Pawpaws taste like tropical custard — check creek banks.' },
   },
   winter: {
-    northern: { finds: ['Birch bark tea', 'Rose hips', 'Dried mushrooms (stored)', 'Pine needle tea'], tip: 'Pine needle tea is packed with vitamin C — steep fresh green needles for 10 minutes.' },
-    southern: { finds: ['Citrus (wild or feral)', 'Saw palmetto berries', 'Chickweed', 'Dandelion'], tip: 'Feral citrus trees are common near old homesteads — worth the detour.' },
-    western: { finds: ['Pine needle tea', 'Rose hips', 'Juniper berries', 'Dried manzanita'], tip: 'Rose hips hold through winter — they\'re sweeter after a hard frost.' },
-    eastern: { finds: ['Wintergreen berries', 'Rose hips', 'Pine needle tea', 'Oyster mushrooms'], tip: 'Oyster mushrooms fruit on dead hardwoods even in cold weather — check after rain.' },
+    northern: { finds: ['Birch bark tea', 'Rose hips', 'Dried mushrooms', 'Pine needle tea'], tip: 'Pine needle tea is packed with vitamin C.' },
+    southern: { finds: ['Citrus (feral)', 'Saw palmetto berries', 'Chickweed', 'Dandelion'], tip: 'Feral citrus near old homesteads — worth the detour.' },
+    western: { finds: ['Pine needle tea', 'Rose hips', 'Juniper berries', 'Dried manzanita'], tip: 'Rose hips sweeten after a hard frost.' },
+    eastern: { finds: ['Wintergreen berries', 'Rose hips', 'Pine needle tea', 'Oyster mushrooms'], tip: 'Oyster mushrooms fruit on dead hardwoods after rain.' },
   },
 };
 
@@ -142,30 +143,27 @@ function InsightCard({
 
   return (
     <div className={`bg-white rounded-xl border overflow-hidden ${borderColor}`}>
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className={`w-full px-4 py-3 border-b flex items-center gap-2 ${borderColor} ${headerGradient}`}
-      >
+      <div className={`px-3 py-2 border-b flex items-center gap-1.5 ${borderColor} ${headerGradient}`}>
         {avatar}
-        <span className="text-lg flex-shrink-0">{icon}</span>
-        <span className={`font-bold text-sm ${titleColor}`}>{title}</span>
-        {badge && <span className="ml-auto mr-2">{badge}</span>}
-        {collapsed
-          ? <ChevronDown className={`w-4 h-4 ml-auto ${titleColor} opacity-50`} />
-          : <ChevronUp className={`w-4 h-4 ml-auto ${titleColor} opacity-50`} />}
-      </button>
+        <span className="text-base flex-shrink-0">{icon}</span>
+        <span className={`font-bold text-xs ${titleColor} truncate`}>{title}</span>
+        {badge && <span className="ml-auto mr-1">{badge}</span>}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={`ml-auto p-0.5 rounded hover:bg-black/5 transition ${titleColor} opacity-50`}
+        >
+          {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className={`p-0.5 rounded hover:bg-black/5 transition ${titleColor} opacity-40`}
+          title="Dismiss"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
       {!collapsed && (
-        <div className="p-4">
-          {children}
-          <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-            <button
-              onClick={() => setDismissed(true)}
-              className="text-gray-400 hover:text-gray-600 text-xs transition"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+        <div className="px-3 py-2.5">{children}</div>
       )}
     </div>
   );
@@ -182,8 +180,8 @@ function GoldenHourCard({ lat, lng, weather }: { lat: number; lng: number; weath
     setData({
       sunrise: fmt(times.sunrise),
       sunset: fmt(times.sunset),
-      goldenHourAM: fmt(times.goldenHourEnd),   // morning golden hour ends at this time
-      goldenHourPM: fmt(times.goldenHour),       // evening golden hour starts at this time
+      goldenHourAM: fmt(times.goldenHourEnd),
+      goldenHourPM: fmt(times.goldenHour),
     });
   }, [lat, lng]);
 
@@ -191,38 +189,29 @@ function GoldenHourCard({ lat, lng, weather }: { lat: number; lng: number; weath
 
   return (
     <InsightCard
-      icon={<Sun className="w-4 h-4 text-amber-500" />}
+      icon={<Sun className="w-3.5 h-3.5 text-amber-500" />}
       title="Golden Hour"
       borderColor="border-amber-200"
       headerGradient="bg-gradient-to-r from-amber-50 to-orange-50"
       titleColor="text-amber-900"
-      avatar={
-        // TODO: Replace with real Hitch character art
-        <CharacterAvatar initial="H" color="#7c3aed" />
-      }
+      avatar={/* TODO: Replace with real Hitch character art */ <CharacterAvatar initial="H" color="#7c3aed" />}
     >
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-amber-600 font-medium mb-1">🌅 Sunrise</p>
-          <p className="text-lg font-bold text-amber-900">{data.sunrise}</p>
-          <p className="text-xs text-amber-500 mt-0.5">Golden til {data.goldenHourAM}</p>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="bg-amber-50/80 rounded-lg px-2 py-1.5 text-center">
+          <p className="text-[10px] text-amber-600 font-medium">🌅 Sunrise</p>
+          <p className="text-sm font-bold text-amber-900">{data.sunrise}</p>
+          <p className="text-[10px] text-amber-400">Golden til {data.goldenHourAM}</p>
         </div>
-        <div className="bg-gradient-to-br from-orange-50 to-rose-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-orange-600 font-medium mb-1">🌇 Sunset</p>
-          <p className="text-lg font-bold text-orange-900">{data.sunset}</p>
-          <p className="text-xs text-orange-500 mt-0.5">Golden from {data.goldenHourPM}</p>
+        <div className="bg-orange-50/80 rounded-lg px-2 py-1.5 text-center">
+          <p className="text-[10px] text-orange-600 font-medium">🌇 Sunset</p>
+          <p className="text-sm font-bold text-orange-900">{data.sunset}</p>
+          <p className="text-[10px] text-orange-400">Golden from {data.goldenHourPM}</p>
         </div>
       </div>
       {weather?.description && (
-        <p className="text-xs text-amber-600 mb-2">Current conditions: {weather.description}{weather.temp != null ? ` · ${Math.round(weather.temp)}°F` : ''}</p>
+        <p className="text-[10px] text-amber-600 mb-1">{weather.description}{weather.temp != null ? ` · ${Math.round(weather.temp)}°F` : ''}</p>
       )}
-      <div className="flex items-center gap-2 mt-2">
-        {/* TODO: Replace with real Hitch character art */}
-        <CharacterAvatar initial="H" color="#7c3aed" />
-        <p className="text-xs text-gray-500 italic">
-          "Chase the light, not the likes. But also… get the likes." — Hitch 🦄
-        </p>
-      </div>
+      <p className="text-[10px] text-gray-400 italic mt-1">"Chase the light, not the likes." — Hitch 🦄</p>
     </InsightCard>
   );
 }
@@ -244,32 +233,23 @@ function WildlifeActivityCard({ lat, lng }: { lat: number; lng: number }) {
       borderColor="border-green-200"
       headerGradient="bg-gradient-to-r from-green-50 to-emerald-50"
       titleColor="text-green-900"
-      avatar={
-        // TODO: Replace with real Ranger Rick character art
-        <CharacterAvatar initial="R" color="#16a34a" />
-      }
+      avatar={/* TODO: Replace with real Ranger Rick character art */ <CharacterAvatar initial="R" color="#16a34a" />}
     >
-      <div className="space-y-2 mb-3">
+      <div className="grid grid-cols-2 gap-1.5 mb-2">
         {data.animals.map((animal) => (
-          <div key={animal} className="flex items-center gap-2 bg-green-50/60 rounded-lg px-3 py-2">
-            <TreePine className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-            <span className="text-sm text-green-900">{animal}</span>
+          <div key={animal} className="flex items-center gap-1 bg-green-50/60 rounded px-2 py-1">
+            <TreePine className="w-3 h-3 text-green-500 flex-shrink-0" />
+            <span className="text-[11px] text-green-900 truncate">{animal}</span>
           </div>
         ))}
       </div>
-      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-        <p className="text-xs text-amber-800 font-medium">
-          <AlertTriangle className="w-3 h-3 inline mr-1 -mt-0.5" />
+      <div className="bg-amber-50 rounded px-2 py-1.5 mb-1.5">
+        <p className="text-[10px] text-amber-800 font-medium">
+          <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
           {data.tip}
         </p>
       </div>
-      <div className="flex items-center gap-2">
-        {/* TODO: Replace with real Ranger Rick character art */}
-        <CharacterAvatar initial="R" color="#16a34a" />
-        <p className="text-xs text-gray-500 italic">
-          "Every critter has a story. Your job is to observe, not audition." — Ranger Rick 🏕️
-        </p>
-      </div>
+      <p className="text-[10px] text-gray-400 italic">"Observe, don't audition." — Ranger Rick 🏕️</p>
     </InsightCard>
   );
 }
@@ -286,34 +266,25 @@ function ForagingForecastCard({ lat, lng }: { lat: number; lng: number }) {
 
   return (
     <InsightCard
-      icon={<Leaf className="w-4 h-4 text-lime-600" />}
+      icon={<Leaf className="w-3.5 h-3.5 text-lime-600" />}
       title="Foraging Forecast"
       borderColor="border-lime-200"
       headerGradient="bg-gradient-to-r from-lime-50 to-green-50"
       titleColor="text-lime-900"
-      avatar={
-        // TODO: Replace with real Walter character art
-        <CharacterAvatar initial="W" color="#854d0e" />
-      }
+      avatar={/* TODO: Replace with real Walter character art */ <CharacterAvatar initial="W" color="#854d0e" />}
     >
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      <div className="grid grid-cols-2 gap-1.5 mb-2">
         {data.finds.map((find) => (
-          <div key={find} className="flex items-center gap-1.5 bg-lime-50/60 rounded-lg px-2.5 py-2">
-            <span className="text-sm">🌿</span>
-            <span className="text-xs text-lime-900 font-medium">{find}</span>
+          <div key={find} className="flex items-center gap-1 bg-lime-50/60 rounded px-2 py-1">
+            <span className="text-[11px]">🌿</span>
+            <span className="text-[11px] text-lime-900 font-medium truncate">{find}</span>
           </div>
         ))}
       </div>
-      <div className="bg-lime-50 border border-lime-200 rounded-lg px-3 py-2 mb-3">
-        <p className="text-xs text-lime-800">{data.tip}</p>
+      <div className="bg-lime-50 rounded px-2 py-1.5 mb-1.5">
+        <p className="text-[10px] text-lime-800">{data.tip}</p>
       </div>
-      <div className="flex items-center gap-2">
-        {/* TODO: Replace with real Walter character art */}
-        <CharacterAvatar initial="W" color="#854d0e" />
-        <p className="text-xs text-gray-500 italic">
-          "Nature always sets the table — you just need to know when to sit down." — Walter 🍄
-        </p>
-      </div>
+      <p className="text-[10px] text-gray-400 italic">"Nature sets the table — know when to sit." — Walter 🍄</p>
     </InsightCard>
   );
 }
@@ -359,51 +330,41 @@ function AirQualityCard({ lat, lng }: { lat: number; lng: number }) {
 
   return (
     <InsightCard
-      icon={<Wind className="w-4 h-4 text-sky-500" />}
+      icon={<Wind className="w-3.5 h-3.5 text-sky-500" />}
       title="Air Quality"
       borderColor={isWarning ? 'border-red-300' : 'border-sky-200'}
       headerGradient={isWarning
         ? 'bg-gradient-to-r from-red-50 to-orange-50'
         : 'bg-gradient-to-r from-sky-50 to-blue-50'}
       titleColor={isWarning ? 'text-red-900' : 'text-sky-900'}
-      avatar={
-        // TODO: Replace with real Hitch character art
-        <CharacterAvatar initial="H" color="#7c3aed" />
-      }
+      avatar={/* TODO: Replace with real Hitch character art */ <CharacterAvatar initial="H" color="#7c3aed" />}
       badge={isWarning ? (
-        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" /> Hitch Warning
+        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse flex items-center gap-0.5">
+          <AlertTriangle className="w-2.5 h-2.5" /> Warning
         </span>
       ) : undefined}
     >
-      <div className="flex items-center gap-4 mb-3">
-        <div className={`rounded-xl px-4 py-3 text-center ${info.bg}`}>
-          <p className={`text-3xl font-bold ${info.color}`}>{data.aqi}</p>
-          <p className={`text-xs font-medium ${info.color} mt-0.5`}>US AQI</p>
+      <div className="flex items-center gap-3 mb-2">
+        <div className={`rounded-lg px-3 py-2 text-center ${info.bg}`}>
+          <p className={`text-xl font-bold ${info.color}`}>{data.aqi}</p>
+          <p className={`text-[10px] font-medium ${info.color}`}>US AQI</p>
         </div>
-        <div className="flex-1 space-y-1.5">
-          <p className={`text-sm font-bold ${info.color}`}>{info.label}</p>
-          <p className="text-xs text-gray-500">PM2.5: {data.pm25.toFixed(1)} µg/m³</p>
-          <p className="text-xs text-gray-500">PM10: {data.pm10.toFixed(1)} µg/m³</p>
+        <div className="flex-1 space-y-0.5">
+          <p className={`text-xs font-bold ${info.color}`}>{info.label}</p>
+          <p className="text-[10px] text-gray-500">PM2.5: {data.pm25.toFixed(1)} · PM10: {data.pm10.toFixed(1)} µg/m³</p>
         </div>
       </div>
       {isWarning && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
-          <p className="text-xs text-red-800 font-medium">
-            <AlertTriangle className="w-3 h-3 inline mr-1 -mt-0.5" />
-            Consider limiting outdoor activity. Close RV windows and run the AC on recirculate.
+        <div className="bg-red-50 rounded px-2 py-1.5 mb-1.5">
+          <p className="text-[10px] text-red-800 font-medium">
+            <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
+            Limit outdoor activity. Close windows, AC on recirculate.
           </p>
         </div>
       )}
-      <div className="flex items-center gap-2">
-        {/* TODO: Replace with real Hitch character art */}
-        <CharacterAvatar initial="H" color="#7c3aed" />
-        <p className="text-xs text-gray-500 italic">
-          {isWarning
-            ? '"Breathe easy — or don\'t. That\'s literally what I\'m telling you." — Hitch 🦄'
-            : '"Clear skies, clean lungs, good vibes. That\'s the RV Unicorn way." — Hitch 🦄'}
-        </p>
-      </div>
+      <p className="text-[10px] text-gray-400 italic">
+        {isWarning ? '"Breathe easy — or don\'t." — Hitch 🦄' : '"Clear skies, clean lungs." — Hitch 🦄'}
+      </p>
     </InsightCard>
   );
 }
@@ -415,7 +376,6 @@ export default function NatureInsightCards({ lat, lng, weather }: NatureInsightC
     lat && lng ? { lat, lng } : null
   );
 
-  // Fall back to browser geolocation if no lat/lng from active trip
   useEffect(() => {
     if (lat && lng) {
       setCoords({ lat, lng });
@@ -424,14 +384,14 @@ export default function NatureInsightCards({ lat, lng, weather }: NatureInsightC
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {} // silently fail — cards just won't show
+      () => {}
     );
   }, [lat, lng]);
 
   if (!coords) return null;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-3">
       <GoldenHourCard lat={coords.lat} lng={coords.lng} weather={weather} />
       <WildlifeActivityCard lat={coords.lat} lng={coords.lng} />
       <ForagingForecastCard lat={coords.lat} lng={coords.lng} />
