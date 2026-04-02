@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Calendar, Users, MapPin } from 'lucide-react';
+import LiveEventBadge from './LiveEventBadge';
+import { computeEventLifecycle } from '../hooks/useEventLifecycle';
 
 const TYPE_COLORS: Record<string, string> = {
   RALLY: 'bg-amber-100 text-amber-800',
@@ -16,9 +18,14 @@ interface Props {
 
 export default function EventCard({ event, onJoin, isJoined }: Props) {
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const lifecycle = event.lifecycle || computeEventLifecycle(event.startDate, event.endDate, event.eventStatus);
+  const isLive = lifecycle === 'LIVE';
+  const isEnded = lifecycle === 'ENDED';
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-orange-200 transition group">
+    <div className={`bg-white rounded-2xl border overflow-hidden hover:shadow-lg transition group ${
+      isLive ? 'border-red-300 shadow-red-100/50 shadow-md' : isEnded ? 'border-gray-200 opacity-75' : 'border-gray-100 hover:border-orange-200'
+    }`}>
       <Link to={`/events-v2/${event.id}`}>
         <div className="h-32 bg-gradient-to-br from-[#1B2B4B] to-[#2d4a7a] overflow-hidden relative">
           {event.bannerImage ? (
@@ -26,9 +33,12 @@ export default function EventCard({ event, onJoin, isJoined }: Props) {
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">🏕️</div>
           )}
-          <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${TYPE_COLORS[event.eventType] || TYPE_COLORS.OTHER}`}>
-            {event.eventType || 'EVENT'}
-          </span>
+          <div className="absolute top-2 left-2 flex items-center gap-1.5">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${TYPE_COLORS[event.eventType] || TYPE_COLORS.OTHER}`}>
+              {event.eventType || 'EVENT'}
+            </span>
+            <LiveEventBadge startDate={event.startDate} endDate={event.endDate} eventStatus={event.eventStatus} />
+          </div>
         </div>
       </Link>
       <div className="p-3">

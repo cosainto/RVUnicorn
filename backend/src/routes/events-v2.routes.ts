@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { computeEventLifecycle, computePresenceStatus } from '../helpers/event-status';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -64,7 +65,11 @@ router.get('/', async (req, res) => {
       take: parseInt(String(limit)),
     });
 
-    res.json({ events });
+    const enriched = events.map(e => ({
+      ...e,
+      lifecycle: computeEventLifecycle(e),
+    }));
+    res.json({ events: enriched });
   } catch {
     res.status(500).json({ error: 'Failed' });
   }
@@ -85,7 +90,37 @@ router.get('/:id', async (req, res) => {
       },
     });
     if (!event) return res.status(404).json({ error: 'Event not found' });
-    res.json({ event });
+
+    const lifecycle = computeEventLifecycle(event);
+
+    // Fetch active check-ins at this campground to derive HERE_NOW
+    const activeCheckInUserIds = new Set<string>();
+    if (event.campgroundId && lifecycle === 'LIVE') {
+      const checkIns = await prisma.checkIn.findMany({
+        where: { campgroundId: event.campgroundId, isActive: true },
+        select: { userId: true },
+      });
+      checkIns.forEach(c => activeCheckInUserIds.add(c.userId));
+    }
+    // Also check EventCheckIn records
+    const eventCheckIns = await prisma.eventCheckIn.findMany({
+      where: { eventId: event.id },
+      select: { userId: true },
+    });
+    eventCheckIns.forEach(c => activeCheckInUserIds.add(c.userId));
+
+    const attendeesWithPresence = (event.attendees || []).map((a: any) => ({
+      ...a,
+      presenceStatus: computePresenceStatus(a, lifecycle, activeCheckInUserIds.has(a.userId)),
+    }));
+
+    res.json({
+      event: {
+        ...event,
+        lifecycle,
+        attendees: attendeesWithPresence,
+      },
+    });
   } catch {
     res.status(500).json({ error: 'Failed' });
   }

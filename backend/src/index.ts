@@ -129,6 +129,7 @@ import pushRoutes from './routes/push.routes';
 import { runRoadChatCleanup } from './cron/road-chat-cleanup.cron';
 import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
+import { registerEventSockets } from './campfire/events.socket';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -316,6 +317,7 @@ app.get('/health', (req, res) => {
 
 
 registerCampfireSockets(io);
+registerEventSockets(io);
 // Road chat cleanup — run every hour
 setInterval(runRoadChatCleanup, 60 * 60 * 1000);
 runRoadChatCleanup(); // run once on startup too

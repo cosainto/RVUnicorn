@@ -6,6 +6,9 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealCard from '../components/MealCard';
 import EventCampgroundMap from '../components/EventCampgroundMap';
+import LiveEventBadge from '../components/LiveEventBadge';
+import { useEventPresence } from '../hooks/useEventPresence';
+import { useEventLifecycle } from '../hooks/useEventLifecycle';
 
 const MODE_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
   FULL: { emoji: '🎪', label: 'Full', color: 'bg-amber-100 text-amber-800' },
@@ -62,6 +65,9 @@ export default function EventDetailPageV2() {
     } catch {}
   };
 
+  const lifecycle = useEventLifecycle(event?.startDate || '', event?.endDate || '', event?.eventStatus);
+  const { hereNow } = useEventPresence(id);
+
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl animate-pulse">🏕️</div></div>;
   if (!event) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500">Event not found</p></div>;
 
@@ -79,7 +85,10 @@ export default function EventDetailPageV2() {
         {event.bannerImage && <img src={event.bannerImage} className="w-full h-full object-cover opacity-60" alt="" />}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="text-white font-bold text-xl">{event.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-white font-bold text-xl">{event.title}</h1>
+            <LiveEventBadge startDate={event.startDate} endDate={event.endDate} eventStatus={event.eventStatus} size="md" />
+          </div>
           <div className="flex items-center gap-3 mt-1 text-white/70 text-xs">
             <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(event.startDate)} – {formatDate(event.endDate)}</span>
             {(event.campground?.name || event.locationName) && (
@@ -106,6 +115,34 @@ export default function EventDetailPageV2() {
       )}
 
       <div className="max-w-3xl mx-auto px-4 py-4">
+        {/* Here Now strip — visible when event is LIVE */}
+        {lifecycle === 'LIVE' && hereNow.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+            <p className="text-xs font-bold text-green-700 mb-2">🟢 Here Now ({hereNow.length})</p>
+            <div className="flex gap-2 overflow-x-auto">
+              {hereNow.map(p => (
+                <Link key={p.userId} to={`/profile/${p.user.username || p.userId}`}
+                  className="flex flex-col items-center gap-1 flex-shrink-0">
+                  {p.user.profilePicture ? (
+                    <div className="relative">
+                      <img src={p.user.profilePicture} className="w-10 h-10 rounded-full object-cover ring-2 ring-green-400" alt="" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-sm font-bold text-green-700 ring-2 ring-green-400">
+                        {p.user.firstName?.[0]}
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
+                    </div>
+                  )}
+                  <span className="text-[10px] text-green-700 font-medium truncate max-w-[60px]">{p.user.firstName}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Join / Mode controls */}
         {!myAttendee ? (
           <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
@@ -239,28 +276,43 @@ export default function EventDetailPageV2() {
             )}
 
             {/* Attendees */}
-            {tab === 'attendees' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {(event.attendees || []).map((a: any) => (
-                  <Link key={a.id} to={`/profile/${a.user?.username}`}
-                    className="bg-white rounded-xl border border-gray-100 p-3 text-center hover:border-orange-200 transition">
-                    {a.user?.profilePicture ? (
-                      <img src={a.user.profilePicture} className="w-12 h-12 rounded-full object-cover mx-auto" alt="" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-orange-200 flex items-center justify-center text-lg font-bold text-orange-700 mx-auto">{a.user?.firstName?.[0]}</div>
-                    )}
-                    <p className="text-sm font-semibold text-gray-900 mt-1.5 truncate">{a.user?.firstName} {a.user?.lastName}</p>
-                    {a.siteNumber && <p className="text-[10px] text-gray-400">Site {a.siteNumber}</p>}
-                    <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded-full ${MODE_LABELS[a.participationMode]?.color || 'bg-gray-100 text-gray-500'}`}>
-                      {MODE_LABELS[a.participationMode]?.label || a.participationMode}
-                    </span>
-                    {a.socialBattery && (
-                      <span className="inline-block w-2 h-2 rounded-full ml-1" style={{ backgroundColor: BATTERY_COLORS[a.socialBattery] || '#ccc' }} />
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
+            {tab === 'attendees' && (() => {
+              const PRESENCE_ORDER: Record<string, number> = { HERE_NOW: 0, GOING: 1, MAYBE: 2, NOT_GOING: 3 };
+              const sorted = [...(event.attendees || [])].sort((a: any, b: any) =>
+                (PRESENCE_ORDER[a.presenceStatus] ?? 1) - (PRESENCE_ORDER[b.presenceStatus] ?? 1)
+              );
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {sorted.map((a: any) => {
+                    const isHere = a.presenceStatus === 'HERE_NOW';
+                    return (
+                      <Link key={a.id} to={`/profile/${a.user?.username}`}
+                        className={`bg-white rounded-xl border p-3 text-center hover:border-orange-200 transition ${isHere ? 'border-green-300 bg-green-50/30' : 'border-gray-100'}`}>
+                        <div className="relative inline-block">
+                          {a.user?.profilePicture ? (
+                            <img src={a.user.profilePicture} className={`w-12 h-12 rounded-full object-cover mx-auto ${isHere ? 'ring-2 ring-green-400' : ''}`} alt="" />
+                          ) : (
+                            <div className={`w-12 h-12 rounded-full bg-orange-200 flex items-center justify-center text-lg font-bold text-orange-700 mx-auto ${isHere ? 'ring-2 ring-green-400' : ''}`}>{a.user?.firstName?.[0]}</div>
+                          )}
+                          {isHere && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />}
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mt-1.5 truncate">{a.user?.firstName} {a.user?.lastName}</p>
+                        {a.siteNumber && <p className="text-[10px] text-gray-400">Site {a.siteNumber}</p>}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          {isHere && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Here Now</span>}
+                          <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full ${MODE_LABELS[a.participationMode]?.color || 'bg-gray-100 text-gray-500'}`}>
+                            {MODE_LABELS[a.participationMode]?.label || a.participationMode}
+                          </span>
+                          {a.socialBattery && (
+                            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: BATTERY_COLORS[a.socialBattery] || '#ccc' }} />
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 

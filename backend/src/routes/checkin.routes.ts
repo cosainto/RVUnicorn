@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
+import { io } from '../index';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -114,6 +115,29 @@ router.post('/', authenticateToken, async (req: any, res) => {
     } catch (eventErr: any) {
     }
 
+    // Emit presence:arrived for any live events at this campground
+    if (campgroundId) {
+      try {
+        const now = new Date();
+        const liveEvents = await prisma.event.findMany({
+          where: { campgroundId, startDate: { lte: now }, endDate: { gte: now } },
+          select: { id: true },
+        });
+        for (const evt of liveEvents) {
+          const isAttendee = await prisma.eventAttendee.findFirst({
+            where: { eventId: evt.id, userId },
+          });
+          if (isAttendee) {
+            io.of('/events').to(evt.id).emit('presence:arrived', {
+              userId,
+              eventId: evt.id,
+              user: checkIn.user,
+            });
+          }
+        }
+      } catch {}
+    }
+
     res.json(checkIn);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -177,6 +201,18 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
           data: { isActive: false },
         });
       } catch (e) { }
+
+      // Emit presence:departed for any live events at this campground
+      try {
+        const now = new Date();
+        const liveEvents = await prisma.event.findMany({
+          where: { campgroundId: activeCheckIn.campgroundId, startDate: { lte: now }, endDate: { gte: now } },
+          select: { id: true },
+        });
+        for (const evt of liveEvents) {
+          io.of('/events').to(evt.id).emit('presence:departed', { userId, eventId: evt.id });
+        }
+      } catch {}
     }
 
     res.json({ success: true });
