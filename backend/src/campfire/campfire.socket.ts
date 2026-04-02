@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { prisma } from '../prisma';
+import { ensureTriviaWeek } from '../cron/trivia-cron';
 
 const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
 
@@ -156,5 +157,10 @@ async function maybeActivateRoom(campgroundId: string, namespace: any) {
       ],
     });
     namespace.to(campgroundId).emit('room:activated', { message: '🔥 Campfire is live! Trivia at 5:30 PM.' });
+
+    // Generate trivia week on-demand if none exists (mid-week check-in)
+    ensureTriviaWeek(campgroundId).catch(e =>
+      console.error(`[Campfire] ensureTriviaWeek failed for ${campgroundId}:`, e)
+    );
   }
 }

@@ -147,6 +147,76 @@ export async function kickoffNewWeek() {
   }
 }
 
+// ── On-demand: Ensure a trivia week exists for a newly activated room ─
+export async function ensureTriviaWeek(campgroundId: string) {
+  const { weekStart, weekEnd } = getWeekBounds(new Date());
+
+  // Already has an active week this period — nothing to do
+  const existing = await prisma.triviaWeek.findFirst({
+    where: { campgroundId, isActive: true, weekStart: { gte: weekStart } },
+  });
+  if (existing) return;
+
+  console.log(`[TriviaCron] Creating on-demand trivia week for campground ${campgroundId}`);
+
+  const character = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+  const themes = ['Classic Americana','Great Outdoors','Road Trip USA','Campfire Classics','Family Fun'];
+  const theme = themes[Math.floor(Math.random() * themes.length)];
+
+  let questions: any[] = [];
+  try {
+    questions = await generateWeekQuestions(theme, character);
+  } catch (e) {
+    console.error(`[TriviaCron] On-demand question generation failed for ${campgroundId}:`, e);
+    return;
+  }
+
+  // Close any stale weeks
+  await prisma.triviaWeek.updateMany({
+    where: { campgroundId, isActive: true },
+    data: { isActive: false },
+  });
+
+  const week = await prisma.triviaWeek.create({
+    data: { campgroundId, weekStart, weekEnd, hostCharacter: character, theme, isActive: true },
+  });
+
+  const questionData = questions.map((q: any) => {
+    const schedDate = new Date(weekStart);
+    const daysFromMon = q.dayOfWeek === 0 ? 6 : q.dayOfWeek - 1;
+    schedDate.setDate(weekStart.getDate() + daysFromMon);
+    schedDate.setHours(17, 30 + (q.questionNum - 1) * 3, 0, 0);
+    return {
+      weekId: week.id,
+      dayOfWeek: q.dayOfWeek,
+      questionNum: q.questionNum,
+      question: q.question,
+      optionA: q.optionA,
+      optionB: q.optionB,
+      optionC: q.optionC,
+      optionD: q.optionD,
+      answer: q.answer,
+      category: q.category,
+      scheduledAt: schedDate,
+    };
+  });
+
+  await prisma.triviaQuestion.createMany({ data: questionData });
+
+  const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
+  if (room) {
+    await prisma.campfireMessage.create({
+      data: {
+        roomId: room.id,
+        isHitch: true,
+        content: `🎉 Trivia is ready! I'm ${character} and this week's theme is "${theme}". Sessions at 7:30 AM, 12:25 PM & 5:30 PM CT. Let's go! 🔥`,
+      },
+    });
+  }
+
+  console.log(`[TriviaCron] On-demand week created for campground ${campgroundId}`);
+}
+
 // ── Daily 5:25 PM: Warning message ───────────────────────────
 export async function postTriviaWarning() {
   const rooms = await prisma.campfireRoom.findMany({ where: { isActive: true } });
@@ -560,12 +630,7 @@ export function registerTriviaCrons(io: any) {
   cron.schedule('25,28,31,34,37,40,43,46,49,52 12 * * *', () => askNextQuestion(io), { timezone: 'America/Chicago' });
   cron.schedule('30,33,36,39,42,45,48,51,54,57 17 * * *', () => askNextQuestion(io), { timezone: 'America/Chicago' });
 
-  // Daily 6:00 PM — daily leaderboard
-  // Lunchtime trivia — 12:30 PM
-  cron.schedule('30 12 * * *', async () => {
-    console.log('[Cron] Starting lunchtime trivia...');
-    await kickoffNewWeek().catch(e => console.error('Lunchtime trivia error:', e));
-  }, { timezone: 'America/Chicago' });
+  // Daily leaderboards
 
   cron.schedule('0 8 * * *',  () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
   cron.schedule('55 12 * * *', () => postDailyLeaderboard(io), { timezone: 'America/Chicago' });
