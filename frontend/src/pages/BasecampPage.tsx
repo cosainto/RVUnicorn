@@ -84,6 +84,37 @@ function SupplyListCompact({ eventId }: { eventId: string }) {
 }
 import InviteFriends from '../components/InviteFriends';
 
+// Upcoming Events sidebar card
+function UpcomingEventsCard() {
+  const [events, setEvents] = useState<any[]>([]);
+  useEffect(() => {
+    api.get('/events-v2?upcoming=true&limit=2')
+      .then(({ data }) => setEvents(data.events || []))
+      .catch(() => {});
+  }, []);
+  if (events.length === 0) return null;
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+        <span className="text-base">🎪</span>
+        <h3 className="font-bold text-sm text-gray-900">Upcoming Events</h3>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {events.map((e: any) => (
+          <Link key={e.id} to={`/events-v2/${e.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-800 truncate">{e.title}</p>
+              <p className="text-[10px] text-gray-400">{new Date(e.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {e._count?.attendees || 0} attending</p>
+            </div>
+            <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+          </Link>
+        ))}
+      </div>
+      <Link to="/events-v2" className="block text-center py-2 text-xs text-orange-600 font-semibold hover:bg-orange-50 transition">Browse events →</Link>
+    </div>
+  );
+}
+
 // Friends heading somewhere you know — sidebar card
 function FriendsTipPromptCard() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -3274,6 +3305,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             {/* ── 4. Friends ────────────────────────────────────────── */}
              <Top8Friends username={user?.username} />
+
+            {/* ── 4a. Upcoming Events card ──────────────────────── */}
+            <UpcomingEventsCard />
 
             {/* ── 4b. Friends Going Somewhere You Know ────────────── */}
             <FriendsTipPromptCard />

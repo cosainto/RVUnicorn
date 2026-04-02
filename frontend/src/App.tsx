@@ -104,6 +104,10 @@ import AdminSponsorCampaignsPage from './pages/AdminSponsorCampaignsPage';
 import AdminHostListingsPage from './pages/AdminHostListingsPage';
 import CampgroundQuizPage from './pages/CampgroundQuizPage';
 import LastMinuteDealsPage from './pages/LastMinuteDealsPage';
+import EventsDiscoveryPage from './pages/EventsDiscoveryPage';
+import EventCreatePage from './pages/EventCreatePage';
+import EventDetailPageV2 from './pages/EventDetailPageV2';
+import EventManagePage from './pages/EventManagePage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -152,6 +156,10 @@ function AppContent() {
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
         <Route path="/deals" element={<LastMinuteDealsPage />} />
+        <Route path="/events-v2" element={<EventsDiscoveryPage />} />
+        <Route path="/events-v2/create" element={<EventCreatePage />} />
+        <Route path="/events-v2/:id" element={<EventDetailPageV2 />} />
+        <Route path="/events-v2/:id/manage" element={<EventManagePage />} />
         <Route
           path="/feed"
           element={
