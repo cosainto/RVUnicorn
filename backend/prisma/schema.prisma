@@ -332,6 +332,9 @@ model User {
   rigConnectionsReceived  RigConnection[]  @relation("RigConnectionReceiver")
   emailDripLogs           EmailDripLog[]
   onboardingData          Json?
+  campfireTipsAuthored    CampfireTip[]         @relation("CampfireTipAuthor")
+  campfireTipsReceived    CampfireTip[]         @relation("CampfireTipRecipient")
+  campfireTipReactions    CampfireTipReaction[]
 }
 
 model Post {
@@ -587,6 +590,7 @@ model Campground {
   pitStops               PitStop[]               @relation("CampgroundPitStops")
   wildlifeSightings      WildlifeSighting[]
   campMarketListings     CampMarketListing[]
+  campfireTips           CampfireTip[]
 }
 
 model CampMarketListing {
@@ -717,6 +721,7 @@ model Event {
   photoAlbums       PhotoAlbum[]
   savedTrips        SavedTrip[]
   stateVisits       StateVisit[]
+  campfireTips      CampfireTip[]
   tripPackItems     TripPackItem[]       @relation("EventTripPackItems")
   tripPlans         TripPlan[]
   supplyItems       SupplyItem[]
@@ -4487,5 +4492,47 @@ model EmailDripLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, emailType])
+  @@index([userId])
+}
+
+model CampfireTip {
+  id             String              @id @default(cuid())
+  campgroundId   String
+  authorId       String
+  tripId         String?
+  recipientId    String?
+  title          String?
+  content        String
+  category       String?
+  helpfulCount   Int                 @default(0)
+  savedCount     Int                 @default(0)
+  isReusable     Boolean             @default(true)
+  authorVisitCount Int               @default(1)
+  lastVisitedAt  DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  campground     Campground          @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  author         User                @relation("CampfireTipAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient      User?               @relation("CampfireTipRecipient", fields: [recipientId], references: [id])
+  trip           Event?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  reactions      CampfireTipReaction[]
+
+  @@index([campgroundId])
+  @@index([authorId])
+  @@index([recipientId])
+  @@index([helpfulCount])
+}
+
+model CampfireTipReaction {
+  id        String      @id @default(cuid())
+  tipId     String
+  userId    String
+  type      String      // HELPFUL, SAVE, APPRECIATE
+  createdAt DateTime    @default(now())
+  tip       CampfireTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tipId, userId, type])
+  @@index([tipId])
   @@index([userId])
 }

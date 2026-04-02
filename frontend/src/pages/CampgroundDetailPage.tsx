@@ -38,6 +38,7 @@ import ThingsToDoSection from '../components/ThingsToDoSection';
 import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import CampMarket from '../components/CampMarket';
+import CampfireTips from '../components/CampfireTips';
 import HarvestHostsTab from '../components/HarvestHostsTab';
 
 const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
@@ -1958,6 +1959,7 @@ export default function CampgroundDetailPage() {
                 userId={user?.id || ''}
                 campgroundId={campground.id}
               />
+              <CampfireTips campgroundId={campground.id} campgroundName={campground.name} />
               <WildlifeSightings campgroundId={campground.id} />
               <CampMarket campgroundId={campground.id} />
               <CampgroundTriviaLeaderboard campgroundId={campground.id} />

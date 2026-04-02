@@ -6,6 +6,7 @@ import CommunityTrustBadge from '../components/CommunityTrustBadge';
 import HitchProfileSummary from '../components/HitchProfileSummary';
 import CampMarketProfile from '../components/CampMarketProfile';
 import RigCard from '../components/RigCard';
+import { CampfireContributorStats } from '../components/CampfireTips';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -663,6 +664,7 @@ const [editForm, setEditForm] = useState({
                 )}
                 {username && <div className="mt-4"><HitchProfileSummary username={username} /></div>}
                 {profile?.id && <div className="mt-4"><CampMarketProfile userId={profile.id} /></div>}
+                {profile?.id && <div className="mt-4"><CampfireContributorStats userId={profile.id} /></div>}
 
 
                 {/* Location & Website */}

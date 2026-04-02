@@ -33,6 +33,7 @@ import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import EventSettingsPanel from '../components/EventSettingsPanel';
 import CampMarket from '../components/CampMarket';
+import CampfireTips from '../components/CampfireTips';
 
 interface Event {
   id: string;
@@ -947,6 +948,7 @@ export default function EventDetailPage() {
               {/* Camp Market at destination */}
               {event.campground?.id && (
                 <div className="mt-4">
+                  <CampfireTips campgroundId={event.campground.id} tripId={event.id} campgroundName={event.campground.name} compact />
                   <CampMarket campgroundId={event.campground.id} compact />
                 </div>
               )}
