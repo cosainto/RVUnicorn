@@ -34,6 +34,7 @@ import ThingsToDoSection from '../components/ThingsToDoSection';
 import EventSettingsPanel from '../components/EventSettingsPanel';
 import CampMarket from '../components/CampMarket';
 import CampfireTips from '../components/CampfireTips';
+import EventCampgroundMap from '../components/EventCampgroundMap';
 
 interface Event {
   id: string;
@@ -950,6 +951,19 @@ export default function EventDetailPage() {
                 <div className="mt-4">
                   <CampfireTips campgroundId={event.campground.id} tripId={event.id} campgroundName={event.campground.name} compact />
                   <CampMarket campgroundId={event.campground.id} compact />
+                </div>
+              )}
+
+              {/* Campground Presence Map */}
+              {event.campground?.id && (
+                <div className="mt-4">
+                  <details className="group">
+                    <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-gray-900 mb-2">
+                      <span>🏕️ Presence Map</span>
+                      <span className="text-xs text-gray-400 font-normal group-open:hidden">Tap to expand</span>
+                    </summary>
+                    <EventCampgroundMap eventId={event.id} campgroundName={event.campground.name} />
+                  </details>
                 </div>
               )}
 

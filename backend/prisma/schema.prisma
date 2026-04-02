@@ -754,7 +754,14 @@ model EventAttendee {
   confirmationNumber String?
   notes              String?
   siteNumber         String?
-  siteVisibility     String   @default("PRIVATE") // PRIVATE, EVENT, FRIENDS
+  siteVisibility     String   @default("ATTENDEES")
+  loopArea           String?
+  arrivalStatus      String   @default("NOT_ARRIVED")
+  isOpenToVisitors   Boolean  @default(false)
+  campfireActive     Boolean  @default(false)
+  digitalFlag        String?
+  hasDogs            Boolean  @default(false)
+  presenceUpdatedAt  DateTime?
   event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -1802,4 +1802,158 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
   }
 });
 
+// ── Presence System ─────────────────────────────────────────────
+
+// PATCH /api/events/:id/rsvp-presence — update presence fields
+router.patch('/:id/rsvp-presence', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { siteNumber, loopArea, siteVisibility, isOpenToVisitors, campfireActive, digitalFlag, hasDogs } = req.body;
+    if (digitalFlag && digitalFlag.length > 60) return res.status(400).json({ error: 'Digital flag max 60 chars' });
+
+    const attendee = await prisma.eventAttendee.update({
+      where: { eventId_userId: { eventId: req.params.id, userId } },
+      data: {
+        siteNumber: siteNumber !== undefined ? siteNumber : undefined,
+        loopArea: loopArea !== undefined ? loopArea : undefined,
+        siteVisibility: siteVisibility || undefined,
+        isOpenToVisitors: isOpenToVisitors !== undefined ? isOpenToVisitors : undefined,
+        campfireActive: campfireActive !== undefined ? campfireActive : undefined,
+        digitalFlag: digitalFlag !== undefined ? digitalFlag : undefined,
+        hasDogs: hasDogs !== undefined ? hasDogs : undefined,
+        presenceUpdatedAt: new Date(),
+      },
+    });
+    res.json({ attendee });
+  } catch {
+    res.status(500).json({ error: 'Failed to update presence' });
+  }
+});
+
+// PATCH /api/events/:id/arrival-status — update arrival status + notifications
+router.patch('/:id/arrival-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { status } = req.body;
+    if (!['NOT_ARRIVED', 'CHECKED_IN', 'CAMPFIRE_ACTIVE'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+
+    const attendee = await prisma.eventAttendee.update({
+      where: { eventId_userId: { eventId: req.params.id, userId } },
+      data: {
+        arrivalStatus: status,
+        campfireActive: status === 'CAMPFIRE_ACTIVE',
+        presenceUpdatedAt: new Date(),
+      },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+
+    // Notify friends at this event
+    if (status === 'CHECKED_IN' || status === 'CAMPFIRE_ACTIVE') {
+      try {
+        const friendships = await prisma.friendship.findMany({
+          where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'accepted' },
+          select: { initiatorId: true, receiverId: true },
+        });
+        const friendIds = new Set(friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId));
+
+        const others = await prisma.eventAttendee.findMany({
+          where: { eventId: req.params.id, userId: { not: userId }, arrivalStatus: { in: ['CHECKED_IN', 'CAMPFIRE_ACTIVE'] } },
+          select: { userId: true },
+        });
+
+        const toNotify = others.filter(o => friendIds.has(o.userId)).slice(0, 10);
+        const siteInfo = attendee.siteNumber ? ` — Site ${attendee.siteNumber}` : '';
+        const loopInfo = attendee.loopArea ? `, ${attendee.loopArea}` : '';
+        const flagInfo = attendee.digitalFlag ? ` "${attendee.digitalFlag}"` : '';
+
+        const notifType = status === 'CAMPFIRE_ACTIVE' ? 'CAMPFIRE_STARTED' : 'CAMPGROUND_ARRIVAL';
+        const title = status === 'CAMPFIRE_ACTIVE'
+          ? `${attendee.user.firstName} started a campfire 🔥`
+          : `${attendee.user.firstName} just arrived!`;
+        const body = status === 'CAMPFIRE_ACTIVE'
+          ? `${attendee.user.firstName} has a campfire going${siteInfo}${loopInfo}!${flagInfo}`
+          : `${attendee.user.firstName} checked in${siteInfo}${loopInfo} 🏕️`;
+
+        for (const target of toNotify) {
+          await prisma.notification.create({
+            data: { userId: target.userId, type: notifType, title, content: body, link: `/trips/${req.params.id}`, category: 'SOCIAL', actorId: userId },
+          }).catch(() => {});
+        }
+      } catch {}
+    }
+
+    res.json({ attendee });
+  } catch {
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// GET /api/events/:id/campground-map — attendees with presence data
+router.get('/:id/campground-map', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: { campgroundId: true, campground: { select: { id: true, name: true } } },
+    });
+
+    const attendees = await prisma.eventAttendee.findMany({
+      where: { eventId: req.params.id, status: { in: ['ATTENDING', 'CHECKED_IN'] } },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvType: true, rvMake: true, rvModel: true, rvYear: true, rvLength: true } },
+      },
+    });
+
+    // Get viewer's rig for twin matching
+    const viewer = await prisma.user.findUnique({ where: { id: userId }, select: { rvMake: true, rvModel: true } });
+
+    // Get friends
+    const friendships = await prisma.friendship.findMany({
+      where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'accepted' },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds = new Set(friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId));
+
+    // Get map image
+    let mapImageUrl: string | null = null;
+    if (event?.campgroundId) {
+      const kit = await prisma.welcomeKit.findUnique({ where: { campgroundId: event.campgroundId }, select: { mapImageUrl: true } });
+      mapImageUrl = kit?.mapImageUrl || null;
+    }
+
+    // Filter by visibility
+    const visible = attendees.filter(a => {
+      if (a.userId === userId) return true;
+      if (a.siteVisibility === 'HIDDEN') return false;
+      if (a.siteVisibility === 'FRIENDS') return friendIds.has(a.userId);
+      return true; // ATTENDEES
+    });
+
+    // Build response with rig twin and friend flags
+    const enriched = visible.map(a => ({
+      ...a,
+      isRigTwin: !!(viewer?.rvMake && a.user.rvMake && viewer.rvMake.toLowerCase() === a.user.rvMake.toLowerCase() && viewer.rvModel && a.user.rvModel && viewer.rvModel.toLowerCase() === a.user.rvModel.toLowerCase()),
+      isFriend: friendIds.has(a.userId),
+    }));
+
+    // Group by loop
+    const loopMap = new Map<string | null, any[]>();
+    for (const a of enriched) {
+      const key = a.loopArea || null;
+      if (!loopMap.has(key)) loopMap.set(key, []);
+      loopMap.get(key)!.push(a);
+    }
+    const loops = [...loopMap.entries()].map(([loopArea, att]) => ({ loopArea, attendees: att, count: att.length }));
+
+    res.json({
+      loops,
+      totalVisible: enriched.length,
+      viewerIsHidden: attendees.find(a => a.userId === userId)?.siteVisibility === 'HIDDEN',
+      mapImageUrl,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;
