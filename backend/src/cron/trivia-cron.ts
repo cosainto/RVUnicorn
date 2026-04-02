@@ -180,7 +180,7 @@ export async function ensureTriviaWeek(campgroundId: string, io?: any) {
             question: nextQ.question,
             options: { A: nextQ.optionA, B: nextQ.optionB, C: nextQ.optionC, D: nextQ.optionD },
             category: nextQ.category,
-            timeLimit: 120,
+            timeLimit: 10,
             askedAt: now.toISOString(),
           });
           const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
@@ -500,7 +500,7 @@ export async function askNextQuestion(io: any) {
         question: question.question,
         options: { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD },
         category: question.category,
-        timeLimit: 120, // 2 minutes
+        timeLimit: 10,
         askedAt: now.toISOString(),
       });
     }
@@ -667,7 +667,7 @@ export async function forceAskNextQuestion(io: any) {
         question: question.question,
         options: { A: question.optionA, B: question.optionB, C: question.optionC, D: question.optionD },
         category: question.category,
-        timeLimit: 30,
+        timeLimit: 10,
         askedAt: now.toISOString(),
       });
     }

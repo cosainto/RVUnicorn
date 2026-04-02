@@ -177,7 +177,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
         const data = await res.json();
         if (data.question) {
           const elapsed = Math.floor((Date.now() - new Date(data.question.askedAt).getTime()) / 1000);
-          if (elapsed < data.question.timeLimit + 10) {
+          if (elapsed < data.question.timeLimit + 5) {
             setActiveTrivia(data.question);
           }
         }
@@ -211,7 +211,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
 
   if (!status) return <div className="flex items-center justify-center h-32"><div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" /></div>;
 
-  const timerPct = activeTrivia ? (triviaTimeLeft / (activeTrivia.timeLimit || 120)) * 100 : 0;
+  const timerPct = activeTrivia ? (triviaTimeLeft / (activeTrivia.timeLimit || 10)) * 100 : 0;
 
   return (
     <>

@@ -302,8 +302,8 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
     });
     if (!week) return res.json({ question: null });
 
-    // Find most recently asked question that is still within answer window (120s + buffer)
-    const cutoff = new Date(Date.now() - 180000); // 3 min window
+    // Find most recently asked question that is still within answer window (10s + buffer)
+    const cutoff = new Date(Date.now() - 15000); // 15s window
     const question = await (prisma as any).triviaQuestion.findFirst({
       where: {
         weekId: week.id,
