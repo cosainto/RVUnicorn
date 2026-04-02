@@ -335,6 +335,11 @@ model User {
   campfireTipsAuthored    CampfireTip[]         @relation("CampfireTipAuthor")
   campfireTipsReceived    CampfireTip[]         @relation("CampfireTipRecipient")
   campfireTipReactions    CampfireTipReaction[]
+  hiddenPosts             HiddenPost[]
+  feedPrefsUser           FeedPreference[]      @relation("FeedPrefUser")
+  feedPrefsTarget         FeedPreference[]      @relation("FeedPrefTarget")
+  feedSignals             FeedSignal[]
+  contentTypePrefs        ContentTypePreference[]
 }
 
 model Post {
@@ -4535,4 +4540,49 @@ model CampfireTipReaction {
   @@unique([tipId, userId, type])
   @@index([tipId])
   @@index([userId])
+}
+
+model HiddenPost {
+  id          String   @id @default(cuid())
+  userId      String
+  activityId  String
+  reason      String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, activityId])
+  @@index([userId])
+}
+
+model FeedPreference {
+  id           String    @id @default(cuid())
+  userId       String
+  targetUserId String
+  type         String
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation("FeedPrefUser", fields: [userId], references: [id], onDelete: Cascade)
+  target       User      @relation("FeedPrefTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  @@unique([userId, targetUserId])
+  @@index([userId, type])
+}
+
+model FeedSignal {
+  id          String   @id @default(cuid())
+  userId      String
+  signalType  String
+  authorId    String?
+  contentType String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, contentType])
+}
+
+model ContentTypePreference {
+  id          String   @id @default(cuid())
+  userId      String
+  contentType String
+  preference  String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, contentType])
 }

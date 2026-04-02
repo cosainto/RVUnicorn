@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import StargazingCard from './StargazingCard';
 import ActivityMuteMenu from './ActivityMuteMenu';
+import FeedItemMenu from './FeedItemMenu';
 
 interface FeedItem {
   id: string;
@@ -269,7 +270,22 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
             // ── Regular feed item ──────────────────────────────────────
             const item = entry.item;
             return (
-            <div key={item.id} className={`p-3 rounded-lg border transition ${!item.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+            <div key={item.id} className={`p-3 rounded-lg border transition group relative ${!item.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+              {/* Feed Item Menu */}
+              <div className="absolute top-2 right-2">
+                <FeedItemMenu
+                  activityId={item.id}
+                  authorId={item.actor?.id || ''}
+                  authorUsername={item.actor?.username || ''}
+                  authorFirstName={item.actor?.firstName || 'User'}
+                  isOwnPost={false}
+                  isSystemPost={item.type === 'SYSTEM' || !item.actor}
+                  contentType={item.type}
+                  onHide={() => setFeedItems(prev => prev.filter(i => i.id !== item.id))}
+                  onMuteAuthor={() => setFeedItems(prev => prev.filter(i => i.actor?.id !== item.actor?.id))}
+                  onDelete={() => { api.delete(`/basecamp-activity/${item.id}`).catch(() => {}); setFeedItems(prev => prev.filter(i => i.id !== item.id)); }}
+                />
+              </div>
               {/* Friend Request */}
               {item.isFriendRequest && (
                 <div className="flex items-center gap-3">

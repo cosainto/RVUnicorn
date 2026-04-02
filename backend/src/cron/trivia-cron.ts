@@ -5,6 +5,7 @@ import { runTripCheckinReminder } from './trip-checkin-reminder';
 import { runStargazingCron, runWalletChaosCron } from './stargazing-cron';
 import { runWeatherAlertCron } from './weather-alert-cron';
 import { runEmailDripCron } from './email-drip';
+import { expireFeedMutes } from '../routes/feed-controls.routes';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -636,6 +637,11 @@ export function registerTriviaCrons(io: any) {
 
       if (recentlyExpired.length > 0) console.log(`[CampMarket] Sent feedback reminders for ${recentlyExpired.length} listings`);
     } catch (e) { console.error('[CampMarket] Expire cron error:', e); }
+  }, { timezone: 'America/Chicago' });
+
+  // Hourly — expire feed mutes
+  cron.schedule('30 * * * *', () => {
+    expireFeedMutes().catch(() => {});
   }, { timezone: 'America/Chicago' });
 
   // Hourly — email drip sequence for new users
