@@ -1279,7 +1279,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     (user as any)?.rvType ? 20 : 0,
     (user as any)?.homeState ? 10 : 0,
     nextEvent ? 20 : 0,
-    (profile as any)?._count?.friends > 0 ? 15 : 0,
+    (user as any)?._count?.friends > 0 ? 15 : 0,
     user.bio ? 15 : 0,
   ].reduce((a, b) => a + b, 0) : 0;
 
@@ -1287,7 +1287,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     !user.profilePicture && { emoji: '📸', label: 'Add a profile photo', link: `/profile/${user.username}` },
     !(user as any)?.rvType && { emoji: '🚐', label: 'Complete your rig setup', link: '/rv-setup' },
     !nextEvent && { emoji: '🗺️', label: 'Plan your first trip', link: '/trips' },
-    !((profile as any)?._count?.friends > 0) && { emoji: '👥', label: 'Find your first friend', link: '/community' },
+    { emoji: '👥', label: 'Find camping friends', link: '/community' },
     !user.bio && { emoji: '✏️', label: 'Write a bio', link: `/profile/${user.username}` },
     !(user as any)?.homeState && { emoji: '📍', label: 'Set your home state', link: `/profile/${user.username}` },
   ].filter(Boolean) : [];
