@@ -15,6 +15,7 @@ const reviewSessions = new Map<string, {
 }>();
 
 let lastChimeAt = 0;
+const promptedCampgrounds = new Set<string>(); // session+campground combos already prompted
 
 const CHARACTERS = [
   { name: 'Hitch', emoji: '🦄', profilePicture: null,
@@ -168,6 +169,43 @@ export function registerRoadChatSockets(io: Server) {
       });
     }, 2000);
 
+    // Hitch destination callout — find other users/friends who visited this campground
+    if (campgroundId && campgroundName) {
+      const promptKey = `${socket.id}:${campgroundId}`;
+      if (!promptedCampgrounds.has(promptKey)) {
+        promptedCampgrounds.add(promptKey);
+        setTimeout(async () => {
+          try {
+            // Find other drivers heading to or who visited same campground
+            const otherDriverIds = [...activeDrivers.entries()]
+              .filter(([sid, d]) => sid !== socket.id && d.userId !== userId)
+              .map(([, d]) => d.userId);
+
+            const visitors = await prisma.checkIn.findMany({
+              where: { campgroundId, userId: { not: userId } },
+              include: { user: { select: { id: true, firstName: true } } },
+              distinct: ['userId'],
+              take: 3,
+            });
+
+            const relevantVisitors = visitors.filter(v =>
+              otherDriverIds.includes(v.userId) || true // include all visitors for now
+            ).slice(0, 2);
+
+            if (relevantVisitors.length > 0) {
+              const names = relevantVisitors.map(v => v.user.firstName).join(' and ');
+              const callout = `🏕️ Heads up, ${user!.firstName}! ${names} ${relevantVisitors.length === 1 ? 'has' : 'have'} stayed at ${campgroundName} before — they might have great tips for you! Ask them about the best sites or what to watch out for.`;
+              roadChat.to(ROOM).emit('message:new', {
+                id: `dest-${Date.now()}`, content: callout, isSystem: false,
+                isCharacter: true, characterName: 'Hitch', createdAt: new Date().toISOString(),
+                user: { id: 'char-Hitch', firstName: 'Hitch', profilePicture: null },
+              });
+            }
+          } catch {}
+        }, 5000);
+      }
+    }
+
     socket.on('message:send', async (data: { content: string }) => {
       if (!data.content?.trim() || !user) return;
       const text = data.content.trim().slice(0, 300);
@@ -216,6 +254,45 @@ export function registerRoadChatSockets(io: Server) {
             }
           } catch (e) { console.error('[RoadChat @Hitch] error:', e); }
         }, 1000);
+      }
+
+      // Campground mention detection — check if message contains a known campground name
+      if (text.length > 8 && !/@hitch/i.test(text)) {
+        const words = text.toLowerCase();
+        const promptKey = `mention:${socket.id}:${words.slice(0, 30)}`;
+        if (!promptedCampgrounds.has(promptKey)) {
+          setTimeout(async () => {
+            try {
+              const matches = await prisma.campground.findMany({
+                where: { name: { contains: text.split(' ').slice(0, 4).join(' '), mode: 'insensitive' } },
+                select: { id: true, name: true },
+                take: 1,
+              });
+              if (matches.length > 0) {
+                const cg = matches[0];
+                const cgKey = `mention:${cg.id}`;
+                if (promptedCampgrounds.has(cgKey)) return;
+                promptedCampgrounds.add(cgKey);
+                promptedCampgrounds.add(promptKey);
+
+                const visitors = await prisma.checkIn.findMany({
+                  where: { campgroundId: cg.id, userId: { not: user!.id } },
+                  include: { user: { select: { firstName: true } } },
+                  distinct: ['userId'],
+                  take: 1,
+                });
+                if (visitors.length > 0) {
+                  roadChat.to(ROOM).emit('message:new', {
+                    id: `mention-${Date.now()}`, isSystem: false, isCharacter: true, characterName: 'Hitch',
+                    content: `🔥 ${cg.name}! ${visitors[0].user.firstName} stayed there — any tips to share?`,
+                    createdAt: new Date().toISOString(),
+                    user: { id: 'char-Hitch', firstName: 'Hitch', profilePicture: null },
+                  });
+                }
+              }
+            } catch {}
+          }, 30000);
+        }
       }
 
       const rs = reviewSessions.get(socket.id);

@@ -103,7 +103,7 @@ function PostCard({ post, showBoard = false, onClick }: { post: Post; showBoard?
           <div className="flex items-center gap-3 mt-2.5 flex-wrap">
             <div className="flex items-center gap-1.5">
               <Avatar user={post.author} size={5} />
-              <span className="text-xs text-gray-500">{post.author.firstName} {post.author.lastName}</span>
+              <Link to={`/profile/${post.author.username}`} className="text-xs text-gray-500 font-semibold hover:underline hover:text-orange-500 transition">{post.author.firstName} {post.author.lastName}</Link>
             </div>
             <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
             <button onClick={onClick} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition">
@@ -242,7 +242,7 @@ function PostDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{post.body}</p>
             <div className="flex items-center gap-3 mt-3">
               <Avatar user={post.author} size={5} />
-              <span className="text-xs text-gray-500">{post.author.firstName} {post.author.lastName}</span>
+              <Link to={`/profile/${post.author.username}`} className="text-xs text-gray-500 font-semibold hover:underline hover:text-orange-500 transition">{post.author.firstName} {post.author.lastName}</Link>
               <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
             </div>
           </div>
@@ -258,7 +258,7 @@ function PostDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Avatar user={comment.author} size={5} />
-                  <span className="text-xs font-semibold text-gray-700">{comment.author.firstName}</span>
+                  <Link to={`/profile/${comment.author.username}`} className="text-xs font-semibold text-gray-700 hover:underline hover:text-orange-500 transition">{comment.author.firstName}</Link>
                   <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
                   {comment.isBestAnswer && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">⭐ Best Answer</span>}
                 </div>
@@ -281,7 +281,7 @@ function PostDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
                         <Avatar user={reply.author} size={5} />
                         <div>
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-xs font-semibold text-gray-700">{reply.author.firstName}</span>
+                            <Link to={`/profile/${reply.author.username}`} className="text-xs font-semibold text-gray-700 hover:underline hover:text-orange-500 transition">{reply.author.firstName}</Link>
                             <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}</span>
                           </div>
                           <p className="text-sm text-gray-700">{reply.body}</p>

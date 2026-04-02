@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const SOCKET_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
@@ -103,7 +104,7 @@ export default function RoadChat({ campgroundId, campgroundName, tripComplete }:
                 </div>
               )}
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                {!isMe && <p className="text-[10px] text-gray-500 px-1">{msg.user.firstName}</p>}
+                {!isMe && <p className="text-[10px] text-gray-500 px-1"><Link to={`/profile/${msg.user.username || msg.user.id}`} className="font-semibold hover:underline hover:text-orange-500 transition">{msg.user.firstName}</Link></p>}
                 <div className={`px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-800 text-gray-100 rounded-bl-sm'}`}>
                   {msg.content}
                 </div>

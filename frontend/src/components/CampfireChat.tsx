@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ChatUser {
@@ -142,7 +143,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           {status.checkedInUsers.map(u => (
             <div key={u.id} className="flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-orange-100 rounded-full px-2 py-1">
               {u.profileImage ? <img src={u.profileImage} className="w-4 h-4 rounded-full object-cover" alt="" /> : <div className="w-4 h-4 rounded-full bg-orange-200 flex items-center justify-center text-[9px]">{(u.firstName || u.username || '?')[0].toUpperCase()}</div>}
-              <span>{u.firstName || u.username}</span>
+              <Link to={`/profile/${u.username || u.id}`} className="hover:underline hover:text-orange-500 transition">{u.firstName || u.username}</Link>
               {u.triviaTitle && <span className="text-[9px] text-orange-400 ml-0.5">{u.triviaTitle}</span>}
             </div>
           ))}
@@ -175,7 +176,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
                 : <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 flex-shrink-0 mb-0.5">{name[0].toUpperCase()}</div>
               )}
               <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                {!isMe && <div className="text-xs text-gray-400 mb-0.5 px-1">{name}</div>}
+                {!isMe && <div className="text-xs text-gray-400 mb-0.5 px-1"><Link to={`/profile/${msg.user?.username || msg.user?.id}`} className="font-semibold hover:underline hover:text-orange-500 transition">{name}</Link></div>}
                 <div className={`px-3 py-2 rounded-xl text-sm ${isMe ? 'bg-orange-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`}>{msg.content}</div>
               </div>
             </div>
