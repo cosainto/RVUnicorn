@@ -130,6 +130,7 @@ import { runRoadChatCleanup } from './cron/road-chat-cleanup.cron';
 import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 import { registerEventSockets } from './campfire/events.socket';
+import { runAutopilotCycle, checkEventMemoryTransitions } from './services/autopilotService';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -341,6 +342,7 @@ setTimeout(runMaintenanceCron, 30000);
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 updateGasPrices(); // run immediately on startup
 setInterval(updateGasPrices, SEVEN_DAYS_MS);
-// force prisma regen Thu Mar 12 19:02:31 CDT 2026
-// force prisma regen Thu Mar 12 19:14:38 CDT 2026
-// 1773629719
+// Co-Host Autopilot — runs every 5 min for live events
+setInterval(runAutopilotCycle, 5 * 60 * 1000);
+// Trip Memory transitions — runs hourly
+setInterval(checkEventMemoryTransitions, 60 * 60 * 1000);

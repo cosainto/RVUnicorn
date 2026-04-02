@@ -350,6 +350,8 @@ model User {
   eventCheckInsUser       EventCheckIn[]
   eventPollsCreated       EventPoll[]
   eventPollResponses      EventPollResponse[]
+  eventConnectionsA      EventConnection[]     @relation("ConnectionUserA")
+  eventConnectionsB      EventConnection[]     @relation("ConnectionUserB")
 }
 
 model Post {
@@ -761,6 +763,21 @@ model Event {
   hitchFAQ          EventHitchFAQ?
   qrToken           String?              @unique
 
+  // Co-Host Autopilot fields
+  autopilotMode         String    @default("FULLY_GUIDED")  // FULLY_GUIDED | ASSISTED | MANUAL
+  hitchSkin             String    @default("PARTY_STARTER") // TRAIL_GUIDE | PARTY_STARTER | OLD_TIMER
+  isLive                Boolean   @default(false)
+  isTripMemory          Boolean   @default(false)
+  planBDescription      String?
+  planBLocation         String?
+  planBActivated        Boolean   @default(false)
+  geoFenceRadiusMiles   Float     @default(0.5)
+  serendipityEnabled    Boolean   @default(true)
+  popUps                EventPopUp[]
+  highlights            EventHighlight[]
+  connections           EventConnection[]
+  tripMemory            TripMemoryRecord?
+
   @@index([organizerId])
   @@index([campgroundId])
   @@index([overnightSpotId])
@@ -788,6 +805,7 @@ model EventAttendee {
   presenceUpdatedAt  DateTime?
   participationMode  String   @default("FULL")
   socialBattery      String?
+  autoCheckedIn      Boolean  @default(false)
   event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -4851,4 +4869,59 @@ model EventTemplate {
   defaultFields Json
   isSystem      Boolean  @default(true)
   createdAt     DateTime @default(now())
+}
+
+// ── Co-Host Autopilot Models ────────────────────────────────────
+
+model EventPopUp {
+  id             String   @id @default(cuid())
+  eventId        String
+  title          String
+  description    String?
+  scheduledTime  DateTime?
+  createdByHitch Boolean  @default(false)
+  triggeredBy    String?
+  status         String   @default("SUGGESTED") // SUGGESTED | APPROVED | LIVE | COMPLETED | DISMISSED
+  createdAt      DateTime @default(now())
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+}
+
+model EventHighlight {
+  id              String   @id @default(cuid())
+  eventId         String
+  messageSnippet  String
+  reactionCount   Int      @default(0)
+  replyCount      Int      @default(0)
+  authorName      String?
+  createdAt       DateTime @default(now())
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+}
+
+model EventConnection {
+  id              String   @id @default(cuid())
+  eventId         String
+  userAId         String
+  userBId         String
+  interactedInChat Boolean @default(false)
+  followedAfter   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userA           User     @relation("ConnectionUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB           User     @relation("ConnectionUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userAId, userBId])
+  @@index([eventId])
+}
+
+model TripMemoryRecord {
+  id                String   @id @default(cuid())
+  eventId           String   @unique
+  totalAttended     Int      @default(0)
+  newConnections    Int      @default(0)
+  popUpEventsCreated Int     @default(0)
+  hitchMessagesSent Int      @default(0)
+  nextTimeSuggestions String[]  @default([])
+  createdAt         DateTime @default(now())
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

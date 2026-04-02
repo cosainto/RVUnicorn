@@ -412,4 +412,243 @@ router.delete('/social-plans/:id', authenticateToken, async (req: any, res: Resp
   }
 });
 
+// ── Geo-Fence Location Check ────────────────────────────────────
+
+router.post('/:id/location-check', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.userId;
+    const { lat, lng } = req.body;
+    if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true, startDate: true, endDate: true, campgroundId: true,
+        geoFenceRadiusMiles: true, eventStatus: true, hitchSkin: true, title: true,
+        campground: { select: { latitude: true, longitude: true } },
+      },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const lifecycle = computeEventLifecycle(event);
+    const centerLat = event.campground?.latitude;
+    const centerLng = event.campground?.longitude;
+    if (!centerLat || !centerLng) return res.json({ status: 'NO_LOCATION' });
+
+    // Haversine distance in miles
+    const R = 3958.8;
+    const dLat = (lat - centerLat) * Math.PI / 180;
+    const dLng = (lng - centerLng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(centerLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+      Math.sin(dLng / 2) ** 2;
+    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const radius = event.geoFenceRadiusMiles || 0.5;
+
+    const attendee = await prisma.eventAttendee.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (!attendee) return res.json({ status: 'NOT_RSVP', distance });
+
+    if (distance <= radius && lifecycle === 'LIVE') {
+      // Auto check-in as HERE_NOW
+      if (attendee.arrivalStatus !== 'HERE_NOW') {
+        await prisma.eventAttendee.update({
+          where: { id: attendee.id },
+          data: { arrivalStatus: 'HERE_NOW', autoCheckedIn: true, presenceUpdatedAt: new Date() },
+        });
+
+        // Emit presence arrived
+        const { io } = await import('../index');
+        io.of('/events').to(eventId).emit('presence:arrived', { userId, eventId });
+      }
+      return res.json({ status: 'HERE_NOW', distance, autoCheckedIn: true });
+    }
+
+    if (distance <= radius * 2) {
+      // Within 2x radius — set as nearby
+      if (attendee.arrivalStatus === 'NOT_ARRIVED') {
+        await prisma.eventAttendee.update({
+          where: { id: attendee.id },
+          data: { arrivalStatus: 'NEARBY', presenceUpdatedAt: new Date() },
+        });
+      }
+      return res.json({ status: 'NEARBY', distance });
+    }
+
+    return res.json({ status: 'FAR', distance });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Autopilot Config ────────────────────────────────────────────
+
+router.put('/:id/autopilot', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: req.params.id } });
+    if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { autopilotMode, hitchSkin, serendipityEnabled, geoFenceRadiusMiles } = req.body;
+    const data: any = {};
+    if (autopilotMode) data.autopilotMode = autopilotMode;
+    if (hitchSkin) data.hitchSkin = hitchSkin;
+    if (serendipityEnabled !== undefined) data.serendipityEnabled = serendipityEnabled;
+    if (geoFenceRadiusMiles) data.geoFenceRadiusMiles = parseFloat(geoFenceRadiusMiles);
+    const updated = await prisma.event.update({ where: { id: event.id }, data });
+    res.json({ event: updated });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Plan B Activation ───────────────────────────────────────────
+
+router.post('/:id/plan-b', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, organizerId: true, title: true, campgroundId: true, hitchSkin: true },
+    });
+    if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { planBDescription, planBLocation } = req.body;
+    await prisma.event.update({
+      where: { id: event.id },
+      data: { planBActivated: true, planBDescription, planBLocation },
+    });
+
+    // Hitch announces Plan B with OLD_TIMER skin
+    const { generatePlanBMessage } = await import('../services/hitchEventService');
+    const { getEventContext } = await import('../services/autopilotService');
+    const ctx = await getEventContext(event);
+    const msg = await generatePlanBMessage({ ...ctx, planBLocation });
+    if (msg && event.campgroundId) {
+      const room = await prisma.campfireRoom.findUnique({ where: { campgroundId: event.campgroundId } });
+      if (room) {
+        await prisma.campfireMessage.create({ data: { roomId: room.id, isHitch: true, content: msg } });
+      }
+    }
+
+    // Notify all attendees
+    const attendees = await prisma.eventAttendee.findMany({
+      where: { eventId: event.id },
+      select: { userId: true },
+    });
+    for (const a of attendees) {
+      await prisma.notification.create({
+        data: {
+          userId: a.userId,
+          type: 'EVENT_UPDATE',
+          content: `⛈️ Plan B activated for "${event.title}"! New location: ${planBLocation || 'TBD'}`,
+          link: `/events-v2/${event.id}`,
+        },
+      }).catch(() => {});
+    }
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Pop-Up Events ───────────────────────────────────────────────
+
+router.get('/:id/popups', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const popups = await prisma.eventPopUp.findMany({
+      where: { eventId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ popups });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+router.post('/:id/popups', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: req.params.id } });
+    if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { title, description, scheduledTime } = req.body;
+    const popup = await prisma.eventPopUp.create({
+      data: {
+        eventId: event.id, title, description,
+        scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
+        status: 'LIVE',
+      },
+    });
+    res.json({ popup });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+router.put('/:id/popups/:popupId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { status } = req.body;
+    const popup = await prisma.eventPopUp.update({
+      where: { id: req.params.popupId },
+      data: { status },
+    });
+    res.json({ popup });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Highlights ──────────────────────────────────────────────────
+
+router.get('/:id/highlights', async (req: any, res: Response) => {
+  try {
+    const highlights = await prisma.eventHighlight.findMany({
+      where: { eventId: req.params.id },
+      orderBy: { reactionCount: 'desc' },
+      take: 10,
+    });
+    res.json({ highlights });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Mission Mode Data ───────────────────────────────────────────
+
+router.get('/:id/mission', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      include: {
+        campground: { select: { name: true, latitude: true, longitude: true } },
+        attendees: {
+          include: { user: { select: { id: true, firstName: true, lastName: true, profilePicture: true, rvType: true } } },
+        },
+        popUps: { orderBy: { createdAt: 'desc' } },
+        highlights: { orderBy: { reactionCount: 'desc' }, take: 10 },
+        tripMemory: true,
+      },
+    });
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    if (event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const lifecycle = computeEventLifecycle(event);
+    const hereNow = event.attendees.filter((a: any) => a.arrivalStatus === 'HERE_NOW');
+    const nearby = event.attendees.filter((a: any) => a.arrivalStatus === 'NEARBY');
+    const going = event.attendees.filter((a: any) => a.status === 'ATTENDING' && a.arrivalStatus === 'NOT_ARRIVED');
+
+    res.json({
+      event: { ...event, lifecycle },
+      heatMap: {
+        hereNow: hereNow.length,
+        nearby: nearby.length,
+        going: going.length,
+        hereNowUsers: hereNow.map((a: any) => a.user),
+        nearbyUsers: nearby.map((a: any) => a.user),
+      },
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;
