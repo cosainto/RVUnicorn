@@ -117,6 +117,7 @@ import campfireTipsRoutes from './routes/campfire-tips.routes';
 import feedControlsRoutes from './routes/feed-controls.routes';
 import lastMinuteRoutes from './routes/last-minute.routes';
 import welcomeKitRoutes from './routes/welcome-kit.routes';
+import eventsV2Routes from './routes/events-v2.routes';
 import quizRoutes from './routes/quiz.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
@@ -294,6 +295,7 @@ app.use("/api/campfire-tips", campfireTipsRoutes);
 app.use("/api/feed", feedControlsRoutes);
 app.use("/api/last-minute", lastMinuteRoutes);
 app.use("/api/welcome-kit", welcomeKitRoutes);
+app.use("/api/events-v2", eventsV2Routes);
 app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 

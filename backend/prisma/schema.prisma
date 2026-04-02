@@ -342,6 +342,10 @@ model User {
   contentTypePrefs        ContentTypePreference[]
   lastMinuteDeals         LastMinuteDeal[]
   lastMinuteDealViews     LastMinuteDealView[]
+  eventAnnouncements      EventAnnouncement[]
+  eventDishes             EventDish[]
+  socialPlans             UserSocialPlan[]
+  hostedMeals             EventMeal[]          @relation("EventMealHost")
 }
 
 model Post {
@@ -710,6 +714,13 @@ model Event {
   bannerPosition    String?              @default("50% 50%")
   roadTripId        String?
   stopNumber        Int?
+  eventType         String?              @default("OTHER")
+  eventStatus       String?              @default("UPCOMING")
+  maxAttendees      Int?
+  isPublic          Boolean              @default(true)
+  locationName      String?
+  latitude          Float?
+  longitude         Float?
   activities        Activity[]
   roadTrip          RoadTrip?            @relation("RoadTripStops", fields: [roadTripId], references: [id], onDelete: SetNull)
   campground        Campground?          @relation(fields: [campgroundId], references: [id])
@@ -736,6 +747,10 @@ model Event {
   supplyItems       SupplyItem[]
   scrapbookPins     ScrapbookPin[]
   tripStory         TripStory?
+  scheduleItems     EventScheduleItem[]
+  announcements     EventAnnouncement[]
+  dishes            EventDish[]
+  socialPlans       UserSocialPlan[]
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -762,6 +777,8 @@ model EventAttendee {
   digitalFlag        String?
   hasDogs            Boolean  @default(false)
   presenceUpdatedAt  DateTime?
+  participationMode  String   @default("FULL")
+  socialBattery      String?
   event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -783,9 +800,17 @@ model EventMeal {
   cookId        String?
   cookStatus    String?    @default("PENDING")
   cook          User?      @relation("MealCook", fields: [cookId], references: [id])
+  host          User?      @relation("EventMealHost", fields: [hostId], references: [id])
+  hostId        String?
+  title         String?
+  description   String?
+  location      String?
+  servings      Int?
+  visibility    String     @default("ATTENDEES")
   event         Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
   recipe        Recipe?    @relation(fields: [recipeId], references: [id])
   rsvps         MealRSVP[]
+  dishes        EventDish[]
 
   @@index([eventId])
   @@index([recipeId])
@@ -4686,4 +4711,64 @@ model WelcomeKitSectionItem {
   sortOrder Int               @default(0)
   section   WelcomeKitSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   @@index([sectionId, sortOrder])
+}
+
+model EventScheduleItem {
+  id          String    @id @default(cuid())
+  eventId     String
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  location    String?
+  isOptional  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@index([eventId, startTime])
+}
+
+model EventAnnouncement {
+  id        String   @id @default(cuid())
+  eventId   String
+  authorId  String
+  title     String
+  body      String
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+}
+
+model EventDish {
+  id        String   @id @default(cuid())
+  mealId    String
+  userId    String
+  dishName  String
+  servings  Int?
+  allergens String[]
+  recipeId  String?
+  createdAt DateTime @default(now())
+  meal      EventMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event?    @relation(fields: [eventId], references: [id])
+  eventId   String?
+  @@index([mealId])
+}
+
+model UserSocialPlan {
+  id           String   @id @default(cuid())
+  userId       String
+  eventId      String?
+  campgroundId String?
+  title        String
+  description  String?
+  scheduledFor DateTime?
+  visibility   String   @default("FRIENDS")
+  inviteeIds   String[]
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        Event?   @relation(fields: [eventId], references: [id])
+  @@index([userId])
+  @@index([eventId])
 }
