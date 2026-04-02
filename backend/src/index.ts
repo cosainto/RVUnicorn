@@ -116,6 +116,7 @@ import rigConnectionRoutes from './routes/rig-connection.routes';
 import campfireTipsRoutes from './routes/campfire-tips.routes';
 import feedControlsRoutes from './routes/feed-controls.routes';
 import lastMinuteRoutes from './routes/last-minute.routes';
+import welcomeKitRoutes from './routes/welcome-kit.routes';
 import quizRoutes from './routes/quiz.routes';
 import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
@@ -292,6 +293,7 @@ app.use("/api/rig-connection", rigConnectionRoutes);
 app.use("/api/campfire-tips", campfireTipsRoutes);
 app.use("/api/feed", feedControlsRoutes);
 app.use("/api/last-minute", lastMinuteRoutes);
+app.use("/api/welcome-kit", welcomeKitRoutes);
 app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 

@@ -76,6 +76,7 @@ import WeatherActivities from '../components/WeatherActivities';
 import SupplyList from '../components/SupplyList';
 import CampMarket from '../components/CampMarket';
 import LastMinuteDeals from '../components/LastMinuteDeals';
+import WelcomeKit from '../components/WelcomeKit';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -2184,6 +2185,18 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Welcome Kit (shown when camping) ────────────────────────── */}
+      {isCamping && activeCheckIn?.campground?.id && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <WelcomeKit
+            campgroundId={activeCheckIn.campground.id}
+            campgroundName={activeCheckIn.campground.name}
+            checkInDate={activeCheckIn.checkInDate}
+            checkOutDate={activeCheckIn.checkOutDate}
+          />
         </div>
       )}
 

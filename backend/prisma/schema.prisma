@@ -599,6 +599,7 @@ model Campground {
   campMarketListings     CampMarketListing[]
   campfireTips           CampfireTip[]
   lastMinuteDeals        LastMinuteDeal[]
+  welcomeKit             WelcomeKit?
 }
 
 model CampMarketListing {
@@ -4626,4 +4627,56 @@ model LastMinuteDealView {
   deal      LastMinuteDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([dealId, userId])
+}
+
+model WelcomeKit {
+  id               String              @id @default(cuid())
+  campgroundId     String              @unique
+  isPublished      Boolean             @default(false)
+  wifiName         String?
+  wifiPassword     String?
+  gateCode         String?
+  checkoutTime     String?
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  officePhone      String?
+  emergencyPhone   String?
+  maintenancePhone String?
+  welcomeMessage   String?
+  welcomeVideoUrl  String?
+  mapImageUrl      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  campground       Campground          @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  sections         WelcomeKitSection[]
+}
+
+model WelcomeKitSection {
+  id        String                  @id @default(cuid())
+  kitId     String
+  type      String
+  title     String
+  content   String?
+  fileUrl   String?
+  fileType  String?
+  sortOrder Int                     @default(0)
+  isActive  Boolean                 @default(true)
+  icon      String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  kit       WelcomeKit              @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  items     WelcomeKitSectionItem[]
+  @@index([kitId, sortOrder])
+}
+
+model WelcomeKitSectionItem {
+  id        String            @id @default(cuid())
+  sectionId String
+  label     String
+  value     String?
+  url       String?
+  icon      String?
+  sortOrder Int               @default(0)
+  section   WelcomeKitSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  @@index([sectionId, sortOrder])
 }
