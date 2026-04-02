@@ -1170,25 +1170,25 @@ const [editForm, setEditForm] = useState({
         <div className="mb-6">
           <SocialFeed username={username || ''} isOwnProfile={isOwnProfile} />
         </div>
-      </div>
 
-      {/* Admin: Campground Claims Queue — visible only to Will & Deanna */}
-      {user && ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(user.id) && isOwnProfile && (
-        <div className="mb-6">
-          <details className="bg-white rounded-xl border border-amber-200 overflow-hidden">
-            <summary className="px-4 py-3 cursor-pointer flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 transition">
-              <span className="text-base">⛺</span>
-              <span className="font-bold text-sm text-amber-900">Campground Claims</span>
-              <span className="text-xs text-amber-500 ml-auto">Admin</span>
-            </summary>
-            <div className="p-4">
-              <Suspense fallback={<div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" /></div>}>
-                <CampgroundClaimsQueue />
-              </Suspense>
-            </div>
-          </details>
-        </div>
-      )}
+        {/* Admin: Campground Claims Queue — visible only to Will & Deanna */}
+        {user && ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(user.id) && isOwnProfile && (
+          <div className="mb-6">
+            <details open className="bg-white rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm">
+              <summary className="px-4 py-3 cursor-pointer flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 transition">
+                <span className="text-base">⛺</span>
+                <span className="font-bold text-sm text-amber-900">Campground Claims</span>
+                <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full font-bold ml-auto">Admin</span>
+              </summary>
+              <div className="p-4">
+                <Suspense fallback={<div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <CampgroundClaimsQueue />
+                </Suspense>
+              </div>
+            </details>
+          </div>
+        )}
+      </div>
 
       {/* Edit Profile Modal */}
       {showEditModal && (
