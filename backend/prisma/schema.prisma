@@ -346,6 +346,10 @@ model User {
   eventDishes             EventDish[]
   socialPlans             UserSocialPlan[]
   hostedMeals             EventMeal[]          @relation("EventMealHost")
+  eventBlasts             EventBlast[]
+  eventCheckInsUser       EventCheckIn[]
+  eventPollsCreated       EventPoll[]
+  eventPollResponses      EventPollResponse[]
 }
 
 model Post {
@@ -751,6 +755,11 @@ model Event {
   announcements     EventAnnouncement[]
   dishes            EventDish[]
   socialPlans       UserSocialPlan[]
+  blasts            EventBlast[]
+  eventCheckIns     EventCheckIn[]
+  polls             EventPoll[]
+  hitchFAQ          EventHitchFAQ?
+  qrToken           String?              @unique
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -4771,4 +4780,75 @@ model UserSocialPlan {
   event        Event?   @relation(fields: [eventId], references: [id])
   @@index([userId])
   @@index([eventId])
+}
+
+model EventBlast {
+  id             String   @id @default(cuid())
+  eventId        String
+  authorId       String
+  message        String
+  isEmergency    Boolean  @default(false)
+  sentAt         DateTime @default(now())
+  recipientCount Int      @default(0)
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([eventId])
+}
+
+model EventCheckIn {
+  id          String   @id @default(cuid())
+  eventId     String
+  userId      String
+  checkedInAt DateTime @default(now())
+  checkedInBy String?
+  siteNumber  String?
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userId])
+}
+
+model EventPoll {
+  id        String              @id @default(cuid())
+  eventId   String
+  authorId  String
+  question  String
+  options   String[]
+  isActive  Boolean             @default(true)
+  endsAt    DateTime?
+  createdAt DateTime            @default(now())
+  event     Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  responses EventPollResponse[]
+  @@index([eventId, isActive])
+}
+
+model EventPollResponse {
+  id          String    @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  respondedAt DateTime  @default(now())
+  poll        EventPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([pollId, userId])
+}
+
+model EventHitchFAQ {
+  id         String   @id @default(cuid())
+  eventId    String   @unique
+  rawText    String
+  fileName   String
+  uploadedAt DateTime @default(now())
+  uploadedBy String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EventTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  type          String
+  description   String
+  defaultFields Json
+  isSystem      Boolean  @default(true)
+  createdAt     DateTime @default(now())
 }

@@ -108,6 +108,7 @@ import EventsDiscoveryPage from './pages/EventsDiscoveryPage';
 import EventCreatePage from './pages/EventCreatePage';
 import EventDetailPageV2 from './pages/EventDetailPageV2';
 import EventManagePage from './pages/EventManagePage';
+import CheckInPage from './pages/CheckInPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -160,6 +161,7 @@ function AppContent() {
         <Route path="/events-v2/create" element={<EventCreatePage />} />
         <Route path="/events-v2/:id" element={<EventDetailPageV2 />} />
         <Route path="/events-v2/:id/manage" element={<EventManagePage />} />
+        <Route path="/checkin/:qrToken" element={<CheckInPage />} />
         <Route
           path="/feed"
           element={
