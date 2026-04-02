@@ -273,3 +273,71 @@ router.put('/hosts/:id/reject', authenticateToken, requireWill, async (req: Requ
     res.json(host);
   } catch (e) { res.status(500).json({ error: 'Failed to reject' }); }
 });
+
+// ── Campground Claims Queue ─────────────────────────────────────
+
+router.get('/campground-claims', authenticateToken, requireWill, async (req: any, res: Response) => {
+  try {
+    const claims = await prisma.campground.findMany({
+      where: { claimedById: { not: null } },
+      select: {
+        id: true, name: true, city: true, state: true, location: true,
+        claimedAt: true, claimedById: true, verificationStatus: true,
+        businessEmail: true, businessPhone: true,
+        claimedBy: { select: { id: true, firstName: true, lastName: true, email: true, username: true } },
+      },
+      orderBy: { claimedAt: 'desc' },
+    });
+    res.json({ claims });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch claims' });
+  }
+});
+
+router.patch('/campground-claims/:campgroundId', authenticateToken, requireWill, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { status } = req.body;
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      include: { claimedBy: { select: { id: true, email: true, firstName: true } } },
+    });
+    if (!campground || !campground.claimedById) return res.status(404).json({ error: 'No claim found' });
+
+    if (status === 'APPROVED') {
+      await prisma.campground.update({ where: { id: campgroundId }, data: { verificationStatus: 'VERIFIED' } });
+      await prisma.campgroundAdmin.upsert({
+        where: { userId_campgroundId: { userId: campground.claimedById, campgroundId } },
+        create: { userId: campground.claimedById, campgroundId, role: 'OWNER' },
+        update: { role: 'OWNER' },
+      });
+      try {
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        if (campground.claimedBy?.email) {
+          await resend.emails.send({
+            from: 'RVUnicorn <noreply@rvunicorn.com>', to: campground.claimedBy.email,
+            subject: 'Your campground claim for ' + campground.name + ' has been approved!',
+            html: '<p>Hi ' + (campground.claimedBy.firstName || 'there') + ',</p><p>Great news! Your claim for <strong>' + campground.name + '</strong> has been approved. You now have full access to your campground business dashboard.</p><p>— The RVUnicorn Team</p>',
+          });
+        }
+      } catch {}
+    } else if (status === 'REJECTED') {
+      await prisma.campground.update({ where: { id: campgroundId }, data: { verificationStatus: 'UNCLAIMED', claimedById: null, claimedAt: null } });
+      try {
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        if (campground.claimedBy?.email) {
+          await resend.emails.send({
+            from: 'RVUnicorn <noreply@rvunicorn.com>', to: campground.claimedBy.email,
+            subject: 'Update on your campground claim for ' + campground.name,
+            html: '<p>Hi ' + (campground.claimedBy.firstName || 'there') + ',</p><p>Your campground claim for <strong>' + campground.name + '</strong> was not approved. Contact us at support@rvunicorn.com for more information.</p><p>— The RVUnicorn Team</p>',
+          });
+        }
+      } catch {}
+    }
+    res.json({ success: true, status });
+  } catch {
+    res.status(500).json({ error: 'Failed to update claim' });
+  }
+});
