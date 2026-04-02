@@ -1207,6 +1207,19 @@ export default function BasecampPage({ user }: BasecampProps) {
   const [quizPicks, setQuizPicks] = useState<any[]>([]);
   const [creatingDraft, setCreatingDraft] = useState(false);
 
+  // Resume onboarding state
+  const [onboardingResume, setOnboardingResume] = useState<{ step: number; completed: boolean } | null>(null);
+  const onboardingSkippedToday = localStorage.getItem('rvu_onboarding_skip_date') === new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/auth/me').then(({ data }) => {
+      if (data && !data.onboardingCompleted && data.onboardingStep > 0) {
+        setOnboardingResume({ step: data.onboardingStep, completed: data.onboardingCompleted });
+      }
+    }).catch(() => {});
+  }, [user]);
+
   // Load quiz picks from localStorage
   useEffect(() => {
     try {
@@ -2600,6 +2613,24 @@ export default function BasecampPage({ user }: BasecampProps) {
                   🚐 {creatingDraft ? 'Creating...' : 'Plan your first trip →'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Resume Onboarding Banner ── */}
+        {onboardingResume && !onboardingResume.completed && !onboardingSkippedToday && (
+          <div className="bg-white border border-primary-200 rounded-2xl p-4 mb-4 flex items-center gap-4">
+            <span className="text-2xl">👋</span>
+            <div className="flex-1">
+              <p className="font-bold text-gray-900 text-sm">Welcome back, {user?.firstName || 'friend'}!</p>
+              <p className="text-xs text-gray-500">Want to finish setting up your profile?</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link to="/rv-setup" className="bg-primary-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-primary-700 transition">
+                Continue setup →
+              </Link>
+              <button onClick={() => { localStorage.setItem('rvu_onboarding_skip_date', new Date().toISOString().slice(0, 10)); setOnboardingResume(null); }}
+                className="text-xs text-gray-400 hover:text-gray-600">Skip</button>
             </div>
           </div>
         )}

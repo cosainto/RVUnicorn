@@ -309,6 +309,22 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
     } catch {}
   };
 
+  // Save onboarding progress to backend
+  const saveProgress = async (stepNum: number, completed = false) => {
+    try {
+      await api.patch('/users/me/onboarding-progress', {
+        step: stepNum,
+        data: { userPersona, rvType, rigMake, rigModel, rigYear },
+        completed,
+      });
+    } catch {}
+  };
+
+  // Save progress when step changes
+  useEffect(() => {
+    if (step > 0) saveProgress(step);
+  }, [step]);
+
   return (
     <div className="max-w-2xl mx-auto relative">
       <style>{`
@@ -1046,7 +1062,7 @@ export default function RVOnboardingFlow({ onComplete }: { onComplete?: () => vo
                 homeState: authUser?.homeState,
                 profilePicture: authUser?.profilePicture,
               }}
-              onSkip={() => { if (onComplete) onComplete(); else navigate('/basecamp'); }}
+              onSkip={async () => { await saveProgress(7, true); if (onComplete) onComplete(); else navigate('/basecamp'); }}
             />
           </div>
           <div className="flex justify-center mt-4">

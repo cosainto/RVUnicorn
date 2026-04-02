@@ -330,6 +330,8 @@ model User {
   campMarketStats         CampMarketStats?
   rigConnectionsRequested RigConnection[]  @relation("RigConnectionRequester")
   rigConnectionsReceived  RigConnection[]  @relation("RigConnectionReceiver")
+  emailDripLogs           EmailDripLog[]
+  onboardingData          Json?
 }
 
 model Post {
@@ -4475,4 +4477,15 @@ model RigConnection {
 
   @@unique([requesterId, receiverId])
   @@index([receiverId, status])
+}
+
+model EmailDripLog {
+  id        String   @id @default(cuid())
+  userId    String
+  emailType String
+  sentAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, emailType])
+  @@index([userId])
 }

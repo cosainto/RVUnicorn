@@ -177,4 +177,21 @@ router.get('/same-destination', authenticateToken, async (req: any, res: Respons
   } catch { res.json({ users: [] }); }
 });
 
+// PATCH /api/users/me/onboarding-progress — save onboarding step progress
+router.patch('/me/onboarding-progress', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { step, data, completed } = req.body;
+    const updateData: any = {};
+    if (step !== undefined) updateData.onboardingStep = step;
+    if (data !== undefined) updateData.onboardingData = data;
+    if (completed) updateData.onboardingCompleted = true;
+
+    await prisma.user.update({ where: { id: userId }, data: updateData });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to save progress' });
+  }
+});
+
 export default router;
