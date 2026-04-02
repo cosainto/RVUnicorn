@@ -5,6 +5,41 @@ import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Trivia sessions in Central Time (hours, minutes)
+const TRIVIA_SESSIONS = [
+  { h: 7, m: 30, label: 'Morning' },
+  { h: 12, m: 25, label: 'Lunchtime' },
+  { h: 17, m: 30, label: 'Campfire' },
+];
+
+function getNextTriviaSession(): { startsAt: string; label: string; isActive: boolean } | null {
+  const now = new Date();
+  const central = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const centralMins = central.getHours() * 60 + central.getMinutes();
+
+  for (const s of TRIVIA_SESSIONS) {
+    const startMin = s.h * 60 + s.m;
+    const endMin = startMin + 30;
+    // Currently in this session
+    if (centralMins >= startMin && centralMins < endMin) {
+      const startsAt = new Date(now);
+      startsAt.setHours(startsAt.getHours() - (centralMins - startMin)); // approx
+      return { startsAt: startsAt.toISOString(), label: s.label, isActive: true };
+    }
+    // This session is upcoming today
+    if (centralMins < startMin) {
+      const diff = (startMin - centralMins) * 60 * 1000;
+      return { startsAt: new Date(now.getTime() + diff).toISOString(), label: s.label, isActive: false };
+    }
+  }
+  // All sessions passed — next is tomorrow morning
+  const tomorrowMorning = TRIVIA_SESSIONS[0];
+  const minsUntilMidnight = (24 * 60) - centralMins;
+  const minsFromMidnight = tomorrowMorning.h * 60 + tomorrowMorning.m;
+  const diff = (minsUntilMidnight + minsFromMidnight) * 60 * 1000;
+  return { startsAt: new Date(now.getTime() + diff).toISOString(), label: tomorrowMorning.label, isActive: false };
+}
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const optionalAuth = (req: any, res: any, next: any) => {
@@ -402,6 +437,7 @@ router.get('/:campgroundId/current-trivia', authenticateToken, async (req: Reque
         theme: week.theme,
         hostCharacter: week.hostCharacter,
       },
+      nextSession: getNextTriviaSession(),
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get trivia' });

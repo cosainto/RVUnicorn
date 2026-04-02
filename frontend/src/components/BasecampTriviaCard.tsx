@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Trophy, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Bell, BellOff, Clock } from 'lucide-react';
 import api from '../services/api';
 
 interface TriviaQuestion {
@@ -22,6 +22,12 @@ interface TriviaStats {
   hostCharacter: string;
 }
 
+interface NextSession {
+  startsAt: string;
+  label: string;
+  isActive: boolean;
+}
+
 const CHARACTER_IMAGES: Record<string, string> = {
   hitch: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png',
   wallet: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218458/rvunicorn/guides/wallet_guide.png',
@@ -36,21 +42,34 @@ interface Props {
   campgroundId: string;
 }
 
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return 'Now!';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function BasecampTriviaCard({ campgroundId }: Props) {
   const [question, setQuestion] = useState<TriviaQuestion | null>(null);
   const [stats, setStats] = useState<TriviaStats | null>(null);
+  const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<{ isCorrect: boolean; points: number; correctAnswer: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifyMe, setNotifyMe] = useState(() => localStorage.getItem('trivia_notify') === '1');
+  const [countdown, setCountdown] = useState('');
 
   const fetchTrivia = useCallback(async () => {
     try {
       const { data } = await api.get(`/campfire/${campgroundId}/current-trivia`);
       setQuestion(data.question);
       setStats(data.stats);
-    } catch {
-      // silent
-    } finally {
+      setNextSession(data.nextSession);
+    } catch {} finally {
       setLoading(false);
     }
   }, [campgroundId]);
@@ -61,6 +80,43 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
     return () => clearInterval(interval);
   }, [fetchTrivia]);
 
+  // Countdown timer — ticks every second
+  useEffect(() => {
+    if (!nextSession || nextSession.isActive) { setCountdown(''); return; }
+    const tick = () => {
+      const ms = new Date(nextSession.startsAt).getTime() - Date.now();
+      setCountdown(formatCountdown(ms));
+
+      // Trigger browser notification 3 minutes before if opted in
+      if (notifyMe && ms > 0 && ms <= 180000 && ms > 179000) {
+        if (Notification.permission === 'granted') {
+          new Notification('🎯 Campfire Trivia starting in 3 minutes!', {
+            body: `${nextSession.label} session is almost here. Get ready!`,
+            icon: '/images/Logo_RVUnicorn.webp',
+          });
+        }
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [nextSession, notifyMe]);
+
+  const toggleNotify = () => {
+    if (!notifyMe && Notification.permission === 'default') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') {
+          setNotifyMe(true);
+          localStorage.setItem('trivia_notify', '1');
+        }
+      });
+    } else {
+      const next = !notifyMe;
+      setNotifyMe(next);
+      localStorage.setItem('trivia_notify', next ? '1' : '0');
+    }
+  };
+
   const submitAnswer = async (answer: string) => {
     if (!question || selected) return;
     setSelected(answer);
@@ -70,10 +126,7 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
         answer,
         answeredAt: new Date().toISOString(),
       });
-      if (data.isCorrect !== undefined) {
-        setResult(data);
-      }
-      // Fetch next question after a short delay
+      if (data.isCorrect !== undefined) setResult(data);
       setTimeout(() => {
         setSelected(null);
         setResult(null);
@@ -85,10 +138,11 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
   };
 
   if (loading) return null;
-  if (!stats) return null;
+  if (!stats && !nextSession) return null;
 
-  const host = stats.hostCharacter || 'hitch';
+  const host = stats?.hostCharacter || 'hitch';
   const hostImg = CHARACTER_IMAGES[host];
+  const hasActiveSession = nextSession?.isActive;
 
   return (
     <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
@@ -102,28 +156,32 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
           </div>
         )}
         <span className="font-bold text-xs text-purple-900">Campfire Trivia</span>
-        <span className="text-[10px] text-purple-400 truncate">{stats.theme}</span>
-        <div className="ml-auto flex items-center gap-1.5">
-          <Trophy className="w-3 h-3 text-amber-500" />
-          <span className="text-[11px] font-bold text-amber-600">{stats.points} pts</span>
-        </div>
+        {stats?.theme && <span className="text-[10px] text-purple-400 truncate">{stats.theme}</span>}
+        {stats && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <Trophy className="w-3 h-3 text-amber-500" />
+            <span className="text-[11px] font-bold text-amber-600">{stats.points} pts</span>
+          </div>
+        )}
       </div>
 
-      {/* Progress bar */}
-      <div className="px-3 pt-2 pb-1">
-        <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-          <span>{stats.answered}/{stats.totalAsked} answered</span>
-          <span>{stats.correct} correct</span>
+      {/* Progress bar — only when session has started */}
+      {stats && stats.totalAsked > 0 && (
+        <div className="px-3 pt-2 pb-1">
+          <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+            <span>{stats.answered}/{stats.totalAsked} answered</span>
+            <span>{stats.correct} correct</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all"
+              style={{ width: `${stats.totalAsked > 0 ? (stats.answered / stats.totalAsked) * 100 : 0}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all"
-            style={{ width: `${stats.totalAsked > 0 ? (stats.answered / stats.totalAsked) * 100 : 0}%` }}
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Question or completion state */}
+      {/* Active question */}
       {question ? (
         <div className="px-3 py-2">
           <div className="flex items-center gap-1.5 mb-2">
@@ -132,30 +190,18 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
             </span>
             <span className="text-[10px] text-gray-400">{question.category}</span>
           </div>
-
           <p className="text-xs font-medium text-gray-800 mb-2 leading-relaxed">{question.question}</p>
-
           <div className="grid grid-cols-1 gap-1.5">
             {(Object.entries(question.options) as [string, string][]).map(([key, val]) => {
               const isSelected = selected === key;
               const isCorrect = result?.correctAnswer === key;
               const isWrong = isSelected && result && !result.isCorrect;
-
               let cls = 'w-full text-left px-3 py-2 rounded-lg border text-[11px] font-medium transition flex items-center gap-2 ';
-              if (!selected) {
-                cls += 'border-gray-200 bg-gray-50 hover:bg-purple-500 hover:text-white hover:border-purple-500 cursor-pointer';
-              } else if (!result) {
-                cls += isSelected
-                  ? 'bg-purple-500 border-purple-600 text-white'
-                  : 'border-gray-100 bg-gray-50 text-gray-300';
-              } else if (isCorrect) {
-                cls += 'bg-green-500 border-green-600 text-white';
-              } else if (isWrong) {
-                cls += 'bg-red-500 border-red-600 text-white';
-              } else {
-                cls += 'border-gray-100 bg-gray-50 text-gray-300';
-              }
-
+              if (!selected) cls += 'border-gray-200 bg-gray-50 hover:bg-purple-500 hover:text-white hover:border-purple-500 cursor-pointer';
+              else if (!result) cls += isSelected ? 'bg-purple-500 border-purple-600 text-white' : 'border-gray-100 bg-gray-50 text-gray-300';
+              else if (isCorrect) cls += 'bg-green-500 border-green-600 text-white';
+              else if (isWrong) cls += 'bg-red-500 border-red-600 text-white';
+              else cls += 'border-gray-100 bg-gray-50 text-gray-300';
               return (
                 <button key={key} onClick={() => submitAnswer(key)} disabled={!!selected} className={cls}>
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
@@ -168,7 +214,6 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
               );
             })}
           </div>
-
           {result && (
             <div className={`mt-2 px-2.5 py-1.5 rounded-lg text-center text-[11px] font-semibold ${
               result.isCorrect ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -177,20 +222,51 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
             </div>
           )}
         </div>
-      ) : stats.totalAsked > 0 ? (
+
+      /* All caught up — answered everything this session */
+      ) : stats && stats.totalAsked > 0 && hasActiveSession ? (
         <div className="px-3 py-4 text-center">
           <div className="text-2xl mb-1">🎉</div>
           <p className="text-xs font-bold text-gray-800">All caught up!</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">
-            {stats.correct}/{stats.answered} correct · {stats.points} pts today
-          </p>
-          <p className="text-[10px] text-purple-400 mt-1">Next questions at the next session</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{stats.correct}/{stats.answered} correct · {stats.points} pts</p>
         </div>
+
+      /* Countdown to next session */
       ) : (
-        <div className="px-3 py-4 text-center">
-          <div className="text-2xl mb-1">🎯</div>
-          <p className="text-xs font-bold text-gray-800">Trivia is warming up!</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Sessions: 7:30 AM, 12:25 PM & 5:30 PM CT</p>
+        <div className="px-3 py-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-purple-400" />
+            <p className="text-xs font-bold text-purple-900">
+              {nextSession ? `${nextSession.label} Session` : 'Next Session'}
+            </p>
+          </div>
+          {countdown && (
+            <div className="text-center mb-3">
+              <span className="text-2xl font-bold text-purple-700 font-mono">{countdown}</span>
+            </div>
+          )}
+          <p className="text-[10px] text-gray-400 text-center mb-3">
+            Sessions: 7:30 AM · 12:25 PM · 5:30 PM CT
+          </p>
+          <button
+            onClick={toggleNotify}
+            className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition ${
+              notifyMe
+                ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                : 'bg-purple-600 text-white hover:bg-purple-700'
+            }`}
+          >
+            {notifyMe ? (
+              <><BellOff className="w-3.5 h-3.5" /> Notifications On — Tap to Turn Off</>
+            ) : (
+              <><Bell className="w-3.5 h-3.5" /> Notify Me 3 Min Before</>
+            )}
+          </button>
+          {stats && stats.points > 0 && (
+            <p className="text-[10px] text-amber-600 text-center mt-2 font-medium">
+              🏆 {stats.points} pts this week · {stats.correct} correct
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -155,46 +155,7 @@ export async function ensureTriviaWeek(campgroundId: string, io?: any) {
   const existing = await prisma.triviaWeek.findFirst({
     where: { campgroundId, isActive: true, weekStart: { gte: weekStart } },
   });
-  if (existing) {
-    // If no questions have been asked today, fire one now
-    if (io) {
-      const dayOfWeek = new Date().getDay();
-      const askedToday = await prisma.triviaQuestion.count({
-        where: { weekId: existing.id, dayOfWeek, askedAt: { not: null } },
-      });
-      if (askedToday === 0) {
-        const nextQ = await prisma.triviaQuestion.findFirst({
-          where: { weekId: existing.id, dayOfWeek, askedAt: null },
-          orderBy: { questionNum: 'asc' },
-        });
-        if (nextQ) {
-          const now = new Date();
-          await prisma.triviaQuestion.update({
-            where: { id: nextQ.id },
-            data: { askedAt: now },
-          });
-          io.of('/campfire').to(campgroundId).emit('trivia:question', {
-            questionId: nextQ.id,
-            questionNum: nextQ.questionNum,
-            total: 10,
-            question: nextQ.question,
-            options: { A: nextQ.optionA, B: nextQ.optionB, C: nextQ.optionC, D: nextQ.optionD },
-            category: nextQ.category,
-            timeLimit: 10,
-            askedAt: now.toISOString(),
-          });
-          const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
-          if (room) {
-            await prisma.campfireMessage.create({
-              data: { roomId: room.id, isHitch: true, content: `🎯 Trivia time! Tap to play →` },
-            });
-          }
-          console.log(`[TriviaCron] On-demand asked Q${nextQ.questionNum} for existing week at ${campgroundId}`);
-        }
-      }
-    }
-    return;
-  }
+  if (existing) return;
 
   console.log(`[TriviaCron] Creating on-demand trivia week for campground ${campgroundId}`);
 
@@ -254,38 +215,6 @@ export async function ensureTriviaWeek(campgroundId: string, io?: any) {
   }
 
   console.log(`[TriviaCron] On-demand week created for campground ${campgroundId}`);
-
-  // Immediately ask the first question so users don't wait for the next cron window
-  if (io) {
-    const dayOfWeek = new Date().getDay();
-    const firstQ = await prisma.triviaQuestion.findFirst({
-      where: { weekId: week.id, dayOfWeek, askedAt: null },
-      orderBy: { questionNum: 'asc' },
-    });
-    if (firstQ) {
-      const now = new Date();
-      await prisma.triviaQuestion.update({
-        where: { id: firstQ.id },
-        data: { askedAt: now },
-      });
-      io.of('/campfire').to(campgroundId).emit('trivia:question', {
-        questionId: firstQ.id,
-        questionNum: firstQ.questionNum,
-        total: 10,
-        question: firstQ.question,
-        options: { A: firstQ.optionA, B: firstQ.optionB, C: firstQ.optionC, D: firstQ.optionD },
-        category: firstQ.category,
-        timeLimit: 120,
-        askedAt: now.toISOString(),
-      });
-      if (room) {
-        await prisma.campfireMessage.create({
-          data: { roomId: room.id, isHitch: true, content: `🎯 First question is live! Tap to play →` },
-        });
-      }
-      console.log(`[TriviaCron] Immediately asked Q${firstQ.questionNum} for ${campgroundId}`);
-    }
-  }
 }
 
 // ── Daily 5:25 PM: Warning message ───────────────────────────
