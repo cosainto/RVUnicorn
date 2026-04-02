@@ -15,10 +15,11 @@ export function registerCampfireSockets(io: Server) {
 
     const checkedIn = await getCheckedInUsers(campgroundId);
     campfire.to(campgroundId).emit('presence:update', checkedIn);
-    await maybeActivateRoom(campgroundId, campfire);
+    await maybeActivateRoom(campgroundId, campfire, io);
 
     // Ensure trivia week exists for this campground (no-op if already created)
-    ensureTriviaWeek(campgroundId).catch(e =>
+    // Pass io so first question fires immediately if a new week is created
+    ensureTriviaWeek(campgroundId, io).catch(e =>
       console.error(`[Campfire] ensureTriviaWeek failed for ${campgroundId}:`, e)
     );
 
@@ -145,7 +146,7 @@ async function getCheckedInUsers(campgroundId: string) {
   return checkIns.map((c: any) => c.user);
 }
 
-async function maybeActivateRoom(campgroundId: string, namespace: any) {
+async function maybeActivateRoom(campgroundId: string, namespace: any, io?: any) {
   const count = await prisma.checkIn.count({ where: { campgroundId, isActive: true } });
   const existing = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
   if (count >= 1 && !existing?.isActive) {
@@ -164,7 +165,7 @@ async function maybeActivateRoom(campgroundId: string, namespace: any) {
     namespace.to(campgroundId).emit('room:activated', { message: '🔥 Campfire is live! Trivia at 5:30 PM.' });
 
     // Generate trivia week on-demand if none exists (mid-week check-in)
-    ensureTriviaWeek(campgroundId).catch(e =>
+    ensureTriviaWeek(campgroundId, io).catch(e =>
       console.error(`[Campfire] ensureTriviaWeek failed for ${campgroundId}:`, e)
     );
   }
