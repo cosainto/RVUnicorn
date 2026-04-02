@@ -4159,6 +4159,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                   </div>
                 );
               })()}
+
+              {/* Camp Market on campfire tab */}
+              {activeCheckIn?.campground?.id && (
+                <CampMarket campgroundId={activeCheckIn.campground.id} />
+              )}
             </div>
           )}
 
