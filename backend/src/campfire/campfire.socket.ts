@@ -17,6 +17,11 @@ export function registerCampfireSockets(io: Server) {
     campfire.to(campgroundId).emit('presence:update', checkedIn);
     await maybeActivateRoom(campgroundId, campfire);
 
+    // Ensure trivia week exists for this campground (no-op if already created)
+    ensureTriviaWeek(campgroundId).catch(e =>
+      console.error(`[Campfire] ensureTriviaWeek failed for ${campgroundId}:`, e)
+    );
+
     socket.on('message:send', async (data: { content: string }) => {
       if (!data.content?.trim()) return;
       const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });

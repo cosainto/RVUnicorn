@@ -4087,6 +4087,14 @@ export default function BasecampPage({ user }: BasecampProps) {
           {/* Campfire Tab */}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
+              {/* Trivia overlay — visible on campfire tab during active sessions */}
+              {activeCheckIn?.campground && (
+                <CampfireTriviaOverlay
+                  socket={null}
+                  userId={user?.id || ''}
+                  campgroundId={activeCheckIn.campground.id}
+                />
+              )}
               {/* Embedded Campfire Chat */}
               {activeCheckIn?.campground && (
                 <div className="rounded-xl overflow-hidden border border-orange-200">
@@ -4358,7 +4366,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             <div className="px-4 pt-3 flex-shrink-0">
               <CampfireTriviaOverlay
                 socket={null}
-                userId={''}
+                userId={user?.id || ''}
                 campgroundId={activeCheckIn.campground.id}
               />
             </div>
