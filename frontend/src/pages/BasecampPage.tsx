@@ -78,6 +78,7 @@ import CampMarket from '../components/CampMarket';
 import LastMinuteDeals from '../components/LastMinuteDeals';
 import WelcomeKit from '../components/WelcomeKit';
 import NatureInsightCards from '../components/NatureInsightCards';
+import BasecampTriviaCard from '../components/BasecampTriviaCard';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -4087,13 +4088,9 @@ export default function BasecampPage({ user }: BasecampProps) {
           {/* Campfire Tab */}
           {campingTab === 'campfire' && (
             <div className="space-y-6">
-              {/* Trivia overlay — visible on campfire tab during active sessions */}
+              {/* Campfire Trivia — standalone card */}
               {activeCheckIn?.campground && (
-                <CampfireTriviaOverlay
-                  socket={null}
-                  userId={user?.id || ''}
-                  campgroundId={activeCheckIn.campground.id}
-                />
+                <BasecampTriviaCard campgroundId={activeCheckIn.campground.id} />
               )}
               {/* Embedded Campfire Chat */}
               {activeCheckIn?.campground && (

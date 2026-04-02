@@ -339,6 +339,75 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
 
 
 
+// GET /api/campfire/:campgroundId/current-trivia
+// Returns the latest asked question the user hasn't answered yet (no time cutoff)
+router.get('/:campgroundId/current-trivia', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const userId = (req as any).userId;
+
+    const week = await (prisma as any).triviaWeek.findFirst({
+      where: { campgroundId, isActive: true },
+    });
+    if (!week) return res.json({ question: null, stats: null });
+
+    const dayOfWeek = new Date().getDay();
+
+    // Find asked questions today that user hasn't answered
+    const asked = await (prisma as any).triviaQuestion.findMany({
+      where: { weekId: week.id, dayOfWeek, askedAt: { not: null } },
+      orderBy: { questionNum: 'desc' },
+    });
+
+    // Find the latest one the user hasn't answered
+    let currentQ = null;
+    for (const q of asked) {
+      const answered = await (prisma as any).triviaAnswer.findFirst({
+        where: { questionId: q.id, userId },
+      });
+      if (!answered) { currentQ = q; break; }
+    }
+
+    // Stats for today
+    const totalAsked = asked.length;
+    const userAnswers = await (prisma as any).triviaAnswer.findMany({
+      where: {
+        userId,
+        question: { weekId: week.id, dayOfWeek },
+      },
+    });
+    const correctCount = userAnswers.filter((a: any) => a.isCorrect).length;
+
+    // Leaderboard position
+    const leaderboard = await (prisma as any).triviaLeaderboard.findFirst({
+      where: { weekId: week.id, userId },
+    });
+
+    res.json({
+      question: currentQ ? {
+        questionId: currentQ.id,
+        questionNum: currentQ.questionNum,
+        total: 10,
+        question: currentQ.question,
+        options: { A: currentQ.optionA, B: currentQ.optionB, C: currentQ.optionC, D: currentQ.optionD },
+        hostCharacter: week.hostCharacter,
+        category: currentQ.category,
+        askedAt: currentQ.askedAt,
+      } : null,
+      stats: {
+        totalAsked,
+        answered: userAnswers.length,
+        correct: correctCount,
+        points: leaderboard?.totalPoints || 0,
+        theme: week.theme,
+        hostCharacter: week.hostCharacter,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get trivia' });
+  }
+});
+
 // POST /api/campfire/:campgroundId/answer
 router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res: Response) => {
   try {
