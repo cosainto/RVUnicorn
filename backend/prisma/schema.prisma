@@ -340,6 +340,8 @@ model User {
   feedPrefsTarget         FeedPreference[]      @relation("FeedPrefTarget")
   feedSignals             FeedSignal[]
   contentTypePrefs        ContentTypePreference[]
+  lastMinuteDeals         LastMinuteDeal[]
+  lastMinuteDealViews     LastMinuteDealView[]
 }
 
 model Post {
@@ -596,6 +598,7 @@ model Campground {
   wildlifeSightings      WildlifeSighting[]
   campMarketListings     CampMarketListing[]
   campfireTips           CampfireTip[]
+  lastMinuteDeals        LastMinuteDeal[]
 }
 
 model CampMarketListing {
@@ -4585,4 +4588,42 @@ model ContentTypePreference {
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, contentType])
+}
+
+model LastMinuteDeal {
+  id              String    @id @default(cuid())
+  campgroundId    String
+  ownerId         String
+  title           String
+  description     String?
+  availableFrom   DateTime
+  availableTo     DateTime
+  sitesAvailable  Int       @default(1)
+  originalPrice   Float?
+  discountPrice   Float?
+  discountPercent Int?
+  maxRigLength    Float?
+  requiresHookups Boolean   @default(false)
+  allowsPets      Boolean   @default(true)
+  isActive        Boolean   @default(true)
+  notifiedCount   Int       @default(0)
+  viewCount       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  owner           User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  views           LastMinuteDealView[]
+  @@index([campgroundId, isActive])
+  @@index([expiresAt, isActive])
+  @@index([availableFrom])
+}
+
+model LastMinuteDealView {
+  id        String         @id @default(cuid())
+  dealId    String
+  userId    String
+  createdAt DateTime       @default(now())
+  deal      LastMinuteDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([dealId, userId])
 }

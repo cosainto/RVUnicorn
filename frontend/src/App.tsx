@@ -103,6 +103,7 @@ import AdminCampgroundsPage from './pages/AdminCampgroundsPage';
 import AdminSponsorCampaignsPage from './pages/AdminSponsorCampaignsPage';
 import AdminHostListingsPage from './pages/AdminHostListingsPage';
 import CampgroundQuizPage from './pages/CampgroundQuizPage';
+import LastMinuteDealsPage from './pages/LastMinuteDealsPage';
 
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
@@ -150,6 +151,7 @@ function AppContent() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
+        <Route path="/deals" element={<LastMinuteDealsPage />} />
         <Route
           path="/feed"
           element={

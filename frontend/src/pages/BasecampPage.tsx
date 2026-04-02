@@ -75,6 +75,7 @@ import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
 import SupplyList from '../components/SupplyList';
 import CampMarket from '../components/CampMarket';
+import LastMinuteDeals from '../components/LastMinuteDeals';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -3091,6 +3092,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
           {/* ── SIDEBAR ─────────────────────────────────────────── */}
           <div className="space-y-4">
+
+            {/* ── Last-Minute Deals ────────────────────────────────── */}
+            <LastMinuteDeals compact />
 
             {/* ── Profile Completion Score ─────────────────────────── */}
             {completionScore < 80 && !completionDismissed && (
