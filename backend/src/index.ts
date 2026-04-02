@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import compression from 'compression';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
@@ -156,6 +157,7 @@ export const io = new SocketIOServer(httpServer, {
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+app.use(compression());
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -169,8 +171,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files with caching headers
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  maxAge: '7d',
+  immutable: true,
+}));
 
 // Public routes (no auth required)
 app.use('/api/sitemap.xml', sitemapRoutes);

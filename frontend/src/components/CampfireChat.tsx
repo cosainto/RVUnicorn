@@ -49,10 +49,12 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
 
   useEffect(() => {
     loadMessages();
-    // Poll every 10 seconds as fallback when WebSocket misses messages
-    const interval = setInterval(loadMessages, 10000);
+    // Only poll as fallback when WebSocket is not connected
+    const interval = setInterval(() => {
+      if (!connected) loadMessages();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [campgroundId]);
+  }, [campgroundId, connected]);
 
   useEffect(() => {
     if (!user?.id) return;

@@ -3,7 +3,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-8 sm:p-12">
         <div className="flex items-center gap-3 mb-8">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="h-10" />
+          <img src="/images/Logo_RVUnicorn.webp" alt="RVUnicorn" className="h-10" />
           <h1 className="text-3xl font-bold text-gray-900">Terms & Conditions</h1>
         </div>
         <p className="text-sm text-gray-500 mb-8">Effective Date: March 31, 2026</p>

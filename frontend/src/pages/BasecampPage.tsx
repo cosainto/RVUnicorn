@@ -77,6 +77,7 @@ import SupplyList from '../components/SupplyList';
 import CampMarket from '../components/CampMarket';
 import LastMinuteDeals from '../components/LastMinuteDeals';
 import WelcomeKit from '../components/WelcomeKit';
+import NatureInsightCards from '../components/NatureInsightCards';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -3461,7 +3462,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   />
                 ) : (
                   <div className="w-full h-full relative">
-                    <img src="/images/showusyourrig.png" alt="Show us your rig" className="w-full h-full object-cover" />
+                    <img src="/images/showusyourrig.webp" alt="Show us your rig" className="w-full h-full object-cover" />
                     <Link
                       to={`/profile/${user.username}/edit`}
                       className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition"
@@ -4193,6 +4194,13 @@ export default function BasecampPage({ user }: BasecampProps) {
                   </div>
                 );
               })()}
+
+              {/* ── Nature Insight Cards ── */}
+              <NatureInsightCards
+                lat={activeCheckIn?.campground?.latitude ? Number(activeCheckIn.campground.latitude) : null}
+                lng={activeCheckIn?.campground?.longitude ? Number(activeCheckIn.campground.longitude) : null}
+                weather={planningData?.weather || null}
+              />
 
               {/* Camp Market on campfire tab */}
               {activeCheckIn?.campground?.id && (

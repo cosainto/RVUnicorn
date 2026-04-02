@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 // ─── All 30 badges ────────────────────────────────────────────────────────────
 const BADGES = [
   { slug: 'founding-member',      name: 'Founding Member',      img: '/images/founding-member.png' },
-  { slug: 'rvunicorn-member',     name: 'RVUnicorn Member',     img: '/images/Logo_RVUnicorn.png' },
+  { slug: 'rvunicorn-member',     name: 'RVUnicorn Member',     img: '/images/Logo_RVUnicorn.webp' },
   { slug: 'first-friend',         name: 'First Friend',         img: '/images/first-friend.png' },
   { slug: 'welcome-to-club',      name: 'Welcome to the Club',  img: '/images/Welcome_to_the_Club.png' },
   { slug: 'social-butterfly',     name: 'Social Butterfly',     img: '/images/social-butterfly.png' },
@@ -34,7 +34,7 @@ const BADGES = [
   { slug: 'first-recipe',         name: 'First Recipe',         img: '/images/first-recipe.png' },
   { slug: 'campfire-chef',        name: 'Campfire Chef',        img: '/images/campfirechef.png' },
   { slug: 'first-review',         name: 'First Review',         img: '/images/Firstime_review.png' },
-  { slug: 'show-your-rig',        name: 'Show Your Rig',        img: '/images/showusyourrig.png' },
+  { slug: 'show-your-rig',        name: 'Show Your Rig',        img: '/images/showusyourrig.webp' },
 ];
 
 // ─── Badge strip ──────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ function BadgeStrip({
                   className="w-24 h-24 object-contain z-10 relative group-hover:scale-105 transition-transform duration-300"
                   style={{ filter: 'drop-shadow(0 3px 14px rgba(0,0,0,0.5)) brightness(1.2) saturate(1.3)' }}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
+                    (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp';
                   }}
                 />
               </div>
@@ -246,7 +246,7 @@ function ProfileCard({ name, rig, state, trips, img, badges }: any) {
           decoding="async"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
+            (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp';
           }}
         />
       </div>
@@ -602,7 +602,7 @@ export default function LandingPage() {
               className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(255,255,255,.07)', border: '1.5px solid rgba(255,255,255,.15)' }}
             >
-              <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-9 h-9 object-contain" loading="lazy" decoding="async" />
+              <img src="/images/Logo_RVUnicorn.webp" alt="RVUnicorn" className="w-9 h-9 object-contain" loading="lazy" decoding="async" />
             </div>
             <span className="font-extrabold text-lg hidden sm:block tracking-tight">RVUnicorn</span>
           </div>
@@ -702,7 +702,7 @@ export default function LandingPage() {
             <div className="absolute w-72 h-72 rounded-full" style={{ background: 'rgba(245,158,11,.05)', animation: 'pulseRing 3s ease-out .9s infinite' }} />
 
             <img
-              src="/images/Campfire_hitch.png"
+              src="/images/Campfire_hitch.webp"
               alt="Hitch — your camp guide"
               className="relative w-72 h-72 md:w-96 md:h-96 object-contain"
               style={{
@@ -713,7 +713,7 @@ export default function LandingPage() {
               decoding="async"
               onError={(e) => {
                 const el = e.target as HTMLImageElement;
-                el.src = '/images/Logo_RVUnicorn.png';
+                el.src = '/images/Logo_RVUnicorn.webp';
                 el.className = 'relative w-56 h-56 object-contain';
               }}
             />
@@ -886,14 +886,14 @@ export default function LandingPage() {
             <div className="flex-shrink-0 relative flex items-center justify-center lg:w-80">
               <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(251,146,60,.10), transparent 65%)' }} />
               <img
-                src="/images/BBQ_RV.png"
+                src="/images/BBQ_RV.webp"
                 alt="Community"
                 className="w-64 h-64 md:w-80 md:h-80 object-contain"
                 style={{ animation: 'floatA 6s ease-in-out infinite', filter: 'drop-shadow(0 0 44px rgba(251,146,60,.18))' }}
                 loading="lazy"
                 decoding="async"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
+                  (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp';
                 }}
               />
             </div>
@@ -917,8 +917,8 @@ export default function LandingPage() {
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                <FeedPost user="Mike & Sandra" type="Check-in" content="Just rolled into Glacier NP — pull-through is perfect for our 40-footer. Hookups are solid. Cell signal 4 bars 📡" img="/images/Campfire_hitch.png" />
-                <FeedPost user="Camp Carters" type="Trip Photo" content="Olympic NP sunset last night. This community always finds the best hidden spots 🌅" img="/images/RV_Hiking.png" />
+                <FeedPost user="Mike & Sandra" type="Check-in" content="Just rolled into Glacier NP — pull-through is perfect for our 40-footer. Hookups are solid. Cell signal 4 bars 📡" img="/images/Campfire_hitch.webp" />
+                <FeedPost user="Camp Carters" type="Trip Photo" content="Olympic NP sunset last night. This community always finds the best hidden spots 🌅" img="/images/RV_Hiking.webp" />
                 <FeedPost user="Campground Group" type="Meetup" content="Yellowstone weekend meetup — 12 rigs confirmed. Join the group to coordinate convoy times." img={null} />
                 <FeedPost user="NomadNancy" type="Badge Earned" content="Just hit my 50 State Explorer badge after 6 years on the road 🏆" img={null} />
               </div>
@@ -972,14 +972,14 @@ export default function LandingPage() {
             <div className="flex-shrink-0 relative flex items-center justify-center lg:w-80">
               <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 55%, rgba(52,211,153,.10), transparent 65%)' }} />
               <img
-                src="/images/Hitch_OutsideTV.png"
+                src="/images/Hitch_OutsideTV.webp"
                 alt="Creator tools"
                 className="w-64 h-64 md:w-80 md:h-80 object-contain"
                 style={{ animation: 'floatB 7s ease-in-out infinite', filter: 'drop-shadow(0 0 44px rgba(52,211,153,.18))' }}
                 loading="lazy"
                 decoding="async"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
+                  (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp';
                 }}
               />
             </div>
@@ -1058,12 +1058,12 @@ export default function LandingPage() {
                 <div className="relative rounded-2xl overflow-hidden" style={{ background: 'rgba(15,25,60,.9)', border: '1px solid rgba(244,114,182,.22)' }}>
                   <div className="h-44 flex items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(circle at 40% 40%, rgba(30,53,100,.9), rgba(5,10,30,.95))' }}>
                     <img
-                      src="/images/RV_Hiking.png"
+                      src="/images/RV_Hiking.webp"
                       alt="Trip photo"
                       className="h-40 w-auto object-contain"
                       style={{ filter: 'drop-shadow(0 0 30px rgba(244,114,182,.25))' }}
                       loading="lazy" decoding="async"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }}
                     />
                   </div>
                   <div className="p-4">
@@ -1072,7 +1072,7 @@ export default function LandingPage() {
                     <div className="flex items-center gap-2">
                       {['/images/Shutterbug.png', '/images/album-pro.png', '/images/storyteller.png'].map((b, i) => (
                         <img key={i} src={b} alt="badge" className="w-7 h-7 object-contain"
-                          onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }} />
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }} />
                       ))}
                       <span className="text-xs ml-1" style={{ color: 'rgba(255,255,255,.38)' }}>Badges earned on this trip</span>
                     </div>
@@ -1159,7 +1159,7 @@ export default function LandingPage() {
                       className="h-24 w-auto object-contain"
                       style={{ filter: 'drop-shadow(0 0 20px rgba(52,211,153,.3))' }}
                       loading="lazy" decoding="async"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }} />
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }} />
                     <div className="absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
                       style={{ background: 'rgba(52,211,153,.15)', border: '1px solid rgba(52,211,153,.4)', color: 'rgba(110,231,183,.95)' }}>
                       <span className="w-1 h-1 rounded-full bg-emerald-400" style={{ animation: 'twinkle 2s ease-in-out infinite' }} />
@@ -1189,11 +1189,11 @@ export default function LandingPage() {
                   style={{ background: 'rgba(8,18,48,.96)', border: '1px solid rgba(245,158,11,.22)', boxShadow: '0 20px 50px rgba(0,0,0,.65), 0 0 25px rgba(245,158,11,.07)' }}>
                   <div className="h-24 relative flex items-center justify-center overflow-hidden"
                     style={{ background: 'radial-gradient(circle at 35% 50%, rgba(40,25,5,.98), rgba(3,8,25,.99))' }}>
-                    <img src="/images/Campfire_hitch.png" alt="Yellowstone"
+                    <img src="/images/Campfire_hitch.webp" alt="Yellowstone"
                       className="h-20 w-auto object-contain"
                       style={{ filter: 'drop-shadow(0 0 18px rgba(245,158,11,.35))' }}
                       loading="lazy" decoding="async"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }} />
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }} />
                     <div className="absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
                       style={{ background: 'rgba(245,158,11,.15)', border: '1px solid rgba(245,158,11,.35)', color: 'rgba(253,230,138,.95)' }}>
                       <span className="w-1 h-1 rounded-full bg-amber-400" style={{ animation: 'twinkle 2.5s ease-in-out infinite' }} />
@@ -1223,11 +1223,11 @@ export default function LandingPage() {
                   style={{ background: 'rgba(8,18,48,.96)', border: '1px solid rgba(167,139,250,.22)', boxShadow: '0 20px 50px rgba(0,0,0,.65), 0 0 25px rgba(167,139,250,.07)' }}>
                   <div className="h-24 relative flex items-center justify-center overflow-hidden"
                     style={{ background: 'radial-gradient(circle at 35% 50%, rgba(25,10,40,.98), rgba(3,8,25,.99))' }}>
-                    <img src="/images/BBQ_RV.png" alt="Sedona"
+                    <img src="/images/BBQ_RV.webp" alt="Sedona"
                       className="h-20 w-auto object-contain"
                       style={{ filter: 'drop-shadow(0 0 18px rgba(167,139,250,.3))' }}
                       loading="lazy" decoding="async"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }} />
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }} />
                     <div className="absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
                       style={{ background: 'rgba(52,211,153,.15)', border: '1px solid rgba(52,211,153,.4)', color: 'rgba(110,231,183,.95)' }}>
                       <span className="w-1 h-1 rounded-full bg-emerald-400" style={{ animation: 'twinkle 1.8s ease-in-out infinite' }} />
@@ -1257,11 +1257,11 @@ export default function LandingPage() {
                   style={{ background: 'rgba(8,18,48,.94)', border: '1px solid rgba(96,165,250,.20)', boxShadow: '0 16px 40px rgba(0,0,0,.6)' }}>
                   <div className="h-20 relative flex items-center justify-center overflow-hidden"
                     style={{ background: 'radial-gradient(circle at 35% 50%, rgba(5,20,40,.98), rgba(3,8,25,.99))' }}>
-                    <img src="/images/RV_Hiking.png" alt="Olympic NP"
+                    <img src="/images/RV_Hiking.webp" alt="Olympic NP"
                       className="h-16 w-auto object-contain"
                       style={{ filter: 'drop-shadow(0 0 14px rgba(96,165,250,.3))' }}
                       loading="lazy" decoding="async"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png'; }} />
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp'; }} />
                   </div>
                   <div className="p-3">
                     <div className="font-extrabold text-white text-xs leading-tight">Olympic NP — Hoh</div>
@@ -1399,7 +1399,7 @@ export default function LandingPage() {
                     loading="lazy"
                     decoding="async"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.png';
+                      (e.target as HTMLImageElement).src = '/images/Logo_RVUnicorn.webp';
                     }}
                   />
                 </div>
@@ -1440,7 +1440,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)' }}>
-                <img src="/images/Logo_RVUnicorn.png" alt="" className="w-6 h-6 object-contain" loading="lazy" decoding="async" />
+                <img src="/images/Logo_RVUnicorn.webp" alt="" className="w-6 h-6 object-contain" loading="lazy" decoding="async" />
               </div>
               <span className="text-sm" style={{ color: 'rgba(255,255,255,.3)' }}>
                 © {new Date().getFullYear()} RVUnicorn
