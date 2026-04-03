@@ -4040,11 +4040,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="font-medium text-xs mt-0.5">{tonightData?.rverCount ?? '...'} checked in</div>
                 </div>
                 <button
-                  onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
+                  onClick={() => document.getElementById('camp-marketplace')?.scrollIntoView({ behavior: 'smooth' })}
                   className="bg-orange-500/30 hover:bg-orange-500/50 border border-orange-400/30 rounded-lg p-3 text-center transition"
                 >
-                  <div className="text-xl mb-1">🏕️</div>
-                  <div className="font-bold text-xs text-orange-300">Open Campfire →</div>
+                  <div className="text-xl mb-1">🛒</div>
+                  <div className="font-bold text-xs text-orange-300">Marketplace →</div>
                 </button>
               </div>
             </div>
