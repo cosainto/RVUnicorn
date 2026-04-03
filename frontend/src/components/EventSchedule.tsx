@@ -124,6 +124,20 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [showMeals, setShowMeals] = useState(true);
   const [showWorkBlocks, setShowWorkBlocks] = useState(false);
+  const [showAddWorkBlock, setShowAddWorkBlock] = useState(false);
+  const [workBlocks, setWorkBlocks] = useState<any[]>([]);
+  const [workBlockForm, setWorkBlockForm] = useState({ date: '', startTime: '', endTime: '', note: '' });
+  const handleAddWorkBlock = async () => {
+    if (!workBlockForm.date || !workBlockForm.startTime) return;
+    try {
+      await api.post(`/events/${eventId}/work-blocks`, workBlockForm);
+      setShowAddWorkBlock(false);
+      setWorkBlockForm({ date: '', startTime: '', endTime: '', note: '' });
+      // Reload work blocks
+      const { data } = await api.get(`/events/${eventId}/work-blocks`).catch(() => ({ data: [] }));
+      setWorkBlocks(Array.isArray(data) ? data : data.workBlocks || []);
+    } catch {}
+  };
   const [weatherByDate, setWeatherByDate] = useState<Record<string, any>>({});
 
   // Outdoor activity types that need weather warnings
