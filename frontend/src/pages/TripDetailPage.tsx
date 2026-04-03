@@ -1,7 +1,7 @@
 import ShareButton from '../components/ShareButton';
 import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Calendar, ShoppingCart, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign, CalendarDays} from 'lucide-react';
 import api from '../services/api';
@@ -35,6 +35,9 @@ import EventSettingsPanel from '../components/EventSettingsPanel';
 import CampMarket from '../components/CampMarket';
 import CampfireTips from '../components/CampfireTips';
 import EventCampgroundMap from '../components/EventCampgroundMap';
+import NowBar from '../components/NowBar';
+import CampBoard from '../components/CampBoard';
+import { useTripState } from '../hooks/useTripState';
 
 interface Event {
   id: string;
@@ -688,6 +691,28 @@ export default function EventDetailPage() {
   const [copyAttendees, setCopyAttendees] = useState(false);
   const [openPhases, setOpenPhases] = useState<Set<string>>(new Set(['plan']));
 
+  // Pulse: state-aware trip lifecycle
+  const pulse = useTripState({
+    startDate: event?.startDate,
+    endDate: event?.endDate,
+    campgroundLat: event?.campground?.latitude,
+    campgroundLng: event?.campground?.longitude,
+    isCheckedIn,
+  });
+
+  // Auto-expand the relevant phase based on trip state
+  const statePhaseMap: Record<string, string> = {
+    'blueprint': 'plan', 'load-out': 'prepare', 'in-motion': 'travel', 'on-site': 'camp', 'echo': 'remember',
+  };
+  const userToggledPhases = useRef(false);
+
+  useEffect(() => {
+    if (!userToggledPhases.current && pulse.tripState) {
+      const phase = statePhaseMap[pulse.tripState];
+      if (phase) setOpenPhases(new Set([phase]));
+    }
+  }, [pulse.tripState]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
 
@@ -803,14 +828,32 @@ export default function EventDetailPage() {
 
   const daysUntil = getDaysUntilEvent();
 
-  const togglePhase = (id: string) => setOpenPhases(prev => {
+  const togglePhase = (id: string) => { userToggledPhases.current = true; setOpenPhases(prev => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
-  });
+  }); };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div>
+      {/* Pulse NowBar */}
+      {event && (
+        <NowBar
+          tripState={pulse.tripState}
+          stateLabel={pulse.stateLabel}
+          stateEmoji={pulse.stateEmoji}
+          stateColor={pulse.stateColor}
+          daysUntilTrip={pulse.daysUntilTrip}
+          hoursUntilTrip={pulse.hoursUntilTrip}
+          distanceMiles={pulse.distanceMiles}
+          eventTitle={event.title}
+          campgroundName={event.campground?.name}
+          attendeeCount={event.attendees?.length || 0}
+          photoCount={tripAlbums.reduce((sum: number, a: any) => sum + (a._count?.photos || 0), 0)}
+          mealCount={event._count?.meals || 0}
+        />
+      )}
+      <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Road Trip Banner */}
       {event.roadTrip && (
         <div className="mb-4 rounded-xl overflow-hidden shadow-md">
@@ -1097,11 +1140,16 @@ export default function EventDetailPage() {
           { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
           { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
         ].map(phase => (
-          <div key={phase.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div key={phase.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition ${
+            statePhaseMap[pulse.tripState] === phase.id ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-gray-200'
+          }`}>
             <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: phase.bg }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 relative" style={{ background: phase.bg }}>
                   <span style={{ color: phase.color }}>{phase.emoji}</span>
+                  {statePhaseMap[pulse.tripState] === phase.id && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+                  )}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900 text-sm">{phase.label}</p>
@@ -1646,6 +1694,16 @@ export default function EventDetailPage() {
 
           {openPhases.has(phase.id) && phase.id === 'camp' && (
             <div className="space-y-8">
+              {/* CampBoard — shows when On-Site */}
+              {pulse.tripState === 'on-site' && event.campground && (
+                <CampBoard
+                  eventId={event.id}
+                  campgroundId={event.campground.id}
+                  campgroundName={event.campground.name || ''}
+                  isCheckedIn={isCheckedIn}
+                  scheduleItems={event.scheduleItems || []}
+                />
+              )}
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} campgroundLat={event.campground?.latitude} campgroundLng={event.campground?.longitude} />
               {event.campground && (
                 <div className="border-t pt-8">
@@ -2240,6 +2298,7 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
