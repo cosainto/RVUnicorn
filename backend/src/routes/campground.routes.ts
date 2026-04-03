@@ -864,3 +864,87 @@ router.patch('/:id/banner-position', authenticateToken, async (req: any, res) =>
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
+// GET /api/campgrounds/:id/pulse-feed
+// Returns last 20 ambient events for the campfire Pulse feed
+router.get('/:id/pulse-feed', async (req: any, res: any) => {
+  try {
+    const { id: campgroundId } = req.params;
+    const since = new Date(Date.now() - 48 * 60 * 60 * 1000); // last 48h
+    const pulseEvents: any[] = [];
+
+    // Recent check-ins
+    const checkIns = await prisma.checkIn.findMany({
+      where: { campgroundId, createdAt: { gte: since } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+    for (const c of checkIns) {
+      pulseEvents.push({
+        type: 'checkin',
+        text: `🏕 ${c.user.firstName}${c.user.lastName ? ' ' + c.user.lastName[0] + '.' : ''} just checked in`,
+        createdAt: c.createdAt,
+        userId: c.user.id,
+        userName: c.user.firstName,
+      });
+    }
+
+    // Recent photos
+    const photos = await prisma.photo.findMany({
+      where: { event: { campgroundId }, createdAt: { gte: since } },
+      include: { user: { select: { id: true, firstName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }).catch(() => []);
+    for (const p of photos) {
+      pulseEvents.push({
+        type: 'photo',
+        text: `📸 ${(p as any).user?.firstName || 'Someone'} posted a photo`,
+        createdAt: p.createdAt,
+        userId: (p as any).user?.id,
+        userName: (p as any).user?.firstName,
+      });
+    }
+
+    // Recent wildlife sightings
+    const wildlife = await (prisma as any).wildlifeSighting?.findMany?.({
+      where: { campgroundId, createdAt: { gte: since } },
+      include: { user: { select: { id: true, firstName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }).catch(() => []) || [];
+    for (const w of wildlife) {
+      pulseEvents.push({
+        type: 'wildlife',
+        text: `🦅 ${w.species || 'Wildlife'} sighting reported${w.user?.firstName ? ' by ' + w.user.firstName : ''}`,
+        createdAt: w.createdAt,
+        userId: w.user?.id,
+        userName: w.user?.firstName,
+      });
+    }
+
+    // Recent followers
+    const followers = await (prisma as any).campgroundFollow?.findMany?.({
+      where: { campgroundId, createdAt: { gte: since } },
+      include: { user: { select: { id: true, firstName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }).catch(() => []) || [];
+    for (const f of followers) {
+      pulseEvents.push({
+        type: 'follower',
+        text: `❤️ ${f.user?.firstName || 'Someone'} started following this campground`,
+        createdAt: f.createdAt,
+        userId: f.user?.id,
+        userName: f.user?.firstName,
+      });
+    }
+
+    // Sort by time, take 20
+    pulseEvents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json({ events: pulseEvents.slice(0, 20) });
+  } catch (e) {
+    res.json({ events: [] });
+  }
+});
