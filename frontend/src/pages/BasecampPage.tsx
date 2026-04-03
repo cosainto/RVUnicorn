@@ -2185,10 +2185,10 @@ export default function BasecampPage({ user }: BasecampProps) {
                   </a>
                 ) : (
                   <button
-                    onClick={() => setShowCampfireModal(true)}
+                    onClick={() => document.getElementById('camp-marketplace')?.scrollIntoView({ behavior: 'smooth' })}
                     className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded-lg font-semibold transition text-sm shadow-sm"
                   >
-                    🔥 Open Campfire
+                    🛒 Campsite Marketplace
                   </button>
                 )}
                 <a
@@ -4209,7 +4209,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
               {/* Camp Market on campfire tab */}
               {activeCheckIn?.campground?.id && (
-                <CampMarket campgroundId={activeCheckIn.campground.id} />
+                <div id="camp-marketplace">
+                  <CampMarket campgroundId={activeCheckIn.campground.id} />
+                </div>
               )}
             </div>
           )}
