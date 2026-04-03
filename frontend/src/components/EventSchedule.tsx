@@ -123,6 +123,7 @@ export default function EventSchedule({ eventId, eventStartDate, eventEndDate, c
   const [updatingActivityId, setUpdatingActivityId] = useState<string | null>(null);
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [showMeals, setShowMeals] = useState(true);
+  const [showWorkBlocks, setShowWorkBlocks] = useState(false);
   const [weatherByDate, setWeatherByDate] = useState<Record<string, any>>({});
 
   // Outdoor activity types that need weather warnings
