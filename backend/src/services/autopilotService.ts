@@ -1,8 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
-import { io } from '../index';
 import { generateHitchMessage, type HitchSkin, type HitchEventContext } from './hitchEventService';
 import { computeEventLifecycle } from '../helpers/event-status';
+
+// Lazy import to avoid circular dependency with index.ts
+function getIO() {
+  return require('../index').io;
+}
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -38,7 +42,7 @@ async function postHitchToEvent(eventId: string, campgroundId: string | null, me
   await prisma.campfireMessage.create({
     data: { roomId: room.id, isHitch: true, content: message },
   });
-  io.of('/campfire').to(campgroundId).emit('message:new', {
+  getIO().of('/campfire').to(campgroundId).emit('message:new', {
     id: `hitch-${Date.now()}`,
     content: message,
     createdAt: new Date().toISOString(),

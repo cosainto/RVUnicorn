@@ -2,7 +2,8 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
-import { io } from '../index';
+// Lazy import to avoid circular dependency with index.ts
+function getIO() { return require('../index').io; }
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -128,7 +129,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
             where: { eventId: evt.id, userId },
           });
           if (isAttendee) {
-            io.of('/events').to(evt.id).emit('presence:arrived', {
+            getIO().of('/events').to(evt.id).emit('presence:arrived', {
               userId,
               eventId: evt.id,
               user: checkIn.user,
@@ -210,7 +211,7 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
           select: { id: true },
         });
         for (const evt of liveEvents) {
-          io.of('/events').to(evt.id).emit('presence:departed', { userId, eventId: evt.id });
+          getIO().of('/events').to(evt.id).emit('presence:departed', { userId, eventId: evt.id });
         }
       } catch {}
     }
