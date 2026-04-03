@@ -343,6 +343,6 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 updateGasPrices(); // run immediately on startup
 setInterval(updateGasPrices, SEVEN_DAYS_MS);
 // Co-Host Autopilot — runs every 5 min for live events
-setInterval(runAutopilotCycle, 5 * 60 * 1000);
+setInterval(() => runAutopilotCycle().catch(e => console.error('[Autopilot]', e)), 5 * 60 * 1000);
 // Trip Memory transitions — runs hourly
-setInterval(checkEventMemoryTransitions, 60 * 60 * 1000);
+setInterval(() => checkEventMemoryTransitions().catch(e => console.error('[TripMemory]', e)), 60 * 60 * 1000);
