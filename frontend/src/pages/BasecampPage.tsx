@@ -1192,6 +1192,25 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [isCamping, activeCheckIn?.campground?.id]);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [showRversHere, setShowRversHere] = useState(false);
+  const [rversHereList, setRversHereList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (showRversHere && activeCheckIn?.campground?.id) {
+      api.get(`/campgrounds/${activeCheckIn.campground.id}`)
+        .then(({ data }) => {
+          const checkins = data.checkIns || data.activeCheckIns || [];
+          setRversHereList(checkins);
+        })
+        .catch(() => {
+          // Fallback: fetch from checkins endpoint
+          api.get(`/checkins/campground/${activeCheckIn.campground.id}`)
+            .then(({ data }) => setRversHereList(data.checkIns || data || []))
+            .catch(() => {});
+        });
+    }
+  }, [showRversHere, activeCheckIn?.campground?.id]);
+
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const [campfireVibeMsg, setCampfireVibeMsg] = useState<string | null>(null);
   const [campfireUnread, setCampfireUnread] = useState(0);
@@ -4022,11 +4041,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                     <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventActivityCount} items →</div>
                   </a>
                 ) : linkedEvent ? (
-                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                  <a href={`/trips/${linkedEvent.id}?tab=meals`} className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition block">
                     <div className="text-xl mb-1">🍽️</div>
                     <div className="text-white/60 text-xs">Meals</div>
-                    <div className="font-medium text-xs mt-0.5 text-white/50">None planned</div>
-                  </div>
+                    <div className="font-medium text-xs mt-0.5 text-orange-300">{linkedEventMealCount > 0 ? `${linkedEventMealCount} meals →` : 'View meals →'}</div>
+                  </a>
                 ) : (
                   <div className="bg-white/10 rounded-lg p-3 text-center">
                     <div className="text-xl mb-1">🔕</div>
@@ -4034,11 +4053,14 @@ export default function BasecampPage({ user }: BasecampProps) {
                     <div className="font-medium text-xs mt-0.5">{tonightData?.quietHoursStart || '10:00 PM'}</div>
                   </div>
                 )}
-                <div className="bg-white/10 rounded-lg p-3 text-center">
+                <button
+                  onClick={() => setShowRversHere(v => !v)}
+                  className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition"
+                >
                   <div className="text-xl mb-1">👥</div>
                   <div className="text-white/60 text-xs">RVers Here</div>
                   <div className="font-medium text-xs mt-0.5">{tonightData?.rverCount ?? '...'} checked in</div>
-                </div>
+                </button>
                 <button
                   onClick={() => document.getElementById('camp-marketplace')?.scrollIntoView({ behavior: 'smooth' })}
                   className="bg-orange-500/30 hover:bg-orange-500/50 border border-orange-400/30 rounded-lg p-3 text-center transition"
@@ -4047,6 +4069,44 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="font-bold text-xs text-orange-300">Marketplace →</div>
                 </button>
               </div>
+
+              {/* RVers Here dropdown */}
+              {showRversHere && (
+                <div className="mt-3 bg-white/10 rounded-xl p-3 border border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-white/80">👥 Campers Checked In</span>
+                    <button onClick={() => setShowRversHere(false)} className="text-white/40 hover:text-white/70 text-xs">✕</button>
+                  </div>
+                  {rversHereList.length === 0 ? (
+                    <p className="text-xs text-white/40 text-center py-2">Loading...</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {rversHereList.map((c: any) => {
+                        const u = c.user || c;
+                        return (
+                          <Link
+                            key={u.id || c.id}
+                            to={`/profile/${u.username || u.id}`}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition"
+                          >
+                            {u.profilePicture ? (
+                              <img src={u.profilePicture} className="w-7 h-7 rounded-full object-cover" alt="" />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-orange-400/30 flex items-center justify-center text-[10px] font-bold text-white">
+                                {(u.firstName || u.username || '?')[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-white truncate">{u.firstName} {u.lastName || ''}</p>
+                              {c.siteNumber && <p className="text-[10px] text-white/40">Site {c.siteNumber}</p>}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
