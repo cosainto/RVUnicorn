@@ -592,18 +592,19 @@ router.post('/:campgroundId/chat-message', authenticateToken, async (req: Reques
 
 
 // GET /api/campfire/:campgroundId/daily-vibe
-// AI-generated daily message about what's happening at camp today
-// Cached per campground per day in memory
-const vibeCache: Record<string, { message: string; date: string }> = {};
+// AI-generated daily Hitch Pulse — like a chatty neighbor with camp gossip
+// Cached per campground per 3 hours to keep it fresh through the day
+const vibeCache: Record<string, { message: string; cachedAt: number }> = {};
+const VIBE_TTL = 3 * 60 * 60 * 1000; // 3 hours
 
 router.get('/:campgroundId/daily-vibe', async (req: Request, res: Response) => {
   try {
     const { campgroundId } = req.params;
 
-    // Check cache — only generate once per campground per day
-    const today = new Date().toISOString().split('T')[0];
-    if (vibeCache[campgroundId]?.date === today) {
-      return res.json({ message: vibeCache[campgroundId].message });
+    // Check cache — refresh every 3 hours
+    const cached = vibeCache[campgroundId];
+    if (cached && Date.now() - cached.cachedAt < VIBE_TTL) {
+      return res.json({ message: cached.message });
     }
 
     const campground = await (prisma as any).campground.findUnique({
@@ -616,31 +617,96 @@ router.get('/:campgroundId/daily-vibe', async (req: Request, res: Response) => {
     const hour = now.getHours();
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayOfWeek = dayNames[now.getDay()];
-    const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
+    const timeOfDay = hour < 6 ? 'early morning' : hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
     const month = now.getMonth();
     const season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'fall' : 'winter';
+
+    // Gather real context for Hitch to riff on
+    const context: string[] = [];
+
+    // Who's checked in?
+    const checkedInCount = await (prisma as any).checkIn.count({
+      where: { campgroundId, isActive: true },
+    });
+    if (checkedInCount > 0) context.push(`${checkedInCount} camper${checkedInCount > 1 ? 's' : ''} currently checked in`);
+
+    // Trivia info
+    const triviaWeek = await (prisma as any).triviaWeek?.findFirst?.({
+      where: { campgroundId, isActive: true },
+      include: {
+        leaderboard: { orderBy: { totalPoints: 'desc' }, take: 1, include: { user: { select: { firstName: true } } } },
+      },
+    }).catch(() => null);
+    if (triviaWeek) {
+      context.push(`Trivia theme this week: "${triviaWeek.theme}"`);
+      if (triviaWeek.leaderboard?.[0]) {
+        context.push(`Current trivia leader: ${triviaWeek.leaderboard[0].user?.firstName} with ${triviaWeek.leaderboard[0].totalPoints} pts`);
+      }
+      context.push('Trivia sessions at 7:30 AM, 12:25 PM & 5:30 PM CT');
+    }
+
+    // Recent check-in names
+    const recentCheckins = await (prisma as any).checkIn.findMany({
+      where: { campgroundId, isActive: true },
+      include: { user: { select: { firstName: true } } },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+    });
+    const names = recentCheckins.map((c: any) => c.user?.firstName).filter(Boolean);
+    if (names.length > 0) context.push(`Recent arrivals: ${names.join(', ')}`);
+
+    // Any upcoming events at this campground?
+    const upcomingEvent = await (prisma as any).event.findFirst({
+      where: { campgroundId, startDate: { gte: now }, eventStatus: { not: 'CANCELLED' } },
+      select: { title: true, startDate: true },
+      orderBy: { startDate: 'asc' },
+    }).catch(() => null);
+    if (upcomingEvent) {
+      const eventDate = new Date(upcomingEvent.startDate);
+      const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / 86400000);
+      context.push(`Upcoming event: "${upcomingEvent.title}" in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`);
+    }
+
+    // Pick a random conversation style to keep it varied
+    const styles = [
+      'neighborly gossip — share a fun observation or campground tidbit',
+      'trivia hype — tease the next trivia session or congratulate the current leader',
+      'campfire wisdom — share a quick camping tip relevant to the season and location',
+      'community cheerleader — welcome new arrivals or celebrate who\'s here',
+      'weather chat — comment on the season and what it means for camping today',
+      'random fun fact — share something interesting about the area or camping in general',
+      'gentle nudge — remind folks about an upcoming event or trivia session',
+      'nostalgic storyteller — quick one-liner about a campfire memory or tradition',
+    ];
+    const style = styles[Math.floor(Math.random() * styles.length)];
 
     const Anthropic = require('@anthropic-ai/sdk');
     const anthropic = new Anthropic.default();
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
+      max_tokens: 150,
       messages: [{
         role: 'user',
-        content: `You are a friendly campfire host at ${campground.name} in ${campground.city}, ${campground.state}. 
-Write a single short, warm, fun message (1-2 sentences max, under 120 characters) about what's happening at camp today.
-It's ${dayOfWeek} ${timeOfDay} in ${season}. Trivia night is at 5:30 PM.
-Be specific to the location and time of day. Sound like a real person, not a bot. No hashtags or emojis at the start.`,
+        content: `You are Hitch, the friendly RV Unicorn campfire host at ${campground.name} in ${campground.city}, ${campground.state}. You're like the neighbor at the campground who always wants to chat — warm, curious, a little nosy, always knows what's going on.
+
+It's ${dayOfWeek} ${timeOfDay} in ${season}.
+
+Here's what you know right now:
+${context.length > 0 ? context.map(c => `- ${c}`).join('\n') : '- Quiet day at camp so far'}
+
+Your vibe for this message: ${style}
+
+Write 1-2 short sentences (under 160 characters). Sound like a real camp neighbor, not a bot. Be specific, personal, and fun. Reference actual context above when possible. No hashtags. Emojis are fine but don't start with one.`,
       }],
     });
 
     const message = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
-    if (message) vibeCache[campgroundId] = { message, date: today };
+    if (message) vibeCache[campgroundId] = { message, cachedAt: Date.now() };
 
     res.json({ message });
   } catch (error) {
-    res.json({ message: null }); // fail silently
+    res.json({ message: null });
   }
 });
 
