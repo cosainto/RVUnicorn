@@ -173,25 +173,37 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         @keyframes campfirePulse{0%,100%{opacity:0.5}50%{opacity:0.75}}
         @keyframes tabFade{from{opacity:0}to{opacity:1}}.tab-enter{animation:tabFade 150ms ease}
 
-        /* Dark theme overrides for SocialFeed */
-        .dark-feed .bg-white { background: rgba(15,26,46,0.95) !important; color: rgba(255,255,255,0.85) !important; }
-        .dark-feed .bg-gray-50, .dark-feed .bg-gray-100 { background: rgba(255,255,255,0.04) !important; }
-        .dark-feed .bg-gray-200 { background: rgba(255,255,255,0.08) !important; }
-        .dark-feed .bg-gray-300 { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.7) !important; }
-        .dark-feed .border-gray-100, .dark-feed .border-gray-200 { border-color: rgba(255,255,255,0.06) !important; }
-        .dark-feed .text-gray-900 { color: rgba(255,255,255,0.9) !important; }
-        .dark-feed .text-gray-800, .dark-feed .text-gray-700 { color: rgba(255,255,255,0.7) !important; }
-        .dark-feed .text-gray-600 { color: rgba(255,255,255,0.5) !important; }
-        .dark-feed .text-gray-500 { color: rgba(255,255,255,0.4) !important; }
-        .dark-feed .text-gray-400 { color: rgba(255,255,255,0.3) !important; }
-        .dark-feed .text-gray-300 { color: rgba(255,255,255,0.2) !important; }
-        .dark-feed .hover\\:bg-gray-50:hover, .dark-feed .hover\\:bg-gray-100:hover { background: rgba(255,255,255,0.06) !important; }
-        .dark-feed .hover\\:bg-gray-400:hover { background: rgba(255,255,255,0.12) !important; }
-        .dark-feed .border-l-4 { border-color: rgba(201,168,76,0.3) !important; }
-        .dark-feed .shadow-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.4) !important; }
-        .dark-feed .shadow-md, .dark-feed .shadow-sm { box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important; }
-        .dark-feed input, .dark-feed textarea { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.1) !important; color: white !important; }
-        .dark-feed .rounded-lg { border-color: rgba(255,255,255,0.06); }
+        /* Campfire Night theme for SocialFeed */
+        .dark-feed { background: #0F1C35 !important; }
+        .dark-feed .bg-white { background: #0F1C35 !important; color: rgba(245,240,232,0.75) !important; }
+        .dark-feed .bg-gray-50, .dark-feed .bg-gray-100 { background: #1B2E50 !important; }
+        .dark-feed .bg-gray-200 { background: rgba(27,46,80,0.7) !important; }
+        .dark-feed .bg-gray-300 { background: rgba(27,46,80,0.5) !important; color: rgba(245,240,232,0.6) !important; }
+        .dark-feed .bg-green-50, .dark-feed .bg-blue-50, .dark-feed .bg-orange-50, .dark-feed .bg-indigo-50, .dark-feed .bg-amber-50, .dark-feed .bg-purple-50, .dark-feed .bg-red-50 { background: rgba(27,46,80,0.5) !important; }
+        .dark-feed .border-gray-100, .dark-feed .border-gray-200, .dark-feed .border-gray-300 { border-color: rgba(232,168,56,0.1) !important; }
+        .dark-feed .border-green-200, .dark-feed .border-blue-200, .dark-feed .border-orange-200, .dark-feed .border-indigo-200, .dark-feed .border-amber-300, .dark-feed .border-purple-200 { border-color: rgba(232,168,56,0.15) !important; }
+        .dark-feed .text-gray-900 { color: #F5F0E8 !important; }
+        .dark-feed .text-gray-800, .dark-feed .text-gray-700 { color: rgba(245,240,232,0.7) !important; }
+        .dark-feed .text-gray-600 { color: rgba(245,240,232,0.5) !important; }
+        .dark-feed .text-gray-500 { color: rgba(245,240,232,0.4) !important; }
+        .dark-feed .text-gray-400 { color: rgba(245,240,232,0.3) !important; }
+        .dark-feed .text-gray-300 { color: rgba(245,240,232,0.2) !important; }
+        .dark-feed .text-blue-500 { color: #E8A838 !important; }
+        .dark-feed .text-red-500 { color: #D4621A !important; }
+        .dark-feed .text-orange-500 { color: #D4621A !important; }
+        .dark-feed .bg-blue-50 .text-blue-500, .dark-feed .text-primary-600 { color: #E8A838 !important; }
+        .dark-feed .hover\\:bg-gray-50:hover, .dark-feed .hover\\:bg-gray-100:hover { background: rgba(27,46,80,0.8) !important; }
+        .dark-feed .hover\\:bg-gray-400:hover { background: rgba(27,46,80,0.6) !important; }
+        .dark-feed .border-l-4 { border-color: #E8A838 !important; }
+        .dark-feed .shadow-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important; }
+        .dark-feed .shadow-md, .dark-feed .shadow-sm { box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important; }
+        .dark-feed input, .dark-feed textarea { background: #1B2E50 !important; border-color: rgba(232,168,56,0.15) !important; color: #F5F0E8 !important; }
+        .dark-feed .rounded-lg { border-color: rgba(232,168,56,0.08); }
+        .dark-feed .bg-gradient-to-br { background: #1B2E50 !important; }
+        .dark-feed a.text-primary-600, .dark-feed .hover\\:text-primary-600:hover, .dark-feed .hover\\:text-primary-700:hover { color: #E8A838 !important; }
+        .dark-feed .font-semibold.text-primary-600 { color: #E8A838 !important; }
+        .dark-feed .btn-primary, .dark-feed .bg-primary-500, .dark-feed .bg-primary-600 { background: #D4621A !important; color: #F5F0E8 !important; }
+        .dark-feed .border-2.border-gray-200 { border-color: rgba(27,46,80,0.8) !important; }
       `}</style>
 
       <div className="min-h-screen font-dm" style={{ background: 'var(--navy-deep)', color: 'white' }}>
