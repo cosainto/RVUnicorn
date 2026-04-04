@@ -143,7 +143,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   if (!profile) return <div className="min-h-screen flex items-center justify-center" style={{ background: '#0F1A2E', color: 'rgba(255,255,255,0.5)' }}><p>Profile not found</p></div>;
 
   const joinDate = new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const TABS = [{ id: 'activity', label: 'Activity' }, { id: 'photos', label: `Photos${albums.length ? ` (${albums.length})` : ''}` }, { id: 'community', label: 'Community' }];
+  const TABS = [
+    { id: 'activity', label: 'Activity' },
+    { id: 'photos', label: `Photos${albums.length ? ` (${albums.length})` : ''}` },
+    { id: 'community', label: 'Community' },
+    ...(favoriteCampgrounds.length > 0 ? [{ id: 'campsites', label: `Campsites (${favoriteCampgrounds.length})` }] : []),
+  ];
 
   return (
     <>
@@ -279,6 +284,15 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                         {profileBadges.length > 3 && <button onClick={() => setShowBadgesModal(true)} className="text-[11px]" style={{ color: 'var(--gold-light)' }}>View all {profileBadges.length} →</button>}
                       </div>
                     )}
+
+                    {/* Compact calendar strip */}
+                    {profile && (
+                      <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--glass-border)' }}>
+                        <div className="overflow-hidden rounded-xl" style={{ maxHeight: '120px' }}>
+                          <TripCalendarWidget compact={true} userId={profile.id} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -391,27 +405,32 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               {activeContentTab === 'community' && (
                 <div className="space-y-4">
                   <div className="flat-card p-5"><Top8Friends username={username} /></div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flat-card p-5">
-                      <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" style={{ color: 'var(--gold)' }} />Groups</h3><Link to="/groups" className="text-[11px]" style={{ color: 'var(--gold-light)' }}>All</Link></div>
-                      {userGroups.length > 0 ? <div className="space-y-1.5">{userGroups.slice(0, 5).map(g => <Link key={g.id} to={`/groups/${g.slug || g.id}`} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition">{g.imageUrl ? <img src={g.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.08)' }}><Users className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} /></div>}<div className="min-w-0"><p className="text-[12px] font-medium truncate">{g.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{g._count?.members || 0} members</p></div></Link>)}</div> : <p className="text-[12px] text-center py-4" style={{ color: 'var(--muted)' }}>No groups yet</p>}
-                    </div>
-                    <div className="flat-card p-5">
-                      <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Star className="w-4 h-4" style={{ color: 'var(--gold)' }} />Followed Campsites</h3>
-                      {favoriteCampgrounds.length > 0 ? <div className="space-y-1.5">{favoriteCampgrounds.slice(0, 5).map(c => <Link key={c.id} to={`/campgrounds/${c.id}`} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition">{(c.imageUrl || c.photos?.[0]?.imageUrl) ? <img src={c.imageUrl || c.photos[0].imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.08)' }}><MapPin className="w-3.5 h-3.5" style={{ color: '#10B981' }} /></div>}<div className="min-w-0"><p className="text-[12px] font-medium truncate">{c.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{c.location}, {c.state}</p></div></Link>)}</div> : <p className="text-[12px] text-center py-4" style={{ color: 'var(--muted)' }}>No followed campgrounds</p>}
-                    </div>
+                  <div className="flat-card p-5">
+                    <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" style={{ color: 'var(--gold)' }} />Groups</h3><Link to="/groups" className="text-[11px]" style={{ color: 'var(--gold-light)' }}>All</Link></div>
+                    {userGroups.length > 0 ? <div className="space-y-1.5">{userGroups.slice(0, 5).map(g => <Link key={g.id} to={`/groups/${g.slug || g.id}`} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition">{g.imageUrl ? <img src={g.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.08)' }}><Users className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} /></div>}<div className="min-w-0"><p className="text-[12px] font-medium truncate">{g.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{g._count?.members || 0} members</p></div></Link>)}</div> : <p className="text-[12px] text-center py-4" style={{ color: 'var(--muted)' }}>No groups yet</p>}
                   </div>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {profile && <FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} className="flex-1" />}
-                    {profile?.isCreator && <FollowersSection creatorId={profile.id} isOwnProfile={isOwnProfile} className="flex-1" />}
-                    <div className="flat-card overflow-hidden"><TripCalendarWidget compact={true} userId={profile.id} /></div>
-                  </div>
+                  {profile && <div className="flat-card p-5"><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
+                  {profile?.isCreator && <div className="flat-card p-5"><FollowersSection creatorId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                   {profile.isCreator && creatorContent.length > 0 && (
                     <div className="flat-card p-5">
                       <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><div className="p-1.5 rounded-lg" style={{ background: 'linear-gradient(135deg,#8B5CF6,#EC4899)' }}><Video className="w-3.5 h-3.5 text-white" /></div><h3 className="text-sm font-bold">Creator Content</h3></div><Link to={`/creators/${profile.username}`} className="text-[11px] font-medium" style={{ color: '#A78BFA' }}>View All →</Link></div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{creatorContent.map((it: any) => <Link key={it.id} to={`/creators/${profile.username}`} className="group rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)' }}><div className="aspect-video relative">{it.thumbnailUrl ? <img src={it.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Video className="w-6 h-6" style={{ color: '#A78BFA' }} /></div>}{it.contentType === 'VIDEO' && <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition"><Play className="w-8 h-8 text-white" /></div>}</div><div className="p-2"><p className="text-[11px] font-medium truncate">{it.title}</p></div></Link>)}</div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeContentTab === 'campsites' && favoriteCampgrounds.length > 0 && (
+                <div className="flat-card p-5">
+                  <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Star className="w-4 h-4" style={{ color: 'var(--gold)' }} />Followed Campsites</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {favoriteCampgrounds.map(c => (
+                      <Link key={c.id} to={`/campgrounds/${c.id}`} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/[0.03] transition">
+                        {(c.imageUrl || c.photos?.[0]?.imageUrl) ? <img src={c.imageUrl || c.photos[0].imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover" /> : <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.08)' }}><MapPin className="w-3.5 h-3.5" style={{ color: '#10B981' }} /></div>}
+                        <div className="min-w-0"><p className="text-[12px] font-medium truncate">{c.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{c.location}, {c.state}</p></div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
