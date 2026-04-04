@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { computeEventLifecycle, computePresenceStatus } from '../helpers/event-status';
+import { sendWebPush } from '../utils/webPush';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -228,15 +229,12 @@ router.delete('/:id/leave', authenticateToken, async (req: any, res: Response) =
           data: { status: 'ATTENDING' },
         });
 
-        // Notify the promoted user
+        // Notify the promoted user (DB + push)
+        const promoMsg = `A spot opened up for ${nextWaitlisted.event.title}! You're in! 🎉`;
         await prisma.notification.create({
-          data: {
-            userId: nextWaitlisted.userId,
-            type: 'WAITLIST_PROMOTED',
-            content: `A spot opened up for ${nextWaitlisted.event.title}! You're in! 🎉`,
-            link: `/trips/${eventId}`,
-          },
+          data: { userId: nextWaitlisted.userId, type: 'WAITLIST_PROMOTED', content: promoMsg, link: `/trips/${eventId}` },
         });
+        sendWebPush(nextWaitlisted.userId, { title: 'You\'re In! 🎉', body: promoMsg, icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/trips/${eventId}` }).catch(() => {});
       }
     }
 
@@ -325,16 +323,16 @@ router.post('/:id/activate-plan-b', authenticateToken, async (req: any, res: Res
       select: { userId: true },
     });
 
+    const planBMsg = `Plan B activated for ${event.title}! ${planBDescription || 'Check the event for updated details.'}`;
     if (attendees.length > 0) {
       await prisma.notification.createMany({
-        data: attendees.map(a => ({
-          userId: a.userId,
-          type: 'EVENT_PLAN_B',
-          content: `Plan B activated for ${event.title}! ${planBDescription || 'Check the event for updated details.'}`,
-          link: `/trips/${req.params.id}`,
-        })),
+        data: attendees.map(a => ({ userId: a.userId, type: 'EVENT_PLAN_B', content: planBMsg, link: `/trips/${req.params.id}` })),
         skipDuplicates: true,
       });
+      // Send push to all attendees
+      for (const a of attendees) {
+        sendWebPush(a.userId, { title: '⚠️ Plan B Activated', body: planBMsg, icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/trips/${req.params.id}` }).catch(() => {});
+      }
     }
 
     res.json({ success: true });
@@ -990,6 +988,9 @@ router.post('/:id/proximity-checkin', authenticateToken, async (req: any, res: R
           where: { id: attendee.id },
           data: { arrivalStatus: 'HERE_NOW', autoCheckedIn: true, presenceUpdatedAt: new Date() },
         });
+        // Push welcome notification
+        sendWebPush(req.userId, { title: `Welcome to ${event.title}! 🏕️`, body: 'Tap to check in and see who\'s here.', icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/trips/${event.id}` }).catch(() => {});
+
         return res.json({
           inRange: true,
           autoCheckedIn: true,

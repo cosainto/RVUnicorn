@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
+import { sendWebPush } from '../utils/webPush';
 // Lazy import to avoid circular dependency with index.ts
 function getIO() { return require('../index').io; }
 
@@ -276,15 +277,20 @@ router.get('/active', authenticateToken, async (req: any, res) => {
         });
 
         if (friendIds.length > 0 && user) {
+          const checkinMsg = `${user.firstName} ${user.lastName} checked in at ${checkIn.campground!.name} 🏕️`;
           await prisma.notification.createMany({
             data: friendIds.map((friendId: string) => ({
               userId: friendId,
               type: 'FRIEND_CHECKIN',
-              content: `${user.firstName} ${user.lastName} checked in at ${checkIn.campground!.name} 🏕️`,
+              content: checkinMsg,
               link: `/campgrounds/${checkIn.campground!.id}`,
             })),
             skipDuplicates: true,
           });
+          // Push notifications to friends
+          for (const friendId of friendIds.slice(0, 20)) {
+            sendWebPush(friendId, { title: 'Friend Checked In 🏕️', body: checkinMsg, icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/campgrounds/${checkIn.campground!.id}` }).catch(() => {});
+          }
         }
       } catch (activityErr) {
       }
