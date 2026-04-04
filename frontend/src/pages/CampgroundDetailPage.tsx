@@ -217,15 +217,13 @@ const ALL_TABS = [
   { id: 'overview', label: 'Overview', icon: MapPin },
   { id: 'map', label: 'Map', icon: Map },
   { id: 'amenities', label: 'Amenities', icon: Check },
-  { id: 'campfire', label: '🔥 Campfire', icon: null },
   { id: 'threads', label: 'Threads', icon: MessageSquare },
   { id: 'news', label: 'News', icon: Megaphone },
   { id: 'events', label: 'Events', icon: Calendar },
   { id: 'photos', label: 'Photos', icon: Camera },
-  { id: 'stickers', label: 'Stickers', icon: Award },
+  { id: 'badges', label: 'Badges', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
   { id: 'vibe', label: '✨ Vibe', icon: null },
-  { id: 'ask-hitch', label: '🦄 Ask Hitch', icon: null },
 ];
 
 export default function CampgroundDetailPage() {
@@ -291,6 +289,7 @@ export default function CampgroundDetailPage() {
   }, [user]);
   const [inWishlist, setInWishlist] = useState(false);
   const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
+  const [customBadges, setCustomBadges] = useState<any[]>([]);
   const [reviewData, setReviewData] = useState({ rating: 0, title: '', review: '', visitDate: '' });
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -308,7 +307,8 @@ export default function CampgroundDetailPage() {
   const loadCampground = async () => {
     try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
         setBannerPosition(data.bannerPosition || '50% 50%');
-      try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {} }
+      try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {}
+      try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data.badges || [])); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
   };
 
@@ -1606,7 +1606,7 @@ export default function CampgroundDetailPage() {
           </div>
           
           <div className={themeStyles.tabs + " overflow-x-auto"}>
-            <div className="flex">{ALL_TABS.map(tab => { 
+            <div className="flex">{ALL_TABS.filter(tab => tab.id !== 'badges' || customBadges.length > 0).map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const TabIcon = tab.icon;
@@ -1939,32 +1939,6 @@ export default function CampgroundDetailPage() {
             </div>
           )}
 
-          {/* Stickers Tab */}
-          {activeTab === 'campfire' && campground && (
-            <div className="space-y-6">
-              {campground.latitude && campground.longitude && (
-                <WeatherActivities
-                  lat={campground.latitude}
-                  lon={campground.longitude}
-                  campgroundName={campground.name}
-                />
-              )}
-              <CampfireChat
-                campgroundId={campground.id}
-                campgroundName={campground.name}
-                isUserCheckedIn={true}
-              />
-              <CampfireTriviaOverlay
-                socket={null}
-                userId={user?.id || ''}
-                campgroundId={campground.id}
-              />
-              <CampfireTips campgroundId={campground.id} campgroundName={campground.name} />
-              <WildlifeSightings campgroundId={campground.id} />
-              <CampMarket campgroundId={campground.id} />
-              <CampgroundTriviaLeaderboard campgroundId={campground.id} />
-            </div>
-          )}
           {activeTab === 'vibe' && campground && (
             <div className="space-y-4">
               <RigStressScore campgroundId={campground.id} />
@@ -1977,17 +1951,20 @@ export default function CampgroundDetailPage() {
               <CampersLikeYou />
             </div>
           )}
-          {activeTab === 'ask-hitch' && campground && (
-            <HitchCampgroundChat
-              campgroundId={campground.id}
-              campgroundName={campground.name}
-              campground={campground}
-            />
-          )}
-          {activeTab === 'stickers' && (
+          {activeTab === 'badges' && customBadges.length > 0 && (
             <div>
-              <h3 className="text-xl font-bold mb-4">Collectible Stickers</h3>
-              {campground.stickers && campground.stickers.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{campground.stickers.map(s => (<div key={s.id} className="border rounded-lg p-4 text-center hover:shadow-md transition"><div className="text-4xl mb-2">{s.emoji || '🏕️'}</div><p className="font-semibold">{s.name}</p>{s.description && <p className="text-sm text-gray-500 mt-1">{s.description}</p>}<p className="text-xs text-gray-400 mt-2">{s._count?.userStickers || 0} earned</p></div>))}</div> : <div className="text-center py-12 text-gray-500"><Award className="w-16 h-16 mx-auto mb-4 text-gray-300" /><p>No stickers available</p></div>}
+              <h3 className="text-xl font-bold mb-4">Campground Badges</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {customBadges.map((b: any) => (
+                  <div key={b.id} className="border rounded-lg p-4 text-center hover:shadow-md transition">
+                    {b.imageUrl ? <img src={b.imageUrl} alt={b.name} className="w-16 h-16 mx-auto mb-2 rounded-full object-cover" /> : <div className="text-4xl mb-2">{b.iconEmoji || '🏆'}</div>}
+                    <p className="font-semibold">{b.name}</p>
+                    {b.description && <p className="text-sm text-gray-500 mt-1">{b.description}</p>}
+                    {b.isLimitedEdition && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full mt-2 inline-block">Limited Edition</span>}
+                    <p className="text-xs text-gray-400 mt-2">{b.issuedCount || 0} earned</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
