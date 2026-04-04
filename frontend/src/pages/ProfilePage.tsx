@@ -101,7 +101,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showBadgesModal, setShowBadgesModal] = useState(false);
   const [activeContentTab, setActiveContentTab] = useState('activity');
-  const [showAbout, setShowAbout] = useState(false);
+  const [showAbout, setShowAbout] = useState(true);
   const saveBadgePositions = async (positions: {[key: string]: {x: number, y: number}}) => { try { await api.put('/privacy/badge-position', { positions }); } catch {} };
   const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
   const [albums, setAlbums] = useState<any[]>([]);
