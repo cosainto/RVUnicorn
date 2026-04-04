@@ -187,8 +187,8 @@ export default function RigMemoryPage() {
         {/* ══ MAIN CONTENT ══ */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 pb-12 space-y-6">
 
-          {/* ── MAINTENANCE LOG PREVIEW ── */}
-          {maintenance.length > 0 && (
+          {/* ── MAINTENANCE LOG PREVIEW (owner only) ── */}
+          {isOwnProfile && maintenance.length > 0 && (
             <div className="flat-card p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold flex items-center gap-2"><Wrench className="w-4 h-4" style={{ color: '#E8A838' }} /> Maintenance Log</h3>

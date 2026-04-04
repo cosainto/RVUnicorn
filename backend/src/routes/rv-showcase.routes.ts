@@ -431,13 +431,16 @@ router.get('/:username/compare', authenticateToken, async (req: any, res) => {
   } catch { res.status(500).json({ error: 'Failed' }); }
 });
 
-// ══ MAINTENANCE LOG PREVIEW ══
-router.get('/:username/maintenance-preview', optionalAuth, async (req, res) => {
+// ══ MAINTENANCE LOG PREVIEW (owner only) ══
+router.get('/:username/maintenance-preview', authenticateToken, async (req: any, res) => {
   try {
     const { username } = req.params;
     let user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
     if (!user) user = await prisma.user.findUnique({ where: { id: username }, select: { id: true } });
     if (!user) return res.json({ records: [] });
+
+    // Only the rig owner can see maintenance records
+    if (user.id !== req.userId) return res.json({ records: [] });
 
     const records = await prisma.maintenanceRecord.findMany({
       where: { userId: user.id },
