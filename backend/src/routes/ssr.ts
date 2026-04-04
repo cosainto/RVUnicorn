@@ -174,24 +174,47 @@ router.get('/community/:boardSlug', async (req: Request, res: Response, next: Ne
 // Root-level sitemap.xml
 router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try {
-    const campgrounds = await prisma.campground.findMany({
-      select: { id: true, customSlug: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-      take: 50000,
-    });
+    const [campgrounds, users] = await Promise.all([
+      prisma.campground.findMany({
+        select: { id: true, customSlug: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 50000,
+      }),
+      prisma.user.findMany({
+        select: { username: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 50000,
+      }),
+    ]);
 
-    console.log(`Sitemap: fetched ${campgrounds.length} campgrounds`);
+    console.log(`Sitemap: ${campgrounds.length} campgrounds, ${users.length} profiles`);
     const today = new Date().toISOString().split('T')[0];
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-    xml += `  <url>\n    <loc>https://rvunicorn.com</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
-    xml += `  <url>\n    <loc>https://rvunicorn.com/campgrounds</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+    // Static pages
+    const staticPages = [
+      { path: '/', priority: '1.0', freq: 'daily' },
+      { path: '/campgrounds', priority: '0.9', freq: 'daily' },
+      { path: '/trips', priority: '0.7', freq: 'daily' },
+      { path: '/community', priority: '0.7', freq: 'daily' },
+      { path: '/recipes', priority: '0.6', freq: 'weekly' },
+    ];
+    for (const p of staticPages) {
+      xml += `  <url>\n    <loc>https://rvunicorn.com${p.path}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${p.freq}</changefreq>\n    <priority>${p.priority}</priority>\n  </url>\n`;
+    }
 
+    // Campground pages
     for (const cg of campgrounds) {
       const slug = cg.customSlug || cg.id;
       const lastmod = cg.updatedAt ? cg.updatedAt.toISOString().split('T')[0] : today;
       xml += `  <url>\n    <loc>https://rvunicorn.com/campgrounds/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    // User profile pages
+    for (const u of users) {
+      const lastmod = u.updatedAt ? u.updatedAt.toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>https://rvunicorn.com/profile/${u.username}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
     }
 
     xml += '</urlset>';
@@ -215,7 +238,7 @@ Disallow: /settings
 Disallow: /messages
 Disallow: /notifications
 
-Sitemap: https://rvunicorn.com/api/sitemap.xml
+Sitemap: https://rvunicorn.com/sitemap.xml
 `;
 
   res.set('Content-Type', 'text/plain');
