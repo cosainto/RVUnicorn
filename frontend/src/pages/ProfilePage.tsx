@@ -301,7 +301,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         {/* ═══ HERO: COVER + IDENTITY ═══ */}
         <section className="relative">
           {/* Cover Photo */}
-          <div className="badge-container h-56 sm:h-72 md:h-80 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 50%, rgba(232,98,42,0.15) 100%)' }}>
+          <div className="badge-container h-48 sm:h-60 md:h-72 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 50%, rgba(232,98,42,0.15) 100%)' }}>
             {profile.coverPhoto && (
               <DraggableBanner
                 imageUrl={profile.coverPhoto} altText="Cover"
@@ -339,7 +339,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
           {/* Identity Card */}
           <div className="max-w-6xl mx-auto px-4 sm:px-6 -mt-20 relative z-10">
-            <div className="glass-card p-6 sm:p-8">
+            <div className="glass-card p-5 sm:p-6">
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left: Avatar + Info */}
                 <div className="flex flex-col sm:flex-row items-start gap-5 flex-1">
@@ -485,7 +485,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               </div>
 
               {/* Stats Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6" style={{ borderTop: '1px solid rgba(201,168,76,0.12)' }}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-5" style={{ borderTop: '1px solid rgba(201,168,76,0.12)' }}>
                 <AnimatedStat icon={'\u{1F3D5}'} value={profile._count?.posts || 0} label="Posts" />
                 <AnimatedStat icon={'\u{1F5FA}'} value={profile._count?.friends || 0} label="Friends" />
                 <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" />
@@ -496,7 +496,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         </section>
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8 pb-16 space-y-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-5 pb-10 space-y-5">
 
           {/* Admin: Pending Claims */}
           {user?.username === 'will' && pendingClaims.length > 0 && (
@@ -570,8 +570,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <span className="text-5xl mb-3 block">{'\u{1F699}'}</span>
+              <div className="text-center py-8">
+                <span className="text-4xl mb-2 block">{'\u{1F699}'}</span>
                 <p className="text-sm" style={{ color: 'var(--muted)' }}>No RV tour yet</p>
                 {isOwnProfile && <button onClick={() => setShowRVShowcaseEdit(true)} className="mt-3 text-sm font-medium" style={{ color: 'var(--campfire)' }}>Add your RV photos & video →</button>}
               </div>
