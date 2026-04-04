@@ -1887,7 +1887,7 @@ export default function CampgroundDetailPage() {
             <LocationEventsCalendar
               locationId={campground.id}
               locationType="campground"
-              canManage={isAdmin || isOwner || false}
+              canManage={isAdmin}
               locationName={campground.name}
             />
             <div className="space-y-4">
