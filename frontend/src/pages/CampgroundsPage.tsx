@@ -167,6 +167,26 @@ export default function CampgroundsPage() {
         <p className="text-gray-500">Find campgrounds that fit your rig and style</p>
       </div>
 
+      {/* Character Quick Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+        {[
+          { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261021/rvunicorn/characters/diesel.png', name: "Diesel's Pick", desc: 'Big Rig Ready', filters: { isBigRigFriendly: true, hasPullThrough: true, hasFullHookups: true } },
+          { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261086/rvunicorn/characters/luna.webp', name: "Luna's Pick", desc: 'Family & Pets', filters: { isPetFriendly: true, hasPool: true } },
+          { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png', name: "Scout's Pick", desc: 'Adventure Ready', filters: { isWaterfront: true } },
+          { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261022/rvunicorn/characters/rose.png', name: "Rosé's Pick", desc: 'Full Amenities', filters: { hasFullHookups: true, hasShowers: true, hasPool: true, hasStore: true } },
+        ].map(preset => (
+          <button key={preset.name} onClick={() => { setAmenityFilters(preset.filters); setCurrentPage(1); }}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl flex-shrink-0 border transition hover:shadow-md"
+            style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.15)' }}>
+            <img src={preset.img} alt={preset.name} className="w-8 h-8 rounded-full object-cover" />
+            <div className="text-left">
+              <p className="text-[11px] font-bold" style={{ color: '#E8A838' }}>{preset.name}</p>
+              <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>{preset.desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
         <div className="flex gap-2 flex-wrap">
           <div className="relative flex-1 min-w-48">
