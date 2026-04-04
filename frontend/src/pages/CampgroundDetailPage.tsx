@@ -560,7 +560,42 @@ export default function CampgroundDetailPage() {
   const currentTheme = themeStyles;
 
   return (
-    <div className={themeStyles.container + ' ' + themeStyles.fontStyle} style={{ '--accent-color': accentColor } as React.CSSProperties}>
+    <>
+    <style>{`
+      .cg-dark { background: #0F1C35 !important; color: #F5F0E8 !important; min-height: 100vh; }
+      .cg-dark .bg-white, .cg-dark .bg-gray-50, .cg-dark .bg-gray-100 { background: #0F1C35 !important; color: #F5F0E8 !important; }
+      .cg-dark .bg-amber-50, .cg-dark .bg-amber-100, .cg-dark .bg-amber-200 { background: #1B2E50 !important; color: #F5F0E8 !important; }
+      .cg-dark .bg-green-50, .cg-dark .bg-blue-50, .cg-dark .bg-indigo-50 { background: rgba(27,46,80,0.5) !important; }
+      .cg-dark .text-gray-900, .cg-dark .text-gray-800 { color: #F5F0E8 !important; }
+      .cg-dark .text-gray-700, .cg-dark .text-gray-600 { color: rgba(245,240,232,0.7) !important; }
+      .cg-dark .text-gray-500, .cg-dark .text-gray-400 { color: rgba(245,240,232,0.4) !important; }
+      .cg-dark .text-gray-300 { color: rgba(245,240,232,0.25) !important; }
+      .cg-dark .border-gray-200, .cg-dark .border-gray-100, .cg-dark .border-gray-300 { border-color: rgba(232,168,56,0.1) !important; }
+      .cg-dark .border-amber-300, .cg-dark .border-amber-400, .cg-dark .border-amber-700 { border-color: rgba(232,168,56,0.2) !important; }
+      .cg-dark .shadow-lg, .cg-dark .shadow-2xl, .cg-dark .shadow-xl { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+      .cg-dark .shadow-md, .cg-dark .shadow-sm, .cg-dark .shadow { box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important; }
+      .cg-dark .hover\\:shadow-md:hover, .cg-dark .hover\\:shadow-2xl:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.5) !important; }
+      .cg-dark input, .cg-dark textarea, .cg-dark select, .cg-dark .input { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
+      .cg-dark .prose { color: rgba(245,240,232,0.7) !important; }
+      .cg-dark .prose h1, .cg-dark .prose h2, .cg-dark .prose h3, .cg-dark .prose h4 { color: #F5F0E8 !important; }
+      .cg-dark .prose a { color: #E8A838 !important; }
+      .cg-dark .text-primary-600, .cg-dark .text-primary-500, .cg-dark .hover\\:text-primary-600:hover, .cg-dark .hover\\:text-primary-700:hover { color: #E8A838 !important; }
+      .cg-dark .bg-primary-600, .cg-dark .bg-primary-500, .cg-dark .btn-primary { background: #E8622A !important; color: white !important; }
+      .cg-dark .bg-primary-100, .cg-dark .bg-primary-50 { background: rgba(232,168,56,0.1) !important; }
+      .cg-dark .text-primary-700, .cg-dark .text-primary-800 { color: #E8A838 !important; }
+      .cg-dark .border-b.border-gray-200 { border-color: rgba(232,168,56,0.08) !important; }
+      .cg-dark .bg-white\\/90, .cg-dark .bg-white\\/80 { background: rgba(15,28,53,0.9) !important; }
+      .cg-dark .backdrop-blur-lg { backdrop-filter: blur(16px) !important; }
+      .cg-dark .rounded-2xl.shadow-2xl { background: #0F1C35 !important; border: 1px solid rgba(232,168,56,0.12) !important; }
+      .cg-dark .btn-secondary, .cg-dark .btn.btn-secondary { background: transparent !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,240,232,0.5) !important; }
+      .cg-dark .hover\\:bg-gray-50:hover, .cg-dark .hover\\:bg-gray-100:hover { background: rgba(27,46,80,0.6) !important; }
+      .cg-dark .bg-gradient-to-r.from-green-500, .cg-dark .bg-gradient-to-r.from-blue-500 { background: #1B2E50 !important; }
+      .cg-dark .border-sky-100, .cg-dark .border-sky-200 { border-color: rgba(232,168,56,0.08) !important; }
+      .cg-dark .text-sky-400, .cg-dark .text-sky-600 { color: rgba(245,240,232,0.4) !important; }
+      .cg-dark .bg-emerald-600 { background: #E8622A !important; }
+      .cg-dark .hover\\:bg-emerald-500:hover { background: #D4621A !important; }
+    `}</style>
+    <div className={'cg-dark ' + themeStyles.container + ' ' + themeStyles.fontStyle} style={{ '--accent-color': accentColor } as React.CSSProperties}>
       {campground && (
         <Helmet>
           <title>{campground.name} — RVUnicorn Campground Reviews & RV Info</title>
@@ -2205,6 +2240,7 @@ export default function CampgroundDetailPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
 // Sun Mar  1 11:38:04 CST 2026
