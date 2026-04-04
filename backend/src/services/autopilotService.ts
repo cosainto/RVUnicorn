@@ -260,7 +260,7 @@ export async function checkEventMemoryTransitions() {
         data: { isTripMemory: true },
       });
 
-      // Notify attendees
+      // Notify attendees + follow suggestions
       for (const attendee of event.attendees) {
         await prisma.notification.create({
           data: {
@@ -270,6 +270,36 @@ export async function checkEventMemoryTransitions() {
             link: `/events-v2/${event.id}`,
           },
         }).catch(() => {});
+
+        // Follow suggestions — suggest other attendees they're not already friends with
+        const others = event.attendees.filter(a => a.userId !== attendee.userId).slice(0, 3);
+        if (others.length > 0) {
+          const existingFriends = await prisma.friendship.findMany({
+            where: {
+              status: 'ACCEPTED',
+              OR: [
+                { initiatorId: attendee.userId, receiverId: { in: others.map(o => o.userId) } },
+                { receiverId: attendee.userId, initiatorId: { in: others.map(o => o.userId) } },
+              ],
+            },
+            select: { initiatorId: true, receiverId: true },
+          }).catch(() => []);
+
+          const friendIds = new Set(existingFriends.map((f: any) => f.initiatorId === attendee.userId ? f.receiverId : f.initiatorId));
+          const newPeople = others.filter(o => !friendIds.has(o.userId));
+
+          if (newPeople.length > 0) {
+            const names = newPeople.map(p => p.user.firstName).join(', ');
+            await prisma.notification.create({
+              data: {
+                userId: attendee.userId,
+                type: 'FOLLOW_SUGGESTION',
+                content: `You camped with ${names} at ${event.title} — follow them to see their next trip!`,
+                link: `/profile/${newPeople[0].user.id}`,
+              },
+            }).catch(() => {});
+          }
+        }
       }
 
       console.log(`[Autopilot] Trip memory created for event ${event.id}`);

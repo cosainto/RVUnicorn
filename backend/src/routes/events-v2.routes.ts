@@ -825,4 +825,184 @@ router.get('/:id/mission', authenticateToken, async (req: any, res: Response) =>
   }
 });
 
+// ══════════════════════════════════════════════════════════════════
+// RIG-AWARE CHECKLIST — Hitch suggests items based on rig capabilities
+// ══════════════════════════════════════════════════════════════════
+
+router.get('/:id/rig-suggestions', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, title: true, startDate: true, endDate: true, locationName: true },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { rvType: true, rvMake: true, rvModel: true, rvFeatures: true, rvSolarWatts: true, rvGeneratorWatts: true, rvFreshWaterGal: true, rvSleeps: true },
+    });
+
+    // Get already claimed items for this event
+    const claimedItems = await prisma.supplyItem.findMany({
+      where: { eventId: req.params.id },
+      include: { claimedBy: { select: { id: true, firstName: true, lastName: true } } },
+    });
+
+    // Generate suggestions based on rig capabilities
+    const suggestions: { item: string; reason: string; category: string }[] = [];
+    const features = (user?.rvFeatures || []).map((f: string) => f.toLowerCase());
+
+    if (features.includes('grill') || features.includes('outdoor grill')) {
+      suggestions.push({ item: 'Grill & grilling supplies', reason: 'Your rig has a grill — perfect for campfire cookouts!', category: 'cooking' });
+    }
+    if (features.includes('oven') || features.includes('convection oven')) {
+      suggestions.push({ item: 'Baked goods or casserole', reason: 'You have an oven — bring something baked!', category: 'cooking' });
+    }
+    if ((user?.rvSolarWatts || 0) > 200 || (user?.rvGeneratorWatts || 0) > 2000) {
+      suggestions.push({ item: 'Blender or electric cooler', reason: 'Your power setup can handle small appliances', category: 'equipment' });
+    }
+    if ((user?.rvFreshWaterGal || 0) > 50) {
+      suggestions.push({ item: 'Extra water for group cooking', reason: 'Your fresh water tank is large enough to share', category: 'supplies' });
+    }
+    if ((user?.rvSleeps || 0) > 4) {
+      suggestions.push({ item: 'Extra seating or table', reason: 'Your rig sleeps many — you likely have extra chairs', category: 'equipment' });
+    }
+
+    // Always suggest basics
+    suggestions.push({ item: 'Firewood bundle', reason: 'Every campfire needs fuel', category: 'supplies' });
+    suggestions.push({ item: 'Drinks (cooler)', reason: 'Hydration is key', category: 'supplies' });
+    suggestions.push({ item: 'Snacks/appetizers', reason: 'Easy to share', category: 'food' });
+
+    res.json({ suggestions, claimedItems });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// Claim a supply item for an event (prevents duplicates)
+router.post('/:id/claim-item', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { title, category, quantity } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title required' });
+
+    // Check if already claimed by someone
+    const existing = await prisma.supplyItem.findFirst({
+      where: { eventId: req.params.id, title: { equals: title, mode: 'insensitive' }, claimedById: { not: null } },
+    });
+    if (existing) return res.status(409).json({ error: `Already claimed by someone else`, claimedBy: existing.claimedById });
+
+    const item = await prisma.supplyItem.upsert({
+      where: { id: 'find-by-title' }, // Will fall through to create
+      create: {
+        eventId: req.params.id,
+        title,
+        category: category || 'general',
+        quantity: quantity || 1,
+        createdById: req.userId,
+        claimedById: req.userId,
+        priority: 'NORMAL',
+      },
+      update: { claimedById: req.userId },
+    }).catch(async () => {
+      // Upsert fallback — just create
+      return prisma.supplyItem.create({
+        data: {
+          eventId: req.params.id,
+          title,
+          category: category || 'general',
+          quantity: quantity || 1,
+          createdById: req.userId,
+          claimedById: req.userId,
+          priority: 'NORMAL',
+        },
+      });
+    });
+
+    res.json({ item, message: `You claimed "${title}"!` });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed' });
+  }
+});
+
+// Unclaim a supply item
+router.delete('/:id/unclaim-item/:itemId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const item = await prisma.supplyItem.findUnique({ where: { id: req.params.itemId } });
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    if (item.claimedById !== req.userId) return res.status(403).json({ error: 'Not your claim' });
+
+    await prisma.supplyItem.update({
+      where: { id: req.params.itemId },
+      data: { claimedById: null },
+    });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// GEO-FENCE HERE_NOW — Auto check-in when user enters event radius
+// ══════════════════════════════════════════════════════════════════
+
+router.post('/:id/proximity-checkin', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+    if (!latitude || !longitude) return res.status(400).json({ error: 'Location required' });
+
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true, title: true, latitude: true, longitude: true,
+        geoFenceRadiusMiles: true, startDate: true, endDate: true, isLive: true,
+      },
+    });
+    if (!event || !event.latitude || !event.longitude) return res.json({ inRange: false });
+
+    // Check if event is active (within event window)
+    const now = new Date();
+    const eventStart = new Date(event.startDate);
+    const eventEnd = event.endDate ? new Date(event.endDate) : new Date(eventStart.getTime() + 24 * 60 * 60 * 1000);
+    const bufferMs = 2 * 60 * 60 * 1000; // 2 hour buffer before/after
+    if (now < new Date(eventStart.getTime() - bufferMs) || now > new Date(eventEnd.getTime() + bufferMs)) {
+      return res.json({ inRange: false, reason: 'Event not active' });
+    }
+
+    // Haversine distance
+    const R = 3959; // Earth radius in miles
+    const dLat = (latitude - event.latitude) * Math.PI / 180;
+    const dLon = (longitude - event.longitude) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(event.latitude * Math.PI / 180) * Math.cos(latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const radius = event.geoFenceRadiusMiles || 0.5;
+    const inRange = distance <= radius;
+
+    if (inRange) {
+      // Check if user is an attendee
+      const attendee = await prisma.eventAttendee.findUnique({
+        where: { eventId_userId: { eventId: event.id, userId: req.userId } },
+      });
+
+      if (attendee && attendee.arrivalStatus !== 'HERE_NOW') {
+        await prisma.eventAttendee.update({
+          where: { id: attendee.id },
+          data: { arrivalStatus: 'HERE_NOW', autoCheckedIn: true, presenceUpdatedAt: new Date() },
+        });
+        return res.json({
+          inRange: true,
+          autoCheckedIn: true,
+          message: `Welcome to ${event.title}! You're checked in.`,
+          distance: Math.round(distance * 100) / 100,
+        });
+      }
+    }
+
+    res.json({ inRange, distance: Math.round(distance * 100) / 100 });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 export default router;
