@@ -185,8 +185,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         {/* ══ 1. COVER PHOTO ══ */}
         <section className="relative">
           <div className="badge-container relative overflow-hidden" style={{ height: 'clamp(200px, 30vw, 300px)', background: 'radial-gradient(ellipse 80% 60% at 50% 100%, var(--campfire-glow), transparent 60%), linear-gradient(135deg, var(--navy), var(--navy-deep))' }}>
-            {profile.coverPhoto ? (
-              <DraggableBanner imageUrl={profile.coverPhoto} altText="Cover" position={profile.bannerPosition || '50% 50%'} canEdit={isOwnProfile}
+            {(profile.coverPhoto || rvShowcase?.photos?.[0]) ? (
+              <DraggableBanner imageUrl={profile.coverPhoto || rvShowcase.photos[0]} altText="Cover" position={profile.bannerPosition || '50% 50%'} canEdit={isOwnProfile && !!profile.coverPhoto}
                 onPositionChange={async (pos) => { try { await api.put('/profile', { bannerPosition: pos }); setProfile(p => p ? { ...p, bannerPosition: pos } : p); } catch {} }}
                 className="w-full h-full" style={{ animation: 'kenBurns 22s ease-in-out infinite' }} />
             ) : (
