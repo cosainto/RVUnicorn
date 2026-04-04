@@ -371,7 +371,6 @@ router.get('/user/:userId/active', async (req: any, res) => {
       include: {
         campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } },
         harvestHost: { select: { id: true, name: true, hostType: true, imageUrl: true } },
-        overnightSpot: { select: { id: true, name: true, category: true, city: true, state: true } },
       }
     });
     res.json(checkIn);
