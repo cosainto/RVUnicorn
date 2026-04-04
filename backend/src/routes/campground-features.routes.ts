@@ -833,4 +833,76 @@ router.delete('/:campgroundId/map', authenticateToken, async (req: Request, res:
 });
 
 
+// ══ HITCH ROUTE SUGGESTIONS — suggest campground stops near a destination ══
+router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { destLat, destLng, originLat, originLng, rvType, maxResults } = req.query;
+    if (!destLat || !destLng) return res.json({ stops: [] });
+
+    const lat = parseFloat(destLat as string);
+    const lng = parseFloat(destLng as string);
+    const oLat = originLat ? parseFloat(originLat as string) : null;
+    const oLng = originLng ? parseFloat(originLng as string) : null;
+    const limit = Math.min(parseInt(maxResults as string) || 5, 10);
+
+    // Find campgrounds near the destination (within ~50 miles)
+    const nearDest = await prisma.campground.findMany({
+      where: {
+        latitude: { gte: lat - 0.7, lte: lat + 0.7 },
+        longitude: { gte: lng - 0.7, lte: lng + 0.7 },
+      },
+      select: {
+        id: true, name: true, location: true, state: true, latitude: true, longitude: true,
+        imageUrl: true, customSlug: true, googleRating: true, amenities: true,
+        isBigRigFriendly: true, hasPullThrough: true, hasFullHookups: true, isPetFriendly: true,
+      },
+      take: 50,
+    });
+
+    // Calculate distance and sort
+    const withDistance = nearDest.map(cg => {
+      const dLat = ((cg.latitude || 0) - lat) * Math.PI / 180;
+      const dLng = ((cg.longitude || 0) - lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180) * Math.cos((cg.latitude||0)*Math.PI/180) * Math.sin(dLng/2)**2;
+      const miles = 3959 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return { ...cg, distanceMiles: Math.round(miles * 10) / 10 };
+    }).sort((a, b) => a.distanceMiles - b.distanceMiles);
+
+    // If we have origin, also find midpoint stops
+    let midpointStops: any[] = [];
+    if (oLat && oLng) {
+      const midLat = (oLat + lat) / 2;
+      const midLng = (oLng + lng) / 2;
+      const nearMid = await prisma.campground.findMany({
+        where: {
+          latitude: { gte: midLat - 0.5, lte: midLat + 0.5 },
+          longitude: { gte: midLng - 0.5, lte: midLng + 0.5 },
+        },
+        select: {
+          id: true, name: true, location: true, state: true, latitude: true, longitude: true,
+          imageUrl: true, customSlug: true, googleRating: true,
+          isBigRigFriendly: true, hasPullThrough: true, hasFullHookups: true,
+        },
+        take: 20,
+      });
+      midpointStops = nearMid.slice(0, 3).map(cg => ({ ...cg, suggestion: 'midpoint', label: 'Good halfway stop' }));
+    }
+
+    // Build Hitch-style suggestions
+    const suggestions = withDistance.slice(0, limit).map(cg => {
+      let hitchTip = '';
+      if (cg.googleRating && cg.googleRating >= 4.5) hitchTip = `Highly rated — ${cg.googleRating}/5 stars!`;
+      else if (cg.isBigRigFriendly) hitchTip = 'Big rig friendly — Diesel approves.';
+      else if (cg.isPetFriendly) hitchTip = 'Pet friendly — Luna recommends.';
+      else if (cg.hasFullHookups) hitchTip = 'Full hookups available.';
+      else hitchTip = `${cg.distanceMiles} miles from your destination.`;
+      return { ...cg, hitchTip, suggestion: 'nearby' };
+    });
+
+    res.json({ stops: [...midpointStops, ...suggestions] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed' });
+  }
+});
+
 export default router;

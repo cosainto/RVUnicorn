@@ -121,6 +121,58 @@ function RoadTripsEmbed() {
   );
 }
 
+function HitchStopSuggestions({ campgroundId, onAddStop }: { campgroundId: string; onAddStop: (cg: any) => void }) {
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!campgroundId) return;
+    setLoading(true);
+    api.get(`/campground-features/suggest-stops?destLat=0&destLng=0&maxResults=4`)
+      .then(() => {
+        // Fetch the campground coords first
+        api.get(`/campgrounds/${campgroundId}`).then(cgRes => {
+          const cg = cgRes.data;
+          if (cg?.latitude && cg?.longitude) {
+            api.get(`/campground-features/suggest-stops?destLat=${cg.latitude}&destLng=${cg.longitude}&maxResults=4`)
+              .then(r => setSuggestions(r.data.stops || []))
+              .catch(() => {});
+          }
+        }).catch(() => {});
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [campgroundId]);
+
+  if (loading || suggestions.length === 0) return null;
+
+  return (
+    <div className="rounded-xl p-4 mt-3" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-7 h-7 rounded-full object-cover" />
+        <div>
+          <p className="text-[12px] font-bold" style={{ color: '#E8A838' }}>Hitch's Route Suggestions</p>
+          <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Campgrounds near your destination</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {suggestions.slice(0, 4).map((s: any) => (
+          <div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              {s.imageUrl ? <img src={s.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" /> : <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(232,168,56,0.1)' }}><span className="text-sm">{'\u{1F3D5}'}</span></div>}
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium truncate" style={{ color: '#F5F0E8' }}>{s.name}</p>
+                <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>{s.hitchTip || `${s.location}, ${s.state}`}</p>
+              </div>
+            </div>
+            <button onClick={() => onAddStop(s)} className="text-[10px] font-semibold px-3 py-1.5 rounded-full flex-shrink-0 ml-2" style={{ background: '#E8622A', color: 'white' }}>+ Add Stop</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function EventsPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
@@ -969,6 +1021,17 @@ export default function EventsPage() {
                     setFormData({ ...formData, campgroundId: null, overnightSpotId: null, destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER', location });
                   }}
                 />
+              )}
+
+              {/* Hitch Route Suggestions */}
+              {formData.campgroundId && !formData.isMultiStop && (
+                <HitchStopSuggestions campgroundId={formData.campgroundId} onAddStop={(cg: any) => {
+                  setFormData(prev => ({ ...prev, isMultiStop: true }));
+                  setMultiStops([
+                    { campgroundId: formData.campgroundId!, campgroundName: formData.location, campgroundLocation: '', campgroundState: '', nights: 1, notes: '' },
+                    { campgroundId: cg.id, campgroundName: cg.name, campgroundLocation: cg.location || '', campgroundState: cg.state || '', nights: 1, notes: cg.hitchTip || '' },
+                  ]);
+                }} />
               )}
 
               {/* Multi-stop builder */}
