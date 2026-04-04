@@ -518,7 +518,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           )}
 
           {/* ═══ SECTION 3: TRAVEL MAP (hero position) ═══ */}
-          <div ref={mapSection.ref} className={`glass-card p-5 fade-up ${mapSection.inView ? 'visible' : ''}`}>
+          <div className="glass-card p-5">
             <p className="font-playfair text-base italic text-center mb-3" style={{ color: 'var(--gold)' }}>
               {favoriteCampgrounds.length} campgrounds · {albums.length} albums · on the road
             </p>
@@ -530,7 +530,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           </div>
 
           {/* ═══ SECTION 4: RIG SHOWROOM ═══ */}
-          <div ref={rigSection.ref} className={`glass-card p-5 fade-up ${rigSection.inView ? 'visible' : ''}`}>
+          <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold tracking-[0.15em] uppercase" style={{ color: 'var(--gold)' }}>THEIR RIG</p>
               {isOwnProfile && <button onClick={() => setShowRVShowcaseEdit(true)} className="text-xs font-medium hover:underline" style={{ color: 'var(--gold-light)' }}>Edit</button>}
@@ -583,7 +583,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           )}
 
           {/* ═══ SECTION 6: TABBED CONTENT ═══ */}
-          <div ref={contentSection.ref} className={`fade-up ${contentSection.inView ? 'visible' : ''}`}>
+          <div>
             {/* Tab pills */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {TABS.map(tab => (
