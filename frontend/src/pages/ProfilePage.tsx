@@ -523,8 +523,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               <h2 className="font-playfair text-lg font-bold flex items-center gap-2"><Map className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Where They've Been</h2>
               <Link to={`/map/${username}`} className="text-xs font-medium" style={{ color: 'var(--gold-light)' }}>Full Map →</Link>
             </div>
-            <div style={{ maxHeight: '360px', overflow: 'hidden', borderRadius: '12px', background: 'var(--navy)' }}>
-              {profile && <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} profilePicture={profile.profilePicture} />}
+            <div style={{ borderRadius: '12px', background: 'var(--navy)' }}>
+              {profile && <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} profilePicture={profile.profilePicture} compact={true} />}
             </div>
           </div>
 
