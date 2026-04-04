@@ -2106,15 +2106,30 @@ export default function CampgroundDetailPage() {
 
       {/* Claim Modal */}
       {showClaimModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-bold">Claim This Campground</h3><button onClick={() => setShowClaimModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button></div>
-            <p className="text-gray-600 mb-4">Submit a claim request to manage this campground's business page. Your request will be reviewed by our team.</p>
-            <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Business Email *</label><input type="email" placeholder="your@business.com" value={claimData.businessEmail} onChange={e => setClaimData({ ...claimData, businessEmail: e.target.value })} className="input w-full" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label><input type="tel" placeholder="(555) 123-4567" value={claimData.businessPhone} onChange={e => setClaimData({ ...claimData, businessPhone: e.target.value })} className="input w-full" /></div>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowClaimModal(false)}>
+          <div className="rounded-2xl max-w-md w-full overflow-hidden" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.18)' }} onClick={e => e.stopPropagation()}>
+            {/* Hitch header */}
+            <div className="p-5 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(232,168,56,0.1)' }}>
+              <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-10 h-10 rounded-full object-cover" />
+              <div>
+                <h3 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>Claim This Campground</h3>
+                <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Hitch will help verify your ownership</p>
+              </div>
+              <button onClick={() => setShowClaimModal(false)} className="ml-auto hover:opacity-70"><X className="w-5 h-5" style={{ color: 'rgba(245,240,232,0.4)' }} /></button>
             </div>
-            <div className="flex gap-3 mt-6"><button onClick={() => setShowClaimModal(false)} className="btn btn-secondary flex-1">Cancel</button><button onClick={handleClaimSubmit} disabled={!claimData.businessEmail || claimSubmitting} className="btn btn-primary flex-1 disabled:opacity-50">{claimSubmitting ? "Submitting..." : "Submit Claim"}</button></div>
+            <div className="p-5">
+              <div className="p-3 rounded-xl mb-4" style={{ background: '#1B2E50', borderLeft: '3px solid #E8A838' }}>
+                <p className="text-[12px]" style={{ color: 'rgba(245,240,232,0.7)' }}>Once verified, you'll be able to manage events, post announcements, create custom badges, and respond to reviews. Over 16,000 RVers use RVUnicorn to discover campgrounds!</p>
+              </div>
+              <div className="space-y-3">
+                <div><label className="text-[11px] font-medium mb-1 block" style={{ color: 'rgba(245,240,232,0.4)' }}>Business Email *</label><input type="email" placeholder="your@business.com" value={claimData.businessEmail} onChange={e => setClaimData({ ...claimData, businessEmail: e.target.value })} className="w-full px-3 py-2 rounded-lg text-[13px]" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)', color: '#F5F0E8' }} /></div>
+                <div><label className="text-[11px] font-medium mb-1 block" style={{ color: 'rgba(245,240,232,0.4)' }}>Business Phone</label><input type="tel" placeholder="(555) 123-4567" value={claimData.businessPhone} onChange={e => setClaimData({ ...claimData, businessPhone: e.target.value })} className="w-full px-3 py-2 rounded-lg text-[13px]" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)', color: '#F5F0E8' }} /></div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button onClick={() => setShowClaimModal(false)} className="flex-1 py-2.5 rounded-xl text-[13px] font-medium" style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(245,240,232,0.5)' }}>Cancel</button>
+                <button onClick={handleClaimSubmit} disabled={!claimData.businessEmail || claimSubmitting} className="flex-1 py-2.5 rounded-xl text-[13px] font-bold disabled:opacity-40 transition hover:brightness-110" style={{ background: '#E8622A', color: 'white' }}>{claimSubmitting ? "Submitting..." : "Submit Claim"}</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
