@@ -172,6 +172,26 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         @keyframes kenBurns{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
         @keyframes campfirePulse{0%,100%{opacity:0.5}50%{opacity:0.75}}
         @keyframes tabFade{from{opacity:0}to{opacity:1}}.tab-enter{animation:tabFade 150ms ease}
+
+        /* Dark theme overrides for SocialFeed */
+        .dark-feed .bg-white { background: rgba(15,26,46,0.95) !important; color: rgba(255,255,255,0.85) !important; }
+        .dark-feed .bg-gray-50, .dark-feed .bg-gray-100 { background: rgba(255,255,255,0.04) !important; }
+        .dark-feed .bg-gray-200 { background: rgba(255,255,255,0.08) !important; }
+        .dark-feed .bg-gray-300 { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.7) !important; }
+        .dark-feed .border-gray-100, .dark-feed .border-gray-200 { border-color: rgba(255,255,255,0.06) !important; }
+        .dark-feed .text-gray-900 { color: rgba(255,255,255,0.9) !important; }
+        .dark-feed .text-gray-800, .dark-feed .text-gray-700 { color: rgba(255,255,255,0.7) !important; }
+        .dark-feed .text-gray-600 { color: rgba(255,255,255,0.5) !important; }
+        .dark-feed .text-gray-500 { color: rgba(255,255,255,0.4) !important; }
+        .dark-feed .text-gray-400 { color: rgba(255,255,255,0.3) !important; }
+        .dark-feed .text-gray-300 { color: rgba(255,255,255,0.2) !important; }
+        .dark-feed .hover\\:bg-gray-50:hover, .dark-feed .hover\\:bg-gray-100:hover { background: rgba(255,255,255,0.06) !important; }
+        .dark-feed .hover\\:bg-gray-400:hover { background: rgba(255,255,255,0.12) !important; }
+        .dark-feed .border-l-4 { border-color: rgba(201,168,76,0.3) !important; }
+        .dark-feed .shadow-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.4) !important; }
+        .dark-feed .shadow-md, .dark-feed .shadow-sm { box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important; }
+        .dark-feed input, .dark-feed textarea { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.1) !important; color: white !important; }
+        .dark-feed .rounded-lg { border-color: rgba(255,255,255,0.06); }
       `}</style>
 
       <div className="min-h-screen font-dm" style={{ background: 'var(--navy-deep)', color: 'white' }}>
@@ -403,7 +423,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               {TABS.map(t => <button key={t.id} onClick={() => setActiveContentTab(t.id)} className={`tab-pill ${activeContentTab === t.id ? 'active' : ''}`}>{t.label}</button>)}
             </div>
             <div className="tab-enter" key={activeContentTab}>
-              {activeContentTab === 'activity' && <SocialFeed username={username || ''} isOwnProfile={isOwnProfile} />}
+              {activeContentTab === 'activity' && <div className="dark-feed"><SocialFeed username={username || ''} isOwnProfile={isOwnProfile} /></div>}
 
               {activeContentTab === 'photos' && (
                 <div className="flat-card p-5">
@@ -414,7 +434,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               )}
 
               {activeContentTab === 'community' && (
-                <div className="space-y-4">
+                <div className="space-y-4 dark-feed">
                   <div className="flat-card p-5"><Top8Friends username={username} /></div>
                   <div className="flat-card p-5">
                     <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" style={{ color: 'var(--gold)' }} />Groups</h3><Link to="/groups" className="text-[11px]" style={{ color: 'var(--gold-light)' }}>All</Link></div>
