@@ -57,7 +57,21 @@ router.get('/:username', optionalAuth, async (req, res) => {
       return res.status(403).json({ error: 'This showcase is private' });
     }
 
-    res.json(showcase);
+    // Get household co-pilots (people who share this rig)
+    let coPilots: any[] = [];
+    const ownerWithHousehold = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { householdId: true },
+    });
+    if (ownerWithHousehold?.householdId) {
+      const members = await prisma.user.findMany({
+        where: { householdId: ownerWithHousehold.householdId, id: { not: user.id } },
+        select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+      });
+      coPilots = members;
+    }
+
+    res.json({ ...showcase, coPilots });
   } catch (error) {
     console.error('Get RV showcase error:', error);
     res.status(500).json({ error: 'Failed to get RV showcase' });

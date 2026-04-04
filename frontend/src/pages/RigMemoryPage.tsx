@@ -179,6 +179,27 @@ export default function RigMemoryPage() {
                   <div className="text-center"><span className="font-playfair text-xl font-bold block">{new Set(trips.map(t => t.location).filter(Boolean)).size}</span><span className="text-[10px] uppercase" style={{ color: 'var(--gold)', letterSpacing: '0.08em' }}>Places</span></div>
                 </div>
 
+                {/* Co-Pilots */}
+                {(rig as any)?.coPilots?.length > 0 && (
+                  <div className="mt-5 pt-4" style={{ borderTop: '1px solid var(--glass-border)' }}>
+                    <p className="text-[10px] font-semibold uppercase mb-3" style={{ color: 'rgba(245,240,232,0.4)', letterSpacing: '0.1em' }}>{'\u{1F699}'} Co-Pilots</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(rig as any).coPilots.map((cp: any) => (
+                        <Link key={cp.id} to={`/profile/${cp.username}`} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:brightness-110 transition" style={{ background: '#1B2E50' }}>
+                          {cp.profilePicture ? (
+                            <img src={cp.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: '#E8A838' }}>
+                              {cp.firstName?.[0]}{cp.lastName?.[0]}
+                            </div>
+                          )}
+                          <span className="text-[12px] font-medium" style={{ color: '#F5F0E8' }}>{cp.firstName} {cp.lastName}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Mods toggle */}
                 <button onClick={() => setShowMods(!showMods)} className="flex items-center gap-1.5 mt-4 text-[12px] font-medium" style={{ color: 'var(--gold)' }}>
                   {'\u{1F527}'} View Mods & Upgrades <ChevronDown className="w-3.5 h-3.5" style={{ transform: showMods ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }} />
