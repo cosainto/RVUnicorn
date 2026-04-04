@@ -517,17 +517,32 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             </div>
           )}
 
-          {/* ═══ SECTION 3: TRAVEL MAP (hero position) ═══ */}
-          <div className="glass-card p-5">
-            <p className="font-playfair text-base italic text-center mb-3" style={{ color: 'var(--gold)' }}>
-              {favoriteCampgrounds.length} campgrounds · {albums.length} albums · on the road
-            </p>
+          {/* ═══ SECTION 3: TRAVEL MAP ═══ */}
+          <div className="glass-card p-5 overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-playfair text-lg font-bold flex items-center gap-2"><Map className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Where They've Been</h2>
               <Link to={`/map/${username}`} className="text-xs font-medium" style={{ color: 'var(--gold-light)' }}>Full Map →</Link>
             </div>
-            {profile && <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} profilePicture={profile.profilePicture} />}
+            <div style={{ maxHeight: '360px', overflow: 'hidden', borderRadius: '12px', background: 'var(--navy)' }}>
+              {profile && <TravelMap userId={profile.id} isOwnProfile={isOwnProfile} profilePicture={profile.profilePicture} />}
+            </div>
           </div>
+
+          {/* ═══ FOLLOWED CAMPSITES (always visible) ═══ */}
+          {favoriteCampgrounds.length > 0 && (
+            <div className="glass-card p-5">
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Star className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Followed Campsites</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {favoriteCampgrounds.slice(0, 8).map(cg => (
+                  <Link key={cg.id} to={`/campgrounds/${cg.id}`} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/5 transition">
+                    {(cg.imageUrl || cg.photos?.[0]?.imageUrl) ? <img src={cg.imageUrl || cg.photos[0].imageUrl} alt={cg.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.1)' }}><MapPin className="w-3.5 h-3.5" style={{ color: '#10B981' }} /></div>}
+                    <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate">{cg.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{cg.location}, {cg.state}</p></div>
+                  </Link>
+                ))}
+              </div>
+              {favoriteCampgrounds.length > 8 && <Link to="/campgrounds" className="text-xs block text-center mt-2" style={{ color: 'var(--gold-light)' }}>View all {favoriteCampgrounds.length} →</Link>}
+            </div>
+          )}
 
           {/* ═══ SECTION 4: RIG SHOWROOM ═══ */}
           <div className="glass-card p-5">
