@@ -13,8 +13,25 @@ app.use('/api', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true 
 app.use('/uploads', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
 
 // Proxy SEO routes to the backend
-app.use('/sitemap.xml', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
-app.use('/robots.txt', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
+app.get('/sitemap.xml', (req, res) => {
+  const url = `${BACKEND_URL}/sitemap.xml`;
+  import('http').then(http => {
+    http.get(url, (proxyRes) => {
+      res.set('Content-Type', proxyRes.headers['content-type'] || 'application/xml');
+      res.set('Cache-Control', 'public, max-age=86400');
+      proxyRes.pipe(res);
+    }).on('error', () => res.status(502).send('Backend unavailable'));
+  });
+});
+app.get('/robots.txt', (req, res) => {
+  const url = `${BACKEND_URL}/robots.txt`;
+  import('http').then(http => {
+    http.get(url, (proxyRes) => {
+      res.set('Content-Type', 'text/plain');
+      proxyRes.pipe(res);
+    }).on('error', () => res.status(502).send('Backend unavailable'));
+  });
+});
 
 // Proxy SSR campground and community pages to the backend for crawlers only
 const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
