@@ -41,13 +41,32 @@ export default function EventDetailPageV2() {
 
   useEffect(() => { if (id) loadEvent(); }, [id, user]);
 
+  const [waitlistInfo, setWaitlistInfo] = useState<{ position: number; message: string } | null>(null);
+
   const handleJoin = async (mode: string) => {
     setJoining(true);
     try {
-      await api.post(`/events-v2/${id}/join`, { participationMode: mode });
+      const { data } = await api.post(`/events-v2/${id}/join`, { participationMode: mode });
+      if (data.waitlist) {
+        setWaitlistInfo({ position: data.position, message: data.message });
+      }
+      loadEvent();
+    } catch (e: any) {
+      if (e.response?.data?.error === 'Event is full') {
+        setWaitlistInfo({ position: 0, message: 'Event is full — try joining to get on the waitlist.' });
+      }
+    }
+    finally { setJoining(false); }
+  };
+
+  const handleLeave = async () => {
+    if (!confirm('Leave this event?')) return;
+    try {
+      await api.delete(`/events-v2/${id}/leave`);
+      setMyAttendee(null);
+      setWaitlistInfo(null);
       loadEvent();
     } catch {}
-    finally { setJoining(false); }
   };
 
   const updateMode = async (mode: string) => {
@@ -143,10 +162,45 @@ export default function EventDetailPageV2() {
           </div>
         )}
 
+        {/* Waitlist banner */}
+        {waitlistInfo && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+            <p className="text-sm font-semibold text-blue-800">{'\u{1F3D5}'} {waitlistInfo.message}</p>
+          </div>
+        )}
+
+        {/* Plan B banner */}
+        {event?.planBActivated && (
+          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-4">
+            <p className="text-sm font-bold text-amber-800">{'\u{26A0}'} Plan B Activated</p>
+            {event.planBDescription && <p className="text-sm text-amber-700 mt-1">{event.planBDescription}</p>}
+            {event.planBLocation && <p className="text-xs text-amber-600 mt-1">{'\u{1F4CD}'} {event.planBLocation}</p>}
+          </div>
+        )}
+
+        {/* Capacity indicator */}
+        {event?.maxAttendees && (
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{
+                width: `${Math.min(100, ((event.attendees?.filter((a: any) => a.status === 'ATTENDING' || a.status === 'HERE_NOW').length || 0) / event.maxAttendees) * 100)}%`,
+                background: (event.attendees?.filter((a: any) => a.status === 'ATTENDING' || a.status === 'HERE_NOW').length || 0) >= event.maxAttendees ? '#ef4444' : '#C9A84C',
+              }} />
+            </div>
+            <span className="text-xs text-gray-500">
+              {event.attendees?.filter((a: any) => a.status === 'ATTENDING' || a.status === 'HERE_NOW').length || 0}/{event.maxAttendees} spots
+            </span>
+          </div>
+        )}
+
         {/* Join / Mode controls */}
         {!myAttendee ? (
           <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-            <p className="text-sm font-semibold text-gray-900 mb-2">How do you want to participate?</p>
+            <p className="text-sm font-semibold text-gray-900 mb-2">
+              {event?.maxAttendees && (event.attendees?.filter((a: any) => a.status === 'ATTENDING' || a.status === 'HERE_NOW').length || 0) >= event.maxAttendees
+                ? 'Event is full — join the waitlist'
+                : 'How do you want to participate?'}
+            </p>
             <div className="flex gap-2">
               {Object.entries(MODE_LABELS).map(([key, { emoji, label, color }]) => (
                 <button key={key} onClick={() => handleJoin(key)} disabled={joining}
@@ -155,6 +209,14 @@ export default function EventDetailPageV2() {
                 </button>
               ))}
             </div>
+          </div>
+        ) : myAttendee.status === 'WAITLIST' ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-blue-800">On the Waitlist</p>
+              <p className="text-xs text-blue-600 mt-0.5">We'll notify you when a spot opens</p>
+            </div>
+            <button onClick={handleLeave} className="text-xs text-red-500 hover:text-red-700">Leave Waitlist</button>
           </div>
         ) : (
           <div className="flex items-center justify-between mb-4">
@@ -166,15 +228,18 @@ export default function EventDetailPageV2() {
                 </button>
               ))}
             </div>
-            {view === 'campground' && (
-              <div className="flex gap-1">
-                {['OPEN', 'BUSY', 'DND'].map(b => (
-                  <button key={b} onClick={() => updateBattery(b)}
-                    className={`w-6 h-6 rounded-full border-2 transition ${myAttendee.socialBattery === b ? 'border-gray-900 scale-110' : 'border-gray-200'}`}
-                    style={{ backgroundColor: BATTERY_COLORS[b] }} title={b} />
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {view === 'campground' && (
+                <div className="flex gap-1">
+                  {['OPEN', 'BUSY', 'DND'].map(b => (
+                    <button key={b} onClick={() => updateBattery(b)}
+                      className={`w-6 h-6 rounded-full border-2 transition ${myAttendee.socialBattery === b ? 'border-gray-900 scale-110' : 'border-gray-200'}`}
+                      style={{ backgroundColor: BATTERY_COLORS[b] }} title={b} />
+                  ))}
+                </div>
+              )}
+              <button onClick={handleLeave} className="text-xs text-gray-400 hover:text-red-500 transition">Leave</button>
+            </div>
           </div>
         )}
 

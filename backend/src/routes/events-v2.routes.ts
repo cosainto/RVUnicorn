@@ -155,15 +155,189 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
 router.post('/:id/join', authenticateToken, async (req: any, res: Response) => {
   try {
     const { participationMode, siteNumber } = req.body;
-    const event = await prisma.event.findUnique({ where: { id: req.params.id }, select: { maxAttendees: true, _count: { select: { attendees: true } } } });
-    if (event?.maxAttendees && event._count.attendees >= event.maxAttendees) return res.status(400).json({ error: 'Event is full' });
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: {
+        maxAttendees: true,
+        title: true,
+        _count: { select: { attendees: { where: { status: { in: ['ATTENDING', 'HERE_NOW'] } } } } },
+      },
+    });
+
+    // Check if already on waitlist or attending
+    const existing = await prisma.eventAttendee.findUnique({
+      where: { eventId_userId: { eventId: req.params.id, userId: req.userId } },
+    });
+
+    const isFull = event?.maxAttendees && event._count.attendees >= event.maxAttendees;
+
+    if (isFull && !existing) {
+      // Add to waitlist
+      const waitlistCount = await prisma.eventAttendee.count({
+        where: { eventId: req.params.id, status: 'WAITLIST' },
+      });
+      const attendee = await prisma.eventAttendee.create({
+        data: {
+          eventId: req.params.id,
+          userId: req.userId,
+          status: 'WAITLIST',
+          participationMode: participationMode || 'FULL',
+          siteNumber,
+        },
+      });
+      return res.json({ attendee, waitlist: true, position: waitlistCount + 1, message: `You're #${waitlistCount + 1} on the waitlist — we'll notify you if a spot opens!` });
+    }
 
     const attendee = await prisma.eventAttendee.upsert({
       where: { eventId_userId: { eventId: req.params.id, userId: req.userId } },
       create: { eventId: req.params.id, userId: req.userId, status: 'ATTENDING', participationMode: participationMode || 'FULL', siteNumber },
       update: { status: 'ATTENDING', participationMode: participationMode || undefined },
     });
-    res.json({ attendee });
+    res.json({ attendee, waitlist: false });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed' });
+  }
+});
+
+// ── Leave Event ────────────────────────────────────────────────
+router.delete('/:id/leave', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.userId;
+
+    const attendee = await prisma.eventAttendee.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (!attendee) return res.status(404).json({ error: 'Not attending this event' });
+
+    await prisma.eventAttendee.delete({
+      where: { eventId_userId: { eventId, userId } },
+    });
+
+    // Auto-promote next person from waitlist if spot opened
+    if (attendee.status === 'ATTENDING' || attendee.status === 'HERE_NOW') {
+      const nextWaitlisted = await prisma.eventAttendee.findFirst({
+        where: { eventId, status: 'WAITLIST' },
+        orderBy: { createdAt: 'asc' },
+        include: { user: { select: { id: true, firstName: true } }, event: { select: { title: true } } },
+      });
+
+      if (nextWaitlisted) {
+        await prisma.eventAttendee.update({
+          where: { id: nextWaitlisted.id },
+          data: { status: 'ATTENDING' },
+        });
+
+        // Notify the promoted user
+        await prisma.notification.create({
+          data: {
+            userId: nextWaitlisted.userId,
+            type: 'WAITLIST_PROMOTED',
+            content: `A spot opened up for ${nextWaitlisted.event.title}! You're in! 🎉`,
+            link: `/trips/${eventId}`,
+          },
+        });
+      }
+    }
+
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed' });
+  }
+});
+
+// ── Waitlist Position ──────────────────────────────────────────
+router.get('/:id/waitlist-position', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const waitlisted = await prisma.eventAttendee.findMany({
+      where: { eventId: req.params.id, status: 'WAITLIST' },
+      orderBy: { createdAt: 'asc' },
+      select: { userId: true },
+    });
+    const position = waitlisted.findIndex(w => w.userId === req.userId) + 1;
+    res.json({ position: position > 0 ? position : null, total: waitlisted.length });
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Weather Contingency ────────────────────────────────────────
+router.post('/:id/weather-check', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, organizerId: true, title: true, startDate: true, latitude: true, longitude: true, planBActivated: true },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.organizerId !== req.userId) return res.status(403).json({ error: 'Only organizer can check weather' });
+    if (!event.latitude || !event.longitude) return res.json({ forecast: null, warning: null });
+
+    // Fetch NWS forecast
+    try {
+      const pointRes = await fetch(`https://api.weather.gov/points/${event.latitude},${event.longitude}`, { headers: { 'User-Agent': 'RVUnicorn/1.0' } });
+      if (!pointRes.ok) return res.json({ forecast: null, warning: 'Could not fetch weather data' });
+      const pointData = await pointRes.json();
+      const forecastUrl = pointData.properties?.forecast;
+      if (!forecastUrl) return res.json({ forecast: null, warning: null });
+
+      const forecastRes = await fetch(forecastUrl, { headers: { 'User-Agent': 'RVUnicorn/1.0' } });
+      const forecastData = await forecastRes.json();
+      const periods = forecastData.properties?.periods || [];
+
+      // Check for rain/severe weather near event date
+      const eventDate = new Date(event.startDate);
+      const warnings: string[] = [];
+      for (const period of periods.slice(0, 10)) {
+        const forecast = (period.detailedForecast || '').toLowerCase();
+        if (forecast.includes('thunderstorm') || forecast.includes('severe') || forecast.includes('tornado') || forecast.includes('heavy rain') || forecast.includes('flood')) {
+          warnings.push(`${period.name}: ${period.shortForecast}`);
+        }
+      }
+
+      res.json({
+        forecast: periods.slice(0, 6).map((p: any) => ({ name: p.name, temp: p.temperature, unit: p.temperatureUnit, short: p.shortForecast, icon: p.icon })),
+        warnings: warnings.length > 0 ? warnings : null,
+        suggestion: warnings.length > 0 ? `Weather concerns detected for your event. Consider adding a Plan B location.` : null,
+      });
+    } catch {
+      res.json({ forecast: null, warning: 'Weather service unavailable' });
+    }
+  } catch {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ── Activate Plan B ────────────────────────────────────────────
+router.post('/:id/activate-plan-b', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { planBDescription, planBLocation } = req.body;
+    const event = await prisma.event.findUnique({ where: { id: req.params.id }, select: { organizerId: true, title: true } });
+    if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    await prisma.event.update({
+      where: { id: req.params.id },
+      data: { planBActivated: true, planBDescription, planBLocation },
+    });
+
+    // Notify all attending users
+    const attendees = await prisma.eventAttendee.findMany({
+      where: { eventId: req.params.id, status: { in: ['ATTENDING', 'HERE_NOW'] } },
+      select: { userId: true },
+    });
+
+    if (attendees.length > 0) {
+      await prisma.notification.createMany({
+        data: attendees.map(a => ({
+          userId: a.userId,
+          type: 'EVENT_PLAN_B',
+          content: `Plan B activated for ${event.title}! ${planBDescription || 'Check the event for updated details.'}`,
+          link: `/trips/${req.params.id}`,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Failed' });
   }
