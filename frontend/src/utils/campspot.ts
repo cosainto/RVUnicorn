@@ -13,7 +13,7 @@
 
 // Your AWIN Publisher ID (get this after signing up)
 // Leave empty for direct links without affiliate tracking
-export const AWIN_PUBLISHER_ID = 'YOUR_ID_HERE'; // AWIN Publisher ID
+export const AWIN_PUBLISHER_ID = '2799516'; // AWIN Publisher ID
 
 // Campspot advertiser ID on AWIN
 const CAMPSPOT_ADVERTISER_ID = '22326';
