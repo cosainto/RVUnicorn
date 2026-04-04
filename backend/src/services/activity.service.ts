@@ -116,8 +116,52 @@ export const logTripJoined = (userId: string, eventId: string, title: string) =>
 export const logFriendAdded = (userId: string, friendId: string, friendName: string) =>
   createActivity({ userId, type: 'FRIEND_ADDED', targetUserId: friendId, title: friendName });
 
-export const logCheckIn = (userId: string, campgroundId: string, campgroundName: string) =>
-  createActivity({ userId, type: 'CHECK_IN', campgroundId, title: campgroundName });
+export const logCheckIn = async (userId: string, campgroundId: string, campgroundName: string) => {
+  // Create the activity first
+  const activity = await createActivity({ userId, type: 'CHECK_IN', campgroundId, title: campgroundName });
+
+  // Generate AI blurb in the background (don't block the check-in response)
+  if (activity?.isPublic) {
+    generateCheckinBlurb(activity.id, campgroundId, campgroundName).catch(err =>
+      console.error('Failed to generate check-in blurb:', err)
+    );
+  }
+
+  return activity;
+};
+
+async function generateCheckinBlurb(activityId: string, campgroundId: string, campgroundName: string) {
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic();
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true, location: true, state: true, city: true, amenities: true, description: true },
+    });
+
+    if (!campground) return;
+
+    const location = [campground.city || campground.location, campground.state].filter(Boolean).join(', ');
+    const amenities = (campground.amenities || []).slice(0, 5).join(', ');
+
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 120,
+      messages: [{
+        role: 'user',
+        content: `You are a friendly RV travel assistant. Write 2-3 warm, conversational sentences about ${campground.name} in ${location}. ${amenities ? `Notable amenities: ${amenities}.` : ''} ${campground.description ? `About: ${campground.description.slice(0, 200)}` : ''} Keep it upbeat, helpful for RV travelers, and under 60 words. No hashtags.`,
+      }],
+    });
+
+    const blurb = (response.content[0] as any)?.text;
+    if (blurb) {
+      await prisma.activity.update({ where: { id: activityId }, data: { content: blurb } });
+    }
+  } catch (err) {
+    console.error('AI blurb generation failed:', err);
+  }
+}
 
 export const logReview = (userId: string, campgroundId: string, campgroundName: string, rating: number) =>
   createActivity({ userId, type: 'CAMPGROUND_REVIEW', campgroundId, title: campgroundName, content: String(rating) + ' stars' });

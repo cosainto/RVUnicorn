@@ -1215,7 +1215,36 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           )}
         </div>
 
-        {item.content && (!item.activityLabel || item.type === 'CAMPGROUND_ANNOUNCEMENT') && (
+        {/* Rich CHECK_IN card */}
+        {(item.type === 'CHECKIN' || item.activityType === 'CHECK_IN') && item.campground && (
+          <div className="mb-3 flex items-start gap-3 p-3 rounded-xl" style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.12)' }}>
+            {item.campground.imageUrl ? (
+              <img src={item.campground.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(201,168,76,0.1)' }}>
+                <MapPin className="w-6 h-6" style={{ color: '#C9A84C' }} />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span style={{ color: '#C9A84C', fontSize: '14px' }}>{'\u{1F3D5}'}</span>
+                <Link to={`/campgrounds/${item.campground.id}`} className="font-semibold text-sm hover:underline" style={{ color: 'inherit' }}>
+                  {item.campground.name}
+                </Link>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(201,168,76,0.12)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.2)' }}>checked in</span>
+              </div>
+              {(item.campground.location || item.campground.state) && (
+                <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.campground.location}{item.campground.state && `, ${item.campground.state}`}</p>
+              )}
+              {item.content && <p className="text-[12px] mt-2 italic leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.content}</p>}
+              {item.targetLink && item.targetLink.includes('/trips/') && (
+                <Link to={item.targetLink} className="text-[11px] font-medium mt-1.5 inline-block" style={{ color: '#E8622A' }}>View Trip →</Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {item.content && (!item.activityLabel || item.type === 'CAMPGROUND_ANNOUNCEMENT') && !(item.type === 'CHECKIN' || item.activityType === 'CHECK_IN') && (
           <div className="mb-3">
             <p className="text-gray-900 whitespace-pre-wrap"><RenderMentions content={item.content} /></p>
           </div>

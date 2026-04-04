@@ -1156,7 +1156,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
             select: { id: true, title: true }
           },
           campground: {
-            select: { id: true, name: true, location: true, state: true }
+            select: { id: true, name: true, location: true, state: true, city: true, imageUrl: true, customSlug: true }
           },
           targetUser: {
             select: { id: true, firstName: true, lastName: true, username: true }
