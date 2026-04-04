@@ -21,6 +21,7 @@ interface VisitedCampground {
 
 interface Props {
   userId: string;
+  username?: string;
   trips: Trip[];
   visitedCampgrounds: VisitedCampground[];
   plannedCount: number;
@@ -30,7 +31,7 @@ interface Props {
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DOT_COLORS: Record<string, string> = { camping: '#E8A838', driving: '#D4621A', planned: '#4A90D9' };
 
-export default function CalendarCampgroundCard({ trips, visitedCampgrounds, visitedCount, plannedCount }: Props) {
+export default function CalendarCampgroundCard({ trips, visitedCampgrounds, visitedCount, plannedCount, username }: Props) {
   const navigate = useNavigate();
   const now = new Date();
   const [month] = useState(now.getMonth());
@@ -86,13 +87,22 @@ export default function CalendarCampgroundCard({ trips, visitedCampgrounds, visi
       {/* RIGHT — Campgrounds */}
       <div style={{ background: 'rgba(15, 28, 54, 0.75)', padding: '20px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-          {[{ label: 'Visited', count: visitedCount, emoji: '\u{1F4CD}' }, { label: 'Planned', count: plannedCount, emoji: '\u{1F5D3}' }].map(({ label, count, emoji }) => (
-            <div key={label} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', marginBottom: '2px' }}>{emoji}</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: '#E8A838', lineHeight: 1 }}>{count}</div>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{label}</div>
-            </div>
-          ))}
+          <div onClick={() => navigate(username ? `/profile/${username}/rig` : '/campgrounds')}
+            style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}>
+            <div style={{ fontSize: '14px', marginBottom: '2px' }}>{'\u{1F4CD}'}</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#E8A838', lineHeight: 1 }}>{visitedCount}</div>
+            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Visited</div>
+          </div>
+          <div onClick={() => navigate('/trips')}
+            style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}>
+            <div style={{ fontSize: '14px', marginBottom: '2px' }}>{'\u{1F5D3}'}</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#4A90D9', lineHeight: 1 }}>{plannedCount}</div>
+            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Planned</div>
+          </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {recentCampgrounds.length === 0 && <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: '16px' }}>No campgrounds yet</p>}

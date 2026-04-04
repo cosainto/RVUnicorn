@@ -389,6 +389,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           {profile && (
             <CalendarCampgroundCard
               userId={profile.id}
+              username={username}
               trips={userTrips.map((t: any) => ({ id: t.id, startDate: t.startDate, endDate: t.endDate || t.startDate, type: new Date(t.startDate) > new Date() ? 'planned' : 'camping' }))}
               visitedCampgrounds={recentCheckins}
               visitedCount={favoriteCampgrounds.length}
