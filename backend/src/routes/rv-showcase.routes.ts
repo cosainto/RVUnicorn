@@ -322,4 +322,131 @@ router.delete('/:id/photo/:photoIndex', authenticateToken, async (req, res) => {
   }
 });
 
+// ══ RIGS LIKE THIS — find similar rigs by make/model ══
+router.get('/:username/similar-rigs', async (req, res) => {
+  try {
+    const { username } = req.params;
+    let user = await prisma.user.findUnique({ where: { username }, select: { id: true, rvMake: true, rvModel: true, rvType: true } });
+    if (!user) user = await prisma.user.findUnique({ where: { id: username }, select: { id: true, rvMake: true, rvModel: true, rvType: true } });
+    if (!user || !user.rvMake) return res.json({ rigs: [], total: 0 });
+
+    // Find users with same make, optionally same model
+    const similar = await prisma.user.findMany({
+      where: {
+        id: { not: user.id },
+        rvMake: { equals: user.rvMake, mode: 'insensitive' },
+        ...(user.rvModel ? { rvModel: { equals: user.rvModel, mode: 'insensitive' } } : {}),
+      },
+      select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvMake: true, rvModel: true, rvYear: true, rvType: true },
+      take: 8,
+    });
+
+    // If too few with same model, expand to same make only
+    let results = similar;
+    if (similar.length < 4 && user.rvModel) {
+      const makeOnly = await prisma.user.findMany({
+        where: { id: { notIn: [user.id, ...similar.map(s => s.id)] }, rvMake: { equals: user.rvMake, mode: 'insensitive' } },
+        select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvMake: true, rvModel: true, rvYear: true, rvType: true },
+        take: 8 - similar.length,
+      });
+      results = [...similar, ...makeOnly];
+    }
+
+    const total = await prisma.user.count({ where: { rvMake: { equals: user.rvMake, mode: 'insensitive' }, id: { not: user.id } } });
+    res.json({ rigs: results.slice(0, 4), total });
+  } catch { res.status(500).json({ error: 'Failed' }); }
+});
+
+// ══ RIG QUESTIONS — Q&A threads about a rig ══
+router.get('/:username/questions', async (req, res) => {
+  try {
+    const { username } = req.params;
+    let user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) user = await prisma.user.findUnique({ where: { id: username }, select: { id: true } });
+    if (!user) return res.json({ questions: [] });
+
+    const showcase = await prisma.rVShowcase.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (!showcase) return res.json({ questions: [] });
+
+    // Use threads tagged to this showcase via metadata
+    const questions = await prisma.thread.findMany({
+      where: { slug: { startsWith: `rig-q-${showcase.id}` } },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        _count: { select: { posts: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    res.json({ questions });
+  } catch { res.status(500).json({ error: 'Failed' }); }
+});
+
+router.post('/:username/questions', authenticateToken, async (req: any, res) => {
+  try {
+    const { username } = req.params;
+    const { title, content } = req.body;
+    if (!title) return res.status(400).json({ error: 'Question title required' });
+
+    let user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) user = await prisma.user.findUnique({ where: { id: username }, select: { id: true } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const showcase = await prisma.rVShowcase.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (!showcase) return res.status(404).json({ error: 'No rig found' });
+
+    const slug = `rig-q-${showcase.id}-${Date.now()}`;
+    const thread = await prisma.thread.create({
+      data: { title, content: content || null, slug, authorId: req.userId },
+      include: { author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+
+    // Notify rig owner
+    if (user.id !== req.userId) {
+      await prisma.notification.create({
+        data: { userId: user.id, type: 'RIG_QUESTION', content: `Someone asked about your rig: "${title}"`, link: `/profile/${username}/rig` },
+      }).catch(() => {});
+    }
+
+    res.json({ question: thread });
+  } catch (e: any) { res.status(500).json({ error: e.message || 'Failed' }); }
+});
+
+// ══ RIG COMPARISON — compare two rigs side by side ══
+router.get('/:username/compare', authenticateToken, async (req: any, res) => {
+  try {
+    const { username } = req.params;
+    const viewerId = req.userId;
+
+    const rvFields = { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvMake: true, rvModel: true, rvType: true, rvYear: true, rvLength: true, rvHeight: true, rvWeight: true, rvSleeps: true, rvSlideouts: true, rvMpg: true, rvFuelType: true, rvSolarWatts: true, rvGeneratorWatts: true, rvBatteryAh: true, rvFreshWaterGal: true, rvGreyWaterGal: true, rvBlackWaterGal: true, rvFuelGal: true, rvLpGasGal: true, rvAirconditioners: true, rvAwningFt: true, rvShorepower: true, rvFeatures: true };
+
+    let profileUser = await prisma.user.findUnique({ where: { username }, select: rvFields });
+    if (!profileUser) profileUser = await prisma.user.findUnique({ where: { id: username }, select: rvFields });
+    if (!profileUser) return res.status(404).json({ error: 'User not found' });
+
+    const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: rvFields });
+    if (!viewer?.rvMake) return res.json({ profileRig: profileUser, viewerRig: null, message: 'Add your rig to compare' });
+
+    res.json({ profileRig: profileUser, viewerRig: viewer });
+  } catch { res.status(500).json({ error: 'Failed' }); }
+});
+
+// ══ MAINTENANCE LOG PREVIEW ══
+router.get('/:username/maintenance-preview', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    let user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) user = await prisma.user.findUnique({ where: { id: username }, select: { id: true } });
+    if (!user) return res.json({ records: [] });
+
+    const records = await prisma.maintenanceRecord.findMany({
+      where: { userId: user.id },
+      select: { id: true, title: true, category: true, serviceDate: true, mileage: true, cost: true },
+      orderBy: { serviceDate: 'desc' },
+      take: 5,
+    });
+    res.json({ records });
+  } catch { res.status(500).json({ error: 'Failed' }); }
+});
+
 export default router;
