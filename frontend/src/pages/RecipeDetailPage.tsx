@@ -108,8 +108,8 @@ const CATEGORIES = [
 ];
 
 function LinkedVideoCard({ recipeId }: { recipeId: string }) {
-  const [video, setVideo] = React.useState<any>(null);
-  React.useEffect(() => {
+  const [video, setVideo] = useState<any>(null);
+  useEffect(() => {
     const load = async () => {
       try {
         const response = await api.get("/creators/content/by-recipe/" + recipeId);
