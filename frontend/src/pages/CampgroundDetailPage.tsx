@@ -35,6 +35,7 @@ import CampgroundWeather from '../components/CampgroundWeather';
 import { getCampspotUrl, getCampspotSearchUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
+import ShareCard from '../components/ShareCard';
 import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import CampMarket from '../components/CampMarket';
@@ -267,6 +268,7 @@ export default function CampgroundDetailPage() {
   const [uploadingMap, setUploadingMap] = useState(false);
 
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -365,7 +367,7 @@ export default function CampgroundDetailPage() {
 
   const handleCheckIn = async () => {
     if (!user || !campground) return;
-    try { await api.post('/checkins', { campgroundId: campground.id, checkInDate: checkInData.checkInDate, checkOutDate: checkInData.checkOutDate || null, siteNumber: checkInData.siteNumber || null }); alert('✅ Checked in!'); setShowCheckInModal(false); loadCampground(); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
+    try { await api.post('/checkins', { campgroundId: campground.id, checkInDate: checkInData.checkInDate, checkOutDate: checkInData.checkOutDate || null, siteNumber: checkInData.siteNumber || null }); setShowCheckInModal(false); setShowShareCard(true); loadCampground(); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
   };
 
   const handleSubmitReview = async () => {
@@ -2240,6 +2242,19 @@ export default function CampgroundDetailPage() {
         </div>
       )}
     </div>
+
+    {/* Share Card after check-in */}
+    {showShareCard && campground && user && (
+      <ShareCard
+        type="checkin"
+        title={`Just checked in!`}
+        campgroundName={campground.name}
+        location={`${campground.location}${campground.state ? `, ${campground.state}` : ''}`}
+        userName={`${user.firstName} ${user.lastName}`}
+        userAvatar={(user as any).profilePicture}
+        onClose={() => setShowShareCard(false)}
+      />
+    )}
     </>
   );
 }
