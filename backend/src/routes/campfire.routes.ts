@@ -306,10 +306,21 @@ router.get('/:campgroundId/room/status', authenticateToken, async (req: any, res
 router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, res) => {
   try {
     const { campgroundId } = req.params;
+    const userId = req.userId;
     const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
     if (!room) return res.json({ messages: [] });
+
+    // Only show messages from after the user's check-in time
+    const activeCheckIn = await prisma.checkIn.findFirst({
+      where: { userId, campgroundId, isActive: true },
+      select: { checkInDate: true },
+    });
+
     const messages = await prisma.campfireMessage.findMany({
-      where: { roomId: room.id },
+      where: {
+        roomId: room.id,
+        ...(activeCheckIn ? { createdAt: { gte: activeCheckIn.checkInDate } } : {}),
+      },
       include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
       orderBy: { createdAt: 'asc' },
       take: 50,
