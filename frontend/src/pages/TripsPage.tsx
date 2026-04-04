@@ -826,24 +826,44 @@ export default function EventsPage() {
 
       {/* Create Event Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6 rounded-t-xl sticky top-0 z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-8 h-8" />
-                  <h2 className="text-2xl font-bold">Create Event</h2>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.18)' }}>
+            <div className="p-5 sticky top-0 z-10 flex items-center justify-between" style={{ background: '#1B2E50', borderBottom: '1px solid rgba(232,168,56,0.1)' }}>
+              <div className="flex items-center gap-3">
+                <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-9 h-9 rounded-full object-cover" />
+                <div>
+                  <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>Plan a Trip</h2>
+                  <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Hitch will help with stops, routing & weather</p>
                 </div>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition"
-                >
-                  ✕
-                </button>
               </div>
+              <button onClick={() => setShowCreateModal(false)} style={{ color: 'rgba(245,240,232,0.4)' }} className="hover:opacity-70 p-1">✕</button>
             </div>
 
-            <div className="p-6 space-y-4">
+            {/* Character co-pilot suggestions */}
+            <div className="px-5 py-3 flex gap-2 overflow-x-auto" style={{ borderBottom: '1px solid rgba(232,168,56,0.06)', scrollbarWidth: 'none' }}>
+              {[
+                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261021/rvunicorn/characters/diesel.png', tip: 'I\'ll check height clearances for your rig on every route.' },
+                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png', tip: 'Add a national park — I know the best hidden trails.' },
+                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261086/rvunicorn/characters/luna.webp', tip: 'Need kid-friendly stops? I\'ve got you covered.' },
+              ].map((c, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg flex-shrink-0" style={{ background: 'rgba(232,168,56,0.05)', border: '1px solid rgba(232,168,56,0.08)' }}>
+                  <img src={c.img} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  <p className="text-[10px] whitespace-nowrap" style={{ color: 'rgba(245,240,232,0.5)' }}>{c.tip}</p>
+                </div>
+              ))}
+            </div>
+
+            <style>{`
+              .trip-form .text-gray-700, .trip-form .text-gray-900 { color: #F5F0E8 !important; }
+              .trip-form .text-gray-500, .trip-form .text-gray-600 { color: rgba(245,240,232,0.5) !important; }
+              .trip-form .input, .trip-form input, .trip-form select, .trip-form textarea { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
+              .trip-form .bg-white { background: #0F1C35 !important; }
+              .trip-form .bg-gray-50, .trip-form .bg-gray-100 { background: #1B2E50 !important; }
+              .trip-form .border-gray-200, .trip-form .border-gray-300 { border-color: rgba(232,168,56,0.1) !important; }
+              .trip-form .btn-primary { background: #E8622A !important; color: white !important; }
+              .trip-form .btn-secondary { background: transparent !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,240,232,0.5) !important; }
+            `}</style>
+            <div className="p-6 space-y-4 trip-form">
               {/* Title */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
