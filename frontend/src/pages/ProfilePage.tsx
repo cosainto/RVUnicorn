@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import TripCalendarWidget from '../components/TripCalendarWidget';
+import CalendarCampgroundCard from '../components/CalendarCampgroundCard';
 import { User as UserType } from '../services/auth.service';
 import RVShowcaseEdit from '../components/RVShowcaseEdit';
 import SocialLinks from '../components/SocialLinks';
@@ -115,6 +116,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [showRVShowcaseEdit, setShowRVShowcaseEdit] = useState(false);
   const [showToolbox, setShowToolbox] = useState(false);
+  const [userTrips, setUserTrips] = useState<any[]>([]);
+  const [recentCheckins, setRecentCheckins] = useState<any[]>([]);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', bio: '', location: '', zipCode: '', website: '', profilePicture: '', coverPhoto: '', bannerPosition: '50% 50%', rvMpg: '' as string | number, rvFuelType: '' });
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState('');
@@ -123,7 +126,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const isOwnProfile = user?.username === username || user?.id === username;
   const rigSection = useInView(); const mapSection = useInView();
 
-  useEffect(() => { loadProfile(); loadFavoriteCampgrounds(); loadRVShowcase(); loadUserGroups(); loadPendingClaims(); loadCreatorContent(); }, [username]);
+  useEffect(() => { loadProfile(); loadFavoriteCampgrounds(); loadRVShowcase(); loadUserGroups(); loadPendingClaims(); loadCreatorContent(); loadTripsAndCheckins(); }, [username]);
+  const loadTripsAndCheckins = async () => {
+    try { const { data } = await api.get('/trips/my'); setUserTrips(Array.isArray(data) ? data : (data.trips || [])); } catch {}
+    try { const { data } = await api.get('/campgrounds/favorites/my'); setRecentCheckins(data.slice(0, 5).map((c: any) => ({ id: c.id, name: c.name, city: c.city || c.location || '', state: c.state || '', photoUrl: c.imageUrl || c.photos?.[0]?.imageUrl, slug: c.customSlug || c.id, visitDate: c.updatedAt || '', planned: false }))); } catch {}
+  };
   const loadCreatorContent = async () => { if (!username) return; try { const { data: p } = await api.get(`/profile/${username}`); if (p.isCreator) { const { data: c } = await api.get(`/creators/content/${p.id}`); setCreatorContent(Array.isArray(c) ? c.slice(0, 4) : []); try { const { data: s } = await api.get(`/creators/profile/${username}`); setCreatorStats(s); } catch {} } } catch {} };
   const loadProfile = async () => { try { setLoading(true); const { data } = await api.get(`/profile/${username}`); setProfile(data); loadAlbums(data.id); setEditForm({ firstName: data.firstName || '', lastName: data.lastName || '', bio: data.bio || '', location: data.location || '', website: data.website || '', profilePicture: data.profilePicture || '', coverPhoto: data.coverPhoto || '', bannerPosition: data.bannerPosition || '50% 50%' }); if (user && !isOwnProfile && data.id) checkFriendshipStatus(data.id); api.get(`/rig-connection/co-pilot/${data.id}`).then(r => { if (r.data?.coPilot) setCoPilot(r.data.coPilot); }).catch(() => {}); try { if (data.rvCoOwnedBy?.length > 0) setCoOwnedRVs(data.rvCoOwnedBy.map((c: any) => c.owner)); const br = await api.get(`/badges/user/${data.id}`); setProfileBadges(br.data?.badges || []); setDisplayedBadges((br.data?.badges || []).slice(0, 3)); const pr = await api.get(`/privacy/badge-position/${data.id}`); if (pr.data?.positions) setBadgePositions(pr.data.positions); } catch {} } catch {} finally { setLoading(false); } };
   const loadAlbums = async (pid?: string) => { try { setLoadingAlbums(true); const { data } = await api.get(`/media-albums?userId=${pid}`); setAlbums(data.slice(0, 6)); } catch {} finally { setLoadingAlbums(false); } };
@@ -285,14 +292,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       </div>
                     )}
 
-                    {/* Compact calendar strip */}
-                    {profile && (
-                      <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--glass-border)' }}>
-                        <div className="overflow-hidden rounded-xl" style={{ maxHeight: '64px' }}>
-                          <TripCalendarWidget compact={true} userId={profile.id} />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -385,6 +384,17 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               </div>
             )}
           </div>
+
+          {/* ══ 5. CALENDAR + CAMPGROUNDS CARD ══ */}
+          {profile && (
+            <CalendarCampgroundCard
+              userId={profile.id}
+              trips={userTrips.map((t: any) => ({ id: t.id, startDate: t.startDate, endDate: t.endDate || t.startDate, type: new Date(t.startDate) > new Date() ? 'planned' : 'camping' }))}
+              visitedCampgrounds={recentCheckins}
+              visitedCount={favoriteCampgrounds.length}
+              plannedCount={userTrips.filter((t: any) => new Date(t.startDate) > new Date()).length}
+            />
+          )}
 
           {/* ══ 6. TABBED CONTENT ══ */}
           <div>
