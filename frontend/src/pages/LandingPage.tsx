@@ -56,7 +56,7 @@ function Navbar() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-3">
-          <img src="/images/Logo_RVUnicorn.webp" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
+          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
           <span className="font-playfair text-xl font-bold text-white">RVUnicorn</span>
         </Link>
 
@@ -666,7 +666,7 @@ export default function LandingPage() {
               {/* Col 1 */}
               <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <img src="/images/Logo_RVUnicorn.webp" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
+                  <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
                   <span className="font-playfair text-lg font-bold">RVUnicorn</span>
                 </div>
                 <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Your Camping Community</p>
