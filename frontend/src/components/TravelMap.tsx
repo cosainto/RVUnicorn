@@ -1496,188 +1496,125 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
 
       {/* State Modal */}
       {selectedState && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white p-4 rounded-t-lg sticky top-0 z-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">{STATE_NAMES[selectedState]}</h2>
-                <button onClick={() => setSelectedState(null)} className="text-white hover:text-gray-200">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedState(null)}>
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl" style={{ background: 'rgba(15,26,46,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,168,76,0.18)' }} onClick={e => e.stopPropagation()}>
+            <div className="p-5 sticky top-0 z-10 flex items-center justify-between" style={{ background: 'rgba(15,26,46,0.98)', borderBottom: '1px solid rgba(201,168,76,0.15)' }}>
+              <h2 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display',serif", color: 'white' }}>{STATE_NAMES[selectedState]}</h2>
+              <button onClick={() => setSelectedState(null)} className="p-1 hover:opacity-70"><X className="w-5 h-5 text-white" /></button>
+            </div>
+
+            <div className="p-5">
               {activeLayers.includes('gasPrices') && gasPrices.find(p => p.stateCode === selectedState) && (
-                <div className="mt-2 flex gap-4 text-sm">
+                <div className="flex gap-4 text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
                   <span>Regular: ${gasPrices.find(p => p.stateCode === selectedState)?.regularPrice?.toFixed(2) || "N/A"}</span>
                   <span>Diesel: ${gasPrices.find(p => p.stateCode === selectedState)?.dieselPrice?.toFixed(2) || "N/A"}</span>
                 </div>
               )}
-            </div>
 
-            <div className="p-6">
               {isOwnProfile && (
-                <button
-                  onClick={handleAddVisit}
-                  className="btn btn-primary mb-4 w-full flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Visit to {STATE_NAMES[selectedState]}
+                <button onClick={handleAddVisit} className="mb-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#E8622A', color: 'white' }}>
+                  <Plus className="w-4 h-4" /> Add Visit to {STATE_NAMES[selectedState]}
                 </button>
               )}
 
               {stateDetailError ? (
-                <div className="text-center py-8">
-                  <Lock className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                  <p className="text-gray-500 text-sm">{stateDetailError}</p>
-                </div>
+                <div className="text-center py-8"><Lock className="w-10 h-10 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.2)' }} /><p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{stateDetailError}</p></div>
               ) : stateDetailLoading ? (
-                <div className="space-y-3">
-                  {[1,2].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" />)}
-                </div>
+                <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />)}</div>
               ) : (stateDetail?.visits || getStateVisits(selectedState)).length > 0 ? (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">
-                    {isOwnProfile ? 'Your visits:' : 'Trips:'}
-                  </h3>
+                  <h3 className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{isOwnProfile ? 'Your visits' : 'Trips'}</h3>
                   {(stateDetail?.visits || getStateVisits(selectedState)).map((visit: any) => (
-                    <div key={visit.id} className={`rounded-lg p-4 border-2 ${isPlannedVisit(visit.startDate) ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}>
+                    <div key={visit.id} className="rounded-xl p-4" style={{ background: isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Calendar className={`w-5 h-5 ${isPlannedVisit(visit.startDate) ? 'text-blue-500' : 'text-primary-500'}`} />
-                          <span className="font-semibold">{formatDateRange(visit.startDate, visit.endDate)}</span>
-                          {isPlannedVisit(visit.startDate) && (
-                            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">Planned</span>
-                          )}
+                          <Calendar className="w-4 h-4" style={{ color: isPlannedVisit(visit.startDate) ? '#4A90D9' : '#C9A84C' }} />
+                          <span className="text-sm font-semibold">{formatDateRange(visit.startDate, visit.endDate)}</span>
+                          {isPlannedVisit(visit.startDate) && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(74,144,217,0.2)', color: '#4A90D9' }}>Planned</span>}
                         </div>
                         {isOwnProfile ? (
                           <div className="flex gap-1">
-                            <button
-                              onClick={() => {
-                                setEditingVisit(visit);
-                                setVisitForm({
-                                  state: visit.state,
-                                  startDate: visit.startDate.split('T')[0],
-                                  endDate: visit.endDate?.split('T')[0] || '',
-                                  notes: visit.notes || '',
-                                  campsiteId: visit.campsiteId || '',
-                                  eventId: visit.eventId || '',
-                                  attendeeIds: visit.attendees?.map((a: any) => a.user?.id || a.id) || [],
-                                  albumIds: visit.albums?.map((a: any) => a.id) || [],
-                                  visibility: visit.visibility || 'PUBLIC',
-                                });
-                                loadCampgrounds(visit.state);
-                                setSelectedState(null);
-                                setShowAddVisitModal(true);
-                              }}
-                              className="text-primary-600 hover:text-primary-700 p-1.5"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteVisit(visit.id)}
-                              className="text-red-500 hover:text-red-700 p-1.5"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <button onClick={() => { setEditingVisit(visit); setVisitForm({ state: visit.state, startDate: visit.startDate.split('T')[0], endDate: visit.endDate?.split('T')[0] || '', notes: visit.notes || '', campsiteId: visit.campsiteId || '', eventId: visit.eventId || '', attendeeIds: visit.attendees?.map((a: any) => a.user?.id || a.id) || [], albumIds: visit.albums?.map((a: any) => a.id) || [], visibility: visit.visibility || 'PUBLIC' }); loadCampgrounds(visit.state); setSelectedState(null); setShowAddVisitModal(true); }} className="p-1.5 hover:opacity-70" style={{ color: '#C9A84C' }}><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteVisit(visit.id)} className="p-1.5 hover:opacity-70" style={{ color: '#ef4444' }}><Trash2 className="w-4 h-4" /></button>
                           </div>
                         ) : (
                           (visit.event?.id || visit.eventId) ? (
-                            <Link
-                              to={`/trips/${visit.event?.id || visit.eventId}`}
-                              className="flex items-center gap-1 text-sm bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View Trip
+                            <Link to={`/trips/${visit.event?.id || visit.eventId}`} className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: '#E8622A', color: 'white' }}>
+                              <Eye className="w-3.5 h-3.5" /> View Trip
                             </Link>
                           ) : null
                         )}
                       </div>
-                      {/* Event title + cover */}
+
+                      {/* Event */}
                       {visit.event && (
-                        <div className="flex items-center gap-3 mb-2">
-                          {visit.event.coverImage && (
-                            <img src={visit.event.coverImage} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="" />
-                          )}
+                        <Link to={`/trips/${visit.event.id}`} className="flex items-center gap-3 mb-3 p-2 rounded-lg hover:bg-white/[0.03] transition">
+                          {visit.event.coverImage && <img src={visit.event.coverImage} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt="" />}
                           <div>
-                            <Link to={`/trips/${visit.event.id}`} className="font-medium text-gray-900 hover:text-primary-600 transition">
-                              {visit.event.title}
-                            </Link>
-                            {visit.event.location && <p className="text-xs text-gray-400">{visit.event.location}</p>}
+                            <p className="text-sm font-medium" style={{ color: '#FDF6E9' }}>{visit.event.title}</p>
+                            {visit.event.location && <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>{visit.event.location}</p>}
                           </div>
-                        </div>
-                      )}
-                      {/* Attendees */}
-                      {visit.attendees && visit.attendees.length > 0 && (
-                        <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
-                          <Users className="w-4 h-4" />
-                          <span>{visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"}</span>
-                          <div className="flex -space-x-2">
-                            {visit.attendees.slice(0, 5).map((a: any) => (
-                              <img
-                                key={a.user?.id || a.id}
-                                src={a.user?.profilePicture || a.profilePicture || "/default-avatar.png"}
-                                alt=""
-                                className="w-6 h-6 rounded-full border-2 border-white"
-                              />
-                            ))}
-                            {visit.attendees.length > 5 && (
-                              <span className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs">+{visit.attendees.length - 5}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {(visit.campsite) && (
-                        <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="text-primary-600 hover:text-primary-700 flex items-center gap-2 mb-2">
-                          <MapPin className="w-4 h-4" />
-                          {visit.campsite.name}
                         </Link>
                       )}
-                      {visit.notes && <p className="text-gray-700 text-sm">{visit.notes}</p>}
-                      {/* Album thumbnails grid */}
+
+                      {/* Attendees */}
+                      {visit.attendees && visit.attendees.length > 0 && (
+                        <div className="flex items-center gap-2 mb-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <Users className="w-3.5 h-3.5" />
+                          <span>{visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"}</span>
+                          <div className="flex -space-x-1.5">
+                            {visit.attendees.slice(0, 5).map((a: any) => (
+                              <img key={a.user?.id || a.id} src={a.user?.profilePicture || a.profilePicture || "/default-avatar.png"} alt="" className="w-5 h-5 rounded-full border" style={{ borderColor: 'rgba(15,26,46,0.9)' }} />
+                            ))}
+                            {visit.attendees.length > 5 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(15,26,46,0.9)' }}>+{visit.attendees.length - 5}</span>}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Campsite */}
+                      {visit.campsite && (
+                        <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="flex items-center gap-1.5 mb-2 text-[12px] hover:opacity-80 transition" style={{ color: '#C9A84C' }}>
+                          <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
+                        </Link>
+                      )}
+
+                      {visit.notes && <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>}
+
+                      {/* Photos / Albums */}
                       {visit.albums && visit.albums.length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                            <Image className="w-4 h-4" /> Albums ({visit.albums.length})
+                        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                          <p className="text-[12px] font-semibold mb-2 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            <Image className="w-3.5 h-3.5" /> Albums ({visit.albums.length})
                           </p>
                           <div className="grid grid-cols-3 gap-2">
                             {visit.albums.map((album: any) => (
-                              <Link
-                                key={album.id}
-                                to={`/media-albums/${album.id}`}
-                                className="group relative rounded-lg overflow-hidden aspect-square bg-gray-100 hover:ring-2 hover:ring-primary-400 transition"
-                              >
+                              <Link key={album.id} to={`/media-albums/${album.id}`} className="group relative rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-amber-500/50 transition" style={{ background: 'rgba(255,255,255,0.04)' }}>
                                 {(album.coverPhoto || album.photos?.[0]?.imageUrl) ? (
                                   <img src={album.coverPhoto || album.photos[0].imageUrl} className="w-full h-full object-cover" alt="" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-gray-300"><Image className="w-8 h-8" /></div>
+                                  <div className="w-full h-full flex items-center justify-center"><Image className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.15)' }} /></div>
                                 )}
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
-                                  <p className="text-white text-xs font-medium truncate">{album.title}</p>
-                                  <p className="text-white/70 text-[10px]">{album.photoCount || album._count?.photos || 0} photos</p>
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                                  <p className="text-white text-[10px] font-medium truncate">{album.title}</p>
+                                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{album.photoCount || album._count?.photos || 0} photos</p>
                                 </div>
                               </Link>
                             ))}
                           </div>
                         </div>
                       )}
-                      {/* Copy trip button for non-owners */}
+
+                      {/* Copy trip */}
                       {!isOwnProfile && (
-                        <button
-                          onClick={() => handleCopyTrip(visit)}
-                          disabled={copyingTrip === visit.id}
-                          className="mt-2 flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 transition"
-                        >
-                          <Copy className="w-3 h-3" />
-                          {copyingTrip === visit.id ? 'Copying...' : 'Copy to my map'}
+                        <button onClick={() => handleCopyTrip(visit)} disabled={copyingTrip === visit.id} className="mt-2 flex items-center gap-1 text-[11px] hover:opacity-80 transition" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          <Copy className="w-3 h-3" /> {copyingTrip === visit.id ? 'Copying...' : 'Copy to my map'}
                         </button>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-600">
-                  <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                  <p>No visits recorded</p>
-                </div>
+                <div className="text-center py-8"><MapPin className="w-10 h-10 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} /><p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>No visits recorded</p></div>
               )}
             </div>
           </div>
