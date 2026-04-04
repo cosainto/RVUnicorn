@@ -632,8 +632,40 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
 
   return (
     <>
+      <style>{`
+        .bc-dark { background: #0F1C35 !important; color: #F5F0E8 !important; min-height: 100vh; padding-bottom: 2rem; }
+        .bc-dark .bg-white { background: rgba(15,28,53,0.95) !important; color: #F5F0E8 !important; }
+        .bc-dark .bg-gray-50, .bc-dark .bg-gray-100 { background: #1B2E50 !important; color: #F5F0E8 !important; }
+        .bc-dark .bg-gray-200, .bc-dark .bg-gray-300 { background: rgba(27,46,80,0.6) !important; }
+        .bc-dark .bg-green-50, .bc-dark .bg-blue-50, .bc-dark .bg-amber-50, .bc-dark .bg-orange-50, .bc-dark .bg-purple-50, .bc-dark .bg-red-50, .bc-dark .bg-yellow-50, .bc-dark .bg-indigo-50 { background: rgba(27,46,80,0.4) !important; }
+        .bc-dark .bg-primary-50, .bc-dark .bg-primary-100 { background: rgba(232,168,56,0.08) !important; }
+        .bc-dark .bg-gradient-to-r.from-primary-50, .bc-dark .bg-gradient-to-r.from-green-50, .bc-dark .bg-gradient-to-r.from-blue-50 { background: rgba(27,46,80,0.4) !important; }
+        .bc-dark .text-gray-900, .bc-dark .text-gray-800 { color: #F5F0E8 !important; }
+        .bc-dark .text-gray-700, .bc-dark .text-gray-600 { color: rgba(245,240,232,0.65) !important; }
+        .bc-dark .text-gray-500, .bc-dark .text-gray-400 { color: rgba(245,240,232,0.4) !important; }
+        .bc-dark .text-gray-300 { color: rgba(245,240,232,0.25) !important; }
+        .bc-dark .text-primary-700, .bc-dark .text-primary-600, .bc-dark .text-primary-500 { color: #E8A838 !important; }
+        .bc-dark .text-green-700, .bc-dark .text-green-600 { color: #10B981 !important; }
+        .bc-dark .text-blue-700, .bc-dark .text-blue-600 { color: #60A5FA !important; }
+        .bc-dark .text-orange-700, .bc-dark .text-orange-600 { color: #E8622A !important; }
+        .bc-dark .border-gray-100, .bc-dark .border-gray-200, .bc-dark .border-gray-300 { border-color: rgba(232,168,56,0.08) !important; }
+        .bc-dark .border-green-200, .bc-dark .border-blue-200, .bc-dark .border-orange-200, .bc-dark .border-amber-200, .bc-dark .border-purple-200 { border-color: rgba(232,168,56,0.12) !important; }
+        .bc-dark .shadow-lg, .bc-dark .shadow-xl, .bc-dark .shadow-2xl { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+        .bc-dark .shadow-md, .bc-dark .shadow-sm, .bc-dark .shadow { box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important; }
+        .bc-dark input, .bc-dark textarea, .bc-dark select { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
+        .bc-dark .btn-primary, .bc-dark .bg-primary-600, .bc-dark .bg-primary-500 { background: #E8622A !important; color: white !important; }
+        .bc-dark .btn-secondary { background: transparent !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,240,232,0.5) !important; }
+        .bc-dark .hover\\:bg-gray-50:hover, .bc-dark .hover\\:bg-gray-100:hover { background: rgba(27,46,80,0.6) !important; }
+        .bc-dark .hover\\:text-primary-600:hover, .bc-dark .hover\\:text-primary-700:hover { color: #E8A838 !important; }
+        .bc-dark .rounded-xl, .bc-dark .rounded-lg, .bc-dark .rounded-2xl { border-color: rgba(232,168,56,0.06); }
+        .bc-dark .bg-gradient-to-r.from-orange-500, .bc-dark .bg-gradient-to-r.from-amber-500 { background: linear-gradient(to right, #E8622A, #E8A838) !important; }
+        .bc-dark .bg-gradient-to-r.from-green-400, .bc-dark .bg-gradient-to-br.from-green-400 { background: linear-gradient(to right, #1B4332, #1B2E50) !important; }
+        .bc-dark .bg-gradient-to-r.from-purple-500 { background: linear-gradient(to right, #5B21B6, #1B2E50) !important; }
+        .bc-dark .prose { color: rgba(245,240,232,0.7) !important; }
+        .bc-dark .divide-gray-100 > * + *, .bc-dark .divide-gray-200 > * + * { border-color: rgba(232,168,56,0.06) !important; }
+      `}</style>
       {typeof showTour !== 'undefined' && showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
-    <div className="space-y-3">
+    <div className="bc-dark space-y-3">
       {/* Current Status Display */}
       {currentStatus && (
         <div className="flex items-center gap-2 text-sm">
@@ -4152,33 +4184,12 @@ export default function BasecampPage({ user }: BasecampProps) {
               {activeCheckIn?.campground && (
                 <BasecampTriviaCard campgroundId={activeCheckIn.campground.id} />
               )}
-              {/* Embedded Campfire Chat */}
+              {/* Campfire Pulse Feed */}
               {activeCheckIn?.campground && (
-                <div className="rounded-xl overflow-hidden border border-orange-200">
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500">
-                    <div className="flex items-center gap-2 text-white">
-                      <span className="text-lg">🔥</span>
-                      <span className="font-bold text-sm">Campfire Chat</span>
-                      <span className="text-orange-100 text-xs">— {activeCheckIn.campground.name}</span>
-                      {(campfireUnread > 0 || newCampfirePosts > 0) && (
-                        <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                          {campfireUnread + newCampfirePosts} new
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => { setShowCampfireModal(true); setCampfireUnread(0); }}
-                      className="text-white/80 hover:text-white text-xs flex items-center gap-1 transition"
-                      title="Expand to full screen"
-                    >
-                      ⛶ Expand
-                    </button>
-                  </div>
-                  <CampfireChat
-                    campgroundId={activeCheckIn.campground.id}
-                    campgroundName={activeCheckIn.campground.name}
-                  />
-                </div>
+                <CampfireChat
+                  campgroundId={activeCheckIn.campground.id}
+                  campgroundName={activeCheckIn.campground.name}
+                />
               )}
 
               {/* Trip Photo Strip — horizontal scroll */}
