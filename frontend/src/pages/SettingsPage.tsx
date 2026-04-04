@@ -307,6 +307,31 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* ── Campfire Companions ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <span className="text-lg">{'\u{1F525}'}</span>
+          <h2 className="text-lg font-semibold text-gray-900">Campfire Companions</h2>
+        </div>
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900">AI Companions in Chat</p>
+            <p className="text-xs text-gray-500">AI characters keep the campfire warm when chat is quiet</p>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const current = (settings as any).campfireCompanionsEnabled !== false;
+                await api.put('/chat/companion-settings', { enabled: !current });
+                setSettings((s: any) => ({ ...s, campfireCompanionsEnabled: !current }));
+              } catch {}
+            }}
+            className={`relative w-11 h-6 rounded-full transition-colors ${(settings as any).campfireCompanionsEnabled !== false ? 'bg-[#E8622A]' : 'bg-gray-300'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${(settings as any).campfireCompanionsEnabled !== false ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+      </div>
+
       {/* ── Privacy & Security Links ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">

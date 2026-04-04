@@ -320,8 +320,10 @@ model User {
   sentInvites          Invite[]             @relation("SentInvites")
   stargazingEnabled    Boolean   @default(true)
   smsWeatherAlerts     Boolean   @default(false)
-  triviaTitle         String?   
+  campfireCompanionsEnabled Boolean @default(true)
+  triviaTitle         String?
   driveSessions           DriveSession[]
+  companionSessions        CompanionSession[] @relation("CompanionSessions")
   pushSubscriptions       PushSubscription[]
   campMarketListings      CampMarketListing[]
   campMarketInterests     CampMarketInterest[]  @relation("CampMarketBuyer")
@@ -4924,4 +4926,30 @@ model TripMemoryRecord {
   nextTimeSuggestions String[]  @default([])
   createdAt         DateTime @default(now())
   event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model CompanionSession {
+  id            String   @id @default(cuid())
+  userId        String
+  campgroundId  String
+  character     String
+  isLurkMode    Boolean  @default(false)
+  messageCount  Int      @default(0)
+  startedAt     DateTime @default(now())
+  lastActiveAt  DateTime @updatedAt
+  user          User     @relation("CompanionSessions", fields: [userId], references: [id])
+
+  @@index([userId, campgroundId])
+}
+
+model CampgroundInsight {
+  id            String   @id @default(cuid())
+  campgroundId  String
+  userId        String
+  source        String   @default("COMPANION_CHAT")
+  insightType   String
+  value         String
+  createdAt     DateTime @default(now())
+
+  @@index([campgroundId])
 }

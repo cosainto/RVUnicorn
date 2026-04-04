@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { X, CheckCircle, XCircle, Flame } from 'lucide-react';
 import api from '../services/api';
+import { getCharacter } from '../utils/characters';
 
 interface ChatUser {
   id: string;
@@ -65,6 +66,21 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   const [showUsers, setShowUsers] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [showMentionHint, setShowMentionHint] = useState(false);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+
+  // Companion system
+  const [companionMsgs, setCompanionMsgs] = useState<{ role: 'user' | 'assistant'; content: string; character?: string; image?: string }[]>([]);
+  const [companionChar, setCompanionChar] = useState<string | null>(null);
+  const [companionImage, setCompanionImage] = useState<string | null>(null);
+  const [companionThinking, setCompanionThinking] = useState(false);
+  const [companionActive, setCompanionActive] = useState(false);
+  const [isLurkMode, setIsLurkMode] = useState(false);
+  const [isQuietMode, setIsQuietMode] = useState(false);
+  const [openerSent, setOpenerSent] = useState(false);
+  const [userResponded, setUserResponded] = useState(false);
+  const lurkTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const companionHistoryRef = useRef<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +127,59 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     const pulseInterval = setInterval(loadPulse, 60000);
     return () => { clearInterval(msgInterval); clearInterval(pulseInterval); };
   }, [campgroundId, connected]);
+
+  // Companion trigger — activate when chat is quiet
+  useEffect(() => {
+    if (!user || !campgroundId || openerSent || isLurkMode) return;
+    const activeCount = status?.checkedInCount || 0;
+    if (activeCount >= 3) { setIsQuietMode(true); return; }
+    if (isQuietMode) setIsQuietMode(false);
+
+    const timer = setTimeout(async () => {
+      try {
+        const chars = ['HITCH', 'WALLET', 'WALTER', 'SCOUT'];
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        setCompanionThinking(true);
+        const { data } = await api.post('/chat/companion-opener', { userId: user.id, campgroundId, character: char });
+        if (!data.enabled) { setCompanionThinking(false); return; }
+        setCompanionChar(data.character);
+        setCompanionImage(data.image);
+        setCompanionMsgs([{ role: 'assistant', content: data.message, character: data.character, image: data.image }]);
+        companionHistoryRef.current = [{ role: 'assistant', content: data.message }];
+        setCompanionActive(true);
+        setCompanionThinking(false);
+        setOpenerSent(true);
+        // Lurk timer — 15s without response
+        lurkTimerRef.current = setTimeout(() => { if (!userResponded) setIsLurkMode(true); }, 15000);
+      } catch { setCompanionThinking(false); }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [user?.id, campgroundId, status?.checkedInCount, openerSent, isLurkMode]);
+
+  // Send message to companion
+  const sendToCompanion = async (msg: string) => {
+    if (isLurkMode || isQuietMode || !companionChar) return;
+    if (lurkTimerRef.current) { clearTimeout(lurkTimerRef.current); lurkTimerRef.current = null; }
+    setUserResponded(true);
+
+    let targetChar = companionChar;
+    const mention = msg.match(/@(Hitch|Wallet|Walter|Scout)/i);
+    if (mention) targetChar = mention[1].toUpperCase();
+
+    setCompanionMsgs(prev => [...prev, { role: 'user', content: msg }]);
+    companionHistoryRef.current.push({ role: 'user', content: msg });
+    setCompanionThinking(true);
+
+    try {
+      const { data } = await api.post('/chat/companion-reply', {
+        userId: user!.id, campgroundId, character: targetChar,
+        conversationHistory: companionHistoryRef.current.slice(-10), userMessage: msg,
+      });
+      companionHistoryRef.current.push({ role: 'assistant', content: data.message });
+      setCompanionMsgs(prev => [...prev, { role: 'assistant', content: data.message, character: data.character, image: data.image }]);
+    } catch {}
+    setCompanionThinking(false);
+  };
 
   // All trivia handlers (preserved)
   const handleTriviaQuestion = useCallback((q: TriviaQuestion) => {
@@ -226,11 +295,25 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   }, [messages]);
 
   const send = useCallback(() => {
-    if (!input.trim() || !socketRef.current) return;
-    socketRef.current.emit('message:send', { content: input.trim() });
+    if (!input.trim()) return;
+    const msg = input.trim();
+
+    // Check if this is directed at a companion (@Hitch, @Wallet, etc.)
+    const isCompanionMsg = /^@(Hitch|Wallet|Walter|Scout)\b/i.test(msg) || (companionActive && !isLurkMode && !isQuietMode && messages.length < 3);
+
+    if (isCompanionMsg && companionActive) {
+      sendToCompanion(msg);
+    }
+
+    // Also send to regular chat if socket is connected
+    if (socketRef.current) {
+      socketRef.current.emit('message:send', { content: msg });
+    }
+
     setInput('');
     setShowMentionHint(false);
-  }, [input]);
+    setShowMentionDropdown(false);
+  }, [input, companionActive, isLurkMode, isQuietMode, messages.length]);
 
   const insertMention = (name: string) => {
     setInput(prev => prev.replace(/@$/, `@${name} `));
@@ -312,19 +395,33 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
               </div>
             );
 
-            // LAYER 2 — Hitch Messages
-            if (msg.isHitch) return (
-              <div key={msg.id} className="flex items-start gap-2 max-w-[85%]">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-md">🦄</div>
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-[#C9A84C] mb-0.5">Hitch</div>
-                  <div className="bg-[#1B2B4B] text-white rounded-xl rounded-tl-none px-3 py-2 text-sm leading-relaxed border-l-[3px] border-[#C9A84C]"
-                    style={{ boxShadow: '0 2px 12px rgba(232, 98, 42, 0.15)' }}>
-                    {msg.content}
+            // LAYER 2 — Character Messages (Hitch, Walter, Wallet, etc.)
+            if (msg.isHitch) {
+              // Detect character from message content or default to Hitch
+              const charNames = ['walter', 'wallet', 'rose', 'rosé', 'diesel', 'scout', 'luna', 'ranger rick', 'pebble'];
+              const contentLower = msg.content.toLowerCase();
+              let charKey = 'hitch';
+              // Check if message starts with a character attribution like "— Walter" or is from a known character
+              for (const cn of charNames) {
+                if (contentLower.startsWith(cn) || contentLower.includes(`— ${cn}`) || contentLower.includes(`- ${cn}`)) {
+                  charKey = cn;
+                  break;
+                }
+              }
+              const character = getCharacter(charKey);
+              return (
+                <div key={msg.id} className="flex items-start gap-2 max-w-[85%]">
+                  <img src={character.image} alt={character.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5 shadow-md border border-[#C9A84C]/30" />
+                  <div className="flex-1">
+                    <div className="text-[10px] font-bold text-[#C9A84C] mb-0.5">{character.name}</div>
+                    <div className="bg-[#1B2B4B] text-white rounded-xl rounded-tl-none px-3 py-2 text-sm leading-relaxed border-l-[3px] border-[#C9A84C]"
+                      style={{ boxShadow: '0 2px 12px rgba(232, 98, 42, 0.15)' }}>
+                      {msg.content}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
+              );
+            }
 
             // LAYER 3 — Camper Chat
             const isMe = msg.user?.id === user?.id;
@@ -355,6 +452,35 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
               </div>
             );
           })}
+          {/* Companion messages */}
+          {companionMsgs.map((cm, i) => (
+            <div key={`companion-${i}`} className={cm.role === 'user' ? 'flex justify-end' : 'flex items-start gap-2 max-w-[70%]'} style={{ animation: 'fadeIn 0.3s ease' }}>
+              {cm.role === 'assistant' && cm.image && <img src={cm.image} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />}
+              {cm.role === 'assistant' ? (
+                <div>
+                  {cm.character && <span className="text-[10px] font-bold block mb-0.5" style={{ color: { HITCH: '#E8A838', WALLET: '#2ECC71', WALTER: '#7B68EE', SCOUT: '#D4621A' }[cm.character] || '#E8A838' }}>{cm.character.charAt(0) + cm.character.slice(1).toLowerCase()}</span>}
+                  <div className="rounded-xl rounded-tl-none px-3 py-2 text-[13px] leading-relaxed" style={{ background: '#1B2E50', color: '#F5F0E8' }}>{cm.content}</div>
+                </div>
+              ) : (
+                <div className="max-w-[70%] rounded-2xl rounded-br-sm px-3 py-2 text-[13px]" style={{ background: 'rgba(232,168,56,0.15)', color: '#F5F0E8' }}>{cm.content}</div>
+              )}
+            </div>
+          ))}
+          {companionThinking && companionChar && (
+            <div className="flex items-center gap-2">
+              {companionImage && <img src={companionImage} alt="" className="w-7 h-7 rounded-full object-cover" />}
+              <div className="flex items-center gap-1 px-3 py-2 rounded-xl" style={{ background: '#1B2E50' }}>
+                {[0, 1, 2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: { HITCH: '#E8A838', WALLET: '#2ECC71', WALTER: '#7B68EE', SCOUT: '#D4621A' }[companionChar] || '#E8A838', animationDelay: `${i * 0.15}s` }} />)}
+                <span className="text-[10px] ml-1.5" style={{ color: 'rgba(245,240,232,0.4)' }}>{companionChar.charAt(0) + companionChar.slice(1).toLowerCase()} is thinking...</span>
+              </div>
+            </div>
+          )}
+          {isQuietMode && (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg text-[11px]" style={{ background: 'rgba(232,168,56,0.08)', color: 'rgba(232,168,56,0.7)', border: '1px solid rgba(232,168,56,0.15)' }}>
+              <span>Campfire's picking up — companions are stepping back {'\u{1F525}'}</span>
+              <button onClick={() => setIsQuietMode(false)} className="ml-2 hover:opacity-70">✕</button>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
 
@@ -384,10 +510,36 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
         )}
 
         {/* Input bar */}
-        <div className="border-t border-orange-200 px-3 py-2 flex gap-2 items-center bg-white">
+        <div className="border-t border-orange-200 px-3 py-2 flex gap-2 items-center bg-white relative">
+          {/* @Mention dropdown */}
+          {showMentionDropdown && (
+            <div className="absolute bottom-full left-3 right-3 mb-1 rounded-xl overflow-hidden z-10" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.2)' }}>
+              {[
+                { name: 'Hitch', desc: 'Mentor & Trail Guide', color: '#E8A838', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png' },
+                { name: 'Wallet', desc: 'Deal Hunter', color: '#2ECC71', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218458/rvunicorn/guides/wallet_guide.png' },
+                { name: 'Walter', desc: 'Nature & Stars', color: '#7B68EE', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261024/rvunicorn/characters/walter.png' },
+                { name: 'Scout', desc: 'Adventure Guide', color: '#D4621A', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png' },
+              ].filter(c => !mentionQuery || c.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
+              .map(c => (
+                <button key={c.name} onClick={() => { setInput(prev => prev.replace(/@\w*$/, `@${c.name} `)); setShowMentionDropdown(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[#1B2E50] transition">
+                  <img src={c.img} alt={c.name} className="w-6 h-6 rounded-full object-cover" />
+                  <span className="text-[12px] font-bold" style={{ color: c.color }}>{c.name}</span>
+                  <span className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>{c.desc}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <input
-            type="text" value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            type="text" value={input}
+            onChange={e => {
+              setInput(e.target.value);
+              const val = e.target.value;
+              const atMatch = val.match(/@(\w*)$/);
+              if (atMatch) { setShowMentionDropdown(true); setMentionQuery(atMatch[1]); }
+              else { setShowMentionDropdown(false); }
+            }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === 'Escape') setShowMentionDropdown(false); }}
             placeholder={PLACEHOLDERS[placeholderIdx]}
             disabled={!connected}
             className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:text-gray-400 bg-[#FFF8F0]"
