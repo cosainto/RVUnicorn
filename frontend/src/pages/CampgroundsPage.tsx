@@ -108,7 +108,30 @@ export default function CampgroundsPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+    <style>{`
+      .cg-list-dark{background:#0F1C35!important;color:#F5F0E8!important;min-height:100vh}
+      .cg-list-dark .bg-white{background:rgba(15,28,53,0.95)!important;color:#F5F0E8!important}
+      .cg-list-dark .bg-gray-50,.cg-list-dark .bg-gray-100{background:#1B2E50!important}
+      .cg-list-dark .text-gray-900,.cg-list-dark .text-gray-800{color:#F5F0E8!important}
+      .cg-list-dark .text-gray-700,.cg-list-dark .text-gray-600{color:rgba(245,240,232,0.65)!important}
+      .cg-list-dark .text-gray-500,.cg-list-dark .text-gray-400{color:rgba(245,240,232,0.4)!important}
+      .cg-list-dark .border-gray-200,.cg-list-dark .border-gray-100{border-color:rgba(232,168,56,0.08)!important}
+      .cg-list-dark .shadow-sm,.cg-list-dark .shadow{box-shadow:0 2px 10px rgba(0,0,0,0.3)!important}
+      .cg-list-dark input,.cg-list-dark select{background:#1B2E50!important;border-color:rgba(232,168,56,0.12)!important;color:#F5F0E8!important}
+      .cg-list-dark .btn-primary,.cg-list-dark .bg-primary-600{background:#E8622A!important;color:white!important}
+      .cg-list-dark .btn-secondary{background:transparent!important;border-color:rgba(255,255,255,0.1)!important;color:rgba(245,240,232,0.5)!important}
+      .cg-list-dark .hover\\:shadow-md:hover{box-shadow:0 4px 16px rgba(0,0,0,0.5)!important}
+      .cg-list-dark .text-primary-600{color:#E8A838!important}
+      .cg-list-dark .hover\\:text-primary-600:hover{color:#E8A838!important}
+      .cg-list-dark .bg-primary-100{background:rgba(232,168,56,0.1)!important}
+      .cg-list-dark .text-primary-700{color:#E8A838!important}
+      .cg-list-dark .bg-green-100{background:rgba(16,185,129,0.1)!important}.cg-list-dark .text-green-700{color:#10B981!important}
+      .cg-list-dark .bg-blue-100{background:rgba(59,130,246,0.1)!important}.cg-list-dark .text-blue-700{color:#60A5FA!important}
+      .cg-list-dark .bg-red-500{background:#E8622A!important}
+      .cg-list-dark .hover\\:border-gray-300:hover{border-color:rgba(232,168,56,0.15)!important}
+    `}</style>
+    <div className="cg-list-dark max-w-7xl mx-auto px-4 py-8">
       {/* Page Tab Switcher */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -314,5 +337,6 @@ export default function CampgroundsPage() {
       {showSuggestModal && <SuggestCampground onClose={() => setShowSuggestModal(false)} onSubmit={() => { setShowSuggestModal(false); fetchCampgrounds(); }} />}
     </div> }
     </div>
+    </>
   );
 }

@@ -509,7 +509,30 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+    <style>{`
+      .trips-dark { background:#0F1C35!important; color:#F5F0E8!important; min-height:100vh; }
+      .trips-dark .bg-white{background:rgba(15,28,53,0.95)!important;color:#F5F0E8!important}
+      .trips-dark .bg-gray-50,.trips-dark .bg-gray-100{background:#1B2E50!important;color:#F5F0E8!important}
+      .trips-dark .bg-gray-200,.trips-dark .bg-gray-300{background:rgba(27,46,80,0.6)!important}
+      .trips-dark .bg-green-50,.trips-dark .bg-blue-50,.trips-dark .bg-amber-50,.trips-dark .bg-purple-50{background:rgba(27,46,80,0.4)!important}
+      .trips-dark .text-gray-900,.trips-dark .text-gray-800{color:#F5F0E8!important}
+      .trips-dark .text-gray-700,.trips-dark .text-gray-600{color:rgba(245,240,232,0.65)!important}
+      .trips-dark .text-gray-500,.trips-dark .text-gray-400{color:rgba(245,240,232,0.4)!important}
+      .trips-dark .text-gray-300{color:rgba(245,240,232,0.25)!important}
+      .trips-dark .text-primary-600,.trips-dark .text-primary-700{color:#E8A838!important}
+      .trips-dark .border-gray-100,.trips-dark .border-gray-200,.trips-dark .border-gray-300{border-color:rgba(232,168,56,0.08)!important}
+      .trips-dark .shadow-lg,.trips-dark .shadow-xl,.trips-dark .shadow-2xl{box-shadow:0 4px 20px rgba(0,0,0,0.4)!important}
+      .trips-dark .shadow-md,.trips-dark .shadow-sm,.trips-dark .shadow{box-shadow:0 2px 10px rgba(0,0,0,0.3)!important}
+      .trips-dark input,.trips-dark textarea,.trips-dark select{background:#1B2E50!important;border-color:rgba(232,168,56,0.12)!important;color:#F5F0E8!important}
+      .trips-dark .btn-primary,.trips-dark .bg-primary-600,.trips-dark .bg-primary-500{background:#E8622A!important;color:white!important}
+      .trips-dark .btn-secondary{background:transparent!important;border-color:rgba(255,255,255,0.1)!important;color:rgba(245,240,232,0.5)!important}
+      .trips-dark .hover\\:bg-gray-50:hover,.trips-dark .hover\\:bg-gray-100:hover{background:rgba(27,46,80,0.6)!important}
+      .trips-dark .hover\\:text-primary-600:hover{color:#E8A838!important}
+      .trips-dark .bg-green-600,.trips-dark .bg-blue-600,.trips-dark .bg-purple-600{background:#E8622A!important}
+      .trips-dark .hover\\:shadow-md:hover{box-shadow:0 4px 16px rgba(0,0,0,0.5)!important}
+    `}</style>
+    <div className="trips-dark max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
@@ -1187,5 +1210,6 @@ export default function EventsPage() {
       )}
     </>)}
     </div>
+    </>
   );
 }
