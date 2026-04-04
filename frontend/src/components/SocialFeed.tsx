@@ -1548,9 +1548,13 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       {/* Inline Post Form - show on own profile or friend's wall */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
-            <User className="w-5 h-5 text-white" />
-          </div>
+          {(authUser as any)?.profilePicture ? (
+            <img src={(authUser as any).profilePicture} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-white" />
+            </div>
+          )}
           <div className="flex-1">
             <MentionInput
               value={newPostContent}
