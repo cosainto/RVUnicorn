@@ -325,15 +325,18 @@ export default function LandingPage() {
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
               {[
-                ['\u{1F91D}', 'Never Camp Alone Again', 'See who\'s nearby, join their campfire, and make friends along the road.'],
-                ['\u{1F5FA}', 'Plan Trips in Minutes', 'Smart routes built for your rig — height clearances, gas costs, and campground stops included.'],
-                ['\u{1F4E1}', 'Know Before You Go', 'Real insights from RVers already there — weather, road conditions, and honest reviews.'],
-                ['\u{1F525}', 'Turn Stops into Experiences', 'Meals, meetups, trivia nights, and shared moments — powered by Hitch, your AI camp guide.'],
-              ].map(([icon, title, desc], i) => (
-                <div key={title as string} className={`glass-card outcome-card p-8 fade-up fade-up-d${i + 1} ${sec3.inView ? 'visible' : ''}`}>
-                  <span className="text-3xl mb-4 block">{icon}</span>
-                  <h3 className="font-playfair text-xl font-bold mb-3" style={{ color: 'var(--cream)' }}>{title}</h3>
-                  <p className="leading-relaxed" style={{ color: 'var(--muted)' }}>{desc}</p>
+                ['\u{1F91D}', 'Never Camp Alone Again', 'See who\'s nearby, join their campfire, and make friends along the road.', '/images/dinner_family.png'],
+                ['\u{1F5FA}', 'Plan Trips in Minutes', 'Smart routes built for your rig — height clearances, gas costs, and campground stops included.', null],
+                ['\u{1F4E1}', 'Know Before You Go', 'Real insights from RVers already there — weather, road conditions, and honest reviews.', '/images/rose_voyager.png'],
+                ['\u{1F525}', 'Turn Stops into Experiences', 'Meals, meetups, trivia nights, and shared moments — powered by Hitch, your AI camp guide.', '/images/trivia_master.png'],
+              ].map(([icon, title, desc, img], i) => (
+                <div key={title as string} className={`glass-card outcome-card p-8 fade-up fade-up-d${i + 1} ${sec3.inView ? 'visible' : ''} flex gap-4`}>
+                  <div className="flex-1">
+                    <span className="text-3xl mb-4 block">{icon}</span>
+                    <h3 className="font-playfair text-xl font-bold mb-3" style={{ color: 'var(--cream)' }}>{title}</h3>
+                    <p className="leading-relaxed" style={{ color: 'var(--muted)' }}>{desc}</p>
+                  </div>
+                  {img && <img src={img as string} alt="" className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 self-center hidden sm:block" style={{ border: '1px solid rgba(201,168,76,0.15)' }} />}
                 </div>
               ))}
             </div>
@@ -374,8 +377,8 @@ export default function LandingPage() {
             {/* Left — Hitch visual */}
             <div className={`flex justify-center fade-up ${sec5.inView ? 'visible' : ''}`}>
               <div className="relative">
-                <div className="absolute inset-0 rounded-full animate-campfire-glow" style={{ background: 'radial-gradient(circle, rgba(232,98,42,0.2), transparent 70%)', transform: 'scale(1.5)' }} />
-                <img src={HITCH_IMG} alt="Hitch — AI Camp Guide" className="relative w-64 h-64 rounded-full object-cover border-4" style={{ borderColor: 'var(--gold)' }} />
+                <div className="absolute inset-0 rounded-3xl animate-campfire-glow" style={{ background: 'radial-gradient(circle, rgba(232,98,42,0.15), transparent 70%)', transform: 'scale(1.2)' }} />
+                <img src="/images/HitchBBQ.png" alt="Hitch grilling at the campsite" className="relative w-72 h-72 rounded-3xl object-cover border-2 shadow-2xl" style={{ borderColor: 'var(--gold)' }} />
               </div>
             </div>
 
@@ -427,9 +430,16 @@ export default function LandingPage() {
             <h2 className={`font-playfair text-4xl md:text-5xl font-bold mb-4 fade-up fade-up-d1 ${sec6.inView ? 'visible' : ''}`}>
               RVUnicorn turns campgrounds<br />into communities.
             </h2>
-            <p className={`text-lg mb-12 fade-up fade-up-d2 ${sec6.inView ? 'visible' : ''}`} style={{ color: 'var(--muted)' }}>
+            <p className={`text-lg mb-6 fade-up fade-up-d2 ${sec6.inView ? 'visible' : ''}`} style={{ color: 'var(--muted)' }}>
               The moment you check in, your Basecamp activates.
             </p>
+
+            {/* Character scene images */}
+            <div className={`flex justify-center gap-4 mb-10 fade-up fade-up-d3 ${sec6.inView ? 'visible' : ''}`}>
+              <img src="/images/dinner_family.png" alt="RVUnicorn family dinner" className="w-40 h-40 rounded-2xl object-cover border" style={{ borderColor: 'rgba(201,168,76,0.2)' }} />
+              <img src="/images/stargazing_crew.png" alt="Stargazing at camp" className="w-40 h-40 rounded-2xl object-cover border hidden sm:block" style={{ borderColor: 'rgba(201,168,76,0.2)' }} />
+              <img src="/images/on_fire.png" alt="Campfire trivia night" className="w-40 h-40 rounded-2xl object-cover border hidden md:block" style={{ borderColor: 'rgba(201,168,76,0.2)' }} />
+            </div>
 
             {/* Basecamp Mockup */}
             <div className={`glass-card max-w-lg mx-auto text-left overflow-hidden fade-up fade-up-d3 ${sec6.inView ? 'visible' : ''}`}>
@@ -549,9 +559,12 @@ export default function LandingPage() {
         {/* ═══ SECTION 8: SOCIAL PROOF ═══ */}
         <section ref={sec8.ref} className="py-24 px-6" style={{ background: 'var(--navy-deep)' }}>
           <div className="max-w-6xl mx-auto">
-            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-16 fade-up ${sec8.inView ? 'visible' : ''}`}>
+            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-4 fade-up ${sec8.inView ? 'visible' : ''}`}>
               Real RVers. Real trips.
             </h2>
+            <div className={`flex justify-center mb-12 fade-up fade-up-d1 ${sec8.inView ? 'visible' : ''}`}>
+              <img src="/images/stargazing_crew.png" alt="RVUnicorn crew stargazing" className="w-64 h-40 rounded-2xl object-cover" style={{ border: '1px solid rgba(201,168,76,0.15)' }} />
+            </div>
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
