@@ -151,11 +151,13 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
   const joinDate = new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const TABS = [
-    { id: 'activity', label: 'Activity' },
-    { id: 'photos', label: `Photos${albums.length ? ` (${albums.length})` : ''}` },
-    { id: 'community', label: 'Community' },
-    ...(favoriteCampgrounds.length > 0 ? [{ id: 'campsites', label: `Campsites (${favoriteCampgrounds.length})` }] : []),
-  ];
+    { id: 'activity', label: 'Activity', show: true },
+    { id: 'friends', label: 'Friends', show: (profile._count?.friends || 0) > 0 },
+    { id: 'albums', label: `Albums${albums.length ? ` (${albums.length})` : ''}`, show: true },
+    { id: 'trips', label: 'Trips', show: userTrips.length > 0 },
+    { id: 'groups', label: `Groups${userGroups.length ? ` (${userGroups.length})` : ''}`, show: userGroups.length > 0 },
+    { id: 'campgrounds', label: `Campgrounds${favoriteCampgrounds.length ? ` (${favoriteCampgrounds.length})` : ''}`, show: favoriteCampgrounds.length > 0 },
+  ].filter(t => t.show);
 
   return (
     <>
@@ -431,13 +433,24 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
           {/* ══ 6. TABBED CONTENT ══ */}
           <div>
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
               {TABS.map(t => <button key={t.id} onClick={() => setActiveContentTab(t.id)} className={`tab-pill ${activeContentTab === t.id ? 'active' : ''}`}>{t.label}</button>)}
             </div>
             <div className="tab-enter" key={activeContentTab}>
+
+              {/* Activity */}
               {activeContentTab === 'activity' && <div className="dark-feed"><SocialFeed username={username || ''} isOwnProfile={isOwnProfile} /></div>}
 
-              {activeContentTab === 'photos' && (
+              {/* Friends */}
+              {activeContentTab === 'friends' && (
+                <div className="dark-feed"><div className="flat-card p-5"><Top8Friends username={username} /></div>
+                  {profile && <div className="flat-card p-5 mt-4"><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
+                  {profile?.isCreator && <div className="flat-card p-5 mt-4"><FollowersSection creatorId={profile.id} isOwnProfile={isOwnProfile} /></div>}
+                </div>
+              )}
+
+              {/* Albums */}
+              {activeContentTab === 'albums' && (
                 <div className="flat-card p-5">
                   <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Camera className="w-4 h-4" style={{ color: 'var(--gold)' }} />Photo Albums</h3>{isOwnProfile && <button onClick={() => setShowCreateAlbumModal(true)} className="text-[11px] font-medium" style={{ color: 'var(--campfire)' }}>+ New Album</button>}</div>
                   {albums.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{albums.map(a => <Link key={a.id} to={`/media-albums/${a.id}`} className="group"><div className="aspect-square rounded-lg overflow-hidden mb-1" style={{ background: 'rgba(255,255,255,0.03)' }}>{a.previewMedia?.[0] ? <img src={a.previewMedia[0].thumbnailUrl || a.previewMedia[0].url} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /> : <div className="w-full h-full flex items-center justify-center"><Camera className="w-6 h-6" style={{ color: 'var(--muted)' }} /></div>}</div><p className="text-[11px] font-medium truncate">{a.title}</p></Link>)}</div>
@@ -445,17 +458,20 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 </div>
               )}
 
-              {activeContentTab === 'community' && (
-                <div className="space-y-4 dark-feed">
-                  <div className="flat-card p-5"><Top8Friends username={username} /></div>
-                  <div className="flat-card p-5">
-                    <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" style={{ color: 'var(--gold)' }} />Groups</h3><Link to="/groups" className="text-[11px]" style={{ color: 'var(--gold-light)' }}>All</Link></div>
-                    {userGroups.length > 0 ? <div className="space-y-1.5">{userGroups.slice(0, 5).map(g => <Link key={g.id} to={`/groups/${g.slug || g.id}`} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition">{g.imageUrl ? <img src={g.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.08)' }}><Users className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} /></div>}<div className="min-w-0"><p className="text-[12px] font-medium truncate">{g.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{g._count?.members || 0} members</p></div></Link>)}</div> : <p className="text-[12px] text-center py-4" style={{ color: 'var(--muted)' }}>No groups yet</p>}
-                  </div>
-                  {profile && <div className="flat-card p-5"><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
-                  {profile?.isCreator && <div className="flat-card p-5"><FollowersSection creatorId={profile.id} isOwnProfile={isOwnProfile} /></div>}
+              {/* Trips */}
+              {activeContentTab === 'trips' && (
+                <div className="flat-card p-5 dark-feed">
+                  <TripCalendarWidget compact={false} userId={profile.id} />
+                </div>
+              )}
+
+              {/* Groups */}
+              {activeContentTab === 'groups' && (
+                <div className="flat-card p-5">
+                  <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4" style={{ color: 'var(--gold)' }} />Groups</h3><Link to="/groups" className="text-[11px]" style={{ color: 'var(--gold-light)' }}>All Groups</Link></div>
+                  {userGroups.length > 0 ? <div className="space-y-1.5">{userGroups.map(g => <Link key={g.id} to={`/groups/${g.slug || g.id}`} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/[0.03] transition">{g.imageUrl ? <img src={g.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover" /> : <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.08)' }}><Users className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} /></div>}<div className="min-w-0"><p className="text-[12px] font-medium truncate">{g.name}</p><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{g._count?.members || 0} members</p></div></Link>)}</div> : <p className="text-[12px] text-center py-4" style={{ color: 'var(--muted)' }}>No groups yet</p>}
                   {profile.isCreator && creatorContent.length > 0 && (
-                    <div className="flat-card p-5">
+                    <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><div className="p-1.5 rounded-lg" style={{ background: 'linear-gradient(135deg,#8B5CF6,#EC4899)' }}><Video className="w-3.5 h-3.5 text-white" /></div><h3 className="text-sm font-bold">Creator Content</h3></div><Link to={`/creators/${profile.username}`} className="text-[11px] font-medium" style={{ color: '#A78BFA' }}>View All →</Link></div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{creatorContent.map((it: any) => <Link key={it.id} to={`/creators/${profile.username}`} className="group rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)' }}><div className="aspect-video relative">{it.thumbnailUrl ? <img src={it.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Video className="w-6 h-6" style={{ color: '#A78BFA' }} /></div>}{it.contentType === 'VIDEO' && <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition"><Play className="w-8 h-8 text-white" /></div>}</div><div className="p-2"><p className="text-[11px] font-medium truncate">{it.title}</p></div></Link>)}</div>
                     </div>
@@ -463,7 +479,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 </div>
               )}
 
-              {activeContentTab === 'campsites' && favoriteCampgrounds.length > 0 && (
+              {/* Campgrounds */}
+              {activeContentTab === 'campgrounds' && (
                 <div className="flat-card p-5">
                   <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Star className="w-4 h-4" style={{ color: 'var(--gold)' }} />Followed Campsites</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -474,8 +491,10 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       </Link>
                     ))}
                   </div>
+                  {profile && <div className="mt-4 pt-4 dark-feed" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                 </div>
               )}
+
             </div>
           </div>
 
