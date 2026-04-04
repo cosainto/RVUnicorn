@@ -137,6 +137,7 @@ import campgroundBadgesRoutes from './routes/campground-badges.routes';
 import triviaAdminRoutes from './routes/trivia-admin.routes';
 import roadTripsRoutes from './routes/road-trips.routes';
 import tripSubeventsRoutes from './routes/trip-subevents.routes';
+import ssrRoutes from './routes/ssr';
 
 
 
@@ -310,6 +311,9 @@ app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 
 
 
+
+// SSR routes — serve pre-rendered HTML for crawlers and direct page loads
+app.use(ssrRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

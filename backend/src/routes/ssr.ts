@@ -1,0 +1,225 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import { prisma } from '../index';
+import { renderCampgroundPage, renderCommunityBoardPage } from '../utils/campgroundSSR';
+
+const router = Router();
+
+const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
+
+function shouldSSR(req: Request): boolean {
+  const isCrawler = CRAWLER_UA.test(req.headers['user-agent'] || '');
+  const isDirectLoad = req.headers.accept?.includes('text/html') && !req.headers['x-requested-with'];
+  return isCrawler || !!isDirectLoad;
+}
+
+// SSR for campground pages
+router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) {
+    return next();
+  }
+
+  try {
+    const { slug } = req.params;
+
+    // Look up by customSlug first, then by id
+    const campground = await prisma.campground.findFirst({
+      where: {
+        OR: [
+          { customSlug: slug },
+          { id: slug },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        location: true,
+        state: true,
+        latitude: true,
+        longitude: true,
+        amenities: true,
+        customSlug: true,
+        imageUrl: true,
+        websiteUrl: true,
+        businessPhone: true,
+        phone: true,
+        googleRating: true,
+        photos: {
+          where: { status: 'APPROVED' },
+          select: { imageUrl: true },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: {
+          select: {
+            followers: true,
+            checkIns: true,
+            reviews: true,
+            photos: true,
+          },
+        },
+      },
+    });
+
+    if (!campground) {
+      return res.status(404).send('Campground not found');
+    }
+
+    const reviews = await prisma.campgroundReview.findMany({
+      where: { campgroundId: campground.id },
+      select: {
+        rating: true,
+        review: true,
+        title: true,
+        createdAt: true,
+        user: {
+          select: { firstName: true, lastName: true, username: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
+
+    const events = await prisma.campgroundEvent.findMany({
+      where: {
+        campgroundId: campground.id,
+        startDate: { gte: new Date() },
+      },
+      select: {
+        title: true,
+        startDate: true,
+        description: true,
+      },
+      orderBy: { startDate: 'asc' },
+      take: 5,
+    });
+
+    const stats = {
+      followers: campground._count.followers,
+      checkIns: campground._count.checkIns,
+      reviews: campground._count.reviews,
+      photos: campground._count.photos,
+    };
+
+    const html = renderCampgroundPage(campground, stats, reviews, events);
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('SSR campground error:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// SSR for community board pages
+router.get('/community/:boardSlug', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) {
+    return next();
+  }
+
+  try {
+    const { boardSlug } = req.params;
+
+    const board = await (prisma as any).board.findUnique({
+      where: { slug: boardSlug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        postCount: true,
+      },
+    });
+
+    if (!board) {
+      return res.status(404).send('Board not found');
+    }
+
+    const posts = await (prisma as any).boardPost.findMany({
+      where: { boardId: board.id },
+      select: {
+        title: true,
+        body: true,
+        createdAt: true,
+        author: {
+          select: { firstName: true, lastName: true, username: true },
+        },
+        _count: {
+          select: { comments: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    // Map boardPost shape to the template's expected shape
+    const threads = posts.map((p: any) => ({
+      title: p.title,
+      content: p.body,
+      author: p.author,
+      createdAt: p.createdAt,
+      _count: { posts: p._count.comments },
+    }));
+
+    const html = renderCommunityBoardPage(
+      { name: board.name, slug: board.slug, postCount: board.postCount },
+      threads
+    );
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('SSR community board error:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Root-level sitemap.xml
+router.get('/sitemap.xml', async (_req: Request, res: Response) => {
+  try {
+    const campgrounds = await prisma.campground.findMany({
+      select: { id: true, customSlug: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 50000,
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+    xml += `  <url>\n    <loc>https://rvunicorn.com</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+    xml += `  <url>\n    <loc>https://rvunicorn.com/campgrounds</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+
+    for (const cg of campgrounds) {
+      const slug = cg.customSlug || cg.id;
+      const lastmod = cg.updatedAt ? cg.updatedAt.toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>https://rvunicorn.com/campgrounds/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    xml += '</urlset>';
+
+    res.set('Content-Type', 'application/xml');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(xml);
+  } catch (e) {
+    console.error('Sitemap error:', e);
+    res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+  }
+});
+
+// Root-level robots.txt
+router.get('/robots.txt', (_req: Request, res: Response) => {
+  const robotsTxt = `User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications
+
+Sitemap: https://rvunicorn.com/sitemap.xml
+`;
+
+  res.set('Content-Type', 'text/plain');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(robotsTxt);
+});
+
+export default router;
