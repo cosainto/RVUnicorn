@@ -294,10 +294,10 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   {/* RIGHT 60%: Stats + Badges + Actions */}
                   <div className="lg:w-[60%]">
                     <div className="grid grid-cols-2 gap-2">
-                      <AnimatedStat icon={'\u{1F3D5}'} value={profile._count?.posts || 0} label="Nights Camped" />
-                      <AnimatedStat icon={'\u{1F6E3}'} value={profile._count?.friends || 0} label="Miles Driven" />
+                      <AnimatedStat icon={'\u{1F3D5}'} value={userTrips.reduce((sum, t) => { const s = new Date(t.startDate); const e = t.endDate ? new Date(t.endDate) : s; return sum + Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86400000)); }, 0)} label="Nights Camped" />
+                      <AnimatedStat icon={'\u{1F6E3}'} value={userTrips.length} label="Trips" />
                       <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" />
-                      <AnimatedStat icon={'\u{1F5FA}'} value={albums.length} label="States" />
+                      <AnimatedStat icon={'\u{1F91D}'} value={profile._count?.friends || 0} label="Friends" />
                     </div>
 
                     {/* Badges */}
@@ -412,7 +412,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               username={username}
               trips={userTrips.map((t: any) => ({ id: t.id, startDate: t.startDate, endDate: t.endDate || t.startDate, type: new Date(t.startDate) > new Date() ? 'planned' : 'camping' }))}
               visitedCampgrounds={recentCheckins}
-              visitedCount={favoriteCampgrounds.length}
+              visitedCount={userTrips.filter((t: any) => new Date(t.startDate) <= new Date()).length}
               plannedCount={userTrips.filter((t: any) => new Date(t.startDate) > new Date()).length}
             />
           )}
