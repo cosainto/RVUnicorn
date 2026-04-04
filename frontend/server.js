@@ -16,26 +16,21 @@ app.use('/uploads', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: t
 app.use('/sitemap.xml', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
 app.use('/robots.txt', createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true }));
 
-// Proxy SSR campground and community pages to the backend
-// The backend SSR handler checks user-agent and returns full HTML for crawlers,
-// or calls next() for normal users (which falls through to the SPA below)
-app.use('/campgrounds/:slug', createProxyMiddleware({
-  target: BACKEND_URL,
-  changeOrigin: true,
-  // Only proxy if it looks like a crawler or direct page load (not an XHR/fetch)
-  filter: (req) => {
-    const isCrawler = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i.test(req.headers['user-agent'] || '');
-    return isCrawler;
-  },
-}));
-app.use('/community/:boardSlug', createProxyMiddleware({
-  target: BACKEND_URL,
-  changeOrigin: true,
-  filter: (req) => {
-    const isCrawler = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i.test(req.headers['user-agent'] || '');
-    return isCrawler;
-  },
-}));
+// Proxy SSR campground and community pages to the backend for crawlers only
+const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
+
+app.use('/campgrounds/:slug', (req, res, next) => {
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
+    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
+  }
+  next();
+});
+app.use('/community/:boardSlug', (req, res, next) => {
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
+    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
+  }
+  next();
+});
 
 // Serve static files from the Vite build
 app.use(express.static(path.join(__dirname, 'dist'), {
