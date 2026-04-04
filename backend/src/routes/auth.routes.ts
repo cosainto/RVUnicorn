@@ -11,7 +11,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, username, phoneNumber } = req.body;
+    const { email, password, firstName, lastName, username, phoneNumber, inviteToken } = req.body;
 
     if (!email || !password || !firstName || !lastName || !username) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -74,6 +74,22 @@ router.post('/register', async (req, res) => {
       console.error('Auto-friend Will error (non-fatal):', friendErr);
     }
 
+    // Process invite token — link new user to inviter
+    if (inviteToken) {
+      try {
+        const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
+        if (invite && invite.status === 'pending' && new Date() < invite.expiresAt) {
+          await prisma.invite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
+          // Auto-friend the inviter and new user
+          await prisma.friendship.create({ data: { initiatorId: invite.senderId, receiverId: user.id, status: 'ACCEPTED' } }).catch(() => {});
+          // Award Trail Blazer badge to inviter
+          try { await awardBadge(invite.senderId, 'trailblazer'); } catch {}
+          // Notify the inviter
+          await prisma.notification.create({ data: { userId: invite.senderId, type: 'INVITE_ACCEPTED', content: `${firstName} ${lastName} joined RVUnicorn from your invite! You're now friends. 🎉`, link: `/profile/${username}` } }).catch(() => {});
+          console.log(`[Invite] ${email} joined via invite from ${invite.senderId}`);
+        }
+      } catch (inviteErr) { console.error('Invite processing error (non-fatal):', inviteErr); }
+    }
 
     // Send welcome email
     try {

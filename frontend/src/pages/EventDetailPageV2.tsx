@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Calendar, Users, MapPin, Settings, Bell, ChevronRight } from 'lucide-react';
+import { Calendar, Users, MapPin, Settings, Bell, ChevronRight, UserPlus } from 'lucide-react';
+import InviteToTrip from '../components/InviteToTrip';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import MealCard from '../components/MealCard';
@@ -42,6 +43,7 @@ export default function EventDetailPageV2() {
   useEffect(() => { if (id) loadEvent(); }, [id, user]);
 
   const [waitlistInfo, setWaitlistInfo] = useState<{ position: number; message: string } | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   const handleJoin = async (mode: string) => {
     setJoining(true);
@@ -240,6 +242,16 @@ export default function EventDetailPageV2() {
               )}
               <button onClick={handleLeave} className="text-xs text-gray-400 hover:text-red-500 transition">Leave</button>
             </div>
+          </div>
+        )}
+
+        {/* Invite friends */}
+        {myAttendee && (
+          <div className="mb-4">
+            <button onClick={() => setShowInvite(!showInvite)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-semibold transition" style={{ background: showInvite ? 'rgba(232,168,56,0.1)' : '#1B2E50', color: '#E8A838', border: '1px solid rgba(232,168,56,0.12)' }}>
+              <UserPlus className="w-4 h-4" /> Invite Friends to This Trip
+            </button>
+            {showInvite && event && <div className="mt-2"><InviteToTrip tripId={event.id} tripTitle={event.title} onClose={() => setShowInvite(false)} /></div>}
           </div>
         )}
 

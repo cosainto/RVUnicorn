@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, TreePine } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterPage() {
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('ref') || '';
+  const isInvited = searchParams.get('invited') === 'true';
+
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +26,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(email, username, password, firstName, lastName, phone);
+      await (register as any)(email, username, password, firstName, lastName, phone, inviteToken);
       navigate('/welcome');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to register');
@@ -67,11 +71,22 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Invite welcome */}
+        {isInvited && (
+          <div className="mb-4 p-4 rounded-2xl flex items-center gap-3" style={{ background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.2)' }}>
+            <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-10 h-10 rounded-full object-cover" />
+            <div>
+              <p className="text-sm font-bold text-white">You've been invited!</p>
+              <p className="text-xs text-white/60">A friend wants you to join their RV adventures. Sign up and you'll be connected automatically.</p>
+            </div>
+          </div>
+        )}
+
         {/* Register Card */}
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/20">
           <div className="flex items-center gap-2 mb-6">
             <Sparkles className="w-6 h-6 text-gold-500" />
-            <h2 className="text-xl font-bold text-gray-900">Create your account</h2>
+            <h2 className="text-xl font-bold text-gray-900">{isInvited ? 'Join your friend on RVUnicorn' : 'Create your account'}</h2>
           </div>
 
           {error && (
