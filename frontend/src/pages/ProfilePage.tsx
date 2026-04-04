@@ -238,6 +238,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                             <div className="relative">
                               <button onClick={() => setShowToolbox(!showToolbox)} className="p-2 rounded-full" style={{ border: '1px solid rgba(255,255,255,0.1)' }}><MoreHorizontal className="w-4 h-4" style={{ color: 'var(--muted)' }} /></button>
                               {showToolbox && <div className="absolute top-full left-0 mt-1 py-2 rounded-xl z-20 min-w-[160px]" style={{ background: 'var(--glass-secondary)', border: '1px solid var(--glass-border)' }}>
+                                <Link to={`/profile/${username}/rig`} className="flex items-center gap-2 px-4 py-2 text-[12px] hover:bg-white/5" style={{ color: 'var(--cream)' }}><Tent className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />My Rig</Link>
                                 <Link to={`/profile/${username}/recipes`} className="flex items-center gap-2 px-4 py-2 text-[12px] hover:bg-white/5" style={{ color: 'var(--cream)' }}><ChefHat className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />Recipe Box</Link>
                                 <Link to={`/profile/${username}/gear`} className="flex items-center gap-2 px-4 py-2 text-[12px] hover:bg-white/5" style={{ color: 'var(--cream)' }}><Backpack className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />Gear List</Link>
                                 {profile.rvMake && <button onClick={() => { setShowRigCard(true); setShowToolbox(false); }} className="flex items-center gap-2 px-4 py-2 text-[12px] hover:bg-white/5 w-full text-left" style={{ color: 'var(--cream)' }}><Award className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />Rig Card</button>}
@@ -345,31 +346,28 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             </div>
           </div>
 
-          {/* ══ 4. RIG SHOWCASE ══ */}
-          <div className="support-glass p-5 lg:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] font-semibold uppercase" style={{ color: 'var(--gold)', letterSpacing: '0.12em' }}>THEIR RIG</p>
-              {isOwnProfile && <button onClick={() => setShowRVShowcaseEdit(true)} className="text-[11px] font-medium hover:underline" style={{ color: 'var(--gold-light)' }}>Edit</button>}
-            </div>
+          {/* ══ 4. RIG TEASER (links to /profile/:username/rig) ══ */}
+          <div className="support-glass overflow-hidden">
             {rvShowcase && (rvShowcase.photos?.length > 0 || rvShowcase.videoUrl) ? (
-              <div className="grid md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  {rvShowcase.videoUrl && <div className="aspect-video rounded-xl overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}><video src={rvShowcase.videoUrl} controls className="w-full h-full object-cover" /></div>}
-                  {rvShowcase.photos?.length > 0 && <div className={`grid gap-2 ${rvShowcase.photos.length === 1 ? '' : 'grid-cols-2'}`}>{rvShowcase.photos.map((p: string, i: number) => <img key={i} src={p} alt="" className="aspect-square object-cover rounded-xl" />)}</div>}
+              <div className="grid md:grid-cols-[40%_60%]">
+                <div className="aspect-[4/3] md:aspect-auto" style={{ background: 'var(--navy)', minHeight: '180px' }}>
+                  {rvShowcase.photos?.[0] ? <img src={rvShowcase.photos[0]} alt="RV" className="w-full h-full object-cover" /> : rvShowcase.videoUrl ? <video src={rvShowcase.videoUrl} className="w-full h-full object-cover" muted /> : null}
                 </div>
-                <div className="py-2">
+                <div className="p-5 lg:p-6 flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold uppercase mb-2" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>THEIR RIG</p>
                   {rvShowcase.title && <h3 className="font-playfair text-xl font-bold italic mb-1" style={{ color: 'var(--cream)' }}>{rvShowcase.title}</h3>}
-                  {(profile.rvMake || profile.rvType) && <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}</p>}
-                  {profile.rvType && <span className="inline-block text-[11px] px-3 py-1 rounded-full mb-3" style={{ background: 'rgba(201,168,76,0.1)', color: 'var(--gold-light)', border: '1px solid rgba(201,168,76,0.15)' }}>{profile.rvType}</span>}
-                  {rvShowcase.description && <p className="text-[13px] leading-relaxed" style={{ color: 'var(--muted)' }}>{rvShowcase.description}</p>}
+                  {(profile.rvMake || profile.rvType) && <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${profile.rvType}`}</p>}
+                  {rvShowcase.photos && rvShowcase.photos.length > 1 && (
+                    <div className="flex gap-1.5 mb-3">{rvShowcase.photos.slice(0, 3).map((p: string, i: number) => <img key={i} src={p} alt="" className="w-10 h-10 rounded-lg object-cover" />)}</div>
+                  )}
+                  <Link to={`/profile/${username}/rig`} className="text-[12px] font-semibold mt-1" style={{ color: 'var(--campfire)' }}>Explore {isOwnProfile ? 'My' : 'Their'} Rig & Memories →</Link>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8" style={{ background: 'var(--campfire-glow)', borderRadius: '12px' }}>
+              <div className="p-6 text-center" style={{ background: 'var(--campfire-glow)' }}>
                 <span className="text-3xl block mb-2">{'\u{1F699}'}</span>
-                <p className="text-[14px] font-medium mb-1" style={{ color: 'var(--cream)' }}>Your rig is the heart of your profile.</p>
-                <p className="text-[12px] mb-3" style={{ color: 'var(--muted)' }}>{isOwnProfile ? 'Add it and let other RVers know how you roll.' : "This traveler hasn't added their rig yet."}</p>
-                {isOwnProfile && <button onClick={() => setShowRVShowcaseEdit(true)} className="px-5 py-2 rounded-full text-[12px] font-semibold" style={{ background: 'var(--campfire)', color: 'white' }}>Set Up My Rig</button>}
+                <p className="text-[14px] font-medium mb-1" style={{ color: 'var(--cream)' }}>{isOwnProfile ? 'Your rig is the heart of your profile.' : "This traveler hasn't added their rig yet."}</p>
+                {isOwnProfile && <Link to="/my-rv" className="inline-block mt-2 px-5 py-2 rounded-full text-[12px] font-semibold" style={{ background: 'var(--campfire)', color: 'white' }}>Set Up My Rig</Link>}
               </div>
             )}
           </div>

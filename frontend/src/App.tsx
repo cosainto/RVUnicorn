@@ -24,6 +24,7 @@ const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const UserRecipesPage = lazy(() => import('./pages/UserRecipesPage'));
 const UserGearPage = lazy(() => import('./pages/UserGearPage'));
+const RigMemoryPage = lazy(() => import('./pages/RigMemoryPage'));
 const TripsPage = lazy(() => import('./pages/TripsPage'));
 const MyRVPage = lazy(() => import('./pages/MyRVPage'));
 const TripEditPage = lazy(() => import('./pages/TripEditPage'));
@@ -196,6 +197,14 @@ function AppContent() {
             element={
               <PrivateRoute>
                 <UserGearPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile/:username/rig"
+            element={
+              <PrivateRoute>
+                <RigMemoryPage />
               </PrivateRoute>
             }
           />
