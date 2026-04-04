@@ -6,7 +6,12 @@
     <link rel="apple-touch-icon" href="/images/Logo_RVUnicorn.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="RVUnicorn - Your Kind of People. The invite-only camping and RV community for sharing adventures, finding campgrounds, and connecting with fellow travelers." />
-    <meta name="theme-color" content="#1a2e4a" />
+    <meta name="theme-color" content="#0F1C35" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RVUnicorn" />
     <meta property="og:title" content="RVUnicorn - Your Kind of People" />
     <meta property="og:description" content="The invite-only camping and RV community for sharing adventures, finding campgrounds, and connecting with fellow travelers." />
     <meta property="og:image" content="/images/Logo_RVUnicorn.png" />
@@ -14,6 +19,68 @@
     <title>RVUnicorn - Your Kind of People</title>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDjozGrpxhprpPOF2aktbZi051sDyqTXSk&libraries=places&callback=Function.prototype"></script>
     <script src="https://www.awin1.com/affs/tag/2799516" async></script>
+    <style>
+      /* Global mobile responsiveness */
+      @media (max-width: 768px) {
+        /* Prevent horizontal overflow */
+        body, #root { overflow-x: hidden; max-width: 100vw; }
+
+        /* Stack grids on mobile */
+        .grid-cols-2, .md\:grid-cols-2, .md\:grid-cols-3, .md\:grid-cols-4,
+        .lg\:grid-cols-2, .lg\:grid-cols-3, .lg\:grid-cols-4 {
+          grid-template-columns: 1fr !important;
+        }
+
+        /* Full width cards */
+        .max-w-6xl, .max-w-7xl, .max-w-5xl { padding-left: 12px !important; padding-right: 12px !important; }
+
+        /* Smaller text on mobile */
+        .text-5xl, .text-6xl, .text-7xl { font-size: 2rem !important; line-height: 1.15 !important; }
+        .text-4xl { font-size: 1.75rem !important; }
+        .text-3xl { font-size: 1.5rem !important; }
+
+        /* Fix two-column layouts */
+        .grid[style*="grid-template-columns: 1fr 1fr"],
+        .grid[style*="grid-template-columns: 40%"],
+        [style*="grid-template-columns: 1fr 1fr"] {
+          grid-template-columns: 1fr !important;
+        }
+
+        /* Scrollable tab rows */
+        .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .overflow-x-auto::-webkit-scrollbar { display: none; }
+
+        /* Touch-friendly tap targets */
+        button, a, [role="button"] { min-height: 36px; }
+
+        /* Prevent images from overflowing */
+        img { max-width: 100%; height: auto; }
+
+        /* Fix fixed modals */
+        .fixed.inset-0 { padding: 8px !important; }
+        .fixed.inset-0 > div { max-height: 90vh !important; overflow-y: auto !important; }
+
+        /* Bottom safe area for phones with gesture bar */
+        .pb-10, .pb-12, .pb-16 { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)) !important; }
+      }
+
+      /* PWA standalone mode adjustments */
+      @media (display-mode: standalone) {
+        body { padding-top: env(safe-area-inset-top); }
+      }
+
+      /* Smooth scrolling */
+      html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+
+      /* Better touch interactions */
+      * { -webkit-tap-highlight-color: transparent; }
+      input, textarea, select { font-size: 16px !important; } /* Prevents iOS zoom on focus */
+
+      /* Bottom nav spacing on mobile */
+      @media (max-width: 640px) {
+        #root > div { padding-bottom: 70px !important; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

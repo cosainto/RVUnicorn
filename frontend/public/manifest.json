@@ -1,0 +1,37 @@
+{
+  "name": "RVUnicorn — Your Kind of People",
+  "short_name": "RVUnicorn",
+  "description": "The social platform for RV travel. Discover campgrounds, plan trips, and connect with fellow campers.",
+  "start_url": "/basecamp",
+  "display": "standalone",
+  "background_color": "#0F1C35",
+  "theme_color": "#0F1C35",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/Logo_RVUnicorn.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/Logo_RVUnicorn.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "social", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Campgrounds",
+      "url": "/campgrounds",
+      "icons": [{ "src": "/images/Logo_RVUnicorn.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Trips",
+      "url": "/trips",
+      "icons": [{ "src": "/images/Logo_RVUnicorn.png", "sizes": "96x96" }]
+    }
+  ]
+}

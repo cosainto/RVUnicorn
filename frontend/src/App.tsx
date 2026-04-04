@@ -6,6 +6,7 @@ import ToastProvider from './components/ToastProvider';
 import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
 import HitchFloatingChat from './components/HitchFloatingChat';
+import MobileBottomNav from './components/MobileBottomNav';
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
 import React from 'react';
 import { Camera } from 'lucide-react';
@@ -481,6 +482,7 @@ function App() {
             <AppContent />
           </ToastProvider>
           <HitchFloatingChat />
+          <MobileBottomNav />
         </Router>
       </AuthProvider>
     </HelmetProvider>

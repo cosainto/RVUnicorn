@@ -1,17 +1,51 @@
-// RVUnicorn Service Worker — Web Push Handler
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+// RVUnicorn Service Worker — PWA + Push
+const CACHE_NAME = 'rvunicorn-v1';
+const PRECACHE = ['/', '/images/Logo_RVUnicorn.png'];
 
+// Install — cache shell
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
+  );
+});
+
+// Activate — clean old caches
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then(names => Promise.all(
+      names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
+    )).then(() => clients.claim())
+  );
+});
+
+// Fetch — network first, fallback to cache
+self.addEventListener('fetch', (e) => {
+  // Skip non-GET and API requests
+  if (e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+
+  e.respondWith(
+    fetch(e.request).then(response => {
+      // Cache successful responses
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/')))
+  );
+});
+
+// Push notifications
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let data = {};
   try { data = event.data.json(); } catch { data = { title: 'RVUnicorn', body: event.data.text() }; }
 
-  const title = data.title || 'RVUnicorn 🦄';
+  const title = data.title || 'RVUnicorn \u{1F984}';
   const options = {
     body: data.body || '',
-    icon: data.icon || '/hitch.png',
-    badge: data.badge || '/hitch.png',
+    icon: data.icon || '/images/Logo_RVUnicorn.png',
+    badge: data.badge || '/images/Logo_RVUnicorn.png',
     data: { url: data.url || '/' },
     vibrate: [200, 100, 200],
   };

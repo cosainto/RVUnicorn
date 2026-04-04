@@ -53,7 +53,7 @@ export default function CalendarCampgroundCard({ trips, visitedCampgrounds, visi
   const recentCampgrounds = visitedCampgrounds.slice(0, 5);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
+    <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '1px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
       {/* LEFT — Mini Calendar */}
       <div style={{ background: 'rgba(15, 28, 54, 0.85)', padding: '20px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: '#E8A838', textTransform: 'uppercase', margin: '0 0 12px' }}>{monthLabel}</p>
