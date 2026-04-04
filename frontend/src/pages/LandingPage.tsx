@@ -208,6 +208,14 @@ export default function LandingPage() {
       `}</style>
 
       <div className="font-dm" style={{ background: 'var(--navy-deep)', color: 'white', minHeight: '100vh' }}>
+        {/* Beta Banner */}
+        <div className="relative z-50 text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
+          <p className="text-[12px] font-bold tracking-wide">
+            {'\u{1F6A7}'} RVUnicorn is in Early Access Beta — You're among the first to shape the future of RV travel.
+            <Link to="/register" className="ml-2 underline font-bold">Join free & help us grow →</Link>
+          </p>
+        </div>
+
         <Navbar />
 
         {/* ═══ HERO ═══ */}
@@ -217,7 +225,7 @@ export default function LandingPage() {
               {/* Left — Content */}
               <div>
                 <p className="text-xs font-dm font-semibold tracking-[0.2em] uppercase mb-6" style={{ color: 'var(--gold)', animation: 'fadeUp 0.6s ease both' }}>
-                  THE SOCIAL PLATFORM FOR RV TRAVEL
+                  EARLY ACCESS BETA — THE SOCIAL PLATFORM FOR RV TRAVEL
                 </p>
                 <h1 className="font-playfair text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6" style={{ animation: 'fadeUp 0.6s ease 0.1s both' }}>
                   Find Your Herd.<br />
@@ -252,7 +260,7 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Join 11,000+ RVers already traveling together</span>
+                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Join 11,000+ early members building the RV community together</span>
                 </div>
               </div>
 
@@ -629,11 +637,11 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className={`text-sm mb-6 fade-up fade-up-d3 ${sec10.inView ? 'visible' : ''}`} style={{ color: 'var(--muted)' }}>
-              Free to join · No credit card needed · Works on any device
+              Free forever · No credit card · We're in beta and growing every day
             </p>
             <div className={`flex items-center justify-center gap-2 fade-up fade-up-d4 ${sec10.inView ? 'visible' : ''}`}>
               <span style={{ color: 'var(--gold)' }}>{'\u2B50\u2B50\u2B50\u2B50\u2B50'}</span>
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>Loved by full-timers, weekend warriors, and first-timers alike</span>
+              <span className="text-sm" style={{ color: 'var(--muted)' }}>Every early member helps shape what RVUnicorn becomes. Your voice matters here.</span>
             </div>
           </div>
         </section>
