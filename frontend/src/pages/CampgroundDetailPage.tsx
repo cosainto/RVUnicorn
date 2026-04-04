@@ -1691,6 +1691,58 @@ export default function CampgroundDetailPage() {
                   </div>
                 </div>
               )}
+              {/* ── CHARACTER INSIGHTS ── */}
+              <div className="rounded-xl overflow-hidden" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.12)' }}>
+                {/* Hitch's Take */}
+                <div className="p-4 flex items-start gap-3" style={{ borderBottom: '1px solid rgba(232,168,56,0.08)' }}>
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-bold" style={{ color: '#E8A838' }}>Hitch's Take</p>
+                    <p className="text-[12px] leading-relaxed mt-1" style={{ color: 'rgba(245,240,232,0.7)' }}>
+                      {campground.name} in {campground.location}{campground.state ? `, ${campground.state}` : ''}.
+                      {(campground as any).googleRating ? ` Rated ${(campground as any).googleRating}/5 by visitors.` : ''}
+                      {campground.amenities?.length > 0 ? ` Notable amenities: ${campground.amenities.slice(0, 3).join(', ')}.` : ''}
+                      {' '}Check the reviews below for the real scoop from RVers who've been here!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Diesel's Rig Check — only if campground has rig-relevant data */}
+                {((campground as any).hasPullThrough || (campground as any).isBigRigFriendly || (campground as any).maxRvLength || (campground as any).maxAmpService) && (
+                  <div className="p-4 flex items-start gap-3" style={{ borderBottom: '1px solid rgba(232,168,56,0.08)' }}>
+                    <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261021/rvunicorn/characters/diesel.png" alt="Diesel Dave" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-bold" style={{ color: '#E8A838' }}>Diesel's Rig Check</p>
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                        {(campground as any).isBigRigFriendly && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>{'\u2705'} Big Rig Friendly</span>}
+                        {(campground as any).hasPullThrough && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>{'\u2705'} Pull-Through Sites</span>}
+                        {(campground as any).maxRvLength && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8C96A' }}>{'\u{1F4CF}'} Max {(campground as any).maxRvLength} ft</span>}
+                        {(campground as any).maxAmpService && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8C96A' }}>{'\u26A1'} {(campground as any).maxAmpService} Amp</span>}
+                        {(campground as any).hasFullHookups && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>{'\u2705'} Full Hookups</span>}
+                        {(campground as any).hasElectricHookup && !(campground as any).hasFullHookups && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8C96A' }}>{'\u26A1'} Electric Hookup</span>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Luna's Family Check — if pet/family relevant */}
+                {((campground as any).isPetFriendly || (campground as any).hasPool || (campground as any).hasShowers) && (
+                  <div className="p-4 flex items-start gap-3">
+                    <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261086/rvunicorn/characters/luna.webp" alt="Luna" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-bold" style={{ color: '#E8A838' }}>Luna's Family Check</p>
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                        {(campground as any).isPetFriendly && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>{'\u{1F436}'} Pet Friendly</span>}
+                        {(campground as any).hasPool && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA' }}>{'\u{1F3CA}'} Pool</span>}
+                        {(campground as any).hasShowers && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA' }}>{'\u{1F6BF}'} Showers</span>}
+                        {(campground as any).hasLaundry && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA' }}>{'\u{1F9FA}'} Laundry</span>}
+                        {(campground as any).hasStore && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA' }}>{'\u{1F6D2}'} Store</span>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {campground.checkIns && campground.checkIns.length > 0 && (
                 <div>
                   <h3 className="text-xl font-bold mb-3 flex items-center gap-2"><Users className="w-5 h-5" />Currently Checked In ({campground.checkIns.length})</h3>
