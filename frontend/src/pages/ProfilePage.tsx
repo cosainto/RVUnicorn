@@ -288,7 +288,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     {/* Compact calendar strip */}
                     {profile && (
                       <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--glass-border)' }}>
-                        <div className="overflow-hidden rounded-xl" style={{ maxHeight: '120px' }}>
+                        <div className="overflow-hidden rounded-xl" style={{ maxHeight: '64px' }}>
                           <TripCalendarWidget compact={true} userId={profile.id} />
                         </div>
                       </div>
