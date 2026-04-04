@@ -138,6 +138,7 @@ import triviaAdminRoutes from './routes/trivia-admin.routes';
 import roadTripsRoutes from './routes/road-trips.routes';
 import tripSubeventsRoutes from './routes/trip-subevents.routes';
 import ssrRoutes from './routes/ssr';
+import waitlistRoutes from './routes/waitlist.routes';
 
 
 
@@ -181,6 +182,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 }));
 
 // Public routes (no auth required)
+app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
 app.use('/api/quiz', quizRoutes);
 

@@ -137,6 +137,47 @@ function FatigueRing({ inView }: { inView: boolean }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // LANDING PAGE
 // ═════════════════════════════════════════════════════════════════════════════
+// ── Upcoming Events Strip ────────────────────────────────────────────────────
+function UpcomingEventsStrip() {
+  const [events, setEvents] = useState<any[]>([]);
+  useEffect(() => {
+    fetch('/api/waitlist/upcoming-events').then(r => r.json()).then(d => setEvents(d.events || [])).catch(() => {});
+  }, []);
+  if (events.length === 0) return null;
+
+  return (
+    <section className="py-16 px-6" style={{ background: 'var(--navy-deep)' }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png" alt="Scout" className="w-10 h-10 rounded-full object-cover" />
+          <div>
+            <h3 className="font-playfair text-xl font-bold" style={{ color: 'var(--cream)' }}>Happening This Week</h3>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>Scout found {events.length} events at campgrounds near you</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {events.slice(0, 6).map((e: any) => (
+            <Link key={e.id} to={e.campground ? `/campgrounds/${e.campground.customSlug || e.campground.id}` : '#'}
+              className="rounded-xl p-4 transition hover:brightness-110" style={{ background: 'rgba(27,46,80,0.5)', border: '1px solid rgba(201,168,76,0.1)' }}>
+              <div className="flex items-start gap-3">
+                {e.campground?.imageUrl && <img src={e.campground.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--cream)' }}>{e.title}</p>
+                  {e.campground && <p className="text-[11px] truncate" style={{ color: 'var(--gold-light)' }}>{e.campground.name}</p>}
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
+                    {new Date(e.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {e.campground?.state && ` · ${e.campground.state}`}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   const howItWorksRef = useRef<HTMLElement>(null);
   const sec3 = useInView();
@@ -629,6 +670,36 @@ export default function LandingPage() {
             </p>
           </div>
         </section>
+
+        {/* ═══ EMAIL CAPTURE ═══ */}
+        <section className="py-16 px-6" style={{ background: 'var(--navy)', borderTop: '1px solid rgba(201,168,76,0.08)', borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
+          <div className="max-w-xl mx-auto text-center">
+            <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-14 h-14 rounded-full mx-auto mb-4 border-2" style={{ borderColor: 'var(--gold)' }} />
+            <h3 className="font-playfair text-2xl font-bold mb-2">Not ready to join yet?</h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>Drop your email and Hitch will send you campground tips, community updates, and early access features. No spam — just good roads.</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+              if (!email) return;
+              try {
+                await fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+                (form.elements.namedItem('email') as HTMLInputElement).value = '';
+                const btn = form.querySelector('button') as HTMLButtonElement;
+                btn.textContent = 'You\'re on the list! 🎉';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = 'Stay in the Loop'; btn.disabled = false; }, 3000);
+              } catch {}
+            }} className="flex gap-2 max-w-md mx-auto">
+              <input name="email" type="email" required placeholder="your@email.com" className="flex-1 px-4 py-3 rounded-full text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(201,168,76,0.2)', color: 'white' }} />
+              <button type="submit" className="px-6 py-3 rounded-full text-sm font-semibold transition hover:brightness-110" style={{ background: 'var(--gold)', color: 'var(--navy-deep)' }}>Stay in the Loop</button>
+            </form>
+            <p className="text-[11px] mt-3" style={{ color: 'rgba(255,255,255,0.25)' }}>We respect your inbox. Unsubscribe anytime.</p>
+          </div>
+        </section>
+
+        {/* ═══ THIS WEEKEND ═══ */}
+        <UpcomingEventsStrip />
 
         {/* ═══ SECTION 10: FINAL CTA ═══ */}
         <section ref={sec10.ref} className="py-28 px-6 relative" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 100%, rgba(232,98,42,0.08) 0%, transparent 50%), var(--navy-deep)' }}>
