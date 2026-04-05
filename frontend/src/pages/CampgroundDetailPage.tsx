@@ -37,6 +37,7 @@ import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import ShareCard from '../components/ShareCard';
 import CommunityNudgeModal from '../components/CommunityNudgeModal';
+import StateCompletionModal from '../components/StateCompletionModal';
 import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import CampMarket from '../components/CampMarket';
@@ -272,6 +273,7 @@ export default function CampgroundDetailPage() {
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [showCheckoutNudge, setShowCheckoutNudge] = useState(false);
+  const [newStateData, setNewStateData] = useState<{ code: string; number: number } | null>(null);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -372,7 +374,11 @@ export default function CampgroundDetailPage() {
 
   const handleCheckIn = async () => {
     if (!user || !campground) return;
-    try { await api.post('/checkins', { campgroundId: campground.id, checkInDate: checkInData.checkInDate, checkOutDate: checkInData.checkOutDate || null, siteNumber: checkInData.siteNumber || null }); setShowCheckInModal(false); setShowShareCard(true); loadCampground(); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
+    try {
+      const { data: ciData } = await api.post('/checkins', { campgroundId: campground.id, checkInDate: checkInData.checkInDate, checkOutDate: checkInData.checkOutDate || null, siteNumber: checkInData.siteNumber || null });
+      setShowCheckInModal(false); setShowShareCard(true); loadCampground();
+      if (ciData.newStateUnlocked) { setTimeout(() => setNewStateData({ code: ciData.newStateUnlocked, number: ciData.totalStates }), 2000); }
+    } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
   };
 
   const handleSubmitReview = async () => {
@@ -2330,6 +2336,11 @@ export default function CampgroundDetailPage() {
         </div>
       )}
     </div>
+
+    {/* State Completion Celebration */}
+    {newStateData && (
+      <StateCompletionModal stateCode={newStateData.code} stateNumber={newStateData.number} onClose={() => setNewStateData(null)} />
+    )}
 
     {/* Checkout community nudge */}
     {showCheckoutNudge && campground && (

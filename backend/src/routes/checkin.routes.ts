@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
 import { sendWebPush } from '../utils/webPush';
+import { checkSharedFire } from './sharing.routes';
 // Lazy import to avoid circular dependency with index.ts
 function getIO() { return require('../index').io; }
 
@@ -258,6 +259,9 @@ router.get('/active', authenticateToken, async (req: any, res) => {
       try {
         await logCheckIn(userId, checkIn.campground.id, checkIn.campground.name);
 
+        // Shared Fire — notify nearby friends (fire and forget)
+        checkSharedFire(userId, checkIn.campground.id).catch(() => {});
+
         // Notify friends that user checked in
         const friendships = await prisma.friendship.findMany({
           where: {
@@ -296,7 +300,25 @@ router.get('/active', authenticateToken, async (req: any, res) => {
       }
     }
 
-    res.json({ checkIn });
+    // Check for new state unlocked
+    let newStateUnlocked = null;
+    let totalStates = 0;
+    if (checkIn?.campground?.state) {
+      try {
+        const prevCheckins = await prisma.checkIn.findMany({
+          where: { userId, id: { not: checkIn.id } },
+          select: { campground: { select: { state: true } } },
+        });
+        const prevStates = new Set(prevCheckins.map(c => c.campground?.state).filter(Boolean));
+        totalStates = prevStates.size;
+        if (!prevStates.has(checkIn.campground.state)) {
+          newStateUnlocked = checkIn.campground.state;
+          totalStates += 1;
+        }
+      } catch {}
+    }
+
+    res.json({ checkIn, newStateUnlocked, totalStates });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

@@ -91,6 +91,7 @@ model User {
   isCrewCaptain                                   Boolean                     @default(false)
   crewCaptainAt                                   DateTime?
   openToWork                                      Boolean                     @default(false)
+  showLiveStatusPublicly                          Boolean                     @default(false)
   jobTypePrefs                                    String[]                    @default([])
   jobStatePrefs                                   String[]                    @default([])
   jobCompPref                                     String?
@@ -5103,4 +5104,20 @@ model JobApplication {
   job          JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
   user         User       @relation("JobApplications", fields: [userId], references: [id])
   @@unique([jobId, userId])
+}
+
+model SharedFireAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  fromUserId  String
+  sentAt      DateTime @default(now())
+  @@unique([userId, fromUserId])
+}
+
+model ShareEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  shareType String
+  platform  String
+  createdAt DateTime @default(now())
 }
