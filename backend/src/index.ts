@@ -190,7 +190,7 @@ app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', companionRoutes);
 app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use(passport.initialize());
-app.use(oauthRoutes);
+app.use('/api', oauthRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
 app.use('/api/quiz', quizRoutes);
 
