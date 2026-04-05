@@ -158,7 +158,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
     // 3: Basecamp (mock UI built inline)
     { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #1B2E50)', icon: '\u{1F3D5}', headline: 'Your Basecamp', body: 'Everything happens here \u2014 campfire chat, weather, recipes, and your crew.' },
     // 4: Check In
-    { img: '/images/char_hitch_walter.png', icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Over 16,000 campgrounds across North America. Every check-in fills in your personal travel map \u2014 one state at a time.' },
+    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #0a1a2e)', icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Every check-in fills in your travel map. See where friends are camping right now.' },
     // 5: Hitch AI
     { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Meet Your RVUnicorn Family', body: 'These characters are here to help you on every trip.' },
     // 6: Rig Type
@@ -208,6 +208,70 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
           {slide === 2 && (
             <div className="flex flex-wrap gap-2">
               {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.region === r.value} onClick={() => saveProgress({ region: r.value })} />)}
+            </div>
+          )}
+
+          {/* Slide 4: Travel Map Mock */}
+          {slide === 4 && (
+            <div className="space-y-3">
+              {/* Mock US Map with highlighted states */}
+              <div className="rounded-xl p-4 relative" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-[12px] font-bold" style={{ color: '#F5F0E8' }}>Deanna's Travel Map</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>14 states visited</p>
+                  </div>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>Live</span>
+                </div>
+                {/* Simplified US map as state dots */}
+                <div className="relative" style={{ height: '120px' }}>
+                  {/* Visited states as gold dots positioned roughly geographically */}
+                  {[
+                    { st: 'OR', x: '8%', y: '15%' }, { st: 'MT', x: '20%', y: '10%' }, { st: 'WY', x: '25%', y: '22%' },
+                    { st: 'SD', x: '35%', y: '18%' }, { st: 'WI', x: '48%', y: '18%' }, { st: 'MI', x: '55%', y: '15%' },
+                    { st: 'NY', x: '78%', y: '18%' }, { st: 'MA', x: '85%', y: '16%' }, { st: 'PA', x: '76%', y: '25%' },
+                    { st: 'IN', x: '55%', y: '32%' }, { st: 'KY', x: '60%', y: '40%' }, { st: 'TX', x: '32%', y: '65%' },
+                    { st: 'NM', x: '22%', y: '55%' }, { st: 'AZ', x: '15%', y: '55%' }, { st: 'UT', x: '18%', y: '35%' },
+                    { st: 'GA', x: '65%', y: '55%' }, { st: 'FL', x: '70%', y: '72%' },
+                  ].map(s => (
+                    <div key={s.st} className="absolute flex flex-col items-center" style={{ left: s.x, top: s.y }}>
+                      <div className="w-3 h-3 rounded-full" style={{ background: '#E8A838', boxShadow: '0 0 6px rgba(232,168,56,0.4)' }} />
+                      <span className="text-[7px] font-bold mt-0.5" style={{ color: 'rgba(232,168,56,0.6)' }}>{s.st}</span>
+                    </div>
+                  ))}
+                  {/* Unvisited states as dim dots */}
+                  {[
+                    { x: '5%', y: '35%' }, { x: '12%', y: '45%' }, { x: '42%', y: '30%' }, { x: '50%', y: '45%' },
+                    { x: '68%', y: '35%' }, { x: '72%', y: '45%' }, { x: '38%', y: '50%' }, { x: '45%', y: '60%' },
+                    { x: '30%', y: '40%' }, { x: '82%', y: '30%' }, { x: '60%', y: '60%' },
+                  ].map((d, i) => (
+                    <div key={i} className="absolute w-2 h-2 rounded-full" style={{ left: d.x, top: d.y, background: 'rgba(255,255,255,0.08)' }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Friends camping now */}
+              <div className="rounded-xl p-3" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
+                <p className="text-[11px] font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F4CD}'} Friends Camping Now</p>
+                <div className="space-y-2">
+                  {[
+                    { name: 'Mike R.', spot: 'Zion National Park, UT', color: '#E8622A', emoji: '\u{1F3D5}' },
+                    { name: 'Sarah J.', spot: 'Glacier NP, MT', color: '#3B82F6', emoji: '\u{1F3D4}' },
+                    { name: 'The Robinsons', spot: 'Joshua Tree, CA', color: '#10B981', emoji: '\u{1F335}' },
+                  ].map(f => (
+                    <div key={f.name} className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{ background: f.color, color: 'white' }}>{f.name[0]}</div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-medium" style={{ color: '#F5F0E8' }}>{f.name}</span>
+                        <span className="text-[10px] ml-1.5" style={{ color: 'rgba(245,240,232,0.35)' }}>{f.emoji} {f.spot}</span>
+                      </div>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-[12px] text-center" style={{ color: 'rgba(232,168,56,0.4)' }}>16,000+ campgrounds across North America</p>
             </div>
           )}
 
