@@ -160,7 +160,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
     // 4: Check In
     { img: heroImg(1), icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Over 16,000 campgrounds across North America. Every check-in fills in your personal travel map \u2014 one state at a time.' },
     // 5: Hitch AI
-    { img: heroImg(2), icon: '\u2728', headline: 'Meet Hitch', body: 'Your AI trail guide. Ask anything.' },
+    { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Meet Your RVUnicorn Family', body: 'These characters are here to help you on every trip.' },
     // 6: Rig Type
     { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #2a2000)', icon: '\u{1F690}', headline: 'What\'s your rig?', body: 'Every adventure starts with your home on wheels. Tell us what you\'re rolling in.' },
     // 7: Let's Go
@@ -211,35 +211,28 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
             </div>
           )}
 
-          {/* Slide 5: Hitch AI Chat Animation */}
+          {/* Slide 5: Meet Your RVUnicorn Family */}
           {slide === 5 && (
-            <div className="space-y-3 mt-2">
-              {hitchStep >= 1 && (
-                <div className="flex justify-end" style={{ animation: 'fadeIn 200ms ease' }}>
-                  <div className="px-3 py-2 rounded-2xl rounded-br-sm text-[13px] max-w-[75%]" style={{ background: 'rgba(232,168,56,0.15)', color: '#F5F0E8' }}>
-                    Where should I stop {LOCATION_REF[state.region || ''] || 'for tonight'}?
-                  </div>
-                </div>
-              )}
-              {hitchStep === 2 && (
-                <div className="flex items-center gap-2" style={{ animation: 'fadeIn 200ms ease' }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: '#E8A838', color: '#0F1C35' }}>H</div>
-                  <div className="flex gap-1 px-3 py-2 rounded-xl" style={{ background: '#1B2E50' }}>
-                    {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: '#E8A838', animationDelay: `${i*0.15}s` }} />)}
-                  </div>
-                </div>
-              )}
-              {hitchStep >= 3 && (
-                <div className="flex items-start gap-2" style={{ animation: 'fadeIn 200ms ease' }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: '#E8A838', color: '#0F1C35' }}>H</div>
-                  <div>
-                    <span className="text-[11px] font-bold block mb-0.5" style={{ color: '#E8A838' }}>Hitch</span>
-                    <div className="px-3 py-2 rounded-xl rounded-tl-sm text-[13px]" style={{ background: '#1B2E50', color: '#F5F0E8' }}>
-                      {HITCH_RESPONSES[state.region || ''] || HITCH_RESPONSES.midwest}
+            <div className="space-y-2 mt-1">
+              {[
+                { img: '/images/char_hitch_walter.png', name: 'Hitch', role: 'Your Trail Guide', desc: 'AI camp host who knows every road', color: '#E8A838' },
+                { img: '/images/char_diesel.png', name: 'Diesel Dave', role: 'Big Rig Expert', desc: 'Makes sure your rig fits everywhere', color: '#8BC34A' },
+                { img: '/images/char_luna.png', name: 'Luna', role: 'Family & Pets', desc: 'Kid-friendly spots and pet policies', color: '#F48FB1' },
+                { img: '/images/char_scout.png', name: 'Scout', role: 'Adventure Guide', desc: 'Trails, hidden gems, and boondocking', color: '#FF7043' },
+                { img: '/images/char_rose.png', name: 'Rosé', role: 'Glamping Guru', desc: 'Wineries, scenic views, the finer side', color: '#9C27B0' },
+                { img: '/images/char_walter.png', name: 'Walter', role: 'Nature & Stars', desc: 'Stargazing and honest campground takes', color: '#5C6BC0' },
+              ].map((char, i) => (
+                <div key={char.name} className="flex items-center gap-3 p-2.5 rounded-xl" style={{ background: '#1B2E50', animation: `fadeIn 300ms ease ${i * 100}ms both` }}>
+                  <img src={char.img} alt={char.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0 border" style={{ borderColor: char.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold" style={{ color: char.color }}>{char.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,232,0.5)' }}>{char.role}</span>
                     </div>
+                    <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.45)' }}>{char.desc}</p>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
 
