@@ -1756,7 +1756,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       )}
 
       {shareModalItem && (() => {
-        const sUrl = 'https://rvunicorn-production.up.railway.app/post/' + shareModalItem.id;
+        const sUrl = 'https://www.rvunicorn.com/post/' + shareModalItem.id;
         const sText = shareModalItem.content?.substring(0, 100) || 'Check out this post on RVUnicorn!';
         const eu = encodeURIComponent(sUrl);
         const et = encodeURIComponent(sText);

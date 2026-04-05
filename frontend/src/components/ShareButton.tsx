@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
 
-const SITE = 'https://rvunicorn-production.up.railway.app';
+const SITE = 'https://www.rvunicorn.com';
 
 interface ShareButtonProps {
   title: string;

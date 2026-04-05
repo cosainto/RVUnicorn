@@ -394,7 +394,7 @@ export default function CreatorPage() {
     }
   };
 
-  const creatorUrl = `https://rvunicorn-production.up.railway.app/creators/${creator?.username}`;
+  const creatorUrl = `https://www.rvunicorn.com/creators/${creator?.username}`;
 
   if (loading) {
     return (

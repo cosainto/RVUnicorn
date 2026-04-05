@@ -414,7 +414,7 @@ function OverviewTab({ stats, allContent, user }: { stats: CreatorStats; allCont
           <div className="flex items-center gap-2 mt-2">
             <code className="flex-1 text-xs bg-gray-50 px-2 py-1.5 rounded-lg text-gray-600 truncate">rvunicorn.com/creators/{user?.username}</code>
             <button
-              onClick={() => navigator.clipboard.writeText(`https://rvunicorn-production.up.railway.app/creators/${user?.username}`)}
+              onClick={() => navigator.clipboard.writeText(`https://www.rvunicorn.com/creators/${user?.username}`)}
               className="p-1.5 hover:bg-gray-100 rounded-lg transition"
             >
               <Copy className="w-4 h-4 text-gray-400" />
