@@ -8,6 +8,7 @@ const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116
 const CAMPER_TYPES = [
   { emoji: '\u{1F5D3}', label: 'Weekend Warrior', value: 'weekend_warrior' },
   { emoji: '\u{1F3E0}', label: 'Full-Timer', value: 'full_timer' },
+  { emoji: '\u{26FA}', label: 'Occasional Camper', value: 'occasional' },
   { emoji: '\u{1F5FA}', label: 'Planning First Big Trip', value: 'first_big_trip' },
   { emoji: '\u2728', label: 'First Trip Ever', value: 'first_trip_ever' },
 ];
@@ -42,7 +43,7 @@ interface Props { onComplete: () => void; displayName: string; }
 
 export default function OnboardingModalV2({ onComplete, displayName }: Props) {
   const [slide, setSlide] = useState(0);
-  const [state, setState] = useState({ camperType: null as string | null, region: null as string | null, rigType: null as string | null, startedAt: Date.now() });
+  const [state, setState] = useState({ camperType: null as string | null, regions: [] as string[], rigType: null as string | null, startedAt: Date.now() });
   const [photos, setPhotos] = useState<Record<string, string[]>>({ all: [], west: [], south: [], midwest: [], northeast: [] });
   const [hitchStep, setHitchStep] = useState(0);
   const [exiting, setExiting] = useState(false);
@@ -80,7 +81,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
   const canAdvance = () => {
     if (slide === 1) return !!state.camperType;
-    if (slide === 2) return !!state.region;
+    if (slide === 2) return state.regions.length > 0;
     if (slide === 6) return !!state.rigType;
     return true;
   };
@@ -108,7 +109,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
   const heroImg = (idx: number) => photos.all[idx] || '';
   const regionImg = () => {
-    const r = state.region || '';
+    const r = state.regions[0] || '';
     return photos[r === 'mountain' ? 'west' : r]?.[0] || photos.all[3] || '';
   };
 
@@ -116,6 +117,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
   const headlines: Record<string, string> = {
     weekend_warrior: 'Your next escape is closer than you think.',
     full_timer: 'Your next long-term basecamp is waiting.',
+    occasional: 'Every trip counts. Make the next one unforgettable.',
     first_big_trip: 'Every great journey starts here.',
     first_trip_ever: 'Everyone starts somewhere. This is yours.',
   };
@@ -199,15 +201,22 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
           {/* Slide 1: Camper Type Cards */}
           {slide === 1 && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {CAMPER_TYPES.map(ct => <OptionCard key={ct.value} {...ct} selected={state.camperType === ct.value} onClick={() => saveProgress({ camperType: ct.value })} />)}
             </div>
           )}
 
           {/* Slide 2: Region Pills */}
           {slide === 2 && (
-            <div className="flex flex-wrap gap-2">
-              {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.region === r.value} onClick={() => saveProgress({ region: r.value })} />)}
+            <div>
+              <div className="flex flex-wrap gap-2">
+                {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.regions.includes(r.value)} onClick={() => {
+                  const newRegions = state.regions.includes(r.value) ? state.regions.filter(v => v !== r.value) : [...state.regions, r.value];
+                  setState(s => ({ ...s, regions: newRegions }));
+                  saveProgress({ region: newRegions.join(',') });
+                }} />)}
+              </div>
+              <p className="text-[11px] text-center mt-2" style={{ color: 'rgba(245,240,232,0.3)' }}>Select as many as you like</p>
             </div>
           )}
 
