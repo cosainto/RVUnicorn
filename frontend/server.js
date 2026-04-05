@@ -9,9 +9,14 @@ const PORT = parseInt(process.env.PORT || '4173');
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 // Proxy API and upload requests to the backend
-// Use pathFilter instead of mount path to preserve /api prefix
-app.use(createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true, pathFilter: '/api' }));
-app.use(createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true, pathFilter: '/uploads' }));
+// Must use middleware function to preserve full path including /api prefix
+const apiProxy = createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true });
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
+    return apiProxy(req, res, next);
+  }
+  next();
+});
 
 // Proxy SEO routes to the backend
 app.get('/sitemap.xml', (req, res) => {

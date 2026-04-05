@@ -1,9 +1,6 @@
-const BACKEND_URL = import.meta.env.VITE_API_URL || '/api';
-
 export default function OAuthButtons() {
   const handleOAuth = (provider: string) => {
-    // OAuth redirects must go directly to the backend, not through the SPA
-    window.location.href = `${BACKEND_URL}/auth/${provider}`;
+    window.location.href = `/api/auth/${provider}`;
   };
 
   return (
