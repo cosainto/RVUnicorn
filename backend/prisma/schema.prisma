@@ -626,6 +626,7 @@ model Campground {
   campfireTips           CampfireTip[]
   lastMinuteDeals        LastMinuteDeal[]
   welcomeKit             WelcomeKit?
+  rules                  CampgroundRules?
 }
 
 model CampMarketListing {
@@ -5031,4 +5032,29 @@ model ReferralEvent {
   tripSlug       String?
   createdAt      DateTime @default(now())
   @@index([referrerId])
+}
+
+model CampgroundRules {
+  id              String   @id @default(cuid())
+  campgroundId    String   @unique
+  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  checkInTime     String?
+  checkOutTime    String?
+  quietHoursStart String?
+  quietHoursEnd   String?
+  petPolicy       String?
+  petRestrictions String?
+  firePolicy      String?
+  generatorHours  String?
+  speedLimit      String?
+  ageRestrictions String?
+  maxVehicles     String?
+  maxGuests       String?
+  alcoholPolicy   String?
+  swimRules       String?
+  trashPolicy     String?
+  additionalRules String[]  @default([])
+  rawText         String?
+  scrapedAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

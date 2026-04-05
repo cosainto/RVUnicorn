@@ -223,6 +223,7 @@ const ALL_TABS = [
   { id: 'news', label: 'News', icon: Megaphone },
   { id: 'events', label: 'Events', icon: Calendar },
   { id: 'photos', label: 'Photos', icon: Camera },
+  { id: 'rules', label: 'Rules', icon: null },
   { id: 'badges', label: 'Badges', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
   { id: 'vibe', label: '✨ Vibe', icon: null },
@@ -294,6 +295,7 @@ export default function CampgroundDetailPage() {
   const [inWishlist, setInWishlist] = useState(false);
   const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
   const [customBadges, setCustomBadges] = useState<any[]>([]);
+  const [campgroundRules, setCampgroundRules] = useState<any>(null);
   const [reviewData, setReviewData] = useState({ rating: 0, title: '', review: '', visitDate: '' });
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -312,7 +314,8 @@ export default function CampgroundDetailPage() {
     try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
         setBannerPosition(data.bannerPosition || '50% 50%');
       try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {}
-      try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data.badges || [])); } catch {} }
+      try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data.badges || [])); } catch {}
+      try { const rulesRes = await api.get(`/campground-features/${id}/rules`); setCampgroundRules(rulesRes.data.rules); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
   };
 
@@ -2040,6 +2043,89 @@ export default function CampgroundDetailPage() {
               <CampgroundVibeCard campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} />
               <HitchRigCheck campgroundId={campground.id} campgroundName={campground.name} />
               <CampersLikeYou />
+            </div>
+          )}
+          {activeTab === 'rules' && (
+            <div>
+              <h3 className="text-xl font-bold mb-4">Campground Rules & Policies</h3>
+              {campgroundRules ? (
+                <div className="space-y-4">
+                  {/* Hours */}
+                  {(campgroundRules.checkInTime || campgroundRules.checkOutTime || campgroundRules.quietHoursStart) && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-3" style={{ color: '#E8A838' }}>{'\u{1F552}'} Hours</h4>
+                      <div className="grid grid-cols-2 gap-3 text-[13px]">
+                        {campgroundRules.checkInTime && <div><span style={{ color: 'rgba(245,240,232,0.4)' }}>Check-in:</span> <span style={{ color: '#F5F0E8' }}>{campgroundRules.checkInTime}</span></div>}
+                        {campgroundRules.checkOutTime && <div><span style={{ color: 'rgba(245,240,232,0.4)' }}>Check-out:</span> <span style={{ color: '#F5F0E8' }}>{campgroundRules.checkOutTime}</span></div>}
+                        {campgroundRules.quietHoursStart && <div><span style={{ color: 'rgba(245,240,232,0.4)' }}>Quiet hours:</span> <span style={{ color: '#F5F0E8' }}>{campgroundRules.quietHoursStart} – {campgroundRules.quietHoursEnd || 'morning'}</span></div>}
+                        {campgroundRules.generatorHours && <div><span style={{ color: 'rgba(245,240,232,0.4)' }}>Generator:</span> <span style={{ color: '#F5F0E8' }}>{campgroundRules.generatorHours}</span></div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pets */}
+                  {campgroundRules.petPolicy && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F436}'} Pet Policy</h4>
+                      <p className="text-[13px]" style={{ color: '#F5F0E8' }}>{campgroundRules.petPolicy}</p>
+                      {campgroundRules.petRestrictions && <p className="text-[12px] mt-1" style={{ color: 'rgba(245,240,232,0.4)' }}>{campgroundRules.petRestrictions}</p>}
+                    </div>
+                  )}
+
+                  {/* Fire & Safety */}
+                  {(campgroundRules.firePolicy || campgroundRules.speedLimit) && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F525}'} Fire & Safety</h4>
+                      {campgroundRules.firePolicy && <p className="text-[13px] mb-1" style={{ color: '#F5F0E8' }}>{campgroundRules.firePolicy}</p>}
+                      {campgroundRules.speedLimit && <p className="text-[13px]" style={{ color: '#F5F0E8' }}>Speed limit: {campgroundRules.speedLimit}</p>}
+                    </div>
+                  )}
+
+                  {/* Limits */}
+                  {(campgroundRules.maxVehicles || campgroundRules.maxGuests || campgroundRules.ageRestrictions) && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F6D1}'} Limits</h4>
+                      <div className="space-y-1 text-[13px]">
+                        {campgroundRules.maxVehicles && <p style={{ color: '#F5F0E8' }}>Max vehicles: {campgroundRules.maxVehicles}</p>}
+                        {campgroundRules.maxGuests && <p style={{ color: '#F5F0E8' }}>Max guests: {campgroundRules.maxGuests}</p>}
+                        {campgroundRules.ageRestrictions && <p style={{ color: '#F5F0E8' }}>Age: {campgroundRules.ageRestrictions}</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other */}
+                  {(campgroundRules.alcoholPolicy || campgroundRules.swimRules || campgroundRules.trashPolicy) && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{2139}'} Other Policies</h4>
+                      <div className="space-y-1 text-[13px]">
+                        {campgroundRules.alcoholPolicy && <p style={{ color: '#F5F0E8' }}>Alcohol: {campgroundRules.alcoholPolicy}</p>}
+                        {campgroundRules.swimRules && <p style={{ color: '#F5F0E8' }}>Swimming: {campgroundRules.swimRules}</p>}
+                        {campgroundRules.trashPolicy && <p style={{ color: '#F5F0E8' }}>Trash: {campgroundRules.trashPolicy}</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Rules */}
+                  {campgroundRules.additionalRules?.length > 0 && (
+                    <div className="rounded-xl p-4" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.1)' }}>
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F4CB}'} Additional Rules</h4>
+                      <ul className="space-y-1">
+                        {campgroundRules.additionalRules.map((rule: string, i: number) => (
+                          <li key={i} className="text-[13px] flex items-start gap-2" style={{ color: '#F5F0E8' }}>
+                            <span style={{ color: 'rgba(232,168,56,0.5)' }}>•</span> {rule}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <span className="text-4xl block mb-3">{'\u{1F4CB}'}</span>
+                  <p className="text-sm" style={{ color: 'rgba(245,240,232,0.4)' }}>No rules information available yet.</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(245,240,232,0.25)' }}>Check the campground's website for current policies.</p>
+                </div>
+              )}
             </div>
           )}
           {activeTab === 'badges' && customBadges.length > 0 && (

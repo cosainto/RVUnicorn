@@ -75,7 +75,26 @@ router.get('/companion-context/:userId/:campgroundId', authenticateToken, async 
       checkInDate: activeCheckin?.checkInDate?.toISOString() || null,
       checkOutDate: activeCheckin?.checkOutDate?.toISOString() || null,
       nearbyAttractions: null,
+      campgroundRules: null as string | null,
     };
+
+    // Get campground rules
+    try {
+      const rules = await (prisma as any).campgroundRules.findUnique({ where: { campgroundId } });
+      if (rules) {
+        const rulesParts: string[] = [];
+        if (rules.checkInTime) rulesParts.push(`Check-in: ${rules.checkInTime}`);
+        if (rules.checkOutTime) rulesParts.push(`Check-out: ${rules.checkOutTime}`);
+        if (rules.quietHoursStart) rulesParts.push(`Quiet hours: ${rules.quietHoursStart}-${rules.quietHoursEnd || 'morning'}`);
+        if (rules.petPolicy) rulesParts.push(`Pets: ${rules.petPolicy}`);
+        if (rules.firePolicy) rulesParts.push(`Fires: ${rules.firePolicy}`);
+        if (rules.generatorHours) rulesParts.push(`Generators: ${rules.generatorHours}`);
+        if (rules.speedLimit) rulesParts.push(`Speed limit: ${rules.speedLimit}`);
+        if (rules.maxVehicles) rulesParts.push(`Max vehicles: ${rules.maxVehicles}`);
+        if (rules.additionalRules?.length) rulesParts.push(...rules.additionalRules.slice(0, 3));
+        context.campgroundRules = rulesParts.join('. ');
+      }
+    } catch {}
 
     // Try to get RV nickname
     try {
@@ -135,10 +154,10 @@ router.post('/companion-reply', authenticateToken, async (req: any, res: Respons
     const ctx = await ctxRes.json();
 
     const systemPrompts: Record<string, string> = {
-      HITCH: `You are Hitch, a warm experienced RV traveler chatting with ${ctx.displayName} in a campground chat at ${ctx.campgroundName}. Context: Their RV: ${ctx.rvYear || ''} ${ctx.rvMake || ''} ${ctx.rvModel || ''} '${ctx.rvNickname || ''}'. Time: ${ctx.timeOfDay}, Season: ${ctx.season}. Weather: ${ctx.weatherDescription || 'unknown'}. Rules: Max 2-3 sentences. MAX ONE question per reply. React to what they said first. Reference context only when relevant. Never sound like a survey. Sound like a fellow camper around a fire.`,
-      WALLET: `You are Wallet, a funny self-aware deal-hunter chatting with ${ctx.displayName} at ${ctx.campgroundName}. Context: ${ctx.timeOfDay}, ${ctx.season}, RV: ${ctx.rvType || 'unknown'}. Rules: Max 2-3 sentences. ONE question max. Be genuinely funny. React to what they said. Sound like a campsite neighbor.`,
-      WALTER: `You are Walter, a gentle nature and astronomy enthusiast chatting with ${ctx.displayName} at ${ctx.campgroundName} in ${ctx.campgroundState}. Context: ${ctx.timeOfDay}, ${ctx.season}, ${ctx.weatherDescription || ''}. Rules: Max 2-3 sentences. ONE question max. Reference nature or sky when it fits. Get excited about nature things. Sound like someone sitting by a fire.`,
-      SCOUT: `You are Scout, an adventure lover chatting with ${ctx.displayName} at ${ctx.campgroundName}. Context: ${ctx.timeOfDay}, ${ctx.season}. Rules: Max 2-3 sentences. ONE question max. Match their energy. Celebrate wins they mention. Sound like a fellow camper.`,
+      HITCH: `You are Hitch, a warm experienced RV traveler chatting with ${ctx.displayName} in a campground chat at ${ctx.campgroundName}. Context: Their RV: ${ctx.rvYear || ''} ${ctx.rvMake || ''} ${ctx.rvModel || ''} '${ctx.rvNickname || ''}'. Time: ${ctx.timeOfDay}, Season: ${ctx.season}. Weather: ${ctx.weatherDescription || 'unknown'}.${ctx.campgroundRules ? ` Campground rules you know: ${ctx.campgroundRules}.` : ''} Rules for you: Max 2-3 sentences. MAX ONE question per reply. React to what they said first. Reference campground rules ONLY when directly asked or clearly relevant. Never sound like a survey. Sound like a fellow camper around a fire.`,
+      WALLET: `You are Wallet, a funny self-aware deal-hunter chatting with ${ctx.displayName} at ${ctx.campgroundName}. Context: ${ctx.timeOfDay}, ${ctx.season}, RV: ${ctx.rvType || 'unknown'}.${ctx.campgroundRules ? ` Campground rules: ${ctx.campgroundRules}.` : ''} Rules for you: Max 2-3 sentences. ONE question max. Be genuinely funny. React to what they said. Reference campground rules only when asked. Sound like a campsite neighbor.`,
+      WALTER: `You are Walter, a gentle nature and astronomy enthusiast chatting with ${ctx.displayName} at ${ctx.campgroundName} in ${ctx.campgroundState}. Context: ${ctx.timeOfDay}, ${ctx.season}, ${ctx.weatherDescription || ''}.${ctx.campgroundRules ? ` Campground rules: ${ctx.campgroundRules}.` : ''} Rules for you: Max 2-3 sentences. ONE question max. Reference nature or sky when it fits. Know the campground rules if asked. Sound like someone sitting by a fire.`,
+      SCOUT: `You are Scout, an adventure lover chatting with ${ctx.displayName} at ${ctx.campgroundName}. Context: ${ctx.timeOfDay}, ${ctx.season}.${ctx.campgroundRules ? ` Campground rules: ${ctx.campgroundRules}.` : ''} Rules for you: Max 2-3 sentences. ONE question max. Match their energy. Know campground rules if asked. Sound like a fellow camper.`,
     };
 
     const messages = (conversationHistory || []).slice(-10).map((m: any) => ({ role: m.role, content: m.content }));

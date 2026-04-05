@@ -833,6 +833,15 @@ router.delete('/:campgroundId/map', authenticateToken, async (req: Request, res:
 });
 
 
+// ══ CAMPGROUND RULES ══
+router.get('/:campgroundId/rules', async (req: Request, res: Response) => {
+  try {
+    const rules = await prisma.campgroundRules.findUnique({ where: { campgroundId: req.params.campgroundId } });
+    if (!rules) return res.json({ rules: null });
+    res.json({ rules });
+  } catch { res.json({ rules: null }); }
+});
+
 // ══ HITCH ROUTE SUGGESTIONS — suggest campground stops near a destination ══
 router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) => {
   try {
