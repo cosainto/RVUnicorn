@@ -82,7 +82,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.BACKEND_URL || 'https://rvunicorn-production.up.railway.app'}/api/auth/google/callback`,
+    callbackURL: `${process.env.FRONTEND_URL || 'https://www.rvunicorn.com'}/api/auth/google/callback`.replace(/"/g, ''),
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
       const result = await findOrCreateOAuthUser('google', profile);
@@ -92,7 +92,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
   router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 
-  router.get('/api/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }),
+  router.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }),
     (req: Request, res: Response) => {
       const { user, isNew } = req.user as any;
       const token = generateToken(user);
@@ -106,7 +106,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: `${process.env.BACKEND_URL || 'https://rvunicorn-production.up.railway.app'}/api/auth/facebook/callback`,
+    callbackURL: `${process.env.FRONTEND_URL || 'https://www.rvunicorn.com'}/api/auth/facebook/callback`.replace(/"/g, ''),
     profileFields: ['id', 'emails', 'name', 'displayName', 'photos', 'profileUrl'],
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
@@ -117,7 +117,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
 
   router.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email', 'public_profile'], session: false }));
 
-  router.get('/api/auth/facebook/callback', passport.authenticate('facebook', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=facebook` }),
+  router.get('/auth/facebook/callback', passport.authenticate('facebook', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=facebook` }),
     (req: Request, res: Response) => {
       const { user, isNew } = req.user as any;
       const token = generateToken(user);
@@ -127,7 +127,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
 }
 
 // ══ APPLE (POST-based) ══
-router.post('/api/auth/apple/callback', async (req: Request, res: Response) => {
+router.post('/auth/apple/callback', async (req: Request, res: Response) => {
   try {
     const { id_token, user: appleUser } = req.body;
     if (!id_token) return res.redirect(`${FRONTEND_URL}/login?error=apple`);
