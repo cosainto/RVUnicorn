@@ -1,5 +1,6 @@
 import LandingPage from './LandingPage';
 import NudgeCard from '../components/NudgeCard';
+import ProgressMicroBar from '../components/ProgressMicroBar';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -667,6 +668,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       `}</style>
       {typeof showTour !== 'undefined' && showTour && user && <BasecampTour firstName={user.firstName} onComplete={handleTourComplete} />}
     <div className="bc-dark space-y-3">
+      {/* Progress Micro-Bar */}
+      <ProgressMicroBar />
       {/* Onboarding Nudge Card */}
       <NudgeCard />
       {/* Current Status Display */}
