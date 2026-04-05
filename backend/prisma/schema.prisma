@@ -90,6 +90,11 @@ model User {
   referralCount                                   Int                         @default(0)
   isCrewCaptain                                   Boolean                     @default(false)
   crewCaptainAt                                   DateTime?
+  openToWork                                      Boolean                     @default(false)
+  jobTypePrefs                                    String[]                    @default([])
+  jobStatePrefs                                   String[]                    @default([])
+  jobCompPref                                     String?
+  availableFrom                                   DateTime?
   petTypes                                        String[]                    @default([])
   preferredTripLength                             String?
   travelPartySize                                 Int?
@@ -338,6 +343,8 @@ model User {
   companionSessions        CompanionSession[] @relation("CompanionSessions")
   oauthAccounts            OAuthAccount[]     @relation("OAuthAccounts")
   onboardingEvents         OnboardingEvent[]  @relation("OnboardingEvents")
+  jobPostingsCreated       JobPosting[]       @relation("JobPostingsCreated")
+  jobApplications          JobApplication[]   @relation("JobApplications")
   pushSubscriptions       PushSubscription[]
   campMarketListings      CampMarketListing[]
   campMarketInterests     CampMarketInterest[]  @relation("CampMarketBuyer")
@@ -627,6 +634,7 @@ model Campground {
   lastMinuteDeals        LastMinuteDeal[]
   welcomeKit             WelcomeKit?
   rules                  CampgroundRules?
+  jobPostings            JobPosting[]
 }
 
 model CampMarketListing {
@@ -5057,4 +5065,42 @@ model CampgroundRules {
   rawText         String?
   scrapedAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model JobPosting {
+  id              String    @id @default(cuid())
+  campgroundId    String
+  createdById     String
+  title           String
+  description     String?
+  jobType         String    @default("SEASONAL")
+  compensation    String?
+  salary          String?
+  siteIncluded    Boolean   @default(false)
+  hoursPerWeek    Int?
+  startDate       DateTime?
+  endDate         DateTime?
+  requirements    String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  applications    JobApplication[]
+  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  createdBy       User       @relation("JobPostingsCreated", fields: [createdById], references: [id])
+  @@index([campgroundId])
+  @@index([isActive])
+}
+
+model JobApplication {
+  id           String   @id @default(cuid())
+  jobId        String
+  userId       String
+  status       String   @default("PENDING")
+  coverLetter  String?
+  hiredAt      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  job          JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user         User       @relation("JobApplications", fields: [userId], references: [id])
+  @@unique([jobId, userId])
 }

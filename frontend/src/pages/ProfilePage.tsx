@@ -271,7 +271,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       {/* Co-pilot */}
                       {coPilot && <Link to={`/profile/${coPilot.username}`} className="flex items-center gap-1.5 mt-2 text-[12px] hover:opacity-80" style={{ color: 'var(--muted)' }}>{'\u{1F9ED}'} Traveling with <span className="font-medium" style={{ color: 'var(--cream)' }}>@{coPilot.username}</span></Link>}
 
-                      <div className="mt-2 space-y-1"><CurrentlyAtBadge userId={profile.id} isOwnProfile={isOwnProfile} /><CommunityTrustBadge userId={profile.id} /></div>
+                      <div className="mt-2 space-y-1">
+                        <CurrentlyAtBadge userId={profile.id} isOwnProfile={isOwnProfile} />
+                        <CommunityTrustBadge userId={profile.id} />
+                        {profile.openToWork && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.2)' }}>{'\u{1F527}'} Open to Work</span>}
+                      </div>
 
                       {/* RV line */}
                       {(profile.rvMake || profile.rvType) && <p className="text-[12px] mt-2 flex items-center gap-1.5" style={{ color: 'var(--cream)' }}><Tent className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${profile.rvType}`}</p>}

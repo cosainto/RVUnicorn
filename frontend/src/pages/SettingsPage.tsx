@@ -308,6 +308,31 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* ── Workamper & Job Preferences ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <span className="text-lg">{'\u{1F527}'}</span>
+          <h2 className="text-lg font-semibold text-gray-900">Workamper & Job Preferences</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Open to Work</p>
+              <p className="text-xs text-gray-500">Shows a badge on your profile so campground owners can find you</p>
+            </div>
+            <button
+              onClick={async () => {
+                const current = (settings as any).openToWork || false;
+                await api.patch('/jobs/preferences', { openToWork: !current }).catch(() => {});
+                setSettings((s: any) => ({ ...s, openToWork: !current }));
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors ${(settings as any).openToWork ? 'bg-[#E8622A]' : 'bg-gray-300'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${(settings as any).openToWork ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* ── Campfire Companions ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">

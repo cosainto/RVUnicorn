@@ -144,6 +144,7 @@ import adminAnalyticsRoutes from './routes/admin-analytics.routes';
 import communityAIRoutes, { weeklyPromptCron, boardRevivalCron } from './routes/communityAI.routes';
 import onboardingV2Routes from './routes/onboarding-v2.routes';
 import tripPublicRoutes from './routes/trip-public.routes';
+import jobIntegrationRoutes from './routes/job-integrations.routes';
 import oauthRoutes from './routes/oauth.routes';
 import passport from 'passport';
 
@@ -195,6 +196,7 @@ app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/community', communityAIRoutes);
 app.use('/api/onboarding', onboardingV2Routes);
 app.use('/api/trips', tripPublicRoutes);
+app.use('/api/jobs', jobIntegrationRoutes);
 app.use(passport.initialize());
 app.use('/api', oauthRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
