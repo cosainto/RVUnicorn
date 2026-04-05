@@ -110,6 +110,51 @@ router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextF
   }
 });
 
+// SSR for public trip view — always serve for crawlers AND direct loads
+router.get('/trips/:slug/view', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) return next();
+  try {
+    const { slug } = req.params;
+    const trip = await prisma.event.findFirst({
+      where: { OR: [{ tripSlug: slug }, { id: slug }] },
+      include: { organizer: { select: { firstName: true, lastName: true } }, campground: { select: { name: true, state: true, imageUrl: true } } },
+    });
+    if (!trip || !trip.isPublic) return next();
+
+    const ownerName = `${trip.organizer.firstName} ${trip.organizer.lastName}`;
+    const photo = trip.campground?.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const days = Math.ceil((trip.endDate.getTime() - trip.startDate.getTime()) / 86400000);
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${trip.title} — ${ownerName}'s RV Trip on RVUnicorn</title>
+<meta name="description" content="Follow ${ownerName}'s ${days}-day road trip. ${trip.campground?.name ? `Starting at ${trip.campground.name}` : ''} on RVUnicorn.">
+<meta property="og:title" content="${trip.title}">
+<meta property="og:description" content="${ownerName} is on a ${days}-day RV trip. Follow along on RVUnicorn.">
+<meta property="og:image" content="${photo}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://rvunicorn.com/trips/${slug}/view">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${trip.title}">
+<meta name="twitter:image" content="${photo}">
+<link rel="canonical" href="https://rvunicorn.com/trips/${slug}/view">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Trip","name":"${trip.title}","description":"${trip.description || ''}","touristType":"RV Travelers"}</script>
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px">
+<h1>${trip.title}</h1><p>A trip by ${ownerName}</p>
+<p>${trip.startDate.toLocaleDateString()} — ${trip.endDate.toLocaleDateString()} · ${days} days</p>
+${trip.description ? `<p>${trip.description}</p>` : ''}
+<p><a href="https://rvunicorn.com" style="color:#E8A838">Join RVUnicorn free →</a></p>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
 // SSR for community board pages
 router.get('/community/:boardSlug', async (req: Request, res: Response, next: NextFunction) => {
   if (!shouldSSR(req)) {

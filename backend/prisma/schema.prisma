@@ -87,6 +87,9 @@ model User {
   nudgeRigCompleted                               Boolean                     @default(false)
   nudgeHomeBaseCompleted                          Boolean                     @default(false)
   nudgeCheckinCompleted                           Boolean                     @default(false)
+  referralCount                                   Int                         @default(0)
+  isCrewCaptain                                   Boolean                     @default(false)
+  crewCaptainAt                                   DateTime?
   petTypes                                        String[]                    @default([])
   preferredTripLength                             String?
   travelPartySize                                 Int?
@@ -786,6 +789,11 @@ model Event {
   planBActivated        Boolean   @default(false)
   geoFenceRadiusMiles   Float     @default(0.5)
   serendipityEnabled    Boolean   @default(true)
+  tripSlug              String?   @unique
+  shareToken            String?   @unique
+  sharedAt              DateTime?
+  publicViewCount       Int       @default(0)
+  ghostModeEnabled      Boolean   @default(false)
   popUps                EventPopUp[]
   highlights            EventHighlight[]
   connections           EventConnection[]
@@ -5003,4 +5011,24 @@ model OnboardingEvent {
   createdAt DateTime @default(now())
   user      User     @relation("OnboardingEvents", fields: [userId], references: [id])
   @@index([userId])
+}
+
+model TripViewEvent {
+  id            String   @id @default(cuid())
+  tripId        String
+  viewerUserId  String?
+  referrer      String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  @@index([tripId])
+}
+
+model ReferralEvent {
+  id             String   @id @default(cuid())
+  referrerId     String
+  referredUserId String
+  source         String
+  tripSlug       String?
+  createdAt      DateTime @default(now())
+  @@index([referrerId])
 }
