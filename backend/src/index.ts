@@ -141,6 +141,7 @@ import ssrRoutes from './routes/ssr';
 import waitlistRoutes from './routes/waitlist.routes';
 import companionRoutes from './routes/companion.routes';
 import adminAnalyticsRoutes from './routes/admin-analytics.routes';
+import communityAIRoutes, { weeklyPromptCron, boardRevivalCron } from './routes/communityAI.routes';
 import oauthRoutes from './routes/oauth.routes';
 import passport from 'passport';
 
@@ -189,6 +190,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', companionRoutes);
 app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/community', communityAIRoutes);
 app.use(passport.initialize());
 app.use('/api', oauthRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
@@ -360,3 +362,12 @@ setInterval(updateGasPrices, SEVEN_DAYS_MS);
 setInterval(() => runAutopilotCycle().catch(e => console.error('[Autopilot]', e)), 5 * 60 * 1000);
 // Trip Memory transitions — runs hourly
 setInterval(() => checkEventMemoryTransitions().catch(e => console.error('[TripMemory]', e)), 60 * 60 * 1000);
+// Community AI — weekly prompt (Mondays 9am CT) + board revival (every 6h)
+setInterval(() => boardRevivalCron().catch(e => console.error('[CommunityAI]', e)), 6 * 60 * 60 * 1000);
+// Weekly prompt — check every hour, run on Monday mornings
+setInterval(() => {
+  const now = new Date();
+  if (now.getDay() === 1 && now.getHours() === 14) { // Monday 9am CT = 14:00 UTC
+    weeklyPromptCron().catch(e => console.error('[CommunityAI Weekly]', e));
+  }
+}, 60 * 60 * 1000);

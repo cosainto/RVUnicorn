@@ -36,6 +36,7 @@ import { getCampspotUrl, getCampspotSearchUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import ShareCard from '../components/ShareCard';
+import CommunityNudgeModal from '../components/CommunityNudgeModal';
 import CampgroundBadgeDisplay from "../components/CampgroundBadgeDisplay";
 import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import CampMarket from '../components/CampMarket';
@@ -269,6 +270,7 @@ export default function CampgroundDetailPage() {
 
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [showCheckoutNudge, setShowCheckoutNudge] = useState(false);
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -361,7 +363,7 @@ export default function CampgroundDetailPage() {
       } catch {}
       setActiveCheckIn(null);
       loadCampground();
-      alert('Checked out successfully!');
+      setShowCheckoutNudge(true);
     } catch (e: any) { alert(e.response?.data?.error || 'Failed to check out'); }
   };
 
@@ -2242,6 +2244,19 @@ export default function CampgroundDetailPage() {
         </div>
       )}
     </div>
+
+    {/* Checkout community nudge */}
+    {showCheckoutNudge && campground && (
+      <CommunityNudgeModal
+        trigger="checkout"
+        campgroundName={campground.name}
+        campgroundState={campground.state}
+        campgroundId={campground.id}
+        userRigClass={(user as any)?.rvType}
+        onShare={(title, body) => { setShowCheckoutNudge(false); navigate(`/community?draft=true&title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`); }}
+        onDismiss={() => setShowCheckoutNudge(false)}
+      />
+    )}
 
     {/* Share Card after check-in */}
     {showShareCard && campground && user && (

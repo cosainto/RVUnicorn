@@ -4969,3 +4969,18 @@ model OAuthAccount {
   @@unique([provider, providerId])
   @@index([userId])
 }
+
+model CommunityPostSummary {
+  id          String   @id @default(cuid())
+  postId      String   @unique
+  summary     String
+  commentCount Int
+  generatedAt DateTime @default(now())
+}
+
+model BoardRevival {
+  id        String   @id @default(cuid())
+  boardId   String
+  postedAt  DateTime @default(now())
+  @@index([boardId])
+}
