@@ -318,8 +318,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     {displayedBadges.length > 0 && (
                       <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--glass-border)' }}>
                         {displayedBadges.slice(0, 3).map(b => (
-                          <div key={b.id} className="w-9 h-9 rounded-full overflow-hidden" style={{ border: b.name === 'Founding Member' ? '2px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)' }}>
-                            <img src={b.imageUrl} alt={b.name} className="w-full h-full object-cover" title={b.name} />
+                          <div key={b.id} className="relative group">
+                            <div className="w-9 h-9 rounded-full overflow-hidden" style={{ border: b.name === 'Founding Member' ? '2px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)' }}>
+                              <img src={b.imageUrl} alt={b.name} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-20 text-center" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.2)' }}>
+                              <p className="text-[9px] font-bold" style={{ color: '#F5F0E8' }}>{b.name}</p>
+                              {b.name === 'Founding Member' && b.badgeNumber && <p className="text-[8px]" style={{ color: '#E8A838' }}>Limited Edition #{b.badgeNumber}/5,000</p>}
+                            </div>
                           </div>
                         ))}
                         {profileBadges.length > 3 && <button onClick={() => setShowBadgesModal(true)} className="text-[11px]" style={{ color: 'var(--gold-light)' }}>View all {profileBadges.length} →</button>}
@@ -509,7 +515,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowBadgesModal(false)}>
             <div className="hero-glass max-w-lg w-full max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5"><h2 className="font-playfair text-xl font-bold">Achievements ({profileBadges.length})</h2><button onClick={() => setShowBadgesModal(false)}><X className="w-5 h-5" /></button></div>
-              {profileBadges.filter(b => b.name === 'Founding Member').length > 0 && <><p className="text-[11px] font-semibold uppercase mb-3" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>Legacy Badges</p><div className="grid grid-cols-4 gap-4 mb-5">{profileBadges.filter(b => b.name === 'Founding Member').map(b => <div key={b.id} className="text-center"><div className="w-14 h-14 mx-auto rounded-full overflow-hidden mb-1" style={{ border: '2px solid var(--gold)' }}><img src={b.imageUrl} alt={b.name} className="w-full h-full object-cover" /></div><p className="text-[10px] font-medium">{b.name}</p></div>)}</div></>}
+              {profileBadges.filter(b => b.name === 'Founding Member').length > 0 && <><p className="text-[11px] font-semibold uppercase mb-3" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>Legacy Badges</p><div className="grid grid-cols-4 gap-4 mb-5">{profileBadges.filter(b => b.name === 'Founding Member').map(b => <div key={b.id} className="text-center"><div className="w-14 h-14 mx-auto rounded-full overflow-hidden mb-2 relative" style={{ border: '2px solid var(--gold)' }}><img src={b.imageUrl} alt={b.name} className="w-full h-full object-cover" /><div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full text-[7px] font-bold whitespace-nowrap" style={{ background: 'var(--gold)', color: '#0F1C35' }}>LIMITED</div></div><p className="text-[10px] font-bold" style={{ color: '#F5F0E8' }}>{b.name}</p>{b.badgeNumber && <p className="text-[9px] mt-0.5" style={{ color: 'var(--gold)' }}>#{b.badgeNumber} of 5,000</p>}</div>)}</div></>}
               <p className="text-[11px] font-semibold uppercase mb-3" style={{ color: 'var(--muted)', letterSpacing: '0.1em' }}>Achievement Badges</p>
               <div className="grid grid-cols-4 gap-4">{profileBadges.filter(b => b.name !== 'Founding Member').map(b => <div key={b.id} className="text-center"><div className="w-12 h-12 mx-auto rounded-full overflow-hidden mb-1" style={{ border: '1px solid rgba(255,255,255,0.1)' }}><img src={b.imageUrl} alt={b.name} className="w-full h-full object-cover" /></div><p className="text-[10px]" style={{ color: 'var(--muted)' }}>{b.name}</p></div>)}</div>
             </div>
