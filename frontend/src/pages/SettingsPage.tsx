@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   const [settings, setSettings] = useState({ showCampingStatus: true });
+  const { subscribed, subscribe, unsubscribe, permission, loading: pushLoading } = usePushNotifications();
 
   // Account info state
   const [email, setEmail] = useState('');
