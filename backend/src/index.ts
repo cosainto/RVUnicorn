@@ -140,6 +140,7 @@ import tripSubeventsRoutes from './routes/trip-subevents.routes';
 import ssrRoutes from './routes/ssr';
 import waitlistRoutes from './routes/waitlist.routes';
 import companionRoutes from './routes/companion.routes';
+import adminAnalyticsRoutes from './routes/admin-analytics.routes';
 
 
 
@@ -185,6 +186,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 // Public routes (no auth required)
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', companionRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
 app.use('/api/quiz', quizRoutes);
 

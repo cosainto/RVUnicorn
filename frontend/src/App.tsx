@@ -85,6 +85,7 @@ const AdminBadgeApprovalPage = lazy(() => import('./components/AdminBadgeApprova
 const AdminCampgroundsPage = lazy(() => import('./pages/AdminCampgroundsPage'));
 const AdminSponsorCampaignsPage = lazy(() => import('./pages/AdminSponsorCampaignsPage'));
 const AdminHostListingsPage = lazy(() => import('./pages/AdminHostListingsPage'));
+const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
 const CampgroundQuizPage = lazy(() => import('./pages/CampgroundQuizPage'));
 const LastMinuteDealsPage = lazy(() => import('./pages/LastMinuteDealsPage'));
 const EventsDiscoveryPage = lazy(() => import('./pages/EventsDiscoveryPage'));
@@ -223,6 +224,7 @@ function AppContent() {
           <Route path="/community/:slug" element={<CommunityPage />} />
           <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
           <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
+          <Route path="/admin/analytics" element={<PrivateRoute><AdminAnalyticsPage /></PrivateRoute>} />
           <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />
             <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
             <Route path="/hosts/new" element={<CreateHostPage />} />
