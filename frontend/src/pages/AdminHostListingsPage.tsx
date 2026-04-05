@@ -50,6 +50,7 @@ export default function AdminHostListingsPage() {
           <Link to="/admin/campgrounds" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-100 text-primary-700 hover:bg-primary-200 transition">🏕️ Campgrounds</Link>
           <Link to="/admin/hosts" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">🏡 Host Listings</Link>
           <Link to="/admin/badges" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition">🏅 Badges</Link>
+          <Link to="/admin/analytics" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 transition">📊 Analytics</Link>
         </div>
       </div>
 
