@@ -207,8 +207,16 @@ export async function weeklyPromptCron() {
 
 export async function boardRevivalCron() {
   try {
-    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    // Time-of-day guard: only post between 9AM-7PM CT (14:00-00:00 UTC)
+    const hourUTC = new Date().getUTCHours();
+    if (hourUTC < 14 || hourUTC >= 24) {
+      console.log('[Community AI] Board revival skipped — outside peak hours (9AM-7PM CT)');
+      return;
+    }
+
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 86400000);
+    const oneMonthAgo = new Date(Date.now() - 30 * 86400000);
 
     const boards = await (prisma as any).board.findMany({ where: { isActive: true }, select: { id: true, name: true, slug: true } });
 
@@ -216,17 +224,24 @@ export async function boardRevivalCron() {
     if (!systemUser) return;
 
     for (const board of boards) {
-      // Check if dormant (no posts in 48h)
-      const recentPost = await (prisma as any).boardPost.findFirst({ where: { boardId: board.id, createdAt: { gte: twoDaysAgo } } });
+      // Check if board is truly dead (60+ days no posts) — let it rest
+      const anyRecentPost = await (prisma as any).boardPost.findFirst({ where: { boardId: board.id, createdAt: { gte: sixtyDaysAgo } } });
+      if (!anyRecentPost) {
+        console.log(`[Community AI] ${board.name} dead 60+ days — skipping, letting it rest`);
+        continue;
+      }
+
+      // Check if dormant (no posts in 14 days)
+      const recentPost = await (prisma as any).boardPost.findFirst({ where: { boardId: board.id, createdAt: { gte: fourteenDaysAgo } } });
       if (recentPost) continue;
 
-      // Check if already revived this week
-      const recentRevival = await (prisma as any).boardRevival.findFirst({ where: { boardId: board.id, postedAt: { gte: weekAgo } } });
+      // Check if already revived this month (not this week)
+      const recentRevival = await (prisma as any).boardRevival.findFirst({ where: { boardId: board.id, postedAt: { gte: oneMonthAgo } } });
       if (recentRevival) continue;
 
       // Generate revival prompt
       const question = await callHaiku(
-        `You are Hitch, RVUnicorn's campfire host. The ${board.name} community board has been quiet. Write a 1-2 sentence conversation starter question specific to this board's topic to get people talking again. Warm, curious tone. Under 25 words. Return only the question.`,
+        `You are Hitch, RVUnicorn's campfire host. The ${board.name} community board has been quiet for a couple weeks. Write a 1-2 sentence conversation starter question specific to this board's topic to get people talking again. Warm, curious tone. Under 25 words. Return only the question.`,
         50
       );
 
