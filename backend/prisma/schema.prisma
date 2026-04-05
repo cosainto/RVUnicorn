@@ -324,6 +324,7 @@ model User {
   triviaTitle         String?
   driveSessions           DriveSession[]
   companionSessions        CompanionSession[] @relation("CompanionSessions")
+  oauthAccounts            OAuthAccount[]     @relation("OAuthAccounts")
   pushSubscriptions       PushSubscription[]
   campMarketListings      CampMarketListing[]
   campMarketInterests     CampMarketInterest[]  @relation("CampMarketBuyer")
@@ -4952,4 +4953,18 @@ model CampgroundInsight {
   createdAt     DateTime @default(now())
 
   @@index([campgroundId])
+}
+
+model OAuthAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  user         User     @relation("OAuthAccounts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
 }

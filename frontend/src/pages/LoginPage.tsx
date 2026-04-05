@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame, TreePine } from 'lucide-react';
+import OAuthButtons from '../components/OAuthButtons';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -75,6 +76,8 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <OAuthButtons />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, TreePine } from 'lucide-react';
+import OAuthButtons from '../components/OAuthButtons';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterPage() {
@@ -94,6 +95,8 @@ export default function RegisterPage() {
               {error}
             </div>
           )}
+
+          <OAuthButtons />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
