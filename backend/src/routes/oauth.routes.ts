@@ -65,10 +65,13 @@ async function findOrCreateOAuthUser(provider: string, profile: any): Promise<{ 
     await prisma.badge.findFirst({ where: { slug: 'rvunicorn-member' } }).then(async (badge) => {
       if (badge) await prisma.userBadge.create({ data: { userId: user.id, badgeId: badge.id } }).catch(() => {});
     });
-    if (new Date() < new Date('2027-07-01')) {
-      await prisma.badge.findFirst({ where: { slug: 'founding-member' } }).then(async (badge) => {
-        if (badge) await prisma.userBadge.create({ data: { userId: user.id, badgeId: badge.id } }).catch(() => {});
-      });
+    // Founding Member — limited to first 5,000
+    const foundingBadge = await prisma.badge.findFirst({ where: { slug: 'founding-member' } });
+    if (foundingBadge) {
+      const issued = await prisma.userBadge.count({ where: { badgeId: foundingBadge.id } });
+      if (issued < 5000) {
+        await prisma.userBadge.create({ data: { userId: user.id, badgeId: foundingBadge.id, badgeNumber: issued + 1 } }).catch(() => {});
+      }
     }
   } catch {}
 

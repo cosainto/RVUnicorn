@@ -2100,12 +2100,13 @@ model Badge {
 }
 
 model UserBadge {
-  id       String   @id @default(cuid())
-  userId   String
-  badgeId  String
-  earnedAt DateTime @default(now())
-  progress Int?
-  notified Boolean  @default(false)
+  id          String   @id @default(cuid())
+  userId      String
+  badgeId     String
+  earnedAt    DateTime @default(now())
+  progress    Int?
+  notified    Boolean  @default(false)
+  badgeNumber Int?
   badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

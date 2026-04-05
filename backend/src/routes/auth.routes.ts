@@ -55,10 +55,22 @@ router.post('/register', async (req, res) => {
 
     // Award RVUnicorn Member badge
     await awardBadge(user.id, 'rvunicorn-member');
-    // Award Founding Member badge to early adopters (before July 1, 2027)
-    if (new Date() < new Date('2027-07-01')) {
-      await awardBadge(user.id, 'founding-member');
-    }
+    // Award Founding Member badge — limited to first 5,000 members
+    try {
+      const foundingBadge = await prisma.badge.findUnique({ where: { slug: 'founding-member' } });
+      if (foundingBadge) {
+        const issuedCount = await prisma.userBadge.count({ where: { badgeId: foundingBadge.id } });
+        if (issuedCount < 5000) {
+          const badgeNumber = issuedCount + 1;
+          await prisma.userBadge.create({
+            data: { userId: user.id, badgeId: foundingBadge.id, badgeNumber },
+          }).catch(() => {}); // Skip if already awarded
+          console.log(`[Badge] Founding Member #${badgeNumber}/5000 awarded to ${user.email}`);
+        } else {
+          console.log(`[Badge] Founding Member badge sold out (5000/5000) — ${user.email} missed it`);
+        }
+      }
+    } catch (badgeErr) { console.error('Founding badge error:', badgeErr); }
     // Auto-friend Will (founder) with every new user
     try {
       const WILL_ID = 'cmlpeyk82005s3qause3sws7y';

@@ -64,7 +64,8 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     res.json({
       badges: earnedBadges.map(ub => ({
         ...ub.badge,
-        earnedAt: ub.earnedAt
+        earnedAt: ub.earnedAt,
+        badgeNumber: ub.badgeNumber,
       })),
       count: earnedBadges.length
     });
