@@ -254,8 +254,6 @@ import scrapbookRoutes from "./routes/scrapbook.routes";
 app.use("/api/scrapbook", scrapbookRoutes);
 import tripStoryRoutes from './routes/trip-story.routes';
 app.use("/api/trip-story", tripStoryRoutes);
-import tripStoryRoutes from './routes/trip-story.routes';
-app.use("/api/trip-story", tripStoryRoutes);
 app.use("/api/household", householdRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/photo-tags", photoTagsRoutes);
