@@ -339,6 +339,8 @@ registerTriviaCrons(io);
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL || '(not set, using https://www.rvunicorn.com)'}`);
+  console.log(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET'}`);
 });
 // trigger deploy
 // Force redeploy Sat Jan 17 17:17:40 CST 2026

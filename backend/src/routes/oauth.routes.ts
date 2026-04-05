@@ -84,7 +84,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.FRONTEND_URL || 'https://www.rvunicorn.com'}/api/auth/google/callback`.replace(/"/g, ''),
+    callbackURL: `${FRONTEND_URL}/api/auth/google/callback`,
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
       const result = await findOrCreateOAuthUser('google', profile);
@@ -108,7 +108,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: `${process.env.FRONTEND_URL || 'https://www.rvunicorn.com'}/api/auth/facebook/callback`.replace(/"/g, ''),
+    callbackURL: `${FRONTEND_URL}/api/auth/facebook/callback`,
     profileFields: ['id', 'emails', 'name', 'displayName', 'photos', 'profileUrl'],
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
