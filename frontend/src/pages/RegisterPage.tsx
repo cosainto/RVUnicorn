@@ -65,7 +65,7 @@ export default function RegisterPage() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center mb-2">
             <img 
-              src="/images/Logo_RVUnicorn.webp" 
+              src="/images/Logo_RVUnicorn.png" 
               alt="RVUnicorn" 
               className="h-24 w-auto object-contain drop-shadow-2xl"
             />

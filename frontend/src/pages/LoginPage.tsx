@@ -57,7 +57,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <img 
-              src="/images/Logo_RVUnicorn.webp" 
+              src="/images/Logo_RVUnicorn.png" 
               alt="RVUnicorn" 
               className="h-32 w-auto object-contain drop-shadow-2xl"
             />
