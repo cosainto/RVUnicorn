@@ -7,6 +7,30 @@ import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
 import HitchFloatingChat from './components/HitchFloatingChat';
 import MobileBottomNav from './components/MobileBottomNav';
+import { useState, useEffect as useEffectApp } from 'react';
+
+// Onboarding trigger — shows modal for new users
+function OnboardingTrigger() {
+  const OnboardingModalV2 = lazy(() => import('./components/OnboardingModalV2'));
+  const { user } = useAuth();
+  const [show, setShow] = useState(false);
+
+  useEffectApp(() => {
+    if (!user) return;
+    // Check if user needs onboarding
+    if (!(user as any).onboardingCompletedAt && !(user as any).onboardingSkippedAt && !(user as any).onboardingCompleted) {
+      setShow(true);
+    }
+  }, [user]);
+
+  if (!show || !user) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <OnboardingModalV2 onComplete={() => setShow(false)} displayName={(user as any).firstName || 'friend'} />
+    </Suspense>
+  );
+}
 import BookingFollowUpNotification from './components/BookingFollowUpNotification';
 import React from 'react';
 import { Camera } from 'lucide-react';
@@ -487,6 +511,7 @@ function App() {
           </ToastProvider>
           <HitchFloatingChat />
           <MobileBottomNav />
+          <OnboardingTrigger />
         </Router>
       </AuthProvider>
     </HelmetProvider>

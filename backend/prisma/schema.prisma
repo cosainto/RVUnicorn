@@ -78,6 +78,15 @@ model User {
   homeZipCode                                     String?
   onboardingCompleted                             Boolean                     @default(false)
   onboardingStep                                  Int                         @default(0)
+  onboardingCompletedAt                           DateTime?
+  onboardingSkippedAt                             DateTime?
+  onboardingCamperType                            String?
+  onboardingRigType                               String?
+  onboardingRegion                                String?
+  nudgeCardDismissedAt                            DateTime?
+  nudgeRigCompleted                               Boolean                     @default(false)
+  nudgeHomeBaseCompleted                          Boolean                     @default(false)
+  nudgeCheckinCompleted                           Boolean                     @default(false)
   petTypes                                        String[]                    @default([])
   preferredTripLength                             String?
   travelPartySize                                 Int?
@@ -325,6 +334,7 @@ model User {
   driveSessions           DriveSession[]
   companionSessions        CompanionSession[] @relation("CompanionSessions")
   oauthAccounts            OAuthAccount[]     @relation("OAuthAccounts")
+  onboardingEvents         OnboardingEvent[]  @relation("OnboardingEvents")
   pushSubscriptions       PushSubscription[]
   campMarketListings      CampMarketListing[]
   campMarketInterests     CampMarketInterest[]  @relation("CampMarketBuyer")
@@ -4983,4 +4993,14 @@ model BoardRevival {
   boardId   String
   postedAt  DateTime @default(now())
   @@index([boardId])
+}
+
+model OnboardingEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation("OnboardingEvents", fields: [userId], references: [id])
+  @@index([userId])
 }

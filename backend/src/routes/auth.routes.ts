@@ -234,6 +234,8 @@ router.get('/me', authenticateToken, async (req, res) => {
         hasPets: true,
         petTypes: true,
         onboardingCompleted: true,
+        onboardingCompletedAt: true,
+        onboardingSkippedAt: true,
         phoneNumber: true,
       }
     });

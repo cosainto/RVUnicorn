@@ -142,6 +142,7 @@ import waitlistRoutes from './routes/waitlist.routes';
 import companionRoutes from './routes/companion.routes';
 import adminAnalyticsRoutes from './routes/admin-analytics.routes';
 import communityAIRoutes, { weeklyPromptCron, boardRevivalCron } from './routes/communityAI.routes';
+import onboardingV2Routes from './routes/onboarding-v2.routes';
 import oauthRoutes from './routes/oauth.routes';
 import passport from 'passport';
 
@@ -191,6 +192,7 @@ app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/chat', companionRoutes);
 app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/community', communityAIRoutes);
+app.use('/api/onboarding', onboardingV2Routes);
 app.use(passport.initialize());
 app.use('/api', oauthRoutes);
 app.use('/api/sitemap.xml', sitemapRoutes);
