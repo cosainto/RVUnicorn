@@ -150,15 +150,15 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
   const slides = [
     // 0: Welcome
-    { img: heroImg(0), icon: '\u{1F984}', headline: 'Welcome to RVUnicorn', body: 'The campfire community built for the road. Pull up a chair \u2014 you found your people.' },
+    { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Welcome to RVUnicorn', body: 'The campfire community built for the road. Pull up a chair \u2014 you found your people.' },
     // 1: Camper Type
     { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #1a3a2a)', icon: '\u{1F3D5}', headline: 'What kind of camper are you?', body: 'We\'ll make RVUnicorn feel like it was built just for you.' },
     // 2: Region
     { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #0a2a2a)', icon: '\u{1F4CD}', headline: 'Where do you love to roam?', body: 'We\'ll show you campgrounds and communities closest to your heart.' },
-    // 3: Basecamp
-    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #2a1a0a)', icon: '\u{1F3D5}', headline: 'Your Basecamp', body: 'Everything you need while you\'re at camp. Check in, track the weather, chat with neighbors, and cook \u2014 all without leaving.' },
+    // 3: Basecamp (mock UI built inline)
+    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #1B2E50)', icon: '\u{1F3D5}', headline: 'Your Basecamp', body: 'Everything happens here \u2014 campfire chat, weather, recipes, and your crew.' },
     // 4: Check In
-    { img: heroImg(1), icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Over 16,000 campgrounds across North America. Every check-in fills in your personal travel map \u2014 one state at a time.' },
+    { img: '/images/char_hitch_walter.png', icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Over 16,000 campgrounds across North America. Every check-in fills in your personal travel map \u2014 one state at a time.' },
     // 5: Hitch AI
     { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Meet Your RVUnicorn Family', body: 'These characters are here to help you on every trip.' },
     // 6: Rig Type
@@ -208,6 +208,44 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
           {slide === 2 && (
             <div className="flex flex-wrap gap-2">
               {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.region === r.value} onClick={() => saveProgress({ region: r.value })} />)}
+            </div>
+          )}
+
+          {/* Slide 3: Basecamp Mock UI */}
+          {slide === 3 && (
+            <div className="rounded-xl overflow-hidden" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.15)' }}>
+              {/* Campfire header */}
+              <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(232,98,42,0.1)', borderBottom: '1px solid rgba(232,98,42,0.15)' }}>
+                <span className="text-sm">{'\u{1F525}'}</span>
+                <span className="text-[11px] font-semibold" style={{ color: '#F5F0E8' }}>Campfire · Zion NP</span>
+                <span className="w-1.5 h-1.5 rounded-full ml-auto animate-pulse" style={{ background: '#10B981' }} />
+                <span className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>8 here</span>
+              </div>
+              {/* Mock messages */}
+              <div className="p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: '#3B82F6' }} />
+                  <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F0E8' }}>Anyone know if Loop B has shade? It's brutal today {'\u{1F525}'}</div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <img src="/images/char_hitch_walter.png" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                  <div>
+                    <span className="text-[9px] font-bold block" style={{ color: '#E8A838' }}>Hitch</span>
+                    <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(232,168,56,0.08)', color: '#F5F0E8', borderLeft: '2px solid #E8A838' }}>Sites 34-41 have the best tree cover! Bring your awning too {'\u{2600}'}</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: '#10B981' }} />
+                  <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F0E8' }}>We're on site 37 — come say hi! Making tacos tonight {'\u{1F32E}'}</div>
+                </div>
+              </div>
+              {/* Stats strip */}
+              <div className="flex items-center justify-around px-3 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#E8A838' }}>72°</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Tonight</span></div>
+                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#F5F0E8' }}>12</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>States</span></div>
+                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#10B981' }}>✓</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Checked In</span></div>
+                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#D4621A' }}>{'\u{1F3AF}'}</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Trivia 8pm</span></div>
+              </div>
             </div>
           )}
 
