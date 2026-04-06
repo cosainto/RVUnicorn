@@ -301,7 +301,7 @@ export default function LandingPage() {
                       <img key={i} src={src} alt="" className="w-8 h-8 rounded-full object-cover border-2" style={{ borderColor: 'var(--navy-deep)' }} />
                     ))}
                   </div>
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Join 11,000+ early members building the RV community together</span>
+                  <span className="text-sm" style={{ color: 'var(--muted)' }}>Join the fastest growing community of RVers across the country</span>
                 </div>
               </div>
 
