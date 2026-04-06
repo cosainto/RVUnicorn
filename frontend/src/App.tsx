@@ -124,6 +124,8 @@ const EventDetailPageV2 = lazy(() => import('./pages/EventDetailPageV2'));
 const EventManagePage = lazy(() => import('./pages/EventManagePage'));
 const CheckInPage = lazy(() => import('./pages/CheckInPage'));
 const OrganizerDashboard = lazy(() => import('./pages/OrganizerDashboard'));
+const DealersPage = lazy(() => import('./pages/DealersPage'));
+const DealerProfilePage = lazy(() => import('./pages/DealerProfilePage'));
 
 function PageLoader() {
   return (
@@ -207,6 +209,8 @@ function AppContent() {
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
           <Route path="/deals" element={<LastMinuteDealsPage />} />
+          <Route path="/dealers" element={<DealersPage />} />
+          <Route path="/dealers/:dealerId" element={<DealerProfilePage />} />
           <Route path="/events-v2" element={<EventsDiscoveryPage />} />
           <Route path="/events-v2/create" element={<EventCreatePage />} />
           <Route path="/events-v2/:id" element={<EventDetailPageV2 />} />

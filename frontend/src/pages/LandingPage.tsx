@@ -290,15 +290,14 @@ export default function LandingPage() {
                 {/* Social proof */}
                 <div className="flex items-center gap-3" style={{ animation: 'fadeUp 0.6s ease 0.4s both' }}>
                   <div className="flex -space-x-2">
-                    {['MR', 'SJ', 'TR', 'KL', 'WP'].map((initials, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2"
-                        style={{
-                          background: ['#E8622A', '#C9A84C', '#3B82F6', '#10B981', '#8B5CF6'][i],
-                          borderColor: 'var(--navy-deep)',
-                          color: 'white',
-                        }}>
-                        {initials}
-                      </div>
+                    {[
+                      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face',
+                      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=face',
+                      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=64&h=64&fit=crop&crop=face',
+                      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=64&h=64&fit=crop&crop=face',
+                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face',
+                    ].map((src, i) => (
+                      <img key={i} src={src} alt="" className="w-8 h-8 rounded-full object-cover border-2" style={{ borderColor: 'var(--navy-deep)' }} />
                     ))}
                   </div>
                   <span className="text-sm" style={{ color: 'var(--muted)' }}>Join 11,000+ early members building the RV community together</span>
@@ -511,7 +510,7 @@ export default function LandingPage() {
 
                 {/* Camper message */}
                 <div className="flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: '#3B82F6' }}>SJ</div>
+                  <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=56&h=56&fit=crop&crop=face" alt="Sarah J." className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                   <div>
                     <span className="text-[10px] font-medium block" style={{ color: 'var(--muted)' }}>Sarah J.</span>
                     <div className="text-xs p-2.5 rounded-lg rounded-tl-none" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--cream)' }}>
@@ -609,26 +608,27 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
-                  initials: 'MR', color: '#E8622A', name: 'Mike R.', meta: 'Checked in at Zion National Park \u00B7 2h ago',
+                  photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face',
+                  name: 'Mike R.', meta: 'Checked in at Zion National Park \u00B7 2h ago',
                   text: 'Finally made it! Hitch warned us about the tunnel height restriction — saved us a nightmare \u{1F64F}',
                   likes: 24, comments: 8, tag: '\u{1F3D5} Zion NP',
                 },
                 {
-                  initials: 'SJ', color: '#3B82F6', name: 'Sarah J.', meta: 'Planning a trip \u00B7 Just now',
+                  photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face',
+                  name: 'Sarah J.', meta: 'Planning a trip \u00B7 Just now',
                   text: 'Chicago \u2192 Badlands \u2192 Yellowstone in our 31\' Class A. Anyone done this route? Hitch has us stopping at Wall Drug \u{1F602}',
                   likes: 12, comments: 15, tag: null,
                 },
                 {
-                  initials: 'TR', color: '#10B981', name: 'The Robinsons', meta: 'Campfire chat at Lake Havasu \u00B7 Tonight',
+                  photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face',
+                  name: 'The Robinsons', meta: 'Campfire chat at Lake Havasu \u00B7 Tonight',
                   text: 'Won trivia night! Wallet tried to sabotage us with trick questions but we pulled through \u{1F3C6}\u{1F525}',
                   likes: 31, comments: 6, tag: null,
                 },
               ].map((post, i) => (
                 <div key={post.name} className={`glass-card p-6 fade-up fade-up-d${i + 1} ${sec8.inView ? 'visible' : ''}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: post.color, color: 'white' }}>
-                      {post.initials}
-                    </div>
+                    <img src={post.photo} alt={post.name} className="w-10 h-10 rounded-full object-cover" />
                     <div>
                       <p className="text-sm font-semibold">{post.name}</p>
                       <p className="text-xs" style={{ color: 'var(--muted)' }}>{post.meta}</p>

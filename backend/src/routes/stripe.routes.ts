@@ -5,13 +5,18 @@ import Stripe from 'stripe';
 
 const router = Router();
 const prisma = new PrismaClient();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' as any });
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' as any })
+  : null;
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://www.rvunicorn.com').replace(/"/g, '');
 
 const TIER_LEVELS: Record<string, number> = { TRAILHEAD: 0, BASECAMP: 1, SUMMIT: 2, FOUNDING: 2 };
 
+if (!stripe) console.warn('[Stripe] STRIPE_SECRET_KEY not set — Stripe routes will return errors');
+
 // ══ POST /api/stripe/create-checkout ══
 router.post('/create-checkout', authenticateToken, async (req: any, res: Response) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
     const { campgroundId, priceId, tier } = req.body;
     const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, claimedById: true } });
@@ -51,6 +56,7 @@ router.post('/create-checkout', authenticateToken, async (req: any, res: Respons
 
 // ══ POST /api/stripe/create-portal ══
 router.post('/create-portal', authenticateToken, async (req: any, res: Response) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
     const { campgroundId } = req.body;
     const sub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
@@ -66,6 +72,7 @@ router.post('/create-portal', authenticateToken, async (req: any, res: Response)
 
 // ══ POST /api/stripe/pause ══
 router.post('/pause', authenticateToken, async (req: any, res: Response) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
     const { campgroundId, resumeDate } = req.body;
     const sub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
@@ -87,6 +94,7 @@ router.post('/pause', authenticateToken, async (req: any, res: Response) => {
 
 // ══ POST /api/stripe/webhook ══
 router.post('/webhook', async (req: Request, res: Response) => {
+  if (!stripe) return res.status(503).send('Stripe not configured');
   const sig = req.headers['stripe-signature'];
   if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(400).send('Missing signature');
 

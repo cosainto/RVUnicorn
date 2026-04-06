@@ -43,6 +43,7 @@ import CampgroundBadgeCreator from "../components/CampgroundBadgeCreator";
 import CampMarket from '../components/CampMarket';
 import CampfireTips from '../components/CampfireTips';
 import HarvestHostsTab from '../components/HarvestHostsTab';
+import NearbyBusinesses from '../components/NearbyBusinesses';
 
 const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
   const base = "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -1810,7 +1811,10 @@ export default function CampgroundDetailPage() {
                 <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
               </div>
               {isAdmin && <CampgroundBadgeCreator campgroundId={campground.id} />}
-              
+
+              {/* Near You — Local Businesses */}
+              <NearbyBusinesses campgroundId={campground.id} />
+
               {/* Community - Followers & Campers */}
               <CampgroundCommunity campgroundId={campground.id} campgroundName={campground.name} />
             </div>

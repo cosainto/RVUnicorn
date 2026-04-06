@@ -149,6 +149,8 @@ import sharingRoutes, { checkSharedFire } from './routes/sharing.routes';
 import stripeRoutes from './routes/stripe.routes';
 import express_raw from 'express';
 import oauthRoutes from './routes/oauth.routes';
+import localBusinessRoutes from './routes/local-business.routes';
+import dealerRoutes from './routes/dealer.routes';
 import passport from 'passport';
 
 
@@ -331,6 +333,8 @@ app.use("/api/events-v2", eventsV2Routes);
 app.use("/api/events-v2", eventOrganizerRoutes);
 app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
+app.use("/api/local-business", localBusinessRoutes);
+app.use("/api/dealers", dealerRoutes);
 
 
 
