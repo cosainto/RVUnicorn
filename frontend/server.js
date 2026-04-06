@@ -76,8 +76,9 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   index: false,
 }));
 
-// SPA catch-all — serve index.html for all other routes
+// SPA catch-all — serve index.html for all other routes (never cache so deploys take effect immediately)
 app.get('*', (_req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

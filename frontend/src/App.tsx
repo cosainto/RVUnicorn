@@ -7,7 +7,19 @@ import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
 import HitchFloatingChat from './components/HitchFloatingChat';
 import MobileBottomNav from './components/MobileBottomNav';
-import { useState, useEffect as useEffectApp } from 'react';
+
+// Retry lazy imports — handles stale chunks after deploys
+function lazyRetry(importFn: () => Promise<any>) {
+  return lazy(() => importFn().catch(() => {
+    // Chunk failed to load (likely new deploy) — reload once
+    const reloaded = sessionStorage.getItem('chunk_reload');
+    if (!reloaded) {
+      sessionStorage.setItem('chunk_reload', '1');
+      window.location.reload();
+    }
+    return importFn();
+  }));
+}
 
 // Onboarding trigger — shows modal for new users
 function OnboardingTrigger() {
