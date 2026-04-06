@@ -31,8 +31,8 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
   const lines = content.split('\n').filter(Boolean);
   const title = lines[0];
   const body = lines.slice(1).join('\n').trim();
-  const isLong = body.length > 200;
-  const displayBody = expanded || !isLong ? body : body.slice(0, 200) + '…';
+  const hasBody = body.length > 0;
+  const displayBody = expanded ? body : body.slice(0, 120) + (body.length > 120 ? '…' : '');
 
   return (
     <div className="rounded-xl overflow-hidden border border-indigo-800/40" style={{
@@ -63,11 +63,14 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
         </div>
 
         <h3 className="text-white font-bold text-xs mb-1">{title}</h3>
-        <p className="text-indigo-200 text-[11px] leading-snug whitespace-pre-line">{displayBody}</p>
-        {isLong && (
-          <button onClick={() => setExpanded(!expanded)} className="text-indigo-400 hover:text-indigo-300 text-[10px] font-medium mt-1 transition">
-            {expanded ? 'Show less' : 'Read more'}
-          </button>
+        {hasBody && (
+          <>
+            {expanded && <p className="text-indigo-200 text-[11px] leading-snug whitespace-pre-line">{body}</p>}
+            {!expanded && <p className="text-indigo-200 text-[11px] leading-snug">{displayBody}</p>}
+            <button onClick={() => setExpanded(!expanded)} className="text-indigo-400 hover:text-indigo-300 text-[10px] font-medium mt-1 transition">
+              {expanded ? '▲ Show less' : '▼ Read more'}
+            </button>
+          </>
         )}
 
         <div className="mt-2 pt-2 border-t border-indigo-800/40 flex items-center justify-between">

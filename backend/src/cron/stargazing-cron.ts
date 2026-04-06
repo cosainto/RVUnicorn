@@ -173,7 +173,7 @@ export async function runStargazingCron() {
         if (!skyReport) continue;
 
         const moonPhase = getMoonPhase(today);
-        const content = `🌟 Tonight's Sky at \${campground.name}\n\n\${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
+        const content = `🌟 Tonight's Sky at ${campground.name}\n\n${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
         const metadata = JSON.stringify({
           imageUrl: STARGAZING_IMAGE,
           walterImage: WALTER_IMAGE,
@@ -196,7 +196,7 @@ export async function runStargazingCron() {
           }).catch(() => null);
 
           if (existing) {
-            console.log(`[Stargazing] Already posted today for \${u.firstName}`);
+            console.log(`[Stargazing] Already posted today for ${u.firstName}`);
             continue;
           }
 
@@ -209,7 +209,7 @@ export async function runStargazingCron() {
               isPublic: false,
             },
           });
-          console.log(`[Stargazing] ✅ Feed post created for \${u.firstName} at \${campground.name}`);
+          console.log(`[Stargazing] ✅ Feed post created for ${u.firstName} at ${campground.name}`);
         }
 
         // ── Campfire Chat drop — only when 2+ users checked in here ─────
@@ -230,7 +230,7 @@ export async function runStargazingCron() {
             }).catch(() => null);
 
             if (!existingChatPost) {
-              const chatContent = `🔭 **Walter here.** \${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
+              const chatContent = `🔭 **Walter here.** ${skyReport}\n\n✨ Step outside and look up — the universe is putting on a show just for you!`;
               await (prisma as any).campfireMessage.create({
                 data: {
                   roomId: room.id,
@@ -240,7 +240,7 @@ export async function runStargazingCron() {
                   userId: null,
                 },
               });
-              console.log(`[Stargazing] 💬 Walter dropped into campfire chat at \${campground.name} (\${users.length} campers)`);
+              console.log(`[Stargazing] 💬 Walter dropped into campfire chat at ${campground.name} (${users.length} campers)`);
             }
           }
         }
@@ -248,7 +248,7 @@ export async function runStargazingCron() {
         // Small delay between campgrounds to avoid API rate limits
         await new Promise(r => setTimeout(r, 1500));
       } catch (e) {
-        console.error(`[Stargazing] Failed for campground \${cgId}:`, e);
+        console.error(`[Stargazing] Failed for campground ${cgId}:`, e);
       }
     }
   } catch (e) {
