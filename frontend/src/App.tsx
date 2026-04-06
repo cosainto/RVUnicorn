@@ -113,6 +113,8 @@ const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const PublicTripViewPage = lazy(() => import('./pages/PublicTripViewPage'));
 const JoinCrewPage = lazy(() => import('./pages/JoinCrewPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CampgroundQuizPage = lazy(() => import('./pages/CampgroundQuizPage'));
 const LastMinuteDealsPage = lazy(() => import('./pages/LastMinuteDealsPage'));
 const EventsDiscoveryPage = lazy(() => import('./pages/EventsDiscoveryPage'));
@@ -198,6 +200,8 @@ function AppContent() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/trips/:slug/view" element={<PublicTripViewPage />} />
           <Route path="/join" element={<JoinCrewPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
           <Route path="/deals" element={<LastMinuteDealsPage />} />

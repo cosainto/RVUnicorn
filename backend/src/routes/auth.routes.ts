@@ -5,6 +5,7 @@ import { prisma } from '../index';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { awardBadge } from '../services/badge.service';
 import { sendEmail, welcomeEmail } from '../services/email-sms.service';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -305,6 +306,78 @@ router.put('/change-password', authenticateToken, async (req: any, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ══ FORGOT PASSWORD ══
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Don't reveal whether email exists
+      return res.json({ success: true, message: 'If that email exists, we sent a reset link.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: token, passwordResetExpires: expires },
+    });
+
+    const resetUrl = `https://www.rvunicorn.com/reset-password?token=${token}`;
+
+    await sendEmail({
+      to: email,
+      subject: 'Reset your RVUnicorn password',
+      html: `
+        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">
+          <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/Logo_RVUnicorn.png" alt="RVUnicorn" style="width:48px;height:48px;border-radius:50%;margin-bottom:16px" />
+          <h2 style="color:#1a2e4a;margin:0 0 8px">Reset Your Password</h2>
+          <p style="color:#666;font-size:14px">Hey ${user.firstName}, we got your request to reset your RVUnicorn password.</p>
+          <p style="color:#666;font-size:14px">Click the button below to set a new one. This link expires in 1 hour.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#E8622A;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Reset Password</a>
+          <p style="color:#999;font-size:12px;margin-top:20px">If you didn't request this, you can safely ignore this email. Your password won't change.</p>
+          <p style="color:#999;font-size:12px;margin-top:16px;border-top:1px solid #eee;padding-top:16px">— The RVUnicorn Team 🦄</p>
+        </div>
+      `,
+      text: `Reset your RVUnicorn password: ${resetUrl}`,
+    });
+
+    res.json({ success: true, message: 'If that email exists, we sent a reset link.' });
+  } catch (e: any) {
+    console.error('Forgot password error:', e);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// ══ RESET PASSWORD ══
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    const user = await prisma.user.findFirst({
+      where: { passwordResetToken: token, passwordResetExpires: { gt: new Date() } },
+    });
+
+    if (!user) return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null },
+    });
+
+    res.json({ success: true, message: 'Password updated! You can now sign in.' });
+  } catch (e: any) {
+    console.error('Reset password error:', e);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

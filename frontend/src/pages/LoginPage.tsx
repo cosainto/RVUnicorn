@@ -69,7 +69,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="text-[12px] font-medium mb-1.5 block" style={{ color: 'rgba(245,240,232,0.5)' }}>Password</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[12px] font-medium" style={{ color: 'rgba(245,240,232,0.5)' }}>Password</label>
+                  <Link to="/forgot-password" className="text-[11px] font-medium" style={{ color: '#E8A838' }}>Forgot password?</Link>
+                </div>
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)} required
                   placeholder="••••••••"

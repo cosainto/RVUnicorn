@@ -92,6 +92,8 @@ model User {
   crewCaptainAt                                   DateTime?
   openToWork                                      Boolean                     @default(false)
   showLiveStatusPublicly                          Boolean                     @default(false)
+  passwordResetToken                              String?
+  passwordResetExpires                             DateTime?
   jobTypePrefs                                    String[]                    @default([])
   jobStatePrefs                                   String[]                    @default([])
   jobCompPref                                     String?
