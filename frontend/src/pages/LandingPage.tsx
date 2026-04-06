@@ -563,7 +563,10 @@ export default function LandingPage() {
             {/* Left — Fatigue mockup */}
             <div className={`flex justify-center fade-up ${sec7.inView ? 'visible' : ''}`}>
               <div className="p-8 text-center rounded-2xl" style={{ background: '#F7F9FC', border: '1px solid #E2E8F0' }}>
-                <FatigueRing inView={sec7.inView} />
+                <div className="flex items-center justify-center gap-5">
+                  <FatigueRing inView={sec7.inView} />
+                  <img src="/images/tired_driver.png" alt="Tired RV Unicorn driver" className="w-28 h-28 rounded-2xl object-cover" />
+                </div>
                 <div className="mt-4 space-y-2">
                   <p className="text-sm" style={{ color: '#64748B' }}>Next recommended stop</p>
                   <p className="text-lg font-semibold" style={{ color: '#1E293B' }}>47 miles</p>
