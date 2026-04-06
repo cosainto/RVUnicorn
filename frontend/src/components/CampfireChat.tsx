@@ -92,6 +92,22 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   const [triviaTimeLeft, setTriviaTimeLeft] = useState(0);
   const triviaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Weather + time
+  const [weather, setWeather] = useState<{ temp?: number; condition?: string; sunset?: string } | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+
+  useEffect(() => {
+    api.get(`/weather/${campgroundId}`).then(r => {
+      const w = r.data;
+      setWeather({ temp: w.temperature ?? w.temp, condition: w.condition || w.description, sunset: w.sunset });
+    }).catch(() => {});
+  }, [campgroundId]);
+
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })), 60000);
+    return () => clearInterval(t);
+  }, []);
+
   // Rotating placeholder
   useEffect(() => {
     const interval = setInterval(() => setPlaceholderIdx(i => (i + 1) % PLACEHOLDERS.length), 10000);
@@ -361,6 +377,19 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
             </div>
           </div>
           {!connected && <span className="text-[10px] text-red-300">Reconnecting...</span>}
+        </div>
+
+        {/* Time + Weather bar */}
+        <div className="px-4 py-2 flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-sky-50 to-orange-50">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <span>{'\u{1F552}'} {currentTime}</span>
+          </div>
+          {weather && (
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              {weather.temp != null && <span>{weather.temp}°F {weather.condition || ''}</span>}
+              {weather.sunset && <span>{'\u{1F305}'} Sunset {weather.sunset}</span>}
+            </div>
+          )}
         </div>
 
         {/* Checked-in users dropdown */}
