@@ -558,19 +558,19 @@ export default function LandingPage() {
         </section>
 
         {/* ═══ SECTION 7: DRIVING MODE TEASER ═══ */}
-        <section ref={sec7.ref} className="py-24 px-6" style={{ background: 'var(--navy)' }}>
+        <section ref={sec7.ref} className="py-24 px-6" style={{ background: '#FFFFFF' }}>
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             {/* Left — Fatigue mockup */}
             <div className={`flex justify-center fade-up ${sec7.inView ? 'visible' : ''}`}>
-              <div className="glass-card p-8 text-center">
+              <div className="p-8 text-center rounded-2xl" style={{ background: '#F7F9FC', border: '1px solid #E2E8F0' }}>
                 <FatigueRing inView={sec7.inView} />
                 <div className="mt-4 space-y-2">
-                  <p className="text-sm" style={{ color: 'var(--muted)' }}>Next recommended stop</p>
-                  <p className="text-lg font-semibold">47 miles</p>
+                  <p className="text-sm" style={{ color: '#64748B' }}>Next recommended stop</p>
+                  <p className="text-lg font-semibold" style={{ color: '#1E293B' }}>47 miles</p>
                 </div>
-                <div className="flex items-start gap-2.5 mt-5 p-3 rounded-lg text-left" style={{ background: 'rgba(15,26,46,0.6)', borderLeft: '2px solid var(--gold)' }}>
+                <div className="flex items-start gap-2.5 mt-5 p-3 rounded-lg text-left" style={{ background: '#EFF6FF', borderLeft: '2px solid #0EA5E9' }}>
                   <img src={HITCH_IMG} alt="Hitch" className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5" />
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--cream)' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#475569' }}>
                     You've been driving 3.5hrs. Cracker Barrel ahead has RV parking {'\u{1F6D1}'}
                   </p>
                 </div>
@@ -579,18 +579,18 @@ export default function LandingPage() {
 
             {/* Right — Content */}
             <div>
-              <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-4 fade-up ${sec7.inView ? 'visible' : ''}`} style={{ color: 'var(--gold)' }}>
+              <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-4 fade-up ${sec7.inView ? 'visible' : ''}`} style={{ color: '#0EA5E9' }}>
                 YOUR SAFETY CO-PILOT
               </p>
-              <h2 className={`font-playfair text-3xl md:text-4xl font-bold mb-6 fade-up fade-up-d1 ${sec7.inView ? 'visible' : ''}`}>
+              <h2 className={`font-playfair text-3xl md:text-4xl font-bold mb-6 fade-up fade-up-d1 ${sec7.inView ? 'visible' : ''}`} style={{ color: '#1E293B' }}>
                 Guardian Mode keeps you sharp on every mile.
               </h2>
-              <p className={`text-lg leading-relaxed mb-8 fade-up fade-up-d2 ${sec7.inView ? 'visible' : ''}`} style={{ color: 'var(--muted)' }}>
+              <p className={`text-lg leading-relaxed mb-8 fade-up fade-up-d2 ${sec7.inView ? 'visible' : ''}`} style={{ color: '#64748B' }}>
                 RVUnicorn's Driving Mode tracks fatigue, suggests rest stops built for your rig size, and keeps your co-pilot in the loop — even on remote stretches.
               </p>
               <div className={`fade-up fade-up-d3 ${sec7.inView ? 'visible' : ''}`}>
-                <Link to="/register" className="inline-block px-6 py-3 text-sm font-medium rounded-full border transition-all hover:bg-white/5"
-                  style={{ color: 'white', borderColor: 'rgba(255,255,255,0.25)' }}>
+                <Link to="/register" className="inline-block px-6 py-3 text-sm font-medium rounded-full border transition-all hover:bg-sky-50"
+                  style={{ color: '#0EA5E9', borderColor: '#0EA5E9' }}>
                   Learn More
                 </Link>
               </div>
