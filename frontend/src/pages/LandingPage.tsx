@@ -514,8 +514,8 @@ export default function LandingPage() {
                 <div className="flex items-start gap-2.5">
                   <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=56&h=56&fit=crop&crop=face" alt="Sarah J." className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                   <div>
-                    <span className="text-[10px] font-medium block" style={{ color: 'var(--muted)' }}>Sarah J.</span>
-                    <div className="text-xs p-2.5 rounded-lg rounded-tl-none" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--cream)' }}>
+                    <span className="text-[10px] font-medium block" style={{ color: '#64748B' }}>Sarah J.</span>
+                    <div className="text-xs p-2.5 rounded-lg rounded-tl-none" style={{ background: '#F1F5F9', color: '#1E293B' }}>
                       Anyone have a campfire going at Loop B? We've got s'mores supplies!
                     </div>
                   </div>
