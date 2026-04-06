@@ -238,9 +238,8 @@ For travel time questions: estimate average RV travel speed of 55-60mph, add 15-
 Keep responses helpful and specific. Reference the user by name when you have it. If they ask about their badges, trips, or similar users, use the context provided. Always end with an actionable suggestion.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
-      tools: [{ type: "web_search_20250305" as any, name: "web_search" }],
       system: personaPrefix + "\n\n" + systemPrompt,
       messages: [
         ...history.slice(-4).map((m: any) => ({ role: m.role, content: m.content })),
