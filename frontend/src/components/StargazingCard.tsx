@@ -16,6 +16,7 @@ interface Props {
 export default function StargazingCard({ content, metadata, onOptOut }: Props) {
   const [optedOut, setOptedOut] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleOptOut = async () => {
     try {
@@ -30,8 +31,8 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
   const lines = content.split('\n').filter(Boolean);
   const title = lines[0];
   const body = lines.slice(1).join('\n').trim();
-  // Show only first ~200 chars to keep card compact
-  const truncatedBody = body.length > 200 ? body.slice(0, 200) + '…' : body;
+  const isLong = body.length > 200;
+  const displayBody = expanded || !isLong ? body : body.slice(0, 200) + '…';
 
   return (
     <div className="rounded-xl overflow-hidden border border-indigo-800/40" style={{
@@ -62,7 +63,12 @@ export default function StargazingCard({ content, metadata, onOptOut }: Props) {
         </div>
 
         <h3 className="text-white font-bold text-xs mb-1">{title}</h3>
-        <p className="text-indigo-200 text-[11px] leading-snug">{truncatedBody}</p>
+        <p className="text-indigo-200 text-[11px] leading-snug whitespace-pre-line">{displayBody}</p>
+        {isLong && (
+          <button onClick={() => setExpanded(!expanded)} className="text-indigo-400 hover:text-indigo-300 text-[10px] font-medium mt-1 transition">
+            {expanded ? 'Show less' : 'Read more'}
+          </button>
+        )}
 
         <div className="mt-2 pt-2 border-t border-indigo-800/40 flex items-center justify-between">
           <span className="text-indigo-400 text-[10px]">{metadata.moonPhase}</span>
