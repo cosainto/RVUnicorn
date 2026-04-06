@@ -77,6 +77,64 @@ export function registerCampfireSockets(io: Server) {
           } catch (e) { console.error('[Campfire @Hitch] error:', e); }
         }, 1000);
       }
+
+      // @Walter mention — stargazing/veteran persona
+      if (/@walter/i.test(data.content)) {
+        setTimeout(async () => {
+          try {
+            const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
+            const question = data.content.replace(/@walter/gi, '').trim();
+            if (!question) return;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: `You are Walter 🎭, a gruff veteran RV stargazing guide at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. You're sarcastic and curmudgeonly but secretly love sharing knowledge about the night sky, constellations, and campground life. Keep responses to 1-3 sentences. Be funny and dry. Family-friendly.`,
+                messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
+            });
+            const aiData = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const walterMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: null, content: `🎭 ${reply}`, isSystem: true, isHitch: false },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: walterMsg.id, content: walterMsg.content, createdAt: walterMsg.createdAt,
+                isSystem: true, isHitch: false,
+              });
+            }
+          } catch (e) { console.error('[Campfire @Walter] error:', e); }
+        }, 1500);
+      }
+
+      // @Scout mention — adventure trailblazer persona
+      if (/@scout/i.test(data.content)) {
+        setTimeout(async () => {
+          try {
+            const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
+            const question = data.content.replace(/@scout/gi, '').trim();
+            if (!question) return;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: `You are Scout 🏔️, an adventure trailblazer at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. High energy, loves trails, hidden gems, and outdoor adventures. Keep responses to 1-3 sentences. Enthusiastic and helpful. Family-friendly.`,
+                messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
+            });
+            const aiData = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const scoutMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: null, content: `🏔️ ${reply}`, isSystem: true, isHitch: false },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: scoutMsg.id, content: scoutMsg.content, createdAt: scoutMsg.createdAt,
+                isSystem: true, isHitch: false,
+              });
+            }
+          } catch (e) { console.error('[Campfire @Scout] error:', e); }
+        }, 1500);
+      }
     });
 
 
