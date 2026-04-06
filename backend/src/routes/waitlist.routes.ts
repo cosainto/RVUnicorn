@@ -69,10 +69,19 @@ router.get('/upcoming-events', async (req: Request, res: Response) => {
         campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, customSlug: true } },
       },
       orderBy: { startDate: 'asc' },
-      take: 12,
+      take: 50,
     });
 
-    res.json({ events });
+    // Deduplicate — one event per campground for variety
+    const seen = new Set<string>();
+    const unique = events.filter(e => {
+      const key = e.campground?.id || e.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 12);
+
+    res.json({ events: unique });
   } catch {
     res.json({ events: [] });
   }
