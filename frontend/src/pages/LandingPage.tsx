@@ -119,17 +119,17 @@ function FatigueRing({ inView }: { inView: boolean }) {
 
   return (
     <svg width="140" height="140" viewBox="0 0 140 140">
-      <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+      <circle cx="70" cy="70" r={radius} fill="none" stroke="#E2E8F0" strokeWidth="8" />
       <circle
         cx="70" cy="70" r={radius} fill="none" strokeWidth="8" strokeLinecap="round"
-        stroke="var(--gold)"
+        stroke="#0EA5E9"
         strokeDasharray={circumference}
         strokeDashoffset={inView ? offset : circumference}
         transform="rotate(-90 70 70)"
         style={{ transition: 'stroke-dashoffset 1.5s ease-out' }}
       />
-      <text x="70" y="64" textAnchor="middle" fill="white" fontSize="28" fontWeight="700" fontFamily="DM Sans">82</text>
-      <text x="70" y="84" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="11" fontFamily="DM Sans">Fatigue Score</text>
+      <text x="70" y="64" textAnchor="middle" fill="#1E293B" fontSize="28" fontWeight="700" fontFamily="DM Sans">82</text>
+      <text x="70" y="84" textAnchor="middle" fill="#94A3B8" fontSize="11" fontFamily="DM Sans">Fatigue Score</text>
     </svg>
   );
 }
