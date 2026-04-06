@@ -197,15 +197,15 @@ export default function LandingPage() {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
         :root {
-          --navy: #1B2B4B;
-          --navy-deep: #0F1A2E;
-          --gold: #C9A84C;
-          --gold-light: #E8C96A;
-          --campfire: #E8622A;
-          --campfire-glow: rgba(232, 98, 42, 0.15);
-          --ember: #F4A460;
-          --cream: #FDF6E9;
-          --muted: rgba(255,255,255,0.6);
+          --navy: #1E293B;
+          --navy-deep: #0F172A;
+          --gold: #0EA5E9;
+          --gold-light: #38BDF8;
+          --campfire: #F97316;
+          --campfire-glow: rgba(14, 165, 233, 0.12);
+          --ember: #FB923C;
+          --cream: #F8FAFC;
+          --muted: rgba(255,255,255,0.7);
         }
 
         .font-playfair { font-family: 'Playfair Display', serif; }
@@ -233,10 +233,11 @@ export default function LandingPage() {
         .fade-up-d5 { transition-delay:0.5s; }
 
         .glass-card {
-          background: rgba(27,43,75,0.5);
+          background: rgba(255,255,255,0.9);
           backdrop-filter: blur(16px);
-          border: 1px solid rgba(201,168,76,0.12);
+          border: 1px solid rgba(14,165,233,0.12);
           border-radius: 16px;
+          color: #1E293B;
         }
 
         .outcome-card {
@@ -244,11 +245,11 @@ export default function LandingPage() {
         }
         .outcome-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.1);
         }
       `}</style>
 
-      <div className="font-dm" style={{ background: 'var(--navy-deep)', color: 'white', minHeight: '100vh' }}>
+      <div className="font-dm" style={{ background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 50%, #F7F9FC 50.1%)', color: 'white', minHeight: '100vh' }}>
         {/* Beta Banner */}
         <div className="relative z-50 text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
           <p className="text-[12px] font-bold tracking-wide">

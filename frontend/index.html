@@ -69,23 +69,42 @@
         body { padding-top: env(safe-area-inset-top); }
       }
 
-      /* Global Campfire Night dark theme */
-      body, #root { background: #0F1C35 !important; color: #F5F0E8 !important; }
-      .bg-white { background: rgba(15,28,53,0.95) !important; color: #F5F0E8 !important; }
-      .bg-gray-50, .bg-gray-100 { background: #1B2E50 !important; }
-      .bg-gray-200, .bg-gray-300 { background: rgba(27,46,80,0.6) !important; }
-      .text-gray-900, .text-gray-800 { color: #F5F0E8 !important; }
-      .text-gray-700, .text-gray-600 { color: rgba(245,240,232,0.65) !important; }
-      .text-gray-500 { color: rgba(245,240,232,0.4) !important; }
-      .text-gray-400 { color: rgba(245,240,232,0.3) !important; }
-      .border-gray-100, .border-gray-200, .border-gray-300 { border-color: rgba(232,168,56,0.08) !important; }
-      .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
-      .shadow-md, .shadow-sm, .shadow { box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important; }
-      input, textarea, select { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
-      .text-primary-600, .text-primary-700 { color: #E8A838 !important; }
-      .btn-primary, .bg-primary-600, .bg-primary-500 { background: #E8622A !important; color: white !important; }
-      .bg-green-50, .bg-blue-50, .bg-amber-50, .bg-red-50, .bg-purple-50, .bg-orange-50 { background: rgba(27,46,80,0.4) !important; }
-      .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { background: rgba(27,46,80,0.6) !important; }
+      /* Fresh Trail — light, clean, nature-inspired theme */
+      :root {
+        --ft-bg: #F7F9FC;
+        --ft-surface: #FFFFFF;
+        --ft-surface-alt: #F0F4F8;
+        --ft-text: #1E293B;
+        --ft-text-secondary: #475569;
+        --ft-text-muted: #94A3B8;
+        --ft-accent: #0EA5E9;
+        --ft-accent-hover: #0284C7;
+        --ft-green: #16A34A;
+        --ft-orange: #F97316;
+        --ft-border: #E2E8F0;
+      }
+      body, #root { background: var(--ft-bg) !important; color: var(--ft-text) !important; }
+      .bg-white { background: var(--ft-surface) !important; color: var(--ft-text) !important; }
+      .bg-gray-50, .bg-gray-100 { background: var(--ft-surface-alt) !important; }
+      .bg-gray-200, .bg-gray-300 { background: #E2E8F0 !important; }
+      .text-gray-900, .text-gray-800 { color: var(--ft-text) !important; }
+      .text-gray-700, .text-gray-600 { color: var(--ft-text-secondary) !important; }
+      .text-gray-500 { color: #64748B !important; }
+      .text-gray-400 { color: var(--ft-text-muted) !important; }
+      .border-gray-100, .border-gray-200, .border-gray-300 { border-color: var(--ft-border) !important; }
+      .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }
+      .shadow-md, .shadow-sm, .shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; }
+      input, textarea, select { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; color: var(--ft-text) !important; }
+      .text-primary-600, .text-primary-700 { color: var(--ft-accent) !important; }
+      .btn-primary, .bg-primary-600, .bg-primary-500 { background: var(--ft-accent) !important; color: white !important; }
+      .btn-primary:hover, .bg-primary-600:hover { background: var(--ft-accent-hover) !important; }
+      .bg-green-50 { background: #F0FDF4 !important; }
+      .bg-blue-50 { background: #EFF6FF !important; }
+      .bg-amber-50 { background: #FFFBEB !important; }
+      .bg-red-50 { background: #FEF2F2 !important; }
+      .bg-purple-50 { background: #FAF5FF !important; }
+      .bg-orange-50 { background: #FFF7ED !important; }
+      .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { background: #F1F5F9 !important; }
 
       /* Smooth scrolling */
       html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
