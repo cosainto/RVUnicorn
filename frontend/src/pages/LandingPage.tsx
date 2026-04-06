@@ -250,15 +250,15 @@ export default function LandingPage() {
       `}</style>
 
       <div className="font-dm" style={{ background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 50%, #F7F9FC 50.1%)', color: 'white', minHeight: '100vh' }}>
+        <Navbar />
+
         {/* Beta Banner */}
-        <div className="relative z-50 text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
+        <div className="relative z-40 text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
           <p className="text-[12px] font-bold tracking-wide">
             {'\u{1F6A7}'} RVUnicorn is in Early Access Beta — You're among the first to shape the future of RV travel.
             <Link to="/register" className="ml-2 underline font-bold">Join free & help us grow →</Link>
           </p>
         </div>
-
-        <Navbar />
 
         {/* ═══ HERO ═══ */}
         <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(232,98,42,0.08) 0%, transparent 60%), var(--navy-deep)' }}>
