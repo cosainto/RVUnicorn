@@ -345,6 +345,67 @@ Keep responses helpful and specific. Reference the user by name when you have it
   }
 });
 
+// POST /api/hitch/campers-like-you
+router.post('/campers-like-you', authenticateToken, async (req: any, res) => {
+  try {
+    const { interests = [], rvType, state } = req.body;
+    const userId = req.userId;
+
+    // Find users with similar interests or RV type
+    const similarUsers = await prisma.user.findMany({
+      where: {
+        id: { not: userId },
+        OR: [
+          ...(interests.length > 0 ? [{ campingInterests: { hasSome: interests } }] : []),
+          ...(rvType ? [{ rvType }] : []),
+        ],
+      },
+      select: { id: true },
+      take: 100,
+    });
+
+    const similarUserIds = similarUsers.map(u => u.id);
+
+    // Find campgrounds these similar users have checked into
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: { in: similarUserIds } },
+      include: {
+        campground: {
+          select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true },
+        },
+      },
+      orderBy: { checkInDate: 'desc' },
+      take: 200,
+    });
+
+    // Count and rank campgrounds
+    const cgMap = new Map<string, { campground: any; count: number }>();
+    for (const ci of checkIns) {
+      if (!ci.campground) continue;
+      const existing = cgMap.get(ci.campground.id);
+      if (existing) { existing.count++; } else { cgMap.set(ci.campground.id, { campground: ci.campground, count: 1 }); }
+    }
+
+    const ranked = Array.from(cgMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+      .map(({ campground, count }) => ({
+        id: campground.id,
+        name: campground.name,
+        city: campground.location,
+        state: campground.state,
+        imageUrl: campground.imageUrl,
+        matchScore: Math.min(99, Math.round((count / Math.max(similarUserIds.length, 1)) * 100 + 40)),
+        matchReason: `Popular with ${count} camper${count !== 1 ? 's' : ''} like you`,
+      }));
+
+    res.json({ campgrounds: ranked, similarUserCount: similarUserIds.length });
+  } catch (e: any) {
+    console.error('Campers like you error:', e?.message);
+    res.status(500).json({ error: e?.message || 'Failed' });
+  }
+});
+
 // POST /api/hitch/packing-suggestions
 router.post('/packing-suggestions', async (req: any, res) => {
   try {
