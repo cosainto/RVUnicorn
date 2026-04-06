@@ -638,6 +638,8 @@ model Campground {
   welcomeKit             WelcomeKit?
   rules                  CampgroundRules?
   jobPostings            JobPosting[]
+  subscription           CampgroundSubscription? @relation("CampgroundSub")
+  trialEndsAt            DateTime?
 }
 
 model CampMarketListing {
@@ -5122,4 +5124,45 @@ model ShareEvent {
   shareType String
   platform  String
   createdAt DateTime @default(now())
+}
+
+model CampgroundSubscription {
+  id                   String   @id @default(cuid())
+  campgroundId         String   @unique
+  tier                 String   @default("TRAILHEAD")
+  status               String   @default("ACTIVE")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  trialStartDate       DateTime?
+  trialEndDate         DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  pausedAt             DateTime?
+  pauseResumesAt       DateTime?
+  isFoundingMember     Boolean  @default(false)
+  foundingMemberSince  DateTime?
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  campground           Campground @relation("CampgroundSub", fields: [campgroundId], references: [id])
+}
+
+model UpsellEvent {
+  id            String    @id @default(cuid())
+  campgroundId  String
+  trigger       String
+  shownAt       DateTime  @default(now())
+  converted     Boolean   @default(false)
+  convertedAt   DateTime?
+}
+
+model GhostAnalyticsEmail {
+  id            String   @id @default(cuid())
+  campgroundId  String
+  email         String
+  sentAt        DateTime @default(now())
+  opened        Boolean  @default(false)
+  claimed       Boolean  @default(false)
 }

@@ -114,6 +114,7 @@ const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const PublicTripViewPage = lazy(() => import('./pages/PublicTripViewPage'));
 const JoinCrewPage = lazy(() => import('./pages/JoinCrewPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const CampgroundUpgradePage = lazy(() => import('./pages/CampgroundUpgradePage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CampgroundQuizPage = lazy(() => import('./pages/CampgroundQuizPage'));
 const LastMinuteDealsPage = lazy(() => import('./pages/LastMinuteDealsPage'));
@@ -202,6 +203,7 @@ function AppContent() {
           <Route path="/join" element={<JoinCrewPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/business/:campgroundId/upgrade" element={<PrivateRoute><CampgroundUpgradePage /></PrivateRoute>} />
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
           <Route path="/deals" element={<LastMinuteDealsPage />} />
