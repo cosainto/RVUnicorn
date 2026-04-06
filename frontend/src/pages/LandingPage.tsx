@@ -359,10 +359,10 @@ export default function LandingPage() {
         <ActivityStrip />
 
         {/* ═══ SECTION 3: OUTCOME CARDS ═══ */}
-        <section ref={sec3.ref} className="py-24 px-6" style={{ background: 'var(--navy)' }}>
+        <section ref={sec3.ref} className="py-24 px-6" style={{ background: '#F7F9FC' }}>
           <div className="max-w-6xl mx-auto">
-            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-16 fade-up ${sec3.inView ? 'visible' : ''}`}>
-              Everything you need to travel better — <span style={{ color: 'var(--gold)' }}>together</span>
+            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-16 fade-up ${sec3.inView ? 'visible' : ''}`} style={{ color: '#1E293B' }}>
+              Everything you need to travel better — <span style={{ color: '#0EA5E9' }}>together</span>
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
               {[
@@ -371,13 +371,14 @@ export default function LandingPage() {
                 ['\u{1F4E1}', 'Know Before You Go', 'Real insights from RVers already there — weather, road conditions, and honest reviews.', '/images/rose_voyager.png'],
                 ['\u{1F525}', 'Turn Stops into Experiences', 'Meals, meetups, trivia nights, and shared moments — powered by Hitch, your AI camp guide.', '/images/trivia_master.png'],
               ].map(([icon, title, desc, img], i) => (
-                <div key={title as string} className={`glass-card outcome-card p-8 fade-up fade-up-d${i + 1} ${sec3.inView ? 'visible' : ''} flex gap-4`}>
+                <div key={title as string} className={`outcome-card p-8 rounded-2xl fade-up fade-up-d${i + 1} ${sec3.inView ? 'visible' : ''} flex gap-4`}
+                  style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                   <div className="flex-1">
                     <span className="text-3xl mb-4 block">{icon}</span>
-                    <h3 className="font-playfair text-xl font-bold mb-3" style={{ color: 'var(--cream)' }}>{title}</h3>
-                    <p className="leading-relaxed" style={{ color: 'var(--muted)' }}>{desc}</p>
+                    <h3 className="font-playfair text-xl font-bold mb-3" style={{ color: '#1E293B' }}>{title}</h3>
+                    <p className="leading-relaxed text-[15px]" style={{ color: '#64748B' }}>{desc}</p>
                   </div>
-                  {img && <img src={img as string} alt="" className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 self-center hidden sm:block" style={{ border: '1px solid rgba(201,168,76,0.15)' }} />}
+                  {img && <img src={img as string} alt="" className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 self-center hidden sm:block" style={{ border: '1px solid #E2E8F0' }} />}
                 </div>
               ))}
             </div>
@@ -385,14 +386,14 @@ export default function LandingPage() {
         </section>
 
         {/* ═══ SECTION 4: HOW IT WORKS ═══ */}
-        <section ref={(el) => { (howItWorksRef as any).current = el; (sec4.ref as any).current = el; }} className="py-24 px-6" style={{ background: 'var(--navy-deep)' }}>
+        <section ref={(el) => { (howItWorksRef as any).current = el; (sec4.ref as any).current = el; }} className="py-24 px-6" style={{ background: '#FFFFFF' }}>
           <div className="max-w-5xl mx-auto">
-            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-16 fade-up ${sec4.inView ? 'visible' : ''}`}>
+            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-16 fade-up ${sec4.inView ? 'visible' : ''}`} style={{ color: '#1E293B' }}>
               How RVUnicorn works
             </h2>
             <div className="grid md:grid-cols-3 gap-12 relative">
               {/* Connecting line (desktop) */}
-              <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px" style={{ background: 'linear-gradient(to right, transparent, var(--gold), transparent)' }} />
+              <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px" style={{ background: 'linear-gradient(to right, transparent, #0EA5E9, transparent)' }} />
 
               {[
                 ['1', 'Create Your Profile', 'Tell us about your rig, your travel style, and where you want to go. We handle the rest.'],
@@ -401,11 +402,11 @@ export default function LandingPage() {
               ].map(([num, title, desc], i) => (
                 <div key={num as string} className={`text-center fade-up fade-up-d${i + 1} ${sec4.inView ? 'visible' : ''}`}>
                   <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-playfair font-bold relative z-10"
-                    style={{ background: 'var(--navy)', border: '2px solid var(--gold)', color: 'var(--gold)' }}>
+                    style={{ background: '#EFF6FF', border: '2px solid #0EA5E9', color: '#0EA5E9' }}>
                     {num}
                   </div>
-                  <h3 className="font-playfair text-xl font-bold mb-3">{title}</h3>
-                  <p className="leading-relaxed" style={{ color: 'var(--muted)' }}>{desc}</p>
+                  <h3 className="font-playfair text-xl font-bold mb-3" style={{ color: '#1E293B' }}>{title}</h3>
+                  <p className="leading-relaxed text-[15px]" style={{ color: '#64748B' }}>{desc}</p>
                 </div>
               ))}
             </div>
