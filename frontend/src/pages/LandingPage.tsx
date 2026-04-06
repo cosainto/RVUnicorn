@@ -602,13 +602,13 @@ export default function LandingPage() {
         </section>
 
         {/* ═══ SECTION 8: SOCIAL PROOF ═══ */}
-        <section ref={sec8.ref} className="py-24 px-6" style={{ background: 'var(--navy-deep)' }}>
+        <section ref={sec8.ref} className="py-24 px-6" style={{ background: '#F7F9FC' }}>
           <div className="max-w-6xl mx-auto">
-            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-4 fade-up ${sec8.inView ? 'visible' : ''}`}>
+            <h2 className={`font-playfair text-3xl md:text-4xl font-bold text-center mb-4 fade-up ${sec8.inView ? 'visible' : ''}`} style={{ color: '#1E293B' }}>
               Real RVers. Real trips.
             </h2>
             <div className={`flex justify-center mb-12 fade-up fade-up-d1 ${sec8.inView ? 'visible' : ''}`}>
-              <img src="/images/stargazing_crew.png" alt="RVUnicorn crew stargazing" className="w-64 h-40 rounded-2xl object-cover" style={{ border: '1px solid rgba(201,168,76,0.15)' }} />
+              <img src="/images/stargazing_crew.png" alt="RVUnicorn crew stargazing" className="w-64 h-40 rounded-2xl object-cover" style={{ border: '1px solid #E2E8F0' }} />
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               {[
@@ -631,16 +631,17 @@ export default function LandingPage() {
                   likes: 31, comments: 6, tag: null,
                 },
               ].map((post, i) => (
-                <div key={post.name} className={`glass-card p-6 fade-up fade-up-d${i + 1} ${sec8.inView ? 'visible' : ''}`}>
+                <div key={post.name} className={`p-6 rounded-2xl fade-up fade-up-d${i + 1} ${sec8.inView ? 'visible' : ''}`}
+                  style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                   <div className="flex items-center gap-3 mb-4">
                     <img src={post.photo} alt={post.name} className="w-10 h-10 rounded-full object-cover" />
                     <div>
-                      <p className="text-sm font-semibold">{post.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--muted)' }}>{post.meta}</p>
+                      <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{post.name}</p>
+                      <p className="text-xs" style={{ color: '#94A3B8' }}>{post.meta}</p>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--cream)' }}>{post.text}</p>
-                  <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--muted)' }}>
+                  <p className="text-sm leading-relaxed mb-4" style={{ color: '#475569' }}>{post.text}</p>
+                  <div className="flex items-center gap-4 text-xs" style={{ color: '#94A3B8' }}>
                     <span>{'\u2764'} {post.likes}</span>
                     <span>{'\u{1F4AC}'} {post.comments}</span>
                     {post.tag && <span className="ml-auto">{post.tag}</span>}
@@ -648,14 +649,14 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <p className="text-center text-xs mt-8" style={{ color: 'var(--muted)' }}>Posts are from real RVUnicorn community members</p>
+            <p className="text-center text-xs mt-8" style={{ color: '#94A3B8' }}>Posts are from real RVUnicorn community members</p>
           </div>
         </section>
 
         {/* ═══ SECTION 9: RIG-AWARE CALLOUT ═══ */}
-        <section ref={sec9.ref} className="py-16 px-6" style={{ background: 'var(--navy)', borderTop: '1px solid rgba(201,168,76,0.08)', borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
+        <section ref={sec9.ref} className="py-16 px-6" style={{ background: '#FFFFFF', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
           <div className="max-w-5xl mx-auto text-center">
-            <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-8 fade-up ${sec9.inView ? 'visible' : ''}`} style={{ color: 'var(--gold)' }}>
+            <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-8 fade-up ${sec9.inView ? 'visible' : ''}`} style={{ color: '#0EA5E9' }}>
               BUILT FOR YOUR SPECIFIC RIG
             </p>
             <div className={`flex flex-wrap justify-center gap-4 mb-6 fade-up fade-up-d1 ${sec9.inView ? 'visible' : ''}`}>
@@ -664,13 +665,13 @@ export default function LandingPage() {
                 ['\u{1F3D5}', 'Campsite size matched to your rig'],
                 ['\u26FD', 'Gas costs calculated for your MPG'],
               ].map(([icon, text]) => (
-                <div key={text as string} className="glass-card px-6 py-4 flex items-center gap-3">
+                <div key={text as string} className="px-6 py-4 flex items-center gap-3 rounded-2xl" style={{ background: '#F7F9FC', border: '1px solid #E2E8F0' }}>
                   <span className="text-2xl">{icon}</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--cream)' }}>{text}</span>
+                  <span className="text-sm font-medium" style={{ color: '#1E293B' }}>{text}</span>
                 </div>
               ))}
             </div>
-            <p className={`text-sm fade-up fade-up-d2 ${sec9.inView ? 'visible' : ''}`} style={{ color: 'var(--muted)' }}>
+            <p className={`text-sm fade-up fade-up-d2 ${sec9.inView ? 'visible' : ''}`} style={{ color: '#64748B' }}>
               Whether you're in a teardrop or a 45' diesel pusher — RVUnicorn knows the difference.
             </p>
           </div>
