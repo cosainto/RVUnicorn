@@ -115,7 +115,7 @@ function ActivityStrip() {
 function FatigueRing({ inView }: { inView: boolean }) {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - 0.82);
+  const offset = circumference * (1 - 0.73);
 
   return (
     <svg width="140" height="140" viewBox="0 0 140 140">
@@ -128,7 +128,7 @@ function FatigueRing({ inView }: { inView: boolean }) {
         transform="rotate(-90 70 70)"
         style={{ transition: 'stroke-dashoffset 1.5s ease-out' }}
       />
-      <text x="70" y="64" textAnchor="middle" fill="#1E293B" fontSize="28" fontWeight="700" fontFamily="DM Sans">82</text>
+      <text x="70" y="64" textAnchor="middle" fill="#1E293B" fontSize="28" fontWeight="700" fontFamily="DM Sans">73</text>
       <text x="70" y="84" textAnchor="middle" fill="#94A3B8" fontSize="11" fontFamily="DM Sans">Fatigue Score</text>
     </svg>
   );
