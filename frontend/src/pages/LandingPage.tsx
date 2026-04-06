@@ -367,7 +367,7 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-2 gap-6">
               {[
                 ['\u{1F91D}', 'Never Camp Alone Again', 'See who\'s nearby, join their campfire, and make friends along the road.', '/images/dinner_family.png'],
-                ['\u{1F5FA}', 'Plan Trips in Minutes', 'Smart routes built for your rig — height clearances, gas costs, and campground stops included.', null],
+                ['\u{1F5FA}', 'Plan Trips in Minutes', 'Smart routes built for your rig — height clearances, gas costs, and campground stops included.', '/images/road-warrior.png'],
                 ['\u{1F4E1}', 'Know Before You Go', 'Real insights from RVers already there — weather, road conditions, and honest reviews.', '/images/rose_voyager.png'],
                 ['\u{1F525}', 'Turn Stops into Experiences', 'Meals, meetups, trivia nights, and shared moments — powered by Hitch, your AI camp guide.', '/images/trivia_master.png'],
               ].map(([icon, title, desc, img], i) => (
