@@ -127,6 +127,7 @@ import { updateGasPrices } from "./cron/gas-price-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
 import pushRoutes from './routes/push.routes';
 import { runRoadChatCleanup } from './cron/road-chat-cleanup.cron';
+import { runCampfireCleanup } from './cron/campfire-cleanup.cron';
 import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 import { registerEventSockets } from './campfire/events.socket';
@@ -352,7 +353,10 @@ registerCampfireSockets(io);
 registerEventSockets(io);
 // Road chat cleanup — run every hour
 setInterval(runRoadChatCleanup, 60 * 60 * 1000);
-runRoadChatCleanup(); // run once on startup too
+runRoadChatCleanup();
+// Campfire chat cleanup — delete messages older than 24h, run every hour
+setInterval(runCampfireCleanup, 60 * 60 * 1000);
+runCampfireCleanup();
 registerRoadChatSockets(io);
 registerTriviaCrons(io);
 httpServer.listen(PORT, () => {

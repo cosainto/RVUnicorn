@@ -316,10 +316,15 @@ router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, r
       select: { checkInDate: true },
     });
 
+    // Show messages from last 24 hours only (or since check-in, whichever is more recent)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const cutoff = activeCheckIn?.checkInDate && activeCheckIn.checkInDate > twentyFourHoursAgo
+      ? activeCheckIn.checkInDate : twentyFourHoursAgo;
+
     const messages = await prisma.campfireMessage.findMany({
       where: {
         roomId: room.id,
-        ...(activeCheckIn ? { createdAt: { gte: activeCheckIn.checkInDate } } : {}),
+        createdAt: { gte: cutoff },
       },
       include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
       orderBy: { createdAt: 'asc' },
