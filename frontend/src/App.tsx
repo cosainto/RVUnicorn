@@ -27,7 +27,7 @@ function OnboardingTrigger() {
   const { user } = useAuth();
   const [show, setShow] = useState(false);
 
-  useEffectApp(() => {
+  useEffect(() => {
     if (!user) return;
     // Check if user needs onboarding
     if (!(user as any).onboardingCompletedAt && !(user as any).onboardingSkippedAt && !(user as any).onboardingCompleted) {
