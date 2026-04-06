@@ -49,11 +49,25 @@ router.get('/', async (req: Request, res: Response) => {
       ];
     }
 
+    // Randomize default order when no search/filters applied
+    const isDefaultBrowse = !search && !state && !req.query.verificationStatus;
+    const takeCount = limit ? parseInt(limit as string) : 50;
+    const pageNum = page ? parseInt(page as string) : 1;
+
+    let skipCount = (pageNum - 1) * takeCount;
+    if (isDefaultBrowse && pageNum === 1) {
+      // Random offset for first page to show different campgrounds each visit
+      const total = await prisma.campground.count({ where });
+      skipCount = Math.floor(Math.random() * Math.max(0, total - takeCount));
+    }
+
     const campgrounds = await prisma.campground.findMany({
       where,
-      take: limit ? parseInt(limit as string) : 50,
-      skip: page ? (parseInt(page as string) - 1) * (limit ? parseInt(limit as string) : 50) : (offset ? parseInt(offset as string) : 0),
-      orderBy: [
+      take: takeCount,
+      skip: skipCount,
+      orderBy: isDefaultBrowse ? [
+        { googleRating: 'desc' },
+      ] : [
         { followers: { _count: 'desc' } },
         { reviews: { _count: 'desc' } },
         { name: 'asc' },
