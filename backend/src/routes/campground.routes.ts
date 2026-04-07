@@ -127,39 +127,17 @@ router.get("/following", authenticateToken, async (req: any, res) => {
     const userId = req.user?.id || req.userId;
     const now = new Date();
     
-    // Get followed campgrounds
+    // claimedBy and admins are relations on Campground — not on Follow/CheckIn/Stay.
+    // Earlier versions of this endpoint hoisted them to the top level which makes
+    // Prisma throw at runtime. Result-shaping below only reads `.campground`, so
+    // we just include the campground summary on each query.
+    const campgroundSelect = { id: true, name: true, location: true, city: true, imageUrl: true, state: true };
+
     const follows = await prisma.campgroundFollow.findMany({
       where: { userId },
-      include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
-        campground: {
-          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
-        }
-      }
+      include: { campground: { select: campgroundSelect } },
     });
-    
-    // Get campgrounds user is currently checked in at
+
     const activeCheckIns = await prisma.checkIn.findMany({
       where: {
         userId,
@@ -167,82 +145,32 @@ router.get("/following", authenticateToken, async (req: any, res) => {
         checkInDate: { lte: now },
         OR: [
           { checkOutDate: null },
-          { checkOutDate: { gte: now } }
-        ]
+          { checkOutDate: { gte: now } },
+        ],
       },
-      include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
-        campground: {
-          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
-        }
-      }
+      include: { campground: { select: campgroundSelect } },
     });
-    
-    // Get campgrounds from past stays/visits
+
     const stays = await prisma.stay.findMany({
       where: { userId },
-      include: {
-        claimedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
-        },
-        admins: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
-        campground: {
-          select: { id: true, name: true, location: true, city: true, imageUrl: true, state: true }
-        }
-      },
-      orderBy: { startDate: "desc" }
+      include: { campground: { select: campgroundSelect } },
+      orderBy: { startDate: 'desc' },
     });
     
-    // Combine and deduplicate
+    // Combine and deduplicate. Skip rows whose campground is null (e.g. a
+    // HarvestHost-only check-in) — they have no campgroundId to key on.
     const campgroundMap = new Map();
-    activeCheckIns.forEach(c => campgroundMap.set(c.campground.id, { ...c.campground, source: "checked-in" }));
+    activeCheckIns.forEach(c => {
+      if (c.campground) campgroundMap.set(c.campground.id, { ...c.campground, source: 'checked-in' });
+    });
     follows.forEach(f => {
-      if (!campgroundMap.has(f.campground.id)) {
-        campgroundMap.set(f.campground.id, { ...f.campground, source: "following" });
+      if (f.campground && !campgroundMap.has(f.campground.id)) {
+        campgroundMap.set(f.campground.id, { ...f.campground, source: 'following' });
       }
     });
     stays.forEach(s => {
-      if (!campgroundMap.has(s.campground.id)) {
-        campgroundMap.set(s.campground.id, { ...s.campground, source: "visited" });
+      if (s.campground && !campgroundMap.has(s.campground.id)) {
+        campgroundMap.set(s.campground.id, { ...s.campground, source: 'visited' });
       }
     });
     
