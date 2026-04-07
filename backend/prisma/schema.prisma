@@ -3042,20 +3042,28 @@ model MediaTag {
 }
 
 model Message {
-  id          String   @id @default(uuid())
-  senderId    String
-  recipientId String
-  subject     String?
-  content     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  senderId       String
+  recipientId    String
+  subject        String?
+  content        String
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // Reply / Reply All threading
+  threadId       String?
+  inReplyToId    String?
+  // Denormalized list of every user who was on the original send
+  // (sender + primary recipient + all CC recipients). Lets the UI render
+  // a "Reply All" button without N joins.
+  participantIds String[] @default([])
+  recipient      User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender         User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([senderId])
   @@index([recipientId])
   @@index([isRead])
+  @@index([threadId])
 }
 
 model ThingToDo {

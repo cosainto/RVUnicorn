@@ -2,7 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Send, Trash2, Search, Users, Tent, X, Loader } from 'lucide-react';
 import api from '../services/api';
-import { User as UserType } from '../services/auth.service';
+import { useAuth } from '../contexts/AuthContext';
+
+interface MessageUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  profilePicture?: string;
+}
 
 interface Message {
   id: string;
@@ -10,20 +18,12 @@ interface Message {
   content: string;
   isRead: boolean;
   createdAt: string;
-  sender: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    profilePicture?: string;
-  };
-  recipient: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    profilePicture?: string;
-  };
+  threadId?: string | null;
+  inReplyToId?: string | null;
+  participantIds?: string[];
+  participants?: MessageUser[];
+  sender: MessageUser;
+  recipient: MessageUser;
 }
 
 interface Friend {
@@ -42,11 +42,9 @@ interface Campground {
   source?: string;
 }
 
-interface MessagesPageProps {
-  user: UserType;
-}
-
-export default function MessagesPage({ user }: MessagesPageProps) {
+export default function MessagesPage() {
+  const { user } = useAuth();
+  if (!user) return null;
   const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox');
   const [messages, setMessages] = useState<Message[]>([]);
   const [sentMessages, setSentMessages] = useState<Message[]>([]);
@@ -66,6 +64,11 @@ export default function MessagesPage({ user }: MessagesPageProps) {
   const [newMessage, setNewMessage] = useState({ subject: '', content: '' });
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  // Reply state — drives the threading on POST
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  // Names of people we're CC'ing on a Reply All — added on the fly so the UI can render
+  // them as chips in the cc list even if they're not in the user's friends list yet.
+  const [externalCcUsers, setExternalCcUsers] = useState<MessageUser[]>([]);
 
   useEffect(() => {
     loadMessages();
@@ -158,6 +161,7 @@ export default function MessagesPage({ user }: MessagesPageProps) {
         ccUserIds: ccFriends.length > 0 ? ccFriends : undefined,
         subject: newMessage.subject.trim() || undefined,
         content: newMessage.content,
+        inReplyToId: replyToId || undefined,
       });
       
       resetComposeForm();
@@ -180,7 +184,49 @@ export default function MessagesPage({ user }: MessagesPageProps) {
     setCampgroundSearch('');
     setSearchedCampgrounds([]);
     setMessageType('friend');
+    setReplyToId(null);
+    setExternalCcUsers([]);
     setShowCompose(false);
+  };
+
+  // Open compose as a reply only to the original sender
+  const handleReply = (m: Message) => {
+    setSelectedRecipient(m.sender.id);
+    setMessageType('friend');
+    setCcFriends([]);
+    setExternalCcUsers([]);
+    setNewMessage({
+      subject: m.subject ? (m.subject.startsWith('Re:') ? m.subject : `Re: ${m.subject}`) : '',
+      content: '',
+    });
+    setReplyToId(m.id);
+    setShowCompose(true);
+  };
+
+  // Open compose as a reply to the original sender + every other participant
+  // (excluding the current user). Pulls everyone from m.participants if present,
+  // falls back to a single-recipient reply if the message has no participant data.
+  const handleReplyAll = (m: Message) => {
+    const everyone = m.participants || [];
+    const others = everyone.filter(p => p.id !== user.id && p.id !== m.sender.id);
+    setSelectedRecipient(m.sender.id);
+    setMessageType('friend');
+    setCcFriends(others.map(o => o.id));
+    // Make sure compose's CC chip list can render names even if some of these
+    // people aren't in the current user's friends list
+    setExternalCcUsers(others);
+    setNewMessage({
+      subject: m.subject ? (m.subject.startsWith('Re:') ? m.subject : `Re: ${m.subject}`) : '',
+      content: '',
+    });
+    setReplyToId(m.id);
+    setShowCompose(true);
+  };
+
+  // True only if a Reply All would actually go to someone else beyond the sender
+  const canReplyAll = (m: Message) => {
+    const others = (m.participants || []).filter(p => p.id !== user.id && p.id !== m.sender.id);
+    return others.length > 0;
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -239,7 +285,14 @@ export default function MessagesPage({ user }: MessagesPageProps) {
     m.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const availableCcFriends = friends.filter(f => f.id !== selectedRecipient);
+  // CC list shows the user's friends + any extra people pulled in by Reply All
+  // (people who were on the original message but aren't in the friends list).
+  // Both share the same checkbox + ccFriends state machine.
+  const friendIds = new Set(friends.map(f => f.id));
+  const availableCcFriends: MessageUser[] = [
+    ...externalCcUsers.filter(u => u.id !== selectedRecipient && !friendIds.has(u.id)),
+    ...friends.filter(f => f.id !== selectedRecipient),
+  ];
 
   // Get selected campground name for display
   const selectedCampgroundData = [...myCampgrounds, ...searchedCampgrounds].find(c => c.id === selectedCampground);
@@ -371,6 +424,19 @@ export default function MessagesPage({ user }: MessagesPageProps) {
                           </span>
                         </div>
 
+                        {/* Participant strip — show when there's >2 people on the thread */}
+                        {(message.participants?.length || 0) > 2 && (
+                          <p className="text-xs text-gray-500 mb-1">
+                            to {(message.participants || [])
+                              .filter(p => p.id !== message.sender.id)
+                              .slice(0, 3)
+                              .map(p => p.id === user.id ? 'you' : p.firstName)
+                              .join(', ')}
+                            {(message.participants || []).filter(p => p.id !== message.sender.id).length > 3 &&
+                              ` +${(message.participants || []).filter(p => p.id !== message.sender.id).length - 3}`}
+                          </p>
+                        )}
+
                         {message.subject && (
                           <p className="text-sm font-semibold text-gray-900 mb-1">
                             {message.subject}
@@ -391,19 +457,20 @@ export default function MessagesPage({ user }: MessagesPageProps) {
                             </button>
                           )}
                           <button
-                            onClick={() => {
-                              setSelectedRecipient(message.sender.id);
-                              setMessageType('friend');
-                              setNewMessage({ 
-                                subject: message.subject ? `Re: ${message.subject}` : '', 
-                                content: '' 
-                              });
-                              setShowCompose(true);
-                            }}
-                            className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                            onClick={() => handleReply(message)}
+                            className="text-xs text-primary-600 hover:text-primary-700 font-semibold"
                           >
                             Reply
                           </button>
+                          {canReplyAll(message) && (
+                            <button
+                              onClick={() => handleReplyAll(message)}
+                              className="text-xs text-primary-600 hover:text-primary-700 font-semibold"
+                              title={`Reply to ${message.sender.firstName} and ${(message.participants || []).filter(p => p.id !== user.id && p.id !== message.sender.id).length} other${(message.participants || []).filter(p => p.id !== user.id && p.id !== message.sender.id).length === 1 ? '' : 's'}`}
+                            >
+                              Reply All
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteMessage(message.id)}
                             className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center space-x-1"
@@ -494,7 +561,9 @@ export default function MessagesPage({ user }: MessagesPageProps) {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-t-lg">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Compose Message</h2>
+                <h2 className="text-xl font-bold">
+                  {replyToId ? (ccFriends.length > 0 ? 'Reply All' : 'Reply') : 'Compose Message'}
+                </h2>
                 <button
                   onClick={resetComposeForm}
                   className="text-white hover:text-gray-200"
@@ -502,6 +571,13 @@ export default function MessagesPage({ user }: MessagesPageProps) {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+              {replyToId && (
+                <p className="text-xs text-white/80 mt-1">
+                  {ccFriends.length > 0
+                    ? `Replying to ${ccFriends.length + 1} ${ccFriends.length + 1 === 1 ? 'person' : 'people'}`
+                    : 'Replying only to the sender'}
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleSendMessage} className="p-6 space-y-4">
