@@ -256,32 +256,9 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
       }
     });
 
-    // Create BasecampActivity so it shows in the basecamp feed for both users
-    await prisma.basecampActivity.create({
-      data: {
-        userId: updated.initiatorId,
-        actorId: updated.receiverId,
-        type: 'NEW_CAMPING_BUDDY',
-        entityType: 'USER',
-        entityId: updated.receiverId,
-        entityName: `${updated.receiver.firstName} ${updated.receiver.lastName}`,
-        metadata: {}
-      }
-    });
-    
-    await prisma.basecampActivity.create({
-      data: {
-        userId: updated.receiverId,
-        actorId: updated.initiatorId,
-        type: 'NEW_CAMPING_BUDDY',
-        entityType: 'USER',
-        entityId: updated.initiatorId,
-        entityName: `${updated.initiator.firstName} ${updated.initiator.lastName}`,
-        metadata: {}
-      }
-    });
-
-    // Delete the BasecampActivity for this friend request
+    // Clean up the FRIEND_REQUEST BasecampActivity row left over from when
+    // the request was first sent — it's no longer relevant now that the
+    // request has been accepted.
     await prisma.basecampActivity.deleteMany({
       where: {
         userId: userId,
@@ -290,8 +267,16 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
       }
     });
 
-    // Log activity for friend feed
-    await logFriendAdded(updated.initiatorId, updated.receiverId, updated.receiver.firstName + ' ' + updated.receiver.lastName);
+    // ONE Activity row per friendship — the acceptor is the actor, the
+    // initiator is the target. The activity feed query already returns
+    // rows where the current user is EITHER userId or targetUserId
+    // (profile.routes.ts:1152-1155), so this single row shows up in both
+    // users' feeds, rendering as "You became friends with X" for the
+    // acceptor and "Stefanie became friends with you" for the initiator.
+    //
+    // Previously this endpoint created two Activity rows AND two
+    // BasecampActivity NEW_CAMPING_BUDDY rows for the same event, which
+    // surfaced as 3 duplicate notifications in the basecamp feed.
     await logFriendAdded(updated.receiverId, updated.initiatorId, updated.initiator.firstName + ' ' + updated.initiator.lastName);
 
     res.json(updated);
