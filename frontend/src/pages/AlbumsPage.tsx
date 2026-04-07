@@ -111,25 +111,41 @@ export default function AlbumsPage() {
 
     try {
       setCreating(true);
-      
+
+      // Server accepts up to 100 photos per multipart request, so chunk
+      // larger uploads: first chunk creates the album, subsequent chunks
+      // append to it via /albums/:id/photos.
+      const CHUNK_SIZE = 100;
+      const chunks: File[][] = [];
+      for (let i = 0; i < selectedFiles.length; i += CHUNK_SIZE) {
+        chunks.push(selectedFiles.slice(i, i + CHUNK_SIZE));
+      }
+
+      // First chunk — create the album
+      const firstChunk = chunks.shift()!;
       const submitData = new FormData();
       submitData.append('title', formData.title);
       submitData.append('description', formData.description);
       submitData.append('privacy', formData.privacy);
-      
-      // Append all photos
-      selectedFiles.forEach(file => {
-        submitData.append('photos', file);
-      });
+      firstChunk.forEach(file => submitData.append('photos', file));
 
-      await api.post('/albums', submitData, {
+      const { data: createdAlbum } = await api.post('/albums', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
+      // Remaining chunks — append to the new album
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkData = new FormData();
+        chunks[i].forEach(file => chunkData.append('photos', file));
+        await api.post(`/albums/${createdAlbum.id}/photos`, chunkData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
       setShowCreateModal(false);
       resetForm();
       await loadAlbums();
-      alert('Album created! 🎉');
+      alert(`Album created with ${selectedFiles.length} photo${selectedFiles.length === 1 ? '' : 's'}! 🎉`);
     } catch (error) {
       console.error('Create album error:', error);
       alert('Failed to create album');

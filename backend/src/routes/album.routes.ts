@@ -16,7 +16,7 @@ const getUserId = (req: any): string => {
 };
 
 // Create album
-router.post('/', authenticateToken, upload.array('photos', 50), async (req, res) => {
+router.post('/', authenticateToken, upload.array('photos', 100), async (req, res) => {
   try {
     const { title, description, privacy } = req.body;
     const files = req.files as Express.Multer.File[];
@@ -388,7 +388,7 @@ router.delete('/:albumId', authenticateToken, async (req, res) => {
 });
 
 // Add photos to album
-router.post('/:albumId/photos', authenticateToken, upload.array('photos', 50), async (req, res) => {
+router.post('/:albumId/photos', authenticateToken, upload.array('photos', 100), async (req, res) => {
   try {
     const { albumId } = req.params;
     const files = req.files as Express.Multer.File[];
