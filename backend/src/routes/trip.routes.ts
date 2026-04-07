@@ -1031,6 +1031,11 @@ router.get('/:id/attendees', async (req, res) => {
 });
 
 // POST /api/events/:id/attendees - Add attendee(s) to event
+//
+// Permission: event organizer OR anyone who's already on the trip
+// (any EventAttendee row, regardless of RSVP status). The previous
+// organizer-only gate broke real-world camping where attendees need
+// to bring along friends without bothering the trip creator.
 router.post('/:id/attendees', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
@@ -1050,7 +1055,13 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
     }
 
     if (event.organizerId !== userId) {
-      return res.status(403).json({ error: 'Only the event organizer can invite attendees' });
+      const myAttendance = await prisma.eventAttendee.findUnique({
+        where: { eventId_userId: { eventId: id, userId } },
+        select: { id: true },
+      });
+      if (!myAttendance) {
+        return res.status(403).json({ error: 'You need to be on this trip to invite others' });
+      }
     }
 
     const attendees = [];
@@ -1088,14 +1099,28 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
         });
         attendees.push(attendee);
 
+        // Look up the inviter so the notification can name them
+        const inviter = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        });
+        const inviterName = inviter
+          ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || 'Someone'
+          : 'Someone';
+
         await prisma.notification.create({
           data: {
             userId: invitedUserId,
             type: 'EVENT_INVITE',
+            // category: 'EVENT' so it lands in the new Trips tab in the bell
+            category: 'EVENT',
             content: isPastTrip
-              ? `You were tagged in the trip "${event.title}"`
-              : `You've been invited to ${event.title}`,
-            link: `/events/${id}`,
+              ? `${inviterName} tagged you in "${event.title}"`
+              : `${inviterName} invited you to "${event.title}"`,
+            // /trips/:id is the actual frontend route — /events/:id 404s
+            link: `/trips/${id}`,
+            actorId: userId,
+            actorName: inviterName,
             read: false,
           },
         });
