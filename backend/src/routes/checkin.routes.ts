@@ -224,6 +224,33 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
   }
 });
 
+// GET /api/checkins/history - My recent check-ins (used by BasecampPage to
+// match my places against friends' upcoming trips)
+router.get('/history', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const limit = Math.min(parseInt(String(req.query.limit || '50'), 10) || 50, 200);
+    const checkins = await prisma.checkIn.findMany({
+      where: { userId },
+      orderBy: { checkInDate: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        campgroundId: true,
+        checkInDate: true,
+        checkOutDate: true,
+        siteNumber: true,
+        isActive: true,
+        campground: { select: { id: true, name: true, state: true, location: true } },
+      },
+    });
+    res.json(checkins);
+  } catch (error) {
+    console.error('Get checkin history error:', error);
+    res.status(500).json({ error: 'Failed to fetch checkin history' });
+  }
+});
+
 // GET /api/checkins/active - Get my active check-in
 router.get('/active', authenticateToken, async (req: any, res) => {
   try {
