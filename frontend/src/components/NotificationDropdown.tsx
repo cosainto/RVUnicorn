@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell, MessageCircle, Users, MapPin, Settings, Check, CheckCheck,
-  Send, X, ChevronRight, Trash2, MoreHorizontal, Zap
+  Send, X, ChevronRight, Trash2, MoreHorizontal, Zap, Tent
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -26,6 +26,7 @@ interface UnreadCounts {
   friends: number;
   campground: number;
   system: number;
+  events: number;
 }
 
 interface Props {
@@ -36,6 +37,7 @@ interface Props {
 
 const TABS = [
   { key: 'all', label: 'All', icon: Bell },
+  { key: 'EVENT', label: 'Trips', icon: Tent },
   { key: 'MESSAGE', label: 'Messages', icon: MessageCircle },
   { key: 'FRIEND', label: 'Friends', icon: Users },
   { key: 'CAMPGROUND', label: 'Campgrounds', icon: MapPin },
@@ -56,6 +58,7 @@ function timeAgo(dateStr: string): string {
 
 function getCategoryIcon(category: string) {
   switch (category) {
+    case 'EVENT': return <Tent className="w-4 h-4 text-orange-500" />;
     case 'MESSAGE': return <MessageCircle className="w-4 h-4 text-blue-500" />;
     case 'FRIEND': return <Users className="w-4 h-4 text-purple-500" />;
     case 'CAMPGROUND': return <MapPin className="w-4 h-4 text-emerald-500" />;
@@ -66,6 +69,7 @@ function getCategoryIcon(category: string) {
 
 function getCategoryColor(category: string) {
   switch (category) {
+    case 'EVENT': return 'bg-orange-100';
     case 'MESSAGE': return 'bg-blue-100';
     case 'FRIEND': return 'bg-purple-100';
     case 'CAMPGROUND': return 'bg-emerald-100';
@@ -78,7 +82,7 @@ export default function NotificationDropdown({ isOpen, onClose, onUnreadUpdate }
   const [activeTab, setActiveTab] = useState('all');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-  const [counts, setCounts] = useState<UnreadCounts>({ count: 0, messages: 0, friends: 0, campground: 0, system: 0 });
+  const [counts, setCounts] = useState<UnreadCounts>({ count: 0, messages: 0, friends: 0, campground: 0, system: 0, events: 0 });
   const [quickReplyId, setQuickReplyId] = useState<string | null>(null);
   const [quickReplyText, setQuickReplyText] = useState('');
   const [sending, setSending] = useState(false);
@@ -176,6 +180,7 @@ export default function NotificationDropdown({ isOpen, onClose, onUnreadUpdate }
   const getTabCount = (key: string): number => {
     switch (key) {
       case 'all': return counts.count;
+      case 'EVENT': return counts.events;
       case 'MESSAGE': return counts.messages;
       case 'FRIEND': return counts.friends;
       case 'CAMPGROUND': return counts.campground;

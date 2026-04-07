@@ -79,14 +79,15 @@ router.get('/', authenticateToken, async (req: any, res) => {
 // GET /api/notifications/unread — counts per category
 router.get('/unread', authenticateToken, async (req: any, res) => {
   try {
-    const [total, messages, friends, campground, system] = await Promise.all([
+    const [total, messages, friends, campground, system, events] = await Promise.all([
       prisma.notification.count({ where: { userId: req.userId, read: false } }),
       prisma.notification.count({ where: { userId: req.userId, read: false, category: 'MESSAGE' } }),
       prisma.notification.count({ where: { userId: req.userId, read: false, category: 'FRIEND' } }),
       prisma.notification.count({ where: { userId: req.userId, read: false, category: 'CAMPGROUND' } }),
       prisma.notification.count({ where: { userId: req.userId, read: false, category: 'SYSTEM' } }),
+      prisma.notification.count({ where: { userId: req.userId, read: false, category: 'EVENT' } }),
     ]);
-    res.json({ count: total, messages, friends, campground, system });
+    res.json({ count: total, messages, friends, campground, system, events });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get unread count' });
   }

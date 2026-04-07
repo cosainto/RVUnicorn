@@ -26,7 +26,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifCounts, setNotifCounts] = useState({ count: 0, messages: 0, friends: 0, campground: 0, system: 0 });
+  const [notifCounts, setNotifCounts] = useState({ count: 0, messages: 0, friends: 0, campground: 0, system: 0, events: 0 });
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);

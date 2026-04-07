@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Bell, MessageCircle, Users, MapPin, Zap, Check, CheckCheck,
   Trash2, Search, Filter, ChevronDown, MoreHorizontal, ArrowLeft,
-  Volume2, VolumeX, Settings
+  Volume2, VolumeX, Settings, Tent
 } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../components/ToastProvider';
@@ -24,6 +24,7 @@ interface Notification {
 
 const CATEGORIES = [
   { key: 'all', label: 'All', icon: Bell, color: 'text-gray-600' },
+  { key: 'EVENT', label: 'Trips', icon: Tent, color: 'text-orange-600' },
   { key: 'MESSAGE', label: 'Messages', icon: MessageCircle, color: 'text-blue-600' },
   { key: 'FRIEND', label: 'Friends', icon: Users, color: 'text-purple-600' },
   { key: 'CAMPGROUND', label: 'Campgrounds', icon: MapPin, color: 'text-emerald-600' },
@@ -45,6 +46,7 @@ function timeAgo(dateStr: string): string {
 
 function getCategoryStyle(category: string) {
   switch (category) {
+    case 'EVENT': return { icon: Tent, color: 'text-orange-500', bg: 'bg-orange-100', label: 'Trip' };
     case 'MESSAGE': return { icon: MessageCircle, color: 'text-blue-500', bg: 'bg-blue-100', label: 'Message' };
     case 'FRIEND': return { icon: Users, color: 'text-purple-500', bg: 'bg-purple-100', label: 'Friend' };
     case 'CAMPGROUND': return { icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-100', label: 'Campground' };
