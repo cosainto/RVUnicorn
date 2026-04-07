@@ -111,6 +111,20 @@ router.get('/:id', optionalAuth, async (req, res) => {
           },
           orderBy: { createdAt: "desc" },
         },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+          orderBy: { addedAt: 'asc' },
+        },
         _count: {
           select: {
             photos: true,
@@ -171,17 +185,20 @@ router.post('/:id/photos', authenticateToken, upload.single('photo'), async (req
     const userId = (req as any).userId;
     const { caption } = req.body;
 
-    // Verify album exists and user owns it
+    // Verify album exists and user is owner or collaborator
     const album = await prisma.photoAlbum.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        collaborators: { where: { userId }, select: { id: true } },
+      },
     });
 
     if (!album) {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    if (album.userId !== userId) {
+    if (album.userId !== userId && album.collaborators.length === 0) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

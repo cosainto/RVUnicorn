@@ -180,44 +180,55 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
     const isFriend = friendIds.includes(profileUserId);
 
     let privacyFilter: any = { privacy: 'PUBLIC' };
-    
+
     if (isOwnProfile) {
-      // Show all albums for own profile
       privacyFilter = {};
     } else if (isFriend) {
-      // Show public and friends-only albums
       privacyFilter = { privacy: { in: ['PUBLIC', 'FRIENDS'] } };
     }
 
-    const albums = await prisma.photoAlbum.findMany({
+    // Albums where the profile user is the owner
+    const ownedAlbums = await prisma.photoAlbum.findMany({
       where: {
         userId: profileUserId,
         ...privacyFilter,
       },
       include: {
         user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
+          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
         },
-        photos: {
-          take: 1,
-          orderBy: { createdAt: 'asc' },
-        },
-        _count: {
-          select: {
-            photos: true,
-          },
-        },
+        photos: { take: 1, orderBy: { createdAt: 'asc' } },
+        _count: { select: { photos: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(albums);
+    // Albums where the profile user is a collaborator (shared with them)
+    const sharedAlbums = await prisma.photoAlbum.findMany({
+      where: {
+        collaborators: { some: { userId: profileUserId } },
+        ...privacyFilter,
+      },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+        },
+        photos: { take: 1, orderBy: { createdAt: 'asc' } },
+        _count: { select: { photos: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Tag shared albums so the client can show "Shared by X"
+    const tagged = [
+      ...ownedAlbums.map(a => ({ ...a, isShared: false })),
+      ...sharedAlbums.map(a => ({ ...a, isShared: true })),
+    ];
+
+    // Sort combined list by createdAt desc
+    tagged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json(tagged);
   } catch (error) {
     console.error('Get user albums error:', error);
     res.status(500).json({ error: 'Failed to fetch albums' });
@@ -234,33 +245,24 @@ router.get('/:albumId', authenticateToken, async (req, res) => {
       where: { id: albumId },
       include: {
         user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            profilePicture: true,
-          },
+          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
         },
         photos: {
           include: {
             user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                username: true,
-                profilePicture: true,
-              },
+              select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
             },
           },
           orderBy: { createdAt: 'asc' },
         },
-        _count: {
-          select: {
-            photos: true,
+        collaborators: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+            },
           },
         },
+        _count: { select: { photos: true } },
       },
     });
 
@@ -268,29 +270,31 @@ router.get('/:albumId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    // Check privacy
-    if (album.privacy === 'PRIVATE' && album.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const isOwner = album.userId === userId;
+    const isCollaborator = album.collaborators.some(c => c.userId === userId);
 
-    if (album.privacy === 'FRIENDS' && album.userId !== userId) {
-      // Check if user is a friend
-      const friendship = await prisma.friendship.findFirst({
-        where: {
-          status: 'ACCEPTED',
-          OR: [
-            { initiatorId: userId, receiverId: album.userId },
-            { initiatorId: album.userId, receiverId: userId },
-          ],
-        },
-      });
-
-      if (!friendship) {
+    // Privacy checks — collaborators always have access regardless of privacy setting
+    if (!isOwner && !isCollaborator) {
+      if (album.privacy === 'PRIVATE') {
         return res.status(403).json({ error: 'Access denied' });
+      }
+      if (album.privacy === 'FRIENDS') {
+        const friendship = await prisma.friendship.findFirst({
+          where: {
+            status: 'ACCEPTED',
+            OR: [
+              { initiatorId: userId, receiverId: album.userId },
+              { initiatorId: album.userId, receiverId: userId },
+            ],
+          },
+        });
+        if (!friendship) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
       }
     }
 
-    res.json(album);
+    res.json({ ...album, isCollaborator, isOwner });
   } catch (error) {
     console.error('Get album error:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
@@ -387,7 +391,102 @@ router.delete('/:albumId', authenticateToken, async (req, res) => {
   }
 });
 
-// Add photos to album
+// ── Collaborators ─────────────────────────────────────────────
+
+// List collaborators on an album
+router.get('/:albumId/collaborators', authenticateToken, async (req, res) => {
+  try {
+    const { albumId } = req.params;
+    const collaborators = await prisma.photoAlbumCollaborator.findMany({
+      where: { albumId },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+        },
+      },
+      orderBy: { addedAt: 'asc' },
+    });
+    res.json(collaborators);
+  } catch (error) {
+    console.error('List collaborators error:', error);
+    res.status(500).json({ error: 'Failed to list collaborators' });
+  }
+});
+
+// Add a collaborator (owner only) — accepts { username } or { userId }
+router.post('/:albumId/collaborators', authenticateToken, async (req, res) => {
+  try {
+    const { albumId } = req.params;
+    const { username, userId: targetUserId } = req.body;
+    const userId = getUserId(req);
+
+    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    if (!album) return res.status(404).json({ error: 'Album not found' });
+    if (album.userId !== userId) {
+      return res.status(403).json({ error: 'Only the album owner can add collaborators' });
+    }
+
+    let collaboratorUserId = targetUserId as string | undefined;
+    if (!collaboratorUserId && username) {
+      const u = await prisma.user.findUnique({ where: { username } });
+      if (!u) return res.status(404).json({ error: `No user found with username "${username}"` });
+      collaboratorUserId = u.id;
+    }
+    if (!collaboratorUserId) {
+      return res.status(400).json({ error: 'username or userId required' });
+    }
+    if (collaboratorUserId === album.userId) {
+      return res.status(400).json({ error: "You're already the owner of this album" });
+    }
+
+    try {
+      const collab = await prisma.photoAlbumCollaborator.create({
+        data: { albumId, userId: collaboratorUserId },
+        include: {
+          user: {
+            select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+          },
+        },
+      });
+      res.json(collab);
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        return res.status(409).json({ error: 'That user is already a collaborator' });
+      }
+      throw e;
+    }
+  } catch (error) {
+    console.error('Add collaborator error:', error);
+    res.status(500).json({ error: 'Failed to add collaborator' });
+  }
+});
+
+// Remove a collaborator — owner can remove anyone, collaborator can remove themselves
+router.delete('/:albumId/collaborators/:collaboratorUserId', authenticateToken, async (req, res) => {
+  try {
+    const { albumId, collaboratorUserId } = req.params;
+    const userId = getUserId(req);
+
+    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    if (!album) return res.status(404).json({ error: 'Album not found' });
+
+    const isOwner = album.userId === userId;
+    const isSelf = collaboratorUserId === userId;
+    if (!isOwner && !isSelf) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    await prisma.photoAlbumCollaborator.deleteMany({
+      where: { albumId, userId: collaboratorUserId },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove collaborator error:', error);
+    res.status(500).json({ error: 'Failed to remove collaborator' });
+  }
+});
+
+// Add photos to album — owner or collaborator
 router.post('/:albumId/photos', authenticateToken, upload.array('photos', 100), async (req, res) => {
   try {
     const { albumId } = req.params;
@@ -400,13 +499,16 @@ router.post('/:albumId/photos', authenticateToken, upload.array('photos', 100), 
 
     const album = await prisma.photoAlbum.findUnique({
       where: { id: albumId },
+      include: { collaborators: { where: { userId } } },
     });
 
     if (!album) {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    if (album.userId !== userId) {
+    const isOwner = album.userId === userId;
+    const isCollaborator = album.collaborators.length > 0;
+    if (!isOwner && !isCollaborator) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

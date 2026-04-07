@@ -10,6 +10,8 @@ interface Album {
   description?: string;
   privacy: string;
   createdAt: string;
+  coverPhotoUrl?: string | null;
+  isShared?: boolean;
   _count: {
     photos: number;
   };
@@ -234,9 +236,9 @@ export default function AlbumsPage() {
               className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
             >
               <div className="aspect-video bg-gray-200 relative overflow-hidden">
-                {album.photos[0] ? (
+                {(album.coverPhotoUrl || album.photos[0]?.imageUrl) ? (
                   <img
-                    src={`${album.photos[0].imageUrl}`}
+                    src={album.coverPhotoUrl || album.photos[0].imageUrl}
                     alt={album.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -254,6 +256,11 @@ export default function AlbumsPage() {
                   {getPrivacyIcon(album.privacy)}
                   <span className="font-medium">{getPrivacyLabel(album.privacy)}</span>
                 </div>
+                {album.isShared && (
+                  <div className="absolute top-2 left-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
+                    SHARED
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="text-xl font-semibold text-gray-900 mb-1">{album.title}</h3>
@@ -261,6 +268,7 @@ export default function AlbumsPage() {
                   <p className="text-sm text-gray-600 line-clamp-2">{album.description}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-2">
+                  {album.isShared && album.user ? `Shared by ${album.user.firstName} ${album.user.lastName} • ` : ''}
                   {new Date(album.createdAt).toLocaleDateString()}
                 </p>
               </div>

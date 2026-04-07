@@ -930,44 +930,46 @@ router.get("/album/:albumId", authenticateToken, async (req: any, res) => {
 // ALBUM COVER
 // ============================================
 
-// Set album cover
+// Set album cover — owner or any collaborator may set it
 router.patch("/album/:albumId/cover", authenticateToken, async (req: any, res) => {
   try {
     const { albumId } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
     const { photoId, coverPhotoUrl } = req.body;
 
-    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    const album = await prisma.photoAlbum.findUnique({
+      where: { id: albumId },
+      include: { collaborators: { where: { userId } } },
+    });
 
     if (!album) {
       return res.status(404).json({ error: "Album not found" });
     }
 
-    if (album.userId !== userId) {
-      return res.status(403).json({ error: "You can only edit your own albums" });
+    const isOwner = album.userId === userId;
+    const isCollaborator = album.collaborators.length > 0;
+    if (!isOwner && !isCollaborator) {
+      return res.status(403).json({ error: "Only the album owner or collaborators can change the cover" });
     }
 
     const updateData: any = {};
-    
+
     if (photoId) {
-      // Verify photo belongs to this album
-      const photo = await prisma.photo.findFirst({
-        where: { id: photoId, albumId }
-      });
-      
+      const photo = await prisma.photo.findFirst({ where: { id: photoId, albumId } });
       if (!photo) {
         return res.status(400).json({ error: "Photo not found in this album" });
       }
-      
       updateData.coverPhotoId = photoId;
       updateData.coverPhotoUrl = photo.imageUrl;
     } else if (coverPhotoUrl) {
       updateData.coverPhotoUrl = coverPhotoUrl;
+    } else {
+      return res.status(400).json({ error: "photoId or coverPhotoUrl required" });
     }
 
     const updatedAlbum = await prisma.photoAlbum.update({
       where: { id: albumId },
-      data: updateData
+      data: updateData,
     });
 
     res.json(updatedAlbum);

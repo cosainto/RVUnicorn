@@ -14,7 +14,7 @@ import {
   Image as ImageIcon,
   Send,
   Tag,
-  UserPlus, Link2, CheckSquare
+  UserPlus, Link2, CheckSquare, Star
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -105,6 +105,14 @@ export default function AlbumDetailPage() {
 
   const isNewAlbum = id === 'new';
   const isOwner = album?.user?.id === user?.id;
+  const isCollaborator = !!album?.collaborators?.some((c: any) => c.userId === user?.id);
+  const canEdit = isOwner || isCollaborator;
+
+  const [showCollabModal, setShowCollabModal] = useState(false);
+  const [collabUsername, setCollabUsername] = useState('');
+  const [collabSaving, setCollabSaving] = useState(false);
+  const [collabError, setCollabError] = useState('');
+  const [settingCover, setSettingCover] = useState<string | null>(null);
 
   useEffect(() => {
     if (id && id !== 'new') {
@@ -315,6 +323,45 @@ export default function AlbumDetailPage() {
     }
   };
 
+  const handleSetCover = async (photoId: string) => {
+    if (!canEdit) return;
+    setSettingCover(photoId);
+    try {
+      await api.patch(`/photos/album/${id}/cover`, { photoId });
+      await loadAlbum();
+    } catch (error: any) {
+      console.error('Set cover error:', error);
+      alert(error?.response?.data?.error || 'Failed to set cover photo');
+    } finally {
+      setSettingCover(null);
+    }
+  };
+
+  const handleAddCollaborator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collabUsername.trim()) return;
+    setCollabSaving(true);
+    setCollabError('');
+    try {
+      await api.post(`/albums/${id}/collaborators`, { username: collabUsername.trim() });
+      setCollabUsername('');
+      await loadAlbum();
+    } catch (error: any) {
+      setCollabError(error?.response?.data?.error || 'Failed to add collaborator');
+    } finally {
+      setCollabSaving(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (collaboratorUserId: string) => {
+    try {
+      await api.delete(`/albums/${id}/collaborators/${collaboratorUserId}`);
+      await loadAlbum();
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'Failed to remove collaborator');
+    }
+  };
+
   const handleLikePhoto = async (photoId: string) => {
     try {
       const photo = album.photos.find((p: any) => p.id === photoId);
@@ -493,7 +540,7 @@ export default function AlbumDetailPage() {
             {album.description && (
               <p className="text-gray-600 mb-4">{album.description}</p>
             )}
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
               <div className="flex items-center gap-1">
                 {privacyIcons[album.privacy as keyof typeof privacyIcons]}
                 <span>{album.privacy}</span>
@@ -502,10 +549,37 @@ export default function AlbumDetailPage() {
               <span>{album.photos?.length || 0} photos</span>
               <span>•</span>
               <span>Created {new Date(album.createdAt).toLocaleDateString()}</span>
+              {album.collaborators?.length > 0 && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-500">Shared with</span>
+                    <div className="flex -space-x-1.5">
+                      {album.collaborators.slice(0, 4).map((c: any) => (
+                        c.user.profilePicture ? (
+                          <img key={c.userId} src={c.user.profilePicture} alt={c.user.firstName}
+                            title={`${c.user.firstName} ${c.user.lastName}`}
+                            className="w-6 h-6 rounded-full border-2 border-white object-cover" />
+                        ) : (
+                          <div key={c.userId} title={`${c.user.firstName} ${c.user.lastName}`}
+                            className="w-6 h-6 rounded-full border-2 border-white bg-primary-100 text-primary-700 text-[10px] font-bold flex items-center justify-center">
+                            {c.user.firstName?.[0]}{c.user.lastName?.[0]}
+                          </div>
+                        )
+                      ))}
+                      {album.collaborators.length > 4 && (
+                        <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 text-gray-700 text-[10px] font-bold flex items-center justify-center">
+                          +{album.collaborators.length - 4}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {isOwner && (
+          {canEdit && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowUploadModal(true)}
@@ -514,12 +588,23 @@ export default function AlbumDetailPage() {
                 <Upload className="w-5 h-5" />
                 Upload Photos
               </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="btn btn-secondary text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+              {isOwner && (
+                <button
+                  onClick={() => setShowCollabModal(true)}
+                  className="btn btn-secondary flex items-center gap-2"
+                  title="Manage collaborators"
+                >
+                  <UserPlus className="w-5 h-5" />
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="btn btn-secondary text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -528,31 +613,50 @@ export default function AlbumDetailPage() {
       {/* Photos Grid */}
       {album.photos && album.photos.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {album.photos.map((photo: any) => (
-            <div
-              key={photo.id}
-              onClick={() => setSelectedPhoto(photo)}
-              className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition relative group"
-            >
-              <img
-                src={`${photo.imageUrl}`}
-                alt={photo.caption || 'Photo'}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <div className="flex gap-4 text-white">
-                  <div className="flex items-center gap-1">
-                    <Heart className="w-5 h-5" />
-                    <span>{photo._count?.likes || 0}</span>
+          {album.photos.map((photo: any) => {
+            const isCover = album.coverPhotoId === photo.id || album.coverPhotoUrl === photo.imageUrl;
+            return (
+              <div
+                key={photo.id}
+                onClick={() => setSelectedPhoto(photo)}
+                className="aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition relative group"
+              >
+                <img
+                  src={`${photo.imageUrl}`}
+                  alt={photo.caption || 'Photo'}
+                  className="w-full h-full object-cover"
+                />
+                {isCover && (
+                  <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                    <Star className="w-3 h-3 fill-yellow-900" /> COVER
                   </div>
-                  <div className="flex items-center gap-1">
-                    <MessageCircle className="w-5 h-5" />
-                    <span>{photo._count?.comments || 0}</span>
+                )}
+                {canEdit && !isCover && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSetCover(photo.id); }}
+                    disabled={settingCover === photo.id}
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-white text-gray-700 text-[10px] font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow opacity-0 group-hover:opacity-100 transition disabled:opacity-50"
+                    title="Set as album cover"
+                  >
+                    <Star className="w-3 h-3" />
+                    {settingCover === photo.id ? '...' : 'Set cover'}
+                  </button>
+                )}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="flex gap-4 text-white">
+                    <div className="flex items-center gap-1">
+                      <Heart className="w-5 h-5" />
+                      <span>{photo._count?.likes || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="w-5 h-5" />
+                      <span>{photo._count?.comments || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -1092,6 +1196,71 @@ export default function AlbumDetailPage() {
       )}
 
       {/* Delete Confirmation Modal */}
+      {showCollabModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Collaborators</h3>
+              <button onClick={() => { setShowCollabModal(false); setCollabError(''); setCollabUsername(''); }} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Add anyone traveling with you. Collaborators can upload photos, set the cover, and the album will appear on their profile.
+            </p>
+
+            <form onSubmit={handleAddCollaborator} className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={collabUsername}
+                onChange={(e) => { setCollabUsername(e.target.value); setCollabError(''); }}
+                placeholder="@username"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <button
+                type="submit"
+                disabled={collabSaving || !collabUsername.trim()}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {collabSaving ? 'Adding…' : 'Add'}
+              </button>
+            </form>
+            {collabError && <p className="text-sm text-red-600 mb-3">{collabError}</p>}
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(album.collaborators || []).length === 0 ? (
+                <p className="text-sm text-gray-400 italic">No collaborators yet</p>
+              ) : (
+                album.collaborators.map((c: any) => (
+                  <div key={c.userId} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                    <div className="flex items-center gap-2">
+                      {c.user.profilePicture ? (
+                        <img src={c.user.profilePicture} className="w-8 h-8 rounded-full object-cover" alt={c.user.firstName} />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">
+                          {c.user.firstName?.[0]}{c.user.lastName?.[0]}
+                        </div>
+                      )}
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">{c.user.firstName} {c.user.lastName}</div>
+                        <div className="text-xs text-gray-500">@{c.user.username}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveCollaborator(c.userId)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Remove"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">

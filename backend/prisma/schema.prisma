@@ -248,6 +248,7 @@ model User {
   personalPackItems                               PersonalPackItem[]
   photos                                          Photo[]
   photoAlbums                                     PhotoAlbum[]
+  photoAlbumCollabs                               PhotoAlbumCollaborator[]
   campgroundPhotoTagsCreated                      PhotoCampgroundTag[]        @relation("CampgroundPhotoTagsCreated")
   photoComments                                   PhotoComment[]
   photoLikes                                      PhotoLike[]
@@ -924,25 +925,40 @@ model GearItem {
 }
 
 model PhotoAlbum {
-  id            String            @id @default(cuid())
+  id            String                   @id @default(cuid())
   userId        String
   title         String
   description   String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  privacy       String            @default("PUBLIC")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  privacy       String                   @default("PUBLIC")
   coverPhotoUrl String?
+  coverPhotoId  String?
   eventId       String?
   photos        Photo[]
-  event         Event?            @relation(fields: [eventId], references: [id])
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         Event?                   @relation(fields: [eventId], references: [id])
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   albumComments PhotoComment[]
   stateVisits   StateVisitAlbum[]
-  videos        Video[]           @relation("AlbumVideos")
+  videos        Video[]                  @relation("AlbumVideos")
+  collaborators PhotoAlbumCollaborator[]
 
   @@index([userId])
   @@index([privacy])
   @@index([eventId])
+}
+
+model PhotoAlbumCollaborator {
+  id      String     @id @default(cuid())
+  albumId String
+  userId  String
+  addedAt DateTime   @default(now())
+  album   PhotoAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, userId])
+  @@index([albumId])
+  @@index([userId])
 }
 
 model Photo {
