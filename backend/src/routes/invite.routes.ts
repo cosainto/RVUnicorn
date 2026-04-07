@@ -5,10 +5,118 @@ import { Resend } from 'resend';
 import crypto from 'crypto';
 
 const router = Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const inviteResend = new Resend(process.env.RESEND_API_KEY);
+const resend = inviteResend;
 
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773890549/rvunicorn/hitch-campfire.png';
-const SITE_URL = process.env.FRONTEND_URL || 'https://www.rvunicorn.com';
+export const INVITE_SITE_URL = process.env.FRONTEND_URL || 'https://www.rvunicorn.com';
+const SITE_URL = INVITE_SITE_URL;
+
+// Event-specific invite email — used by /api/events/:id/invite
+export function buildEventInviteEmail(opts: {
+  senderName: string;
+  eventTitle: string;
+  eventLocation: string;
+  eventDateLabel: string;
+  inviteUrl: string;
+  personalMessage?: string;
+  eventBanner?: string | null;
+}): string {
+  const { senderName, eventTitle, eventLocation, eventDateLabel, inviteUrl, personalMessage, eventBanner } = opts;
+  const heroImg = eventBanner || HITCH_IMG;
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>You're invited: ${eventTitle}</title></head>
+<body style="margin:0;padding:0;background-color:#1a0f0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a0f0a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+        <tr><td align="center" style="padding-bottom:0;">
+          <img src="${heroImg}" alt="${eventTitle}" style="width:100%;max-width:600px;height:240px;object-fit:cover;border-radius:16px 16px 0 0;display:block;" />
+        </td></tr>
+
+        <tr><td style="background:linear-gradient(180deg,#2d1a0e 0%,#1f120a 100%);border-radius:0 0 16px 16px;padding:32px 40px;border:1px solid #4a2c1a;border-top:none;">
+
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td align="center" style="padding-bottom:24px;">
+              <div style="display:inline-block;background:rgba(255,150,50,0.15);border:1px solid rgba(255,150,50,0.3);border-radius:20px;padding:6px 16px;margin-bottom:16px;">
+                <span style="color:#ff9632;font-size:13px;font-weight:600;">🔥 You're invited to a trip</span>
+              </div>
+              <h1 style="color:#fff;font-size:30px;font-weight:800;margin:0 0 12px;line-height:1.2;">
+                ${eventTitle}
+              </h1>
+              <p style="color:#c4956a;font-size:15px;margin:0;">
+                <strong style="color:#ff9632;">${senderName}</strong> wants you on this one. 🎯
+              </p>
+            </td></tr>
+
+            <!-- Event facts -->
+            <tr><td style="padding-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,150,50,0.08);border:1px solid rgba(255,150,50,0.2);border-radius:12px;">
+                <tr>
+                  <td style="padding:18px 20px;border-bottom:1px solid rgba(255,150,50,0.15);">
+                    <div style="color:#9a8070;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">📅 When</div>
+                    <div style="color:#fff;font-size:16px;font-weight:600;">${eventDateLabel}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:18px 20px;border-bottom:1px solid rgba(255,150,50,0.15);">
+                    <div style="color:#9a8070;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">📍 Where</div>
+                    <div style="color:#fff;font-size:16px;font-weight:600;">${eventLocation}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <div style="color:#9a8070;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">🦄 Hosted by</div>
+                    <div style="color:#fff;font-size:16px;font-weight:600;">${senderName}</div>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+
+            ${personalMessage ? `
+            <tr><td style="padding-bottom:24px;">
+              <div style="background:rgba(255,255,255,0.04);border-left:3px solid #ff9632;border-radius:0 10px 10px 0;padding:16px 20px;">
+                <p style="color:#e8d5b7;font-size:15px;line-height:1.6;margin:0;font-style:italic;">"${personalMessage}"</p>
+                <p style="color:#9a8070;font-size:12px;margin:8px 0 0;">— ${senderName}</p>
+              </div>
+            </td></tr>
+            ` : ''}
+
+            <tr><td style="padding-bottom:8px;">
+              <p style="color:#e8d5b7;font-size:15px;line-height:1.7;margin:0;">
+                Picture it: a campfire crackling, gear unloaded, the people you care about close by. That's what's waiting for you. RVUnicorn is how we plan it together — routes, packing, meals, photos, all in one place.
+              </p>
+            </td></tr>
+
+            <tr><td align="center" style="padding:24px 0 16px;">
+              <a href="${inviteUrl}" style="display:inline-block;background:linear-gradient(135deg,#ff6b2b,#ff9632);color:#fff;text-decoration:none;font-size:18px;font-weight:800;padding:18px 56px;border-radius:50px;letter-spacing:0.3px;box-shadow:0 4px 24px rgba(255,107,43,0.45);">
+                🏕️ I'm In — Take Me There
+              </a>
+              <p style="color:#6b5040;font-size:12px;margin:14px 0 0;">No account? We'll set one up in a tap. Invite expires in 14 days.</p>
+            </td></tr>
+
+            <tr><td style="border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;">
+              <p style="color:#6b5040;font-size:12px;margin:0;text-align:center;">
+                You got this email because <strong style="color:#9a8070;">${senderName}</strong> invited you to a trip on RVUnicorn — the social platform for RV campers.
+              </p>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td align="center" style="padding-top:24px;">
+          <p style="color:#4a3020;font-size:12px;margin:0;">
+            © 2025 RVUnicorn · <a href="${SITE_URL}" style="color:#6b5040;text-decoration:none;">rvunicorn.com</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
 
 function buildInviteEmail(senderName: string, inviteUrl: string, personalMessage?: string): string {
   return `<!DOCTYPE html>
@@ -129,7 +237,7 @@ function buildInviteEmail(senderName: string, inviteUrl: string, personalMessage
 // POST /api/invites/send
 router.post('/send', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { email, personalMessage } = req.body;
 
     if (!email?.trim()) return res.status(400).json({ error: 'Email required' });
@@ -209,7 +317,7 @@ router.get('/accept', async (req, res) => {
 router.get('/my', authenticateToken, async (req: any, res) => {
   try {
     const invites = await prisma.invite.findMany({
-      where: { senderId: req.user.id },
+      where: { senderId: req.userId },
       orderBy: { createdAt: 'desc' },
       take: 20,
     });

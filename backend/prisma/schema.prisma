@@ -813,6 +813,7 @@ model Event {
   highlights            EventHighlight[]
   connections           EventConnection[]
   tripMemory            TripMemoryRecord?
+  invites               Invite[]            @relation("EventInvites")
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -4322,19 +4323,23 @@ model DiscountCodePool {
 }
 
 model Invite {
-  id          String    @id @default(cuid())
-  senderId    String
-  email       String
-  token       String    @unique
-  status      String    @default("pending")
-  acceptedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime
-  sender      User      @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  senderId        String
+  email           String
+  token           String    @unique
+  status          String    @default("pending")
+  acceptedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  eventId         String?
+  personalMessage String?
+  sender          User      @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  event           Event?    @relation("EventInvites", fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([senderId])
   @@index([email])
+  @@index([eventId])
 }
 
 // ── Community Boards ──────────────────────────────────────────

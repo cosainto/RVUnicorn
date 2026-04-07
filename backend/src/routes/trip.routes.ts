@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { logEventCreated, logEventJoined } from '../services/activity.service';
 import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logRsvpUpdated } from '../services/activity.service';
 import { prisma } from '../index';
 import { triggerTipPromptsForTrip } from './campfire-tips.routes';
+import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
 
 const router = Router();
 
@@ -1953,6 +1955,158 @@ router.get('/:id/campground-map', authenticateToken, async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/events/:eventId/invite — unified internal+external invite
+// Body: { usernames?: string[], emails?: string[], message?: string }
+// ─────────────────────────────────────────────────────────────
+router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { eventId } = req.params;
+    const usernames: string[] = Array.isArray(req.body.usernames) ? req.body.usernames : [];
+    const emails: string[] = Array.isArray(req.body.emails) ? req.body.emails : [];
+    const message: string | undefined = typeof req.body.message === 'string' ? req.body.message.trim() || undefined : undefined;
+
+    if (usernames.length === 0 && emails.length === 0) {
+      return res.status(400).json({ error: 'Provide at least one username or email' });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        campground: { select: { name: true, location: true, state: true } },
+        organizer: { select: { firstName: true, lastName: true, username: true } },
+      },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, username: true },
+    });
+    if (!sender) return res.status(404).json({ error: 'User not found' });
+    const senderName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username;
+
+    // Build event facts shared by both notification + email
+    const eventLocation = event.locationName
+      || (event.campground ? `${event.campground.name}${event.campground.location ? ', ' + event.campground.location : ''}${event.campground.state ? ', ' + event.campground.state : ''}` : (event.location || 'Location TBD'));
+
+    const startD = new Date(event.startDate);
+    const endD = event.endDate ? new Date(event.endDate) : null;
+    const dateOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    const eventDateLabel = endD && endD.toDateString() !== startD.toDateString()
+      ? `${startD.toLocaleDateString('en-US', dateOpts)} – ${endD.toLocaleDateString('en-US', dateOpts)}`
+      : startD.toLocaleDateString('en-US', dateOpts);
+
+    const internalResults: { username: string; status: 'invited' | 'already' | 'not_found' }[] = [];
+    const externalResults: { email: string; status: 'sent' | 'already' | 'failed'; error?: string }[] = [];
+
+    // ── Internal invites (RVUnicorn members) ────────────────
+    for (const rawUsername of usernames) {
+      const username = String(rawUsername).trim().replace(/^@/, '');
+      if (!username) continue;
+
+      const target = await prisma.user.findUnique({ where: { username }, select: { id: true, firstName: true } });
+      if (!target) {
+        internalResults.push({ username, status: 'not_found' });
+        continue;
+      }
+      if (target.id === userId) continue;
+
+      const existing = await prisma.eventAttendee.findUnique({
+        where: { eventId_userId: { eventId, userId: target.id } },
+      });
+      if (existing) {
+        internalResults.push({ username, status: 'already' });
+        continue;
+      }
+
+      await prisma.eventAttendee.create({
+        data: { eventId, userId: target.id, status: 'INVITED' },
+      });
+
+      // In-app notification
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: target.id,
+            type: 'EVENT_INVITE',
+            category: 'EVENT',
+            content: `${senderName} invited you to "${event.title}" — ${eventDateLabel} at ${eventLocation}`,
+            link: `/trips/${event.id}`,
+            actorId: userId,
+            actorName: senderName,
+            metadata: { eventId, message: message || null },
+          },
+        });
+      } catch (e) {
+        console.error('Notification create failed', e);
+      }
+
+      internalResults.push({ username, status: 'invited' });
+    }
+
+    // ── External invites (email) ───────────────────────────
+    for (const rawEmail of emails) {
+      const email = String(rawEmail).trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+
+      const existing = await prisma.invite.findFirst({
+        where: { senderId: userId, email, eventId, status: 'pending' },
+      });
+      if (existing) {
+        externalResults.push({ email, status: 'already' });
+        continue;
+      }
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+      await prisma.invite.create({
+        data: { senderId: userId, email, token, expiresAt, eventId, personalMessage: message || null },
+      });
+
+      const inviteUrl = `${INVITE_SITE_URL}/join?token=${token}&event=${eventId}&ref=${sender.username}`;
+      const html = buildEventInviteEmail({
+        senderName,
+        eventTitle: event.title,
+        eventLocation,
+        eventDateLabel,
+        inviteUrl,
+        personalMessage: message,
+        eventBanner: event.bannerImage,
+      });
+
+      try {
+        await inviteResend.emails.send({
+          from: 'Hitch at RVUnicorn <hitch@updates.rvunicorn.com>',
+          to: email,
+          subject: `${senderName} invited you to "${event.title}" 🏕️`,
+          html,
+        });
+        externalResults.push({ email, status: 'sent' });
+      } catch (err: any) {
+        console.error('Event invite email failed', err?.message);
+        externalResults.push({ email, status: 'failed', error: err?.message });
+      }
+    }
+
+    res.json({
+      internal: internalResults,
+      external: externalResults,
+      summary: {
+        invited: internalResults.filter(r => r.status === 'invited').length,
+        emailed: externalResults.filter(r => r.status === 'sent').length,
+        notFound: internalResults.filter(r => r.status === 'not_found').length,
+        alreadyInvited: internalResults.filter(r => r.status === 'already').length + externalResults.filter(r => r.status === 'already').length,
+      },
+    });
+  } catch (error: any) {
+    console.error('Unified event invite error:', error);
+    res.status(500).json({ error: 'Failed to send invites' });
   }
 });
 

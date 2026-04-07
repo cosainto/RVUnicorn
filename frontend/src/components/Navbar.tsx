@@ -272,7 +272,7 @@ export default function Navbar() {
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16 gap-4">
+          <div className="flex items-center h-16 gap-4">
 
             {/* Logo */}
             <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
@@ -290,7 +290,7 @@ export default function Navbar() {
             </Link>
 
             {/* Primary Nav */}
-            <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
+            <div className="hidden lg:flex items-center gap-0.5">
               {primaryLinks.map(({ to, icon: Icon, label, ...rest }) => {
                 const isHitch = (rest as any).isHitch;
                 const active = isActive(to);
@@ -358,7 +358,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right Actions */}
+            {/* Right Actions — sit inline with the primary nav, not pinned to the far right */}
             <div className="flex items-center gap-1">
               {/* Search */}
               <button onClick={() => setSearchOpen(!searchOpen)}
