@@ -630,10 +630,29 @@ router.get('/:username/stats', async (req, res) => {
       select: { campgroundId: true },
     });
 
-    // Get total days camped
-    const totalDays = await prisma.stay.count({
-      where: { userId: user.id },
+    // Real nights camped — sum of nights from each Stay record, capped at "today"
+    // for any in-progress stay so future-dated stays don't inflate the count.
+    // Skips zero-night entries (start === end). This is the source of truth and
+    // is what the profile UI now reads, replacing the old client-side reduce
+    // that was accidentally summing the *viewer's* trips.
+    const stays = await prisma.stay.findMany({
+      where: { userId: user.id, startDate: { lte: new Date() } },
+      select: { startDate: true, endDate: true },
     });
+    const now = new Date();
+    let nightsCamped = 0;
+    let totalTrips = 0;
+    for (const s of stays) {
+      const start = new Date(s.startDate);
+      const end = s.endDate ? new Date(s.endDate) : start;
+      // Cap end at today so a stay that's still in progress only counts
+      // nights up to right now, not its planned departure
+      const effectiveEnd = end > now ? now : end;
+      const ms = effectiveEnd.getTime() - start.getTime();
+      if (ms <= 0) continue;
+      nightsCamped += Math.floor(ms / 86400000);
+      totalTrips += 1;
+    }
 
     // Get future trips
     const futureTrips = await prisma.trip.count({
@@ -673,7 +692,10 @@ router.get('/:username/stats', async (req, res) => {
 
     res.json({
       campgroundsVisited: uniqueStays.length,
-      totalDaysCamped: totalDays,
+      nightsCamped,
+      totalTrips,
+      // Legacy field name kept for backward compat — same value as nightsCamped now
+      totalDaysCamped: nightsCamped,
       milesTraveled,
       futureTripsPlanned: futureTrips,
       peopleCampedWith: campedWith.length,
@@ -1232,7 +1254,13 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         targetName = activity.campground.name;
         targetLink = `/campgrounds/${activity.campground.id}`;
       } else if (activity.targetUser) {
-        targetName = `${activity.targetUser.firstName}'s wall`;
+        // FRIEND_ADDED: "Stefanie became friends with Deanna Marlow" — full name, no "'s wall"
+        if (activity.type === 'FRIEND_ADDED') {
+          targetName = `${activity.targetUser.firstName} ${activity.targetUser.lastName || ''}`.trim();
+        } else {
+          // Wall posts and similar still keep the "X's wall" phrasing
+          targetName = `${activity.targetUser.firstName}'s wall`;
+        }
         targetLink = `/profile/${activity.targetUser.username}`;
       } else if (activity.title) {
       } else if (activity.type === "CREATOR_VIDEO_UPLOAD" && activity.metadata) {

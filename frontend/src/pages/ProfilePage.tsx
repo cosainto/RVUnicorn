@@ -118,6 +118,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [showToolbox, setShowToolbox] = useState(false);
   const [userTrips, setUserTrips] = useState<any[]>([]);
   const [recentCheckins, setRecentCheckins] = useState<any[]>([]);
+  // Real per-profile stats from /api/profile/:username/stats. The previous
+  // counts were computed locally from /trips/my which always returns the
+  // VIEWING user's trips, so visitors saw their own numbers attributed to
+  // whoever they were viewing (root cause of "304 nights on a brand-new
+  // account"). This state holds the right person's numbers.
+  const [profileStats, setProfileStats] = useState<{ nightsCamped: number; totalTrips: number } | null>(null);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', bio: '', location: '', zipCode: '', website: '', profilePicture: '', coverPhoto: '', bannerPosition: '50% 50%', rvMpg: '' as string | number, rvFuelType: '' });
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState('');
@@ -126,10 +132,25 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const isOwnProfile = user?.username === username || user?.id === username;
   const rigSection = useInView(); const mapSection = useInView();
 
-  useEffect(() => { loadProfile(); loadFavoriteCampgrounds(); loadRVShowcase(); loadUserGroups(); loadPendingClaims(); loadCreatorContent(); loadTripsAndCheckins(); }, [username]);
+  useEffect(() => { loadProfile(); loadFavoriteCampgrounds(); loadRVShowcase(); loadUserGroups(); loadPendingClaims(); loadCreatorContent(); loadTripsAndCheckins(); loadProfileStats(); }, [username]);
   const loadTripsAndCheckins = async () => {
-    try { const { data } = await api.get('/trips/my'); setUserTrips(Array.isArray(data) ? data : (data.trips || [])); } catch {}
+    // /trips/my returns the AUTHENTICATED user's events — only useful when
+    // you're looking at your own profile. For someone else's profile, leave
+    // userTrips empty so we don't accidentally render the viewer's trips
+    // under the viewed user's name. Stats come from /profile/:username/stats.
+    if (isOwnProfile) {
+      try { const { data } = await api.get('/trips/my'); setUserTrips(Array.isArray(data) ? data : (data.trips || [])); } catch {}
+    } else {
+      setUserTrips([]);
+    }
     try { const { data } = await api.get('/campgrounds/favorites/my'); setRecentCheckins(data.slice(0, 5).map((c: any) => ({ id: c.id, name: c.name, city: c.city || c.location || '', state: c.state || '', photoUrl: c.imageUrl || c.photos?.[0]?.imageUrl, slug: c.customSlug || c.id, visitDate: c.updatedAt || '', planned: false }))); } catch {}
+  };
+  const loadProfileStats = async () => {
+    if (!username) return;
+    try {
+      const { data } = await api.get(`/profile/${username}/stats`);
+      setProfileStats({ nightsCamped: data.nightsCamped || 0, totalTrips: data.totalTrips || 0 });
+    } catch {}
   };
   const loadCreatorContent = async () => { if (!username) return; try { const { data: p } = await api.get(`/profile/${username}`); if (p.isCreator) { const { data: c } = await api.get(`/creators/content/${p.id}`); setCreatorContent(Array.isArray(c) ? c.slice(0, 4) : []); try { const { data: s } = await api.get(`/creators/profile/${username}`); setCreatorStats(s); } catch {} } } catch {} };
   const loadProfile = async () => { try { setLoading(true); const { data } = await api.get(`/profile/${username}`); setProfile(data); loadAlbums(data.id); setEditForm({ firstName: data.firstName || '', lastName: data.lastName || '', bio: data.bio || '', location: data.location || '', website: data.website || '', profilePicture: data.profilePicture || '', coverPhoto: data.coverPhoto || '', bannerPosition: data.bannerPosition || '50% 50%' }); if (user && !isOwnProfile && data.id) checkFriendshipStatus(data.id); api.get(`/rig-connection/co-pilot/${data.id}`).then(r => { if (r.data?.coPilot) setCoPilot(r.data.coPilot); }).catch(() => {}); try { if (data.rvCoOwnedBy?.length > 0) setCoOwnedRVs(data.rvCoOwnedBy.map((c: any) => c.owner)); const br = await api.get(`/badges/user/${data.id}`); setProfileBadges(br.data?.badges || []); setDisplayedBadges((br.data?.badges || []).slice(0, 3)); const pr = await api.get(`/privacy/badge-position/${data.id}`); if (pr.data?.positions) setBadgePositions(pr.data.positions); } catch {} } catch {} finally { setLoading(false); } };
@@ -312,8 +333,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   {/* RIGHT 60%: Stats + Badges + Actions */}
                   <div className="lg:w-[60%]">
                     <div className="grid grid-cols-2 gap-2">
-                      <AnimatedStat icon={'\u{1F3D5}'} value={userTrips.reduce((sum, t) => { const s = new Date(t.startDate); const e = t.endDate ? new Date(t.endDate) : s; return sum + Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86400000)); }, 0)} label="Nights Camped" />
-                      <AnimatedStat icon={'\u{1F6E3}'} value={userTrips.length} label="Trips" />
+                      <AnimatedStat icon={'\u{1F3D5}'} value={profileStats?.nightsCamped ?? 0} label="Nights Camped" />
+                      <AnimatedStat icon={'\u{1F6E3}'} value={profileStats?.totalTrips ?? userTrips.length} label="Trips" />
                       <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" />
                       <AnimatedStat icon={'\u{1F91D}'} value={profile._count?.friends || 0} label="Friends" />
                     </div>
