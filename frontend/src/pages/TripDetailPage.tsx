@@ -1492,10 +1492,12 @@ export default function EventDetailPage() {
                 homeLocation={userHomeLocation || ''}
                 campground={event?.campground}
                 arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined}
+                eventStartDate={event?.startDate}
+                eventEndDate={event?.endDate}
                 tripPlan={tripPlan}
                 tripLoading={tripLoading}
                 onEditTrip={openTripModal}
-                onReload={loadTripPlan}
+                onReload={async () => { await loadEvent(); await loadTripPlan(); }}
                 rvFuelType={(user as any)?.rvFuelType || 'gas'}
               />
               {false && <div className="bg-white rounded-lg border p-6">

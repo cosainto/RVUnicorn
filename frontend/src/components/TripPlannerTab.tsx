@@ -48,8 +48,9 @@ function rvParkyUrl(lat?: number|null, lng?: number|null, name?: string) {
 const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
 const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
 
-export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo }: {
+export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
+  eventStartDate?: string; eventEndDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
   tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string;
 }) {
@@ -74,6 +75,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [aiError, setAiError] = useState('');
   const [editingFrom, setEditingFrom] = useState(false);
   const [editFromValue, setEditFromValue] = useState('');
+  const [editingDates, setEditingDates] = useState(false);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [savingDates, setSavingDates] = useState(false);
+  const [datesError, setDatesError] = useState('');
 
   const campDest = campground ? `${campground.name}, ${campground.location||''}, ${campground.state||''}`.replace(/,\s*,/g,',').trim().replace(/,\s*$/,'') : '';
 
@@ -380,6 +386,33 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     } catch(e) {}
   };
 
+  const openDateEditor = () => {
+    const toInput = (s?: string) => s ? new Date(s).toISOString().split('T')[0] : '';
+    setEditStartDate(toInput(eventStartDate));
+    setEditEndDate(toInput(eventEndDate));
+    setDatesError('');
+    setEditingDates(true);
+  };
+
+  const saveDates = async () => {
+    if (!editStartDate) { setDatesError('Start date required'); return; }
+    if (editEndDate && editEndDate < editStartDate) { setDatesError('End date must be on or after start date'); return; }
+    setSavingDates(true);
+    setDatesError('');
+    try {
+      await api.put(`/events-v2/${eventId}`, {
+        startDate: new Date(editStartDate).toISOString(),
+        endDate: new Date(editEndDate || editStartDate).toISOString(),
+      });
+      setEditingDates(false);
+      onReload();
+    } catch (e: any) {
+      setDatesError(e?.response?.status === 403 ? 'Only the trip organizer can change dates' : 'Failed to save dates');
+    } finally {
+      setSavingDates(false);
+    }
+  };
+
   if (tripLoading) return <div className="flex justify-center py-12"><Loader className="w-6 h-6 animate-spin text-primary-400" /></div>;
 
   return (
@@ -428,10 +461,30 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              {tripPlan.arrivalDate && (
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
-                  🗓 {fmtDate(tripPlan.arrivalDate)}
-                </span>
+              {editingDates ? (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <input type="date" value={editStartDate} onChange={e=>setEditStartDate(e.target.value)}
+                    className="border border-primary-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary-500" />
+                  <span className="text-gray-300 text-xs">→</span>
+                  <input type="date" value={editEndDate} onChange={e=>setEditEndDate(e.target.value)}
+                    className="border border-primary-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-primary-500" />
+                  <button onClick={saveDates} disabled={savingDates}
+                    className="text-primary-600 hover:text-primary-700 p-1 disabled:opacity-50">
+                    {savingDates ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button onClick={()=>setEditingDates(false)} className="text-gray-400 p-1"><X className="w-3.5 h-3.5" /></button>
+                  {datesError && <span className="text-xs text-red-600 ml-1">{datesError}</span>}
+                </div>
+              ) : (
+                <button onClick={openDateEditor}
+                  className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-lg flex items-center gap-1 group"
+                  title="Edit trip dates">
+                  🗓 {eventStartDate ? fmtDate(eventStartDate) : (tripPlan.arrivalDate ? fmtDate(tripPlan.arrivalDate) : 'Set dates')}
+                  {eventEndDate && eventStartDate && new Date(eventEndDate).toDateString() !== new Date(eventStartDate).toDateString() && (
+                    <> – {fmtDate(eventEndDate)}</>
+                  )}
+                  <Edit2 className="w-3 h-3 text-gray-300 group-hover:text-primary-400" />
+                </button>
               )}
               {tripPlan.endLatitude && tripPlan.endLongitude && (
                 <a href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(tripPlan.startLocation)}&destination=${tripPlan.endLatitude},${tripPlan.endLongitude}`}
