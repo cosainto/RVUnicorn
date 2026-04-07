@@ -176,6 +176,9 @@ router.post('/login', async (req, res) => {
       username: user.username,
       profilePicture: user.profilePicture,
       createdAt: user.createdAt,
+      onboardingCompleted: user.onboardingCompleted,
+      onboardingCompletedAt: user.onboardingCompletedAt,
+      onboardingSkippedAt: user.onboardingSkippedAt,
     };
 
     res.json({ user: userResponse, token });
