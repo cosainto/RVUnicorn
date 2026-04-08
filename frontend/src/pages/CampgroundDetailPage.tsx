@@ -32,6 +32,7 @@ import WildlifeSightings from '../components/WildlifeSightings';
 import CampgroundTriviaLeaderboard from '../components/CampgroundTriviaLeaderboard';
 import ToneModeToggle from '../components/ToneModeToggle';
 import CampgroundWeather from '../components/CampgroundWeather';
+import CampgroundPriceWidget from '../components/CampgroundPriceWidget';
 import { getCampspotUrl, getCampspotSearchUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -1616,6 +1617,19 @@ export default function CampgroundDetailPage() {
           isNeon ? "bg-gray-900 border border-purple-500/30 rounded-lg overflow-hidden shadow-xl shadow-purple-500/10" :
           "bg-white rounded-lg shadow-lg overflow-hidden"
         }>
+          {/* Crowdsourced pricing widget — above the weather block.
+              Self-contained: shows the headline price, a community attribution
+              badge, and a "what did you pay?" prompt for users who recently
+              stayed here. See components/CampgroundPriceWidget.tsx */}
+          <div className="px-4 pt-4">
+            <CampgroundPriceWidget
+              campgroundId={campground.id}
+              campgroundName={campground.name}
+              pricePerNight={(campground as any).pricePerNight ?? null}
+              pricePerNightSource={(campground as any).pricePerNightSource ?? null}
+            />
+          </div>
+
           {/* Weather Section - Above Tabs */}
           <div className="p-4 border-b border-gray-200">
             {campground.latitude && campground.longitude && (

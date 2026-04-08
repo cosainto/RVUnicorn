@@ -8,16 +8,16 @@ datasource db {
 }
 
 model User {
-  id                                              String                      @id @default(cuid())
-  email                                           String                      @unique
-  username                                        String                      @unique
+  id                                              String                        @id @default(cuid())
+  email                                           String                        @unique
+  username                                        String                        @unique
   password                                        String
   bio                                             String?
   location                                        String?
   profilePicture                                  String?
   coverPhoto                                      String?
-  createdAt                                       DateTime                    @default(now())
-  updatedAt                                       DateTime                    @updatedAt
+  createdAt                                       DateTime                      @default(now())
+  updatedAt                                       DateTime                      @updatedAt
   firstName                                       String
   lastName                                        String
   rvMake                                          String?
@@ -49,56 +49,56 @@ model User {
   rvWeight                                        Int?
   rvSleeps                                        Int?
   rvSlideouts                                     Int?
-  showCampingStatus                               Boolean                     @default(true)
+  showCampingStatus                               Boolean                       @default(true)
   lastActiveAt                                    DateTime?
   creatorBio                                      String?
   creatorCoverImage                               String?
   creatorEnabledAt                                DateTime?
-  creatorFeatured                                 Boolean                     @default(false)
+  creatorFeatured                                 Boolean                       @default(false)
   creatorSpecialties                              String[]
-  creatorVerified                                 Boolean                     @default(false)
-  isCreator                                       Boolean                     @default(false)
-  showSocialOnCreator                             Boolean                     @default(true)
-  showSocialOnProfile                             Boolean                     @default(true)
+  creatorVerified                                 Boolean                       @default(false)
+  isCreator                                       Boolean                       @default(false)
+  showSocialOnCreator                             Boolean                       @default(true)
+  showSocialOnProfile                             Boolean                       @default(true)
   creatorDisplayName                              String?
   creatorHandle                                   String?
   creatorTipJarUrl                                String?
   creatorTipJarType                               String?
   creatorMerchUrl                                 String?
   creatorMerchLabel                               String?
-  creatorThemeColor                               String?                     @default("#f59e0b")
-  creatorPinnedContentIds                         String[]                    @default([])
-  hasPets                                         Boolean                     @default(false)
+  creatorThemeColor                               String?                       @default("#f59e0b")
+  creatorPinnedContentIds                         String[]                      @default([])
+  hasPets                                         Boolean                       @default(false)
   homeAddress                                     String?
   homeCity                                        String?
-  homeCountry                                     String?                     @default("USA")
+  homeCountry                                     String?                       @default("USA")
   homeLatitude                                    Float?
   homeLongitude                                   Float?
   homeState                                       String?
   homeZipCode                                     String?
-  onboardingCompleted                             Boolean                     @default(false)
-  onboardingStep                                  Int                         @default(0)
+  onboardingCompleted                             Boolean                       @default(false)
+  onboardingStep                                  Int                           @default(0)
   onboardingCompletedAt                           DateTime?
   onboardingSkippedAt                             DateTime?
   onboardingCamperType                            String?
   onboardingRigType                               String?
   onboardingRegion                                String?
   nudgeCardDismissedAt                            DateTime?
-  nudgeRigCompleted                               Boolean                     @default(false)
-  nudgeHomeBaseCompleted                          Boolean                     @default(false)
-  nudgeCheckinCompleted                           Boolean                     @default(false)
-  referralCount                                   Int                         @default(0)
-  isCrewCaptain                                   Boolean                     @default(false)
+  nudgeRigCompleted                               Boolean                       @default(false)
+  nudgeHomeBaseCompleted                          Boolean                       @default(false)
+  nudgeCheckinCompleted                           Boolean                       @default(false)
+  referralCount                                   Int                           @default(0)
+  isCrewCaptain                                   Boolean                       @default(false)
   crewCaptainAt                                   DateTime?
-  openToWork                                      Boolean                     @default(false)
-  showLiveStatusPublicly                          Boolean                     @default(false)
+  openToWork                                      Boolean                       @default(false)
+  showLiveStatusPublicly                          Boolean                       @default(false)
   passwordResetToken                              String?
-  passwordResetExpires                             DateTime?
-  jobTypePrefs                                    String[]                    @default([])
-  jobStatePrefs                                   String[]                    @default([])
+  passwordResetExpires                            DateTime?
+  jobTypePrefs                                    String[]                      @default([])
+  jobStatePrefs                                   String[]                      @default([])
   jobCompPref                                     String?
   availableFrom                                   DateTime?
-  petTypes                                        String[]                    @default([])
+  petTypes                                        String[]                      @default([])
   preferredTripLength                             String?
   travelPartySize                                 Int?
   travelPartyType                                 String?
@@ -107,11 +107,11 @@ model User {
   rvWidth                                         Int?
   tagExpiration                                   DateTime?
   rvOdometer                                      Int?
-  taggedMediaVisibility                           TaggedMediaVisibility       @default(SHOW_IN_FEED)
-  tagApprovalMode                                 TagApprovalMode             @default(AUTO_APPROVE)
-  allowTagsFrom                                   AllowTagsFrom               @default(EVERYONE)
+  taggedMediaVisibility                           TaggedMediaVisibility         @default(SHOW_IN_FEED)
+  tagApprovalMode                                 TagApprovalMode               @default(AUTO_APPROVE)
+  allowTagsFrom                                   AllowTagsFrom                 @default(EVERYONE)
   contentInterests                                String[]
-  campingStyles                                   String[]                    @default([])
+  campingStyles                                   String[]                      @default([])
   rvAirconditioners                               Int?
   rvAwningFt                                      Float?
   rvAxles                                         Int?
@@ -127,42 +127,42 @@ model User {
   rvLpGasGal                                      Float?
   rvShorepower                                    String?
   rvSolarWatts                                    Int?
-  campingInterests                                String[]                    @default([])
+  campingInterests                                String[]                      @default([])
   phoneNumber                                     String?
-  emailOnFriendRequest                            Boolean                     @default(true)
-  emailOnMention                                  Boolean                     @default(true)
-  emailOnMessage                                  Boolean                     @default(true)
-  emailOnNotification                             Boolean                     @default(true)
-  emailOnTripUpdate                               Boolean                     @default(true)
-  aiMaintenanceEnabled                            Boolean                     @default(false)
+  emailOnFriendRequest                            Boolean                       @default(true)
+  emailOnMention                                  Boolean                       @default(true)
+  emailOnMessage                                  Boolean                       @default(true)
+  emailOnNotification                             Boolean                       @default(true)
+  emailOnTripUpdate                               Boolean                       @default(true)
+  aiMaintenanceEnabled                            Boolean                       @default(false)
   currentOdometer                                 Int?
-  rvFuelType                                      String?                     @default("gas")
-  bannerPosition                                  String?                     @default("50% 50%")
+  rvFuelType                                      String?                       @default("gas")
+  bannerPosition                                  String?                       @default("50% 50%")
   activityLogs                                    AccountActivityLog[]
   accountDeletion                                 AccountDeletion?
-  activitySecondary                               Activity[]                  @relation("ActivitySecondaryUser")
-  activityTargets                                 Activity[]                  @relation("ActivityTarget")
+  activitySecondary                               Activity[]                    @relation("ActivitySecondaryUser")
+  activityTargets                                 Activity[]                    @relation("ActivityTarget")
   activities                                      Activity[]
   activityLikes                                   ActivityLike[]
   AffiliateClick                                  AffiliateClick[]
   Album                                           Album[]
   AlbumFeedCooldown                               AlbumFeedCooldown[]
   attractions                                     Attraction[]
-  basecampActivitiesPerformed                     BasecampActivity[]          @relation("BasecampActivityActor")
-  basecampActivitiesReceived                      BasecampActivity[]          @relation("BasecampActivityRecipient")
-  BlockedTagger_BlockedTagger_blockedByIdToUser   BlockedTagger[]             @relation("BlockedTagger_blockedByIdToUser")
-  BlockedTagger_BlockedTagger_blockedUserIdToUser BlockedTagger[]             @relation("BlockedTagger_blockedUserIdToUser")
-  blockedByUsers                                  BlockedUser[]               @relation("BlockedByUsers")
-  blockedUsers                                    BlockedUser[]               @relation("UserBlocks")
+  basecampActivitiesPerformed                     BasecampActivity[]            @relation("BasecampActivityActor")
+  basecampActivitiesReceived                      BasecampActivity[]            @relation("BasecampActivityRecipient")
+  BlockedTagger_BlockedTagger_blockedByIdToUser   BlockedTagger[]               @relation("BlockedTagger_blockedByIdToUser")
+  BlockedTagger_BlockedTagger_blockedUserIdToUser BlockedTagger[]               @relation("BlockedTagger_blockedUserIdToUser")
+  blockedByUsers                                  BlockedUser[]                 @relation("BlockedByUsers")
+  blockedUsers                                    BlockedUser[]                 @relation("UserBlocks")
   bookingClicks                                   BookingClick[]
-  claimedCampgrounds                              Campground[]                @relation("ClaimedCampgrounds")
+  claimedCampgrounds                              Campground[]                  @relation("ClaimedCampgrounds")
   campgroundAdmins                                CampgroundAdmin[]
   campgroundAnnouncements                         CampgroundAnnouncement[]
-  createdCampgroundBadges                         CampgroundBadge[]           @relation("CreatedCampgroundBadges")
+  createdCampgroundBadges                         CampgroundBadge[]             @relation("CreatedCampgroundBadges")
   campgroundBadgeAwards                           CampgroundBadgeAward[]
   campgroundEvents                                CampgroundEvent[]
   campgroundFollows                               CampgroundFollow[]
-  reviewedPhotos                                  CampgroundPhoto[]           @relation("PhotoReviewer")
+  reviewedPhotos                                  CampgroundPhoto[]             @relation("PhotoReviewer")
   campgroundPhotos                                CampgroundPhoto[]
   campgroundPosts                                 CampgroundPost[]
   campgroundPostComments                          CampgroundPostComment[]
@@ -178,39 +178,39 @@ model User {
   creatorContent                                  CreatorContent[]
   creatorComments                                 CreatorContentComment[]
   creatorLikes                                    CreatorContentLike[]
-  taggedInContent                                 CreatorContentTag[]         @relation("TaggedInContent")
-  creatorFollowers                                CreatorFollow[]             @relation("CreatorFollowers")
-  followingCreators                               CreatorFollow[]             @relation("FollowingCreators")
+  taggedInContent                                 CreatorContentTag[]           @relation("TaggedInContent")
+  creatorFollowers                                CreatorFollow[]               @relation("CreatorFollowers")
+  followingCreators                               CreatorFollow[]               @relation("FollowingCreators")
   creatorInsight                                  CreatorInsight?
   creatorMilestones                               CreatorMilestone[]
-  creatorPageCollabs                              CreatorPageCollaborator[]   @relation("CreatorPageCollaborator")
-  creatorPageOwned                                CreatorPageCollaborator[]   @relation("CreatorPageOwner")
+  creatorPageCollabs                              CreatorPageCollaborator[]     @relation("CreatorPageCollaborator")
+  creatorPageOwned                                CreatorPageCollaborator[]     @relation("CreatorPageOwner")
   creatorPolls                                    CreatorPoll[]
   creatorPollVotes                                CreatorPollVote[]
   creatorReposts                                  CreatorRepost[]
   creatorSaves                                    CreatorSave[]
   creatorSeries                                   CreatorSeries[]
-  creatorShoutoutsGiven                           CreatorShoutout[]           @relation("ShoutoutGiver")
-  creatorShoutoutsReceived                        CreatorShoutout[]           @relation("ShoutoutReceiver")
+  creatorShoutoutsGiven                           CreatorShoutout[]             @relation("ShoutoutGiver")
+  creatorShoutoutsReceived                        CreatorShoutout[]             @relation("ShoutoutReceiver")
   creatorStats                                    CreatorStats?
   creatorStories                                  CreatorStory[]
   emailVerifications                              EmailVerification[]
   events                                          Event[]
   eventActivities                                 EventActivity[]
   eventAttendees                                  EventAttendee[]
-  eventBlocksCreated                              EventBlockedUser[]          @relation("EventBlocker")
-  blockedFromEvents                               EventBlockedUser[]          @relation("BlockedFromEvents")
+  eventBlocksCreated                              EventBlockedUser[]            @relation("EventBlocker")
+  blockedFromEvents                               EventBlockedUser[]            @relation("BlockedFromEvents")
   eventComments                                   EventComment[]
   eventCommentMutes                               EventCommentMute[]
-  assignedMeals                                   EventMeal[]                 @relation("MealCook")
+  assignedMeals                                   EventMeal[]                   @relation("MealCook")
   freeOvernightSpotReviews                        FreeOvernightSpotReview[]
-  friendshipsInitiated                            Friendship[]                @relation("FriendshipInitiator")
-  friendshipsReceived                             Friendship[]                @relation("FriendshipReceiver")
+  friendshipsInitiated                            Friendship[]                  @relation("FriendshipInitiator")
+  friendshipsReceived                             Friendship[]                  @relation("FriendshipReceiver")
   GearAdEvent                                     GearAdEvent[]
   gearItems                                       GearItem[]
   groups                                          Group[]
-  groupInvitesReceived                            GroupInvite[]               @relation("GroupInvitee")
-  groupInvitesSent                                GroupInvite[]               @relation("GroupInviter")
+  groupInvitesReceived                            GroupInvite[]                 @relation("GroupInvitee")
+  groupInvitesSent                                GroupInvite[]                 @relation("GroupInviter")
   groupMemberships                                GroupMember[]
   harvestHostReviews                              HarvestHostReview[]
   hitchConversations                              HitchConversation[]
@@ -220,28 +220,28 @@ model User {
   maintenanceRecommendations                      MaintenanceRecommendation[]
   maintenanceRecords                              MaintenanceRecord[]
   maintenanceReminders                            MaintenanceReminder[]
-  mealRSVPs                                       MealRSVP[]                  @relation("MealRSVPs")
+  mealRSVPs                                       MealRSVP[]                    @relation("MealRSVPs")
   Media                                           Media[]
   MediaComment                                    MediaComment[]
   MediaImpression                                 MediaImpression[]
   MediaReaction                                   MediaReaction[]
   MediaReport                                     MediaReport[]
-  MediaTag_MediaTag_taggedByIdToUser              MediaTag[]                  @relation("MediaTag_taggedByIdToUser")
-  MediaTag_MediaTag_taggedUserIdToUser            MediaTag[]                  @relation("MediaTag_taggedUserIdToUser")
-  createdMentions                                 Mention[]                   @relation("CreatedMentions")
-  mentions                                        Mention[]                   @relation("UserMentions")
-  receivedMessages                                Message[]                   @relation("ReceivedMessages")
-  sentMessages                                    Message[]                   @relation("SentMessages")
-  mutedByUsers                                    MutedEntity[]               @relation("MutedByUsers")
-  mutedEntities                                   MutedEntity[]               @relation("UserMutes")
+  MediaTag_MediaTag_taggedByIdToUser              MediaTag[]                    @relation("MediaTag_taggedByIdToUser")
+  MediaTag_MediaTag_taggedUserIdToUser            MediaTag[]                    @relation("MediaTag_taggedUserIdToUser")
+  createdMentions                                 Mention[]                     @relation("CreatedMentions")
+  mentions                                        Mention[]                     @relation("UserMentions")
+  receivedMessages                                Message[]                     @relation("ReceivedMessages")
+  sentMessages                                    Message[]                     @relation("SentMessages")
+  mutedByUsers                                    MutedEntity[]                 @relation("MutedByUsers")
+  mutedEntities                                   MutedEntity[]                 @relation("UserMutes")
   notifications                                   Notification[]
   roadTrips                                       RoadTrip[]
   scrapbookPins                                   ScrapbookPin[]
-  subeventsCreated                                EventSubevent[]          @relation("SubeventCreatedBy")
-  subeventsHosting                                EventSubevent[]          @relation("SubeventHost")
+  subeventsCreated                                EventSubevent[]               @relation("SubeventCreatedBy")
+  subeventsHosting                                EventSubevent[]               @relation("SubeventHost")
   subeventAttendees                               SubeventAttendee[]
-  supplyItemsClaimed                              SupplyItem[]             @relation("SupplyItemClaimedBy")
-  supplyItemsCreated                              SupplyItem[]             @relation("SupplyItemCreatedBy")
+  supplyItemsClaimed                              SupplyItem[]                  @relation("SupplyItemClaimedBy")
+  supplyItemsCreated                              SupplyItem[]                  @relation("SupplyItemCreatedBy")
   overnightStopReviews                            OvernightStopReview[]
   overnightStopUpdates                            OvernightStopUpdate[]
   packingListTemplates                            PackingListTemplate[]
@@ -249,27 +249,27 @@ model User {
   photos                                          Photo[]
   photoAlbums                                     PhotoAlbum[]
   photoAlbumCollabs                               PhotoAlbumCollaborator[]
-  campgroundPhotoTagsCreated                      PhotoCampgroundTag[]        @relation("CampgroundPhotoTagsCreated")
+  campgroundPhotoTagsCreated                      PhotoCampgroundTag[]          @relation("CampgroundPhotoTagsCreated")
   photoComments                                   PhotoComment[]
   photoLikes                                      PhotoLike[]
   photoMoments                                    PhotoMoment[]
   photoReactions                                  PhotoReaction[]
-  photoReports                                    PhotoReport[]               @relation("PhotoReporter")
-  photoReviews                                    PhotoReport[]               @relation("PhotoReviewer")
+  photoReports                                    PhotoReport[]                 @relation("PhotoReporter")
+  photoReviews                                    PhotoReport[]                 @relation("PhotoReviewer")
   photoSaves                                      PhotoSave[]
-  photoTagsCreated                                PhotoTag[]                  @relation("PhotoTagsCreated")
-  photoTagsReceived                               PhotoTag[]                  @relation("PhotoTagsReceived")
+  photoTagsCreated                                PhotoTag[]                    @relation("PhotoTagsCreated")
+  photoTagsReceived                               PhotoTag[]                    @relation("PhotoTagsReceived")
   pinnedComments                                  PinnedComment[]
   placeWishlists                                  PlaceWishlist[]
   posts                                           Post[]
-  wallPosts                                       Post[]                      @relation("WallPosts")
-  profileVisits                                   ProfileVisit[]              @relation("ProfileVisits")
-  visitorVisits                                   ProfileVisit[]              @relation("VisitorVisits")
-  rvCoOwnedBy                                     RVCoOwner[]                 @relation("RVCoOwned")
-  rvCoOwners                                      RVCoOwner[]                 @relation("RVOwner")
-  household                                       Household?               @relation("HouseholdMembers", fields: [householdId], references: [id])
-  sentHouseholdInvites                            HouseholdInvite[]        @relation("HouseholdInviteSender")
-  receivedHouseholdInvites                        HouseholdInvite[]        @relation("HouseholdInviteReceiver")
+  wallPosts                                       Post[]                        @relation("WallPosts")
+  profileVisits                                   ProfileVisit[]                @relation("ProfileVisits")
+  visitorVisits                                   ProfileVisit[]                @relation("VisitorVisits")
+  rvCoOwnedBy                                     RVCoOwner[]                   @relation("RVCoOwned")
+  rvCoOwners                                      RVCoOwner[]                   @relation("RVOwner")
+  household                                       Household?                    @relation("HouseholdMembers", fields: [householdId], references: [id])
+  sentHouseholdInvites                            HouseholdInvite[]             @relation("HouseholdInviteSender")
+  receivedHouseholdInvites                        HouseholdInvite[]             @relation("HouseholdInviteReceiver")
   rvShowcase                                      RVShowcase?
   reactions                                       Reaction[]
   recipes                                         Recipe[]
@@ -282,103 +282,105 @@ model User {
   savedRecipes                                    SavedRecipe[]
   savedTrips                                      SavedTrip[]
   tripComments                                    SavedTripComment[]
-  sharedVehiclesOwned                             SharedVehicle[]             @relation("VehicleOwner")
-  sharedVehiclesPartner                           SharedVehicle[]             @relation("VehiclePartner")
+  sharedVehiclesOwned                             SharedVehicle[]               @relation("VehicleOwner")
+  sharedVehiclesPartner                           SharedVehicle[]               @relation("VehiclePartner")
   stateVisits                                     StateVisit[]
   stateVisitAttendees                             StateVisitAttendee[]
   stays                                           Stay[]
+  campgroundPriceReports                          CampgroundPriceReport[]
   stickerRequests                                 StickerRequest[]
-  tagBlockedUsers                                 TagBlockedUser[]            @relation("TagBlocked")
-  tagBlockedBy                                    TagBlockedUser[]            @relation("TagBlocker")
-  thingsCreated                                   ThingToDo[]                 @relation("ThingsCreated")
-  savedThings                                     ThingToDoSave[]             @relation("SavedThings")
-  thingVotes                                      ThingToDoVote[]             @relation("ThingVotes")
+  tagBlockedUsers                                 TagBlockedUser[]              @relation("TagBlocked")
+  tagBlockedBy                                    TagBlockedUser[]              @relation("TagBlocker")
+  thingsCreated                                   ThingToDo[]                   @relation("ThingsCreated")
+  savedThings                                     ThingToDoSave[]               @relation("SavedThings")
+  thingVotes                                      ThingToDoVote[]               @relation("ThingVotes")
   threads                                         Thread[]
   threadFavorites                                 ThreadFavorite[]
   threadIgnores                                   ThreadIgnore[]
   threadPosts                                     ThreadPost[]
   threadPostLikes                                 ThreadPostLike[]
   threadVotes                                     ThreadVote[]
-  inTopFriendsOf                                  TopFriend[]                 @relation("FriendInTopFriends")
-  topFriends                                      TopFriend[]                 @relation("UserTopFriends")
+  inTopFriendsOf                                  TopFriend[]                   @relation("FriendInTopFriends")
+  topFriends                                      TopFriend[]                   @relation("UserTopFriends")
   trips                                           Trip[]
   tripMemberships                                 TripMember[]
-  assignedTripPackItems                           TripPackItem[]              @relation("AssignedTripPackItems")
-  createdTripPackItems                            TripPackItem[]              @relation("CreatedTripPackItems")
-  packedTripPackItems                             TripPackItem[]              @relation("PackedByTripPackItems")
-  ridingWithTrips                                 TripPlan[]                  @relation("RidingWith")
+  assignedTripPackItems                           TripPackItem[]                @relation("AssignedTripPackItems")
+  createdTripPackItems                            TripPackItem[]                @relation("CreatedTripPackItems")
+  packedTripPackItems                             TripPackItem[]                @relation("PackedByTripPackItems")
+  ridingWithTrips                                 TripPlan[]                    @relation("RidingWith")
   tripPlans                                       TripPlan[]
   badges                                          UserBadge[]
   mileageLogs                                     UserMileageLog[]
   preferences                                     UserPreferences?
   userStickers                                    UserSticker[]
-  vehicleInvitesCreated                           VehicleInvite[]             @relation("VehicleInviteCreator")
-  vehicleInvitesUsed                              VehicleInvite[]             @relation("VehicleInviteUsed")
+  vehicleInvitesCreated                           VehicleInvite[]               @relation("VehicleInviteCreator")
+  vehicleInvitesUsed                              VehicleInvite[]               @relation("VehicleInviteUsed")
   videos                                          Video[]
   videoLikes                                      VideoLike[]
   videoWatches                                    VideoWatch[]
+  campfireMessages                                CampfireMessage[]
+  triviaAnswers                                   TriviaAnswer[]
+  boardPosts                                      BoardPost[]
+  boardComments                                   BoardComment[]
+  boardVotes                                      BoardVote[]
+  wildlifeSightings                               WildlifeSighting[]
+  triviaLeaderboard                               TriviaLeaderboard[]
+  triviaWins                                      TriviaWeek[]                  @relation("TriviaWinner")
+  triviaStreak                                    TriviaStreak?
+  privateTriviaRooms                              PrivateTriviaRoom[]           @relation("PrivateTriviaHost")
+  privateTriviaWins                               PrivateTriviaRoom[]           @relation("PrivateTriviaWinner")
+  privateTriviaPlayed                             PrivateTriviaParticipant[]
+  campaignsCreated                                SponsorCampaign[]             @relation("CampaignCreator")
+  campaignsApproved                               SponsorCampaign[]             @relation("CampaignApprover")
+  sponsoredImpressions                            SponsoredQuestionImpression[] @relation("SponsoredImpressions")
+  sponsoredAnswers                                SponsoredQuestionAnswer[]     @relation("SponsoredAnswers")
+  sponsoredRewards                                SponsoredRewardGrant[]        @relation("SponsoredRewards")
+  assignedCodes                                   DiscountCodePool[]            @relation("AssignedCodes")
+  sentInvites                                     Invite[]                      @relation("SentInvites")
+  stargazingEnabled                               Boolean                       @default(true)
+  smsWeatherAlerts                                Boolean                       @default(false)
+  campfireCompanionsEnabled                       Boolean                       @default(true)
+  triviaTitle                                     String?
+  driveSessions                                   DriveSession[]
+  companionSessions                               CompanionSession[]            @relation("CompanionSessions")
+  oauthAccounts                                   OAuthAccount[]                @relation("OAuthAccounts")
+  onboardingEvents                                OnboardingEvent[]             @relation("OnboardingEvents")
+  jobPostingsCreated                              JobPosting[]                  @relation("JobPostingsCreated")
+  jobApplications                                 JobApplication[]              @relation("JobApplications")
+  dealerProfile                                   DealerProfile?                @relation("DealerProfile")
+  pushSubscriptions                               PushSubscription[]
+  campMarketListings                              CampMarketListing[]
+  campMarketInterests                             CampMarketInterest[]          @relation("CampMarketBuyer")
+  campMarketReviews                               CampMarketFeedback[]          @relation("CampMarketReviewer")
+  campMarketFeedback                              CampMarketFeedback[]          @relation("CampMarketReviewee")
+  campMarketStats                                 CampMarketStats?
+  rigConnectionsRequested                         RigConnection[]               @relation("RigConnectionRequester")
+  rigConnectionsReceived                          RigConnection[]               @relation("RigConnectionReceiver")
+  emailDripLogs                                   EmailDripLog[]
+  onboardingData                                  Json?
+  campfireTipsAuthored                            CampfireTip[]                 @relation("CampfireTipAuthor")
+  campfireTipsReceived                            CampfireTip[]                 @relation("CampfireTipRecipient")
+  campfireTipReactions                            CampfireTipReaction[]
+  hiddenPosts                                     HiddenPost[]
+  feedPrefsUser                                   FeedPreference[]              @relation("FeedPrefUser")
+  feedPrefsTarget                                 FeedPreference[]              @relation("FeedPrefTarget")
+  feedSignals                                     FeedSignal[]
+  contentTypePrefs                                ContentTypePreference[]
+  lastMinuteDeals                                 LastMinuteDeal[]
+  lastMinuteDealViews                             LastMinuteDealView[]
+  eventAnnouncements                              EventAnnouncement[]
+  eventDishes                                     EventDish[]
+  socialPlans                                     UserSocialPlan[]
+  hostedMeals                                     EventMeal[]                   @relation("EventMealHost")
+  eventBlasts                                     EventBlast[]
+  eventCheckInsUser                               EventCheckIn[]
+  eventPollsCreated                               EventPoll[]
+  eventPollResponses                              EventPollResponse[]
+  eventConnectionsA                               EventConnection[]             @relation("ConnectionUserA")
+  eventConnectionsB                               EventConnection[]             @relation("ConnectionUserB")
 
   @@index([email])
   @@index([username])
-  campfireMessages CampfireMessage[]
-  triviaAnswers    TriviaAnswer[]
-  boardPosts      BoardPost[]
-  boardComments   BoardComment[]
-  boardVotes      BoardVote[]
-  wildlifeSightings WildlifeSighting[]
-  triviaLeaderboard TriviaLeaderboard[]
-  triviaWins       TriviaWeek[]     @relation("TriviaWinner")
-  triviaStreak         TriviaStreak?
-  privateTriviaRooms   PrivateTriviaRoom[]   @relation("PrivateTriviaHost")
-  privateTriviaWins    PrivateTriviaRoom[]   @relation("PrivateTriviaWinner")
-  privateTriviaPlayed  PrivateTriviaParticipant[]
-  campaignsCreated     SponsorCampaign[]    @relation("CampaignCreator")
-  campaignsApproved    SponsorCampaign[]    @relation("CampaignApprover")
-  sponsoredImpressions SponsoredQuestionImpression[] @relation("SponsoredImpressions")
-  sponsoredAnswers     SponsoredQuestionAnswer[]     @relation("SponsoredAnswers")
-  sponsoredRewards     SponsoredRewardGrant[]        @relation("SponsoredRewards")
-  assignedCodes        DiscountCodePool[]            @relation("AssignedCodes")
-  sentInvites          Invite[]             @relation("SentInvites")
-  stargazingEnabled    Boolean   @default(true)
-  smsWeatherAlerts     Boolean   @default(false)
-  campfireCompanionsEnabled Boolean @default(true)
-  triviaTitle         String?
-  driveSessions           DriveSession[]
-  companionSessions        CompanionSession[] @relation("CompanionSessions")
-  oauthAccounts            OAuthAccount[]     @relation("OAuthAccounts")
-  onboardingEvents         OnboardingEvent[]  @relation("OnboardingEvents")
-  jobPostingsCreated       JobPosting[]       @relation("JobPostingsCreated")
-  jobApplications          JobApplication[]   @relation("JobApplications")
-  pushSubscriptions       PushSubscription[]
-  campMarketListings      CampMarketListing[]
-  campMarketInterests     CampMarketInterest[]  @relation("CampMarketBuyer")
-  campMarketReviews       CampMarketFeedback[]  @relation("CampMarketReviewer")
-  campMarketFeedback      CampMarketFeedback[]  @relation("CampMarketReviewee")
-  campMarketStats         CampMarketStats?
-  rigConnectionsRequested RigConnection[]  @relation("RigConnectionRequester")
-  rigConnectionsReceived  RigConnection[]  @relation("RigConnectionReceiver")
-  emailDripLogs           EmailDripLog[]
-  onboardingData          Json?
-  campfireTipsAuthored    CampfireTip[]         @relation("CampfireTipAuthor")
-  campfireTipsReceived    CampfireTip[]         @relation("CampfireTipRecipient")
-  campfireTipReactions    CampfireTipReaction[]
-  hiddenPosts             HiddenPost[]
-  feedPrefsUser           FeedPreference[]      @relation("FeedPrefUser")
-  feedPrefsTarget         FeedPreference[]      @relation("FeedPrefTarget")
-  feedSignals             FeedSignal[]
-  contentTypePrefs        ContentTypePreference[]
-  lastMinuteDeals         LastMinuteDeal[]
-  lastMinuteDealViews     LastMinuteDealView[]
-  eventAnnouncements      EventAnnouncement[]
-  eventDishes             EventDish[]
-  socialPlans             UserSocialPlan[]
-  hostedMeals             EventMeal[]          @relation("EventMealHost")
-  eventBlasts             EventBlast[]
-  eventCheckInsUser       EventCheckIn[]
-  eventPollsCreated       EventPoll[]
-  eventPollResponses      EventPollResponse[]
-  eventConnectionsA      EventConnection[]     @relation("ConnectionUserA")
-  eventConnectionsB      EventConnection[]     @relation("ConnectionUserB")
 }
 
 model Post {
@@ -625,13 +627,10 @@ model Campground {
   stickers               Sticker[]
   threads                Thread[]
   tripStops              TripStop[]
-
-  @@index([state])
-  @@index([name])
-  campfireRoom   CampfireRoom?
-  triviaWeeks      TriviaWeek[]
+  campfireRoom           CampfireRoom?
+  triviaWeeks            TriviaWeek[]
   campgroundTriviaScores CampgroundTriviaScore[]
-  pitStops               PitStop[]               @relation("CampgroundPitStops")
+  pitStops               PitStop[]                @relation("CampgroundPitStops")
   wildlifeSightings      WildlifeSighting[]
   campMarketListings     CampMarketListing[]
   campfireTips           CampfireTip[]
@@ -639,12 +638,42 @@ model Campground {
   welcomeKit             WelcomeKit?
   rules                  CampgroundRules?
   jobPostings            JobPosting[]
-  subscription           CampgroundSubscription? @relation("CampgroundSub")
+  subscription           CampgroundSubscription?  @relation("CampgroundSub")
   trialEndsAt            DateTime?
+  priceReports           CampgroundPriceReport[]
+  pricePerNightSource    String?                  // 'COMMUNITY' | 'SCRAPED' | 'OFFICIAL' | null
+  pricePerNightUpdatedAt DateTime?
+
+  @@index([state])
+  @@index([name])
+}
+
+model CampgroundPriceReport {
+  id           String     @id @default(cuid())
+  campgroundId String
+  userId       String
+  // Per-night dollar amount the user reported paying. Stored as Float
+  // for symmetry with Campground.pricePerNight; we don't need cent precision.
+  pricePaid    Float
+  // Optional context so the same campground can have multiple realistic
+  // rates for different site types / hookup levels / seasons. None of
+  // these are required — power users can fill them in but a quick "I
+  // paid $45" still works.
+  siteType     String?    // 'TENT' | 'RV_NO_HOOKUPS' | 'RV_PARTIAL' | 'RV_FULL' | 'CABIN' | 'OTHER'
+  hookupLevel  String?    // 'NONE' | 'WATER' | 'WATER_ELEC' | 'FULL'
+  season       String?    // 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL' | 'PEAK' | 'OFF_PEAK'
+  notes        String?
+  reportedAt   DateTime   @default(now())
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campgroundId])
+  @@index([userId])
+  @@index([reportedAt])
 }
 
 model CampMarketListing {
-  id               String      @id @default(cuid())
+  id               String               @id @default(cuid())
   userId           String
   campgroundId     String
   title            String
@@ -652,14 +681,14 @@ model CampMarketListing {
   price            Float?
   imageUrl         String?
   siteNumber       String?
-  isActive         Boolean     @default(true)
-  isFree           Boolean     @default(false)
+  isActive         Boolean              @default(true)
+  isFree           Boolean              @default(false)
   completedBuyerId String?
   expiresAt        DateTime
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campground       Campground  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campground       Campground           @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
   interests        CampMarketInterest[]
   feedback         CampMarketFeedback[]
 
@@ -669,30 +698,30 @@ model CampMarketListing {
 }
 
 model CampMarketInterest {
-  id         String   @id @default(cuid())
-  listingId  String
-  buyerId    String
-  createdAt  DateTime @default(now())
-  listing    CampMarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  buyer      User     @relation("CampMarketBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  listingId String
+  buyerId   String
+  createdAt DateTime          @default(now())
+  listing   CampMarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer     User              @relation("CampMarketBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, buyerId])
   @@index([buyerId])
 }
 
 model CampMarketFeedback {
-  id          String   @id @default(cuid())
-  listingId   String
-  reviewerId  String
-  revieweeId  String
-  role        String   // BUYER or SELLER
-  rating      Int      // 1-5
-  comment     String?
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  listing     CampMarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  reviewer    User     @relation("CampMarketReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
-  reviewee    User     @relation("CampMarketReviewee", fields: [revieweeId], references: [id], onDelete: Cascade)
+  id         String            @id @default(cuid())
+  listingId  String
+  reviewerId String
+  revieweeId String
+  role       String // BUYER or SELLER
+  rating     Int // 1-5
+  comment    String?
+  expiresAt  DateTime
+  createdAt  DateTime          @default(now())
+  listing    CampMarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User              @relation("CampMarketReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee   User              @relation("CampMarketReviewee", fields: [revieweeId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, reviewerId])
   @@index([revieweeId])
@@ -795,25 +824,25 @@ model Event {
   qrToken           String?              @unique
 
   // Co-Host Autopilot fields
-  autopilotMode         String    @default("FULLY_GUIDED")  // FULLY_GUIDED | ASSISTED | MANUAL
-  hitchSkin             String    @default("PARTY_STARTER") // TRAIL_GUIDE | PARTY_STARTER | OLD_TIMER
-  isLive                Boolean   @default(false)
-  isTripMemory          Boolean   @default(false)
-  planBDescription      String?
-  planBLocation         String?
-  planBActivated        Boolean   @default(false)
-  geoFenceRadiusMiles   Float     @default(0.5)
-  serendipityEnabled    Boolean   @default(true)
-  tripSlug              String?   @unique
-  shareToken            String?   @unique
-  sharedAt              DateTime?
-  publicViewCount       Int       @default(0)
-  ghostModeEnabled      Boolean   @default(false)
-  popUps                EventPopUp[]
-  highlights            EventHighlight[]
-  connections           EventConnection[]
-  tripMemory            TripMemoryRecord?
-  invites               Invite[]            @relation("EventInvites")
+  autopilotMode       String            @default("FULLY_GUIDED") // FULLY_GUIDED | ASSISTED | MANUAL
+  hitchSkin           String            @default("PARTY_STARTER") // TRAIL_GUIDE | PARTY_STARTER | OLD_TIMER
+  isLive              Boolean           @default(false)
+  isTripMemory        Boolean           @default(false)
+  planBDescription    String?
+  planBLocation       String?
+  planBActivated      Boolean           @default(false)
+  geoFenceRadiusMiles Float             @default(0.5)
+  serendipityEnabled  Boolean           @default(true)
+  tripSlug            String?           @unique
+  shareToken          String?           @unique
+  sharedAt            DateTime?
+  publicViewCount     Int               @default(0)
+  ghostModeEnabled    Boolean           @default(false)
+  popUps              EventPopUp[]
+  highlights          EventHighlight[]
+  connections         EventConnection[]
+  tripMemory          TripMemoryRecord?
+  invites             Invite[]          @relation("EventInvites")
 
   @@index([organizerId])
   @@index([campgroundId])
@@ -823,28 +852,28 @@ model Event {
 }
 
 model EventAttendee {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   eventId            String
   userId             String
-  status             String   @default("PENDING")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  status             String    @default("PENDING")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
   confirmationNumber String?
   notes              String?
   siteNumber         String?
-  siteVisibility     String   @default("ATTENDEES")
+  siteVisibility     String    @default("ATTENDEES")
   loopArea           String?
-  arrivalStatus      String   @default("NOT_ARRIVED")
-  isOpenToVisitors   Boolean  @default(false)
-  campfireActive     Boolean  @default(false)
+  arrivalStatus      String    @default("NOT_ARRIVED")
+  isOpenToVisitors   Boolean   @default(false)
+  campfireActive     Boolean   @default(false)
   digitalFlag        String?
-  hasDogs            Boolean  @default(false)
+  hasDogs            Boolean   @default(false)
   presenceUpdatedAt  DateTime?
-  participationMode  String   @default("FULL")
+  participationMode  String    @default("FULL")
   socialBattery      String?
-  autoCheckedIn      Boolean  @default(false)
-  event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  autoCheckedIn      Boolean   @default(false)
+  event              Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@index([eventId])
@@ -852,27 +881,27 @@ model EventAttendee {
 }
 
 model EventMeal {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   eventId       String
   mealType      String
   recipeId      String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   notes         String?
   scheduledAt   DateTime
   scheduledTime String?
   cookId        String?
-  cookStatus    String?    @default("PENDING")
-  cook          User?      @relation("MealCook", fields: [cookId], references: [id])
-  host          User?      @relation("EventMealHost", fields: [hostId], references: [id])
+  cookStatus    String?     @default("PENDING")
+  cook          User?       @relation("MealCook", fields: [cookId], references: [id])
+  host          User?       @relation("EventMealHost", fields: [hostId], references: [id])
   hostId        String?
   title         String?
   description   String?
   location      String?
   servings      Int?
-  visibility    String     @default("ATTENDEES")
-  event         Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  recipe        Recipe?    @relation(fields: [recipeId], references: [id])
+  visibility    String      @default("ATTENDEES")
+  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipe        Recipe?     @relation(fields: [recipeId], references: [id])
   rsvps         MealRSVP[]
   dishes        EventDish[]
 
@@ -1181,21 +1210,21 @@ model SavedRecipe {
 }
 
 model CheckIn {
-  id              String      @id @default(cuid())
+  id              String       @id @default(cuid())
   userId          String
   campgroundId    String?
   checkInDate     DateTime
   checkOutDate    DateTime?
   siteNumber      String?
   notes           String?
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
   harvestHostId   String?
   overnightSpotId String?
-  campground      Campground?   @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  harvestHost     HarvestHost?  @relation("CheckInHarvestHost", fields: [harvestHostId], references: [id])
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campground      Campground?  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  harvestHost     HarvestHost? @relation("CheckInHarvestHost", fields: [harvestHostId], references: [id])
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([campgroundId])
@@ -2156,8 +2185,8 @@ model UserBadge {
   progress    Int?
   notified    Boolean  @default(false)
   badgeNumber Int?
-  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge       Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
   @@index([userId])
@@ -3692,7 +3721,7 @@ model HarvestHost {
   familyFriendly        Boolean?            @default(false)
   bannerPosition        String?             @default("50% 50%")
   reviews               HarvestHostReview[]
-  checkIns              CheckIn[]             @relation("CheckInHarvestHost")
+  checkIns              CheckIn[]           @relation("CheckInHarvestHost")
   pitStops              PitStop[]
 
   @@index([latitude, longitude])
@@ -3830,9 +3859,8 @@ model RecipePhotoSubmission {
   @@index([userId])
 }
 
-
 model EventSubevent {
-  id           String             @id @default(cuid())
+  id           String   @id @default(cuid())
   eventId      String
   userId       String
   createdById  String
@@ -3842,51 +3870,50 @@ model EventSubevent {
   date         DateTime
   startTime    String?
   endTime      String?
-  activityType String             @default("OTHER")
+  activityType String   @default("OTHER")
   location     String?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  event        Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdBy    User               @relation("SubeventCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  host         User?              @relation("SubeventHost", fields: [hostId], references: [id], onDelete: SetNull)
-  attendees    SubeventAttendee[]
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User               @relation("SubeventCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  host      User?              @relation("SubeventHost", fields: [hostId], references: [id], onDelete: SetNull)
+  attendees SubeventAttendee[]
 
   @@index([eventId])
   @@index([userId])
 }
 
 model SubeventAttendee {
-  id         String        @id @default(cuid())
+  id         String   @id @default(cuid())
   subeventId String
   userId     String
-  status     String        @default("INTERESTED")
-  createdAt  DateTime      @default(now())
+  status     String   @default("INTERESTED")
+  createdAt  DateTime @default(now())
 
-  subevent   EventSubevent @relation(fields: [subeventId], references: [id], onDelete: Cascade)
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subevent EventSubevent @relation(fields: [subeventId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([subeventId, userId])
   @@index([subeventId])
   @@index([userId])
 }
 
-
 model RoadTrip {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   title       String
   description String?
-  color       String   @default("#f97316")
-  font        String   @default("playfair")
+  color       String    @default("#f97316")
+  font        String    @default("playfair")
   startDate   DateTime?
   endDate     DateTime?
-  privacy     String   @default("PUBLIC")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  privacy     String    @default("PUBLIC")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stops       Event[]  @relation("RoadTripStops")
+  user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops Event[] @relation("RoadTripStops")
 
   @@index([userId])
 }
@@ -4050,29 +4077,29 @@ model CampfireMessage {
 }
 
 model TriviaWeek {
-  id           String            @id @default(cuid())
-  campgroundId String
-  weekStart    DateTime
-  weekEnd      DateTime
-  hostCharacter String           @default("hitch")
-  theme        String?
-  isActive     Boolean           @default(false)
-  winnerId     String?
-  announcedAt  DateTime?
-  createdAt    DateTime          @default(now())
-  campground   Campground        @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  winner       User?             @relation("TriviaWinner", fields: [winnerId], references: [id])
-  questions    TriviaQuestion[]
-  leaderboard  TriviaLeaderboard[]
+  id               String                  @id @default(cuid())
+  campgroundId     String
+  weekStart        DateTime
+  weekEnd          DateTime
+  hostCharacter    String                  @default("hitch")
+  theme            String?
+  isActive         Boolean                 @default(false)
+  winnerId         String?
+  announcedAt      DateTime?
+  createdAt        DateTime                @default(now())
+  campground       Campground              @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  winner           User?                   @relation("TriviaWinner", fields: [winnerId], references: [id])
+  questions        TriviaQuestion[]
+  leaderboard      TriviaLeaderboard[]
+  campgroundScores CampgroundTriviaScore[]
 
   @@index([campgroundId])
   @@index([isActive])
   @@index([weekStart])
-  campgroundScores CampgroundTriviaScore[]
 }
 
 model TriviaQuestion {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   weekId      String
   dayOfWeek   Int
   questionNum Int
@@ -4082,11 +4109,11 @@ model TriviaQuestion {
   optionC     String
   optionD     String
   answer      String
-  category    String        @default("general")
+  category    String         @default("general")
   scheduledAt DateTime
   askedAt     DateTime?
-  createdAt   DateTime      @default(now())
-  week        TriviaWeek    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  week        TriviaWeek     @relation(fields: [weekId], references: [id], onDelete: Cascade)
   answers     TriviaAnswer[]
 
   @@index([weekId])
@@ -4126,33 +4153,33 @@ model TriviaLeaderboard {
 }
 
 model CampgroundTriviaScore {
-  id             String     @id @default(cuid())
-  campgroundId   String
-  weekId         String
-  totalPoints    Int        @default(0)
-  playerCount    Int        @default(0)
-  weekRank       Int?
-  updatedAt      DateTime   @updatedAt
-  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  week           TriviaWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  campgroundId String
+  weekId       String
+  totalPoints  Int        @default(0)
+  playerCount  Int        @default(0)
+  weekRank     Int?
+  updatedAt    DateTime   @updatedAt
+  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  week         TriviaWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
 
   @@unique([campgroundId, weekId])
   @@index([weekId, totalPoints])
 }
 
 model PrivateTriviaRoom {
-  id            String    @id @default(cuid())
-  code          String    @unique
-  hostId        String
-  topic         String    @default("general")
-  isActive      Boolean   @default(true)
-  winnerId      String?
-  createdAt     DateTime  @default(now())
-  expiresAt     DateTime
-  host          User      @relation("PrivateTriviaHost", fields: [hostId], references: [id])
-  winner        User?     @relation("PrivateTriviaWinner", fields: [winnerId], references: [id])
-  participants  PrivateTriviaParticipant[]
-  questions     PrivateTriviaQuestion[]
+  id           String                     @id @default(cuid())
+  code         String                     @unique
+  hostId       String
+  topic        String                     @default("general")
+  isActive     Boolean                    @default(true)
+  winnerId     String?
+  createdAt    DateTime                   @default(now())
+  expiresAt    DateTime
+  host         User                       @relation("PrivateTriviaHost", fields: [hostId], references: [id])
+  winner       User?                      @relation("PrivateTriviaWinner", fields: [winnerId], references: [id])
+  participants PrivateTriviaParticipant[]
+  questions    PrivateTriviaQuestion[]
 
   @@index([code])
   @@index([hostId])
@@ -4190,70 +4217,70 @@ model PrivateTriviaQuestion {
 }
 
 model TriviaStreak {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  currentStreak Int      @default(0)
-  longestStreak Int      @default(0)
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
   lastPlayedAt  DateTime?
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SponsoredQuestion {
-  id          String   @id @default(cuid())
-  campaignId  String?
-  brandName   String
-  brandLogo   String?
-  status      String   @default("approved")
-  priority    Int      @default(1)
+  id            String                        @id @default(cuid())
+  campaignId    String?
+  brandName     String
+  brandLogo     String?
+  status        String                        @default("approved")
+  priority      Int                           @default(1)
   internalNotes String?
-  question    String
-  optionA     String
-  optionB     String
-  optionC     String
-  optionD     String
-  answer      String
-  rewardType  String   @default("points")
-  rewardValue String?
-  isActive    Boolean  @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime @default(now())
-  campaign    SponsorCampaign? @relation(fields: [campaignId], references: [id])
-  impressions SponsoredQuestionImpression[]
-  answers     SponsoredQuestionAnswer[]
+  question      String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  answer        String
+  rewardType    String                        @default("points")
+  rewardValue   String?
+  isActive      Boolean                       @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime                      @default(now())
+  campaign      SponsorCampaign?              @relation(fields: [campaignId], references: [id])
+  impressions   SponsoredQuestionImpression[]
+  answers       SponsoredQuestionAnswer[]
 
   @@index([isActive])
   @@index([campaignId])
 }
 
 model SponsorCampaign {
-  id                String                      @id @default(cuid())
-  internalName      String
-  brandName         String
-  brandLogoUrl      String?
-  brandLandingUrl   String?
-  packageType       String                      @default("weekly")
-  status            String                      @default("draft")
-  isActive          Boolean                     @default(false)
-  startDate         DateTime?
-  endDate           DateTime?
-  maxImpressions    Int?
-  maxRewardGrants   Int?
-  selectionWeight   Int                         @default(1)
-  exclusivityType   String?
-  internalNotes     String?
-  createdById       String
-  approvedById      String?
-  createdAt         DateTime                    @default(now())
-  updatedAt         DateTime                    @updatedAt
-  createdBy         User                        @relation("CampaignCreator", fields: [createdById], references: [id])
-  approvedBy        User?                       @relation("CampaignApprover", fields: [approvedById], references: [id])
-  questions         SponsoredQuestion[]
-  impressions       SponsoredQuestionImpression[]
-  answers           SponsoredQuestionAnswer[]
-  rewardGrants      SponsoredRewardGrant[]
-  discountCodes     DiscountCodePool[]
+  id              String                        @id @default(cuid())
+  internalName    String
+  brandName       String
+  brandLogoUrl    String?
+  brandLandingUrl String?
+  packageType     String                        @default("weekly")
+  status          String                        @default("draft")
+  isActive        Boolean                       @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  maxImpressions  Int?
+  maxRewardGrants Int?
+  selectionWeight Int                           @default(1)
+  exclusivityType String?
+  internalNotes   String?
+  createdById     String
+  approvedById    String?
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  createdBy       User                          @relation("CampaignCreator", fields: [createdById], references: [id])
+  approvedBy      User?                         @relation("CampaignApprover", fields: [approvedById], references: [id])
+  questions       SponsoredQuestion[]
+  impressions     SponsoredQuestionImpression[]
+  answers         SponsoredQuestionAnswer[]
+  rewardGrants    SponsoredRewardGrant[]
+  discountCodes   DiscountCodePool[]
 
   @@index([isActive])
   @@index([status])
@@ -4261,15 +4288,15 @@ model SponsorCampaign {
 }
 
 model SponsoredQuestionImpression {
-  id                  String          @id @default(cuid())
+  id                  String            @id @default(cuid())
   campaignId          String
   sponsoredQuestionId String
   campgroundId        String?
   playerId            String
-  servedAt            DateTime        @default(now())
-  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  servedAt            DateTime          @default(now())
+  campaign            SponsorCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   question            SponsoredQuestion @relation(fields: [sponsoredQuestionId], references: [id], onDelete: Cascade)
-  player              User            @relation("SponsoredImpressions", fields: [playerId], references: [id], onDelete: Cascade)
+  player              User              @relation("SponsoredImpressions", fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([sponsoredQuestionId])
@@ -4278,34 +4305,34 @@ model SponsoredQuestionImpression {
 }
 
 model SponsoredQuestionAnswer {
-  id                  String          @id @default(cuid())
+  id                  String            @id @default(cuid())
   campaignId          String
   sponsoredQuestionId String
   playerId            String
   selectedAnswer      String
   isCorrect           Boolean
-  answeredAt          DateTime        @default(now())
+  answeredAt          DateTime          @default(now())
   responseTimeMs      Int?
-  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign            SponsorCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   question            SponsoredQuestion @relation(fields: [sponsoredQuestionId], references: [id], onDelete: Cascade)
-  player              User            @relation("SponsoredAnswers", fields: [playerId], references: [id], onDelete: Cascade)
+  player              User              @relation("SponsoredAnswers", fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([playerId])
 }
 
 model SponsoredRewardGrant {
-  id                  String          @id @default(cuid())
+  id                  String            @id @default(cuid())
   campaignId          String
   sponsoredQuestionId String
   playerId            String
   rewardType          String
   rewardValue         String?
   codeId              String?
-  grantedAt           DateTime        @default(now())
-  status              String          @default("granted")
-  campaign            SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  player              User            @relation("SponsoredRewards", fields: [playerId], references: [id], onDelete: Cascade)
+  grantedAt           DateTime          @default(now())
+  status              String            @default("granted")
+  campaign            SponsorCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  player              User              @relation("SponsoredRewards", fields: [playerId], references: [id], onDelete: Cascade)
   code                DiscountCodePool? @relation(fields: [codeId], references: [id])
 
   @@index([campaignId])
@@ -4314,17 +4341,17 @@ model SponsoredRewardGrant {
 }
 
 model DiscountCodePool {
-  id                String          @id @default(cuid())
-  campaignId        String
-  code              String          @unique
-  status            String          @default("available")
-  assignedToId      String?
-  assignedAt        DateTime?
-  redeemedAt        DateTime?
-  createdAt         DateTime        @default(now())
-  campaign          SponsorCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  assignedTo        User?           @relation("AssignedCodes", fields: [assignedToId], references: [id])
-  rewardGrant       SponsoredRewardGrant[]
+  id           String                 @id @default(cuid())
+  campaignId   String
+  code         String                 @unique
+  status       String                 @default("available")
+  assignedToId String?
+  assignedAt   DateTime?
+  redeemedAt   DateTime?
+  createdAt    DateTime               @default(now())
+  campaign     SponsorCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  assignedTo   User?                  @relation("AssignedCodes", fields: [assignedToId], references: [id])
+  rewardGrant  SponsoredRewardGrant[]
 
   @@index([campaignId])
   @@index([status])
@@ -4367,45 +4394,45 @@ model Board {
 }
 
 model BoardPost {
-  id          String         @id @default(cuid())
-  boardId     String
-  authorId    String
-  title       String
-  body        String
-  postType    String         @default("DISCUSSION") // DISCUSSION, QUESTION, PHOTO, TRIP_REPORT, RECIPE, UPGRADE, HUMOR
-  imageUrl    String?
-  tags        String[]
-  voteScore   Int            @default(0)
-  commentCount Int           @default(0)
-  isPinned    Boolean        @default(false)
-  isClosed    Boolean        @default(false)
+  id           String         @id @default(cuid())
+  boardId      String
+  authorId     String
+  title        String
+  body         String
+  postType     String         @default("DISCUSSION") // DISCUSSION, QUESTION, PHOTO, TRIP_REPORT, RECIPE, UPGRADE, HUMOR
+  imageUrl     String?
+  tags         String[]
+  voteScore    Int            @default(0)
+  commentCount Int            @default(0)
+  isPinned     Boolean        @default(false)
+  isClosed     Boolean        @default(false)
   bestAnswerId String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  board       Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments    BoardComment[]
-  votes       BoardVote[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  board        Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments     BoardComment[]
+  votes        BoardVote[]
 
   @@index([boardId, createdAt])
   @@index([voteScore])
 }
 
 model BoardComment {
-  id          String        @id @default(cuid())
-  postId      String
-  authorId    String
-  parentId    String?
-  body        String
-  voteScore   Int           @default(0)
-  isBestAnswer Boolean      @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  post        BoardPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent      BoardComment? @relation("CommentReplies", fields: [parentId], references: [id])
-  replies     BoardComment[] @relation("CommentReplies")
-  votes       BoardVote[]
+  id           String         @id @default(cuid())
+  postId       String
+  authorId     String
+  parentId     String?
+  body         String
+  voteScore    Int            @default(0)
+  isBestAnswer Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  post         BoardPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent       BoardComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies      BoardComment[] @relation("CommentReplies")
+  votes        BoardVote[]
 
   @@index([postId])
 }
@@ -4415,7 +4442,7 @@ model BoardVote {
   userId    String
   postId    String?
   commentId String?
-  value     Int           // 1 or -1
+  value     Int // 1 or -1
   createdAt DateTime      @default(now())
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   post      BoardPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -4479,16 +4506,16 @@ model Household {
 }
 
 model HouseholdInvite {
-  id         String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String?
-  senderId   String
-  receiverId String
-  status     String    @default("PENDING") // PENDING, ACCEPTED, DECLINED
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  household  Household? @relation(fields: [householdId], references: [id])
-  sender     User      @relation("HouseholdInviteSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User      @relation("HouseholdInviteReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  senderId    String
+  receiverId  String
+  status      String     @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  household   Household? @relation(fields: [householdId], references: [id])
+  sender      User       @relation("HouseholdInviteSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User       @relation("HouseholdInviteReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([receiverId])
@@ -4496,16 +4523,16 @@ model HouseholdInvite {
 }
 
 model ScrapbookPin {
-  id          String   @id @default(cuid())
-  eventId     String
-  photoId     String
-  pinnedById  String
-  caption     String?
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  photo       Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  pinnedBy    User     @relation(fields: [pinnedById], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  eventId    String
+  photoId    String
+  pinnedById String
+  caption    String?
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  photo      Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  pinnedBy   User     @relation(fields: [pinnedById], references: [id], onDelete: Cascade)
 
   @@unique([eventId, photoId])
   @@index([eventId])
@@ -4525,7 +4552,6 @@ model TripStory {
   @@index([eventId])
 }
 
-
 model WorkBlock {
   id        String   @id @default(cuid())
   eventId   String
@@ -4540,20 +4566,20 @@ model WorkBlock {
 }
 
 model DriveSession {
-  id                  String   @id @default(cuid())
-  userId              String
-  startTime           DateTime @default(now())
-  endTime             DateTime?
-  totalDriveSeconds   Int      @default(0)
-  totalStopSeconds    Int      @default(0)
-  breakCount          Int      @default(0)
-  longestStretchSecs  Int      @default(0)
-  fatigueScoreAtEnd   Int      @default(0)
-  grade               String   @default("B")
-  alertnessChecks     String[] @default([])
-  eventId             String?
-  createdAt           DateTime @default(now())
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(cuid())
+  userId             String
+  startTime          DateTime  @default(now())
+  endTime            DateTime?
+  totalDriveSeconds  Int       @default(0)
+  totalStopSeconds   Int       @default(0)
+  breakCount         Int       @default(0)
+  longestStretchSecs Int       @default(0)
+  fatigueScoreAtEnd  Int       @default(0)
+  grade              String    @default("B")
+  alertnessChecks    String[]  @default([])
+  eventId            String?
+  createdAt          DateTime  @default(now())
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([eventId])
@@ -4586,32 +4612,32 @@ model PushSubscription {
 }
 
 model QuizLead {
-  id              String    @id @default(cuid())
-  email           String?
-  firstName       String?
-  rvType          String?
-  travelStyle     String?
-  vibe            String?
-  priorities      String[]
-  states          String[]
-  createdAt       DateTime  @default(now())
-  emailSentAt     DateTime?
-  convertedAt     DateTime?
-  userId          String?
+  id          String    @id @default(cuid())
+  email       String?
+  firstName   String?
+  rvType      String?
+  travelStyle String?
+  vibe        String?
+  priorities  String[]
+  states      String[]
+  createdAt   DateTime  @default(now())
+  emailSentAt DateTime?
+  convertedAt DateTime?
+  userId      String?
 
   @@index([email])
 }
 
 model RigConnection {
-  id              String   @id @default(cuid())
-  requesterId     String
-  receiverId      String
-  status          String   @default("PENDING")
-  rigData         Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  requester       User     @relation("RigConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver        User     @relation("RigConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      String   @default("PENDING")
+  rigData     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  requester   User     @relation("RigConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("RigConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, receiverId])
   @@index([receiverId, status])
@@ -4629,26 +4655,26 @@ model EmailDripLog {
 }
 
 model CampfireTip {
-  id             String              @id @default(cuid())
-  campgroundId   String
-  authorId       String
-  tripId         String?
-  recipientId    String?
-  title          String?
-  content        String
-  category       String?
-  helpfulCount   Int                 @default(0)
-  savedCount     Int                 @default(0)
-  isReusable     Boolean             @default(true)
-  authorVisitCount Int               @default(1)
-  lastVisitedAt  DateTime?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  campground     Campground          @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  author         User                @relation("CampfireTipAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  recipient      User?               @relation("CampfireTipRecipient", fields: [recipientId], references: [id])
-  trip           Event?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  reactions      CampfireTipReaction[]
+  id               String                @id @default(cuid())
+  campgroundId     String
+  authorId         String
+  tripId           String?
+  recipientId      String?
+  title            String?
+  content          String
+  category         String?
+  helpfulCount     Int                   @default(0)
+  savedCount       Int                   @default(0)
+  isReusable       Boolean               @default(true)
+  authorVisitCount Int                   @default(1)
+  lastVisitedAt    DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  campground       Campground            @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  author           User                  @relation("CampfireTipAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient        User?                 @relation("CampfireTipRecipient", fields: [recipientId], references: [id])
+  trip             Event?                @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  reactions        CampfireTipReaction[]
 
   @@index([campgroundId])
   @@index([authorId])
@@ -4660,7 +4686,7 @@ model CampfireTipReaction {
   id        String      @id @default(cuid())
   tipId     String
   userId    String
-  type      String      // HELPFUL, SAVE, APPRECIATE
+  type      String // HELPFUL, SAVE, APPRECIATE
   createdAt DateTime    @default(now())
   tip       CampfireTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4671,12 +4697,13 @@ model CampfireTipReaction {
 }
 
 model HiddenPost {
-  id          String   @id @default(cuid())
-  userId      String
-  activityId  String
-  reason      String?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  activityId String
+  reason     String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, activityId])
   @@index([userId])
 }
@@ -4690,6 +4717,7 @@ model FeedPreference {
   createdAt    DateTime  @default(now())
   user         User      @relation("FeedPrefUser", fields: [userId], references: [id], onDelete: Cascade)
   target       User      @relation("FeedPrefTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
   @@unique([userId, targetUserId])
   @@index([userId, type])
 }
@@ -4702,6 +4730,7 @@ model FeedSignal {
   contentType String?
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, contentType])
 }
 
@@ -4712,32 +4741,34 @@ model ContentTypePreference {
   preference  String
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, contentType])
 }
 
 model LastMinuteDeal {
-  id              String    @id @default(cuid())
+  id              String               @id @default(cuid())
   campgroundId    String
   ownerId         String
   title           String
   description     String?
   availableFrom   DateTime
   availableTo     DateTime
-  sitesAvailable  Int       @default(1)
+  sitesAvailable  Int                  @default(1)
   originalPrice   Float?
   discountPrice   Float?
   discountPercent Int?
   maxRigLength    Float?
-  requiresHookups Boolean   @default(false)
-  allowsPets      Boolean   @default(true)
-  isActive        Boolean   @default(true)
-  notifiedCount   Int       @default(0)
-  viewCount       Int       @default(0)
-  createdAt       DateTime  @default(now())
+  requiresHookups Boolean              @default(false)
+  allowsPets      Boolean              @default(true)
+  isActive        Boolean              @default(true)
+  notifiedCount   Int                  @default(0)
+  viewCount       Int                  @default(0)
+  createdAt       DateTime             @default(now())
   expiresAt       DateTime
-  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  owner           User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  campground      Campground           @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  owner           User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   views           LastMinuteDealView[]
+
   @@index([campgroundId, isActive])
   @@index([expiresAt, isActive])
   @@index([availableFrom])
@@ -4750,6 +4781,7 @@ model LastMinuteDealView {
   createdAt DateTime       @default(now())
   deal      LastMinuteDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([dealId, userId])
 }
 
@@ -4790,6 +4822,7 @@ model WelcomeKitSection {
   updatedAt DateTime                @updatedAt
   kit       WelcomeKit              @relation(fields: [kitId], references: [id], onDelete: Cascade)
   items     WelcomeKitSectionItem[]
+
   @@index([kitId, sortOrder])
 }
 
@@ -4802,6 +4835,7 @@ model WelcomeKitSectionItem {
   icon      String?
   sortOrder Int               @default(0)
   section   WelcomeKitSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
   @@index([sectionId, sortOrder])
 }
 
@@ -4816,6 +4850,7 @@ model EventScheduleItem {
   isOptional  Boolean   @default(false)
   createdAt   DateTime  @default(now())
   event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@index([eventId, startTime])
 }
 
@@ -4829,38 +4864,41 @@ model EventAnnouncement {
   createdAt DateTime @default(now())
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
   @@index([eventId])
 }
 
 model EventDish {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   mealId    String
   userId    String
   dishName  String
   servings  Int?
   allergens String[]
   recipeId  String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   meal      EventMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event?    @relation(fields: [eventId], references: [id])
   eventId   String?
+
   @@index([mealId])
 }
 
 model UserSocialPlan {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   eventId      String?
   campgroundId String?
   title        String
   description  String?
   scheduledFor DateTime?
-  visibility   String   @default("FRIENDS")
+  visibility   String    @default("FRIENDS")
   inviteeIds   String[]
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event        Event?   @relation(fields: [eventId], references: [id])
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        Event?    @relation(fields: [eventId], references: [id])
+
   @@index([userId])
   @@index([eventId])
 }
@@ -4875,6 +4913,7 @@ model EventBlast {
   recipientCount Int      @default(0)
   event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
   @@index([eventId])
 }
 
@@ -4887,6 +4926,7 @@ model EventCheckIn {
   siteNumber  String?
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
 }
 
@@ -4902,6 +4942,7 @@ model EventPoll {
   event     Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   responses EventPollResponse[]
+
   @@index([eventId, isActive])
 }
 
@@ -4913,6 +4954,7 @@ model EventPollResponse {
   respondedAt DateTime  @default(now())
   poll        EventPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([pollId, userId])
 }
 
@@ -4939,80 +4981,83 @@ model EventTemplate {
 // ── Co-Host Autopilot Models ────────────────────────────────────
 
 model EventPopUp {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   eventId        String
   title          String
   description    String?
   scheduledTime  DateTime?
-  createdByHitch Boolean  @default(false)
+  createdByHitch Boolean   @default(false)
   triggeredBy    String?
-  status         String   @default("SUGGESTED") // SUGGESTED | APPROVED | LIVE | COMPLETED | DISMISSED
-  createdAt      DateTime @default(now())
-  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status         String    @default("SUGGESTED") // SUGGESTED | APPROVED | LIVE | COMPLETED | DISMISSED
+  createdAt      DateTime  @default(now())
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@index([eventId])
 }
 
 model EventHighlight {
-  id              String   @id @default(cuid())
-  eventId         String
-  messageSnippet  String
-  reactionCount   Int      @default(0)
-  replyCount      Int      @default(0)
-  authorName      String?
-  createdAt       DateTime @default(now())
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  eventId        String
+  messageSnippet String
+  reactionCount  Int      @default(0)
+  replyCount     Int      @default(0)
+  authorName     String?
+  createdAt      DateTime @default(now())
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@index([eventId])
 }
 
 model EventConnection {
-  id              String   @id @default(cuid())
-  eventId         String
-  userAId         String
-  userBId         String
-  interactedInChat Boolean @default(false)
-  followedAfter   Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  userA           User     @relation("ConnectionUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB           User     @relation("ConnectionUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  eventId          String
+  userAId          String
+  userBId          String
+  interactedInChat Boolean  @default(false)
+  followedAfter    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userA            User     @relation("ConnectionUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB            User     @relation("ConnectionUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userAId, userBId])
   @@index([eventId])
 }
 
 model TripMemoryRecord {
-  id                String   @id @default(cuid())
-  eventId           String   @unique
-  totalAttended     Int      @default(0)
-  newConnections    Int      @default(0)
-  popUpEventsCreated Int     @default(0)
-  hitchMessagesSent Int      @default(0)
-  nextTimeSuggestions String[]  @default([])
-  createdAt         DateTime @default(now())
-  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  eventId             String   @unique
+  totalAttended       Int      @default(0)
+  newConnections      Int      @default(0)
+  popUpEventsCreated  Int      @default(0)
+  hitchMessagesSent   Int      @default(0)
+  nextTimeSuggestions String[] @default([])
+  createdAt           DateTime @default(now())
+  event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model CompanionSession {
-  id            String   @id @default(cuid())
-  userId        String
-  campgroundId  String
-  character     String
-  isLurkMode    Boolean  @default(false)
-  messageCount  Int      @default(0)
-  startedAt     DateTime @default(now())
-  lastActiveAt  DateTime @updatedAt
-  user          User     @relation("CompanionSessions", fields: [userId], references: [id])
+  id           String   @id @default(cuid())
+  userId       String
+  campgroundId String
+  character    String
+  isLurkMode   Boolean  @default(false)
+  messageCount Int      @default(0)
+  startedAt    DateTime @default(now())
+  lastActiveAt DateTime @updatedAt
+  user         User     @relation("CompanionSessions", fields: [userId], references: [id])
 
   @@index([userId, campgroundId])
 }
 
 model CampgroundInsight {
-  id            String   @id @default(cuid())
-  campgroundId  String
-  userId        String
-  source        String   @default("COMPANION_CHAT")
-  insightType   String
-  value         String
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  campgroundId String
+  userId       String
+  source       String   @default("COMPANION_CHAT")
+  insightType  String
+  value        String
+  createdAt    DateTime @default(now())
 
   @@index([campgroundId])
 }
@@ -5032,17 +5077,18 @@ model OAuthAccount {
 }
 
 model CommunityPostSummary {
-  id          String   @id @default(cuid())
-  postId      String   @unique
-  summary     String
+  id           String   @id @default(cuid())
+  postId       String   @unique
+  summary      String
   commentCount Int
-  generatedAt DateTime @default(now())
+  generatedAt  DateTime @default(now())
 }
 
 model BoardRevival {
-  id        String   @id @default(cuid())
-  boardId   String
-  postedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  boardId  String
+  postedAt DateTime @default(now())
+
   @@index([boardId])
 }
 
@@ -5053,16 +5099,18 @@ model OnboardingEvent {
   metadata  Json?
   createdAt DateTime @default(now())
   user      User     @relation("OnboardingEvents", fields: [userId], references: [id])
+
   @@index([userId])
 }
 
 model TripViewEvent {
-  id            String   @id @default(cuid())
-  tripId        String
-  viewerUserId  String?
-  referrer      String?
-  userAgent     String?
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  tripId       String
+  viewerUserId String?
+  referrer     String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
   @@index([tripId])
 }
 
@@ -5073,12 +5121,13 @@ model ReferralEvent {
   source         String
   tripSlug       String?
   createdAt      DateTime @default(now())
+
   @@index([referrerId])
 }
 
 model CampgroundRules {
-  id              String   @id @default(cuid())
-  campgroundId    String   @unique
+  id              String     @id @default(cuid())
+  campgroundId    String     @unique
   campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
   checkInTime     String?
   checkOutTime    String?
@@ -5095,55 +5144,58 @@ model CampgroundRules {
   alcoholPolicy   String?
   swimRules       String?
   trashPolicy     String?
-  additionalRules String[]  @default([])
+  additionalRules String[]   @default([])
   rawText         String?
-  scrapedAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  scrapedAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model JobPosting {
-  id              String    @id @default(cuid())
-  campgroundId    String
-  createdById     String
-  title           String
-  description     String?
-  jobType         String    @default("SEASONAL")
-  compensation    String?
-  salary          String?
-  siteIncluded    Boolean   @default(false)
-  hoursPerWeek    Int?
-  startDate       DateTime?
-  endDate         DateTime?
-  requirements    String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  applications    JobApplication[]
-  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  createdBy       User       @relation("JobPostingsCreated", fields: [createdById], references: [id])
+  id           String           @id @default(cuid())
+  campgroundId String
+  createdById  String
+  title        String
+  description  String?
+  jobType      String           @default("SEASONAL")
+  compensation String?
+  salary       String?
+  siteIncluded Boolean          @default(false)
+  hoursPerWeek Int?
+  startDate    DateTime?
+  endDate      DateTime?
+  requirements String?
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  applications JobApplication[]
+  campground   Campground       @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  createdBy    User             @relation("JobPostingsCreated", fields: [createdById], references: [id])
+
   @@index([campgroundId])
   @@index([isActive])
 }
 
 model JobApplication {
-  id           String   @id @default(cuid())
-  jobId        String
-  userId       String
-  status       String   @default("PENDING")
-  coverLetter  String?
-  hiredAt      DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  job          JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user         User       @relation("JobApplications", fields: [userId], references: [id])
+  id          String     @id @default(cuid())
+  jobId       String
+  userId      String
+  status      String     @default("PENDING")
+  coverLetter String?
+  hiredAt     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  job         JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user        User       @relation("JobApplications", fields: [userId], references: [id])
+
   @@unique([jobId, userId])
 }
 
 model SharedFireAlert {
-  id          String   @id @default(cuid())
-  userId      String
-  fromUserId  String
-  sentAt      DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  fromUserId String
+  sentAt     DateTime @default(now())
+
   @@unique([userId, fromUserId])
 }
 
@@ -5156,10 +5208,10 @@ model ShareEvent {
 }
 
 model CampgroundSubscription {
-  id                   String   @id @default(cuid())
-  campgroundId         String   @unique
-  tier                 String   @default("TRAILHEAD")
-  status               String   @default("ACTIVE")
+  id                   String     @id @default(cuid())
+  campgroundId         String     @unique
+  tier                 String     @default("TRAILHEAD")
+  status               String     @default("ACTIVE")
   stripeCustomerId     String?
   stripeSubscriptionId String?
   stripePriceId        String?
@@ -5169,29 +5221,116 @@ model CampgroundSubscription {
   currentPeriodEnd     DateTime?
   pausedAt             DateTime?
   pauseResumesAt       DateTime?
-  isFoundingMember     Boolean  @default(false)
+  isFoundingMember     Boolean    @default(false)
   foundingMemberSince  DateTime?
   cancelledAt          DateTime?
   cancellationReason   String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   campground           Campground @relation("CampgroundSub", fields: [campgroundId], references: [id])
 }
 
 model UpsellEvent {
-  id            String    @id @default(cuid())
-  campgroundId  String
-  trigger       String
-  shownAt       DateTime  @default(now())
-  converted     Boolean   @default(false)
-  convertedAt   DateTime?
+  id           String    @id @default(cuid())
+  campgroundId String
+  trigger      String
+  shownAt      DateTime  @default(now())
+  converted    Boolean   @default(false)
+  convertedAt  DateTime?
 }
 
 model GhostAnalyticsEmail {
-  id            String   @id @default(cuid())
+  id           String   @id @default(cuid())
+  campgroundId String
+  email        String
+  sentAt       DateTime @default(now())
+  opened       Boolean  @default(false)
+  claimed      Boolean  @default(false)
+}
+
+model LocalBusiness {
+  id               String                    @id @default(cuid())
+  name             String
+  description      String?
+  category         String
+  address          String?
+  city             String?
+  state            String?
+  latitude         Float?
+  longitude        Float?
+  phone            String?
+  website          String?
+  imageUrl         String?
+  hoursOfOperation String?
+  priceRange       String?
+  isActive         Boolean                   @default(true)
+  isPremium        Boolean                   @default(false)
+  ownerId          String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  campgroundLinks  LocalBusinessCampground[]
+
+  @@index([category])
+  @@index([state])
+}
+
+model LocalBusinessCampground {
+  id            String        @id @default(cuid())
+  businessId    String
   campgroundId  String
-  email         String
-  sentAt        DateTime @default(now())
-  opened        Boolean  @default(false)
-  claimed       Boolean  @default(false)
+  distanceMiles Float?
+  business      LocalBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, campgroundId])
+  @@index([campgroundId])
+}
+
+model DealerProfile {
+  id          String          @id @default(cuid())
+  userId      String          @unique
+  dealerName  String
+  description String?
+  address     String?
+  city        String?
+  state       String?
+  phone       String?
+  website     String?
+  logoUrl     String?
+  bannerUrl   String?
+  isVerified  Boolean         @default(false)
+  isActive    Boolean         @default(true)
+  tier        String          @default("BASIC")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  listings    DealerListing[]
+  user        User            @relation("DealerProfile", fields: [userId], references: [id])
+
+  @@index([state])
+}
+
+model DealerListing {
+  id           String        @id @default(cuid())
+  dealerId     String
+  title        String
+  description  String?
+  videoUrl     String?
+  thumbnailUrl String?
+  imageUrls    String[]      @default([])
+  rigClass     String?
+  make         String?
+  model        String?
+  year         Int?
+  price        Float?
+  mileage      Int?
+  condition    String?
+  features     String[]      @default([])
+  isActive     Boolean       @default(true)
+  viewCount    Int           @default(0)
+  inquiryCount Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  dealer       DealerProfile @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([rigClass])
+  @@index([make])
 }

@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../index';
+import {
+  submitPriceReport,
+  getPriceStats,
+  shouldPromptForPriceReport,
+} from '../services/campground-pricing.service';
 
 const router = Router();
 
@@ -890,3 +895,71 @@ router.get('/:id/pulse-feed', async (req: any, res: any) => {
     res.json({ events: [] });
   }
 });
+
+
+// ─────────────────────────────────────────────────────────────────
+// Crowdsourced pricing — POST a price report, GET aggregated stats,
+// and check whether the current user should be prompted for a report.
+// See backend/src/services/campground-pricing.service.ts
+// ─────────────────────────────────────────────────────────────────
+
+// POST /api/campgrounds/:id/price-report
+router.post("/:id/price-report", authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { id: campgroundId } = req.params;
+    const { pricePaid, siteType, hookupLevel, season, notes } = req.body;
+
+    if (typeof pricePaid !== "number" || pricePaid <= 0 || pricePaid > 1000) {
+      return res.status(400).json({ error: "pricePaid must be a number between 0 and 1000" });
+    }
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { id: true },
+    });
+    if (!campground) return res.status(404).json({ error: "Campground not found" });
+
+    const report = await submitPriceReport({
+      campgroundId,
+      userId,
+      pricePaid,
+      siteType: typeof siteType === "string" ? siteType : undefined,
+      hookupLevel: typeof hookupLevel === "string" ? hookupLevel : undefined,
+      season: typeof season === "string" ? season : undefined,
+      notes: typeof notes === "string" ? notes : undefined,
+    });
+    res.json({ report });
+  } catch (e: any) {
+    console.error("Submit price report error:", e?.message);
+    res.status(500).json({ error: e?.message || "Failed to submit price report" });
+  }
+});
+
+// GET /api/campgrounds/:id/price-stats — public, anyone can read
+router.get("/:id/price-stats", optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const stats = await getPriceStats(id);
+    res.json(stats);
+  } catch (e: any) {
+    console.error("Get price stats error:", e?.message);
+    res.status(500).json({ error: "Failed to fetch price stats" });
+  }
+});
+
+// GET /api/campgrounds/:id/price-prompt-eligible — does the current user
+// qualify for a "what did you pay?" prompt right now? Used by the frontend
+// to decide whether to show the report banner.
+router.get("/:id/price-prompt-eligible", authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id: campgroundId } = req.params;
+    const eligible = await shouldPromptForPriceReport(userId, campgroundId);
+    res.json({ eligible });
+  } catch (e: any) {
+    console.error("Price prompt eligible error:", e?.message);
+    res.json({ eligible: false });
+  }
+});
+
