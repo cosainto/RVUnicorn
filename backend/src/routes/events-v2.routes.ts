@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { computeEventLifecycle, computePresenceStatus } from '../helpers/event-status';
 import { sendWebPush } from '../utils/webPush';
+import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -32,13 +33,18 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
         bannerImage: bannerImage || null,
         location: locationName || null,
       },
-      include: { organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } }, campground: { select: { id: true, name: true, imageUrl: true } } },
+      include: { organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } }, campground: { select: { id: true, name: true, state: true, imageUrl: true } } },
     });
 
     // Auto-add organizer as CONFIRMED attendee
     await prisma.eventAttendee.create({
       data: { eventId: event.id, userId: organizerId, status: 'ATTENDING', participationMode: 'FULL' },
     }).catch(() => {});
+
+    // Record the visit so the user's travel map and stats reflect this trip
+    if (event.campground) {
+      await recordCampgroundVisit(organizerId, event, event.campground);
+    }
 
     res.json({ event });
   } catch (e) {

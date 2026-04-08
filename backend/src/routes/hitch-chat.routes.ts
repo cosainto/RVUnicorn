@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -293,6 +294,16 @@ Keep responses helpful and specific. Reference the user by name when you have it
             privacy: 'PRIVATE',
           }
         });
+
+        // Record the visit so the user's travel map and stats reflect this trip
+        if (campgroundId) {
+          const cg = await prisma.campground.findUnique({
+            where: { id: campgroundId },
+            select: { id: true, name: true, state: true },
+          });
+          if (cg) await recordCampgroundVisit(userId, event, cg);
+        }
+
         tripCreated = { id: event.id, title: event.title };
         cleanMessage = cleanMessage.replace(/<<CREATE_TRIP>>[\s\S]*?<<\/CREATE_TRIP>>/g, '').trim();
         cleanMessage += '\n\n✅ Trip created! Your trip "' + event.title + '" has been added to your calendar. [View Trip](/trips/' + event.id + ')';

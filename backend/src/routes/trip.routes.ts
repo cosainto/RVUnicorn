@@ -8,32 +8,15 @@ import { prisma } from '../index';
 import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
 import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
+import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
 
-// Helper function to create StateVisit for a user
-async function createStateVisitForUser(userId: string, event: any, campground: any) {
-  if (!campground?.state) return;
-  
-  const existing = await prisma.stateVisit.findFirst({
-    where: { userId, eventId: event.id },
-  });
-  
-  if (!existing) {
-    await prisma.stateVisit.create({
-      data: {
-        userId,
-        state: campground.state,
-        startDate: new Date(event.startDate),
-        endDate: event.endDate ? new Date(event.endDate) : null,
-        campsiteId: campground.id,
-        eventId: event.id,
-        notes: `${event.title} at ${campground.name}`,
-        visibility: 'PUBLIC',
-      },
-    }).catch(() => {});
-  }
-}
+// Local alias — the canonical implementation lives in
+// services/visit-stats.service.ts so every event creation path can
+// use the same write helper. Kept under the old name to minimize the
+// diff in this file.
+const createStateVisitForUser = recordCampgroundVisit;
 
 // GET /api/events - Get all events
 router.get('/', async (req, res) => {

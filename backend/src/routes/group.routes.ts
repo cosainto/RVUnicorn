@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { PrismaClient } from '@prisma/client';
 import { checkAndAwardBadges, BadgeTrigger } from '../services/badge.service';
+import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -711,8 +712,14 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
             profilePicture: true,
           },
         },
+        campground: { select: { id: true, name: true, state: true } },
       },
     });
+
+    // Record the visit so it shows on the organizer's travel map and stats
+    if (event.campground) {
+      await recordCampgroundVisit(userId, event, event.campground);
+    }
 
     // Auto-invite all group members as attendees
     const attendeeData = group.members.map((m) => ({
@@ -836,8 +843,14 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
             profilePicture: true,
           },
         },
+        campground: { select: { id: true, name: true, state: true } },
       },
     });
+
+    // Record the visit so it shows on the organizer's travel map and stats
+    if (event.campground) {
+      await recordCampgroundVisit(userId, event, event.campground);
+    }
 
     // Auto-invite all group members as attendees
     const attendeeData = group.members.map((m) => ({
