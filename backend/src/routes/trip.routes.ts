@@ -7,6 +7,7 @@ import { logRsvpUpdated } from '../services/activity.service';
 import { prisma } from '../index';
 import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
+import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
 
 const router = Router();
 
@@ -542,6 +543,13 @@ router.post('/', authenticateToken, async (req, res) => {
     // Trigger Campfire Tip prompts for friends who visited this campground
     if (event.campgroundId && new Date(startDate) >= new Date()) {
       triggerTipPromptsForTrip(event.id, userId, event.campgroundId).catch(() => {});
+    }
+
+    // Generate Hitch's initial campfire tips for this trip (fire-and-forget).
+    // Only for trips with a campground that haven't already started — past
+    // trips don't need anticipatory tips.
+    if (event.campgroundId && new Date(startDate) >= new Date()) {
+      generateHitchTipsForEvent(event.id, 'INITIAL').catch(() => {});
     }
 
     // Log activity for friend feed (only for non-private events)

@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../prisma';
 import { runTripCheckinReminder } from './trip-checkin-reminder';
+import { runHitchPretripTips } from '../services/hitch-tips.service';
 import { runStargazingCron, runWalletChaosCron } from './stargazing-cron';
 import { runWeatherAlertCron } from './weather-alert-cron';
 import { runEmailDripCron } from './email-drip';
@@ -722,6 +723,9 @@ export function registerTriviaCrons(io: any) {
 
   // Daily 9:00 AM — trip check-in reminder
   cron.schedule('0 9 * * *', () => runTripCheckinReminder(), { timezone: 'America/Chicago' });
+
+  // Daily 9:05 AM — Hitch pretrip campfire tips for trips starting in 2 days
+  cron.schedule('5 9 * * *', () => runHitchPretripTips(), { timezone: 'America/Chicago' });
 
   // Hourly — NWS severe weather alerts for checked-in campers (SMS)
   cron.schedule('0 * * * *', async () => {
