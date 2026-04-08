@@ -84,14 +84,15 @@ export default function CampfireTips({ campgroundId, tripId, campgroundName, com
       // Optimistic update
       setTips(prev => prev.map(t => {
         if (t.id !== tipId) return t;
-        const hasReaction = t.reactions.some(r => r.userId === user?.id && r.type === type);
+        const reactions = t.reactions || [];
+        const hasReaction = reactions.some(r => r.userId === user?.id && r.type === type);
         return {
           ...t,
           helpfulCount: type === 'HELPFUL' ? t.helpfulCount + (hasReaction ? -1 : 1) : t.helpfulCount,
           savedCount: type === 'SAVE' ? t.savedCount + (hasReaction ? -1 : 1) : t.savedCount,
           reactions: hasReaction
-            ? t.reactions.filter(r => !(r.userId === user?.id && r.type === type))
-            : [...t.reactions, { userId: user?.id, type }],
+            ? reactions.filter(r => !(r.userId === user?.id && r.type === type))
+            : [...reactions, { userId: user?.id || '', type }],
         };
       }));
     } catch {}
@@ -214,18 +215,28 @@ export default function CampfireTips({ campgroundId, tripId, campgroundName, com
 
                 {/* Reactions */}
                 <div className="flex items-center gap-3 mt-2">
-                  <button onClick={() => handleReact(tip.id, 'HELPFUL')}
-                    className={`flex items-center gap-1 text-xs transition ${tip.reactions.some(r => r.userId === user?.id && r.type === 'HELPFUL') ? 'text-green-600 font-semibold' : 'text-gray-400 hover:text-green-600'}`}>
-                    <ThumbsUp className="w-3.5 h-3.5" /> {tip.helpfulCount > 0 ? tip.helpfulCount : ''} Helpful
-                  </button>
-                  <button onClick={() => handleReact(tip.id, 'SAVE')}
-                    className={`flex items-center gap-1 text-xs transition ${tip.reactions.some(r => r.userId === user?.id && r.type === 'SAVE') ? 'text-blue-600 font-semibold' : 'text-gray-400 hover:text-blue-600'}`}>
-                    <Bookmark className="w-3.5 h-3.5" /> Save
-                  </button>
-                  <button onClick={() => handleReact(tip.id, 'APPRECIATE')}
-                    className={`flex items-center gap-1 text-xs transition ${tip.reactions.some(r => r.userId === user?.id && r.type === 'APPRECIATE') ? 'text-red-500 font-semibold' : 'text-gray-400 hover:text-red-500'}`}>
-                    <Heart className="w-3.5 h-3.5" />
-                  </button>
+                  {(() => {
+                    // API doesn't always return a reactions array on every tip,
+                    // so default to [] before calling .some() to avoid crashing.
+                    const reactions = tip.reactions || [];
+                    const reacted = (t: string) => reactions.some(r => r.userId === user?.id && r.type === t);
+                    return (
+                      <>
+                        <button onClick={() => handleReact(tip.id, 'HELPFUL')}
+                          className={`flex items-center gap-1 text-xs transition ${reacted('HELPFUL') ? 'text-green-600 font-semibold' : 'text-gray-400 hover:text-green-600'}`}>
+                          <ThumbsUp className="w-3.5 h-3.5" /> {tip.helpfulCount > 0 ? tip.helpfulCount : ''} Helpful
+                        </button>
+                        <button onClick={() => handleReact(tip.id, 'SAVE')}
+                          className={`flex items-center gap-1 text-xs transition ${reacted('SAVE') ? 'text-blue-600 font-semibold' : 'text-gray-400 hover:text-blue-600'}`}>
+                          <Bookmark className="w-3.5 h-3.5" /> Save
+                        </button>
+                        <button onClick={() => handleReact(tip.id, 'APPRECIATE')}
+                          className={`flex items-center gap-1 text-xs transition ${reacted('APPRECIATE') ? 'text-red-500 font-semibold' : 'text-gray-400 hover:text-red-500'}`}>
+                          <Heart className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
