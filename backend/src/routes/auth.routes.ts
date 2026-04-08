@@ -334,8 +334,16 @@ router.post('/forgot-password', async (req, res) => {
 
     const resetUrl = `https://www.rvunicorn.com/reset-password?token=${token}`;
 
+    // Password reset is security-critical, so:
+    //  - bypassPreferences: send even if ENABLE_EMAIL_NOTIFICATIONS is off
+    //    (this isn't a notification preference, it's account recovery)
+    //  - from: hardcoded to the verified Resend sender on updates.rvunicorn.com
+    //    so the send doesn't depend on whatever EMAIL_FROM happens to be
+    //    configured to in the env
     await sendEmail({
       to: email,
+      from: 'RVUnicorn Security <hitch@updates.rvunicorn.com>',
+      bypassPreferences: true,
       subject: 'Reset your RVUnicorn password',
       html: `
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">

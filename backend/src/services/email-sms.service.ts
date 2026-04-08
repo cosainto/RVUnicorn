@@ -14,6 +14,20 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  /**
+   * Override the From address for this specific send. Useful when the
+   * default EMAIL_FROM env var is not a verified Resend sender for the
+   * domain the app uses (e.g. password resets need to go from a
+   * known-good verified address).
+   */
+  from?: string;
+  /**
+   * If true, send the email even when ENABLE_EMAIL_NOTIFICATIONS is off.
+   * Used for security-critical mail like password resets and account
+   * verification, which should never be gated by the user's notification
+   * preferences env flag.
+   */
+  bypassPreferences?: boolean;
 }
 
 interface SMSOptions {
@@ -21,23 +35,37 @@ interface SMSOptions {
   message: string;
 }
 
+// Hardcoded verified-sender fallback used when EMAIL_FROM is unset OR when
+// sendEmail is called with an explicit `from` that should be respected. The
+// `updates.rvunicorn.com` subdomain is the one that's actually verified in
+// Resend (it's what the invite emails use successfully).
+const VERIFIED_SENDER_FALLBACK = 'RVUnicorn <hitch@updates.rvunicorn.com>';
+
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
-  if (process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'true') {
+  if (!options.bypassPreferences && process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'true') {
     console.log('Email notifications disabled. Would have sent:', options.subject);
     return;
   }
 
+  const fromAddress = options.from || process.env.EMAIL_FROM || VERIFIED_SENDER_FALLBACK;
+
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'RVUnicorn <noreply@rvunicorn.com>',
+    const result: any = await resend.emails.send({
+      from: fromAddress,
       to: options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
     });
+    // Resend returns { data, error } — if error is set, throw so the
+    // caller can log a real failure instead of seeing a silent success.
+    if (result?.error) {
+      console.error('Resend rejected email:', { to: options.to, from: fromAddress, error: result.error });
+      throw new Error(result.error.message || JSON.stringify(result.error));
+    }
     console.log(`Email sent to ${options.to}: ${options.subject}`);
-  } catch (error) {
-    console.error('Send email error:', error);
+  } catch (error: any) {
+    console.error('Send email error:', { to: options.to, from: fromAddress, message: error?.message, error });
     // Don't throw - just log the error so app continues
   }
 };
