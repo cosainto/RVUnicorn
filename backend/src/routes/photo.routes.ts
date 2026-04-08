@@ -1,6 +1,7 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
+import { getAlbumAccess } from "../services/album-access.service";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -937,19 +938,11 @@ router.patch("/album/:albumId/cover", authenticateToken, async (req: any, res) =
     const userId = req.userId;
     const { photoId, coverPhotoUrl } = req.body;
 
-    const album = await prisma.photoAlbum.findUnique({
-      where: { id: albumId },
-      include: { collaborators: { where: { userId } } },
-    });
-
-    if (!album) {
-      return res.status(404).json({ error: "Album not found" });
-    }
-
-    const isOwner = album.userId === userId;
-    const isCollaborator = album.collaborators.length > 0;
-    if (!isOwner && !isCollaborator) {
-      return res.status(403).json({ error: "Only the album owner or collaborators can change the cover" });
+    // Owner / collaborator / co-pilot / event co-attendee can all set the cover
+    const access = await getAlbumAccess(albumId, userId);
+    if (!access.exists) return res.status(404).json({ error: "Album not found" });
+    if (!access.canWrite) {
+      return res.status(403).json({ error: "Only the album owner, collaborators, co-pilot, or trip mates can change the cover" });
     }
 
     const updateData: any = {};

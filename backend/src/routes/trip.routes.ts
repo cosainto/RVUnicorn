@@ -155,6 +155,13 @@ router.get('/my', authenticateToken, async (req, res) => {
             meals: true,
           },
         },
+        tripPlans: {
+          // The user-specific TripPlan (if any) for this event — has the
+          // distance and duration we display on the rig page card.
+          where: { userId },
+          select: { id: true, distanceMiles: true, actualMiles: true, durationMinutes: true },
+          take: 1,
+        },
         roadTrip: {
           select: {
             id: true,

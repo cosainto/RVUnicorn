@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
+import { getAlbumAccess } from '../services/album-access.service';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -185,22 +186,11 @@ router.post('/:id/photos', authenticateToken, upload.single('photo'), async (req
     const userId = (req as any).userId;
     const { caption } = req.body;
 
-    // Verify album exists and user is owner or collaborator
-    const album = await prisma.photoAlbum.findUnique({
-      where: { id },
-      select: {
-        userId: true,
-        collaborators: { where: { userId }, select: { id: true } },
-      },
-    });
-
-    if (!album) {
-      return res.status(404).json({ error: 'Album not found' });
-    }
-
-    if (album.userId !== userId && album.collaborators.length === 0) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
+    // Owner / collaborator / co-pilot / event co-attendee can all upload —
+    // see services/album-access.service.ts
+    const access = await getAlbumAccess(id, userId);
+    if (!access.exists) return res.status(404).json({ error: 'Album not found' });
+    if (!access.canWrite) return res.status(403).json({ error: 'Not authorized' });
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });

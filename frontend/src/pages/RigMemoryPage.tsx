@@ -7,7 +7,17 @@ import { Helmet } from 'react-helmet-async';
 
 interface RigData { id: string; title?: string; description?: string; photos: string[]; videoUrl?: string; coPilots?: any[];
   user: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string; rvType?: string; rvYear?: number; rvMake?: string; rvModel?: string }; }
-interface TripData { id: string; title?: string; startDate: string; endDate?: string; location?: string; description?: string; }
+interface TripData {
+  id: string;
+  title?: string;
+  startDate: string;
+  endDate?: string;
+  location?: string;
+  description?: string;
+  // tripPlans is an array per the backend include — we read [0] since
+  // we filter by the current user, so there's at most one
+  tripPlans?: { id: string; distanceMiles?: number | null; actualMiles?: number | null; durationMinutes?: number | null }[];
+}
 interface PhotoData { id: string; imageUrl: string; caption?: string; createdAt: string; eventId?: string; }
 
 export default function RigMemoryPage() {
@@ -186,7 +196,17 @@ export default function RigMemoryPage() {
 
                 {/* Lifetime stats */}
                 <div className="grid grid-cols-4 gap-3 mt-5 pt-4" style={{ borderTop: '1px solid var(--glass-border)' }}>
-                  {[{ v: trips.length, l: 'Trips' }, { v: trips.reduce((s, t) => s + daysBetween(t.startDate, t.endDate), 0), l: 'Nights' }, { v: photos.length, l: 'Photos' }, { v: new Set(trips.map(t => t.location).filter(Boolean)).size, l: 'Places' }].map(s => (
+                  {[
+                    { v: trips.length, l: 'Trips' },
+                    { v: trips.reduce((s, t) => s + daysBetween(t.startDate, t.endDate), 0), l: 'Nights' },
+                    {
+                      // Sum miles across all trips, preferring actualMiles over distanceMiles
+                      v: Math.round(trips.reduce((s, t) => s + (t.tripPlans?.[0]?.actualMiles || t.tripPlans?.[0]?.distanceMiles || 0), 0)).toLocaleString(),
+                      l: 'Miles',
+                    },
+                    { v: photos.length, l: 'Photos' },
+                    { v: new Set(trips.map(t => t.location).filter(Boolean)).size, l: 'Places' },
+                  ].map(s => (
                     <div key={s.l} className="text-center"><span className="font-playfair text-xl font-bold block">{s.v}</span><span className="text-[10px] uppercase" style={{ color: '#E8A838', letterSpacing: '0.08em' }}>{s.l}</span></div>
                   ))}
                 </div>
@@ -251,6 +271,18 @@ export default function RigMemoryPage() {
                         <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>
                           {formatDate(trip.startDate)}{trip.endDate && ` — ${formatDate(trip.endDate)}`}
                           {trip.endDate && <span className="ml-2 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(232,168,56,0.08)', color: '#E8C96A' }}>{daysBetween(trip.startDate, trip.endDate)} nights</span>}
+                          {(() => {
+                            // Show miles from the user-specific TripPlan if present.
+                            // Prefer actualMiles (recorded post-trip) over distanceMiles (planned).
+                            const plan = trip.tripPlans?.[0];
+                            const miles = plan?.actualMiles || plan?.distanceMiles;
+                            if (!miles || miles <= 0) return null;
+                            return (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(232,98,42,0.1)', color: '#E8622A' }}>
+                                {Math.round(miles).toLocaleString()} mi
+                              </span>
+                            );
+                          })()}
                         </p>
                       </div>
                       {isOwnProfile && (

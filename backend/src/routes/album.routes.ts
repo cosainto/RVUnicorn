@@ -5,6 +5,7 @@ import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
+import { getAlbumAccess, getImplicitlyAccessibleAlbumIds } from '../services/album-access.service';
 
 const router = Router();
 
@@ -203,8 +204,8 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Albums where the profile user is a collaborator (shared with them)
-    const sharedAlbums = await prisma.photoAlbum.findMany({
+    // Albums where the profile user is an explicit collaborator
+    const explicitlySharedAlbums = await prisma.photoAlbum.findMany({
       where: {
         collaborators: { some: { userId: profileUserId } },
         ...privacyFilter,
@@ -219,10 +220,40 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Albums the profile user has IMPLICIT access to — owned by their
+    // co-pilot, or linked to an event they're attending. These count as
+    // "shared with them" too.
+    const implicitIds = await getImplicitlyAccessibleAlbumIds(profileUserId);
+    const implicitlySharedAlbums = implicitIds.length > 0
+      ? await prisma.photoAlbum.findMany({
+          where: {
+            id: { in: implicitIds },
+            ...privacyFilter,
+          },
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+            },
+            photos: { take: 1, orderBy: { createdAt: 'asc' } },
+            _count: { select: { photos: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    // Dedupe — an album might appear in both explicit and implicit lists
+    const sharedAlbums = [...explicitlySharedAlbums, ...implicitlySharedAlbums];
+    const seenSharedIds = new Set<string>();
+    const uniqueShared = sharedAlbums.filter(a => {
+      if (seenSharedIds.has(a.id)) return false;
+      seenSharedIds.add(a.id);
+      return true;
+    });
+
     // Tag shared albums so the client can show "Shared by X"
     const tagged = [
       ...ownedAlbums.map(a => ({ ...a, isShared: false })),
-      ...sharedAlbums.map(a => ({ ...a, isShared: true })),
+      ...uniqueShared.map(a => ({ ...a, isShared: true })),
     ];
 
     // Sort combined list by createdAt desc
@@ -270,14 +301,13 @@ router.get('/:albumId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Album not found' });
     }
 
-    const isOwner = album.userId === userId;
-    const isCollaborator = album.collaborators.some(c => c.userId === userId);
+    // Owner / explicit collaborator / co-pilot / event co-attendee → full read+write
+    const access = await getAlbumAccess(albumId, userId);
 
-    // Privacy checks — collaborators always have access regardless of privacy setting
-    if (!isOwner && !isCollaborator) {
-      if (album.privacy === 'PRIVATE') {
-        return res.status(403).json({ error: 'Access denied' });
-      }
+    if (!access.canRead) {
+      // Fall back to FRIENDS visibility — the access service handles
+      // PUBLIC and explicit access tiers, but FRIENDS still needs a
+      // friendship lookup which depends on the friendship table.
       if (album.privacy === 'FRIENDS') {
         const friendship = await prisma.friendship.findFirst({
           where: {
@@ -291,10 +321,22 @@ router.get('/:albumId', authenticateToken, async (req, res) => {
         if (!friendship) {
           return res.status(403).json({ error: 'Access denied' });
         }
+      } else {
+        return res.status(403).json({ error: 'Access denied' });
       }
     }
 
-    res.json({ ...album, isCollaborator, isOwner });
+    res.json({
+      ...album,
+      isCollaborator: access.isCollaborator,
+      isOwner: access.isOwner,
+      // Surface the new access tiers so the UI can show "You're collaborating
+      // because you're [name]'s co-pilot" or "...because you're both on the trip"
+      isCoPilot: access.isCoPilot,
+      isEventCoAttendee: access.isEventCoAttendee,
+      canWrite: access.canWrite,
+      canManage: access.canManage,
+    });
   } catch (error) {
     console.error('Get album error:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
@@ -497,20 +539,11 @@ router.post('/:albumId/photos', authenticateToken, upload.array('photos', 100), 
       return res.status(400).json({ error: 'At least one photo is required' });
     }
 
-    const album = await prisma.photoAlbum.findUnique({
-      where: { id: albumId },
-      include: { collaborators: { where: { userId } } },
-    });
-
-    if (!album) {
-      return res.status(404).json({ error: 'Album not found' });
-    }
-
-    const isOwner = album.userId === userId;
-    const isCollaborator = album.collaborators.length > 0;
-    if (!isOwner && !isCollaborator) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
+    // Owner, explicit collaborator, the owner's co-pilot, or a co-attendee
+    // on the linked event can all upload — see services/album-access.service.ts
+    const access = await getAlbumAccess(albumId, userId);
+    if (!access.exists) return res.status(404).json({ error: 'Album not found' });
+    if (!access.canWrite) return res.status(403).json({ error: 'Not authorized' });
 
     const photoPromises = files.map(async (file) => {
       const url = await uploadBufferToCloudinary(file.buffer, 'rvunicorn/photos');
