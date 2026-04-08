@@ -154,7 +154,51 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   };
   const loadCreatorContent = async () => { if (!username) return; try { const { data: p } = await api.get(`/profile/${username}`); if (p.isCreator) { const { data: c } = await api.get(`/creators/content/${p.id}`); setCreatorContent(Array.isArray(c) ? c.slice(0, 4) : []); try { const { data: s } = await api.get(`/creators/profile/${username}`); setCreatorStats(s); } catch {} } } catch {} };
   const loadProfile = async () => { try { setLoading(true); const { data } = await api.get(`/profile/${username}`); setProfile(data); loadAlbums(data.id); setEditForm({ firstName: data.firstName || '', lastName: data.lastName || '', bio: data.bio || '', location: data.location || '', website: data.website || '', profilePicture: data.profilePicture || '', coverPhoto: data.coverPhoto || '', bannerPosition: data.bannerPosition || '50% 50%' }); if (user && !isOwnProfile && data.id) checkFriendshipStatus(data.id); api.get(`/rig-connection/co-pilot/${data.id}`).then(r => { if (r.data?.coPilot) setCoPilot(r.data.coPilot); }).catch(() => {}); try { if (data.rvCoOwnedBy?.length > 0) setCoOwnedRVs(data.rvCoOwnedBy.map((c: any) => c.owner)); const br = await api.get(`/badges/user/${data.id}`); setProfileBadges(br.data?.badges || []); setDisplayedBadges((br.data?.badges || []).slice(0, 3)); const pr = await api.get(`/privacy/badge-position/${data.id}`); if (pr.data?.positions) setBadgePositions(pr.data.positions); } catch {} } catch {} finally { setLoading(false); } };
-  const loadAlbums = async (pid?: string) => { try { setLoadingAlbums(true); const { data } = await api.get(`/media-albums?userId=${pid}`); setAlbums(data.slice(0, 6)); } catch {} finally { setLoadingAlbums(false); } };
+  const loadAlbums = async (pid?: string) => {
+    if (!pid) return;
+    try {
+      setLoadingAlbums(true);
+      // Albums live in TWO different models: media-albums (Album model) and
+      // photo-albums (PhotoAlbum model). The /albums create flow writes to
+      // PhotoAlbum; the profile-page create flow writes to Album. Pull both
+      // and merge so nothing is hidden from the profile based on which
+      // surface the user happened to use.
+      const [mediaRes, photoRes] = await Promise.allSettled([
+        api.get(`/media-albums?userId=${pid}`),
+        api.get(`/albums/user/${pid}`),
+      ]);
+
+      const media = mediaRes.status === 'fulfilled' ? (mediaRes.value.data || []) : [];
+      const photo = photoRes.status === 'fulfilled' ? (photoRes.value.data || []) : [];
+
+      // Normalize both into a common shape the renderer can consume
+      const normalized = [
+        ...media.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          createdAt: a.createdAt,
+          // detail-page route for media-albums
+          link: `/media-albums/${a.id}`,
+          previewMedia: a.previewMedia,
+          coverImage: a.previewMedia?.[0]?.thumbnailUrl || a.previewMedia?.[0]?.url || null,
+        })),
+        ...photo.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          createdAt: a.createdAt,
+          // detail-page route for photo-albums (the /albums create flow)
+          link: `/albums/${a.id}`,
+          previewMedia: a.photos,
+          coverImage: a.coverPhotoUrl || a.photos?.[0]?.imageUrl || null,
+        })),
+      ];
+
+      // Sort by createdAt desc, take 6
+      normalized.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setAlbums(normalized.slice(0, 6));
+    } catch {}
+    finally { setLoadingAlbums(false); }
+  };
   const loadFavoriteCampgrounds = async () => { try { setLoadingFavorites(true); const { data } = await api.get('/campgrounds/favorites/my'); setFavoriteCampgrounds(data); } catch {} finally { setLoadingFavorites(false); } };
   const loadRVShowcase = async () => { try { const { data } = await api.get(`/rv-showcase/${username}`); setRVShowcase(data); } catch {} };
   const loadUserGroups = async () => { try { const { data } = await api.get('/groups/my'); setUserGroups(data.groups || data || []); } catch {} };
@@ -484,7 +528,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               {activeContentTab === 'albums' && (
                 <div className="flat-card p-5">
                   <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold flex items-center gap-2"><Camera className="w-4 h-4" style={{ color: 'var(--gold)' }} />Photo Albums</h3>{isOwnProfile && <button onClick={() => setShowCreateAlbumModal(true)} className="text-[11px] font-medium" style={{ color: 'var(--campfire)' }}>+ New Album</button>}</div>
-                  {albums.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{albums.map(a => <Link key={a.id} to={`/media-albums/${a.id}`} className="group"><div className="aspect-square rounded-lg overflow-hidden mb-1" style={{ background: 'rgba(255,255,255,0.03)' }}>{a.previewMedia?.[0] ? <img src={a.previewMedia[0].thumbnailUrl || a.previewMedia[0].url} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /> : <div className="w-full h-full flex items-center justify-center"><Camera className="w-6 h-6" style={{ color: 'var(--muted)' }} /></div>}</div><p className="text-[11px] font-medium truncate">{a.title}</p></Link>)}</div>
+                  {albums.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{albums.map(a => <Link key={a.id} to={a.link || `/albums/${a.id}`} className="group"><div className="aspect-square rounded-lg overflow-hidden mb-1" style={{ background: 'rgba(255,255,255,0.03)' }}>{a.coverImage ? <img src={a.coverImage} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" /> : <div className="w-full h-full flex items-center justify-center"><Camera className="w-6 h-6" style={{ color: 'var(--muted)' }} /></div>}</div><p className="text-[11px] font-medium truncate">{a.title}</p></Link>)}</div>
                   : <div className="text-center py-8"><Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--muted)' }} /><p className="text-[13px]" style={{ color: 'var(--muted)' }}>Your adventures, captured. Add your first photo.</p>{isOwnProfile && <button onClick={() => setShowCreateAlbumModal(true)} className="mt-3 px-5 py-2 rounded-full text-[12px] font-semibold" style={{ background: 'var(--campfire)', color: 'white' }}>Add Photos</button>}</div>}
                 </div>
               )}
