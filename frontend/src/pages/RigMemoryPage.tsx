@@ -31,6 +31,10 @@ interface TripData {
   // their `id` is a StateVisit.id, NOT an Event.id — they need a
   // different delete endpoint.
   isStateVisit?: boolean;
+  // The current viewer's EventAttendee row, set by the backend so the
+  // "leave the trip" path can target the right row without an extra
+  // lookup. Null when the viewer is the organizer with no attendee row.
+  myAttendee?: { id: string; status?: string } | null;
   // tripPlans is an array per the backend include — we read [0] since
   // we filter by the current user, so there's at most one
   tripPlans?: { id: string; distanceMiles?: number | null; actualMiles?: number | null; durationMinutes?: number | null }[];
@@ -63,26 +67,49 @@ export default function RigMemoryPage() {
 
   const handleDeleteTrip = async (trip: TripData) => {
     const tripTitle = trip.title || trip.location || 'this trip';
-    const confirmed = window.confirm(
-      trip.isStateVisit
-        ? `Delete "${tripTitle}"?\n\nThis removes the visit from your travel map and stats. This can't be undone.`
-        : `Delete "${tripTitle}"?\n\nThis cancels the trip for everyone you invited and removes it from your map and stats. This can't be undone.`
-    );
+
+    // Three different scenarios with three different semantics:
+    //   1) StateVisit-derived → just remove the map pin
+    //   2) Event you organized → cancel the whole trip for everyone
+    //   3) Event you're just attending → leave the trip (remove yourself
+    //      and your StateVisit, leave the trip itself in place for others)
+    const isOrganizer = !!user && trip.organizerId === user.id;
+    const isLeaving = !trip.isStateVisit && !isOrganizer;
+
+    const confirmMessage = trip.isStateVisit
+      ? `Delete "${tripTitle}"?\n\nThis removes the visit from your travel map and stats. This can't be undone.`
+      : isOrganizer
+        ? `Delete "${tripTitle}"?\n\nThis cancels the trip for everyone you invited and removes it from your map and stats. This can't be undone.`
+        : `Leave "${tripTitle}"?\n\nThe trip stays for everyone else, but it's removed from your trips, map, and stats. This can't be undone.`;
+
+    const confirmed = window.confirm(confirmMessage);
     if (!confirmed) return;
+
     try {
-      // StateVisit-derived "trips" live in a different table — they need
-      // a different endpoint than Event-derived trips. /trips/my merges
-      // both into one list with isStateVisit set on the StateVisit ones.
       if (trip.isStateVisit) {
+        // Map-only visit — just delete the StateVisit row
         await api.delete(`/travel-map/visits/${trip.id}`);
-      } else {
+      } else if (isOrganizer) {
+        // Organizer deleting the whole event — cascades to attendees and StateVisits
         await api.delete(`/events/${trip.id}`);
+      } else if (trip.myAttendee?.id) {
+        // Attendee leaving — DELETE /events/:id/attendees/:attendeeId removes
+        // the user's EventAttendee row AND their StateVisit for this event,
+        // but leaves the trip itself in place for the organizer and others
+        await api.delete(`/events/${trip.id}/attendees/${trip.myAttendee.id}`);
+      } else {
+        // Defensive: no myAttendee row means we don't have the data we need
+        // to leave gracefully. Should be impossible since /trips/my returns
+        // myAttendee for any trip you can see, but fall back to a friendly
+        // message rather than a 404.
+        alert("Couldn't find your attendance record for this trip. Reload the page and try again.");
+        return;
       }
       // Remove from local state immediately so the card disappears
       setTrips(prev => prev.filter(t => t.id !== trip.id));
       setPhotos(prev => prev.filter(p => p.eventId !== trip.id));
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to delete trip');
+      alert(e?.response?.data?.error || (isLeaving ? 'Failed to leave trip' : 'Failed to delete trip'));
     }
   };
 
@@ -335,7 +362,13 @@ export default function RigMemoryPage() {
                             onClick={() => handleDeleteTrip(trip)}
                             className="text-[11px] font-medium flex items-center gap-1 hover:opacity-80"
                             style={{ color: 'rgba(245,240,232,0.4)' }}
-                            title="Delete trip"
+                            title={
+                              trip.isStateVisit
+                                ? 'Delete visit'
+                                : trip.organizerId === user?.id
+                                  ? 'Delete trip'
+                                  : 'Leave trip'
+                            }
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
