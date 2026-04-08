@@ -1462,17 +1462,8 @@ export default function EventDetailPage() {
               )}
 
 {/* Old attendees section removed — consolidated into Who's Coming above */}
-              {event.campground && (
-                <div className="border-t pt-6">
-                  <ThingsToDoSection
-                    campgroundId={event.campground.id}
-                    campgroundName={event.campground.name}
-                    isAdmin={false}
-                    eventId={event.id}
-                    onActivityAdded={() => setScheduleRefreshKey(k => k + 1)}
-                  />
-                </div>
-              )}
+{/* Things to Do Nearby moved out — now rendered as a standalone section
+    BELOW the entire phase list so Travel/Prepare/Camp/Remember sit above it */}
             </div>
           )}
 
@@ -1698,16 +1689,9 @@ export default function EventDetailPage() {
                 />
               )}
               <EventSchedule key={scheduleRefreshKey} eventId={event.id} eventStartDate={event.startDate} eventEndDate={event.endDate || event.startDate} campgroundLat={event.campground?.latitude} campgroundLng={event.campground?.longitude} />
-              {event.campground && (
-                <div className="border-t pt-8">
-                  <ThingsToDoSection 
-                    campgroundId={event.campground.id} 
-                    campgroundName={event.campground.name}
-                    isAdmin={isOrganizer}
-                    onActivityAdded={() => setScheduleRefreshKey(k => k + 1)}
-                  />
-                </div>
-              )}
+              {/* Things to Do Nearby moved out — now rendered as a standalone
+                  section below the phase list. Removed the duplicate that
+                  was previously rendered inside both Plan and Camp phases. */}
             </div>
           )}
           {openPhases.has(phase.id) && phase.id === 'remember' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status === 'going'} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
@@ -1813,6 +1797,19 @@ export default function EventDetailPage() {
         ))}
       </div>
 
+      {/* Things to Do Nearby — sits below the phase list so Travel,
+          Prepare, Camp, and Remember all appear above it */}
+      {event.campground && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
+          <ThingsToDoSection
+            campgroundId={event.campground.id}
+            campgroundName={event.campground.name}
+            isAdmin={isOrganizer}
+            eventId={event.id}
+            onActivityAdded={() => setScheduleRefreshKey(k => k + 1)}
+          />
+        </div>
+      )}
 
       {/* Album Modal */}
       {showAlbumModal && (
