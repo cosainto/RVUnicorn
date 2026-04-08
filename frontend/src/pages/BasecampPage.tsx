@@ -1096,6 +1096,8 @@ export default function BasecampPage({ user }: BasecampProps) {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const [showTour, setShowTour] = useState(false);
+  // Per-trip "How are you feeling?" — resets to fully charged on each page load.
+  const [startingCharge, setStartingCharge] = useState<100 | 75 | 50>(100);
 
   useEffect(() => {
     if (!user) return;
@@ -2394,14 +2396,77 @@ export default function BasecampPage({ user }: BasecampProps) {
             const weather = planningData?.weather;
             const hour = new Date().getHours();
             const isNightDrive = hour >= 20 || hour < 6;
-            const risks: string[] = [];
-            if (isNightDrive) risks.push('🌙 Night driving detected');
-            if (daysUntil !== null && daysUntil === 0) risks.push('⚡ Drive day — take breaks every 2h');
+
+            // Yesterday's drive hours (used for fatigue modifier + risk flag)
+            let yesterdayHours = 0;
             try {
               const hist = JSON.parse(localStorage.getItem('rvu_drive_history') || '[]');
-              const yesterday = hist[hist.length - 1];
-              if (yesterday?.hours > 6) risks.push(`😴 You drove ${yesterday.hours.toFixed(1)}h yesterday`);
+              yesterdayHours = hist[hist.length - 1]?.hours || 0;
             } catch {}
+
+            // Estimate trip distance + drive time from home → campground via haversine
+            const homeLat = (user as any)?.homeLatitude as number | undefined;
+            const homeLng = (user as any)?.homeLongitude as number | undefined;
+            const cgLat = (nextEvent.campground as any)?.latitude as number | undefined;
+            const cgLng = (nextEvent.campground as any)?.longitude as number | undefined;
+            const haveCoords = homeLat != null && homeLng != null && cgLat != null && cgLng != null;
+            let distanceMiles: number | null = null;
+            let driveHours: number | null = null;
+            if (haveCoords) {
+              const R = 3958.8;
+              const toRad = (d: number) => (d * Math.PI) / 180;
+              const dLat = toRad(cgLat! - homeLat!);
+              const dLon = toRad(cgLng! - homeLng!);
+              const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(homeLat!)) * Math.cos(toRad(cgLat!)) * Math.sin(dLon / 2) ** 2;
+              const crowMiles = 2 * R * Math.asin(Math.sqrt(a));
+              distanceMiles = Math.round(crowMiles * 1.3); // road factor
+              driveHours = distanceMiles / 50; // avg RV speed
+            }
+
+            // Driver Battery simulation
+            // Base drain 10%/hr, +2 night, +2 if drove >6h yesterday.
+            const drainPerHour = 10 + (isNightDrive ? 2 : 0) + (yesterdayHours > 6 ? 2 : 0);
+            const RECHARGE_THRESHOLD = 60;
+            const RECHARGE_AMOUNT = 12; // 15-min stretch break
+            const breaks: { atHour: number; chargeBefore: number; chargeAfter: number }[] = [];
+            let arriveCharge: number = startingCharge;
+            if (driveHours != null) {
+              let charge: number = startingCharge;
+              let elapsed = 0;
+              const STEP = 0.25; // 15-min simulation step
+              while (elapsed < driveHours - 0.001) {
+                const advance = Math.min(STEP, driveHours - elapsed);
+                charge -= drainPerHour * advance;
+                elapsed += advance;
+                // Insert a break if charge dropped to threshold AND we're not within 30 min of arrival
+                if (charge <= RECHARGE_THRESHOLD && driveHours - elapsed > 0.5) {
+                  const before = Math.round(charge);
+                  charge = Math.min(100, charge + RECHARGE_AMOUNT);
+                  breaks.push({ atHour: elapsed, chargeBefore: before, chargeAfter: Math.round(charge) });
+                }
+              }
+              arriveCharge = Math.max(0, Math.round(charge));
+            }
+
+            const formatHourMin = (hours: number) => {
+              const h = Math.floor(hours);
+              const m = Math.round((hours - h) * 60);
+              if (h === 0) return `${m} min`;
+              if (m === 0) return `${h}h`;
+              return `${h}h ${m}min`;
+            };
+
+            const risks: string[] = [];
+            if (isNightDrive) risks.push('🌙 Night driving detected');
+            if (yesterdayHours > 6) risks.push(`😴 You drove ${yesterdayHours.toFixed(1)}h yesterday`);
+            if (driveHours != null && driveHours > 10) risks.push(`⚠️ ${formatHourMin(driveHours)} is a long day — consider splitting`);
+
+            const chargeLabel = startingCharge === 100 ? '🟢 Fully charged' : startingCharge === 75 ? '🟡 A bit tired' : '🟠 Pretty tired';
+            const cycleCharge = () => setStartingCharge((c): 100 | 75 | 50 => c === 100 ? 75 : c === 75 ? 50 : 100);
+            const arriveColor = arriveCharge < 35 ? 'text-orange-400' : arriveCharge < 60 ? 'text-yellow-400' : 'text-green-400';
+
             return (
               <div className="bg-blue-950 border border-blue-800 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -2413,12 +2478,60 @@ export default function BasecampPage({ user }: BasecampProps) {
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div className="bg-blue-900/50 rounded-xl p-2 text-center">
-                    <p className="text-lg">⏱️</p>
-                    <p className="text-xs text-blue-300 mt-0.5">Break every</p>
-                    <p className="text-sm font-bold text-white">2 hrs</p>
+
+                {haveCoords && driveHours != null ? (
+                  <>
+                    <div className="bg-blue-900/40 rounded-xl p-3 mb-2 flex items-center gap-3">
+                      <div className="text-2xl">🗺️</div>
+                      <div className="flex-1">
+                        <p className="text-xs text-blue-300">Drive plan</p>
+                        <p className="text-base font-bold text-white">{formatHourMin(driveHours)} <span className="text-xs font-normal text-blue-300">· ~{distanceMiles} mi</span></p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={cycleCharge}
+                        className="text-right hover:opacity-80 transition"
+                        title="Tap to change starting charge"
+                      >
+                        <p className="text-xs text-blue-300">Starting</p>
+                        <p className="text-sm font-semibold text-white whitespace-nowrap">{chargeLabel}</p>
+                      </button>
+                    </div>
+
+                    {breaks.length > 0 ? (
+                      <div className="bg-blue-900/40 rounded-xl p-3 mb-3">
+                        <p className="text-xs text-blue-300 mb-2">⏱️ Suggested breaks ({breaks.length})</p>
+                        <div className="space-y-1.5">
+                          {breaks.map((b, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              <span className="text-amber-300">•</span>
+                              <span className="text-white font-medium">After {formatHourMin(b.atHour)}</span>
+                              <span className="text-blue-300">— 15 min stretch</span>
+                              <span className="text-blue-400 ml-auto">{b.chargeBefore}% → {b.chargeAfter}%</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-2 text-xs pt-1.5 border-t border-blue-800">
+                            <span>🏁</span>
+                            <span className="text-white font-medium">Arrive at camp</span>
+                            <span className={`ml-auto font-bold ${arriveColor}`}>{arriveCharge}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-green-400 mb-3">✅ Short drive — no break needed (arrive at {arriveCharge}%)</p>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-blue-900/40 rounded-xl p-3 mb-3">
+                    <p className="text-xs text-blue-300">
+                      {homeLat == null || homeLng == null
+                        ? 'Set your home location in My RV to see a tailored break plan.'
+                        : 'Campground location missing — generic safety reminder: take a break every 2 hours.'}
+                    </p>
                   </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
                   <div className="bg-blue-900/50 rounded-xl p-2 text-center">
                     <p className="text-lg">⛽</p>
                     <p className="text-xs text-blue-300 mt-0.5">Your MPG</p>
@@ -2430,6 +2543,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                     <p className="text-sm font-bold text-white">{weather ? `${weather.temperature}°` : '—'}</p>
                   </div>
                 </div>
+
                 {risks.length > 0 ? (
                   <div className="space-y-1">{risks.map((r, i) => <p key={i} className="text-xs text-amber-300">{r}</p>)}</div>
                 ) : (
