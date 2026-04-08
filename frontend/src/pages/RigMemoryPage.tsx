@@ -26,6 +26,11 @@ interface TripData {
   location?: string;
   description?: string;
   organizerId?: string;
+  // /trips/my merges Event rows with StateVisit rows into one feed.
+  // StateVisit-derived "trips" come back with isStateVisit: true and
+  // their `id` is a StateVisit.id, NOT an Event.id — they need a
+  // different delete endpoint.
+  isStateVisit?: boolean;
   // tripPlans is an array per the backend include — we read [0] since
   // we filter by the current user, so there's at most one
   tripPlans?: { id: string; distanceMiles?: number | null; actualMiles?: number | null; durationMinutes?: number | null }[];
@@ -56,16 +61,26 @@ export default function RigMemoryPage() {
 
   useEffect(() => { loadData(); }, [username]);
 
-  const handleDeleteTrip = async (tripId: string, tripTitle: string) => {
+  const handleDeleteTrip = async (trip: TripData) => {
+    const tripTitle = trip.title || trip.location || 'this trip';
     const confirmed = window.confirm(
-      `Delete "${tripTitle}"?\n\nThis cancels the trip for everyone you invited and removes it from your map and stats. This can't be undone.`
+      trip.isStateVisit
+        ? `Delete "${tripTitle}"?\n\nThis removes the visit from your travel map and stats. This can't be undone.`
+        : `Delete "${tripTitle}"?\n\nThis cancels the trip for everyone you invited and removes it from your map and stats. This can't be undone.`
     );
     if (!confirmed) return;
     try {
-      await api.delete(`/events/${tripId}`);
+      // StateVisit-derived "trips" live in a different table — they need
+      // a different endpoint than Event-derived trips. /trips/my merges
+      // both into one list with isStateVisit set on the StateVisit ones.
+      if (trip.isStateVisit) {
+        await api.delete(`/travel-map/visits/${trip.id}`);
+      } else {
+        await api.delete(`/events/${trip.id}`);
+      }
       // Remove from local state immediately so the card disappears
-      setTrips(prev => prev.filter(t => t.id !== tripId));
-      setPhotos(prev => prev.filter(p => p.eventId !== tripId));
+      setTrips(prev => prev.filter(t => t.id !== trip.id));
+      setPhotos(prev => prev.filter(p => p.eventId !== trip.id));
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to delete trip');
     }
@@ -317,7 +332,7 @@ export default function RigMemoryPage() {
                             <Plus className="w-3.5 h-3.5" />Add Photos
                           </Link>
                           <button
-                            onClick={() => handleDeleteTrip(trip.id, trip.title || trip.location || 'this trip')}
+                            onClick={() => handleDeleteTrip(trip)}
                             className="text-[11px] font-medium flex items-center gap-1 hover:opacity-80"
                             style={{ color: 'rgba(245,240,232,0.4)' }}
                             title="Delete trip"
