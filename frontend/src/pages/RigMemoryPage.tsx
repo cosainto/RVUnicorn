@@ -7,6 +7,17 @@ import { Helmet } from 'react-helmet-async';
 
 interface RigData { id: string; title?: string; description?: string; photos: string[]; videoUrl?: string; coPilots?: any[];
   user: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string; rvType?: string; rvYear?: number; rvMake?: string; rvModel?: string }; }
+interface TripAttendee {
+  userId: string;
+  status?: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+    username: string;
+    profilePicture?: string | null;
+  };
+}
 interface TripData {
   id: string;
   title?: string;
@@ -14,9 +25,11 @@ interface TripData {
   endDate?: string;
   location?: string;
   description?: string;
+  organizerId?: string;
   // tripPlans is an array per the backend include — we read [0] since
   // we filter by the current user, so there's at most one
   tripPlans?: { id: string; distanceMiles?: number | null; actualMiles?: number | null; durationMinutes?: number | null }[];
+  attendees?: TripAttendee[];
 }
 interface PhotoData { id: string; imageUrl: string; caption?: string; createdAt: string; eventId?: string; }
 
@@ -263,11 +276,24 @@ export default function RigMemoryPage() {
 
             {tripAlbums.length > 0 ? (
               <div className="space-y-4">
-                {tripAlbums.map(({ trip, photos: tripPhotos }) => (
+                {tripAlbums.map(({ trip, photos: tripPhotos }) => {
+                  // Filter attendees to people who actually engaged with the trip
+                  // (everyone except the rig owner viewing their own page).
+                  // Show invited + going + here-now states. Skip declined/not-going.
+                  const otherAttendees = (trip.attendees || []).filter(a => {
+                    if (!a.user) return false;
+                    if (a.user.id === user?.id) return false; // hide self
+                    const status = (a.status || '').toLowerCase();
+                    return !['not_going', 'declined', 'rejected'].includes(status);
+                  });
+                  return (
                   <div key={trip.id} className="flat-card p-5">
                     <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-playfair text-lg font-bold" style={{ color: '#F5F0E8' }}>{trip.title || trip.location || 'Trip'}</h3>
+                      <div className="min-w-0 flex-1">
+                        {/* Title links to the trip detail page */}
+                        <Link to={`/trips/${trip.id}`} className="hover:underline">
+                          <h3 className="font-playfair text-lg font-bold" style={{ color: '#F5F0E8' }}>{trip.title || trip.location || 'Trip'}</h3>
+                        </Link>
                         <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>
                           {formatDate(trip.startDate)}{trip.endDate && ` — ${formatDate(trip.endDate)}`}
                           {trip.endDate && <span className="ml-2 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(232,168,56,0.08)', color: '#E8C96A' }}>{daysBetween(trip.startDate, trip.endDate)} nights</span>}
@@ -301,7 +327,55 @@ export default function RigMemoryPage() {
                         </div>
                       )}
                     </div>
-                    {trip.location && <p className="text-[12px] mb-3" style={{ color: '#FDF6E9' }}>{'\u{1F4CD}'} {trip.location}</p>}
+                    {trip.location && (
+                      <Link to={`/trips/${trip.id}`} className="block hover:underline">
+                        <p className="text-[12px] mb-3" style={{ color: '#FDF6E9' }}>{'\u{1F4CD}'} {trip.location}</p>
+                      </Link>
+                    )}
+
+                    {/* Attendee avatar strip — everyone else who was invited or going */}
+                    {otherAttendees.length > 0 && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex -space-x-2">
+                          {otherAttendees.slice(0, 5).map(a => (
+                            <Link
+                              key={a.userId}
+                              to={`/profile/${a.user!.username}`}
+                              title={`${a.user!.firstName}${a.user!.lastName ? ' ' + a.user!.lastName : ''}`}
+                            >
+                              {a.user!.profilePicture ? (
+                                <img
+                                  src={a.user!.profilePicture}
+                                  alt={a.user!.firstName}
+                                  className="w-7 h-7 rounded-full object-cover"
+                                  style={{ border: '2px solid #1B2E50' }}
+                                />
+                              ) : (
+                                <div
+                                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                  style={{ background: 'rgba(232,168,56,0.18)', color: '#E8C96A', border: '2px solid #1B2E50' }}
+                                >
+                                  {a.user!.firstName?.[0]}
+                                </div>
+                              )}
+                            </Link>
+                          ))}
+                          {otherAttendees.length > 5 && (
+                            <div
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
+                              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(245,240,232,0.6)', border: '2px solid #1B2E50' }}
+                            >
+                              +{otherAttendees.length - 5}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[11px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
+                          {otherAttendees.length === 1
+                            ? `with ${otherAttendees[0].user!.firstName}`
+                            : `with ${otherAttendees.slice(0, 2).map(a => a.user!.firstName).join(', ')}${otherAttendees.length > 2 ? ` +${otherAttendees.length - 2}` : ''}`}
+                        </span>
+                      </div>
+                    )}
                     {tripPhotos.length > 0 ? (
                       <div className="flex gap-2 overflow-x-auto pb-2">
                         {tripPhotos.slice(0, 5).map((photo, i) => (
@@ -314,7 +388,8 @@ export default function RigMemoryPage() {
                       </div>
                     ) : <p className="text-[12px] py-2" style={{ color: 'rgba(245,240,232,0.3)' }}>No photos from this trip yet.</p>}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flat-card p-10 text-center" style={{ background: 'var(--campfire-glow)' }}>
