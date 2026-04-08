@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Camera, Tent, MapPin, Plus, ChevronDown, MessageSquare, GitCompare, Wrench, Users, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Camera, Tent, MapPin, Plus, ChevronDown, MessageSquare, GitCompare, Wrench, Users, Send, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { Helmet } from 'react-helmet-async';
@@ -33,6 +33,21 @@ export default function RigMemoryPage() {
 
   useEffect(() => { loadData(); }, [username]);
 
+  const handleDeleteTrip = async (tripId: string, tripTitle: string) => {
+    const confirmed = window.confirm(
+      `Delete "${tripTitle}"?\n\nThis cancels the trip for everyone you invited and removes it from your map and stats. This can't be undone.`
+    );
+    if (!confirmed) return;
+    try {
+      await api.delete(`/events/${tripId}`);
+      // Remove from local state immediately so the card disappears
+      setTrips(prev => prev.filter(t => t.id !== tripId));
+      setPhotos(prev => prev.filter(p => p.eventId !== tripId));
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to delete trip');
+    }
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -42,17 +57,25 @@ export default function RigMemoryPage() {
       ]);
       setRig(rigRes.data);
 
-      // Load trips
-      try {
-        const tripsRes = await api.get('/trips/my');
-        const allTrips = Array.isArray(tripsRes.data) ? tripsRes.data : (tripsRes.data.trips || []);
-        setTrips(allTrips.sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()));
-        const allPhotos: PhotoData[] = [];
-        for (const trip of allTrips.slice(0, 10)) {
-          try { const pr = await api.get(`/photos/event/${trip.id}`); const tp = Array.isArray(pr.data) ? pr.data : (pr.data.photos || []); allPhotos.push(...tp.map((p: any) => ({ ...p, eventId: trip.id }))); } catch {}
-        }
-        setPhotos(allPhotos);
-      } catch {}
+      // Load trips — /trips/my returns the AUTHENTICATED user's events, so
+      // only call it when viewing your own rig page. Otherwise we'd show
+      // the viewer's trips under someone else's rig (same bug class as
+      // ProfilePage's "Nights Camped showing viewer's data").
+      if (isOwnProfile) {
+        try {
+          const tripsRes = await api.get('/trips/my');
+          const allTrips = Array.isArray(tripsRes.data) ? tripsRes.data : (tripsRes.data.trips || []);
+          setTrips(allTrips.sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()));
+          const allPhotos: PhotoData[] = [];
+          for (const trip of allTrips.slice(0, 10)) {
+            try { const pr = await api.get(`/photos/event/${trip.id}`); const tp = Array.isArray(pr.data) ? pr.data : (pr.data.photos || []); allPhotos.push(...tp.map((p: any) => ({ ...p, eventId: trip.id }))); } catch {}
+          }
+          setPhotos(allPhotos);
+        } catch {}
+      } else {
+        setTrips([]);
+        setPhotos([]);
+      }
 
       // Load similar rigs, questions, maintenance in parallel
       Promise.all([
@@ -230,7 +253,21 @@ export default function RigMemoryPage() {
                           {trip.endDate && <span className="ml-2 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(232,168,56,0.08)', color: '#E8C96A' }}>{daysBetween(trip.startDate, trip.endDate)} nights</span>}
                         </p>
                       </div>
-                      {isOwnProfile && <Link to={`/trips/${trip.id}`} className="text-[11px] font-medium flex items-center gap-1" style={{ color: '#E8622A' }}><Plus className="w-3.5 h-3.5" />Add Photos</Link>}
+                      {isOwnProfile && (
+                        <div className="flex items-center gap-3">
+                          <Link to={`/trips/${trip.id}`} className="text-[11px] font-medium flex items-center gap-1" style={{ color: '#E8622A' }}>
+                            <Plus className="w-3.5 h-3.5" />Add Photos
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteTrip(trip.id, trip.title || trip.location || 'this trip')}
+                            className="text-[11px] font-medium flex items-center gap-1 hover:opacity-80"
+                            style={{ color: 'rgba(245,240,232,0.4)' }}
+                            title="Delete trip"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {trip.location && <p className="text-[12px] mb-3" style={{ color: '#FDF6E9' }}>{'\u{1F4CD}'} {trip.location}</p>}
                     {tripPhotos.length > 0 ? (
