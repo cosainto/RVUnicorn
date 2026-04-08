@@ -179,7 +179,9 @@ async function main() {
   );
 
   // Pull campgrounds with a website URL but no current price, excluding
-  // recreation.gov (handled by Phase 1) and the long-tail of dead URLs
+  // recreation.gov (handled by Phase 1) and the long-tail of dead URLs.
+  // No cap on the query — the user-requested `--limit` is enforced AFTER
+  // the optional shuffle so we can sample from the full population.
   let pool = await prisma.campground.findMany({
     where: {
       websiteUrl: { not: null },
@@ -187,7 +189,6 @@ async function main() {
       NOT: { websiteUrl: { contains: 'recreation.gov' } },
     },
     select: { id: true, name: true, websiteUrl: true },
-    take: shuffle ? 5000 : requestedLimit,
   });
 
   if (shuffle) {
