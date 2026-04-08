@@ -26,26 +26,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Proxy SEO routes to the backend
-app.get('/sitemap.xml', (req, res) => {
-  const url = `${BACKEND_URL}/sitemap.xml`;
-  import('http').then(http => {
-    http.get(url, (proxyRes) => {
-      res.set('Content-Type', proxyRes.headers['content-type'] || 'application/xml');
-      res.set('Cache-Control', 'public, max-age=86400');
-      proxyRes.pipe(res);
-    }).on('error', () => res.status(502).send('Backend unavailable'));
-  });
-});
-app.get('/robots.txt', (req, res) => {
-  const url = `${BACKEND_URL}/robots.txt`;
-  import('http').then(http => {
-    http.get(url, (proxyRes) => {
-      res.set('Content-Type', 'text/plain');
-      proxyRes.pipe(res);
-    }).on('error', () => res.status(502).send('Backend unavailable'));
-  });
-});
+// Proxy SEO routes to the backend (use the same proxy middleware as /api so https BACKEND_URLs work)
+const seoProxy = createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true });
+app.get('/sitemap.xml', seoProxy);
+app.get('/robots.txt', seoProxy);
 
 // Proxy SSR campground and community pages to the backend for crawlers only
 const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;

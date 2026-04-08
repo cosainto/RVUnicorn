@@ -217,6 +217,11 @@ router.get('/community/:boardSlug', async (req: Request, res: Response, next: Ne
 });
 
 // Root-level sitemap.xml
+const COMMUNITY_BOARDS = [
+  'ask', 'maintenance', 'upgrades', 'trip-planning', 'campground-tips',
+  'recipes', 'trip-reports', 'family', 'pets', 'humor',
+];
+
 router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try {
     const [campgrounds, users] = await Promise.all([
@@ -244,9 +249,16 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
       { path: '/trips', priority: '0.7', freq: 'daily' },
       { path: '/community', priority: '0.7', freq: 'daily' },
       { path: '/recipes', priority: '0.6', freq: 'weekly' },
+      { path: '/travel', priority: '0.5', freq: 'monthly' },
+      { path: '/badges', priority: '0.5', freq: 'monthly' },
     ];
     for (const p of staticPages) {
       xml += `  <url>\n    <loc>https://rvunicorn.com${p.path}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${p.freq}</changefreq>\n    <priority>${p.priority}</priority>\n  </url>\n`;
+    }
+
+    // Community boards
+    for (const slug of COMMUNITY_BOARDS) {
+      xml += `  <url>\n    <loc>https://rvunicorn.com/community/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
 
     // Campground pages

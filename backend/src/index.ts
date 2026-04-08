@@ -112,7 +112,6 @@ import itineraryRoutes from './routes/itinerary.routes';
 import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import campMarketRoutes from './routes/camp-market.routes';
-import sitemapRoutes from './routes/sitemap.routes';
 import rigConnectionRoutes from './routes/rig-connection.routes';
 import campfireTipsRoutes from './routes/campfire-tips.routes';
 import feedControlsRoutes from './routes/feed-controls.routes';
@@ -209,7 +208,6 @@ app.use('/api/sharing', sharingRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use(passport.initialize());
 app.use('/api', oauthRoutes);
-app.use('/api/sitemap.xml', sitemapRoutes);
 app.use('/api/quiz', quizRoutes);
 
 // Routes

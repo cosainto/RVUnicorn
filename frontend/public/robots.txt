@@ -6,4 +6,4 @@ Disallow: /settings
 Disallow: /messages
 Disallow: /notifications
 
-Sitemap: https://rvunicorn.com/api/sitemap.xml
+Sitemap: https://rvunicorn.com/sitemap.xml
