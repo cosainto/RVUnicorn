@@ -2390,14 +2390,13 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
           {hasFutureTrip && nextEvent && (() => {
             const rvMpg = (user as any)?.rvMpg || 8;
-            const breakInterval = (user as any)?.breakIntervalHours || 2;
             const daysUntil = nextEvent.startDate ? Math.ceil((new Date(nextEvent.startDate).getTime() - Date.now()) / 86400000) : null;
             const weather = planningData?.weather;
             const hour = new Date().getHours();
             const isNightDrive = hour >= 20 || hour < 6;
             const risks: string[] = [];
             if (isNightDrive) risks.push('🌙 Night driving detected');
-            if (daysUntil !== null && daysUntil === 0) risks.push(`⚡ Drive day — take breaks every ${breakInterval}h`);
+            if (daysUntil !== null && daysUntil === 0) risks.push('⚡ Drive day — take breaks every 2h');
             try {
               const hist = JSON.parse(localStorage.getItem('rvu_drive_history') || '[]');
               const yesterday = hist[hist.length - 1];
@@ -2418,7 +2417,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="bg-blue-900/50 rounded-xl p-2 text-center">
                     <p className="text-lg">⏱️</p>
                     <p className="text-xs text-blue-300 mt-0.5">Break every</p>
-                    <p className="text-sm font-bold text-white">{breakInterval} hr{breakInterval === 1 ? '' : 's'}</p>
+                    <p className="text-sm font-bold text-white">2 hrs</p>
                   </div>
                   <div className="bg-blue-900/50 rounded-xl p-2 text-center">
                     <p className="text-lg">⛽</p>

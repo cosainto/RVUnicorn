@@ -225,7 +225,6 @@ router.get('/me', authenticateToken, async (req, res) => {
         rvWidth: true,
         rvHeight: true,
         rvMpg: true,
-        breakIntervalHours: true,
         rvFuelType: true,
         rvFuelGal: true,
         rvPhotoUrl: true,
