@@ -623,36 +623,119 @@ router.get('/:username/stats', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get campgrounds visited (unique stays)
-    const uniqueStays = await prisma.stay.findMany({
-      where: { userId: user.id },
-      distinct: ['campgroundId'],
-      select: { campgroundId: true },
-    });
-
-    // Real nights camped — sum of nights from each Stay record, capped at "today"
-    // for any in-progress stay so future-dated stays don't inflate the count.
-    // Skips zero-night entries (start === end). This is the source of truth and
-    // is what the profile UI now reads, replacing the old client-side reduce
-    // that was accidentally summing the *viewer's* trips.
-    const stays = await prisma.stay.findMany({
-      where: { userId: user.id, startDate: { lte: new Date() } },
-      select: { startDate: true, endDate: true },
-    });
+    // ── Visit aggregation across all sources ─────────────────────
+    // Different parts of the app populate different tables:
+    //   - Stay        — original "I stayed here" records
+    //   - CheckIn     — physical check-in/out at a campground
+    //   - StateVisit  — feeds the travel map
+    //   - past Event with campgroundId — implicit visits from trips taken
+    //
+    // The map reads StateVisit, but the stats endpoint used to read only
+    // Stay — which is why Deanna's profile showed 0 nights / 0 campgrounds
+    // even though her map had 23 visited sites. We now collect visit
+    // windows from all four tables and merge any that overlap on the
+    // same campground (so the same trip recorded in multiple tables only
+    // counts once).
     const now = new Date();
+
+    type VisitWindow = { campgroundId: string; start: Date; end: Date };
+    const windows: VisitWindow[] = [];
+
+    // Source 1: Stay
+    const stayRows = await prisma.stay.findMany({
+      where: { userId: user.id, startDate: { lte: now } },
+      select: { campgroundId: true, startDate: true, endDate: true },
+    });
+    for (const s of stayRows) {
+      if (!s.campgroundId) continue;
+      const end = s.endDate ? new Date(s.endDate) : new Date(s.startDate);
+      windows.push({
+        campgroundId: s.campgroundId,
+        start: new Date(s.startDate),
+        end: end > now ? now : end,
+      });
+    }
+
+    // Source 2: CheckIn
+    const checkInRows = await prisma.checkIn.findMany({
+      where: { userId: user.id, campgroundId: { not: null }, checkInDate: { lte: now } },
+      select: { campgroundId: true, checkInDate: true, checkOutDate: true },
+    });
+    for (const c of checkInRows) {
+      if (!c.campgroundId) continue;
+      const end = c.checkOutDate ? new Date(c.checkOutDate) : new Date(c.checkInDate);
+      windows.push({
+        campgroundId: c.campgroundId,
+        start: new Date(c.checkInDate),
+        end: end > now ? now : end,
+      });
+    }
+
+    // Source 3: StateVisit (the table that backs the map)
+    const stateVisitRows = await prisma.stateVisit.findMany({
+      where: { userId: user.id, campsiteId: { not: null }, startDate: { lte: now } },
+      select: { campsiteId: true, startDate: true, endDate: true },
+    });
+    for (const sv of stateVisitRows) {
+      if (!sv.campsiteId) continue;
+      const end = sv.endDate ? new Date(sv.endDate) : new Date(sv.startDate);
+      windows.push({
+        campgroundId: sv.campsiteId,
+        start: new Date(sv.startDate),
+        end: end > now ? now : end,
+      });
+    }
+
+    // Source 4: past Event with a campground (excluding wishlist trips)
+    const pastEventRows = await prisma.event.findMany({
+      where: {
+        OR: [
+          { organizerId: user.id },
+          { attendees: { some: { userId: user.id } } },
+        ],
+        campgroundId: { not: null },
+        startDate: { lte: now },
+        isWishlist: false,
+      },
+      select: { campgroundId: true, startDate: true, endDate: true },
+    });
+    for (const e of pastEventRows) {
+      if (!e.campgroundId) continue;
+      const end = e.endDate ? new Date(e.endDate) : new Date(e.startDate);
+      windows.push({
+        campgroundId: e.campgroundId,
+        start: new Date(e.startDate),
+        end: end > now ? now : end,
+      });
+    }
+
+    // Merge overlapping windows per campground so we don't double-count
+    // a single trip that's recorded in multiple tables.
+    const mergedByCampground = new Map<string, { start: Date; end: Date }[]>();
+    windows.sort((a, b) => a.start.getTime() - b.start.getTime());
+    for (const w of windows) {
+      const list = mergedByCampground.get(w.campgroundId) || [];
+      const last = list[list.length - 1];
+      // Overlap if this window starts on/before the previous one's end (+ 1 day buffer)
+      if (last && w.start.getTime() <= last.end.getTime() + 86400000) {
+        last.end = new Date(Math.max(last.end.getTime(), w.end.getTime()));
+      } else {
+        list.push({ start: w.start, end: w.end });
+      }
+      mergedByCampground.set(w.campgroundId, list);
+    }
+
     let nightsCamped = 0;
     let totalTrips = 0;
-    for (const s of stays) {
-      const start = new Date(s.startDate);
-      const end = s.endDate ? new Date(s.endDate) : start;
-      // Cap end at today so a stay that's still in progress only counts
-      // nights up to right now, not its planned departure
-      const effectiveEnd = end > now ? now : end;
-      const ms = effectiveEnd.getTime() - start.getTime();
-      if (ms <= 0) continue;
-      nightsCamped += Math.floor(ms / 86400000);
-      totalTrips += 1;
+    for (const list of mergedByCampground.values()) {
+      for (const span of list) {
+        const ms = span.end.getTime() - span.start.getTime();
+        if (ms <= 0) continue;
+        nightsCamped += Math.floor(ms / 86400000);
+        totalTrips += 1;
+      }
     }
+    const uniqueCampgroundCount = mergedByCampground.size;
 
     // Get future trips
     const futureTrips = await prisma.trip.count({
@@ -691,7 +774,7 @@ router.get('/:username/stats', async (req, res) => {
     const milesTraveled = 0;
 
     res.json({
-      campgroundsVisited: uniqueStays.length,
+      campgroundsVisited: uniqueCampgroundCount,
       nightsCamped,
       totalTrips,
       // Legacy field name kept for backward compat — same value as nightsCamped now
