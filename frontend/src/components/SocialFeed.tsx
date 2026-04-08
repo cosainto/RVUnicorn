@@ -67,6 +67,13 @@ interface FeedItem {
   title?: string;
   targetName?: string;
   targetLink?: string;
+  targetUser?: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName?: string;
+    profilePicture?: string;
+  } | null;
   createdAt: string;
   _count?: {
     likes: number;
@@ -527,8 +534,77 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         return `${actorName} is attending ${item.targetName}`;
       case 'FAVORITE':
         return `${actorName} favorited ${item.targetName}`;
-      case 'FRIEND':
+      case 'FRIEND': {
+        // Viewer-aware rendering for FRIEND_ADDED:
+        //  - viewer is the actor or the target → "You became friends with [other]"
+        //  - viewer is anyone else → "[actor] and [target] became friends"
+        // Both names are clickable links to their profiles.
+        const actor = item.actor;
+        const target = item.targetUser;
+        const actorLink = actor?.username ? `/profile/${actor.username}` : null;
+        const targetLink = target?.username ? `/profile/${target.username}` : item.targetLink || null;
+        const isViewerActor = !!authUser && actor?.id === authUser.id;
+        const isViewerTarget = !!authUser && target?.id === authUser.id;
+
+        if (isViewerActor && target) {
+          // Viewer is the actor — show the OTHER person
+          return (
+            <span>
+              You became friends with{' '}
+              {targetLink ? (
+                <Link to={targetLink} className="font-semibold hover:underline">
+                  {target.firstName} {target.lastName || ''}
+                </Link>
+              ) : (
+                <span className="font-semibold">{target.firstName} {target.lastName || ''}</span>
+              )}
+            </span>
+          );
+        }
+
+        if (isViewerTarget && actor) {
+          // Viewer is the target — show the actor as the "other" person
+          return (
+            <span>
+              You became friends with{' '}
+              {actorLink ? (
+                <Link to={actorLink} className="font-semibold hover:underline">
+                  {actor.firstName} {actor.lastName || ''}
+                </Link>
+              ) : (
+                <span className="font-semibold">{actor.firstName} {actor.lastName || ''}</span>
+              )}
+            </span>
+          );
+        }
+
+        // Viewer is neither — third-person mutual phrasing with both names linkable
+        if (actor && target) {
+          return (
+            <span>
+              {actorLink ? (
+                <Link to={actorLink} className="font-semibold hover:underline">
+                  {actor.firstName} {actor.lastName || ''}
+                </Link>
+              ) : (
+                <span className="font-semibold">{actor.firstName} {actor.lastName || ''}</span>
+              )}
+              {' and '}
+              {targetLink ? (
+                <Link to={targetLink} className="font-semibold hover:underline">
+                  {target.firstName} {target.lastName || ''}
+                </Link>
+              ) : (
+                <span className="font-semibold">{target.firstName} {target.lastName || ''}</span>
+              )}
+              {' became friends'}
+            </span>
+          );
+        }
+
+        // Fallback for old activity rows that don't have targetUser populated
         return `${actorName} became friends with ${item.targetName}`;
+      }
       case 'CAMPSITE_UPDATE':
       case 'CHECKIN':
         return `${actorName} checked in at ${item.targetName}`;

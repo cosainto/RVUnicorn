@@ -484,7 +484,12 @@ router.put('/:friendshipId/accept-friend', authenticateToken, async (req, res) =
     const acceptorName = acceptor?.firstName ? `${acceptor.firstName} ${acceptor.lastName || ''}`.trim() : acceptor?.username || 'Someone';
     const initiatorName = initiator?.firstName ? `${initiator.firstName} ${initiator.lastName || ''}`.trim() : initiator?.username || 'Someone';
 
-    // Create activity for the acceptor's feed
+    // ONE Activity row per friendship — the acceptor is the actor, the
+    // initiator is the target. The activity feed query returns rows
+    // where the current user is EITHER userId or targetUserId, so this
+    // single row shows up in both users' feeds. Defense in depth — this
+    // endpoint has no live caller today, but matching the friendship.routes.ts
+    // dedup logic prevents future regressions if it ever gets wired up.
     await prisma.activity.create({
       data: {
         userId,
@@ -492,18 +497,6 @@ router.put('/:friendshipId/accept-friend', authenticateToken, async (req, res) =
         targetUserId: friendship.initiatorId,
         title: `${acceptorName} and ${initiatorName} are now friends!`,
         content: `${acceptorName} became camping buddies with ${initiatorName}`,
-        isPublic: true,
-      }
-    });
-
-    // Create activity for the initiator's feed
-    await prisma.activity.create({
-      data: {
-        userId: friendship.initiatorId,
-        type: 'FRIEND_ADDED',
-        targetUserId: userId,
-        title: `${initiatorName} and ${acceptorName} are now friends!`,
-        content: `${initiatorName} became camping buddies with ${acceptorName}`,
         isPublic: true,
       }
     });
@@ -1130,6 +1123,8 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           ],
           ...(isOwnProfile ? {} : { isPublic: true })
         },
+        // We pull a few extra rows here so the dedup pass below has room
+        // to collapse FRIEND_ADDED duplicates without leaving a short page.
         take: limit,
         skip,
         orderBy: { createdAt: 'desc' },
@@ -1164,6 +1159,24 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       // Activity model might not exist yet, that's okay
       console.log('Activity model not available yet');
     }
+
+    // Dedup FRIEND_ADDED rows by friendship pair so users like Will don't
+    // see two entries for one friendship. Historically the accept-friend
+    // route created two Activity rows (one userId=initiator, one userId=
+    // receiver) and the activity feed query at line 1127 returns BOTH
+    // because the user is the targetUserId of one and the userId of the
+    // other. The write-side dedup landed in commit 08e99647, but rows
+    // created before that fix still produce duplicates on read.
+    const seenFriendPairs = new Set<string>();
+    activities = activities.filter((a: any) => {
+      if (a.type !== 'FRIEND_ADDED') return true;
+      const ids = [a.userId, a.targetUserId].filter(Boolean).sort();
+      if (ids.length < 2) return true;
+      const key = ids.join('|');
+      if (seenFriendPairs.has(key)) return false;
+      seenFriendPairs.add(key);
+      return true;
+    });
 
     // Activity type configuration
     const ACTIVITY_CONFIG: Record<string, { label: string; icon: string; feedType: string }> = {
@@ -1302,6 +1315,10 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         id: `activity-${activity.id}`,
         type: config.feedType,
         actor: activity.user,
+        // Expose targetUser for FRIEND_ADDED so the frontend can render
+        // viewer-aware text ("You became friends with X" vs "X and Y
+        // became friends") with both names linkable.
+        targetUser: activity.targetUser || null,
         content: activity.content || null,
         title: activity.title,
         targetName,
