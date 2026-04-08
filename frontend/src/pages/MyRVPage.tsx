@@ -100,6 +100,7 @@ export default function MyRVPage() {
     rvSlideouts: '',
     rvWeight: '',
     rvMpg: '',
+    breakIntervalHours: '2',
     rvFuelType: 'gas',
     rvWidth: '',
     rvHeight: '',
@@ -147,6 +148,7 @@ export default function MyRVPage() {
         rvSlideouts: profile.rvSlideouts?.toString() || '',
         rvWeight: profile.rvWeight?.toString() || '',
         rvMpg: profile.rvMpg?.toString() || '',
+        breakIntervalHours: profile.breakIntervalHours?.toString() || '2',
         rvFuelType: profile.rvFuelType || 'gas',
         rvWidth: profile.rvWidth?.toString() || '',
         rvHeight: profile.rvHeight?.toString() || '',
@@ -209,6 +211,7 @@ export default function MyRVPage() {
         rvSlideouts: rvData.rvSlideouts ? parseInt(rvData.rvSlideouts) : null,
         rvWeight: rvData.rvWeight ? parseInt(rvData.rvWeight) : null,
         rvMpg: rvData.rvMpg ? parseFloat(rvData.rvMpg) : null,
+        breakIntervalHours: rvData.breakIntervalHours ? parseInt(rvData.breakIntervalHours) : null,
         rvFuelType: rvData.rvFuelType || 'gas',
         rvWidth: rvData.rvWidth ? parseInt(rvData.rvWidth) : null,
         rvHeight: rvData.rvHeight ? parseInt(rvData.rvHeight) : null,
@@ -662,6 +665,26 @@ export default function MyRVPage() {
               {(() => { const t = MPG_BY_TYPE[rvData.rvType]; const m = MPG_BY_MAKE[rvData.rvMake]; const avg = (m || t?.avg)?.toString(); return avg && rvData.rvMpg !== avg ? <button type="button" onClick={() => setRvData(prev => ({ ...prev, rvMpg: avg }))} className="text-xs text-blue-600 hover:text-blue-700">Use suggested ({avg} mpg)</button> : null; })()}
             </div>
             <p className="text-xs text-gray-400 mt-1">Used for fuel cost estimates in the trip planner</p>
+          </div>
+
+          {/* Break Interval */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ⏱️ Drive Break Interval (hours)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                step="1"
+                min="1"
+                max="8"
+                value={rvData.breakIntervalHours}
+                onChange={(e) => setRvData({ ...rvData, breakIntervalHours: e.target.value })}
+                placeholder="2"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">How often you like to stop and stretch on long drives. Shown in the Basecamp pre-trip checklist.</p>
           </div>
 
           {/* Description */}

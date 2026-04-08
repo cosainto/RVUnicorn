@@ -44,6 +44,7 @@ model User {
   workBlocks                                      WorkBlock[]
   rvLength                                        Int?
   rvMpg                                           Float?
+  breakIntervalHours                              Int?                        @default(2)
   rvPhotoUrl                                      String?
   rvHeight                                        Int?
   rvWeight                                        Int?
