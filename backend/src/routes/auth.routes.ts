@@ -129,7 +129,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.status(201).json({ user, token });
@@ -165,7 +165,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     const userResponse = {
