@@ -1343,6 +1343,10 @@ export default function BasecampPage({ user }: BasecampProps) {
     packingTotal: number;
     packingDone: number;
     weather: { temperature: number; temperatureUnit: string; shortForecast: string } | null;
+    // Raw check-in time string from CampgroundRules (e.g. "1:00 PM",
+    // "13:00", "1pm"). Pre-Trip Intelligence parses it client-side to
+    // recommend a departure time. null = unknown / no rules row.
+    checkInTime: string | null;
   } | null>(null);
 
   // Derived mode flags (computed after nextEvent is declared)
@@ -1439,7 +1443,8 @@ export default function BasecampPage({ user }: BasecampProps) {
       const packingItems = packingData.items || [];
       const packingStats = packingData.stats || null;
 
-      // Try weather if campground has coords
+      // Try weather if campground has coords + fetch rules for check-in time
+      let checkInTime: string | null = null;
       if (nextEvent.campground?.id) {
         try {
           const cgRes = await api.get(`/campgrounds/${nextEvent.campground.id}`);
@@ -1448,6 +1453,13 @@ export default function BasecampPage({ user }: BasecampProps) {
             const wRes = await api.get(`/weather/forecast?lat=${cg.latitude}&lon=${cg.longitude}`);
             weather = wRes.data?.current || null;
           }
+        } catch {}
+        // Fetch CampgroundRules separately — they live on a different
+        // route and aren't included in GET /campgrounds/:id. Soft-fail
+        // because most campgrounds in our DB don't have rules rows yet.
+        try {
+          const rulesRes = await api.get(`/campgrounds/${nextEvent.campground.id}/rules`);
+          checkInTime = rulesRes.data?.checkInTime || null;
         } catch {}
       }
 
@@ -1464,6 +1476,7 @@ export default function BasecampPage({ user }: BasecampProps) {
         packingTotal: packingStats ? packingStats.total : packingItems.length,
         packingDone: packingStats ? packingStats.packed : packingItems.filter((i: any) => i.isPacked || i.packed).length,
         weather,
+        checkInTime,
       });
     });
   }, [nextEvent?.id, isCamping]);
@@ -2510,6 +2523,65 @@ export default function BasecampPage({ user }: BasecampProps) {
                       </button>
                     </div>
 
+                    {/* Suggested departure — work backwards from the
+                        campground check-in time. Defaults to 1 PM when
+                        rules don't have one. Adds a 30-min buffer for
+                        fuel/loading slack and the suggested breaks
+                        (15 min each) so the recommendation accounts
+                        for the real wall-clock time the drive takes,
+                        not just the moving-time estimate. */}
+                    {(() => {
+                      // Lazy parser: handles "1:00 PM", "1pm", "13:00", "1 PM", etc.
+                      const parseCheckIn = (raw: string | null | undefined): { h: number; m: number } => {
+                        if (!raw || typeof raw !== 'string') return { h: 13, m: 0 }; // 1 PM default
+                        const s = raw.trim().toLowerCase();
+                        const m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+                        if (!m) return { h: 13, m: 0 };
+                        let h = parseInt(m[1], 10);
+                        const min = m[2] ? parseInt(m[2], 10) : 0;
+                        const ampm = m[3];
+                        if (ampm === 'pm' && h < 12) h += 12;
+                        if (ampm === 'am' && h === 12) h = 0;
+                        if (h > 23 || min > 59) return { h: 13, m: 0 };
+                        return { h, m: min };
+                      };
+                      const { h: ciH, m: ciM } = parseCheckIn(planningData?.checkInTime);
+                      const isDefault = !planningData?.checkInTime;
+                      // Trip start date at the check-in time (local time)
+                      const startDate = new Date(nextEvent.startDate);
+                      const arriveBy = new Date(startDate);
+                      arriveBy.setHours(ciH, ciM, 0, 0);
+                      // Total wall-clock time = drive time + breaks (15 min each)
+                      // + 30 min loading/fuel buffer
+                      const breakMinutes = breaks.length * 15;
+                      const bufferMinutes = 30;
+                      const totalMinutes = driveHours * 60 + breakMinutes + bufferMinutes;
+                      const departBy = new Date(arriveBy.getTime() - totalMinutes * 60 * 1000);
+                      const sameDay = departBy.toDateString() === arriveBy.toDateString();
+                      const dayName = departBy.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                      const timeStr = departBy.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                      const arriveTimeStr = arriveBy.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                      return (
+                        <div className="bg-blue-900/40 rounded-xl p-3 mb-2">
+                          <div className="flex items-start gap-3">
+                            <div className="text-2xl">🕒</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-blue-300">Suggested departure</p>
+                              <p className="text-base font-bold text-white">
+                                {dayName} at {timeStr}
+                              </p>
+                              <p className="text-[11px] text-blue-300 mt-0.5">
+                                Arrives by {arriveTimeStr}{sameDay ? '' : ' (next day)'} · check-in {isDefault ? '~1:00 PM (assumed)' : planningData!.checkInTime}
+                              </p>
+                              <p className="text-[10px] text-blue-400/80 mt-1 italic">
+                                Estimate — includes {formatHourMin(driveHours)} drive{breaks.length > 0 ? ` + ${breaks.length} stop${breaks.length === 1 ? '' : 's'}` : ''} + 30 min buffer. Real time depends on traffic, weather, and your pace.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {breaks.length > 0 ? (
                       <div className="bg-blue-900/40 rounded-xl p-3 mb-3">
                         <p className="text-xs text-blue-300 mb-2">⏱️ Suggested breaks ({breaks.length})</p>
@@ -2581,55 +2653,8 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Event Countdown Banner OR Inspirational Quote — Planning Mode only */}
-      {isPlanning && (nextEvent ? (
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6" />
-                <div>
-                  <p className="text-sm text-blue-100">Countdown to</p>
-                  <Link to={`/trips/${nextEvent.id}`} className="font-bold hover:underline">
-                    {nextEvent.title || nextEvent.name}
-                  </Link>
-                  {nextEvent.campground && (
-                    <p className="text-xs text-blue-200">at {nextEvent.campground.name}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-center bg-white/20 rounded-lg px-3 py-2 min-w-[60px]">
-                  <div className="text-2xl font-bold">{countdown.days}</div>
-                  <div className="text-xs text-blue-100">Days</div>
-                </div>
-                <div className="text-center bg-white/20 rounded-lg px-3 py-2 min-w-[60px]">
-                  <div className="text-2xl font-bold">{countdown.hours}</div>
-                  <div className="text-xs text-blue-100">Hours</div>
-                </div>
-                <div className="text-center bg-white/20 rounded-lg px-3 py-2 min-w-[60px]">
-                  <div className="text-2xl font-bold">{countdown.minutes}</div>
-                  <div className="text-xs text-blue-100">Min</div>
-                </div>
-                <div className="text-center bg-white/20 rounded-lg px-3 py-2 min-w-[60px]">
-                  <div className="text-2xl font-bold">{countdown.seconds}</div>
-                  <div className="text-xs text-blue-100">Sec</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-blue-100">Starting</p>
-                <p className="font-medium">
-                  {new Date(nextEvent.startDate).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
+      {/* Inspirational Quote (Planning Mode, no upcoming trip) */}
+      {isPlanning && !nextEvent && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -2663,7 +2688,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             </div>
           </div>
         </div>
-      ))}
+      )}
 
       {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
       {hasFutureTrip && nextEvent && (
@@ -2676,8 +2701,15 @@ export default function BasecampPage({ user }: BasecampProps) {
                 <span className="text-2xl">🗺️</span>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">Planning Mode</p>
-                  <h3 className="font-bold text-gray-900 text-lg leading-tight">{nextEvent.title || nextEvent.name}</h3>
+                  <Link to={`/trips/${nextEvent.id}`} className="font-bold text-gray-900 text-lg leading-tight hover:text-primary-700 transition">
+                    {nextEvent.title || nextEvent.name}
+                  </Link>
                   {nextEvent.campground && <p className="text-sm text-gray-500">at {nextEvent.campground.name}</p>}
+                  {nextEvent.startDate && (
+                    <p className="text-xs text-primary-600 font-semibold mt-0.5">
+                      Starts {new Date(nextEvent.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </p>
+                  )}
                 </div>
               </div>
               <Link to={`/trips/${nextEvent.id}`} className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-2 rounded-xl transition">
@@ -2685,24 +2717,24 @@ export default function BasecampPage({ user }: BasecampProps) {
               </Link>
             </div>
 
-            {/* Stats row */}
+            {/* Stats row — each tile deep-links into the relevant trip phase */}
             <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+              <Link to={`/trips/${nextEvent.id}`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
                 <div className="text-2xl font-bold text-primary-700">{countdown.days}</div>
                 <div className="text-xs text-gray-500 font-medium">Days Away</div>
-              </div>
-              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+              </Link>
+              <Link to={`/trips/${nextEvent.id}?openPhase=camp`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
                 <div className="text-2xl font-bold text-primary-700">{planningData?.activityCount ?? '—'}</div>
                 <div className="text-xs text-gray-500 font-medium">Activities</div>
-              </div>
-              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+              </Link>
+              <Link to={`/trips/${nextEvent.id}?openPhase=prepare`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
                 <div className="text-2xl font-bold text-primary-700">{planningData?.mealCount ?? '—'}</div>
                 <div className="text-xs text-gray-500 font-medium">Meals</div>
-              </div>
-              <div className="bg-white rounded-xl p-3 text-center border border-primary-100">
+              </Link>
+              <Link to={`/trips/${nextEvent.id}?openPhase=plan`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
                 <div className="text-2xl font-bold text-primary-700">{planningData?.attendees.length ?? '—'}</div>
                 <div className="text-xs text-gray-500 font-medium">Attendees</div>
-              </div>
+              </Link>
             </div>
 
             {/* Packing progress */}

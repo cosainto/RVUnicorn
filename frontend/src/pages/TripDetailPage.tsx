@@ -150,6 +150,17 @@ export default function EventDetailPage() {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }, 500);
     }
+    // ?openPhase=plan|travel|prepare|camp|remember — open the named phase accordion
+    // and scroll to it. Used by Basecamp planning panel deep-links.
+    const openPhase = params.get('openPhase');
+    if (openPhase && ['plan','travel','prepare','camp','remember'].includes(openPhase)) {
+      userToggledPhases.current = true;
+      setOpenPhases(prev => new Set([...prev, openPhase]));
+      setTimeout(() => {
+        const el = document.getElementById(`phase-${openPhase}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 250);
+    }
   }, [location.search]);
   const [showPackingModal, setShowPackingModal] = useState(false);
   const [plannerFrom, setPlannerFrom] = useState<string>('');
