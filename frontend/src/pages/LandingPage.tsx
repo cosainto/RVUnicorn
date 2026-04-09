@@ -54,6 +54,14 @@ function Navbar() {
         borderBottom: scrolled ? '1px solid rgba(201,168,76,0.1)' : 'none',
       }}
     >
+      {/* Beta Banner — sits above the nav row so they never overlap */}
+      <div className="text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
+        <p className="text-[12px] font-bold tracking-wide">
+          {'\u{1F6A7}'} RVUnicorn is in Early Access Beta — You're among the first to shape the future of RV travel.
+          <Link to="/register" className="ml-2 underline font-bold">Join free & help us grow →</Link>
+        </p>
+      </div>
+
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-3">
           <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
@@ -252,17 +260,9 @@ export default function LandingPage() {
       <div className="font-dm" style={{ background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 50%, #F7F9FC 50.1%)', color: 'white', minHeight: '100vh' }}>
         <Navbar />
 
-        {/* Beta Banner */}
-        <div className="relative z-40 text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, var(--campfire), var(--gold))', color: 'var(--navy-deep)' }}>
-          <p className="text-[12px] font-bold tracking-wide">
-            {'\u{1F6A7}'} RVUnicorn is in Early Access Beta — You're among the first to shape the future of RV travel.
-            <Link to="/register" className="ml-2 underline font-bold">Join free & help us grow →</Link>
-          </p>
-        </div>
-
         {/* ═══ HERO ═══ */}
         <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(232,98,42,0.08) 0%, transparent 60%), var(--navy-deep)' }}>
-          <div className="max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
+          <div className="max-w-7xl mx-auto px-6 pt-36 pb-16 w-full">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Left — Content */}
               <div>
@@ -323,8 +323,13 @@ export default function LandingPage() {
                     </div>
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex -space-x-1.5">
-                        {['#E8622A', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'].map((c, i) => (
-                          <div key={i} className="w-6 h-6 rounded-full border-2" style={{ background: c, borderColor: 'rgba(27,43,75,0.8)' }} />
+                        {[
+                          'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=64&h=64&fit=crop&crop=face',
+                          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=64&h=64&fit=crop&crop=face',
+                          'https://images.unsplash.com/photo-1463453091185-61582044d556?w=64&h=64&fit=crop&crop=face',
+                          'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=64&h=64&fit=crop&crop=face',
+                        ].map((src, i) => (
+                          <img key={i} src={src} alt="" className="w-6 h-6 rounded-full object-cover border-2" style={{ borderColor: 'rgba(27,43,75,0.8)' }} />
                         ))}
                       </div>
                       <span className="text-xs" style={{ color: 'var(--muted)' }}>4 RVers on this trip</span>
