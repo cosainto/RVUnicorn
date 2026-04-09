@@ -128,6 +128,13 @@ router.post('/create-checkout', authenticateToken, async (req: any, res: Respons
       customerId = customer.id;
     }
 
+    // Every paid plan gets a 30-day free trial that grants Summit-level access.
+    // Customers experience the highest-tier features for the first month
+    // regardless of which plan they pick; after the trial they're billed at
+    // their selected plan's rate. The "Summit-during-trial" upgrade is purely
+    // an app-side display + feature-gating concern (see GET /subscription's
+    // effectiveTier and BusinessBasecampPage's sidebar) — Stripe just needs
+    // to know the trial exists so the customer isn't charged for 30 days.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -136,7 +143,7 @@ router.post('/create-checkout', authenticateToken, async (req: any, res: Respons
       cancel_url: `${FRONTEND_URL}/business/${campgroundId}?upgrade=cancelled`,
       metadata: { campgroundId, userId: req.userId, tier },
       subscription_data: {
-        trial_period_days: tier === 'BASECAMP' ? 30 : undefined,
+        trial_period_days: 30,
         metadata: { campgroundId, tier },
       },
     });
@@ -264,19 +271,26 @@ router.post('/webhook', async (req: Request, res: Response) => {
         const { campgroundId, tier, userId } = session.metadata || {};
         if (!campgroundId) break;
 
+        // Every paid tier gets a 30-day Summit-grade trial — see create-checkout
+        // for the rationale. Set trialStartDate/trialEndDate for all of them so
+        // GET /subscription can compute effectiveTier correctly.
+        const nowMs = Date.now();
+        const trialEndsMs = nowMs + 30 * 86400000;
         await (prisma as any).campgroundSubscription.upsert({
           where: { campgroundId },
           create: {
             campgroundId, tier: tier || 'BASECAMP', status: 'ACTIVE',
             stripeCustomerId: session.customer, stripeSubscriptionId: session.subscription,
             isFoundingMember: tier === 'FOUNDING', foundingMemberSince: tier === 'FOUNDING' ? new Date() : null,
-            trialStartDate: tier === 'BASECAMP' ? new Date() : null,
-            trialEndDate: tier === 'BASECAMP' ? new Date(Date.now() + 30 * 86400000) : null,
+            trialStartDate: new Date(nowMs),
+            trialEndDate: new Date(trialEndsMs),
           },
           update: {
             tier: tier || 'BASECAMP', status: 'ACTIVE',
             stripeCustomerId: session.customer, stripeSubscriptionId: session.subscription,
             isFoundingMember: tier === 'FOUNDING',
+            trialStartDate: new Date(nowMs),
+            trialEndDate: new Date(trialEndsMs),
           },
         });
 
@@ -439,8 +453,19 @@ router.get('/subscription/:campgroundId', authenticateToken, async (req: any, re
   try {
     const dbSub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId: req.params.campgroundId } });
     if (!dbSub) {
-      return res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE' } });
+      return res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE', isInTrial: false, effectiveTier: 'TRAILHEAD' } });
     }
+
+    // Trial promo: every paid signup gets 30 days of Summit-grade access
+    // regardless of which plan they picked. effectiveTier is what the UI
+    // should display and feature-gate against; the actual paid tier kicks
+    // in only after trialEndDate passes.
+    const nowMs = Date.now();
+    const trialEndMs = dbSub.trialEndDate ? new Date(dbSub.trialEndDate).getTime() : 0;
+    const isPaidTier = dbSub.tier && dbSub.tier !== 'TRAILHEAD' && dbSub.status !== 'CANCELLED';
+    const isInTrial = isPaidTier && trialEndMs > nowMs;
+    const effectiveTier = isInTrial ? 'SUMMIT' : dbSub.tier;
+    const trialDaysRemaining = isInTrial ? Math.ceil((trialEndMs - nowMs) / 86400000) : 0;
 
     // Enrich with live Stripe data so the frontend can show pending plan
     // changes (Stripe queues downgrades for end-of-period as a
@@ -478,10 +503,18 @@ router.get('/subscription/:campgroundId', authenticateToken, async (req: any, re
       }
     }
 
-    res.json({ subscription: { ...dbSub, pendingChange } });
+    res.json({
+      subscription: {
+        ...dbSub,
+        pendingChange,
+        isInTrial,
+        trialDaysRemaining,
+        effectiveTier,
+      },
+    });
   } catch (e: any) {
     console.error('[Stripe] /subscription error:', e.message);
-    res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE' } });
+    res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE', isInTrial: false, effectiveTier: 'TRAILHEAD' } });
   }
 });
 

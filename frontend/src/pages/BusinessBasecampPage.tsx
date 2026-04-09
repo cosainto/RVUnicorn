@@ -190,6 +190,18 @@ export default function BusinessBasecampPage() {
     : null;
   const pendingChangeTierName = pendingChange ? (TIER_LABELS[pendingChange.tier]?.name || pendingChange.tier) : null;
 
+  // 30-day Summit trial promo: every paid signup gets Summit-level access for
+  // the first month regardless of which plan they picked. After the trial,
+  // they drop to whatever they're paying for.
+  const isInTrial = !!stripeSub?.isInTrial;
+  const trialDaysRemaining = stripeSub?.trialDaysRemaining || 0;
+  const paidTierName = stripeSub?.tier && TIER_LABELS[stripeSub.tier]
+    ? TIER_LABELS[stripeSub.tier].name
+    : null;
+  const trialEndsAtLabel = stripeSub?.trialEndDate
+    ? new Date(stripeSub.trialEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
   // Tab-specific data
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
@@ -444,9 +456,11 @@ export default function BusinessBasecampPage() {
   // Display name comes from the Stripe-side tier when available (Trailhead /
   // Base Camp / Summit / Founding Partner). Falls back to the legacy enum so
   // older campground rows that haven't been touched by the Stripe webhook
-  // still render correctly. Feature gating still uses the legacy `tier` enum.
-  const displayTierKey =
-    stripeSub?.tier && stripeSub.tier !== 'TRAILHEAD' ? stripeSub.tier : tier;
+  // still render correctly. During the 30-day trial promo every paid plan
+  // displays as Summit (the effectiveTier the backend computed).
+  const displayTierKey = stripeSub?.effectiveTier && stripeSub.effectiveTier !== 'TRAILHEAD'
+    ? stripeSub.effectiveTier
+    : (stripeSub?.tier && stripeSub.tier !== 'TRAILHEAD' ? stripeSub.tier : tier);
   const tierInfo = TIER_LABELS[displayTierKey] || TIER_LABELS.FREE;
   const canAccess = (requiredTier: string) => tierLevel(tier) >= tierLevel(requiredTier);
 
@@ -661,8 +675,18 @@ export default function BusinessBasecampPage() {
               </>
             ) : (
               <>
-                <p className="text-white font-bold text-sm mb-1">{tierInfo.icon} {tierInfo.name}</p>
-                {pendingChange ? (
+                <p className="text-white font-bold text-sm mb-1">
+                  {tierInfo.icon} {tierInfo.name}
+                  {isInTrial && <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#10B981', color: 'white' }}>TRIAL</span>}
+                </p>
+                {isInTrial ? (
+                  <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                    🎁 <span className="font-semibold text-emerald-300">{trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'}</span> of free Summit access remaining.
+                    {paidTierName && paidTierName !== 'Summit' && (
+                      <> After {trialEndsAtLabel}, you'll switch to <span className="font-semibold text-white/80">{paidTierName}</span> at your normal rate.</>
+                    )}
+                  </p>
+                ) : pendingChange ? (
                   <p className="text-white/60 text-xs mb-3 leading-relaxed">
                     Switching to <span className="font-semibold text-amber-300">{pendingChangeTierName}</span> on <span className="font-semibold text-white/80">{pendingChangeLabel}</span>. You keep {tierInfo.name} access until then.
                   </p>

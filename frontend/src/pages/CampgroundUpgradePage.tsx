@@ -70,6 +70,22 @@ export default function CampgroundUpgradePage() {
           <p className="text-[12px] mt-3" style={{ color: '#10B981' }}>Monthly billing · Pause for free, up to 6 months — perfect for seasonal campgrounds</p>
         </div>
 
+        {/* Summit trial banner — every signup gets full Summit access for the first 30 days */}
+        <div
+          className="rounded-2xl p-5 mb-6 text-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(14,165,233,0.12))',
+            border: '1.5px solid rgba(16,185,129,0.35)',
+          }}
+        >
+          <p className="text-base font-bold mb-1" style={{ color: '#0F766E' }}>
+            🎁 Every plan starts with a 30-day FREE Summit trial
+          </p>
+          <p className="text-[13px]" style={{ color: '#475569' }}>
+            No matter which plan you pick below, your first 30 days unlock <span className="font-bold">every Summit feature</span> — Mission Mode, Co-Host Autopilot, advanced analytics, and more. After 30 days you'll switch to your selected plan at its normal rate. <span className="font-semibold">No charge during the trial.</span> Cancel anytime.
+          </p>
+        </div>
+
         {/* Tier Cards */}
         <div className="grid md:grid-cols-3 gap-5 mb-8">
           {TIERS.map(tier => {
@@ -83,9 +99,15 @@ export default function CampgroundUpgradePage() {
 
                 <div className="text-2xl mb-2">{tier.badge}</div>
                 <h3 className="text-lg font-bold mb-1">{tier.name}</h3>
-                <p className="text-2xl font-bold mb-4" style={{ fontFamily: "'Playfair Display',serif", color: '#0EA5E9' }}>
+                <p className="text-2xl font-bold mb-1" style={{ fontFamily: "'Playfair Display',serif", color: '#0EA5E9' }}>
                   {tier.price === 'Free' ? 'Free' : `${tier.price}${tier.cycle}`}
                 </p>
+                {tier.id !== 'TRAILHEAD' && (
+                  <p className="text-[11px] font-semibold mb-3" style={{ color: '#10B981' }}>
+                    🎁 First 30 days FREE — full Summit access
+                  </p>
+                )}
+                {tier.id === 'TRAILHEAD' && <div className="mb-3" />}
 
                 <ul className="space-y-2 mb-6">
                   {tier.features.map(f => (
@@ -102,7 +124,7 @@ export default function CampgroundUpgradePage() {
                   <button onClick={() => handleUpgrade(tier)} disabled={loading === tier.id}
                     className="w-full py-3 rounded-xl text-[13px] font-bold transition hover:brightness-110 disabled:opacity-50"
                     style={{ background: tier.popular ? '#E8622A' : '#0EA5E9', color: tier.popular ? 'white' : '#0F1C35' }}>
-                    {loading === tier.id ? 'Loading...' : tier.id === 'BASECAMP' ? 'Start 30-Day Free Trial' : 'Upgrade to Summit'}
+                    {loading === tier.id ? 'Loading...' : 'Start 30-Day Summit Trial'}
                   </button>
                 )}
               </div>
