@@ -437,9 +437,52 @@ router.post('/webhook', async (req: Request, res: Response) => {
 // ══ GET /api/stripe/subscription/:campgroundId ══
 router.get('/subscription/:campgroundId', authenticateToken, async (req: any, res: Response) => {
   try {
-    const sub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId: req.params.campgroundId } });
-    res.json({ subscription: sub || { tier: 'TRAILHEAD', status: 'ACTIVE' } });
-  } catch { res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE' } }); }
+    const dbSub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId: req.params.campgroundId } });
+    if (!dbSub) {
+      return res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE' } });
+    }
+
+    // Enrich with live Stripe data so the frontend can show pending plan
+    // changes (Stripe queues downgrades for end-of-period as a
+    // subscription_schedule rather than executing them immediately, and the
+    // schedule lives in Stripe — not in our DB).
+    let pendingChange: { tier: string; effectiveAt: string } | null = null;
+    if (stripe && dbSub.stripeSubscriptionId) {
+      try {
+        const liveSub = await stripe.subscriptions.retrieve(dbSub.stripeSubscriptionId);
+        const scheduleId = (liveSub as any).schedule;
+        if (scheduleId && typeof scheduleId === 'string') {
+          const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+          // Find the next phase after the current one. Schedule phases are
+          // ordered chronologically; the current phase is the one that
+          // contains "now", and the next phase is what we're switching to.
+          const nowSec = Math.floor(Date.now() / 1000);
+          const phases = (schedule as any).phases || [];
+          const currentPhaseIdx = phases.findIndex(
+            (p: any) => p.start_date <= nowSec && (!p.end_date || p.end_date > nowSec)
+          );
+          const nextPhase = currentPhaseIdx >= 0 ? phases[currentPhaseIdx + 1] : null;
+          if (nextPhase && nextPhase.items?.[0]?.price) {
+            const nextPriceId = nextPhase.items[0].price;
+            const nextTier = priceIdToTier(typeof nextPriceId === 'string' ? nextPriceId : nextPriceId.id);
+            if (nextTier && nextPhase.start_date) {
+              pendingChange = {
+                tier: nextTier,
+                effectiveAt: new Date(nextPhase.start_date * 1000).toISOString(),
+              };
+            }
+          }
+        }
+      } catch (e: any) {
+        console.warn(`[Stripe] Failed to enrich subscription with live data for ${req.params.campgroundId}:`, e.message);
+      }
+    }
+
+    res.json({ subscription: { ...dbSub, pendingChange } });
+  } catch (e: any) {
+    console.error('[Stripe] /subscription error:', e.message);
+    res.json({ subscription: { tier: 'TRAILHEAD', status: 'ACTIVE' } });
+  }
 });
 
 // ══ GET /api/stripe/founding-count ══

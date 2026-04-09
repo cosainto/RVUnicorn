@@ -182,6 +182,13 @@ export default function BusinessBasecampPage() {
   const cancelsAtLabel = stripeSub?.currentPeriodEnd
     ? new Date(stripeSub.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
+  // Pending plan change (Stripe defaults downgrades to "schedule at end of period").
+  // The backend's GET /api/stripe/subscription enriches the response with this.
+  const pendingChange = stripeSub?.pendingChange as { tier: string; effectiveAt: string } | null | undefined;
+  const pendingChangeLabel = pendingChange?.effectiveAt
+    ? new Date(pendingChange.effectiveAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const pendingChangeTierName = pendingChange ? (TIER_LABELS[pendingChange.tier]?.name || pendingChange.tier) : null;
 
   // Tab-specific data
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -655,9 +662,15 @@ export default function BusinessBasecampPage() {
             ) : (
               <>
                 <p className="text-white font-bold text-sm mb-1">{tierInfo.icon} {tierInfo.name}</p>
-                <p className="text-white/60 text-xs mb-3 leading-relaxed">
-                  Manage billing or pause for the season
-                </p>
+                {pendingChange ? (
+                  <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                    Switching to <span className="font-semibold text-amber-300">{pendingChangeTierName}</span> on <span className="font-semibold text-white/80">{pendingChangeLabel}</span>. You keep {tierInfo.name} access until then.
+                  </p>
+                ) : (
+                  <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                    Manage billing or pause for the season
+                  </p>
+                )}
                 <button
                   onClick={openCustomerPortal}
                   disabled={portalLoading}
@@ -669,11 +682,18 @@ export default function BusinessBasecampPage() {
                 <button
                   onClick={pauseForSeason}
                   disabled={pauseLoading}
-                  className="block text-center w-full py-1.5 rounded-lg text-white/80 text-xs font-semibold transition hover:text-white disabled:opacity-50"
+                  className="block text-center w-full py-1.5 rounded-lg text-white/80 text-xs font-semibold transition hover:text-white disabled:opacity-50 mb-2"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}
                 >
                   {pauseLoading ? 'Pausing…' : '🌙 Pause for the Season'}
                 </button>
+                <Link
+                  to={`/business/${campgroundId}/upgrade`}
+                  className="block text-center w-full py-1.5 rounded-lg text-white/50 text-[10px] font-medium transition hover:text-white/80"
+                  style={{ background: 'transparent' }}
+                >
+                  🦄 Want Founding Partner? View all plans
+                </Link>
               </>
             )}
           </div>
