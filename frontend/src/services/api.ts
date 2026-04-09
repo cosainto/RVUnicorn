@@ -23,33 +23,44 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 errors — token expired or invalid
+// Handle 401 errors — only the canonical session-check endpoint can
+// declare a session dead. Every other 401 is a permission denial on a
+// specific resource and must NOT tear down the session.
+//
+// Why: previously ANY 401 from ANY endpoint forcibly logged the user
+// out via window.location.href = '/login'. That meant a single soft
+// endpoint mistakenly returning 401 (because of a stale JWT, a route
+// gated stricter than its callers expected, or just a route with
+// authenticateToken on a page that mounts for both authed and
+// unauthed users) would boot the user mid-page-load. The campground
+// page logout bugs (price-prompt-eligible, then again on claimed
+// campgrounds) were both this same root cause.
+//
+// New policy: only /auth/me's 401 is treated as "session is dead"
+// because /auth/me's entire job is to answer "is this token still
+// good?" — it's the one endpoint where 401 is unambiguous. For every
+// other 401, we just reject the promise and let the caller handle
+// the failure (display an error, show a sign-in CTA, etc.). If the
+// token really is dead, the next /auth/me call (on refresh or route
+// change that re-runs AuthContext) will catch it and bounce.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.config?.url, error.response?.status);
-
-    // Any 401 response means the user's session is no longer valid (expired
-    // or revoked). Clear stored auth and bounce them to /login so they can
-    // re-authenticate, instead of leaving the page silently broken with
-    // every subsequent request also 401'ing. We avoid an infinite loop on
-    // the login page itself by checking the URL we're on.
     if (error.response?.status === 401) {
-      const onLoginPage = window.location.pathname === '/login';
-      // /auth/me 401s during initial load shouldn't redirect — that's just
-      // "no session yet"; the AuthContext handles it.
-      const isAuthCheck = error.config?.url === '/auth/me';
-      if (!onLoginPage && !isAuthCheck) {
+      const url = error.config?.url || '';
+      const isAuthCheck = url === '/auth/me' || url.endsWith('/auth/me');
+      if (isAuthCheck) {
+        // The session-check endpoint says the token is dead — clear
+        // local auth and bounce to /login (unless we're already there).
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // Preserve where they were so we can return them after login
-        const returnTo = window.location.pathname + window.location.search;
-        window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
-      } else if (isAuthCheck) {
-        // Existing behavior for /auth/me — just clear and go to /login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        if (!onLoginPage) window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      } else {
+        // Permission denial on a specific endpoint — log it once for
+        // debugging but DO NOT touch the session.
+        console.warn('[api] 401 on', url, '(ignored — only /auth/me triggers logout)');
       }
     }
     return Promise.reject(error);
