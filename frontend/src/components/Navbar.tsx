@@ -272,7 +272,7 @@ export default function Navbar() {
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center h-16 gap-4">
+          <div className="flex items-center justify-between h-16 gap-4">
 
             {/* Logo */}
             <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
@@ -358,7 +358,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right Actions — sit inline with the primary nav, not pinned to the far right */}
+            {/* Right Actions */}
             <div className="flex items-center gap-1">
               {/* Search */}
               <button onClick={() => setSearchOpen(!searchOpen)}
