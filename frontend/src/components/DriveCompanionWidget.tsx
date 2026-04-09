@@ -30,8 +30,8 @@ export default function DriveCompanionWidget() {
   const {
     isDriving,
     role,
-    drivingMinimized,
-    restoreDrive,
+    passengerFullView,
+    openPassengerFullView,
     nextEvent,
     elapsedSeconds,
     gps,
@@ -52,9 +52,9 @@ export default function DriveCompanionWidget() {
   // Drivers get the full takeover (mounted by BasecampPage).
   if (!isDriving || role !== 'passenger') return null;
 
-  // If a driver-mode user manually minimized, show their existing "Return →" banner instead.
-  // (Still rendered by BasecampPage; we don't double up.)
-  if (role !== 'passenger' && !drivingMinimized) return null;
+  // If the passenger has opted into the full takeover, BasecampPage is rendering
+  // DrivingMode — don't double up.
+  if (passengerFullView) return null;
 
   const fatigue = fatigueLabel(fatigueScore);
   const speedMph = gps?.speedMph != null && gps.speedMph > 1 ? Math.round(gps.speedMph) : null;
@@ -69,7 +69,7 @@ export default function DriveCompanionWidget() {
   const onFlag    = () => { passengerFlagFatigue(); flash('Fatigue flag sent 😴'); };
   const onOverride = () => { passengerSoftOverride(); flash('Override sent ⚡'); };
   const onGoFull = () => {
-    restoreDrive();
+    openPassengerFullView();
     navigate('/basecamp');
   };
 

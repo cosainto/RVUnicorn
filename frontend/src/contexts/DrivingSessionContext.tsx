@@ -46,6 +46,10 @@ interface DrivingSessionContextValue {
   restoreDrive: () => void;
   /** Reset session start to now without exiting — use for "Switch Driver" so the new shift's timer starts fresh. */
   restartSession: () => void;
+  /** Passenger explicitly opted into the full DrivingMode takeover (e.g., tapped "Open Full Drive Mode" in the widget). */
+  passengerFullView: boolean;
+  openPassengerFullView: () => void;
+  closePassengerFullView: () => void;
 
   // ── Role ──
   role: Role;
@@ -94,6 +98,7 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
   // ── Lifecycle state, hydrated from localStorage so refreshes don't drop the session ──
   const [isDriving, setIsDriving] = useState<boolean>(() => localStorage.getItem(LS.driving) === 'true');
   const [drivingMinimized, setDrivingMinimized] = useState<boolean>(false);
+  const [passengerFullView, setPassengerFullView] = useState<boolean>(false);
   const [role, setRoleState] = useState<Role>(() =>
     (localStorage.getItem(LS.driveRole) as Role) || 'driver'
   );
@@ -199,6 +204,7 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
   const exitDrive = useCallback(() => {
     setIsDriving(false);
     setDrivingMinimized(false);
+    setPassengerFullView(false);
     setSessionStart(null);
     setElapsedSeconds(0);
     setGps(null);
@@ -209,8 +215,17 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(LS.driveRole);
   }, []);
 
-  const minimizeDrive = useCallback(() => setDrivingMinimized(true), []);
+  const minimizeDrive = useCallback(() => {
+    setDrivingMinimized(true);
+    setPassengerFullView(false); // tapping "← Basecamp" from the takeover always returns the passenger to widget mode
+  }, []);
   const restoreDrive = useCallback(() => setDrivingMinimized(false), []);
+
+  const openPassengerFullView = useCallback(() => {
+    setPassengerFullView(true);
+    setDrivingMinimized(false);
+  }, []);
+  const closePassengerFullView = useCallback(() => setPassengerFullView(false), []);
 
   const restartSession = useCallback(() => {
     const now = Date.now();
@@ -257,6 +272,9 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
     minimizeDrive,
     restoreDrive,
     restartSession,
+    passengerFullView,
+    openPassengerFullView,
+    closePassengerFullView,
     role,
     setRole,
     sessionStart,

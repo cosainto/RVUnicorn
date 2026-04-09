@@ -2182,9 +2182,10 @@ export default function BasecampPage({ user }: BasecampProps) {
   }
 
 
-  // Drivers get the full takeover. Passengers stay on Basecamp and use the
-  // floating DriveCompanionWidget (mounted in App.tsx) so they can keep browsing.
-  if (isDriving && driveRole === 'driver' && !drivingMinimized) {
+  // Drivers get the full takeover. Passengers stay on Basecamp with the floating
+  // DriveCompanionWidget — unless they explicitly opted in via "Open Full Drive Mode"
+  // (driveSession.passengerFullView), in which case we render the takeover for them too.
+  if (isDriving && (driveRole === 'driver' || driveSession.passengerFullView) && !drivingMinimized) {
     return (
       <DrivingMode
         nextEvent={nextEvent}
