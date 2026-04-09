@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'rea
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DrivingSessionProvider } from './contexts/DrivingSessionContext';
+import DriveCompanionWidget from './components/DriveCompanionWidget';
 import ToastProvider from './components/ToastProvider';
 import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
@@ -531,14 +533,17 @@ function App() {
         <meta property="og:type" content="website" />
       </Helmet>
       <AuthProvider>
-        <Router>
-          <ToastProvider>
-            <AppContent />
-          </ToastProvider>
-          <HitchFloatingChat />
-          <MobileBottomNav />
-          <OnboardingTrigger />
-        </Router>
+        <DrivingSessionProvider>
+          <Router>
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
+            <HitchFloatingChat />
+            <MobileBottomNav />
+            <DriveCompanionWidget />
+            <OnboardingTrigger />
+          </Router>
+        </DrivingSessionProvider>
       </AuthProvider>
     </HelmetProvider>
   );

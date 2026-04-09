@@ -66,6 +66,7 @@ import DrivingMode from '../components/DrivingMode';
 import CreatorFeed from '../components/CreatorFeed';
 import StargazingCard from '../components/StargazingCard';
 import { useAuth } from '../contexts/AuthContext';
+import { useDrivingSession } from '../contexts/DrivingSessionContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -1117,8 +1118,13 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
   const isCamping  = !!activeCheckIn;
-  const [isDriving, setIsDriving] = useState(() => localStorage.getItem('rvunicorn_driving') === 'true');
-  const [drivingMinimized, setDrivingMinimized] = useState(false);
+  // Drive session is now sourced from DrivingSessionContext so widgets/routes outside
+  // BasecampPage can read the same state. We mirror the old local-state shape for the
+  // rest of this file via destructuring.
+  const driveSession = useDrivingSession();
+  const isDriving = driveSession.isDriving;
+  const drivingMinimized = driveSession.drivingMinimized;
+  const driveRole = driveSession.role;
   const [proximityAlertShown, setProximityAlertShown] = useState(false);
   const [proximityToast, setProximityToast] = useState(false);
   const [showProximityCheckIn, setShowProximityCheckIn] = useState(false);
@@ -1130,6 +1136,12 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // Event Countdown State (declared early — used in proximity useEffect below)
   const [nextEvent, setNextEvent] = useState<UpcomingEvent | null>(null);
+
+  // Keep DrivingSessionContext.nextEvent in sync with BasecampPage's local nextEvent
+  // so the DriveCompanionWidget (mounted at App.tsx level) always has current trip context.
+  useEffect(() => {
+    driveSession.setNextEvent(nextEvent as any);
+  }, [nextEvent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Proximity alert — watch GPS when driving, alert when ~1hr from campground
   useEffect(() => {
@@ -2170,19 +2182,17 @@ export default function BasecampPage({ user }: BasecampProps) {
   }
 
 
-  if (isDriving && !drivingMinimized) {
+  // Drivers get the full takeover. Passengers stay on Basecamp and use the
+  // floating DriveCompanionWidget (mounted in App.tsx) so they can keep browsing.
+  if (isDriving && driveRole === 'driver' && !drivingMinimized) {
     return (
       <DrivingMode
         nextEvent={nextEvent}
         rvMpg={(user as any)?.rvMpg || undefined}
-        onMinimize={() => setDrivingMinimized(true)}
+        onMinimize={() => driveSession.minimizeDrive()}
         onExit={() => {
-          setIsDriving(false);
-          setDrivingMinimized(false);
+          driveSession.exitDrive();
           setProximityAlertShown(false);
-          localStorage.removeItem('rvunicorn_driving');
-          localStorage.removeItem('rvunicorn_drive_start');
-          localStorage.removeItem('rvunicorn_drive_role');
         }}
       />
     );
@@ -2292,8 +2302,9 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* ── Return to Driving Mode banner (minimized) ─────────────────── */}
-      {isDriving && drivingMinimized && (
+      {/* ── Return to Driving Mode banner (minimized — driver only) ─────── */}
+      {/* Passengers see the DriveCompanionWidget instead, mounted in App.tsx */}
+      {isDriving && drivingMinimized && driveRole === 'driver' && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-blue-900 border-b border-blue-700 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">🚐</span>
@@ -2303,7 +2314,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             </div>
           </div>
           <button
-            onClick={() => setDrivingMinimized(false)}
+            onClick={() => driveSession.restoreDrive()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition"
           >
             Return →
@@ -2556,7 +2567,7 @@ export default function BasecampPage({ user }: BasecampProps) {
             <CampMarket campgroundId={nextEvent.campground.id} compact />
           )}
           <button
-            onClick={() => { setIsDriving(true); localStorage.setItem('rvunicorn_driving', 'true'); }}
+            onClick={() => driveSession.startDrive(nextEvent as any)}
             className="w-full flex items-center gap-3 bg-white border border-primary-200 rounded-2xl px-4 py-3.5 hover:border-primary-400 hover:shadow-sm transition-all text-left"
           >
             <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0 text-xl">🚐</div>
