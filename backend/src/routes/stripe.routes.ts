@@ -171,7 +171,7 @@ router.post('/pause', authenticateToken, async (req: any, res: Response) => {
 
     await stripe.subscriptions.update(sub.stripeSubscriptionId, {
       pause_collection: {
-        behavior: 'mark_uncollectable',
+        behavior: 'mark_uncollectible',
         resumes_at: Math.floor(resumesAtMs / 1000),
       },
     });
