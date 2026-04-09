@@ -48,16 +48,48 @@ router.get('/:campgroundId/reviews', async (req: Request, res: Response) => {
   }
 });
 
-// Create a review
+// Create a review. Accepts the basic rating + free-text fields plus the
+// rich category fields the schema already supports (noise, levelness,
+// cellService, etc.). The post-trip survey modal in the Echo banner
+// posts the rich fields here so we can hand structured insight back to
+// campsite operators — that's the whole point of the 24h Hitch prompt.
 router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { campgroundId } = req.params;
     const userId = (req as any).userId;
-    const { rating, title, review, visitDate } = req.body;
+    const {
+      rating,
+      title,
+      review,
+      visitDate,
+      // Rich category fields — all optional
+      accessDifficulty,
+      levelness,
+      noise,
+      cellService,
+      bigRigFriendly,
+      petFriendly,
+      bestSiteNumber,
+      wouldReturn,
+    } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
+
+    // Only persist string fields when they're actually strings — keeps
+    // bad client payloads from blowing up the prisma call.
+    const str = (v: any) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
+    const richFields = {
+      accessDifficulty: str(accessDifficulty),
+      levelness: str(levelness),
+      noise: str(noise),
+      cellService: str(cellService),
+      bigRigFriendly: str(bigRigFriendly),
+      petFriendly: str(petFriendly),
+      bestSiteNumber: str(bestSiteNumber),
+      wouldReturn: str(wouldReturn),
+    };
 
     // Check if user already reviewed
     const existing = await prisma.campgroundReview.findUnique({
@@ -68,7 +100,13 @@ router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, re
       // Update existing review
       const updated = await prisma.campgroundReview.update({
         where: { id: existing.id },
-        data: { rating, title, review, visitDate: visitDate ? new Date(visitDate) : null },
+        data: {
+          rating,
+          title,
+          review,
+          visitDate: visitDate ? new Date(visitDate) : null,
+          ...richFields,
+        },
         include: {
           user: {
             select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
@@ -86,6 +124,7 @@ router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, re
         title,
         review,
         visitDate: visitDate ? new Date(visitDate) : null,
+        ...richFields,
       },
       include: {
         user: {

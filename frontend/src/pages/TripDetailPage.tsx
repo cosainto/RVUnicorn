@@ -36,6 +36,7 @@ import CampMarket from '../components/CampMarket';
 import CampfireTips from '../components/CampfireTips';
 import EventCampgroundMap from '../components/EventCampgroundMap';
 import NowBar from '../components/NowBar';
+import TripStaySurveyModal from '../components/TripStaySurveyModal';
 import CampBoard from '../components/CampBoard';
 import { useTripState } from '../hooks/useTripState';
 
@@ -690,6 +691,10 @@ export default function EventDetailPage() {
   const [duplicating, setDuplicating] = useState(false);
   const [copyAttendees, setCopyAttendees] = useState(false);
   const [openPhases, setOpenPhases] = useState<Set<string>>(new Set(['plan']));
+  // Post-trip survey modal — opened from the Echo NowBar's "How was it?"
+  // button, and auto-opened when the URL has ?survey=open (Hitch's 24h
+  // follow-up notification deep-links here).
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
 
   // Pulse: state-aware trip lifecycle
   const pulse = useTripState({
@@ -712,6 +717,32 @@ export default function EventDetailPage() {
       if (phase) setOpenPhases(new Set([phase]));
     }
   }, [pulse.tripState]);
+
+  // Auto-open the post-trip survey when Hitch's notification deep-links
+  // here with ?survey=open. We wait until the event has loaded so the
+  // modal can render the campground name in its header.
+  useEffect(() => {
+    if (!event?.campground?.id) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('survey') === 'open') {
+      setShowSurveyModal(true);
+    }
+  }, [event?.campground?.id, location.search]);
+
+  // Echo NowBar action: open the Remember phase and scroll to it.
+  // The Remember phase is the photos/scrapbook section; setting it open
+  // also causes the EventAlbum and Trip Albums to render.
+  const handleOpenScrapbook = () => {
+    userToggledPhases.current = true;
+    setOpenPhases((prev) => new Set([...prev, 'remember']));
+    // Wait a tick for the phase content to mount, then scroll into view
+    setTimeout(() => {
+      const el = document.getElementById('phase-remember');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const handleOpenSurvey = () => setShowSurveyModal(true);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
   if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
@@ -851,6 +882,17 @@ export default function EventDetailPage() {
           attendeeCount={event.attendees?.length || 0}
           photoCount={tripAlbums.reduce((sum: number, a: any) => sum + (a._count?.photos || 0), 0)}
           mealCount={event._count?.meals || 0}
+          onOpenScrapbook={handleOpenScrapbook}
+          onOpenSurvey={event.campground?.id ? handleOpenSurvey : undefined}
+        />
+      )}
+      {event?.campground?.id && (
+        <TripStaySurveyModal
+          open={showSurveyModal}
+          onClose={() => setShowSurveyModal(false)}
+          campgroundId={event.campground.id}
+          campgroundName={event.campground.name}
+          visitDate={event.endDate || event.startDate}
         />
       )}
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -1140,7 +1182,7 @@ export default function EventDetailPage() {
           { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
           { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
         ].map(phase => (
-          <div key={phase.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition ${
+          <div key={phase.id} id={`phase-${phase.id}`} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition scroll-mt-32 ${
             statePhaseMap[pulse.tripState] === phase.id ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-gray-200'
           }`}>
             <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left">

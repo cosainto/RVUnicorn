@@ -1,4 +1,4 @@
-import { Calendar, Package, Navigation, Flame, Camera, ChevronRight } from 'lucide-react';
+import { Calendar, Package, Navigation, Flame, Camera, Star } from 'lucide-react';
 import { type TripState } from '../hooks/useTripState';
 
 interface Props {
@@ -19,6 +19,11 @@ interface Props {
   nextScheduleTime?: string;
   photoCount?: number;
   mealCount?: number;
+  // Echo-state actions — wired by the parent so this component stays
+  // presentational. Both are optional so callers that don't care about
+  // the post-trip survey/scrapbook flow can leave them out.
+  onOpenScrapbook?: () => void;
+  onOpenSurvey?: () => void;
 }
 
 export default function NowBar({
@@ -28,6 +33,7 @@ export default function NowBar({
   packTotal = 0, packDone = 0,
   nextScheduleItem, nextScheduleTime,
   photoCount = 0, mealCount = 0,
+  onOpenScrapbook, onOpenSurvey,
 }: Props) {
 
   return (
@@ -128,23 +134,43 @@ export default function NowBar({
         )}
 
         {tripState === 'echo' && (
-          <div className="flex items-center justify-between">
+          <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 rounded-lg px-2.5 py-1.5">
+              <div className="bg-white/20 rounded-lg px-2.5 py-1.5 flex-shrink-0">
                 <Camera className="w-5 h-5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold">Trip complete!</p>
                 <p className="text-[10px] text-white/70">
-                  {photoCount > 0 ? `${photoCount} photos` : 'Share your photos'}
+                  {photoCount > 0 ? `${photoCount} photos` : 'Share your photos & how it went'}
                   {attendeeCount > 0 ? ` · ${attendeeCount} campers went` : ''}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 text-[10px] bg-white/20 rounded-lg px-2.5 py-1.5 font-bold">
-              <Camera className="w-3 h-3" />
-              <span>Scrapbook</span>
-              <ChevronRight className="w-3 h-3" />
+            {/* Real action buttons — these used to be inert spans, which is
+                why the banner links never did anything. Both buttons are
+                wired by TripDetailPage. */}
+            <div className="flex items-center gap-2">
+              {onOpenScrapbook && (
+                <button
+                  type="button"
+                  onClick={onOpenScrapbook}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Scrapbook</span>
+                </button>
+              )}
+              {onOpenSurvey && (
+                <button
+                  type="button"
+                  onClick={onOpenSurvey}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white text-purple-700 hover:bg-white/90 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  <span>How was it?</span>
+                </button>
+              )}
             </div>
           </div>
         )}

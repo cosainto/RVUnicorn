@@ -131,6 +131,7 @@ import { registerRoadChatSockets } from './campfire/road-chat.socket';
 import { registerTriviaCrons } from './cron/trivia-cron';
 import { registerEventSockets } from './campfire/events.socket';
 import { runAutopilotCycle, checkEventMemoryTransitions } from './services/autopilotService';
+import { runStaySurveyPromptCron } from './cron/stay-survey-prompt.cron';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -381,6 +382,10 @@ setInterval(updateGasPrices, SEVEN_DAYS_MS);
 setInterval(() => runAutopilotCycle().catch(e => console.error('[Autopilot]', e)), 5 * 60 * 1000);
 // Trip Memory transitions — runs hourly
 setInterval(() => checkEventMemoryTransitions().catch(e => console.error('[TripMemory]', e)), 60 * 60 * 1000);
+// Hitch's 24h post-trip survey nudge — runs hourly. Sends a friendly
+// "how was your stay?" notification to attendees of trips that ended
+// 24-96h ago, if they haven't already left a CampgroundReview.
+setInterval(() => runStaySurveyPromptCron().catch(e => console.error('[StaySurveyPrompt]', e)), 60 * 60 * 1000);
 // Community AI crons — check hourly, fire at specific times
 setInterval(() => {
   const now = new Date();
