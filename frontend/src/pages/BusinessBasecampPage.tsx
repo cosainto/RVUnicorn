@@ -26,11 +26,21 @@ interface DashboardData {
   admins: any[];
 }
 
+// Tier labels keyed by BOTH the legacy CampgroundTier enum AND the Stripe-side
+// tier names, so the page renders correctly regardless of which field we read.
+// Stripe-side names are the primary source (set by the webhook + the
+// stripeSub.tier String column); legacy enum entries exist as a fallback.
 const TIER_LABELS: Record<string, { name: string; color: string; icon: string }> = {
-  FREE: { name: 'Basic Plan', color: 'bg-gray-500', icon: '🏕️' },
-  CLASS_C: { name: 'Class C', color: 'bg-blue-500', icon: '🚐' },
-  CLASS_B: { name: 'Class B', color: 'bg-purple-500', icon: '🚐' },
-  CLASS_A: { name: 'Class A', color: 'bg-amber-500', icon: '🚌' },
+  // Stripe-side tier names (primary)
+  TRAILHEAD: { name: 'Trailhead', color: 'bg-gray-500', icon: '🏔️' },
+  BASECAMP:  { name: 'Base Camp', color: 'bg-blue-500', icon: '🏕️' },
+  SUMMIT:    { name: 'Summit', color: 'bg-amber-500', icon: '👑' },
+  FOUNDING:  { name: 'Founding Partner', color: 'bg-orange-600', icon: '🦄' },
+  // Legacy CampgroundTier enum fallback (kept for backwards compatibility)
+  FREE:    { name: 'Trailhead', color: 'bg-gray-500', icon: '🏔️' },
+  CLASS_C: { name: 'Base Camp', color: 'bg-blue-500', icon: '🏕️' },
+  CLASS_B: { name: 'Base Camp', color: 'bg-blue-500', icon: '🏕️' },
+  CLASS_A: { name: 'Summit', color: 'bg-amber-500', icon: '👑' },
 };
 
 const SIDEBAR_ITEMS = [
@@ -420,7 +430,13 @@ export default function BusinessBasecampPage() {
 
   const { campground, stats, recentActivity, pendingItems, admins } = data;
   const tier = campground.tier || 'FREE';
-  const tierInfo = TIER_LABELS[tier];
+  // Display name comes from the Stripe-side tier when available (Trailhead /
+  // Base Camp / Summit / Founding Partner). Falls back to the legacy enum so
+  // older campground rows that haven't been touched by the Stripe webhook
+  // still render correctly. Feature gating still uses the legacy `tier` enum.
+  const displayTierKey =
+    stripeSub?.tier && stripeSub.tier !== 'TRAILHEAD' ? stripeSub.tier : tier;
+  const tierInfo = TIER_LABELS[displayTierKey] || TIER_LABELS.FREE;
   const canAccess = (requiredTier: string) => tierLevel(tier) >= tierLevel(requiredTier);
 
   /* ─── Helpers ─── */

@@ -41,12 +41,21 @@ function invoiceCampgroundId(invoice: any): string | undefined {
 // about FREE / CLASS_C / CLASS_B / CLASS_A. Without this mapping, every
 // `prisma.campground.update({ tier: 'BASECAMP' })` silently fails (the .catch
 // in the webhook swallowed it for weeks).
+//
+// Mapping rationale: the upgrade page advertises Base Camp as including
+// stickers / analytics / branding, which the legacy SIDEBAR_ITEMS gate behind
+// CLASS_B and CLASS_A. So all paid Stripe tiers must map to CLASS_A (the
+// highest legacy enum) to actually unlock the features customers paid for.
+// Differentiation between Base Camp / Summit / Founding happens via the
+// stripeSub.tier string, which is accurate.
 function tierToLegacyEnum(tier: string | undefined): 'FREE' | 'CLASS_C' | 'CLASS_B' | 'CLASS_A' {
   switch (tier) {
-    case 'BASECAMP': return 'CLASS_C';
-    case 'SUMMIT':   return 'CLASS_A';
-    case 'FOUNDING': return 'CLASS_A';
-    default:         return 'FREE';
+    case 'BASECAMP':
+    case 'SUMMIT':
+    case 'FOUNDING':
+      return 'CLASS_A';
+    default:
+      return 'FREE';
   }
 }
 
