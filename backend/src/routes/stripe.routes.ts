@@ -69,6 +69,29 @@ function resolvePriceId(tier: Tier): string | null {
   return map[tier] || null;
 }
 
+// Reverse lookup: given a Stripe price ID (from a webhook payload), figure out
+// which tier it corresponds to. Used by customer.subscription.updated to detect
+// plan changes initiated from the Customer Portal — those don't refresh the
+// metadata on the subscription, so we have to read sub.items.data[0].price.id.
+function priceIdToTier(priceId: string | undefined | null): Tier | null {
+  if (!priceId) return null;
+  if (priceId === process.env.STRIPE_BASECAMP_PRICE_ID) return 'BASECAMP';
+  if (priceId === process.env.STRIPE_SUMMIT_PRICE_ID)   return 'SUMMIT';
+  if (priceId === process.env.STRIPE_FOUNDING_PRICE_ID) return 'FOUNDING';
+  return null;
+}
+
+// Pull the active price ID from a Stripe subscription object across API
+// versions — items.data[0].price is the canonical path, but `plan.id` was the
+// old top-level field on legacy versions, kept as a fallback.
+function activePriceIdFromSub(sub: any): string | null {
+  return (
+    sub?.items?.data?.[0]?.price?.id ||
+    sub?.plan?.id ||
+    null
+  );
+}
+
 // ══ POST /api/stripe/create-checkout ══
 router.post('/create-checkout', authenticateToken, async (req: any, res: Response) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
@@ -286,18 +309,40 @@ router.post('/webhook', async (req: Request, res: Response) => {
         break;
       }
 
-      // customer.subscription.updated handles three transitions Stripe doesn't
+      // customer.subscription.updated handles every transition Stripe doesn't
       // give dedicated event types for:
-      //   • pause_collection set      → status PAUSED
+      //   • pause_collection set       → status PAUSED
       //   • pause_collection cleared   → status ACTIVE
       //   • cancel_at_period_end true  → status CANCELLING (still active until period end)
       //   • cancel_at_period_end false → status ACTIVE (customer reactivated)
+      //   • plan change (price_id)     → tier sync to whatever the new price is
       case 'customer.subscription.updated': {
         const sub = event.data.object as any;
         const campgroundId = sub.metadata?.campgroundId;
         if (!campgroundId) break;
         const dbSub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
         if (!dbSub) break;
+
+        // Plan change detection — Customer Portal "Update subscription" swaps
+        // sub.items.data[0].price but does NOT refresh sub.metadata.tier, so
+        // we have to reverse-look-up the price against our env-resolved map.
+        const currentPriceId = activePriceIdFromSub(sub);
+        const newTier = priceIdToTier(currentPriceId);
+        if (newTier && newTier !== dbSub.tier) {
+          await (prisma as any).campgroundSubscription.update({
+            where: { campgroundId },
+            data: { tier: newTier },
+          });
+          try {
+            await prisma.campground.update({
+              where: { id: campgroundId },
+              data: { tier: tierToLegacyEnum(newTier) as any },
+            });
+          } catch (e: any) {
+            console.error(`[Stripe] Failed to sync campground.tier for ${campgroundId}:`, e.message);
+          }
+          console.log(`[Stripe] ⇧ ${campgroundId} tier changed: ${dbSub.tier} → ${newTier}`);
+        }
 
         const isPaused = !!sub.pause_collection;
         const isCancelling = !!sub.cancel_at_period_end;
