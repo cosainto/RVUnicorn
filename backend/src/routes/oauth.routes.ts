@@ -5,13 +5,11 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const rawFrontendUrl = process.env.FRONTEND_URL || 'https://www.rvunicorn.com';
-const FRONTEND_URL = rawFrontendUrl.replace(/"/g, '').replace(/\/$/, '').replace('http://localhost:5173', 'https://www.rvunicorn.com');
-console.log('[OAuth] FRONTEND_URL:', FRONTEND_URL);
 
 // ══ Find or Create OAuth User ══
 async function findOrCreateOAuthUser(provider: string, profile: any): Promise<{ user: any; isNew: boolean }> {

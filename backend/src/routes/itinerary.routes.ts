@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -433,7 +434,7 @@ router.post('/:id/share', authenticateToken, async (req: any, res) => {
       where: { id: req.params.id, userId: req.userId },
       data: { shareToken: token, visibility: 'SHARED' }
     });
-    res.json({ shareToken: trip.shareToken, url: `${process.env.FRONTEND_URL || 'https://rvunicorn.com'}/trip/shared/${trip.shareToken}` });
+    res.json({ shareToken: trip.shareToken, url: `${FRONTEND_URL}/trip/shared/${trip.shareToken}` });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

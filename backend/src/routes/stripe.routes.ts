@@ -2,13 +2,13 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import Stripe from 'stripe';
+import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' as any })
   : null;
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://www.rvunicorn.com').replace(/"/g, '');
 
 const TIER_LEVELS: Record<string, number> = { TRAILHEAD: 0, BASECAMP: 1, SUMMIT: 2, FOUNDING: 2 };
 

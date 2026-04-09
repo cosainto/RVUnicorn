@@ -3,13 +3,14 @@ import { prisma } from '../prisma';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
 export const inviteResend = new Resend(process.env.RESEND_API_KEY);
 const resend = inviteResend;
 
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773890549/rvunicorn/hitch-campfire.png';
-export const INVITE_SITE_URL = process.env.FRONTEND_URL || 'https://www.rvunicorn.com';
+export const INVITE_SITE_URL = FRONTEND_URL;
 const SITE_URL = INVITE_SITE_URL;
 
 // Event-specific invite email — used by /api/events/:id/invite

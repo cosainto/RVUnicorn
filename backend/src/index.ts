@@ -366,7 +366,9 @@ registerTriviaCrons(io);
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`FRONTEND_URL: ${process.env.FRONTEND_URL || '(not set, using https://www.rvunicorn.com)'}`);
+  // FRONTEND_URL is logged once at module load by utils/frontendUrl.ts; the
+  // line above this used to log a different value than what was actually used
+  // because each route file resolved it independently. See utils/frontendUrl.ts.
   console.log(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET'}`);
 });
 // trigger deploy

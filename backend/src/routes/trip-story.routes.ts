@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -230,7 +231,7 @@ router.post('/:eventId/share-to-feed', authenticateToken, async (req, res) => {
 
     // Create a teaser (first 300 chars of story)
     const teaser = story.content.slice(0, 300).trim() + (story.content.length > 300 ? '...' : '');
-    const storyUrl = `${process.env.FRONTEND_URL || 'https://www.rvunicorn.com'}/trips/${eventId}/story`;
+    const storyUrl = `${FRONTEND_URL}/trips/${eventId}/story`;
 
     const post = await (prisma as any).boardPost.create({
       data: {
