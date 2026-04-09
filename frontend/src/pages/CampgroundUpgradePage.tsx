@@ -4,6 +4,9 @@ import { Check } from 'lucide-react';
 import api from '../services/api';
 import { useCampgroundTier } from '../hooks/useCampgroundTier';
 
+// Annual-only billing — set to true if/when monthly prices are added in Stripe.
+const SHOW_MONTHLY_TOGGLE = false;
+
 const TIERS = [
   {
     id: 'TRAILHEAD', name: 'Trailhead', price: 'Free', annual: 'Free', badge: '\u{1F3D4}',
@@ -22,7 +25,8 @@ const TIERS = [
 export default function CampgroundUpgradePage() {
   const { campgroundId } = useParams<{ campgroundId: string }>();
   const { tier: currentTier } = useCampgroundTier(campgroundId);
-  const [annual, setAnnual] = useState(false);
+  // Default to annual since that's the only billing cycle currently configured in Stripe.
+  const [annual, setAnnual] = useState(true);
   const [foundingRemaining, setFoundingRemaining] = useState(50);
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -53,14 +57,19 @@ export default function CampgroundUpgradePage() {
           <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "'Playfair Display',serif" }}>Grow Your Campground on RVUnicorn</h1>
           <p className="text-[14px]" style={{ color: '#64748B' }}>Choose the plan that fits your season</p>
 
-          {/* Billing toggle */}
-          <div className="flex items-center justify-center gap-3 mt-6">
-            <span className="text-[13px]" style={{ color: annual ? 'rgba(245,240,232,0.4)' : '#F5F0E8' }}>Monthly</span>
-            <button onClick={() => setAnnual(!annual)} className="relative w-12 h-6 rounded-full transition" style={{ background: annual ? '#0EA5E9' : '#1B2E50' }}>
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-6' : ''}`} />
-            </button>
-            <span className="text-[13px]" style={{ color: annual ? '#F5F0E8' : 'rgba(245,240,232,0.4)' }}>Annual <span style={{ color: '#10B981' }}>Save 2 months</span></span>
-          </div>
+          {/* Billing toggle — hidden when only annual prices are configured */}
+          {SHOW_MONTHLY_TOGGLE && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <span className="text-[13px]" style={{ color: annual ? 'rgba(245,240,232,0.4)' : '#F5F0E8' }}>Monthly</span>
+              <button onClick={() => setAnnual(!annual)} className="relative w-12 h-6 rounded-full transition" style={{ background: annual ? '#0EA5E9' : '#1B2E50' }}>
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-6' : ''}`} />
+              </button>
+              <span className="text-[13px]" style={{ color: annual ? '#F5F0E8' : 'rgba(245,240,232,0.4)' }}>Annual <span style={{ color: '#10B981' }}>Save 2 months</span></span>
+            </div>
+          )}
+          {!SHOW_MONTHLY_TOGGLE && (
+            <p className="text-[12px] mt-3" style={{ color: '#10B981' }}>Annual billing · Save 2 months vs monthly</p>
+          )}
         </div>
 
         {/* Tier Cards */}
