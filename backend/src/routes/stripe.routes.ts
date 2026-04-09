@@ -328,7 +328,11 @@ router.post('/webhook', async (req: Request, res: Response) => {
         // we have to reverse-look-up the price against our env-resolved map.
         const currentPriceId = activePriceIdFromSub(sub);
         const newTier = priceIdToTier(currentPriceId);
-        if (newTier && newTier !== dbSub.tier) {
+        if (!currentPriceId) {
+          console.warn(`[Stripe] sub.updated for ${campgroundId} had no readable price ID — sub.items.data[0].price.id and sub.plan.id both empty`);
+        } else if (!newTier) {
+          console.warn(`[Stripe] sub.updated for ${campgroundId} has price=${currentPriceId} but it doesn't match any STRIPE_*_PRICE_ID env var — check Railway. Current env: BASECAMP=${process.env.STRIPE_BASECAMP_PRICE_ID || 'unset'} SUMMIT=${process.env.STRIPE_SUMMIT_PRICE_ID || 'unset'} FOUNDING=${process.env.STRIPE_FOUNDING_PRICE_ID || 'unset'}`);
+        } else if (newTier !== dbSub.tier) {
           await (prisma as any).campgroundSubscription.update({
             where: { campgroundId },
             data: { tier: newTier },
@@ -341,7 +345,9 @@ router.post('/webhook', async (req: Request, res: Response) => {
           } catch (e: any) {
             console.error(`[Stripe] Failed to sync campground.tier for ${campgroundId}:`, e.message);
           }
-          console.log(`[Stripe] ⇧ ${campgroundId} tier changed: ${dbSub.tier} → ${newTier}`);
+          console.log(`[Stripe] ⇧ ${campgroundId} tier changed: ${dbSub.tier} → ${newTier} (price=${currentPriceId})`);
+        } else {
+          console.log(`[Stripe] sub.updated for ${campgroundId} — tier already ${newTier}, no change needed`);
         }
 
         const isPaused = !!sub.pause_collection;
