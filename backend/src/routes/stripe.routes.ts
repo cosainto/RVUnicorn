@@ -21,6 +21,35 @@ if (!stripe) console.warn('[Stripe] STRIPE_SECRET_KEY not set — Stripe routes 
 //   BASECAMP → monthly
 //   SUMMIT   → monthly
 //   FOUNDING → yearly (locked-in lifetime, capped at 50 spots)
+// Stripe API version 2026-03-25.dahlia restructured invoice payloads —
+// `subscription_details` (and `subscription`) moved from the top level into
+// a `parent` field. Read from both paths so the handler is robust across
+// API versions, since our SDK is pinned to acacia but webhooks may arrive
+// in dahlia format depending on which version was active when the webhook
+// destination was created.
+function invoiceCampgroundId(invoice: any): string | undefined {
+  return (
+    invoice?.parent?.subscription_details?.metadata?.campgroundId ||
+    invoice?.subscription_details?.metadata?.campgroundId ||
+    invoice?.lines?.data?.[0]?.metadata?.campgroundId ||
+    undefined
+  );
+}
+
+// Map our Stripe-side tier names to the legacy CampgroundTier enum on the
+// Campground model. The enum predates the Stripe integration and only knows
+// about FREE / CLASS_C / CLASS_B / CLASS_A. Without this mapping, every
+// `prisma.campground.update({ tier: 'BASECAMP' })` silently fails (the .catch
+// in the webhook swallowed it for weeks).
+function tierToLegacyEnum(tier: string | undefined): 'FREE' | 'CLASS_C' | 'CLASS_B' | 'CLASS_A' {
+  switch (tier) {
+    case 'BASECAMP': return 'CLASS_C';
+    case 'SUMMIT':   return 'CLASS_A';
+    case 'FOUNDING': return 'CLASS_A';
+    default:         return 'FREE';
+  }
+}
+
 type Tier = 'BASECAMP' | 'SUMMIT' | 'FOUNDING';
 function resolvePriceId(tier: Tier): string | null {
   const map: Record<Tier, string | undefined> = {
@@ -219,8 +248,15 @@ router.post('/webhook', async (req: Request, res: Response) => {
           },
         });
 
-        await prisma.campground.update({ where: { id: campgroundId }, data: { tier: tier || 'BASECAMP' } }).catch(() => {});
-        console.log(`[Stripe] ✓ ${campgroundId} upgraded to ${tier}`);
+        try {
+          await prisma.campground.update({
+            where: { id: campgroundId },
+            data: { tier: tierToLegacyEnum(tier) as any },
+          });
+        } catch (e: any) {
+          console.error(`[Stripe] Failed to update campground.tier for ${campgroundId}:`, e.message);
+        }
+        console.log(`[Stripe] ✓ ${campgroundId} upgraded to ${tier} (legacy enum: ${tierToLegacyEnum(tier)})`);
         break;
       }
 
@@ -232,7 +268,11 @@ router.post('/webhook', async (req: Request, res: Response) => {
           where: { campgroundId },
           data: { status: 'CANCELLED', tier: 'TRAILHEAD', cancelledAt: new Date() },
         });
-        await prisma.campground.update({ where: { id: campgroundId }, data: { tier: 'FREE' } }).catch(() => {});
+        try {
+          await prisma.campground.update({ where: { id: campgroundId }, data: { tier: 'FREE' as any } });
+        } catch (e: any) {
+          console.error(`[Stripe] Failed to reset campground.tier for ${campgroundId}:`, e.message);
+        }
         console.log(`[Stripe] ✗ ${campgroundId} cancelled → TRAILHEAD`);
         break;
       }
@@ -271,8 +311,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as any;
-        const campgroundId = invoice.subscription_details?.metadata?.campgroundId;
-        if (!campgroundId) break;
+        const campgroundId = invoiceCampgroundId(invoice);
+        if (!campgroundId) { console.warn('[Stripe] invoice.payment_failed has no campgroundId metadata'); break; }
         await (prisma as any).campgroundSubscription.update({ where: { campgroundId }, data: { status: 'PAST_DUE' } });
         console.log(`[Stripe] ⚠ ${campgroundId} payment failed`);
         break;
@@ -280,12 +320,13 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as any;
-        const campgroundId = invoice.subscription_details?.metadata?.campgroundId;
-        if (!campgroundId) break;
+        const campgroundId = invoiceCampgroundId(invoice);
+        if (!campgroundId) { console.warn('[Stripe] invoice.payment_succeeded has no campgroundId metadata'); break; }
         await (prisma as any).campgroundSubscription.update({
           where: { campgroundId },
           data: { status: 'ACTIVE', currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 30 * 86400000) },
         }).catch(() => {});
+        console.log(`[Stripe] ✓ ${campgroundId} invoice paid`);
         break;
       }
     }

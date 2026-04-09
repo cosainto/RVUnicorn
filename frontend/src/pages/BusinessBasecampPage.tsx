@@ -156,7 +156,15 @@ export default function BusinessBasecampPage() {
     }
   };
 
+  // Trust the Stripe subscription as the source of truth for tier — the legacy
+  // campground.tier enum (FREE/CLASS_C/CLASS_B/CLASS_A) doesn't know about the
+  // Stripe-side names (BASECAMP/SUMMIT/FOUNDING) and can drift out of sync.
   const isPaused = stripeSub?.status === 'PAUSED';
+  const hasPaidStripeSub =
+    stripeSub &&
+    stripeSub.tier &&
+    stripeSub.tier !== 'TRAILHEAD' &&
+    stripeSub.status !== 'CANCELLED';
   const resumesAtLabel = stripeSub?.pauseResumesAt
     ? new Date(stripeSub.pauseResumesAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
@@ -571,7 +579,7 @@ export default function BusinessBasecampPage() {
             className="rounded-xl p-4"
             style={{ border: '1.5px solid #C9A84C', background: 'rgba(201,168,76,0.06)' }}
           >
-            {tier === 'FREE' ? (
+            {!hasPaidStripeSub ? (
               <>
                 <p className="text-white font-bold text-sm mb-1">🦄 Go Pro</p>
                 <p className="text-white/60 text-xs mb-3 leading-relaxed">
