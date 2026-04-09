@@ -950,10 +950,15 @@ router.get("/:id/price-stats", optionalAuth, async (req: Request, res: Response)
 
 // GET /api/campgrounds/:id/price-prompt-eligible — does the current user
 // qualify for a "what did you pay?" prompt right now? Used by the frontend
-// to decide whether to show the report banner.
-router.get("/:id/price-prompt-eligible", authenticateToken, async (req: any, res: Response) => {
+// to decide whether to show the report banner. Uses optionalAuth (NOT
+// authenticateToken) so a missing/expired token returns {eligible: false}
+// instead of a 401 — a 401 here would be caught by the frontend's global
+// axios interceptor and forcibly sign the user out the moment they open
+// any campground page, which is exactly what happened after f4eb6258 shipped.
+router.get("/:id/price-prompt-eligible", optionalAuth, async (req: any, res: Response) => {
   try {
     const userId = req.userId;
+    if (!userId) return res.json({ eligible: false });
     const { id: campgroundId } = req.params;
     const eligible = await shouldPromptForPriceReport(userId, campgroundId);
     res.json({ eligible });
