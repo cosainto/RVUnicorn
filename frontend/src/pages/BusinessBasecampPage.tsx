@@ -100,8 +100,21 @@ export default function BusinessBasecampPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Stripe Customer Portal (manage billing / pause / cancel)
+  // Stripe subscription state — drives the sidebar buttons.
+  const [stripeSub, setStripeSub] = useState<any>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
+
+  const refreshSubscription = async () => {
+    if (!campgroundId) return;
+    try {
+      const { data } = await api.get(`/stripe/subscription/${campgroundId}`);
+      setStripeSub(data.subscription || null);
+    } catch { setStripeSub(null); }
+  };
+
+  useEffect(() => { refreshSubscription(); }, [campgroundId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const openCustomerPortal = async () => {
     if (!campgroundId) return;
     setPortalLoading(true);
@@ -115,6 +128,38 @@ export default function BusinessBasecampPage() {
       setPortalLoading(false);
     }
   };
+
+  const pauseForSeason = async () => {
+    if (!campgroundId) return;
+    if (!confirm('Pause your subscription for the season? You will not be billed while paused. Stripe will automatically resume billing in 6 months — or you can resume manually any time before then.')) return;
+    setPauseLoading(true);
+    try {
+      await api.post('/stripe/pause', { campgroundId });
+      await refreshSubscription();
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to pause subscription');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const resumeNow = async () => {
+    if (!campgroundId) return;
+    setPauseLoading(true);
+    try {
+      await api.post('/stripe/resume', { campgroundId });
+      await refreshSubscription();
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to resume subscription');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const isPaused = stripeSub?.status === 'PAUSED';
+  const resumesAtLabel = stripeSub?.pauseResumesAt
+    ? new Date(stripeSub.pauseResumesAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
 
   // Tab-specific data
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -520,7 +565,7 @@ export default function BusinessBasecampPage() {
           ))}
         </nav>
 
-        {/* Upgrade / Manage Subscription card */}
+        {/* Upgrade / Manage / Pause card */}
         <div className="p-3">
           <div
             className="rounded-xl p-4"
@@ -540,19 +585,50 @@ export default function BusinessBasecampPage() {
                   Upgrade Now
                 </Link>
               </>
+            ) : isPaused ? (
+              <>
+                <p className="text-white font-bold text-sm mb-1">🌙 Paused for the Season</p>
+                <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                  {resumesAtLabel ? <>Auto-resumes <span className="font-semibold text-white/80">{resumesAtLabel}</span>. Resume sooner any time.</> : 'You can resume any time.'}
+                </p>
+                <button
+                  onClick={resumeNow}
+                  disabled={pauseLoading}
+                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 mb-2"
+                  style={{ background: '#10B981' }}
+                >
+                  {pauseLoading ? 'Resuming…' : '▶ Resume Now'}
+                </button>
+                <button
+                  onClick={openCustomerPortal}
+                  disabled={portalLoading}
+                  className="block text-center w-full py-1.5 rounded-lg text-white/70 text-xs font-medium transition hover:text-white disabled:opacity-50"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
+                  {portalLoading ? 'Opening…' : 'Manage Billing'}
+                </button>
+              </>
             ) : (
               <>
                 <p className="text-white font-bold text-sm mb-1">{tierInfo.icon} {tierInfo.name}</p>
                 <p className="text-white/60 text-xs mb-3 leading-relaxed">
-                  Manage billing, pause for the season, or change plan
+                  Manage billing or pause for the season
                 </p>
                 <button
                   onClick={openCustomerPortal}
                   disabled={portalLoading}
-                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
+                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 mb-2"
                   style={{ background: '#0EA5E9' }}
                 >
                   {portalLoading ? 'Opening…' : 'Manage Subscription'}
+                </button>
+                <button
+                  onClick={pauseForSeason}
+                  disabled={pauseLoading}
+                  className="block text-center w-full py-1.5 rounded-lg text-white/80 text-xs font-semibold transition hover:text-white disabled:opacity-50"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}
+                >
+                  {pauseLoading ? 'Pausing…' : '🌙 Pause for the Season'}
                 </button>
               </>
             )}

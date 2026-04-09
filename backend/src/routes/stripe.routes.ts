@@ -101,21 +101,72 @@ router.post('/create-portal', authenticateToken, async (req: any, res: Response)
 });
 
 // ══ POST /api/stripe/pause ══
+// Pause-for-the-season flow. Always sets a resumes_at so Stripe auto-resumes
+// the subscription if the owner forgets to come back. Capped at 6 months — if
+// no resumeDate is passed, defaults to now + 6 months. If a date longer than
+// 6 months is passed, it's silently capped.
+const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 router.post('/pause', authenticateToken, async (req: any, res: Response) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
-    const { campgroundId, resumeDate } = req.body;
+    const { campgroundId, resumeDate } = req.body as { campgroundId?: string; resumeDate?: string };
+    if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
+
+    // Verify the caller actually owns this campground.
+    const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { claimedById: true } });
+    if (!campground || campground.claimedById !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
     const sub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
     if (!sub?.stripeSubscriptionId) return res.status(400).json({ error: 'No active subscription' });
+    if (sub.status === 'PAUSED') return res.status(400).json({ error: 'Subscription is already paused' });
 
-    // Pause collection on Stripe
+    const now = Date.now();
+    const sixMonthsFromNow = now + SIX_MONTHS_MS;
+    let resumesAtMs: number;
+    if (resumeDate) {
+      const requested = new Date(resumeDate).getTime();
+      if (isNaN(requested) || requested <= now) return res.status(400).json({ error: 'Invalid resumeDate' });
+      resumesAtMs = Math.min(requested, sixMonthsFromNow);
+    } else {
+      resumesAtMs = sixMonthsFromNow;
+    }
+
     await stripe.subscriptions.update(sub.stripeSubscriptionId, {
-      pause_collection: { behavior: 'mark_uncollectable', resumes_at: resumeDate ? Math.floor(new Date(resumeDate).getTime() / 1000) : undefined },
+      pause_collection: {
+        behavior: 'mark_uncollectable',
+        resumes_at: Math.floor(resumesAtMs / 1000),
+      },
     });
 
     await (prisma as any).campgroundSubscription.update({
       where: { campgroundId },
-      data: { status: 'PAUSED', pausedAt: new Date(), pauseResumesAt: resumeDate ? new Date(resumeDate) : null },
+      data: { status: 'PAUSED', pausedAt: new Date(now), pauseResumesAt: new Date(resumesAtMs) },
+    });
+
+    res.json({ success: true, resumesAt: new Date(resumesAtMs).toISOString() });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ══ POST /api/stripe/resume ══
+// Resume a paused subscription immediately.
+router.post('/resume', authenticateToken, async (req: any, res: Response) => {
+  if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+  try {
+    const { campgroundId } = req.body as { campgroundId?: string };
+    if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
+
+    const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { claimedById: true } });
+    if (!campground || campground.claimedById !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const sub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
+    if (!sub?.stripeSubscriptionId) return res.status(400).json({ error: 'No subscription found' });
+
+    // Clearing pause_collection resumes the subscription immediately.
+    await stripe.subscriptions.update(sub.stripeSubscriptionId, { pause_collection: '' as any });
+
+    await (prisma as any).campgroundSubscription.update({
+      where: { campgroundId },
+      data: { status: 'ACTIVE', pausedAt: null, pauseResumesAt: null },
     });
 
     res.json({ success: true });
