@@ -286,16 +286,31 @@ router.post('/webhook', async (req: Request, res: Response) => {
         break;
       }
 
-      // Pause / resume — Stripe doesn't fire dedicated pause events; it uses
-      // customer.subscription.updated with pause_collection set or null.
+      // customer.subscription.updated handles three transitions Stripe doesn't
+      // give dedicated event types for:
+      //   • pause_collection set      → status PAUSED
+      //   • pause_collection cleared   → status ACTIVE
+      //   • cancel_at_period_end true  → status CANCELLING (still active until period end)
+      //   • cancel_at_period_end false → status ACTIVE (customer reactivated)
       case 'customer.subscription.updated': {
         const sub = event.data.object as any;
         const campgroundId = sub.metadata?.campgroundId;
         if (!campgroundId) break;
-        const isPaused = !!sub.pause_collection;
         const dbSub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
         if (!dbSub) break;
 
+        const isPaused = !!sub.pause_collection;
+        const isCancelling = !!sub.cancel_at_period_end;
+        // Stripe ships current_period_end as a top-level field on subscriptions
+        // in older API versions and nested under items.data[0] in newer ones.
+        const periodEndUnix =
+          sub.current_period_end ||
+          sub.items?.data?.[0]?.current_period_end ||
+          sub.cancel_at ||
+          null;
+        const periodEndDate = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
+
+        // Pause transitions
         if (isPaused && dbSub.status !== 'PAUSED') {
           await (prisma as any).campgroundSubscription.update({
             where: { campgroundId },
@@ -308,12 +323,36 @@ router.post('/webhook', async (req: Request, res: Response) => {
             },
           });
           console.log(`[Stripe] ⏸ ${campgroundId} paused`);
-        } else if (!isPaused && dbSub.status === 'PAUSED') {
+          break;
+        }
+        if (!isPaused && dbSub.status === 'PAUSED') {
           await (prisma as any).campgroundSubscription.update({
             where: { campgroundId },
             data: { status: 'ACTIVE', pausedAt: null, pauseResumesAt: null },
           });
           console.log(`[Stripe] ▶ ${campgroundId} resumed`);
+          break;
+        }
+
+        // Cancel-at-period-end transitions
+        if (isCancelling && dbSub.status !== 'CANCELLING') {
+          await (prisma as any).campgroundSubscription.update({
+            where: { campgroundId },
+            data: {
+              status: 'CANCELLING',
+              currentPeriodEnd: periodEndDate,
+            },
+          });
+          console.log(`[Stripe] ⌛ ${campgroundId} cancellation pending until ${periodEndDate?.toISOString()}`);
+          break;
+        }
+        if (!isCancelling && dbSub.status === 'CANCELLING') {
+          await (prisma as any).campgroundSubscription.update({
+            where: { campgroundId },
+            data: { status: 'ACTIVE' },
+          });
+          console.log(`[Stripe] ↺ ${campgroundId} cancellation reversed`);
+          break;
         }
         break;
       }

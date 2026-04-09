@@ -170,6 +170,7 @@ export default function BusinessBasecampPage() {
   // campground.tier enum (FREE/CLASS_C/CLASS_B/CLASS_A) doesn't know about the
   // Stripe-side names (BASECAMP/SUMMIT/FOUNDING) and can drift out of sync.
   const isPaused = stripeSub?.status === 'PAUSED';
+  const isCancelling = stripeSub?.status === 'CANCELLING';
   const hasPaidStripeSub =
     stripeSub &&
     stripeSub.tier &&
@@ -177,6 +178,9 @@ export default function BusinessBasecampPage() {
     stripeSub.status !== 'CANCELLED';
   const resumesAtLabel = stripeSub?.pauseResumesAt
     ? new Date(stripeSub.pauseResumesAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const cancelsAtLabel = stripeSub?.currentPeriodEnd
+    ? new Date(stripeSub.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
 
   // Tab-specific data
@@ -608,6 +612,22 @@ export default function BusinessBasecampPage() {
                 >
                   Upgrade Now
                 </Link>
+              </>
+            ) : isCancelling ? (
+              <>
+                <p className="text-white font-bold text-sm mb-1">⌛ Cancelling Soon</p>
+                <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                  {cancelsAtLabel ? <>Your {tierInfo.name} subscription ends <span className="font-semibold text-white/80">{cancelsAtLabel}</span>. You still have full access until then.</> : 'Your subscription will end at period close.'}
+                </p>
+                <button
+                  onClick={openCustomerPortal}
+                  disabled={portalLoading}
+                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
+                  style={{ background: '#10B981' }}
+                >
+                  {portalLoading ? 'Opening…' : '↺ Renew Subscription'}
+                </button>
+                <p className="text-white/40 text-[10px] text-center mt-2">Click to reactivate in the Stripe portal</p>
               </>
             ) : isPaused ? (
               <>
