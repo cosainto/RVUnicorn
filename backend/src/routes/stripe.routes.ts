@@ -14,11 +14,50 @@ const TIER_LEVELS: Record<string, number> = { TRAILHEAD: 0, BASECAMP: 1, SUMMIT:
 
 if (!stripe) console.warn('[Stripe] STRIPE_SECRET_KEY not set — Stripe routes will return errors');
 
+// ── Server-side price catalog ─────────────────────────────────────────────
+// IMPORTANT: never trust the priceId from the client. Anyone could POST a
+// $0.01 price and check out at that price. Resolve from env vars on the server,
+// keyed only by validated {tier, billingCycle}.
+type Tier = 'BASECAMP' | 'SUMMIT' | 'FOUNDING';
+type Cycle = 'monthly' | 'annual';
+function resolvePriceId(tier: Tier, cycle: Cycle): string | null {
+  const map: Record<Tier, Record<Cycle, string | undefined>> = {
+    BASECAMP: {
+      monthly: process.env.STRIPE_BASECAMP_MONTHLY_PRICE_ID,
+      annual:  process.env.STRIPE_BASECAMP_ANNUAL_PRICE_ID,
+    },
+    SUMMIT: {
+      monthly: process.env.STRIPE_SUMMIT_MONTHLY_PRICE_ID,
+      annual:  process.env.STRIPE_SUMMIT_ANNUAL_PRICE_ID,
+    },
+    FOUNDING: {
+      // Founding is a single locked-in price; both cycles map to the same id.
+      monthly: process.env.STRIPE_FOUNDING_PRICE_ID,
+      annual:  process.env.STRIPE_FOUNDING_PRICE_ID,
+    },
+  };
+  return map[tier]?.[cycle] || null;
+}
+
 // ══ POST /api/stripe/create-checkout ══
 router.post('/create-checkout', authenticateToken, async (req: any, res: Response) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
-    const { campgroundId, priceId, tier } = req.body;
+    const { campgroundId, tier, billingCycle } = req.body as { campgroundId?: string; tier?: string; billingCycle?: string };
+
+    // Validate inputs server-side — never trust shapes from the client.
+    if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
+    if (tier !== 'BASECAMP' && tier !== 'SUMMIT' && tier !== 'FOUNDING') {
+      return res.status(400).json({ error: 'Invalid tier' });
+    }
+    const cycle: Cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+
+    const priceId = resolvePriceId(tier as Tier, cycle);
+    if (!priceId) {
+      console.error(`[Stripe] Missing env var for ${tier}/${cycle} — set STRIPE_${tier}_${cycle.toUpperCase()}_PRICE_ID on Railway`);
+      return res.status(503).json({ error: 'This plan is not available yet — pricing not configured' });
+    }
+
     const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, claimedById: true } });
     if (!campground || campground.claimedById !== req.userId) return res.status(403).json({ error: 'Not authorized' });
 
@@ -98,10 +137,22 @@ router.post('/webhook', async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'];
   if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(400).send('Missing signature');
 
+  // The global express.json() verify hook stashes the raw bytes on req.rawBody
+  // (see backend/src/index.ts). Stripe needs those bytes — not the parsed
+  // object — to verify the signature.
+  const rawBody = (req as any).rawBody;
+  if (!rawBody) {
+    console.error('[Stripe Webhook] req.rawBody missing — express.json verify hook is not running');
+    return res.status(500).send('Webhook misconfigured');
+  }
+
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch { return res.status(400).send('Invalid signature'); }
+    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err: any) {
+    console.error('[Stripe Webhook] Signature verification failed:', err.message);
+    return res.status(400).send('Invalid signature');
+  }
 
   try {
     switch (event.type) {

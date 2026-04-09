@@ -11,12 +11,10 @@ const TIERS = [
   },
   {
     id: 'BASECAMP', name: 'Base Camp', price: '$39', annual: '$390', badge: '\u{1F3D5}', popular: true,
-    monthlyPriceId: 'STRIPE_BASECAMP_MONTHLY_PRICE_ID', annualPriceId: 'STRIPE_BASECAMP_ANNUAL_PRICE_ID',
     features: ['Everything in Trailhead', 'Hitch FAQ — custom AI rules', 'Digital Welcome Kit', 'Unlimited announcements', 'Events + RSVP system', 'Unlimited job postings', 'Custom check-in sticker', 'Analytics dashboard', 'Campfire Pulse tools', 'Custom branding', 'Priority search placement'],
   },
   {
     id: 'SUMMIT', name: 'Summit', price: '$99', annual: '$990', badge: '\u{1F451}',
-    monthlyPriceId: 'STRIPE_SUMMIT_MONTHLY_PRICE_ID', annualPriceId: 'STRIPE_SUMMIT_ANNUAL_PRICE_ID',
     features: ['Everything in Base Camp', 'Mission Mode — live control room', 'Co-Host Autopilot (3 modes)', 'Hitch Skins — 3 personalities', 'Serendipity Triggers', 'Geo-fence auto check-in', 'Trip Memory galleries', 'Sponsor campaign tools', 'Advanced analytics', 'Unlimited trivia questions', '"Summit Partner" badge', 'Priority support'],
   },
 ];
@@ -33,11 +31,15 @@ export default function CampgroundUpgradePage() {
   }, []);
 
   const handleUpgrade = async (tier: any) => {
-    const priceId = annual ? tier.annualPriceId : tier.monthlyPriceId;
-    if (!priceId) return;
     setLoading(tier.id);
     try {
-      const { data } = await api.post('/stripe/create-checkout', { campgroundId, priceId: process.env[priceId] || priceId, tier: tier.id });
+      // Backend resolves the actual Stripe price ID from {tier, billingCycle}
+      // via env vars — never trust price IDs from the client.
+      const { data } = await api.post('/stripe/create-checkout', {
+        campgroundId,
+        tier: tier.id,
+        billingCycle: annual ? 'annual' : 'monthly',
+      });
       if (data.url) window.location.href = data.url;
     } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
     finally { setLoading(null); }
@@ -106,7 +108,7 @@ export default function CampgroundUpgradePage() {
           <div className="rounded-2xl p-6 text-center" style={{ background: 'rgba(232,98,42,0.08)', border: '1px solid rgba(232,98,42,0.2)' }}>
             <p className="text-lg font-bold mb-1" style={{ color: '#0EA5E9' }}>{'\u{1F984}'} Founding Partner — {foundingRemaining} of 50 spots remaining</p>
             <p className="text-[13px] mb-4" style={{ color: '#64748B' }}>Lock in Summit access at $49/month forever. Never pay more, no matter how we grow.</p>
-            <button onClick={() => handleUpgrade({ id: 'FOUNDING', monthlyPriceId: 'STRIPE_FOUNDING_PRICE_ID', annualPriceId: 'STRIPE_FOUNDING_PRICE_ID' })}
+            <button onClick={() => handleUpgrade({ id: 'FOUNDING' })}
               className="px-8 py-3 rounded-xl text-[14px] font-bold" style={{ background: '#E8622A', color: 'white' }}>
               Claim Founding Spot
             </button>

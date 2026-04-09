@@ -187,7 +187,12 @@ app.use(cors({
   ],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({
+  // Stash raw bytes so the Stripe webhook handler can verify signatures.
+  // Stripe's constructEvent() requires the original payload, but the global
+  // json parser would otherwise replace req.body with a parsed object.
+  verify: (req: any, _res, buf) => { req.rawBody = buf; },
+}));
 
 // Serve uploaded files with caching headers
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {

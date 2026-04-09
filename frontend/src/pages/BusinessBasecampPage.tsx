@@ -380,12 +380,13 @@ export default function BusinessBasecampPage() {
             </li>
           ))}
         </ul>
-        <button
+        <Link
+          to={`/business/${campgroundId}/upgrade`}
           className="px-6 py-3 rounded-xl text-white font-semibold transition hover:opacity-90 shadow-lg"
           style={{ background: '#E8622A' }}
         >
           Upgrade to Pro
-        </button>
+        </Link>
       </div>
     </div>
   );
@@ -513,12 +514,13 @@ export default function BusinessBasecampPage() {
             <p className="text-white/60 text-xs mb-3 leading-relaxed">
               Unlock Hitch, analytics, branding & more
             </p>
-            <button
-              className="w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
+            <Link
+              to={`/business/${campgroundId}/upgrade`}
+              className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
               style={{ background: '#E8622A' }}
             >
               Upgrade Now
-            </button>
+            </Link>
           </div>
         </div>
       </aside>
