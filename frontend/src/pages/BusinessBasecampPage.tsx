@@ -100,6 +100,22 @@ export default function BusinessBasecampPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Stripe Customer Portal (manage billing / pause / cancel)
+  const [portalLoading, setPortalLoading] = useState(false);
+  const openCustomerPortal = async () => {
+    if (!campgroundId) return;
+    setPortalLoading(true);
+    try {
+      const { data } = await api.post('/stripe/create-portal', { campgroundId });
+      if (data.url) window.location.href = data.url;
+      else alert('Could not open billing portal');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to open billing portal');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
   // Tab-specific data
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
@@ -504,23 +520,42 @@ export default function BusinessBasecampPage() {
           ))}
         </nav>
 
-        {/* Upgrade card */}
+        {/* Upgrade / Manage Subscription card */}
         <div className="p-3">
           <div
             className="rounded-xl p-4"
             style={{ border: '1.5px solid #C9A84C', background: 'rgba(201,168,76,0.06)' }}
           >
-            <p className="text-white font-bold text-sm mb-1">🦄 Go Pro</p>
-            <p className="text-white/60 text-xs mb-3 leading-relaxed">
-              Unlock Hitch, analytics, branding & more
-            </p>
-            <Link
-              to={`/business/${campgroundId}/upgrade`}
-              className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
-              style={{ background: '#E8622A' }}
-            >
-              Upgrade Now
-            </Link>
+            {tier === 'FREE' ? (
+              <>
+                <p className="text-white font-bold text-sm mb-1">🦄 Go Pro</p>
+                <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                  Unlock Hitch, analytics, branding & more
+                </p>
+                <Link
+                  to={`/business/${campgroundId}/upgrade`}
+                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
+                  style={{ background: '#E8622A' }}
+                >
+                  Upgrade Now
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-white font-bold text-sm mb-1">{tierInfo.icon} {tierInfo.name}</p>
+                <p className="text-white/60 text-xs mb-3 leading-relaxed">
+                  Manage billing, pause for the season, or change plan
+                </p>
+                <button
+                  onClick={openCustomerPortal}
+                  disabled={portalLoading}
+                  className="block text-center w-full py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
+                  style={{ background: '#0EA5E9' }}
+                >
+                  {portalLoading ? 'Opening…' : 'Manage Subscription'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </aside>

@@ -17,44 +17,35 @@ if (!stripe) console.warn('[Stripe] STRIPE_SECRET_KEY not set — Stripe routes 
 // ── Server-side price catalog ─────────────────────────────────────────────
 // IMPORTANT: never trust the priceId from the client. Anyone could POST a
 // $0.01 price and check out at that price. Resolve from env vars on the server,
-// keyed only by validated {tier, billingCycle}.
+// keyed only by validated tier. Each tier has exactly one billing cycle:
+//   BASECAMP → monthly
+//   SUMMIT   → monthly
+//   FOUNDING → yearly (locked-in lifetime, capped at 50 spots)
 type Tier = 'BASECAMP' | 'SUMMIT' | 'FOUNDING';
-type Cycle = 'monthly' | 'annual';
-function resolvePriceId(tier: Tier, cycle: Cycle): string | null {
-  const map: Record<Tier, Record<Cycle, string | undefined>> = {
-    BASECAMP: {
-      monthly: process.env.STRIPE_BASECAMP_MONTHLY_PRICE_ID,
-      annual:  process.env.STRIPE_BASECAMP_ANNUAL_PRICE_ID,
-    },
-    SUMMIT: {
-      monthly: process.env.STRIPE_SUMMIT_MONTHLY_PRICE_ID,
-      annual:  process.env.STRIPE_SUMMIT_ANNUAL_PRICE_ID,
-    },
-    FOUNDING: {
-      // Founding is a single locked-in price; both cycles map to the same id.
-      monthly: process.env.STRIPE_FOUNDING_PRICE_ID,
-      annual:  process.env.STRIPE_FOUNDING_PRICE_ID,
-    },
+function resolvePriceId(tier: Tier): string | null {
+  const map: Record<Tier, string | undefined> = {
+    BASECAMP: process.env.STRIPE_BASECAMP_PRICE_ID,
+    SUMMIT:   process.env.STRIPE_SUMMIT_PRICE_ID,
+    FOUNDING: process.env.STRIPE_FOUNDING_PRICE_ID,
   };
-  return map[tier]?.[cycle] || null;
+  return map[tier] || null;
 }
 
 // ══ POST /api/stripe/create-checkout ══
 router.post('/create-checkout', authenticateToken, async (req: any, res: Response) => {
   if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
   try {
-    const { campgroundId, tier, billingCycle } = req.body as { campgroundId?: string; tier?: string; billingCycle?: string };
+    const { campgroundId, tier } = req.body as { campgroundId?: string; tier?: string };
 
     // Validate inputs server-side — never trust shapes from the client.
     if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
     if (tier !== 'BASECAMP' && tier !== 'SUMMIT' && tier !== 'FOUNDING') {
       return res.status(400).json({ error: 'Invalid tier' });
     }
-    const cycle: Cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
 
-    const priceId = resolvePriceId(tier as Tier, cycle);
+    const priceId = resolvePriceId(tier as Tier);
     if (!priceId) {
-      console.error(`[Stripe] Missing env var for ${tier}/${cycle} — set STRIPE_${tier}_${cycle.toUpperCase()}_PRICE_ID on Railway`);
+      console.error(`[Stripe] Missing env var for ${tier} — set STRIPE_${tier}_PRICE_ID on Railway`);
       return res.status(503).json({ error: 'This plan is not available yet — pricing not configured' });
     }
 
@@ -192,6 +183,38 @@ router.post('/webhook', async (req: Request, res: Response) => {
         });
         await prisma.campground.update({ where: { id: campgroundId }, data: { tier: 'FREE' } }).catch(() => {});
         console.log(`[Stripe] ✗ ${campgroundId} cancelled → TRAILHEAD`);
+        break;
+      }
+
+      // Pause / resume — Stripe doesn't fire dedicated pause events; it uses
+      // customer.subscription.updated with pause_collection set or null.
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as any;
+        const campgroundId = sub.metadata?.campgroundId;
+        if (!campgroundId) break;
+        const isPaused = !!sub.pause_collection;
+        const dbSub = await (prisma as any).campgroundSubscription.findUnique({ where: { campgroundId } });
+        if (!dbSub) break;
+
+        if (isPaused && dbSub.status !== 'PAUSED') {
+          await (prisma as any).campgroundSubscription.update({
+            where: { campgroundId },
+            data: {
+              status: 'PAUSED',
+              pausedAt: new Date(),
+              pauseResumesAt: sub.pause_collection.resumes_at
+                ? new Date(sub.pause_collection.resumes_at * 1000)
+                : null,
+            },
+          });
+          console.log(`[Stripe] ⏸ ${campgroundId} paused`);
+        } else if (!isPaused && dbSub.status === 'PAUSED') {
+          await (prisma as any).campgroundSubscription.update({
+            where: { campgroundId },
+            data: { status: 'ACTIVE', pausedAt: null, pauseResumesAt: null },
+          });
+          console.log(`[Stripe] ▶ ${campgroundId} resumed`);
+        }
         break;
       }
 
