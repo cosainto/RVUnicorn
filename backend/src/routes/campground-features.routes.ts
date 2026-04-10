@@ -881,6 +881,66 @@ router.get('/:campgroundId/rules', async (req: Request, res: Response) => {
   } catch { res.json({ rules: null }); }
 });
 
+// ══ TEACH HITCH — Add a custom rule/fact to the campground's knowledge base ══
+// Used by the Organizer Dashboard's Hitch brain tab. Appends to additionalRules
+// which Hitch reads in its companion chat context alongside the structured rules.
+router.post('/:campgroundId/rules/teach', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { fact } = req.body;
+    if (!fact || typeof fact !== 'string' || !fact.trim()) {
+      return res.status(400).json({ error: 'Fact is required' });
+    }
+
+    const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { claimedById: true } });
+    if (!campground || campground.claimedById !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const existing = await prisma.campgroundRules.findUnique({ where: { campgroundId } });
+    if (existing) {
+      const updated = await prisma.campgroundRules.update({
+        where: { campgroundId },
+        data: { additionalRules: { push: fact.trim() } },
+      });
+      res.json({ rules: updated });
+    } else {
+      const created = await (prisma.campgroundRules as any).create({
+        data: { campgroundId, additionalRules: [fact.trim()] },
+      });
+      res.json({ rules: created });
+    }
+  } catch (e: any) {
+    console.error('[TeachHitch] Error:', e.message);
+    res.status(500).json({ error: 'Failed to teach Hitch' });
+  }
+});
+
+// ══ REMOVE HITCH FACT — Remove a custom rule from additionalRules ══
+router.delete('/:campgroundId/rules/teach', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { fact } = req.body;
+    if (!fact) return res.status(400).json({ error: 'Fact is required' });
+
+    const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { claimedById: true } });
+    if (!campground || campground.claimedById !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const existing = await prisma.campgroundRules.findUnique({ where: { campgroundId } });
+    if (!existing) return res.json({ rules: null });
+
+    const updated = await prisma.campgroundRules.update({
+      where: { campgroundId },
+      data: { additionalRules: { set: existing.additionalRules.filter((r: string) => r !== fact) } },
+    });
+    res.json({ rules: updated });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to remove fact' });
+  }
+});
+
 // ══ HITCH ROUTE SUGGESTIONS — suggest campground stops near a destination ══
 router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) => {
   try {

@@ -28,6 +28,24 @@ function WeatherIcon({ condition }: { condition: string }) {
   return <Sun className="w-5 h-5 text-amber-400" />;
 }
 
+function ReadinessItem({ done, label }: { done: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`text-xs ${done ? 'text-green-500' : 'text-gray-300'}`}>{done ? '✓' : '○'}</span>
+      <span className={`text-xs ${done ? 'text-gray-500 line-through' : 'text-gray-700'}`}>{label}</span>
+    </div>
+  );
+}
+
+function RuleChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100">
+      <span className="text-[10px] text-blue-500 font-semibold uppercase min-w-[60px]">{label}</span>
+      <span className="text-xs text-blue-900">{value}</span>
+    </div>
+  );
+}
+
 export default function OrganizerDashboard() {
   const { user } = useAuth() as any;
   const navigate = useNavigate();
@@ -48,6 +66,11 @@ export default function OrganizerDashboard() {
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
 
+  // ── Hitch brain state ──────────────────────────────────────────────────
+  const [campgroundRules, setCampgroundRules] = useState<any>(null);
+  const [teachInput, setTeachInput] = useState('');
+  const [teachSaving, setTeachSaving] = useState(false);
+
   // ── Load organizer's campground + events ─────────────────────────────────
   useEffect(() => {
     const loadAll = async () => {
@@ -59,13 +82,14 @@ export default function OrganizerDashboard() {
         if (cg) {
           setMyCampground(cg);
 
-          // Parallel fetches: check-ins, occupancy, weather
-          const [herdRes, tonightRes, weatherRes] = await Promise.allSettled([
+          // Parallel fetches: check-ins, occupancy, weather, rules
+          const [herdRes, tonightRes, weatherRes, rulesRes] = await Promise.allSettled([
             api.get(`/checkins/herd/campground/${cg.id}`),
             api.get(`/checkins/tonight/${cg.id}`),
             cg.latitude && cg.longitude
               ? api.get(`/weather/forecast?lat=${cg.latitude}&lon=${cg.longitude}`)
               : Promise.resolve(null),
+            api.get(`/campground-features/${cg.id}/rules`),
           ]);
 
           // Today's check-ins — filter to today only
@@ -85,6 +109,11 @@ export default function OrganizerDashboard() {
           // Weather
           if (weatherRes.status === 'fulfilled' && weatherRes.value) {
             setWeather(weatherRes.value.data);
+          }
+
+          // Campground rules (Hitch's knowledge base)
+          if (rulesRes.status === 'fulfilled') {
+            setCampgroundRules(rulesRes.value?.data?.rules || null);
           }
         }
 
@@ -115,6 +144,31 @@ export default function OrganizerDashboard() {
       setBroadcastSending(false);
     }
   }, [broadcastText, myCampground?.id]);
+
+  // ── Teach Hitch handler ───────────────────────────────────────────────────
+  const teachHitch = useCallback(async () => {
+    if (!teachInput.trim() || !myCampground?.id) return;
+    setTeachSaving(true);
+    try {
+      const { data } = await api.post(`/campground-features/${myCampground.id}/rules/teach`, {
+        fact: teachInput.trim(),
+      });
+      setCampgroundRules(data.rules);
+      setTeachInput('');
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to teach Hitch');
+    } finally {
+      setTeachSaving(false);
+    }
+  }, [teachInput, myCampground?.id]);
+
+  const removeHitchFact = useCallback(async (fact: string) => {
+    if (!myCampground?.id) return;
+    try {
+      const { data } = await api.delete(`/campground-features/${myCampground.id}/rules/teach`, { data: { fact } });
+      setCampgroundRules(data.rules);
+    } catch {}
+  }, [myCampground?.id]);
 
   if (missionEventId) {
     return (
@@ -283,7 +337,7 @@ export default function OrganizerDashboard() {
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           {([
             { key: 'events', label: '📋 My Events', icon: Calendar },
-            { key: 'hitch', label: '🦄 Hitch Config', icon: Settings },
+            { key: 'hitch', label: '🧠 Hitch Brain', icon: Settings },
             { key: 'analytics', label: '📊 Analytics', icon: BarChart3 },
           ] as const).map(t => (
             <button
@@ -393,38 +447,168 @@ export default function OrganizerDashboard() {
             )}
 
             {events.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-3">🏕️</div>
-                <p className="text-gray-500 text-sm mb-4">No events yet. Create your first one!</p>
-                <Link
-                  to="/events-v2/create"
-                  className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition"
-                >
-                  <Plus className="w-4 h-4" /> Create Event
-                </Link>
+              <div className="space-y-4">
+                {/* Day-zero: Get started */}
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6 text-center">
+                  <div className="text-4xl mb-3">🏕️</div>
+                  <h3 className="font-bold text-gray-900 text-lg mb-1">Ready to Host?</h3>
+                  <p className="text-sm text-gray-500 mb-5 max-w-md mx-auto">
+                    Create your first event — a potluck, a group ride, a stargazing night, or a full rally. RVUnicorn handles RSVPs, schedules, and check-ins.
+                  </p>
+                  <Link
+                    to="/events-v2/create"
+                    className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-orange-600 transition shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Create Your First Event
+                  </Link>
+                </div>
+
+                {/* Profile completeness — encourage setup */}
+                {myCampground && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <h3 className="font-bold text-gray-900 text-sm mb-3">📋 Campground Readiness</h3>
+                    <div className="space-y-2">
+                      <ReadinessItem done={!!myCampground.description} label="Add a description" />
+                      <ReadinessItem done={!!myCampground.imageUrl} label="Upload a cover photo" />
+                      <ReadinessItem done={!!myCampground.phone} label="Add a phone number" />
+                      <ReadinessItem done={!!campgroundRules} label="Set campground rules (helps Hitch answer questions)" />
+                      <ReadinessItem done={(campgroundRules?.additionalRules?.length || 0) > 0} label="Teach Hitch a custom fact" />
+                      <ReadinessItem done={events.length > 0} label="Create your first event" />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full transition-all"
+                          style={{ width: `${Math.round(([
+                            !!myCampground.description,
+                            !!myCampground.imageUrl,
+                            !!myCampground.phone,
+                            !!campgroundRules,
+                            (campgroundRules?.additionalRules?.length || 0) > 0,
+                            events.length > 0,
+                          ].filter(Boolean).length / 6) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-medium">
+                        {[
+                          !!myCampground.description,
+                          !!myCampground.imageUrl,
+                          !!myCampground.phone,
+                          !!campgroundRules,
+                          (campgroundRules?.additionalRules?.length || 0) > 0,
+                          events.length > 0,
+                        ].filter(Boolean).length}/6
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* ── Hitch Config Tab ── */}
+        {/* ── Hitch Brain Tab ── */}
         {tab === 'hitch' && (
           <div className="space-y-4">
+            {/* What Hitch knows */}
             <div className="bg-white rounded-xl border border-gray-100 p-4">
-              <h3 className="font-bold text-gray-900 text-sm mb-3">🦄 Default Hitch Personality</h3>
-              <p className="text-xs text-gray-500 mb-3">Choose the default personality for new events. You can change this per-event in Mission Mode.</p>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.entries(SKIN_LABELS).map(([key, label]) => (
-                  <div key={key} className="bg-gray-50 rounded-lg p-3 text-center border border-gray-100">
-                    <p className="text-sm font-semibold">{label}</p>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🧠</span>
+                <h3 className="font-bold text-gray-900 text-sm">What Hitch Knows</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Hitch uses these facts to answer camper questions in chat. Teach Hitch anything — Wi-Fi password, pool hours, trail conditions, where the dumpster is.
+              </p>
+
+              {/* Structured rules Hitch already knows */}
+              {campgroundRules && (
+                <div className="space-y-1.5 mb-3">
+                  {campgroundRules.checkInTime && (
+                    <RuleChip label="Check-in" value={campgroundRules.checkInTime} />
+                  )}
+                  {campgroundRules.checkOutTime && (
+                    <RuleChip label="Check-out" value={campgroundRules.checkOutTime} />
+                  )}
+                  {campgroundRules.quietHoursStart && (
+                    <RuleChip label="Quiet hours" value={`${campgroundRules.quietHoursStart} – ${campgroundRules.quietHoursEnd || '?'}`} />
+                  )}
+                  {campgroundRules.petPolicy && (
+                    <RuleChip label="Pets" value={campgroundRules.petPolicy} />
+                  )}
+                  {campgroundRules.firePolicy && (
+                    <RuleChip label="Fires" value={campgroundRules.firePolicy} />
+                  )}
+                  {campgroundRules.speedLimit && (
+                    <RuleChip label="Speed limit" value={campgroundRules.speedLimit} />
+                  )}
+                </div>
+              )}
+
+              {/* Custom facts (additionalRules) */}
+              {campgroundRules?.additionalRules?.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Custom facts you taught Hitch</p>
+                  {campgroundRules.additionalRules.map((fact: string, i: number) => (
+                    <div key={i} className="flex items-start justify-between gap-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+                      <p className="text-xs text-amber-900 flex-1">{fact}</p>
+                      <button
+                        onClick={() => removeHitchFact(fact)}
+                        className="text-amber-400 hover:text-red-500 text-xs flex-shrink-0 transition"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!campgroundRules && (
+                <p className="text-xs text-gray-400 italic mb-3">Hitch doesn't know anything about your campground yet. Teach it below!</p>
+              )}
+
+              {/* Teach Hitch input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={teachInput}
+                  onChange={e => setTeachInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); teachHitch(); } }}
+                  placeholder="Wi-Fi password is CampFire2024 · Pool closes at 9pm · North trail is muddy..."
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  disabled={teachSaving}
+                />
+                <button
+                  onClick={teachHitch}
+                  disabled={!teachInput.trim() || teachSaving}
+                  className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50 transition"
+                  style={{ background: '#E8622A' }}
+                >
+                  {teachSaving ? '...' : 'Teach'}
+                </button>
               </div>
             </div>
 
+            {/* Personality per event */}
             <div className="bg-white rounded-xl border border-gray-100 p-4">
-              <h3 className="font-bold text-gray-900 text-sm mb-2">📝 Hitch FAQ Uploads</h3>
-              <p className="text-xs text-gray-500">Upload FAQ documents per event so Hitch can answer attendee questions. Configure this in each event's Mission Mode.</p>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🎭</span>
+                <h3 className="font-bold text-gray-900 text-sm">Hitch Personality</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Hitch adapts its tone per event. Configure the personality in Mission Mode when setting up each event.
+              </p>
+              {events.length > 0 ? (
+                <div className="space-y-1.5">
+                  {events.slice(0, 5).map(e => (
+                    <div key={e.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                      <p className="text-xs font-medium text-gray-700 truncate flex-1">{e.title}</p>
+                      <span className="text-xs text-gray-500">{SKIN_LABELS[e.hitchSkin] || '🎉 Party Starter'}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Create an event to set Hitch's personality.</p>
+              )}
             </div>
           </div>
         )}
