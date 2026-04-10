@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Calendar, Users, Radio, Plus, Settings, BarChart3, ChevronRight } from 'lucide-react';
+import {
+  Calendar, Users, Radio, Plus, Settings, BarChart3, ChevronRight,
+  Megaphone, Cloud, Sun, CloudRain, Snowflake, Wind, Send, MapPin,
+  Tent, CheckCircle2
+} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { computeEventLifecycle } from '../hooks/useEventLifecycle';
@@ -14,6 +18,16 @@ const SKIN_LABELS: Record<string, string> = {
   OLD_TIMER: '🤠 Old Timer',
 };
 
+// Weather icon picker
+function WeatherIcon({ condition }: { condition: string }) {
+  const c = (condition || '').toLowerCase();
+  if (c.includes('rain') || c.includes('shower')) return <CloudRain className="w-5 h-5 text-blue-400" />;
+  if (c.includes('snow') || c.includes('sleet')) return <Snowflake className="w-5 h-5 text-blue-200" />;
+  if (c.includes('wind')) return <Wind className="w-5 h-5 text-gray-400" />;
+  if (c.includes('cloud') || c.includes('overcast')) return <Cloud className="w-5 h-5 text-gray-400" />;
+  return <Sun className="w-5 h-5 text-amber-400" />;
+}
+
 export default function OrganizerDashboard() {
   const { user } = useAuth() as any;
   const navigate = useNavigate();
@@ -22,15 +36,85 @@ export default function OrganizerDashboard() {
   const [tab, setTab] = useState<'events' | 'hitch' | 'analytics'>('events');
   const [missionEventId, setMissionEventId] = useState<string | null>(null);
 
+  // ── "Today" panel state ──────────────────────────────────────────────────
+  const [myCampground, setMyCampground] = useState<any>(null);
+  const [todayCheckIns, setTodayCheckIns] = useState<any[]>([]);
+  const [rverCount, setRverCount] = useState(0);
+  const [weather, setWeather] = useState<any>(null);
+
+  // ── Broadcast state ──────────────────────────────────────────────────────
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastSent, setBroadcastSent] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+
+  // ── Load organizer's campground + events ─────────────────────────────────
   useEffect(() => {
-    api.get('/events-v2?limit=50')
-      .then(({ data }) => {
-        const mine = (data.events || []).filter((e: any) => e.organizerId === user?.id);
+    const loadAll = async () => {
+      try {
+        // Get organizer's campground(s)
+        const { data: bizData } = await api.get('/business/my');
+        const campgrounds = bizData || [];
+        const cg = campgrounds[0]; // primary campground
+        if (cg) {
+          setMyCampground(cg);
+
+          // Parallel fetches: check-ins, occupancy, weather
+          const [herdRes, tonightRes, weatherRes] = await Promise.allSettled([
+            api.get(`/checkins/herd/campground/${cg.id}`),
+            api.get(`/checkins/tonight/${cg.id}`),
+            cg.latitude && cg.longitude
+              ? api.get(`/weather/forecast?lat=${cg.latitude}&lon=${cg.longitude}`)
+              : Promise.resolve(null),
+          ]);
+
+          // Today's check-ins — filter to today only
+          if (herdRes.status === 'fulfilled') {
+            const all = herdRes.value?.data || [];
+            const today = new Date().toDateString();
+            setTodayCheckIns(all.filter((c: any) => new Date(c.checkInDate || c.createdAt).toDateString() === today));
+            // Also use total herd as fallback rverCount
+            if (tonightRes.status !== 'fulfilled') setRverCount(all.length);
+          }
+
+          // Tonight occupancy
+          if (tonightRes.status === 'fulfilled') {
+            setRverCount(tonightRes.value?.data?.rverCount || 0);
+          }
+
+          // Weather
+          if (weatherRes.status === 'fulfilled' && weatherRes.value) {
+            setWeather(weatherRes.value.data);
+          }
+        }
+
+        // Events
+        const { data: evtData } = await api.get('/events-v2?limit=50');
+        const mine = (evtData.events || []).filter((e: any) => e.organizerId === user?.id);
         setEvents(mine);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch {}
+      setLoading(false);
+    };
+    loadAll();
   }, [user?.id]);
+
+  // ── Broadcast handler ────────────────────────────────────────────────────
+  const sendBroadcast = useCallback(async () => {
+    if (!broadcastText.trim() || !myCampground?.id) return;
+    setBroadcastSending(true);
+    try {
+      await api.post(`/business/${myCampground.id}/broadcast`, {
+        message: broadcastText.trim(),
+      });
+      setBroadcastSent(true);
+      setBroadcastText('');
+      setTimeout(() => { setBroadcastSent(false); setBroadcastOpen(false); }, 2000);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to send broadcast');
+    } finally {
+      setBroadcastSending(false);
+    }
+  }, [broadcastText, myCampground?.id]);
 
   if (missionEventId) {
     return (
@@ -66,6 +150,133 @@ export default function OrganizerDashboard() {
           <p className="text-white/60 text-sm mt-1">Your command center for campground events</p>
         </div>
       </div>
+
+      {/* ── TODAY AT YOUR CAMPGROUND ─────────────────────────────────── */}
+      {myCampground && (
+        <div className="max-w-3xl mx-auto px-4 mt-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Status bar */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-amber-500" />
+                <p className="text-xs font-bold text-gray-900 uppercase tracking-wide">Today at {myCampground.name}</p>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-4 divide-x divide-gray-50">
+              <div className="px-3 py-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Tent className="w-3.5 h-3.5 text-green-500" />
+                </div>
+                <p className="text-lg font-bold text-gray-900">{rverCount}</p>
+                <p className="text-[10px] text-gray-500">On Site</p>
+              </div>
+              <div className="px-3 py-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+                <p className="text-lg font-bold text-gray-900">{todayCheckIns.length}</p>
+                <p className="text-[10px] text-gray-500">Checked In Today</p>
+              </div>
+              <div className="px-3 py-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                </div>
+                <p className="text-lg font-bold text-gray-900">
+                  {events.filter(e => computeEventLifecycle(e.startDate, e.endDate, e.eventStatus) === 'LIVE').length}
+                </p>
+                <p className="text-[10px] text-gray-500">Live Events</p>
+              </div>
+              <div className="px-3 py-3 text-center">
+                {weather?.current ? (
+                  <>
+                    <div className="flex items-center justify-center mb-1">
+                      <WeatherIcon condition={weather.current.condition || ''} />
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">{Math.round(weather.current.temp || 0)}°</p>
+                    <p className="text-[10px] text-gray-500 truncate">{weather.current.condition || 'Clear'}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-center mb-1">
+                      <Sun className="w-3.5 h-3.5 text-gray-300" />
+                    </div>
+                    <p className="text-lg font-bold text-gray-300">—</p>
+                    <p className="text-[10px] text-gray-400">Weather</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Today's check-in names (if any) */}
+            {todayCheckIns.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-gray-50 bg-green-50/50">
+                <p className="text-[10px] text-green-700 font-semibold mb-1">Arrived today</p>
+                <p className="text-xs text-green-800">
+                  {todayCheckIns.slice(0, 5).map((c: any) => c.user?.firstName || 'Guest').join(', ')}
+                  {todayCheckIns.length > 5 && ` +${todayCheckIns.length - 5} more`}
+                </p>
+              </div>
+            )}
+
+            {/* Broadcast megaphone */}
+            <div className="px-4 py-3 border-t border-gray-100">
+              {!broadcastOpen ? (
+                <button
+                  onClick={() => setBroadcastOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-50"
+                  style={{ background: 'rgba(245,158,11,0.08)', color: '#92400e', border: '1px solid rgba(245,158,11,0.2)' }}
+                >
+                  <Megaphone className="w-4 h-4" /> Broadcast to All Campers
+                </button>
+              ) : broadcastSent ? (
+                <div className="flex items-center justify-center gap-2 py-3 text-green-600 text-sm font-bold">
+                  <CheckCircle2 className="w-4 h-4" /> Broadcast sent!
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">
+                    📢 Send to {rverCount > 0 ? `all ${rverCount} campers on site` : 'all checked-in campers'}
+                  </p>
+                  <textarea
+                    value={broadcastText}
+                    onChange={e => setBroadcastText(e.target.value)}
+                    placeholder="Storm warning — secure your awnings! · Happy hour at 5 · Fresh donuts at the office..."
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    rows={2}
+                    maxLength={280}
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400">{broadcastText.length}/280</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setBroadcastOpen(false); setBroadcastText(''); }}
+                        className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={sendBroadcast}
+                        disabled={!broadcastText.trim() || broadcastSending}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white transition disabled:opacity-50"
+                        style={{ background: '#E8622A' }}
+                      >
+                        <Send className="w-3 h-3" />
+                        {broadcastSending ? 'Sending...' : 'Send Now'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="max-w-3xl mx-auto px-4 mt-4">

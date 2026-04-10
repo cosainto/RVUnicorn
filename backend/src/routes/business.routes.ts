@@ -354,4 +354,79 @@ router.put('/:campgroundId/settings', authenticateToken, requireAdmin, async (re
   }
 });
 
+// ══ POST /api/business/:campgroundId/broadcast ══════════════════════════════
+// Send a notification to every camper currently checked in at this campground.
+// Used by the Organizer Dashboard's megaphone feature.
+router.post('/:campgroundId/broadcast', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const { message } = req.body;
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    if (message.length > 280) {
+      return res.status(400).json({ error: 'Message too long (280 char max)' });
+    }
+
+    // Verify the caller is an admin of this campground
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true, claimedById: true },
+    });
+    if (!campground) return res.status(404).json({ error: 'Campground not found' });
+    if (campground.claimedById !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized — you must be the campground owner' });
+    }
+
+    // Find all active check-ins at this campground
+    const activeCheckIns = await prisma.checkIn.findMany({
+      where: {
+        campgroundId,
+        checkOutDate: null, // still checked in
+      },
+      select: { userId: true },
+    });
+
+    // De-dup user IDs (someone might have multiple check-ins) and exclude the sender
+    const userIds = [...new Set(activeCheckIns.map(c => c.userId))].filter(id => id !== req.userId);
+    if (userIds.length === 0) {
+      return res.json({ sent: 0, message: 'No campers currently checked in' });
+    }
+
+    // Create a notification for each checked-in user
+    const sender = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { firstName: true, lastName: true, profilePicture: true },
+    });
+
+    const notifications = await Promise.all(
+      userIds.map(userId =>
+        prisma.notification.create({
+          data: {
+            userId,
+            type: 'CAMPGROUND_BROADCAST',
+            content: message.trim(),
+            category: 'SYSTEM',
+            actorId: req.userId,
+            actorName: sender ? `${sender.firstName} ${sender.lastName}` : campground.name,
+            actorAvatar: sender?.profilePicture || null,
+            link: `/campgrounds/${campgroundId}`,
+            metadata: { campgroundId, campgroundName: campground.name, broadcastType: 'megaphone' },
+          },
+        })
+      )
+    );
+
+    // Push to connected clients via the existing pushNotification mechanism
+    const { pushNotification } = await import('./notification.routes');
+    notifications.forEach((n, i) => pushNotification(userIds[i], n));
+
+    console.log(`[Broadcast] ${campground.name}: "${message.trim().slice(0, 50)}..." → ${userIds.length} campers`);
+    res.json({ sent: userIds.length });
+  } catch (error: any) {
+    console.error('[Broadcast] Error:', error.message);
+    res.status(500).json({ error: 'Failed to send broadcast' });
+  }
+});
+
 export default router;
