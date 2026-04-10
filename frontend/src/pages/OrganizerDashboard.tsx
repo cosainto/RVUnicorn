@@ -60,6 +60,7 @@ export default function OrganizerDashboard() {
       {/* Header */}
       <div className="bg-gradient-to-r from-[#1B2B4B] to-[#2d4a7a] px-4 py-6">
         <div className="max-w-3xl mx-auto">
+          <Link to="/basecamp" className="text-white/50 hover:text-white text-xs font-medium transition mb-2 inline-block">← Back to Basecamp</Link>
           <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">Co-Host Autopilot</p>
           <h1 className="text-white text-xl font-bold">Organizer Dashboard</h1>
           <p className="text-white/60 text-sm mt-1">Your command center for campground events</p>
