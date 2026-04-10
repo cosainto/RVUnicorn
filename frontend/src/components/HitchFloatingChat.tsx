@@ -138,7 +138,7 @@ export default function HitchFloatingChat() {
       {/* Floating button */}
       {!open && (
         <button onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl overflow-hidden border-2 border-white hover:scale-110 transition-transform">
+          className="fixed right-6 z-50 w-14 h-14 rounded-full shadow-2xl overflow-hidden border-2 border-white hover:scale-110 transition-transform bottom-[4.5rem] sm:bottom-6">
           {guide.avatarUrl
             ? <img src={guide.avatarUrl} alt={guide.name} className="w-full h-full object-cover" />
             : <div className={`w-full h-full bg-gradient-to-br ${guide.bgGradient} flex items-center justify-center text-2xl`}>{guide.emoji}</div>
@@ -151,7 +151,7 @@ export default function HitchFloatingChat() {
 
       {/* Chat window */}
       {open && (
-        <div className={`fixed bottom-6 right-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transition-all ${minimized ? 'h-14' : 'h-[540px]'} flex flex-col`}>
+        <div className={`fixed right-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transition-all ${minimized ? 'h-14' : 'h-[540px]'} flex flex-col bottom-[4.5rem] sm:bottom-6`}>
 
           {/* Header */}
           <div className={`bg-gradient-to-r ${guide.bgGradient} px-4 py-3 flex items-center gap-2 shrink-0`}>

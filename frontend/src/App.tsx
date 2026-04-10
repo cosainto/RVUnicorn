@@ -155,7 +155,7 @@ function GlobalCameraButton() {
     <>
       <button
         onClick={() => setShowCapture(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all z-40 flex items-center justify-center"
+        className="fixed right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all z-40 flex items-center justify-center bottom-[7.5rem] sm:bottom-24"
         title="Quick Capture - Take photo or video"
       >
         <Camera className="w-7 h-7" />
