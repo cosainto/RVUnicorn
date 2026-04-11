@@ -1,22 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   Calendar, Users, Radio, Plus, Settings, BarChart3, ChevronRight,
   Megaphone, Cloud, Sun, CloudRain, Snowflake, Wind, Send, MapPin,
-  Tent, CheckCircle2
+  Tent, CheckCircle2, Upload, Clock, AlertTriangle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { computeEventLifecycle } from '../hooks/useEventLifecycle';
 import LiveEventBadge from '../components/LiveEventBadge';
 import MissionMode from '../components/organizer/MissionMode';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const SKIN_LABELS: Record<string, string> = {
   TRAIL_GUIDE: '🏔️ Trail Guide',
   PARTY_STARTER: '🎉 Party Starter',
   OLD_TIMER: '🤠 Old Timer',
 };
+
+const BROADCAST_TYPES = [
+  { key: 'GENERAL', label: 'General', icon: '📢' },
+  { key: 'SCHEDULE_CHANGE', label: 'Schedule Change', icon: '🔄' },
+  { key: 'AMENITY', label: 'Amenity Alert', icon: '🔧' },
+  { key: 'WEATHER', label: 'Weather', icon: '🌩️' },
+  { key: 'WELCOME', label: 'Welcome', icon: '👋' },
+  { key: 'ACTIVITY', label: 'Activity', icon: '🎉' },
+  { key: 'URGENT', label: 'Urgent', icon: '🚨' },
+];
+
+const QUICK_TEMPLATES = [
+  { icon: '🎉', text: 'Welcome to {campground}! WiFi: [network] Pass: [password]. Need anything? Reply here.' },
+  { icon: '🍺', text: 'Happy hour at the pavilion — come say hi! 🍻' },
+  { icon: '🌩️', text: 'Heads up: weather moving in. Secure awnings and loose items.' },
+  { icon: '📋', text: 'Reminder: quiet hours begin at 10pm. Thanks for being great neighbors!' },
+  { icon: '♻️', text: 'Recycling reminder: bins are by the entrance. Thank you!' },
+];
+
+const PERSONALITY_OPTIONS = [
+  { key: 'TRAIL_GUIDE', emoji: '🥾', name: 'Trail Guide', desc: 'Knowledgeable, practical, knows every trail and amenity. Answers questions like a veteran park ranger.' },
+  { key: 'PARTY_STARTER', emoji: '🎉', name: 'Party Starter', desc: 'Energetic and social. Encourages guests to meet each other and join activities.' },
+  { key: 'OLD_TIMER', emoji: '🪵', name: 'Old Timer', desc: 'Warm, storytelling, unhurried. Makes guests feel like they\'ve found a second home.' },
+];
 
 // Weather icon picker
 function WeatherIcon({ condition }: { condition: string }) {
@@ -28,21 +53,31 @@ function WeatherIcon({ condition }: { condition: string }) {
   return <Sun className="w-5 h-5 text-amber-400" />;
 }
 
-function ReadinessItem({ done, label }: { done: boolean; label: string }) {
+function SummitGate({ campgroundName }: { campgroundName?: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className={`text-xs ${done ? 'text-green-500' : 'text-gray-300'}`}>{done ? '✓' : '○'}</span>
-      <span className={`text-xs ${done ? 'text-gray-500 line-through' : 'text-gray-700'}`}>{label}</span>
+    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 p-8 text-center">
+      <div className="text-4xl mb-3">⛰️</div>
+      <h3 className="font-bold text-gray-900 text-lg mb-2">Summit Feature</h3>
+      <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
+        Broadcast messages to your guests, see repeat visitor rates, and let Hitch auto-answer questions — all included in Summit.
+      </p>
+      <Link to="/business/upgrade" className="inline-flex items-center gap-2 bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition">
+        Upgrade to Summit →
+      </Link>
     </div>
   );
 }
 
-function RuleChip({ label, value }: { label: string; value: string }) {
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    DRAFT: 'bg-gray-100 text-gray-600',
+    SCHEDULED: 'bg-amber-100 text-amber-700',
+    SENT: 'bg-green-100 text-green-700',
+  };
   return (
-    <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100">
-      <span className="text-[10px] text-blue-500 font-semibold uppercase min-w-[60px]">{label}</span>
-      <span className="text-xs text-blue-900">{value}</span>
-    </div>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${colors[status] || 'bg-gray-100 text-gray-600'}`}>
+      {status}
+    </span>
   );
 }
 
@@ -51,132 +86,168 @@ export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'events' | 'hitch' | 'analytics'>('events');
+  const [tab, setTab] = useState<'events' | 'broadcast' | 'hitch' | 'analytics'>('events');
   const [missionEventId, setMissionEventId] = useState<string | null>(null);
 
-  // ── "Today" panel state ──────────────────────────────────────────────────
+  // Campground
   const [myCampground, setMyCampground] = useState<any>(null);
-  const [todayCheckIns, setTodayCheckIns] = useState<any[]>([]);
-  const [rverCount, setRverCount] = useState(0);
+  const isSummit = myCampground?.tier === 'CLASS_A';
+
+  // Today panel
+  const [todayData, setTodayData] = useState<any>(null);
   const [weather, setWeather] = useState<any>(null);
 
-  // ── Broadcast state ──────────────────────────────────────────────────────
-  const [broadcastText, setBroadcastText] = useState('');
+  // Broadcast state
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [broadcastType, setBroadcastType] = useState('GENERAL');
+  const [broadcastAudience, setBroadcastAudience] = useState('ALL_CHECKED_IN');
+  const [broadcastScheduled, setBroadcastScheduled] = useState(false);
+  const [broadcastScheduleTime, setBroadcastScheduleTime] = useState('');
   const [broadcastSending, setBroadcastSending] = useState(false);
-  const [broadcastSent, setBroadcastSent] = useState(false);
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcasts, setBroadcasts] = useState<any[]>([]);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
-  // ── Hitch brain state ──────────────────────────────────────────────────
-  const [campgroundRules, setCampgroundRules] = useState<any>(null);
-  const [teachInput, setTeachInput] = useState('');
-  const [teachSaving, setTeachSaving] = useState(false);
+  // Hitch config
+  const [hitchConfig, setHitchConfig] = useState<any>(null);
+  const [hitchSaving, setHitchSaving] = useState(false);
+  const [faqUploading, setFaqUploading] = useState(false);
+  const [faqPreview, setFaqPreview] = useState('');
+  const faqInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Load organizer's campground + events ─────────────────────────────────
+  // Analytics
+  const [analytics, setAnalytics] = useState<any>(null);
+
+  // ── Load data ──────────────────────────────────────────────────
   useEffect(() => {
     const loadAll = async () => {
       try {
-        // Get organizer's campground(s)
         const { data: bizData } = await api.get('/business/my');
-        const campgrounds = bizData || [];
-        const cg = campgrounds[0]; // primary campground
+        const cg = (bizData || [])[0];
         if (cg) {
           setMyCampground(cg);
 
-          // Parallel fetches: check-ins, occupancy, weather, rules
-          const [herdRes, tonightRes, weatherRes, rulesRes] = await Promise.allSettled([
-            api.get(`/checkins/herd/campground/${cg.id}`),
-            api.get(`/checkins/tonight/${cg.id}`),
-            cg.latitude && cg.longitude
-              ? api.get(`/weather/forecast?lat=${cg.latitude}&lon=${cg.longitude}`)
-              : Promise.resolve(null),
-            api.get(`/campground-features/${cg.id}/rules`),
+          // Parallel fetches
+          const [todayRes, weatherRes, evtRes] = await Promise.allSettled([
+            api.get(`/organizer/${cg.id}/today`),
+            cg.latitude && cg.longitude ? api.get(`/weather/forecast?lat=${cg.latitude}&lon=${cg.longitude}`) : Promise.resolve(null),
+            api.get('/events-v2?limit=50'),
           ]);
 
-          // Today's check-ins — filter to today only
-          if (herdRes.status === 'fulfilled') {
-            const all = herdRes.value?.data || [];
-            const today = new Date().toDateString();
-            setTodayCheckIns(all.filter((c: any) => new Date(c.checkInDate || c.createdAt).toDateString() === today));
-            // Also use total herd as fallback rverCount
-            if (tonightRes.status !== 'fulfilled') setRverCount(all.length);
-          }
-
-          // Tonight occupancy
-          if (tonightRes.status === 'fulfilled') {
-            setRverCount(tonightRes.value?.data?.rverCount || 0);
-          }
-
-          // Weather
-          if (weatherRes.status === 'fulfilled' && weatherRes.value) {
-            setWeather(weatherRes.value.data);
-          }
-
-          // Campground rules (Hitch's knowledge base)
-          if (rulesRes.status === 'fulfilled') {
-            setCampgroundRules(rulesRes.value?.data?.rules || null);
+          if (todayRes.status === 'fulfilled') setTodayData(todayRes.value?.data);
+          if (weatherRes.status === 'fulfilled' && weatherRes.value) setWeather(weatherRes.value.data);
+          if (evtRes.status === 'fulfilled') {
+            const mine = (evtRes.value?.data?.events || []).filter((e: any) => e.organizerId === user?.id);
+            setEvents(mine);
           }
         }
-
-        // Events
-        const { data: evtData } = await api.get('/events-v2?limit=50');
-        const mine = (evtData.events || []).filter((e: any) => e.organizerId === user?.id);
-        setEvents(mine);
       } catch {}
       setLoading(false);
     };
     loadAll();
   }, [user?.id]);
 
-  // ── Broadcast handler ────────────────────────────────────────────────────
+  // Auto-refresh today panel every 5 minutes
+  useEffect(() => {
+    if (!myCampground?.id) return;
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/organizer/${myCampground.id}/today`);
+        setTodayData(data);
+      } catch {}
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [myCampground?.id]);
+
+  // Load broadcasts when tab opens
+  useEffect(() => {
+    if (tab === 'broadcast' && myCampground?.id) {
+      api.get(`/organizer/${myCampground.id}/broadcasts`).then(({ data }) => setBroadcasts(data.broadcasts || [])).catch(() => {});
+    }
+  }, [tab, myCampground?.id]);
+
+  // Load hitch config when tab opens
+  useEffect(() => {
+    if (tab === 'hitch' && myCampground?.id) {
+      api.get(`/organizer/${myCampground.id}/hitch-config`).then(({ data }) => setHitchConfig(data.config)).catch(() => {});
+    }
+  }, [tab, myCampground?.id]);
+
+  // Load analytics when tab opens
+  useEffect(() => {
+    if (tab === 'analytics' && myCampground?.id) {
+      api.get(`/organizer/${myCampground.id}/analytics`).then(({ data }) => setAnalytics(data)).catch(() => {});
+    }
+  }, [tab, myCampground?.id]);
+
+  // ── Broadcast handlers ─────────────────────────────────────
   const sendBroadcast = useCallback(async () => {
-    if (!broadcastText.trim() || !myCampground?.id) return;
+    if (!broadcastMsg.trim() || !myCampground?.id) return;
     setBroadcastSending(true);
     try {
-      await api.post(`/business/${myCampground.id}/broadcast`, {
-        message: broadcastText.trim(),
-      });
-      setBroadcastSent(true);
-      setBroadcastText('');
-      setTimeout(() => { setBroadcastSent(false); setBroadcastOpen(false); }, 2000);
+      const payload: any = {
+        message: broadcastMsg.trim(),
+        type: broadcastType,
+        audience: broadcastAudience,
+      };
+      if (broadcastScheduled && broadcastScheduleTime) {
+        payload.scheduledFor = new Date(broadcastScheduleTime).toISOString();
+      }
+      await api.post(`/organizer/${myCampground.id}/broadcasts`, payload);
+      setBroadcastMsg('');
+      setBroadcastScheduled(false);
+      // Reload broadcasts
+      const { data } = await api.get(`/organizer/${myCampground.id}/broadcasts`);
+      setBroadcasts(data.broadcasts || []);
     } catch (e: any) {
       alert(e.response?.data?.error || 'Failed to send broadcast');
     } finally {
       setBroadcastSending(false);
     }
-  }, [broadcastText, myCampground?.id]);
+  }, [broadcastMsg, broadcastType, broadcastAudience, broadcastScheduled, broadcastScheduleTime, myCampground?.id]);
 
-  // ── Teach Hitch handler ───────────────────────────────────────────────────
-  const teachHitch = useCallback(async () => {
-    if (!teachInput.trim() || !myCampground?.id) return;
-    setTeachSaving(true);
+  // ── Hitch config handlers ──────────────────────────────────
+  const saveHitchConfig = useCallback(async () => {
+    if (!myCampground?.id || !hitchConfig) return;
+    setHitchSaving(true);
     try {
-      const { data } = await api.post(`/campground-features/${myCampground.id}/rules/teach`, {
-        fact: teachInput.trim(),
+      const { data } = await api.put(`/organizer/${myCampground.id}/hitch-config`, {
+        personality: hitchConfig.personality,
+        welcomeMessage: hitchConfig.welcomeMessage,
+        autoRespond: hitchConfig.autoRespond,
+        quietHoursStart: hitchConfig.quietHoursStart,
+        quietHoursEnd: hitchConfig.quietHoursEnd,
       });
-      setCampgroundRules(data.rules);
-      setTeachInput('');
+      setHitchConfig(data.config);
     } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to teach Hitch');
+      alert(e.response?.data?.error || 'Failed to save config');
     } finally {
-      setTeachSaving(false);
+      setHitchSaving(false);
     }
-  }, [teachInput, myCampground?.id]);
+  }, [hitchConfig, myCampground?.id]);
 
-  const removeHitchFact = useCallback(async (fact: string) => {
+  const uploadFaq = useCallback(async (file: File) => {
     if (!myCampground?.id) return;
+    setFaqUploading(true);
     try {
-      const { data } = await api.delete(`/campground-features/${myCampground.id}/rules/teach`, { data: { fact } });
-      setCampgroundRules(data.rules);
-    } catch {}
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post(`/organizer/${myCampground.id}/hitch-config/upload-faq`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setFaqPreview(data.preview);
+      setHitchConfig((prev: any) => prev ? { ...prev, faqIndexedAt: data.faqIndexedAt, faqContent: data.preview } : prev);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to upload FAQ');
+    } finally {
+      setFaqUploading(false);
+    }
   }, [myCampground?.id]);
 
   if (missionEventId) {
     return (
       <div>
-        <button
-          onClick={() => setMissionEventId(null)}
-          className="fixed top-3 left-3 z-50 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm border border-white/10 transition"
-        >
+        <button onClick={() => setMissionEventId(null)}
+          className="fixed top-3 left-3 z-50 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm border border-white/10 transition">
           ← Back to Dashboard
         </button>
         <MissionMode eventId={missionEventId} />
@@ -191,7 +262,6 @@ export default function OrganizerDashboard() {
   const pastEvents = events.filter(e => ['ENDED', 'CANCELLED'].includes(computeEventLifecycle(e.startDate, e.endDate, e.eventStatus)));
 
   return (
-
     <div className="min-h-screen bg-gray-50">
       <Helmet><title>Organizer Dashboard — RVUnicorn</title></Helmet>
 
@@ -209,7 +279,6 @@ export default function OrganizerDashboard() {
       {myCampground && (
         <div className="max-w-3xl mx-auto px-4 mt-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Status bar */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-amber-500" />
@@ -226,108 +295,55 @@ export default function OrganizerDashboard() {
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Tent className="w-3.5 h-3.5 text-green-500" />
                 </div>
-                <p className="text-lg font-bold text-gray-900">{rverCount}</p>
-                <p className="text-[10px] text-gray-500">On Site</p>
+                <p className="text-lg font-bold text-gray-900">{todayData?.checkedInNow ?? '—'}</p>
+                <p className="text-[10px] text-gray-500">Checked In</p>
               </div>
               <div className="px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
                 </div>
-                <p className="text-lg font-bold text-gray-900">{todayCheckIns.length}</p>
-                <p className="text-[10px] text-gray-500">Checked In Today</p>
+                <p className="text-lg font-bold text-gray-900">{todayData?.arrivingToday ?? '—'}</p>
+                <p className="text-[10px] text-gray-500">Arriving Today</p>
               </div>
               <div className="px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                  <Radio className="w-3.5 h-3.5 text-orange-500" />
                 </div>
-                <p className="text-lg font-bold text-gray-900">
-                  {events.filter(e => computeEventLifecycle(e.startDate, e.endDate, e.eventStatus) === 'LIVE').length}
-                </p>
-                <p className="text-[10px] text-gray-500">Live Events</p>
+                <p className="text-lg font-bold text-gray-900">{todayData?.campfireActivity?.messageCount24h ?? '—'}</p>
+                <p className="text-[10px] text-gray-500">Campfire Msgs</p>
               </div>
               <div className="px-3 py-3 text-center">
-                {weather?.current ? (
-                  <>
-                    <div className="flex items-center justify-center mb-1">
-                      <WeatherIcon condition={weather.current.condition || ''} />
-                    </div>
-                    <p className="text-lg font-bold text-gray-900">{Math.round(weather.current.temp || 0)}°</p>
-                    <p className="text-[10px] text-gray-500 truncate">{weather.current.condition || 'Clear'}</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-center mb-1">
-                      <Sun className="w-3.5 h-3.5 text-gray-300" />
-                    </div>
-                    <p className="text-lg font-bold text-gray-300">—</p>
-                    <p className="text-[10px] text-gray-400">Weather</p>
-                  </>
-                )}
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-purple-500" />
+                </div>
+                <p className="text-lg font-bold text-gray-900">
+                  {todayData?.liveEvent ? '1' : '0'}
+                </p>
+                <p className="text-[10px] text-gray-500 truncate">
+                  {todayData?.liveEvent ? todayData.liveEvent.title : 'No event'}
+                </p>
               </div>
             </div>
 
-            {/* Today's check-in names (if any) */}
-            {todayCheckIns.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-gray-50 bg-green-50/50">
-                <p className="text-[10px] text-green-700 font-semibold mb-1">Arrived today</p>
-                <p className="text-xs text-green-800">
-                  {todayCheckIns.slice(0, 5).map((c: any) => c.user?.firstName || 'Guest').join(', ')}
-                  {todayCheckIns.length > 5 && ` +${todayCheckIns.length - 5} more`}
+            {/* Arriving today names */}
+            {todayData?.arrivingTodayList?.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-gray-50 bg-blue-50/50">
+                <p className="text-[10px] text-blue-700 font-semibold mb-1">Arriving today</p>
+                <p className="text-xs text-blue-800">
+                  {todayData.arrivingTodayList.map((g: any) => g.displayName).join(', ')}
                 </p>
               </div>
             )}
 
-            {/* Broadcast megaphone */}
-            <div className="px-4 py-3 border-t border-gray-100">
-              {!broadcastOpen ? (
-                <button
-                  onClick={() => setBroadcastOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-50"
-                  style={{ background: 'rgba(245,158,11,0.08)', color: '#92400e', border: '1px solid rgba(245,158,11,0.2)' }}
-                >
-                  <Megaphone className="w-4 h-4" /> Broadcast to All Campers
-                </button>
-              ) : broadcastSent ? (
-                <div className="flex items-center justify-center gap-2 py-3 text-green-600 text-sm font-bold">
-                  <CheckCircle2 className="w-4 h-4" /> Broadcast sent!
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">
-                    📢 Send to {rverCount > 0 ? `all ${rverCount} campers on site` : 'all checked-in campers'}
-                  </p>
-                  <textarea
-                    value={broadcastText}
-                    onChange={e => setBroadcastText(e.target.value)}
-                    placeholder="Storm warning — secure your awnings! · Happy hour at 5 · Fresh donuts at the office..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
-                    rows={2}
-                    maxLength={280}
-                    autoFocus
-                  />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-400">{broadcastText.length}/280</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => { setBroadcastOpen(false); setBroadcastText(''); }}
-                        className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={sendBroadcast}
-                        disabled={!broadcastText.trim() || broadcastSending}
-                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white transition disabled:opacity-50"
-                        style={{ background: '#E8622A' }}
-                      >
-                        <Send className="w-3 h-3" />
-                        {broadcastSending ? 'Sending...' : 'Send Now'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Hitch suggestion */}
+            {todayData?.hitchSuggestion && (
+              <div className="px-4 py-3 border-t border-gray-50" style={{ borderLeftWidth: 4, borderLeftColor: '#E8A838' }}>
+                <p className="text-xs text-gray-700">
+                  <span className="font-semibold text-amber-700">🎯 Hitch suggests:</span>{' '}
+                  {todayData.hitchSuggestion}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -336,17 +352,15 @@ export default function OrganizerDashboard() {
       <div className="max-w-3xl mx-auto px-4 mt-4">
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           {([
-            { key: 'events', label: '📋 My Events', icon: Calendar },
-            { key: 'hitch', label: '🧠 Hitch Brain', icon: Settings },
-            { key: 'analytics', label: '📊 Analytics', icon: BarChart3 },
+            { key: 'events', label: '📋 Events' },
+            { key: 'broadcast', label: '📢 Broadcast' },
+            { key: 'hitch', label: '🧠 Hitch Config' },
+            { key: 'analytics', label: '📊 Analytics' },
           ] as const).map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+            <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold transition ${
                 tab === t.key ? 'bg-white shadow text-[#1B2B4B]' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
+              }`}>
               {t.label}
             </button>
           ))}
@@ -358,18 +372,14 @@ export default function OrganizerDashboard() {
         {/* ── Events Tab ── */}
         {tab === 'events' && (
           <div className="space-y-4">
-            {/* Live Events — prominent */}
             {liveEvents.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold text-red-600 uppercase tracking-wide mb-2 flex items-center gap-1">
                   <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" /> Live Now
                 </h2>
                 {liveEvents.map(e => (
-                  <button
-                    key={e.id}
-                    onClick={() => setMissionEventId(e.id)}
-                    className="w-full bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border-2 border-red-300 p-4 text-left hover:shadow-lg transition mb-2"
-                  >
+                  <button key={e.id} onClick={() => setMissionEventId(e.id)}
+                    className="w-full bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border-2 border-red-300 p-4 text-left hover:shadow-lg transition mb-2">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-gray-900 text-sm">{e.title}</p>
@@ -391,7 +401,6 @@ export default function OrganizerDashboard() {
               </div>
             )}
 
-            {/* Upcoming */}
             {upcomingEvents.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Upcoming</h2>
@@ -407,10 +416,7 @@ export default function OrganizerDashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         <LiveEventBadge startDate={e.startDate} endDate={e.endDate} />
-                        <button
-                          onClick={() => setMissionEventId(e.id)}
-                          className="text-xs text-[#1B2B4B] font-semibold hover:underline"
-                        >
+                        <button onClick={() => setMissionEventId(e.id)} className="text-xs text-[#1B2B4B] font-semibold hover:underline">
                           Setup →
                         </button>
                       </div>
@@ -420,7 +426,6 @@ export default function OrganizerDashboard() {
               </div>
             )}
 
-            {/* Past */}
             {pastEvents.length > 0 && (
               <div>
                 <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Past Events</h2>
@@ -434,10 +439,7 @@ export default function OrganizerDashboard() {
                           · {e._count?.attendees || 0} attended
                         </p>
                       </div>
-                      <button
-                        onClick={() => setMissionEventId(e.id)}
-                        className="text-xs text-gray-500 hover:text-gray-700"
-                      >
+                      <button onClick={() => setMissionEventId(e.id)} className="text-xs text-gray-500 hover:text-gray-700">
                         View Memory →
                       </button>
                     </div>
@@ -447,202 +449,355 @@ export default function OrganizerDashboard() {
             )}
 
             {events.length === 0 && (
-              <div className="space-y-4">
-                {/* Day-zero: Get started */}
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6 text-center">
-                  <div className="text-4xl mb-3">🏕️</div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">Ready to Host?</h3>
-                  <p className="text-sm text-gray-500 mb-5 max-w-md mx-auto">
-                    Create your first event — a potluck, a group ride, a stargazing night, or a full rally. RVUnicorn handles RSVPs, schedules, and check-ins.
-                  </p>
-                  <Link
-                    to="/events-v2/create"
-                    className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-orange-600 transition shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" /> Create Your First Event
-                  </Link>
-                </div>
-
-                {/* Profile completeness — encourage setup */}
-                {myCampground && (
-                  <div className="bg-white rounded-xl border border-gray-100 p-4">
-                    <h3 className="font-bold text-gray-900 text-sm mb-3">📋 Campground Readiness</h3>
-                    <div className="space-y-2">
-                      <ReadinessItem done={!!myCampground.description} label="Add a description" />
-                      <ReadinessItem done={!!myCampground.imageUrl} label="Upload a cover photo" />
-                      <ReadinessItem done={!!myCampground.phone} label="Add a phone number" />
-                      <ReadinessItem done={!!campgroundRules} label="Set campground rules (helps Hitch answer questions)" />
-                      <ReadinessItem done={(campgroundRules?.additionalRules?.length || 0) > 0} label="Teach Hitch a custom fact" />
-                      <ReadinessItem done={events.length > 0} label="Create your first event" />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className="bg-green-500 h-1.5 rounded-full transition-all"
-                          style={{ width: `${Math.round(([
-                            !!myCampground.description,
-                            !!myCampground.imageUrl,
-                            !!myCampground.phone,
-                            !!campgroundRules,
-                            (campgroundRules?.additionalRules?.length || 0) > 0,
-                            events.length > 0,
-                          ].filter(Boolean).length / 6) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-gray-400 font-medium">
-                        {[
-                          !!myCampground.description,
-                          !!myCampground.imageUrl,
-                          !!myCampground.phone,
-                          !!campgroundRules,
-                          (campgroundRules?.additionalRules?.length || 0) > 0,
-                          events.length > 0,
-                        ].filter(Boolean).length}/6
-                      </span>
-                    </div>
-                  </div>
-                )}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6 text-center">
+                <div className="text-4xl mb-3">🏕️</div>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">Ready to Host?</h3>
+                <p className="text-sm text-gray-500 mb-5 max-w-md mx-auto">
+                  Create your first event — a potluck, a group ride, a stargazing night, or a full rally.
+                </p>
+                <Link to="/events-v2/create"
+                  className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-orange-600 transition shadow-sm">
+                  <Plus className="w-4 h-4" /> Create Your First Event
+                </Link>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Hitch Brain Tab ── */}
-        {tab === 'hitch' && (
-          <div className="space-y-4">
-            {/* What Hitch knows */}
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">🧠</span>
-                <h3 className="font-bold text-gray-900 text-sm">What Hitch Knows</h3>
-              </div>
-              <p className="text-xs text-gray-500 mb-3">
-                Hitch uses these facts to answer camper questions in chat. Teach Hitch anything — Wi-Fi password, pool hours, trail conditions, where the dumpster is.
-              </p>
+        {/* ── Broadcast Tab ── */}
+        {tab === 'broadcast' && (
+          !isSummit ? <SummitGate campgroundName={myCampground?.name} /> : (
+            <div className="space-y-6">
+              {/* Send a Broadcast */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 className="font-bold text-gray-900 text-sm mb-4">Send a Broadcast</h3>
 
-              {/* Structured rules Hitch already knows */}
-              {campgroundRules && (
-                <div className="space-y-1.5 mb-3">
-                  {campgroundRules.checkInTime && (
-                    <RuleChip label="Check-in" value={campgroundRules.checkInTime} />
-                  )}
-                  {campgroundRules.checkOutTime && (
-                    <RuleChip label="Check-out" value={campgroundRules.checkOutTime} />
-                  )}
-                  {campgroundRules.quietHoursStart && (
-                    <RuleChip label="Quiet hours" value={`${campgroundRules.quietHoursStart} – ${campgroundRules.quietHoursEnd || '?'}`} />
-                  )}
-                  {campgroundRules.petPolicy && (
-                    <RuleChip label="Pets" value={campgroundRules.petPolicy} />
-                  )}
-                  {campgroundRules.firePolicy && (
-                    <RuleChip label="Fires" value={campgroundRules.firePolicy} />
-                  )}
-                  {campgroundRules.speedLimit && (
-                    <RuleChip label="Speed limit" value={campgroundRules.speedLimit} />
-                  )}
-                </div>
-              )}
-
-              {/* Custom facts (additionalRules) */}
-              {campgroundRules?.additionalRules?.length > 0 && (
-                <div className="space-y-1.5 mb-3">
-                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Custom facts you taught Hitch</p>
-                  {campgroundRules.additionalRules.map((fact: string, i: number) => (
-                    <div key={i} className="flex items-start justify-between gap-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
-                      <p className="text-xs text-amber-900 flex-1">{fact}</p>
-                      <button
-                        onClick={() => removeHitchFact(fact)}
-                        className="text-amber-400 hover:text-red-500 text-xs flex-shrink-0 transition"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!campgroundRules && (
-                <p className="text-xs text-gray-400 italic mb-3">Hitch doesn't know anything about your campground yet. Teach it below!</p>
-              )}
-
-              {/* Teach Hitch input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={teachInput}
-                  onChange={e => setTeachInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); teachHitch(); } }}
-                  placeholder="Wi-Fi password is CampFire2024 · Pool closes at 9pm · North trail is muddy..."
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  disabled={teachSaving}
+                <textarea
+                  value={broadcastMsg}
+                  onChange={(e) => setBroadcastMsg(e.target.value.slice(0, 160))}
+                  placeholder="Your message to campers..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  rows={2}
                 />
-                <button
-                  onClick={teachHitch}
-                  disabled={!teachInput.trim() || teachSaving}
-                  className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-50 transition"
-                  style={{ background: '#E8622A' }}
-                >
-                  {teachSaving ? '...' : 'Teach'}
+                <div className="flex items-center justify-between mt-1 mb-3">
+                  <span className={`text-[10px] ${broadcastMsg.length > 140 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {broadcastMsg.length}/160
+                  </span>
+                  <button onClick={() => setTemplatesOpen(!templatesOpen)} className="text-[10px] text-amber-600 font-semibold hover:underline">
+                    {templatesOpen ? 'Hide templates' : 'Quick templates ↓'}
+                  </button>
+                </div>
+
+                {/* Templates */}
+                {templatesOpen && (
+                  <div className="space-y-1.5 mb-4">
+                    {QUICK_TEMPLATES.map((t, i) => (
+                      <button key={i}
+                        onClick={() => { setBroadcastMsg(t.text.replace('{campground}', myCampground?.name || 'our campground')); setTemplatesOpen(false); }}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-amber-50 text-xs text-gray-700 transition border border-gray-100">
+                        {t.icon} {t.text.slice(0, 80)}...
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Type pills */}
+                <div className="mb-3">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1.5 block">Type</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {BROADCAST_TYPES.map((t) => (
+                      <button key={t.key} onClick={() => setBroadcastType(t.key)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
+                          broadcastType === t.key
+                            ? t.key === 'URGENT' ? 'bg-red-100 text-red-700 border-red-300' : 'bg-amber-100 text-amber-700 border-amber-300'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                        }`}>
+                        {t.icon} {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Audience */}
+                <div className="mb-3">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1.5 block">Audience</label>
+                  <div className="space-y-1.5">
+                    {[
+                      { key: 'ALL_CHECKED_IN', label: `All checked-in guests (${todayData?.checkedInNow || 0})` },
+                      { key: 'ARRIVING_TODAY', label: `Arriving today (${todayData?.arrivingToday || 0})` },
+                      ...(todayData?.liveEvent ? [{ key: 'EVENT_ATTENDEES', label: `${todayData.liveEvent.title} attendees (${todayData.liveEvent.attendeeCount})` }] : []),
+                    ].map((a) => (
+                      <label key={a.key} className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="audience" checked={broadcastAudience === a.key}
+                          onChange={() => setBroadcastAudience(a.key)}
+                          className="text-amber-500 focus:ring-amber-400" />
+                        <span className="text-xs text-gray-700">{a.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Schedule toggle */}
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={broadcastScheduled} onChange={(e) => setBroadcastScheduled(e.target.checked)}
+                      className="rounded text-amber-500 focus:ring-amber-400" />
+                    <span className="text-xs text-gray-700">Schedule for later</span>
+                  </label>
+                  {broadcastScheduled && (
+                    <input type="datetime-local" value={broadcastScheduleTime}
+                      onChange={(e) => setBroadcastScheduleTime(e.target.value)}
+                      className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  )}
+                </div>
+
+                <button onClick={sendBroadcast}
+                  disabled={!broadcastMsg.trim() || broadcastSending || (broadcastScheduled && !broadcastScheduleTime)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
+                  style={{ background: broadcastType === 'URGENT' ? '#dc2626' : '#E8622A' }}>
+                  <Send className="w-4 h-4" />
+                  {broadcastSending ? 'Sending...' : broadcastScheduled ? 'Schedule Broadcast' : `Send to ${
+                    broadcastAudience === 'ALL_CHECKED_IN' ? (todayData?.checkedInNow || 0) :
+                    broadcastAudience === 'ARRIVING_TODAY' ? (todayData?.arrivingToday || 0) :
+                    (todayData?.liveEvent?.attendeeCount || 0)
+                  } guests →`}
                 </button>
               </div>
+
+              {/* Broadcast History */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 className="font-bold text-gray-900 text-sm mb-4">Broadcast History</h3>
+                {broadcasts.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No broadcasts yet. Your guests are waiting to hear from you.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {broadcasts.map((b: any) => {
+                      const typeInfo = BROADCAST_TYPES.find((t) => t.key === b.type);
+                      return (
+                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                          <span className="text-lg">{typeInfo?.icon || '📢'}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-700 line-clamp-1">{b.message}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-gray-400">{b.audience?.replace(/_/g, ' ')}</span>
+                              <span className="text-[10px] text-gray-400">·</span>
+                              <span className="text-[10px] text-gray-400">
+                                {b.sentAt ? formatDistanceToNow(new Date(b.sentAt), { addSuffix: true }) :
+                                 b.scheduledFor ? `Scheduled: ${format(new Date(b.scheduledFor), 'MMM d, h:mm a')}` : 'Draft'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {b.recipientCount != null && <span className="text-[10px] text-gray-400">{b.recipientCount} sent</span>}
+                            <StatusBadge status={b.status} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* ── Hitch Config Tab ── */}
+        {tab === 'hitch' && (
+          <div className="space-y-4">
+            {/* Personality Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="font-bold text-gray-900 text-sm mb-4">🎭 Hitch Personality</h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                {PERSONALITY_OPTIONS.map((p) => (
+                  <button key={p.key}
+                    onClick={() => setHitchConfig((prev: any) => prev ? { ...prev, personality: p.key } : prev)}
+                    className={`text-left p-3 rounded-xl border-2 transition ${
+                      hitchConfig?.personality === p.key ? 'border-amber-400 bg-amber-50' : 'border-gray-100 hover:border-gray-200'
+                    }`}>
+                    <div className="text-2xl mb-1">{p.emoji}</div>
+                    <p className="text-sm font-bold text-gray-900">{p.name}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{p.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-4">
+                <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-1.5 block">Welcome Message</label>
+                <textarea
+                  value={hitchConfig?.welcomeMessage || ''}
+                  onChange={(e) => setHitchConfig((prev: any) => prev ? { ...prev, welcomeMessage: e.target.value } : prev)}
+                  placeholder={`Hey there, welcome to ${myCampground?.name || 'our campground'}! I'm Hitch, your campground guide. Ask me anything...`}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={hitchConfig?.autoRespond !== false}
+                    onChange={(e) => setHitchConfig((prev: any) => prev ? { ...prev, autoRespond: e.target.checked } : prev)}
+                    className="rounded text-amber-500 focus:ring-amber-400" />
+                  <span className="text-xs text-gray-700">Hitch auto-responds to common questions</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-xs text-gray-600">Quiet from</span>
+                  <select value={hitchConfig?.quietHoursStart ?? ''}
+                    onChange={(e) => setHitchConfig((prev: any) => prev ? { ...prev, quietHoursStart: e.target.value ? parseInt(e.target.value) : null } : prev)}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="">Off</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{i === 0 ? '12am' : i < 12 ? `${i}am` : i === 12 ? '12pm' : `${i - 12}pm`}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-gray-600">to</span>
+                  <select value={hitchConfig?.quietHoursEnd ?? ''}
+                    onChange={(e) => setHitchConfig((prev: any) => prev ? { ...prev, quietHoursEnd: e.target.value ? parseInt(e.target.value) : null } : prev)}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="">Off</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{i === 0 ? '12am' : i < 12 ? `${i}am` : i === 12 ? '12pm' : `${i - 12}pm`}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button onClick={saveHitchConfig} disabled={hitchSaving}
+                className="px-5 py-2 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
+                style={{ background: '#E8622A' }}>
+                {hitchSaving ? 'Saving...' : 'Save Configuration'}
+              </button>
             </div>
 
-            {/* Personality per event */}
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">🎭</span>
-                <h3 className="font-bold text-gray-900 text-sm">Hitch Personality</h3>
-              </div>
-              <p className="text-xs text-gray-500 mb-3">
-                Hitch adapts its tone per event. Configure the personality in Mission Mode when setting up each event.
-              </p>
-              {events.length > 0 ? (
-                <div className="space-y-1.5">
-                  {events.slice(0, 5).map(e => (
-                    <div key={e.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                      <p className="text-xs font-medium text-gray-700 truncate flex-1">{e.title}</p>
-                      <span className="text-xs text-gray-500">{SKIN_LABELS[e.hitchSkin] || '🎉 Party Starter'}</span>
-                    </div>
-                  ))}
+            {/* FAQ Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="font-bold text-gray-900 text-sm mb-3">📄 FAQ Document</h3>
+
+              {hitchConfig?.faqIndexedAt ? (
+                <div className="flex items-center gap-2 mb-3 bg-green-50 rounded-lg px-3 py-2 border border-green-100">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-green-700">
+                    FAQ loaded — indexed on {format(new Date(hitchConfig.faqIndexedAt), 'MMM d, yyyy')}
+                  </span>
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic">Create an event to set Hitch's personality.</p>
+                <div className="flex items-center gap-2 mb-3 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs text-amber-700">No FAQ uploaded. Hitch will use campground profile data only.</span>
+                </div>
               )}
+
+              {faqPreview && (
+                <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                  <p className="text-[10px] text-gray-500 font-semibold mb-1">Preview</p>
+                  <p className="text-xs text-gray-600 whitespace-pre-wrap">{faqPreview.slice(0, 200)}...</p>
+                </div>
+              )}
+
+              <input ref={faqInputRef} type="file" accept=".pdf,.txt,.md" className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) uploadFaq(e.target.files[0]); }} />
+
+              <button onClick={() => faqInputRef.current?.click()} disabled={faqUploading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-amber-300 text-xs text-gray-600 hover:text-amber-700 transition w-full justify-center disabled:opacity-50">
+                <Upload className="w-4 h-4" />
+                {faqUploading ? 'Processing...' : 'Upload FAQ (.pdf, .txt, .md — max 5MB)'}
+              </button>
+              <p className="text-[10px] text-gray-400 mt-2 text-center">
+                Upload your campground FAQ, rules, or welcome packet. Hitch will read it and answer questions about it.
+              </p>
             </div>
           </div>
         )}
 
         {/* ── Analytics Tab ── */}
         {tab === 'analytics' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <h3 className="font-bold text-gray-900 text-sm mb-2">📊 Event Analytics</h3>
-              <p className="text-xs text-gray-500 mb-4">Post-event Success Stories and connection metrics appear here after your events end.</p>
-              {pastEvents.length > 0 ? (
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-orange-50 rounded-xl p-3">
-                    <p className="text-2xl font-bold text-orange-600">{pastEvents.length}</p>
-                    <p className="text-[10px] text-gray-500">Events Hosted</p>
+          !isSummit ? <SummitGate campgroundName={myCampground?.name} /> : (
+            <div className="space-y-4">
+              {/* Lifetime Stats */}
+              {analytics?.allTime && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                    <p className="text-2xl font-bold text-orange-600">{analytics.allTime.totalEvents}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Total Events</p>
                   </div>
-                  <div className="bg-green-50 rounded-xl p-3">
-                    <p className="text-2xl font-bold text-green-600">
-                      {pastEvents.reduce((sum, e) => sum + (e._count?.attendees || 0), 0)}
-                    </p>
-                    <p className="text-[10px] text-gray-500">Total Attendees</p>
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{analytics.allTime.totalAttendees}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Guests Hosted</p>
                   </div>
-                  <div className="bg-purple-50 rounded-xl p-3">
-                    <p className="text-2xl font-bold text-purple-600">
-                      {pastEvents.filter(e => e.isTripMemory).length}
-                    </p>
-                    <p className="text-[10px] text-gray-500">Trip Memories</p>
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                    <p className="text-2xl font-bold text-purple-600">{analytics.allTime.repeatVisitorRate}%</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Repeat Visitors</p>
+                    <p className="text-[10px] text-gray-400">came back 2+ times</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                    <p className="text-2xl font-bold text-amber-600">{analytics.allTime.totalBroadcastsSent}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Broadcasts Sent</p>
                   </div>
                 </div>
-              ) : (
-                <p className="text-gray-400 text-sm">No past events yet</p>
+              )}
+
+              {/* Event Performance */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h3 className="font-bold text-gray-900 text-sm mb-3">Your Events Performance</h3>
+                {analytics?.recentEvents?.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b border-gray-100">
+                          <th className="pb-2 font-semibold">Event</th>
+                          <th className="pb-2 font-semibold text-center">Date</th>
+                          <th className="pb-2 font-semibold text-center">Attendees</th>
+                          <th className="pb-2 font-semibold text-center">Returns</th>
+                          <th className="pb-2 font-semibold text-center">Campfire</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.recentEvents.map((e: any) => (
+                          <tr key={e.id} className="border-b border-gray-50">
+                            <td className="py-2 font-medium text-gray-900 max-w-[160px] truncate">{e.title}</td>
+                            <td className="py-2 text-center text-gray-500">{format(new Date(e.date), 'MMM d')}</td>
+                            <td className="py-2 text-center text-gray-700 font-semibold">{e.attendeeCount}</td>
+                            <td className="py-2 text-center">
+                              <span className={`font-semibold ${e.returnedSince > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                {e.returnedSince}
+                              </span>
+                            </td>
+                            <td className="py-2 text-center text-gray-500">{e.campfireMessages} msgs</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-4">Host your first event to start seeing data here.</p>
+                )}
+              </div>
+
+              {/* Top Broadcasts */}
+              {analytics?.topBroadcasts?.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  <h3 className="font-bold text-gray-900 text-sm mb-3">Top Broadcasts</h3>
+                  <div className="space-y-2">
+                    {analytics.topBroadcasts.map((b: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                        <span className="text-lg">{BROADCAST_TYPES.find((t) => t.key === b.type)?.icon || '📢'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-700 line-clamp-1">{b.message}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {b.sentAt ? formatDistanceToNow(new Date(b.sentAt), { addSuffix: true }) : ''} · {b.recipientCount} recipients
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
+          )
         )}
       </div>
     </div>

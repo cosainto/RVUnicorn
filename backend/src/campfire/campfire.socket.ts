@@ -3,6 +3,16 @@ import { prisma } from '../prisma';
 import { ensureTriviaWeek } from '../cron/trivia-cron';
 
 const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
+// Track recently auto-responded messages to avoid duplicate responses
+const recentAutoResponses = new Set<string>();
+
+const PERSONALITY_PROMPTS: Record<string, string> = {
+  TRAIL_GUIDE: 'Knowledgeable, practical, speaks like a veteran park ranger.',
+  PARTY_STARTER: 'Energetic and social, encourages guests to meet each other.',
+  OLD_TIMER: 'Warm, storytelling, unhurried, makes guests feel at home.',
+};
+
+const QUESTION_PATTERN = /\?$|^(what|where|when|how|is|are|can|do|does|will|would|could|should)\b/i;
 
 export function registerCampfireSockets(io: Server) {
   const campfire = io.of('/campfire');
@@ -134,6 +144,77 @@ export function registerCampfireSockets(io: Server) {
             }
           } catch (e) { console.error('[Campfire @Scout] error:', e); }
         }, 1500);
+      }
+
+      // FAQ auto-response — if message looks like a question and no character was mentioned
+      if (!/@(hitch|walter|scout)/i.test(data.content) && QUESTION_PATTERN.test(data.content.trim())) {
+        setTimeout(async () => {
+          try {
+            // Check if HitchCampgroundConfig exists with autoRespond enabled
+            const config = await (prisma as any).hitchCampgroundConfig.findUnique({ where: { campgroundId } });
+            if (!config?.autoRespond) return;
+
+            // Check quiet hours
+            if (config.quietHoursStart != null && config.quietHoursEnd != null) {
+              const hour = new Date().getHours();
+              const start = config.quietHoursStart;
+              const end = config.quietHoursEnd;
+              // Handle wrap-around (e.g. 22 to 8)
+              if (start > end ? (hour >= start || hour < end) : (hour >= start && hour < end)) return;
+            }
+
+            // Deduplicate — don't respond to same message twice
+            if (recentAutoResponses.has(msg.id)) return;
+            recentAutoResponses.add(msg.id);
+            setTimeout(() => recentAutoResponses.delete(msg.id), 60000);
+
+            const campground = await prisma.campground.findUnique({
+              where: { id: campgroundId },
+              select: { name: true, city: true, state: true, amenities: true },
+            });
+            if (!campground) return;
+
+            const personalityDesc = PERSONALITY_PROMPTS[config.personality] || PERSONALITY_PROMPTS.TRAIL_GUIDE;
+            const faqSection = config.faqContent ? `\n\nFAQ KNOWLEDGE BASE:\n${config.faqContent}` : '\nNo FAQ uploaded';
+
+            const systemPrompt = `You are Hitch, an AI campground guide for ${campground.name}${campground.city ? ', ' + campground.city : ''}${campground.state ? ', ' + campground.state : ''}.
+Your personality is: ${personalityDesc}
+
+CAMPGROUND INFO:
+${campground.name}
+Amenities: ${(campground.amenities || []).join(', ') || 'Not listed'}
+${faqSection}
+
+Answer the guest's question briefly and helpfully.
+If you don't know the answer, say so and suggest they ask the campground office directly.
+Keep responses under 100 words.
+Stay in character.`;
+
+            const question = data.content.trim();
+            const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 200,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: `${user.firstName} asks: ${question}` }],
+              }),
+            });
+            const aiData = await aiRes.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const autoMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true },
+                include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: autoMsg.id, content: autoMsg.content, createdAt: autoMsg.createdAt,
+                isSystem: false, isHitch: true, user: autoMsg.user,
+              });
+            }
+          } catch (e) { console.error('[Campfire FAQ AutoResponse] error:', e); }
+        }, 2000);
       }
     });
 
