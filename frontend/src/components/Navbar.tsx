@@ -5,7 +5,7 @@ import {
   Home, Flame, MapPin, Calendar, Map, Camera, UtensilsCrossed,
   Package, Wrench, Users, UsersRound, MessageCircle, Award,
   Shield, Sparkles, Play, Briefcase, Backpack, Heart, MoreHorizontal,
-  Tent, BookOpen, Star, Route
+  Tent, BookOpen, Star, Route, Building2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -41,10 +41,19 @@ export default function Navbar() {
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
   const [triviaIgnored, setTriviaIgnored] = useState(false);
 
+  // Claimed campground — for organizer dashboard quick-switch
+  const [myCampground, setMyCampground] = useState<any>(null);
+
   useEffect(() => {
     if (!user) return;
     api.get('/checkins/active')
       .then(r => setActiveCheckIn(r.data?.checkIn || null))
+      .catch(() => {});
+    api.get('/business/my')
+      .then(r => {
+        const cgs = r.data || [];
+        if (cgs.length > 0) setMyCampground(cgs[0]);
+      })
       .catch(() => {});
   }, [user]);
 
@@ -447,6 +456,9 @@ export default function Navbar() {
                       <ProfileLink to={`/profile/${user.username}`} onClick={() => setProfileOpen(false)} icon={<User className="w-4 h-4" />} label="My Profile" />
                       <ProfileLink to="/my-rv" onClick={() => setProfileOpen(false)} icon={<Wrench className="w-4 h-4" />} label="RV Settings" />
                       <ProfileLink to="/badges" onClick={() => setProfileOpen(false)} icon={<Award className="w-4 h-4" />} label="Badges" />
+                      {myCampground && (
+                        <ProfileLink to="/organizer" onClick={() => setProfileOpen(false)} icon={<Building2 className="w-4 h-4" />} label={myCampground.name || 'My Campground'} highlight />
+                      )}
                       <ProfileLink to="/settings" onClick={() => setProfileOpen(false)} icon={<Settings className="w-4 h-4" />} label="Account Settings" />
                     </div>
                     <div className="p-2 border-t" style={{ borderColor: '#f1f5f9' }}>
@@ -570,6 +582,9 @@ export default function Navbar() {
               <MobileLink to={`/profile/${user.username}`} icon={<User className="w-5 h-5" />} label="My Profile" active={false} />
               <MobileLink to="/my-rv" icon={<Wrench className="w-5 h-5" />} label="RV Settings" active={isActive('/my-rv')} />
               <MobileLink to="/badges" icon={<Award className="w-5 h-5" />} label="Badges" active={isActive('/badges')} />
+              {myCampground && (
+                <MobileLink to="/organizer" icon={<Building2 className="w-5 h-5" />} label={myCampground.name || 'My Campground'} active={isActive('/organizer')} />
+              )}
               <MobileLink to="/settings" icon={<Settings className="w-5 h-5" />} label="Account Settings" active={isActive('/settings')} />
             </MobileSection>
 
@@ -643,15 +658,16 @@ function MobileSection({ label, children }: { label: string; children: React.Rea
   );
 }
 
-function ProfileLink({ to, onClick, icon, label }: { to: string; onClick: () => void; icon: React.ReactNode; label: string }) {
+function ProfileLink({ to, onClick, icon, label, highlight }: { to: string; onClick: () => void; icon: React.ReactNode; label: string; highlight?: boolean }) {
   return (
     <Link to={to} onClick={onClick}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150"
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f8fafc'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+      style={highlight ? { background: 'rgba(245,158,11,0.08)' } : undefined}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = highlight ? 'rgba(245,158,11,0.15)' : '#f8fafc'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = highlight ? 'rgba(245,158,11,0.08)' : 'transparent'; }}
     >
-      <span style={{ color: '#64748b' }}>{icon}</span>
-      <span className="text-sm font-semibold" style={{ color: '#334155' }}>{label}</span>
+      <span style={{ color: highlight ? '#d97706' : '#64748b' }}>{icon}</span>
+      <span className="text-sm font-semibold" style={{ color: highlight ? '#92400e' : '#334155' }}>{label}</span>
     </Link>
   );
 }
