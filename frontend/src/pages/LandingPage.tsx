@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 // ── Hitch image from Cloudinary ──────────────────────────────────────────────
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png';
@@ -201,6 +202,14 @@ export default function LandingPage() {
 
   return (
     <>
+      <Helmet>
+        <title>RVUnicorn — The Social Campground Community for RV Travelers</title>
+        <meta name="description" content="RVUnicorn is where RV travelers find campgrounds, plan trips, and connect around the campfire. AI-powered trip planning, real-time campground chat, and a community that gets the RV life." />
+        <link rel="canonical" href="https://www.rvunicorn.com/" />
+        <meta property="og:title" content="RVUnicorn — The Social Campground Community for RV Travelers" />
+        <meta property="og:description" content="Find campgrounds, plan trips, connect with fellow RVers. Your campfire, wherever you park." />
+        <meta property="og:url" content="https://www.rvunicorn.com/" />
+      </Helmet>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 

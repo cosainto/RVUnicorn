@@ -12,6 +12,120 @@ function shouldSSR(req: Request): boolean {
   return isCrawler || !!isDirectLoad;
 }
 
+// SSR for landing page — give crawlers real HTML content
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) return next();
+
+  try {
+    // Fetch some stats to make the page rich
+    const [campgroundCount, userCount, boardCount] = await Promise.all([
+      prisma.campground.count(),
+      prisma.user.count(),
+      (prisma as any).board.count({ where: { isActive: true } }),
+    ]);
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RVUnicorn — The Social Campground Community for RV Travelers</title>
+  <meta name="description" content="RVUnicorn is the social campground community for RV travelers. Find campgrounds, plan trips, connect with fellow RVers, and get AI-powered travel tips from Hitch.">
+  <meta name="keywords" content="RVUnicorn, RV community, campground finder, RV travel, camping social network, RV trip planner, boondocking, full-time RV">
+  <link rel="canonical" href="https://www.rvunicorn.com/">
+  <meta property="og:title" content="RVUnicorn — The Social Campground Community for RV Travelers">
+  <meta property="og:description" content="Find campgrounds, plan trips, connect with fellow RVers. Your campfire, wherever you park.">
+  <meta property="og:image" content="https://www.rvunicorn.com/images/Logo_RVUnicorn.png">
+  <meta property="og:url" content="https://www.rvunicorn.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RVUnicorn">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="RVUnicorn — The Social Campground Community for RV Travelers">
+  <meta name="twitter:description" content="Find campgrounds, plan trips, connect with fellow RVers. Your campfire, wherever you park.">
+  <meta name="twitter:image" content="https://www.rvunicorn.com/images/Logo_RVUnicorn.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "RVUnicorn",
+    "alternateName": "RV Unicorn",
+    "url": "https://www.rvunicorn.com",
+    "logo": "https://www.rvunicorn.com/images/Logo_RVUnicorn.png",
+    "description": "RVUnicorn is the social campground community for RV travelers. Find campgrounds, plan trips, connect with fellow RVers, and get AI-powered travel tips.",
+    "foundingDate": "2025"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "RVUnicorn",
+    "alternateName": "RV Unicorn",
+    "url": "https://www.rvunicorn.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://www.rvunicorn.com/campgrounds?search={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>RVUnicorn — The Social Campground Community for RV Travelers</h1>
+    <p>Your campfire, wherever you park.</p>
+  </header>
+  <main>
+    <section>
+      <h2>What is RVUnicorn?</h2>
+      <p>RVUnicorn is the social campground community built for RV travelers. Whether you're a full-timer, weekender, or somewhere in between — RVUnicorn helps you find the perfect campground, plan your next trip, and connect with RVers who get it.</p>
+      <p>Meet Hitch, your AI-powered campground co-pilot. Hitch knows the campgrounds, answers your questions in real-time campfire chat, and suggests the best spots based on your rig type and travel style.</p>
+    </section>
+    <section>
+      <h2>RVUnicorn by the Numbers</h2>
+      <ul>
+        <li>${campgroundCount.toLocaleString()} campgrounds listed</li>
+        <li>${userCount.toLocaleString()} RVers in the community</li>
+        <li>${boardCount} active community boards</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Features</h2>
+      <ul>
+        <li>Campground Directory — Search and discover campgrounds with real reviews, amenities, and rig-size compatibility</li>
+        <li>Trip Planner — Plan routes, manage checklists, and track your travels across all 50 states</li>
+        <li>Campfire Chat — Real-time chat at every campground with AI characters Hitch, Walter, and Scout</li>
+        <li>Community Boards — Share trip reports, ask questions, swap recipes, and connect with fellow RVers</li>
+        <li>Drive Mode — Fatigue scoring, break planning, and passenger/driver split for safe road trips</li>
+        <li>Rig Memory — Your RV's digital identity: maintenance logs, trip history, and photo albums</li>
+        <li>Events — Host campground events with RSVP, schedules, and meal planning</li>
+      </ul>
+    </section>
+    <section>
+      <h2>For Campground Owners</h2>
+      <p>RVUnicorn offers campground management tools with the Summit subscription: broadcast messages to guests, let Hitch answer FAQs automatically, track repeat visitors, and run events with Mission Mode.</p>
+    </section>
+    <nav>
+      <a href="/campgrounds">Browse Campgrounds</a>
+      <a href="/community">Community</a>
+      <a href="/register">Join RVUnicorn</a>
+      <a href="/login">Sign In</a>
+    </nav>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} RVUnicorn. All rights reserved.</p>
+  </footer>
+</body>
+</html>`;
+
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch (e) {
+    console.error('[SSR] Landing page error:', e);
+    next();
+  }
+});
+
 // SSR for campground pages
 router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextFunction) => {
   if (!shouldSSR(req)) {
@@ -133,19 +247,19 @@ router.get('/trips/:slug/view', async (req: Request, res: Response, next: NextFu
 <meta property="og:description" content="${ownerName} is on a ${days}-day RV trip. Follow along on RVUnicorn.">
 <meta property="og:image" content="${photo}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta property="og:url" content="https://rvunicorn.com/trips/${slug}/view">
+<meta property="og:url" content="https://www.rvunicorn.com/trips/${slug}/view">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${trip.title}">
 <meta name="twitter:image" content="${photo}">
-<link rel="canonical" href="https://rvunicorn.com/trips/${slug}/view">
+<link rel="canonical" href="https://www.rvunicorn.com/trips/${slug}/view">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Trip","name":"${trip.title}","description":"${trip.description || ''}","touristType":"RV Travelers"}</script>
 </head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
 <div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px">
 <h1>${trip.title}</h1><p>A trip by ${ownerName}</p>
 <p>${trip.startDate.toLocaleDateString()} — ${trip.endDate.toLocaleDateString()} · ${days} days</p>
 ${trip.description ? `<p>${trip.description}</p>` : ''}
-<p><a href="https://rvunicorn.com" style="color:#E8A838">Join RVUnicorn free →</a></p>
+<p><a href="https://www.rvunicorn.com" style="color:#E8A838">Join RVUnicorn free →</a></p>
 </div>
 <div id="root"></div><script type="module" src="/src/main.tsx"></script>
 <script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
@@ -258,20 +372,20 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
 
     // Community boards
     for (const slug of COMMUNITY_BOARDS) {
-      xml += `  <url>\n    <loc>https://rvunicorn.com/community/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/community/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
 
     // Campground pages
     for (const cg of campgrounds) {
       const slug = cg.customSlug || cg.id;
       const lastmod = cg.updatedAt ? cg.updatedAt.toISOString().split('T')[0] : today;
-      xml += `  <url>\n    <loc>https://rvunicorn.com/campgrounds/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/campgrounds/${slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
     }
 
     // User profile pages
     for (const u of users) {
       const lastmod = u.updatedAt ? u.updatedAt.toISOString().split('T')[0] : today;
-      xml += `  <url>\n    <loc>https://rvunicorn.com/profile/${u.username}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/profile/${u.username}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
     }
 
     xml += '</urlset>';
@@ -295,7 +409,7 @@ Disallow: /settings
 Disallow: /messages
 Disallow: /notifications
 
-Sitemap: https://rvunicorn.com/sitemap.xml
+Sitemap: https://www.rvunicorn.com/sitemap.xml
 `;
 
   res.set('Content-Type', 'text/plain');
