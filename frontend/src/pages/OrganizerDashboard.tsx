@@ -4,14 +4,18 @@ import { Helmet } from 'react-helmet-async';
 import {
   Calendar, Users, Radio, Plus, Settings, BarChart3, ChevronRight,
   Megaphone, Cloud, Sun, CloudRain, Snowflake, Wind, Send, MapPin,
-  Tent, CheckCircle2, Upload, Clock, AlertTriangle
+  Tent, CheckCircle2, Upload, Clock, AlertTriangle, Zap, Activity,
+  Sparkles, MessageSquare, Wand2
 } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { computeEventLifecycle } from '../hooks/useEventLifecycle';
 import LiveEventBadge from '../components/LiveEventBadge';
 import MissionMode from '../components/organizer/MissionMode';
 import { format, formatDistanceToNow } from 'date-fns';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const SKIN_LABELS: Record<string, string> = {
   TRAIL_GUIDE: '🏔️ Trail Guide',
@@ -117,6 +121,20 @@ export default function OrganizerDashboard() {
   // Analytics
   const [analytics, setAnalytics] = useState<any>(null);
 
+  // Suggested actions (Hitch Detection Engine)
+  const [suggestedActions, setSuggestedActions] = useState<any[]>([]);
+  const [actionExecuting, setActionExecuting] = useState<string | null>(null);
+
+  // Pulse Feed (real-time activity)
+  const [pulseFeed, setPulseFeed] = useState<any[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+
+  // AI broadcast assist
+  const [aiAssisting, setAiAssisting] = useState<string | null>(null);
+
+  // Park Mode
+  const [parkMode, setParkMode] = useState(false);
+
   // ── Load data ──────────────────────────────────────────────────
   useEffect(() => {
     const loadAll = async () => {
@@ -178,6 +196,37 @@ export default function OrganizerDashboard() {
       api.get(`/organizer/${myCampground.id}/analytics`).then(({ data }) => setAnalytics(data)).catch(() => {});
     }
   }, [tab, myCampground?.id]);
+
+  // Load suggested actions
+  useEffect(() => {
+    if (!myCampground?.id) return;
+    api.get(`/organizer/${myCampground.id}/suggested-actions`).then(({ data }) => setSuggestedActions(data.actions || [])).catch(() => {});
+    const interval = setInterval(() => {
+      api.get(`/organizer/${myCampground.id}/suggested-actions`).then(({ data }) => setSuggestedActions(data.actions || [])).catch(() => {});
+    }, 3 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [myCampground?.id]);
+
+  // WebSocket for Pulse Feed
+  useEffect(() => {
+    if (!myCampground?.id || !user?.id) return;
+    const socket = io(`${SOCKET_URL}/organizer`, {
+      query: { campgroundId: myCampground.id, userId: user.id },
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+    });
+    socketRef.current = socket;
+
+    socket.on('activity:snapshot', (snapshot: any[]) => {
+      setPulseFeed(snapshot);
+    });
+
+    socket.on('activity:new', (activity: any) => {
+      setPulseFeed(prev => [activity, ...prev].slice(0, 30));
+    });
+
+    return () => { socket.disconnect(); socketRef.current = null; };
+  }, [myCampground?.id, user?.id]);
 
   // ── Broadcast handlers ─────────────────────────────────────
   const sendBroadcast = useCallback(async () => {
@@ -242,6 +291,61 @@ export default function OrganizerDashboard() {
       setFaqUploading(false);
     }
   }, [myCampground?.id]);
+
+  // Execute a suggested action (one-click)
+  const executeAction = useCallback(async (action: any) => {
+    if (!myCampground?.id) return;
+    setActionExecuting(action.id);
+    try {
+      if (action.actionType === 'SEND_BROADCAST' || action.actionType === 'POST_PROMPT' || action.actionType === 'SEND_WELCOME') {
+        await api.post(`/organizer/${myCampground.id}/broadcasts`, {
+          message: action.prefillMessage,
+          type: action.actionType === 'SEND_WELCOME' ? 'WELCOME' : 'GENERAL',
+          audience: action.actionPayload?.audience || 'ALL_CHECKED_IN',
+        });
+      }
+      // Remove from list
+      setSuggestedActions(prev => prev.filter(a => a.id !== action.id));
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to execute action');
+    } finally {
+      setActionExecuting(null);
+    }
+  }, [myCampground?.id]);
+
+  // AI broadcast assist
+  const runAiAssist = useCallback(async (assistAction: string) => {
+    if (!myCampground?.id || !broadcastMsg.trim()) return;
+    setAiAssisting(assistAction);
+    try {
+      const { data } = await api.post(`/organizer/${myCampground.id}/broadcast-assist`, {
+        message: broadcastMsg,
+        action: assistAction,
+      });
+      if (data.message) setBroadcastMsg(data.message);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'AI assist failed');
+    } finally {
+      setAiAssisting(null);
+    }
+  }, [myCampground?.id, broadcastMsg]);
+
+  if (parkMode && myCampground) {
+    return (
+      <ParkModeView
+        campground={myCampground}
+        pulseFeed={pulseFeed}
+        todayData={todayData}
+        suggestedActions={suggestedActions}
+        onExecuteAction={executeAction}
+        actionExecuting={actionExecuting}
+        onSendBroadcast={async (msg: string) => {
+          await api.post(`/organizer/${myCampground.id}/broadcasts`, { message: msg, type: 'GENERAL', audience: 'ALL_CHECKED_IN' });
+        }}
+        onExit={() => setParkMode(false)}
+      />
+    );
+  }
 
   if (missionEventId) {
     return (
@@ -335,8 +439,39 @@ export default function OrganizerDashboard() {
               </div>
             )}
 
-            {/* Hitch suggestion */}
-            {todayData?.hitchSuggestion && (
+            {/* Suggested Actions (Hitch Detection Engine) */}
+            {suggestedActions.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-50">
+                <p className="text-[10px] text-amber-700 font-semibold uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Suggested Actions
+                </p>
+                <div className="space-y-2">
+                  {suggestedActions.map((action) => (
+                    <div key={action.id} className="flex items-center gap-3 bg-amber-50/50 rounded-lg px-3 py-2 border border-amber-100">
+                      <span className="text-lg flex-shrink-0">{action.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">{action.title}</p>
+                        <p className="text-[10px] text-gray-500 line-clamp-1">{action.description}</p>
+                      </div>
+                      {action.prefillMessage && (
+                        <button
+                          onClick={() => executeAction(action)}
+                          disabled={actionExecuting === action.id}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white transition ${
+                            action.priority === 'HIGH' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-amber-500 hover:bg-amber-600'
+                          } disabled:opacity-50`}
+                        >
+                          {actionExecuting === action.id ? '...' : action.actionLabel || 'Send'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hitch suggestion (fallback when no detection engine actions) */}
+            {suggestedActions.length === 0 && todayData?.hitchSuggestion && (
               <div className="px-4 py-3 border-t border-gray-50" style={{ borderLeftWidth: 4, borderLeftColor: '#E8A838' }}>
                 <p className="text-xs text-gray-700">
                   <span className="font-semibold text-amber-700">🎯 Hitch suggests:</span>{' '}
@@ -345,6 +480,12 @@ export default function OrganizerDashboard() {
               </div>
             )}
           </div>
+
+          {/* Park Mode button */}
+          <button onClick={() => setParkMode(true)}
+            className="w-full mt-3 flex items-center justify-center gap-2 bg-[#1B2B4B] text-white py-3 rounded-xl text-sm font-bold hover:bg-[#243862] transition">
+            <Radio className="w-4 h-4" /> Enter Park Mode
+          </button>
         </div>
       )}
 
@@ -353,9 +494,10 @@ export default function OrganizerDashboard() {
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           {([
             { key: 'events', label: '📋 Events' },
+            { key: 'pulse', label: '⚡ Pulse' },
             { key: 'broadcast', label: '📢 Broadcast' },
-            { key: 'hitch', label: '🧠 Hitch Config' },
-            { key: 'analytics', label: '📊 Analytics' },
+            { key: 'hitch', label: '🧠 Hitch' },
+            { key: 'analytics', label: '📊 Stats' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-semibold transition ${
@@ -464,6 +606,69 @@ export default function OrganizerDashboard() {
           </div>
         )}
 
+        {/* ── Pulse Feed Tab ── */}
+        {tab === 'pulse' && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-4 h-4 text-amber-500" />
+              <h3 className="font-bold text-gray-900 text-sm">Live Activity Feed</h3>
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            </div>
+            {pulseFeed.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+                <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No activity yet. Events will appear here in real-time as guests check in, chat, and interact.</p>
+              </div>
+            ) : (
+              pulseFeed.map((item) => {
+                const typeStyles: Record<string, { bg: string; icon: string }> = {
+                  CHECKIN: { bg: 'bg-green-50 border-green-100', icon: '🚐' },
+                  CHECKOUT: { bg: 'bg-gray-50 border-gray-100', icon: '👋' },
+                  CHAT_MESSAGE: { bg: 'bg-blue-50 border-blue-100', icon: '💬' },
+                  FAQ_QUESTION: { bg: 'bg-amber-50 border-amber-100', icon: '❓' },
+                  HITCH_RESPONSE: { bg: 'bg-purple-50 border-purple-100', icon: '🦄' },
+                  BROADCAST_SENT: { bg: 'bg-orange-50 border-orange-100', icon: '📢' },
+                  EVENT_RSVP: { bg: 'bg-pink-50 border-pink-100', icon: '🎉' },
+                };
+                const style = typeStyles[item.type] || { bg: 'bg-gray-50 border-gray-100', icon: '📋' };
+
+                return (
+                  <div key={item.id} className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${style.bg} transition`}>
+                    <span className="text-lg flex-shrink-0">{style.icon}</span>
+                    {item.userAvatar && (
+                      <img src={item.userAvatar} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-800">{item.title}</p>
+                      {item.subtitle && <p className="text-[10px] text-gray-500 line-clamp-1">{item.subtitle}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px] text-gray-400">
+                        {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                      </span>
+                      {item.actionLabel && (
+                        <button
+                          onClick={() => {
+                            if (item.actionType === 'SEND_WELCOME' && item.actionPayload?.userName) {
+                              setBroadcastMsg(`Welcome ${item.actionPayload.userName}! Glad you made it. Need anything? Drop us a message.`);
+                              setTab('broadcast');
+                            } else if (item.actionType === 'ANSWER_QUESTION') {
+                              setTab('broadcast');
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[10px] font-semibold text-gray-700 hover:bg-amber-50 hover:border-amber-200 transition"
+                        >
+                          {item.actionLabel}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {/* ── Broadcast Tab ── */}
         {tab === 'broadcast' && (
           !isSummit ? <SummitGate campgroundName={myCampground?.name} /> : (
@@ -479,7 +684,7 @@ export default function OrganizerDashboard() {
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
                   rows={2}
                 />
-                <div className="flex items-center justify-between mt-1 mb-3">
+                <div className="flex items-center justify-between mt-1 mb-2">
                   <span className={`text-[10px] ${broadcastMsg.length > 140 ? 'text-red-500' : 'text-gray-400'}`}>
                     {broadcastMsg.length}/160
                   </span>
@@ -487,6 +692,25 @@ export default function OrganizerDashboard() {
                     {templatesOpen ? 'Hide templates' : 'Quick templates ↓'}
                   </button>
                 </div>
+
+                {/* AI Assist buttons */}
+                {broadcastMsg.trim().length > 5 && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Wand2 className="w-3 h-3 text-purple-400" />
+                    <span className="text-[10px] text-purple-500 font-semibold mr-1">AI:</span>
+                    {[
+                      { key: 'shorten', label: 'Shorten' },
+                      { key: 'engaging', label: 'Make engaging' },
+                      { key: 'push', label: 'Optimize for push' },
+                    ].map((a) => (
+                      <button key={a.key} onClick={() => runAiAssist(a.key)}
+                        disabled={!!aiAssisting}
+                        className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-600 text-[10px] font-semibold border border-purple-200 hover:bg-purple-100 transition disabled:opacity-50">
+                        {aiAssisting === a.key ? '...' : a.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Templates */}
                 {templatesOpen && (
@@ -799,6 +1023,190 @@ export default function OrganizerDashboard() {
             </div>
           )
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── PARK MODE — Full-screen campground control center ──────────────
+
+interface ParkModeProps {
+  campground: any;
+  pulseFeed: any[];
+  todayData: any;
+  suggestedActions: any[];
+  onExecuteAction: (action: any) => void;
+  actionExecuting: string | null;
+  onSendBroadcast: (msg: string) => Promise<void>;
+  onExit: () => void;
+}
+
+function ParkModeView({ campground, pulseFeed, todayData, suggestedActions, onExecuteAction, actionExecuting, onSendBroadcast, onExit }: ParkModeProps) {
+  const [quickMsg, setQuickMsg] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!quickMsg.trim()) return;
+    setSending(true);
+    try {
+      await onSendBroadcast(quickMsg.trim());
+      setQuickMsg('');
+    } catch {}
+    setSending(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0f1a] text-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-[#0f172a] to-[#1e293b] border-b border-white/10 px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onExit} className="text-white/50 hover:text-white text-xs transition">← Dashboard</button>
+            <div>
+              <p className="text-xs text-green-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Park Mode
+              </p>
+              <h1 className="text-lg font-bold text-white">{campground.name}</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-400">{todayData?.checkedInNow ?? 0}</p>
+              <p className="text-[10px] text-green-300">On Site</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-400">{todayData?.arrivingToday ?? 0}</p>
+              <p className="text-[10px] text-blue-300">Arriving</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-amber-400">{todayData?.campfireActivity?.activeUsers ?? 0}</p>
+              <p className="text-[10px] text-amber-300">Chatting</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* LEFT — Activity Feed */}
+          <div className="lg:col-span-2 space-y-3">
+            <h2 className="text-sm font-bold text-amber-400 flex items-center gap-2">
+              <Activity className="w-4 h-4" /> Live Activity
+            </h2>
+
+            {pulseFeed.length === 0 ? (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-8 text-center">
+                <p className="text-sm text-gray-500">Waiting for activity...</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {pulseFeed.map((item) => {
+                  const typeColors: Record<string, string> = {
+                    CHECKIN: 'border-green-500/30 bg-green-500/10',
+                    FAQ_QUESTION: 'border-amber-500/30 bg-amber-500/10',
+                    CHAT_MESSAGE: 'border-blue-500/30 bg-blue-500/10',
+                    HITCH_RESPONSE: 'border-purple-500/30 bg-purple-500/10',
+                    BROADCAST_SENT: 'border-orange-500/30 bg-orange-500/10',
+                  };
+                  const icons: Record<string, string> = {
+                    CHECKIN: '🚐', FAQ_QUESTION: '❓', CHAT_MESSAGE: '💬',
+                    HITCH_RESPONSE: '🦄', BROADCAST_SENT: '📢', EVENT_RSVP: '🎉',
+                  };
+
+                  return (
+                    <div key={item.id} className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${typeColors[item.type] || 'border-white/10 bg-white/5'}`}>
+                      <span className="text-lg">{icons[item.type] || '📋'}</span>
+                      {item.userAvatar && <img src={item.userAvatar} className="w-7 h-7 rounded-full object-cover" alt="" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white">{item.title}</p>
+                        {item.subtitle && <p className="text-[10px] text-gray-400 line-clamp-1">{item.subtitle}</p>}
+                      </div>
+                      <span className="text-[10px] text-gray-500 flex-shrink-0">
+                        {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                      </span>
+                      {item.actionLabel && (
+                        <button className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-[10px] font-semibold text-white hover:bg-white/20 transition">
+                          {item.actionLabel}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT — Action Console */}
+          <div className="space-y-4">
+            {/* Suggested Actions */}
+            {suggestedActions.length > 0 && (
+              <div className="bg-white/5 rounded-xl border border-amber-500/20 p-4">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Suggested Actions
+                </h3>
+                <div className="space-y-2">
+                  {suggestedActions.map((action) => (
+                    <div key={action.id} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className="text-sm">{action.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white">{action.title}</p>
+                          <p className="text-[10px] text-gray-400 line-clamp-2">{action.description}</p>
+                        </div>
+                      </div>
+                      {action.prefillMessage && (
+                        <button onClick={() => onExecuteAction(action)}
+                          disabled={actionExecuting === action.id}
+                          className="w-full py-1.5 rounded-lg text-[10px] font-bold text-white transition disabled:opacity-50 bg-amber-500 hover:bg-amber-600">
+                          {actionExecuting === action.id ? 'Sending...' : `${action.actionLabel || 'Send'} →`}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Broadcast */}
+            <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+              <h3 className="text-xs font-bold text-orange-400 mb-3 flex items-center gap-1.5">
+                <Megaphone className="w-3.5 h-3.5" /> Quick Broadcast
+              </h3>
+              <textarea
+                value={quickMsg}
+                onChange={(e) => setQuickMsg(e.target.value.slice(0, 160))}
+                placeholder="Message all guests..."
+                className="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:border-amber-500/50 resize-none"
+                rows={2}
+              />
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-gray-500">{quickMsg.length}/160</span>
+                <button onClick={handleSend} disabled={!quickMsg.trim() || sending}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 transition disabled:opacity-50">
+                  {sending ? '...' : 'Send'}
+                </button>
+              </div>
+            </div>
+
+            {/* Campfire Status */}
+            <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+              <h3 className="text-xs font-bold text-purple-400 mb-2 flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" /> Campfire Status
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-bold text-white">{todayData?.campfireActivity?.messageCount24h ?? 0}</p>
+                  <p className="text-[10px] text-gray-400">Messages (24h)</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-bold text-white">{todayData?.campfireActivity?.activeUsers ?? 0}</p>
+                  <p className="text-[10px] text-gray-400">Active Users</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

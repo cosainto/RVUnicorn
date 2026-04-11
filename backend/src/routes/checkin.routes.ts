@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
 import { sendWebPush } from '../utils/webPush';
 import { checkSharedFire } from './sharing.routes';
+import { emitOrganizerActivity } from '../campfire/organizer.socket';
 // Lazy import to avoid circular dependency with index.ts
 function getIO() { return require('../index').io; }
 
@@ -116,6 +117,21 @@ router.post('/', authenticateToken, async (req: any, res) => {
         });
       }
     } catch (eventErr: any) {
+    }
+
+    // Emit to organizer pulse feed
+    if (campgroundId) {
+      emitOrganizerActivity(campgroundId, {
+        type: 'CHECKIN',
+        title: `${checkIn.user.firstName} ${checkIn.user.lastName || ''} checked in`,
+        subtitle: siteNumber ? `Site ${siteNumber}` : undefined,
+        userId: checkIn.user.id,
+        userName: checkIn.user.firstName,
+        userAvatar: checkIn.user.profilePicture || undefined,
+        actionLabel: 'Welcome',
+        actionType: 'SEND_WELCOME',
+        actionPayload: { userId: checkIn.user.id, userName: checkIn.user.firstName },
+      });
     }
 
     // Emit presence:arrived for any live events at this campground

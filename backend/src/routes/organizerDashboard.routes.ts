@@ -5,6 +5,7 @@ import { sendWebPush } from '../utils/webPush';
 import { pushNotification } from './notification.routes';
 import Anthropic from '@anthropic-ai/sdk';
 import multer from 'multer';
+import { generateSuggestedActions } from '../services/hitchDetectionEngine';
 
 const router = Router();
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -493,6 +494,65 @@ router.get('/:campgroundId/analytics', authenticateToken, async (req: any, res: 
   } catch (e) {
     console.error('[OrganizerDashboard] Analytics error:', e);
     res.status(500).json({ error: 'Failed to load analytics' });
+  }
+});
+
+// ── SUGGESTED ACTIONS (Hitch Detection Engine) ────────────
+
+router.get('/:campgroundId/suggested-actions', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    if (!(await verifyCampgroundOwner(req.userId, campgroundId))) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const actions = await generateSuggestedActions(campgroundId);
+    res.json({ actions });
+  } catch (e: any) {
+    console.error('[OrganizerDashboard] Suggested actions error:', e);
+    res.status(500).json({ error: 'Failed to generate suggested actions' });
+  }
+});
+
+// ── AI BROADCAST ASSIST ──────────────────────────────────
+
+router.post('/:campgroundId/broadcast-assist', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    if (!(await verifyCampgroundOwner(req.userId, campgroundId))) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const { message, action } = req.body;
+    if (!message?.trim() || !action) {
+      return res.status(400).json({ error: 'Message and action are required' });
+    }
+
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { name: true },
+    });
+
+    const prompts: Record<string, string> = {
+      shorten: `Shorten this campground broadcast to under 80 characters while keeping the core message. Campground: "${campground?.name}". Message: "${message}". Return ONLY the shortened message, nothing else.`,
+      engaging: `Rewrite this campground broadcast to be more engaging and fun, while keeping it under 160 characters. Add personality. Campground: "${campground?.name}". Message: "${message}". Return ONLY the rewritten message, nothing else.`,
+      push: `Optimize this message for a mobile push notification — make it punchy, under 60 characters, with an emoji. Campground: "${campground?.name}". Message: "${message}". Return ONLY the optimized message, nothing else.`,
+    };
+
+    const prompt = prompts[action];
+    if (!prompt) return res.status(400).json({ error: 'Invalid action. Use: shorten, engaging, or push' });
+
+    const aiRes = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const result = aiRes.content[0].type === 'text' ? aiRes.content[0].text.trim() : '';
+    res.json({ message: result });
+  } catch (e) {
+    console.error('[OrganizerDashboard] Broadcast assist error:', e);
+    res.status(500).json({ error: 'Failed to process AI assist' });
   }
 });
 

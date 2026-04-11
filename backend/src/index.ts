@@ -124,6 +124,7 @@ import aiMaintenanceRouter from "./routes/ai-maintenance";
 import { runMaintenanceCron } from "./cron/maintenance-cron";
 import { updateGasPrices } from "./cron/gas-price-cron";
 import { registerCampfireSockets } from './campfire/campfire.socket';
+import { registerOrganizerSockets } from './campfire/organizer.socket';
 import pushRoutes from './routes/push.routes';
 import { runRoadChatCleanup } from './cron/road-chat-cleanup.cron';
 import { runCampfireCleanup } from './cron/campfire-cleanup.cron';
@@ -361,6 +362,7 @@ app.get('/health', (req, res) => {
 
 registerCampfireSockets(io);
 registerEventSockets(io);
+registerOrganizerSockets(io);
 // Road chat cleanup — run every hour
 setInterval(runRoadChatCleanup, 60 * 60 * 1000);
 runRoadChatCleanup();

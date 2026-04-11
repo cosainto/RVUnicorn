@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { prisma } from '../prisma';
 import { ensureTriviaWeek } from '../cron/trivia-cron';
+import { emitOrganizerActivity } from './organizer.socket';
 
 const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
 // Track recently auto-responded messages to avoid duplicate responses
@@ -49,6 +50,21 @@ export function registerCampfireSockets(io: Server) {
       campfire.to(campgroundId).emit('message:new', {
         id: msg.id, content: msg.content, createdAt: msg.createdAt,
         isSystem: false, isHitch: false, user: msg.user,
+      });
+
+      // Emit to organizer pulse feed
+      const isQuestion = /\?$|^(what|where|when|how|is|are|can|do)\b/i.test(data.content.trim());
+      emitOrganizerActivity(campgroundId, {
+        type: isQuestion ? 'FAQ_QUESTION' : 'CHAT_MESSAGE',
+        title: isQuestion
+          ? `${user.firstName} asked a question`
+          : `${user.firstName} posted in campfire`,
+        subtitle: data.content.slice(0, 80),
+        userId: user.id,
+        userName: user.firstName,
+        userAvatar: user.profilePicture || undefined,
+        actionLabel: isQuestion ? 'Answer' : undefined,
+        actionType: isQuestion ? 'ANSWER_QUESTION' : undefined,
       });
 
       // @Hitch mention — conversational AI with memory
