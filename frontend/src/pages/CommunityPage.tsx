@@ -28,7 +28,16 @@ interface Post {
   author: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string };
   board?: { id: string; name: string; slug: string; icon: string; color: string };
   _count?: { comments: number; votes: number };
+  isCharacterPost?: boolean;
+  characterAuthor?: string;
 }
+
+const CHARACTER_INFO: Record<string, { name: string; emoji: string }> = {
+  HITCH: { name: 'Hitch', emoji: '🎯' },
+  WALLET: { name: 'Wallet', emoji: '💸' },
+  SCOUT: { name: 'Scout', emoji: '🧭' },
+  WALTER: { name: 'Walter', emoji: '🔭' },
+};
 
 interface Comment {
   id: string;
@@ -85,8 +94,15 @@ function PostCard({ post, showBoard = false, onClick }: { post: Post; showBoard?
     } catch (e) { console.error(e); }
   };
 
+  const charInfo = post.isCharacterPost && post.characterAuthor ? CHARACTER_INFO[post.characterAuthor] : null;
+
   return (
-    <div className="bg-white rounded-xl border border-gray-100 hover:border-orange-200 transition overflow-hidden">
+    <div className={`rounded-xl border overflow-hidden transition ${charInfo ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300' : 'bg-white border-gray-100 hover:border-orange-200'}`}>
+      {charInfo && (
+        <div className="bg-amber-100/60 px-4 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+          <Flame className="w-3.5 h-3.5" /> Weekly Campfire Thread
+        </div>
+      )}
       <div className="flex gap-3 p-4">
         <VoteButtons score={score} onVote={handleVote} />
         <div className="flex-1 min-w-0">
@@ -102,15 +118,24 @@ function PostCard({ post, showBoard = false, onClick }: { post: Post; showBoard?
           </button>
           <div className="flex items-center gap-3 mt-2.5 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <Avatar user={post.author} size={5} />
-              <Link to={`/profile/${post.author.username}`} className="text-xs text-gray-500 font-semibold hover:underline hover:text-orange-500 transition">{post.author.firstName} {post.author.lastName}</Link>
+              {charInfo ? (
+                <>
+                  <span className="text-lg">{charInfo.emoji}</span>
+                  <span className="text-xs text-amber-700 font-semibold">{charInfo.name} &bull; Weekly Campfire</span>
+                </>
+              ) : (
+                <>
+                  <Avatar user={post.author} size={5} />
+                  <Link to={`/profile/${post.author.username}`} className="text-xs text-gray-500 font-semibold hover:underline hover:text-orange-500 transition">{post.author.firstName} {post.author.lastName}</Link>
+                </>
+              )}
             </div>
             <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
             <button onClick={onClick} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition">
               <MessageSquare className="w-3.5 h-3.5" />
               <span>{post.commentCount || post._count?.comments || 0} comments</span>
             </button>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{POST_TYPES.find(t => t.value === post.postType)?.label || post.postType}</span>
+            {!charInfo && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{POST_TYPES.find(t => t.value === post.postType)?.label || post.postType}</span>}
           </div>
         </div>
       </div>

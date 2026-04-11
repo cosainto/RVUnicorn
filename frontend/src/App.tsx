@@ -124,6 +124,7 @@ const AdminCampgroundsPage = lazy(() => import('./pages/AdminCampgroundsPage'));
 const AdminSponsorCampaignsPage = lazy(() => import('./pages/AdminSponsorCampaignsPage'));
 const AdminHostListingsPage = lazy(() => import('./pages/AdminHostListingsPage'));
 const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
+const CampfireThreadAdminPage = lazy(() => import('./pages/admin/CampfireThreadAdminPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const PublicTripViewPage = lazy(() => import('./pages/PublicTripViewPage'));
 const JoinCrewPage = lazy(() => import('./pages/JoinCrewPage'));
@@ -279,6 +280,7 @@ function AppContent() {
           <Route path="/business/:campgroundId" element={<BusinessBasecampPage />} />
           <Route path="/admin/campgrounds" element={<AdminCampgroundsPage />} />
           <Route path="/admin/analytics" element={<PrivateRoute><AdminAnalyticsPage /></PrivateRoute>} />
+          <Route path="/admin/campfire-threads" element={<PrivateRoute><CampfireThreadAdminPage /></PrivateRoute>} />
           <Route path="/admin/sponsor-campaigns" element={<AdminSponsorCampaignsPage />} />
             <Route path="/admin/hosts" element={<AdminHostListingsPage />} />
             <Route path="/hosts/new" element={<CreateHostPage />} />

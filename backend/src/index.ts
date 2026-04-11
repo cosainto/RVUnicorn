@@ -132,6 +132,10 @@ import { registerTriviaCrons } from './cron/trivia-cron';
 import { registerEventSockets } from './campfire/events.socket';
 import { runAutopilotCycle, checkEventMemoryTransitions } from './services/autopilotService';
 import { runStaySurveyPromptCron } from './cron/stay-survey-prompt.cron';
+import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
+import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
+import organizerDashboardRoutes from './routes/organizerDashboard.routes';
+import { registerBroadcastCron } from './cron/broadcast.cron';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -340,6 +344,8 @@ app.use("/api/road-trips", roadTripsRoutes);
 app.use("/api/events/:eventId/subevents", tripSubeventsRoutes);
 app.use("/api/local-business", localBusinessRoutes);
 app.use("/api/dealers", dealerRoutes);
+app.use("/api/admin/campfire-threads", campfireThreadAdminRoutes);
+app.use("/api/organizer", organizerDashboardRoutes);
 
 
 
@@ -363,6 +369,8 @@ setInterval(runCampfireCleanup, 60 * 60 * 1000);
 runCampfireCleanup();
 registerRoadChatSockets(io);
 registerTriviaCrons(io);
+registerCampfireThreadCrons();
+registerBroadcastCron();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

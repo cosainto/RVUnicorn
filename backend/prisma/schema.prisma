@@ -378,6 +378,8 @@ model User {
   eventPollResponses                              EventPollResponse[]
   eventConnectionsA                               EventConnection[]             @relation("ConnectionUserA")
   eventConnectionsB                               EventConnection[]             @relation("ConnectionUserB")
+  campfireThreadExpertTags                        CampfireThreadExpertTag[]
+  organizerBroadcasts                             OrganizerBroadcast[]
 
   @@index([email])
   @@index([username])
@@ -643,6 +645,9 @@ model Campground {
   priceReports           CampgroundPriceReport[]
   pricePerNightSource    String?                  // 'COMMUNITY' | 'SCRAPED' | 'OFFICIAL' | null
   pricePerNightUpdatedAt DateTime?
+  campfireThreadDestinations CampfireThreadDestination[]
+  organizerBroadcasts    OrganizerBroadcast[]
+  hitchCampgroundConfig  HitchCampgroundConfig?
 
   @@index([state])
   @@index([name])
@@ -4405,12 +4410,14 @@ model BoardPost {
   voteScore    Int            @default(0)
   commentCount Int            @default(0)
   isPinned     Boolean        @default(false)
-  isClosed     Boolean        @default(false)
-  bestAnswerId String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  board        Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isClosed        Boolean        @default(false)
+  bestAnswerId    String?
+  characterAuthor String?        // HITCH | WALLET | WALTER | SCOUT — set for AI character posts
+  isCharacterPost Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author          User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments     BoardComment[]
   votes        BoardVote[]
 
@@ -5333,4 +5340,100 @@ model DealerListing {
 
   @@index([rigClass])
   @@index([make])
+}
+
+// ── Weekly Campfire Thread Engine ────────────────────────────
+
+model CampfireThread {
+  id              String                      @id @default(cuid())
+  title           String
+  content         String                      @db.Text
+  hookQuestion    String
+  hotTake         String
+  character       String                      // HITCH | WALLET | WALTER | SCOUT
+  category        String                      // DESTINATION | VALUE | ADVENTURE | SEASONAL etc.
+  targetAudience  String?
+  rigContext       String?
+  weatherContext  String?
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  status          String                      @default("DRAFT") // DRAFT | SCHEDULED | PUBLISHED
+  boardId         String?
+  postId          String?
+  seedReplies     String[]                    @default([])
+  destinations    CampfireThreadDestination[]
+  expertTags      CampfireThreadExpertTag[]
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  @@index([status, scheduledFor])
+}
+
+model CampfireThreadDestination {
+  id              String          @id @default(cuid())
+  threadId        String
+  thread          CampfireThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  campgroundId    String?
+  campground      Campground?     @relation(fields: [campgroundId], references: [id])
+  name            String
+  state           String?
+  rigRestriction  String?
+  amenitySummary  String?
+  sentiment       String?         // POSITIVE | MIXED | AVOID
+  highlight       String?
+  sourceUrl       String?
+  order           Int             @default(0)
+
+  @@index([threadId])
+}
+
+model CampfireThreadExpertTag {
+  id        String         @id @default(cuid())
+  threadId  String
+  thread    CampfireThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  notified  Boolean        @default(false)
+  createdAt DateTime       @default(now())
+
+  @@index([threadId])
+  @@index([userId])
+}
+
+// ── Organizer Dashboard Enhancements ────────────────────────
+
+model OrganizerBroadcast {
+  id             String     @id @default(cuid())
+  campgroundId   String
+  campground     Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User       @relation(fields: [authorId], references: [id])
+  message        String
+  type           String     @default("GENERAL")
+  audience       String     @default("ALL_CHECKED_IN")
+  eventId        String?
+  scheduledFor   DateTime?
+  sentAt         DateTime?
+  status         String     @default("DRAFT") // DRAFT | SCHEDULED | SENT
+  recipientCount Int?
+  createdAt      DateTime   @default(now())
+
+  @@index([campgroundId])
+  @@index([status, scheduledFor])
+}
+
+model HitchCampgroundConfig {
+  id              String     @id @default(cuid())
+  campgroundId    String     @unique
+  campground      Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  personality     String     @default("TRAIL_GUIDE")
+  welcomeMessage  String?
+  faqDocumentUrl  String?
+  faqIndexedAt    DateTime?
+  faqContent      String?    @db.Text
+  autoRespond     Boolean    @default(true)
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime   @default(now())
 }
