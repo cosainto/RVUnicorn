@@ -380,6 +380,7 @@ model User {
   eventConnectionsB                               EventConnection[]             @relation("ConnectionUserB")
   campfireThreadExpertTags                        CampfireThreadExpertTag[]
   organizerBroadcasts                             OrganizerBroadcast[]
+  tripConfidenceSnapshots                         TripConfidenceSnapshot[]
 
   @@index([email])
   @@index([username])
@@ -471,10 +472,11 @@ model Trip {
   visibility  String       @default("PRIVATE")
   coverImage  String?
   shareToken  String?      @unique
-  stays       Stay[]
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  days        TripDay[]
-  members     TripMember[]
+  stays                Stay[]
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days                 TripDay[]
+  members              TripMember[]
+  confidenceSnapshots  TripConfidenceSnapshot[]
 
   @@index([userId])
   @@index([startDate])
@@ -5436,4 +5438,56 @@ model HitchCampgroundConfig {
   quietHoursEnd   Int?
   updatedAt       DateTime   @updatedAt
   createdAt       DateTime   @default(now())
+}
+
+// ── Trip Confidence System ──────────────────────────────────
+
+model TripConfidenceSnapshot {
+  id                String    @id @default(cuid())
+  tripId            String?
+  trip              Trip?     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  eventId           String?
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score             Int       // 0-100
+  status            String    // GO | CAUTION | NO_GO
+  headline          String
+  subheadline       String?
+  fuelEstimate      Float?
+  fuelGallons       Float?
+  driveMiles        Float?
+  driveHours        Float?
+  weatherSummary    String?
+  weatherTemp       Float?
+  weatherCondition  String?
+  windSpeed         Float?
+  flags             Json      // array of RiskFlag objects
+  passedChecks      Json?     // array of strings
+  breakPlan         Json?     // array of BreakStop objects
+  metrics           Json?     // full metrics object
+  householdStatus   Json?     // array of household review status
+  generatedAt       DateTime  @default(now())
+  expiresAt         DateTime
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([generatedAt])
+}
+
+model TripConfidenceEvent {
+  id            String   @id @default(cuid())
+  tripId        String?
+  eventId       String?
+  campgroundId  String?
+  userId        String
+  type          String   // DELAY | WIND_RISK | FATIGUE | RIG_MISMATCH | REROUTE | FUEL_SPIKE | WEATHER_CHANGE
+  severity      String   // LOW | MEDIUM | HIGH
+  message       String
+  etaImpact     Int?     // minutes of delay
+  emittedAt     DateTime @default(now())
+  acknowledged  Boolean  @default(false)
+
+  @@index([eventId])
+  @@index([campgroundId])
+  @@index([emittedAt])
 }

@@ -137,6 +137,8 @@ import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
 import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
 import { registerBroadcastCron } from './cron/broadcast.cron';
+import tripConfidenceRoutes from './routes/tripConfidence.routes';
+import { registerConfidenceCron } from './cron/tripConfidence.cron';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -347,6 +349,7 @@ app.use("/api/local-business", localBusinessRoutes);
 app.use("/api/dealers", dealerRoutes);
 app.use("/api/admin/campfire-threads", campfireThreadAdminRoutes);
 app.use("/api/organizer", organizerDashboardRoutes);
+app.use("/api/trip-confidence", tripConfidenceRoutes);
 
 
 
@@ -373,6 +376,7 @@ registerRoadChatSockets(io);
 registerTriviaCrons(io);
 registerCampfireThreadCrons();
 registerBroadcastCron();
+registerConfidenceCron();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
