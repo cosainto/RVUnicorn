@@ -94,25 +94,82 @@ router.get('/for-you', optionalAuth, async (req: any, res: Response) => {
     // Get user context for scoring
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { rvType: true, location: true },
+      select: {
+        rvType: true, rvMake: true, rvModel: true, location: true,
+        homeState: true, campingStyles: true, campingInterests: true,
+        hasPets: true, petTypes: true, travelPartyType: true,
+      },
     });
-    const userState = user?.location?.split(',').pop()?.trim() || '';
+    const userState = user?.homeState || user?.location?.split(',').pop()?.trim() || '';
     const userRig = user?.rvType || '';
+    const rigLabel = userRig ? userRig.replace(/_/g, ' ') : '';
+    const rigMake = user?.rvMake?.toLowerCase() || '';
+    const campingStyles = (user?.campingStyles || []).map((s: string) => s.toLowerCase());
+    const campingInterests = (user?.campingInterests || []).map((s: string) => s.toLowerCase());
+    const hasPets = user?.hasPets;
+    const isSolo = user?.travelPartyType === 'SOLO';
+    const isFamily = user?.travelPartyType === 'FAMILY';
 
-    // Score posts
+    // Score posts — higher score = more relevant
     const scored = posts.map((post: any) => {
-      let score = post._count?.comments || 0;
+      let score = (post._count?.comments || 0) * 0.5; // base engagement
       const text = `${post.title} ${post.body}`.toLowerCase();
       let matchReason = '';
 
-      if (userState && text.includes(userState.toLowerCase())) { score += 3; matchReason = `Because you're in ${userState}`; }
-      if (userRig && text.includes(userRig.toLowerCase())) { score += 2; matchReason = matchReason || `For ${userRig} owners`; }
+      // State match
+      if (userState && text.includes(userState.toLowerCase())) {
+        score += 5; matchReason = `Near ${userState}`;
+      }
 
-      return { ...post, score, matchReason: matchReason || `${post._count?.comments || 0} replies` };
+      // RV type match (Class A, Fifth Wheel, etc.)
+      if (rigLabel && text.includes(rigLabel.toLowerCase())) {
+        score += 4; matchReason = matchReason || `For ${rigLabel} owners`;
+      }
+      if (userRig === 'CLASS_A' && (text.includes('class a') || text.includes('motorhome') || text.includes('diesel pusher'))) {
+        score += 3; matchReason = matchReason || 'For Class A owners';
+      }
+      if (userRig === 'FIFTH_WHEEL' && (text.includes('fifth wheel') || text.includes('5th wheel'))) {
+        score += 3; matchReason = matchReason || 'For Fifth Wheel owners';
+      }
+      if (userRig === 'TRAVEL_TRAILER' && text.includes('travel trailer')) {
+        score += 3; matchReason = matchReason || 'For Travel Trailer owners';
+      }
+
+      // RV make match
+      if (rigMake && text.includes(rigMake)) {
+        score += 4; matchReason = matchReason || `About ${user?.rvMake}`;
+      }
+
+      // Camping style matches (boondocking, full-time, weekend, etc.)
+      for (const style of campingStyles) {
+        if (text.includes(style)) { score += 3; matchReason = matchReason || `Matches your style: ${style}`; break; }
+      }
+
+      // Interest matches
+      for (const interest of campingInterests) {
+        if (text.includes(interest)) { score += 2; matchReason = matchReason || `Your interest: ${interest}`; break; }
+      }
+
+      // Pet match
+      if (hasPets && (text.includes('pet') || text.includes('dog') || text.includes('cat'))) {
+        score += 2; matchReason = matchReason || 'Pet-friendly discussion';
+      }
+
+      // Solo/family match
+      if (isSolo && text.includes('solo')) { score += 2; matchReason = matchReason || 'Solo RVer topic'; }
+      if (isFamily && (text.includes('family') || text.includes('kid'))) { score += 2; matchReason = matchReason || 'Family camping'; }
+
+      // Boondocking / off-grid
+      if (campingStyles.includes('boondocking') && (text.includes('boondock') || text.includes('dry camp') || text.includes('off grid') || text.includes('blm'))) {
+        score += 3; matchReason = matchReason || 'Boondocking discussion';
+      }
+
+      return { ...post, _score: score, _matchReason: matchReason || `${post._count?.comments || 0} replies` };
     });
 
-    scored.sort((a: any, b: any) => b.score - a.score);
-    res.json({ posts: scored.slice(0, 5), personalized: true });
+    scored.sort((a: any, b: any) => b._score - a._score);
+    const limit = parseInt(req.query.limit as string) || 5;
+    res.json({ posts: scored.slice(0, limit), personalized: true });
   } catch (e: any) { res.json({ posts: [], personalized: false }); }
 });
 
