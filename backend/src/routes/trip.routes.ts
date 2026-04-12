@@ -320,6 +320,105 @@ router.get('/my-events', authenticateToken, async (req, res) => {
   }
 });
 
+// Discover — MUST be before /:id so Express doesn't match "discover" as an event ID
+router.get('/discover', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { rvType: true, homeState: true, campingStyles: true, campingInterests: true },
+    });
+
+    const campgroundSelect = {
+      id: true, name: true, location: true, state: true, city: true, imageUrl: true,
+      googleRating: true, googleReviewCount: true, maxRvLength: true,
+      isBigRigFriendly: true, isPetFriendly: true, hasFullHookups: true,
+    };
+
+    // 1. Campgrounds matching user profile
+    const profileWhere: any = {};
+    if (user?.rvType === 'CLASS_A' || user?.rvType === 'FIFTH_WHEEL') {
+      profileWhere.isBigRigFriendly = true;
+    }
+    if (user?.homeState) {
+      profileWhere.state = user.homeState;
+    }
+
+    const forYou = await prisma.campground.findMany({
+      where: { ...profileWhere, imageUrl: { not: null } },
+      select: campgroundSelect,
+      orderBy: { googleRating: 'desc' },
+      take: 8,
+    });
+
+    // 2. Popular campgrounds — most check-ins
+    const popularCampgrounds = await prisma.checkIn.groupBy({
+      by: ['campgroundId'],
+      where: { campgroundId: { not: null } },
+      _count: { campgroundId: true },
+      orderBy: { _count: { campgroundId: 'desc' } },
+      take: 8,
+    });
+    const popularIds = popularCampgrounds.map(c => c.campgroundId).filter(Boolean) as string[];
+    const popular = popularIds.length > 0 ? await prisma.campground.findMany({
+      where: { id: { in: popularIds }, imageUrl: { not: null } },
+      select: campgroundSelect,
+    }) : [];
+
+    // 3. Recent public trips from other users
+    const recentTrips = await prisma.event.findMany({
+      where: {
+        privacy: 'PUBLIC',
+        isWishlist: false,
+        organizerId: { not: userId },
+        campgroundId: { not: null },
+      },
+      include: {
+        organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        campground: { select: campgroundSelect },
+        _count: { select: { attendees: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    // 4. Random campgrounds for exploration
+    const totalCampgrounds = await prisma.campground.count({ where: { imageUrl: { not: null } } });
+    const randomSkip = Math.max(0, Math.floor(Math.random() * Math.max(0, totalCampgrounds - 6)));
+    const randomCampgrounds = await prisma.campground.findMany({
+      where: { imageUrl: { not: null } },
+      select: campgroundSelect,
+      skip: randomSkip,
+      take: 6,
+    });
+
+    const campgroundToCard = (cg: any, section: string) => ({
+      id: `discover-${section}-${cg.id}`,
+      title: cg.name,
+      location: [cg.city, cg.state].filter(Boolean).join(', ') || cg.location,
+      campground: cg,
+      campgroundId: cg.id,
+      isDiscover: true,
+      discoverSection: section,
+      startDate: null,
+      endDate: null,
+      _count: { attendees: cg.googleReviewCount || 0 },
+    });
+
+    const results = [
+      ...forYou.map(cg => campgroundToCard(cg, 'For You')),
+      ...popular.map(cg => campgroundToCard(cg, 'Popular with RVers')),
+      ...recentTrips.map(t => ({ ...t, isDiscover: true, discoverSection: 'Recent Trips' })),
+      ...randomCampgrounds.map(cg => campgroundToCard(cg, 'Explore')),
+    ];
+
+    res.json(results);
+  } catch (error) {
+    console.error('Discover events error:', error);
+    res.status(500).json({ error: 'Failed to fetch discover content' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1430,108 +1529,6 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
 
 
 // Discover public events from everyone
-router.get('/discover', authenticateToken, async (req, res) => {
-  try {
-    const userId = (req as any).userId;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { rvType: true, homeState: true, campingStyles: true, campingInterests: true },
-    });
-
-    const campgroundSelect = {
-      id: true, name: true, location: true, state: true, city: true, imageUrl: true,
-      googleRating: true, googleReviewCount: true, maxRvLength: true,
-      isBigRigFriendly: true, isPetFriendly: true, hasFullHookups: true,
-    };
-
-    // 1. Campgrounds matching user profile (rig type, state preferences)
-    const profileWhere: any = {};
-    if (user?.rvType === 'CLASS_A' || user?.rvType === 'FIFTH_WHEEL') {
-      profileWhere.isBigRigFriendly = true;
-    }
-    if (user?.homeState) {
-      // Nearby states — same state or neighboring
-      profileWhere.state = user.homeState;
-    }
-
-    const forYou = await prisma.campground.findMany({
-      where: { ...profileWhere, imageUrl: { not: null } },
-      select: campgroundSelect,
-      orderBy: { googleRating: 'desc' },
-      take: 8,
-    });
-
-    // 2. Popular campgrounds — most check-ins
-    const popularCampgrounds = await prisma.checkIn.groupBy({
-      by: ['campgroundId'],
-      where: { campgroundId: { not: null } },
-      _count: { campgroundId: true },
-      orderBy: { _count: { campgroundId: 'desc' } },
-      take: 8,
-    });
-    const popularIds = popularCampgrounds.map(c => c.campgroundId).filter(Boolean) as string[];
-    const popular = popularIds.length > 0 ? await prisma.campground.findMany({
-      where: { id: { in: popularIds }, imageUrl: { not: null } },
-      select: campgroundSelect,
-    }) : [];
-
-    // 3. Recent public trips from other users
-    const recentTrips = await prisma.event.findMany({
-      where: {
-        privacy: 'PUBLIC',
-        isWishlist: false,
-        organizerId: { not: userId },
-        campgroundId: { not: null },
-      },
-      include: {
-        organizer: {
-          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
-        },
-        campground: { select: campgroundSelect },
-        _count: { select: { attendees: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    });
-
-    // 4. Random campgrounds for exploration
-    const totalCampgrounds = await prisma.campground.count({ where: { imageUrl: { not: null } } });
-    const randomSkip = Math.max(0, Math.floor(Math.random() * Math.max(0, totalCampgrounds - 6)));
-    const randomCampgrounds = await prisma.campground.findMany({
-      where: { imageUrl: { not: null } },
-      select: campgroundSelect,
-      skip: randomSkip,
-      take: 6,
-    });
-
-    // Transform campgrounds into event-like cards for the frontend
-    const campgroundToCard = (cg: any, section: string) => ({
-      id: `discover-${section}-${cg.id}`,
-      title: cg.name,
-      location: [cg.city, cg.state].filter(Boolean).join(', ') || cg.location,
-      campground: cg,
-      campgroundId: cg.id,
-      isDiscover: true,
-      discoverSection: section,
-      startDate: null,
-      endDate: null,
-      _count: { attendees: cg.googleReviewCount || 0 },
-    });
-
-    const results = [
-      ...forYou.map(cg => campgroundToCard(cg, 'For You')),
-      ...popular.map(cg => campgroundToCard(cg, 'Popular with RVers')),
-      ...recentTrips.map(t => ({ ...t, isDiscover: true, discoverSection: 'Recent Trips' })),
-      ...randomCampgrounds.map(cg => campgroundToCard(cg, 'Explore')),
-    ];
-
-    res.json(results);
-  } catch (error) {
-    console.error('Discover events error:', error);
-    res.status(500).json({ error: 'Failed to fetch discover content' });
-  }
-});
-
 // Get events from friends (PUBLIC or FRIENDS privacy)
 router.get('/friends-events', authenticateToken, async (req, res) => {
   try {
