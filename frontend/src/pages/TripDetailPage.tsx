@@ -1742,7 +1742,7 @@ export default function EventDetailPage() {
                   was previously rendered inside both Plan and Camp phases. */}
             </div>
           )}
-          {openPhases.has(phase.id) && phase.id === 'remember' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status === 'going'} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
+          {openPhases.has(phase.id) && phase.id === 'remember' && <EventAlbum eventId={event.id} canUpload={isOrganizer || userAttendee?.status?.toLowerCase() === 'going'} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
             <TripTabEmptyState
               icon="📸"
               title="No photos yet — be the first!"
