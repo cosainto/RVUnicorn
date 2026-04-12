@@ -507,8 +507,8 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
             </div>
           </div>
 
-          {/* Hitch AI banner */}
-          {!showHitch ? (
+          {/* Hitch AI banner — only show big CTA when no itinerary exists yet */}
+          {!showHitch && !trip ? (
             <div className="px-4 py-4 border-b border-gray-100">
               <button
                 onClick={() => setShowHitch(true)}
@@ -516,7 +516,6 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                 style={{ background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 50%, #f97316 100%)', backgroundSize: '200% 200%', animation: 'hitchGlow 3s ease infinite' }}
               >
                 <style>{`@keyframes hitchGlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }`}</style>
-                {/* Subtle shimmer */}
                 <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity" />
                 <img src="/hitch.png" alt="Hitch" className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-white/40" />
                 <div className="flex-1 text-left">
@@ -526,7 +525,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                 <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-lg">✨</div>
               </button>
             </div>
-          ) : (
+          ) : showHitch ? (
             <div className="px-4 pt-3 pb-1 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src="/hitch.png" alt="Hitch" className="w-6 h-6 rounded-full object-cover" />
@@ -536,7 +535,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                 ✕ Close
               </button>
             </div>
-          )}
+          ) : null}
 
           {/* Hitch AI form */}
           {showHitch && (
@@ -788,6 +787,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                   <button onClick={() => setShowSharePanel(v => !v)}
                     className={`text-xs px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${showSharePanel ? 'bg-primary-50 border-primary-300 text-primary-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     👥 Share
+                  </button>
+                  <button onClick={() => setShowHitch(true)}
+                    className="text-xs border border-amber-200 text-amber-600 px-2 py-1.5 rounded-lg hover:bg-amber-50 hover:border-amber-300 transition-all flex items-center gap-1"
+                    title="Regenerate itinerary with Hitch AI">
+                    <img src="/hitch.png" className="w-3 h-3 rounded-full" /> Replan
                   </button>
                   <button onClick={deleteTrip}
                     className="text-xs border border-red-200 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all flex items-center gap-1"
