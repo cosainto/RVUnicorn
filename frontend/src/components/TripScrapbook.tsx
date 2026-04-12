@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from './ImageUpload';
 import HitchPhotoCaptions from './HitchPhotoCaptions';
+import EventPhotoTagger from './EventPhotoTagger';
 
 const MOMENT_TAGS = [
   { key: 'BEST_MOMENT', label: 'Best', icon: '🔥' },
@@ -720,46 +721,24 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
         </div>
       )}
 
-      {/* Photo Lightbox (for All Photos view) */}
+      {/* Photo Lightbox with Tagging (for All Photos view) */}
       {selectedPhoto && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
-          <button className="absolute top-4 right-4 text-white/70 hover:text-white"><X className="w-8 h-8" /></button>
-          <div className="max-w-4xl max-h-[90vh] relative" onClick={e => e.stopPropagation()}>
-            <img src={selectedPhoto.imageUrl} alt={selectedPhoto.caption || ''} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-lg">
-              {selectedPhoto.caption && <p className="text-white text-sm mb-2">{selectedPhoto.caption}</p>}
-              <div className="flex items-center gap-2">
-                {selectedPhoto.user?.profilePicture ? (
-                  <img src={selectedPhoto.user.profilePicture} className="w-7 h-7 rounded-full" alt="" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold">{selectedPhoto.user?.firstName?.[0]}</div>
-                )}
-                <span className="text-white text-sm">{selectedPhoto.user?.firstName} {selectedPhoto.user?.lastName}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EventPhotoTagger
+          photoId={selectedPhoto.id}
+          photoUrl={selectedPhoto.imageUrl}
+          canTag={canPin}
+          onClose={() => setSelectedPhoto(null)}
+        />
       )}
 
-      {/* Lightbox */}
+      {/* Lightbox with Tagging (for Featured/Pinned view) */}
       {lightbox && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <button className="absolute top-4 right-4 text-white/70 hover:text-white">
-            <X className="w-8 h-8" />
-          </button>
-          <div className="max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <img src={lightbox.photo.imageUrl} alt="" className="w-full rounded-2xl max-h-[80vh] object-contain" />
-            {lightbox.caption && (
-              <p className="text-white text-center mt-3 text-sm">{lightbox.caption}</p>
-            )}
-            <p className="text-white/50 text-center text-xs mt-1">
-              by {lightbox.photo.user.firstName} {lightbox.photo.user.lastName}
-            </p>
-          </div>
-        </div>
+        <EventPhotoTagger
+          photoId={lightbox.photoId}
+          photoUrl={lightbox.photo.imageUrl}
+          canTag={canPin}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );
