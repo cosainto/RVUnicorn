@@ -381,6 +381,7 @@ model User {
   campfireThreadExpertTags                        CampfireThreadExpertTag[]
   organizerBroadcasts                             OrganizerBroadcast[]
   tripConfidenceSnapshots                         TripConfidenceSnapshot[]
+  tripIntelligenceSession                         TripIntelligenceSession?
 
   @@index([email])
   @@index([username])
@@ -5490,4 +5491,21 @@ model TripConfidenceEvent {
   @@index([eventId])
   @@index([campgroundId])
   @@index([emittedAt])
+}
+
+model TripIntelligenceSession {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quickStartLabel       String?
+  quickStartLat         Float?
+  quickStartLon         Float?
+  quickDestLabel        String?
+  quickDestLat          Float?
+  quickDestLon          Float?
+  quickDestCampgroundId String?
+  mode                  String   @default("QUICK") // QUICK | FORMAL
+  activeTripId          String?
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
 }

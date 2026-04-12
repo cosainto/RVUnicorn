@@ -138,6 +138,7 @@ import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
 import { registerBroadcastCron } from './cron/broadcast.cron';
 import tripConfidenceRoutes from './routes/tripConfidence.routes';
+import tripIntelligenceRoutes from './routes/tripIntelligence.routes';
 import { registerConfidenceCron } from './cron/tripConfidence.cron';
 
 
@@ -350,6 +351,7 @@ app.use("/api/dealers", dealerRoutes);
 app.use("/api/admin/campfire-threads", campfireThreadAdminRoutes);
 app.use("/api/organizer", organizerDashboardRoutes);
 app.use("/api/trip-confidence", tripConfidenceRoutes);
+app.use("/api/trip-intelligence", tripIntelligenceRoutes);
 
 
 
