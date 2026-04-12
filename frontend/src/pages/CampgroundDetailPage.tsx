@@ -1823,7 +1823,7 @@ export default function CampgroundDetailPage() {
               
               {/* Live Activity Feed */}
               <div className="mb-4">
-                <CampgroundLiveFeed campgroundId={campground.id} />
+                <CampgroundLiveFeed campgroundId={campground.id} onViewEvents={() => setActiveTab('events')} />
               </div>
 
               {/* Things to Do Nearby */}

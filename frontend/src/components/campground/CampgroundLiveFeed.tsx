@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, ChevronRight, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, ChevronRight, Calendar } from 'lucide-react';
 import api from '../../services/api';
 
 interface LiveFeedProps {
   campgroundId: string;
+  onViewEvents?: () => void;
 }
 
 interface FeedItem {
@@ -36,7 +38,8 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function CampgroundLiveFeed({ campgroundId }: LiveFeedProps) {
+export default function CampgroundLiveFeed({ campgroundId, onViewEvents }: LiveFeedProps) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,10 +76,19 @@ export default function CampgroundLiveFeed({ campgroundId }: LiveFeedProps) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-6 text-center">
         <p className="text-gray-500 text-sm mb-3">
-          Be the first to share what you're doing here →
+          No recent activity at this campground yet
         </p>
-        <button className="inline-flex items-center gap-1.5 bg-campfire-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-campfire-600 transition-colors">
-          <Plus size={16} /> Log Activity
+        <button
+          onClick={() => {
+            if (onViewEvents) {
+              onViewEvents();
+            } else {
+              navigate('/events-v2');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 bg-campfire-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-campfire-600 transition-colors"
+        >
+          <Calendar size={16} /> View Events Here
         </button>
       </div>
     );
@@ -159,7 +171,10 @@ export default function CampgroundLiveFeed({ campgroundId }: LiveFeedProps) {
                     Organized by {item.organizer.firstName}
                   </p>
                 )}
-                <button className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
+                <button
+                  onClick={() => navigate(`/activities/${item.id}`)}
+                  className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-0.5"
+                >
                   Join Them <ChevronRight size={14} />
                 </button>
               </div>
