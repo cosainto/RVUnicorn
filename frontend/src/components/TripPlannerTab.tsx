@@ -49,11 +49,11 @@ function rvParkyUrl(lat?: number|null, lng?: number|null, name?: string) {
 const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
 const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
 
-export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo }: {
+export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
   eventStartDate?: string; eventEndDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
-  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string;
+  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string;
 }) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
@@ -82,7 +82,9 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [savingDates, setSavingDates] = useState(false);
   const [datesError, setDatesError] = useState('');
 
-  const campDest = campground ? `${campground.name}, ${campground.location||''}, ${campground.state||''}`.replace(/,\s*,/g,',').trim().replace(/,\s*$/,'') : '';
+  const campDest = campground
+    ? `${campground.name}, ${campground.location||''}, ${campground.state||''}`.replace(/,\s*,/g,',').trim().replace(/,\s*$/,'')
+    : eventLocation || eventTitle || '';
 
   const [aiForm, setAiForm] = useState({
     startLocation: homeLocation||'', destination: campDest, nights: 3,
@@ -102,7 +104,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   useEffect(() => {
     if (plannerTo) setAiForm(f => ({ ...f, destination: plannerTo }));
   }, [plannerTo]);
-  useEffect(() => { if (campground) setAiForm(f=>({...f,destination:campDest})); }, [campground]);
+  useEffect(() => { if (campDest) setAiForm(f=>({...f,destination:campDest})); }, [campground, eventLocation, eventTitle]);
   useEffect(() => { if (arrivalDate) setAiForm(f=>({...f,arrivalDate})); }, [arrivalDate]);
 
   useEffect(() => {

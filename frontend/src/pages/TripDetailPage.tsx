@@ -1530,6 +1530,7 @@ export default function EventDetailPage() {
                 eventTitle={event?.title}
                 homeLocation={userHomeLocation || ''}
                 campground={event?.campground}
+                eventLocation={event?.location || event?.locationName}
                 arrivalDate={event?.startDate ? new Date(event.startDate).toISOString().split('T')[0] : undefined}
                 eventStartDate={event?.startDate}
                 eventEndDate={event?.endDate}
