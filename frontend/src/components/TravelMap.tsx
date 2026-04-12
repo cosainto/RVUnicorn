@@ -1532,18 +1532,19 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           <span className="text-sm font-semibold">{formatDateRange(visit.startDate, visit.endDate)}</span>
                           {isPlannedVisit(visit.startDate) && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(74,144,217,0.2)', color: '#4A90D9' }}>Planned</span>}
                         </div>
-                        {isOwnProfile ? (
-                          <div className="flex gap-1">
-                            <button onClick={() => { setEditingVisit(visit); setVisitForm({ state: visit.state, startDate: visit.startDate.split('T')[0], endDate: visit.endDate?.split('T')[0] || '', notes: visit.notes || '', campsiteId: visit.campsiteId || '', eventId: visit.eventId || '', attendeeIds: visit.attendees?.map((a: any) => a.user?.id || a.id) || [], albumIds: visit.albums?.map((a: any) => a.id) || [], visibility: visit.visibility || 'PUBLIC' }); loadCampgrounds(visit.state); setSelectedState(null); setShowAddVisitModal(true); }} className="p-1.5 hover:opacity-70" style={{ color: '#C9A84C' }}><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDeleteVisit(visit.id)} className="p-1.5 hover:opacity-70" style={{ color: '#ef4444' }}><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        ) : (
-                          (visit.event?.id || visit.eventId) ? (
+                        <div className="flex gap-1 items-center">
+                          {(visit.event?.id || visit.eventId) && (
                             <Link to={`/trips/${visit.event?.id || visit.eventId}`} className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: '#E8622A', color: 'white' }}>
                               <Eye className="w-3.5 h-3.5" /> View Trip
                             </Link>
-                          ) : null
-                        )}
+                          )}
+                          {isOwnProfile && (
+                            <>
+                              <button onClick={() => { setEditingVisit(visit); setVisitForm({ state: visit.state, startDate: visit.startDate.split('T')[0], endDate: visit.endDate?.split('T')[0] || '', notes: visit.notes || '', campsiteId: visit.campsiteId || '', eventId: visit.eventId || '', attendeeIds: visit.attendees?.map((a: any) => a.user?.id || a.id) || [], albumIds: visit.albums?.map((a: any) => a.id) || [], visibility: visit.visibility || 'PUBLIC' }); loadCampgrounds(visit.state); setSelectedState(null); setShowAddVisitModal(true); }} className="p-1.5 hover:opacity-70" style={{ color: '#C9A84C' }}><Edit2 className="w-4 h-4" /></button>
+                              <button onClick={() => handleDeleteVisit(visit.id)} className="p-1.5 hover:opacity-70" style={{ color: '#ef4444' }}><Trash2 className="w-4 h-4" /></button>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Event */}
@@ -1579,6 +1580,30 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                       )}
 
                       {visit.notes && <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>}
+
+                      {/* Event Photo Albums (from event's linked albums) */}
+                      {visit.event?.photoAlbums?.length > 0 && (
+                        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                          <p className="text-[12px] font-semibold mb-2 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                            <Image className="w-3.5 h-3.5" /> Trip Albums ({visit.event.photoAlbums.length})
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {visit.event.photoAlbums.map((album: any) => (
+                              <Link key={album.id} to={`/trips/${visit.event.id}?tab=remember`} className="group relative rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-amber-500/50 transition" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                                {(album.coverPhotoUrl || album.photos?.[0]?.imageUrl) ? (
+                                  <img src={album.coverPhotoUrl || album.photos[0].imageUrl} className="w-full h-full object-cover" alt="" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><Image className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.15)' }} /></div>
+                                )}
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                                  <p className="text-white text-[10px] font-medium truncate">{album.title}</p>
+                                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{album._count?.photos || 0} photos</p>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Photos / Albums */}
                       {visit.albums && visit.albums.length > 0 && (
