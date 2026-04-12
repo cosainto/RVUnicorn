@@ -79,6 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    // Clear driving session state so Co-Pilot doesn't bleed across accounts
+    localStorage.removeItem('rvunicorn_driving');
+    localStorage.removeItem('rvunicorn_drive_start');
+    localStorage.removeItem('rvunicorn_drive_role');
     setUser(null);
   };
 
