@@ -491,11 +491,12 @@ router.get('/feed', authenticateToken, async (req, res) => {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
-          photos: { take: 1, select: { imageUrl: true } },
+          photos: { take: 5, orderBy: { createdAt: 'asc' }, select: { id: true, imageUrl: true } },
+          _count: { select: { photos: true } },
         },
       });
 
-      albums.forEach((album) => {
+      albums.forEach((album: any) => {
         if (blockedUserIds.has(album.userId)) return;
         allActivities.push({
           id: 'album-' + album.id,
@@ -510,6 +511,10 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel: 'created a new album',
           activityColor: 'text-indigo-600',
           imageUrl: album.photos[0]?.imageUrl,
+          albumPreviewPhotos: album.photos.map((p: any) => ({ id: p.id, url: p.imageUrl })),
+          albumPhotoCount: album._count?.photos || 0,
+          albumTitle: album.title,
+          albumId: album.id,
           isFriendActivity: friendIdSet.has(album.userId),
           isBasecampActivity: true,
         });

@@ -5,6 +5,7 @@ import api from '../services/api';
 import StargazingCard from './StargazingCard';
 import ActivityMuteMenu from './ActivityMuteMenu';
 import FeedItemMenu from './FeedItemMenu';
+import AlbumPreviewGrid from './basecamp/AlbumPreviewGrid';
 
 interface FeedItem {
   id: string;
@@ -30,6 +31,10 @@ interface FeedItem {
   campground?: { id: string; name: string; state?: string };
   imageUrl?: string;
   videoUrl?: string;
+  albumPreviewPhotos?: { id: string; url: string }[];
+  albumPhotoCount?: number;
+  albumTitle?: string;
+  albumId?: string;
   isFriendActivity?: boolean;
   hasMutualFriendInteraction?: boolean;
   isPackingActivity?: boolean;
@@ -519,7 +524,15 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                         />
                       </div>
                     </div>
-                    {item.imageUrl && (
+                    {/* Album preview grid for ALBUM_CREATED */}
+                    {item.type === 'ALBUM_CREATED' && item.albumPreviewPhotos && item.albumPreviewPhotos.length > 0 && item.albumId ? (
+                      <AlbumPreviewGrid
+                        photos={item.albumPreviewPhotos}
+                        albumId={item.albumId}
+                        albumTitle={item.albumTitle || item.title || 'Album'}
+                        totalCount={item.albumPhotoCount || item.albumPreviewPhotos.length}
+                      />
+                    ) : item.imageUrl && item.type !== 'ALBUM_CREATED' ? (
                       <div className="mt-2">
                         {item.targetLink ? (
                           <Link to={item.targetLink}>
@@ -529,7 +542,7 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                           <img src={item.imageUrl?.startsWith("/") ? `http://localhost:3001${item.imageUrl}` : item.imageUrl} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200" />
                         )}
                       </div>
-                    )}
+                    ) : null}
                     {item.campground && (
                       <Link to={`/campgrounds/${item.campground.id}`} className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm">
                         🏕️ {item.campground.name}
