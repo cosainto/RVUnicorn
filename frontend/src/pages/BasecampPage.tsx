@@ -2200,7 +2200,11 @@ export default function BasecampPage({ user }: BasecampProps) {
   // Drivers get the full takeover. Passengers stay on Basecamp with the floating
   // DriveCompanionWidget — unless they explicitly opted in via "Open Full Drive Mode"
   // (driveSession.passengerFullView), in which case we render the takeover for them too.
-  if (isDriving && (driveRole === 'driver' || driveSession.passengerFullView) && !drivingMinimized) {
+  // Hard guard: also check localStorage directly to catch stale context state.
+  const lsDrivingValid = localStorage.getItem('rvunicorn_driving') === 'true'
+    && localStorage.getItem('rvunicorn_drive_start')
+    && (Date.now() - parseInt(localStorage.getItem('rvunicorn_drive_start') || '0', 10)) / (1000 * 60 * 60) < 18;
+  if (isDriving && lsDrivingValid && (driveRole === 'driver' || driveSession.passengerFullView) && !drivingMinimized) {
     return (
       <DrivingMode
         nextEvent={nextEvent}

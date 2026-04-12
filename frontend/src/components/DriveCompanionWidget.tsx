@@ -48,9 +48,15 @@ export default function DriveCompanionWidget() {
   const [expanded, setExpanded] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
 
-  // Only render for passengers in an active drive session.
+  // Hard guard: verify localStorage directly — don't trust context state alone.
+  // This catches stale React state, HMR artifacts, and cached bundles.
+  const lsDriving = typeof window !== 'undefined' && localStorage.getItem('rvunicorn_driving') === 'true';
+  const lsStart = typeof window !== 'undefined' ? localStorage.getItem('rvunicorn_drive_start') : null;
+  const isStale = lsStart ? (Date.now() - parseInt(lsStart, 10)) / (1000 * 60 * 60) > 18 : true;
+
+  // Only render for passengers in an active, non-stale drive session.
   // Drivers get the full takeover (mounted by BasecampPage).
-  if (!isDriving || role !== 'passenger') return null;
+  if (!isDriving || !lsDriving || isStale || role !== 'passenger') return null;
 
   // If the passenger has opted into the full takeover, BasecampPage is rendering
   // DrivingMode — don't double up.
