@@ -1830,7 +1830,7 @@ export default function EventDetailPage() {
           {openPhases.has(phase.id) && phase.id === 'remember' && (
             <TripScrapbook
               eventId={event.id}
-              canPin={isOrganizer || userAttendee?.status === 'going' || userAttendee?.status === 'ATTENDING'}
+              canPin={isOrganizer || !!userAttendee || isPastTrip}
             />
           )}
           {openPhases.has(phase.id) && phase.id === 'camp' && (
