@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap } from 'lucide-react';
+import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import ImageUpload from './ImageUpload';
+import HitchPhotoCaptions from './HitchPhotoCaptions';
 
 const MOMENT_TAGS = [
   { key: 'BEST_MOMENT', label: 'Best', icon: '🔥' },
@@ -38,7 +40,13 @@ interface EventPhoto {
   scrapbookPins: { id: string }[];
 }
 
-export default function TripScrapbook({ eventId, canPin }: { eventId: string; canPin: boolean }) {
+export default function TripScrapbook({ eventId, canPin, canUpload, campgroundName, eventTitle }: {
+  eventId: string;
+  canPin: boolean;
+  canUpload?: boolean;
+  campgroundName?: string;
+  eventTitle?: string;
+}) {
   const { user } = useAuth();
   const [pins, setPins] = useState<Pin[]>([]);
   const [photos, setPhotos] = useState<EventPhoto[]>([]);
@@ -64,6 +72,13 @@ export default function TripScrapbook({ eventId, canPin }: { eventId: string; ca
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsHidden, setSuggestionsHidden] = useState(false);
+
+  // Photo upload (merged from EventAlbum)
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadedUrl, setUploadedUrl] = useState('');
+  const [viewMode, setViewMode] = useState<'featured' | 'all'>('featured');
+  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
 
   useEffect(() => {
     loadScrapbook();
@@ -161,6 +176,19 @@ export default function TripScrapbook({ eventId, canPin }: { eventId: string; ca
     } catch {}
   };
 
+  // Upload handlers (merged from EventAlbum)
+  const handleImageUploaded = (url: string) => setUploadedUrl(url);
+  const handleSavePhoto = async () => {
+    setShowUploadModal(false);
+    setUploadCaption('');
+    setUploadedUrl('');
+    await loadScrapbook();
+  };
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('Delete this photo?')) return;
+    try { await api.delete(`/photos/${photoId}`); await loadScrapbook(); } catch { alert('Failed to delete photo'); }
+  };
+
   const pinPhoto = async (photoId: string) => {
     try {
       const { data } = await api.post(`/scrapbook/${eventId}/pin`, { photoId });
@@ -250,11 +278,14 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-white" />
+            <Camera className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Trip Scrapbook</h2>
-            <p className="text-sm text-gray-500">{pins.length} photo{pins.length !== 1 ? 's' : ''} pinned</p>
+            <h2 className="text-lg font-bold text-gray-900">Trip Photos</h2>
+            <p className="text-sm text-gray-500">
+              {photos.length} photo{photos.length !== 1 ? 's' : ''}
+              {pins.length > 0 && <> · <Star className="w-3 h-3 inline text-amber-400" /> {pins.length} featured</>}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -264,15 +295,31 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
               <Link2 className="w-4 h-4" /> Share
             </button>
           )}
-          {canPin && (
-            <button onClick={() => setShowPicker(!showPicker)}
+          {(canUpload || canPin) && (
+            <button onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition">
-              <Plus className="w-4 h-4" />
-              {showPicker ? 'Done Picking' : 'Pin Photos'}
+              <Upload className="w-4 h-4" /> Add Photos
             </button>
           )}
         </div>
       </div>
+
+      {/* Featured / All Photos toggle */}
+      {photos.length > 0 && (
+        <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg w-fit">
+          <button onClick={() => setViewMode('featured')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${viewMode === 'featured' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
+            <Star className="w-3 h-3 inline mr-1" />Featured ({pins.length})
+          </button>
+          <button onClick={() => setViewMode('all')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${viewMode === 'all' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
+            All Photos ({photos.length})
+          </button>
+        </div>
+      )}
+
+      {/* ── FEATURED VIEW ── */}
+      {viewMode === 'featured' && (<>
 
       {/* Photo Picker */}
       {showPicker && (
@@ -568,6 +615,131 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
           </div>
         )}
       </div>
+
+      </>)}
+      {/* end FEATURED VIEW */}
+
+      {/* ── ALL PHOTOS VIEW ── */}
+      {viewMode === 'all' && (
+        <div>
+          {photos.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-2xl">
+              <Camera className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No photos yet</p>
+              <p className="text-sm text-gray-400 mt-1">Upload the first photo from this trip!</p>
+              {(canUpload || canPin) && (
+                <button onClick={() => setShowUploadModal(true)}
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition">
+                  <Upload className="w-4 h-4" /> Upload Photo
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {photos.map((photo: any) => {
+                const isPinned = pinnedIds.has(photo.id);
+                return (
+                  <div key={photo.id} className="relative group rounded-xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-md transition">
+                    <div className="aspect-square cursor-pointer" onClick={() => setSelectedPhoto(photo)}>
+                      <img src={photo.imageUrl} alt={photo.caption || ''} className="w-full h-full object-cover" loading="lazy" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition" />
+                    </div>
+                    {/* Star/pin toggle */}
+                    {canPin && (
+                      <button onClick={() => isPinned ? unpinPhoto(photo.id) : pinPhoto(photo.id)}
+                        className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center transition shadow ${
+                          isPinned ? 'bg-amber-400 text-white' : 'bg-white/80 text-gray-400 opacity-0 group-hover:opacity-100'
+                        }`}>
+                        <Star className="w-3.5 h-3.5" fill={isPinned ? 'white' : 'none'} />
+                      </button>
+                    )}
+                    {isPinned && (
+                      <div className="absolute top-2 right-2">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400 text-white">Featured</span>
+                      </div>
+                    )}
+                    {/* Delete (own photos only) */}
+                    {photo.user?.id === user?.id && (
+                      <button onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); }}
+                        className="absolute bottom-2 right-2 w-6 h-6 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                    <div className="p-1.5">
+                      <div className="flex items-center gap-1">
+                        {photo.user?.profilePicture ? (
+                          <img src={photo.user.profilePicture} className="w-4 h-4 rounded-full" alt="" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">{photo.user?.firstName?.[0]}</div>
+                        )}
+                        <span className="text-[10px] text-gray-500">{photo.user?.firstName}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }}>
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
+              <h3 className="text-lg font-bold">Upload Photo</h3>
+              <button onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <ImageUpload onImageUploaded={handleImageUploaded} currentImage={uploadedUrl} label="Select Photo" eventId={eventId} caption={uploadCaption} />
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption (Optional)</label>
+                <textarea value={uploadCaption} onChange={e => setUploadCaption(e.target.value)} rows={2}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400" placeholder="What's the story behind this photo?" />
+                {campgroundName && (
+                  <div className="mt-2">
+                    <HitchPhotoCaptions campgroundName={campgroundName} tripTitle={eventTitle} onSelect={(c: string) => setUploadCaption(c)} />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleSavePhoto} disabled={!uploadedUrl}
+                  className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition disabled:opacity-50">
+                  {uploadedUrl ? 'Done' : 'Upload a Photo First'}
+                </button>
+                <button onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }}
+                  className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox (for All Photos view) */}
+      {selectedPhoto && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
+          <button className="absolute top-4 right-4 text-white/70 hover:text-white"><X className="w-8 h-8" /></button>
+          <div className="max-w-4xl max-h-[90vh] relative" onClick={e => e.stopPropagation()}>
+            <img src={selectedPhoto.imageUrl} alt={selectedPhoto.caption || ''} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-lg">
+              {selectedPhoto.caption && <p className="text-white text-sm mb-2">{selectedPhoto.caption}</p>}
+              <div className="flex items-center gap-2">
+                {selectedPhoto.user?.profilePicture ? (
+                  <img src={selectedPhoto.user.profilePicture} className="w-7 h-7 rounded-full" alt="" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold">{selectedPhoto.user?.firstName?.[0]}</div>
+                )}
+                <span className="text-white text-sm">{selectedPhoto.user?.firstName} {selectedPhoto.user?.lastName}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightbox && (

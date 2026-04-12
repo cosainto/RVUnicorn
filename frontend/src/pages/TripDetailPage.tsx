@@ -1742,14 +1742,7 @@ export default function EventDetailPage() {
                   was previously rendered inside both Plan and Camp phases. */}
             </div>
           )}
-          {openPhases.has(phase.id) && phase.id === 'remember' && <EventAlbum eventId={event.id} canUpload={isOrganizer || !!userAttendee || isPastTrip} campgroundName={event.campground?.name} eventTitle={event.title} emptyState={
-            <TripTabEmptyState
-              icon="📸"
-              title="No photos yet — be the first!"
-              description="Capture the memories! Add photos from your trip and share the adventure with everyone."
-              tips={["Add photos before, during, and after the trip", "Tag fellow campers in your shots", "Photos here are shared with all attendees"]}
-            />
-          } />}
+          {/* EventAlbum removed — merged into TripScrapbook below */}
           {openPhases.has(phase.id) && phase.id === 'remember' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1831,6 +1824,9 @@ export default function EventDetailPage() {
             <TripScrapbook
               eventId={event.id}
               canPin={isOrganizer || !!userAttendee || isPastTrip}
+              canUpload={isOrganizer || !!userAttendee || isPastTrip}
+              campgroundName={event.campground?.name}
+              eventTitle={event.title}
             />
           )}
           {openPhases.has(phase.id) && phase.id === 'camp' && (
