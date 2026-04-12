@@ -31,12 +31,31 @@ export default function HitchMealSuggestions({ eventId, destination, startDate, 
     finally { setLoading(false); }
   };
 
+  const [addedMeals, setAddedMeals] = useState<Set<string>>(new Set());
+  const [addingMeal, setAddingMeal] = useState<string | null>(null);
+
   const addMeal = async (mealName: string, mealType: string, day: number) => {
+    const key = `${day}-${mealType}`;
+    setAddingMeal(key);
     try {
-      await api.post(`/events/${eventId}/meals`, {
-        name: mealName, mealType: mealType.toUpperCase(), day,
+      // Calculate the actual date from startDate + day offset
+      const tripStart = startDate ? new Date(startDate) : new Date();
+      const mealDate = new Date(tripStart);
+      mealDate.setDate(mealDate.getDate() + (day - 1));
+
+      await api.post('/event-meals', {
+        eventId,
+        date: mealDate.toISOString(),
+        mealType: mealType.toUpperCase(),
+        menuItems: [mealName],
+        notes: mealName,
       });
-    } catch {}
+      setAddedMeals(prev => new Set(prev).add(key));
+    } catch (e: any) {
+      console.error('Add meal error:', e.response?.data || e.message);
+      alert(e.response?.data?.error || 'Failed to add meal — try again');
+    }
+    setAddingMeal(null);
   };
 
   if (!shown) {
@@ -83,10 +102,15 @@ export default function HitchMealSuggestions({ eventId, destination, startDate, 
                         <span className={`text-xs px-1.5 py-0.5 rounded ${meal.difficulty === 'Easy' ? 'bg-green-100 text-green-700' : meal.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{meal.difficulty}</span>
                       </div>
                     </div>
-                    <button onClick={() => addMeal(meal.name, type, day.day)}
-                      className="shrink-0 p-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition">
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                    {addedMeals.has(`${day.day}-${type}`) ? (
+                      <span className="shrink-0 p-1.5 bg-green-100 text-green-600 rounded-lg text-xs font-semibold">✓</span>
+                    ) : (
+                      <button onClick={() => addMeal(meal.name, type, day.day)}
+                        disabled={addingMeal === `${day.day}-${type}`}
+                        className="shrink-0 p-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition disabled:opacity-50">
+                        {addingMeal === `${day.day}-${type}` ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                   </div>
                 );
               })}
