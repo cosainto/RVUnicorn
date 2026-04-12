@@ -3,6 +3,7 @@ import api from '../services/api';
 import { Navigation, Plus, Trash2, Check, X, Loader, Edit2, ExternalLink, AlertCircle } from 'lucide-react';
 import FuelStopPrice from './FuelStopPrice';
 import MultiStopTripPlanner from './MultiStopTripPlanner';
+import HitchTripCostEstimator from './HitchTripCostEstimator';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface PitStop { id: string; name: string; stopType: string; location?: string; estimatedDuration?: number; notes?: string; }
@@ -971,6 +972,36 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* Trip Cost Estimator — auto-populated from itinerary when available */}
+      {trip && trip.days.length > 0 && (
+        <div className="mt-4">
+          <HitchTripCostEstimator
+            eventId={eventId}
+            destination={(() => {
+              // Use destination from the last overnight stop, or campground, or aiForm
+              for (let i = trip.days.length - 1; i >= 0; i--) {
+                for (const s of trip.days[i].stops) {
+                  if (s.type === 'OVERNIGHT' || s.campground) {
+                    return s.customName || s.campground?.name || s.address || '';
+                  }
+                }
+              }
+              return campground?.name || aiForm.destination || '';
+            })()}
+            startLocation={(() => {
+              // Use origin from the first day's first stop, or home location, or aiForm
+              const firstStop = trip.days[0]?.stops?.[0];
+              if (firstStop?.customName && firstStop.type !== 'OVERNIGHT') return firstStop.customName;
+              return homeLocation || aiForm.startLocation || '';
+            })()}
+            startDate={eventStartDate}
+            endDate={eventEndDate}
+            nights={trip.days.length}
+            autoRun
+          />
         </div>
       )}
 

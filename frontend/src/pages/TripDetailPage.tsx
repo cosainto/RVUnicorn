@@ -1539,12 +1539,7 @@ export default function EventDetailPage() {
                 onReload={async () => { await loadEvent(); await loadTripPlan(); }}
                 rvFuelType={(user as any)?.rvFuelType || 'gas'}
               />
-              <HitchTripCostEstimator
-                eventId={event.id}
-                destination={event.campground?.name || event.location}
-                startDate={event.startDate}
-                endDate={event.endDate}
-              />
+              {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}
               {false && <div className="bg-white rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold flex items-center gap-2"><Car className="w-6 h-6" />My Trip</h3>

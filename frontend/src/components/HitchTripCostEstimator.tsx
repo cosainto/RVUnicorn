@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, Loader, Fuel, MapPin, Moon } from 'lucide-react';
 import api from '../services/api';
 
@@ -10,15 +10,18 @@ interface Props {
   endDate?: string;
   rvType?: string;
   rvLength?: number;
+  nights?: number;
+  autoRun?: boolean;
 }
 
-export default function HitchTripCostEstimator({ eventId, destination, startLocation, startDate, endDate, rvType, rvLength }: Props) {
+export default function HitchTripCostEstimator({ eventId, destination, startLocation, startDate, endDate, rvType, rvLength, nights: nightsProp, autoRun }: Props) {
   const [loading, setLoading] = useState(false);
   const [estimate, setEstimate] = useState<any>(null);
+  const computedNights = nightsProp || (endDate && startDate ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) : 3);
   const [form, setForm] = useState({
     from: startLocation || '',
     to: destination || '',
-    nights: endDate && startDate ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) : 3,
+    nights: computedNights,
     rvType: rvType || 'Class C',
     tankSize: 55,
     mpg: 12,
@@ -26,9 +29,27 @@ export default function HitchTripCostEstimator({ eventId, destination, startLoca
     campingFeePerNight: 45,
     groupSize: 2,
   });
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(!!autoRun);
+  const [autoRan, setAutoRan] = useState(false);
 
-  const calculate = async () => {
+  // Update form when props change (e.g. itinerary loaded after Hitch runs)
+  useEffect(() => {
+    const updates: any = {};
+    if (startLocation && startLocation !== form.from) updates.from = startLocation;
+    if (destination && destination !== form.to) updates.to = destination;
+    if (computedNights !== form.nights) updates.nights = computedNights;
+    if (Object.keys(updates).length > 0) setForm(f => ({ ...f, ...updates }));
+  }, [startLocation, destination, computedNights]);
+
+  // Auto-run when autoRun is true and we have from + to
+  useEffect(() => {
+    if (autoRun && !autoRan && !loading && !estimate && form.from && form.to) {
+      setAutoRan(true);
+      calculateCost();
+    }
+  }, [autoRun, autoRan, form.from, form.to]);
+
+  const calculateCost = async () => {
     setLoading(true);
     try {
       const { data } = await api.post('/hitch/trip-cost', form);
@@ -99,7 +120,7 @@ export default function HitchTripCostEstimator({ eventId, destination, startLoca
                 className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2" />
             </div>
           </div>
-          <button onClick={calculate} disabled={loading || !form.from || !form.to}
+          <button onClick={calculateCost} disabled={loading || !form.from || !form.to}
             className="w-full py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
             {loading ? <><Loader className="w-4 h-4 animate-spin" /> Calculating...</> : '💰 Calculate Cost'}
           </button>
