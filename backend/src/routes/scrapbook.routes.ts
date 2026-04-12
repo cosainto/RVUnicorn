@@ -196,8 +196,12 @@ router.post('/:eventId/share', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { eventId } = req.params;
-    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { organizerId: true, scrapbookShareToken: true } });
-    if (!event || event.organizerId !== userId) return res.status(403).json({ error: 'Not authorized' });
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { organizerId: true, scrapbookShareToken: true, startDate: true, endDate: true } });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const isOrg = event.organizerId === userId;
+    const isAttendee = await prisma.eventAttendee.findFirst({ where: { eventId, userId } });
+    const isPast = event.endDate ? new Date(event.endDate) < new Date() : event.startDate ? new Date(event.startDate) < new Date() : false;
+    if (!isOrg && !isAttendee && !isPast) return res.status(403).json({ error: 'Not authorized' });
 
     if (event.scrapbookShareToken) {
       return res.json({ shareUrl: `https://www.rvunicorn.com/s/${event.scrapbookShareToken}` });
