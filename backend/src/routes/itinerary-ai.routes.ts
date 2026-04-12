@@ -26,7 +26,6 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       `${c.id}|${c.name}|${c.city || c.location}, ${c.state}|${c.latitude},${c.longitude}|${[c.hasFullHookups && 'full hookups', c.hasElectricHookup && 'electric', c.hasDumpStation && 'dump station'].filter(Boolean).join(', ')}`
     ).join('\n');
 
-    // Pull free overnight spots from our database
     const overnightSpots = await prisma.freeOvernightSpot.findMany({
       where: { allowsRvs: true },
       select: { id: true, name: true, chain: true, category: true, city: true, state: true, latitude: true, longitude: true, hasFuel: true, hasFood: true, hasShowers: true, is24Hours: true },
@@ -38,52 +37,118 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       `${s.id}|${s.name}|${s.chain}|${s.city}, ${s.state}|${s.latitude},${s.longitude}|${[s.hasFuel && 'fuel', s.hasFood && 'food', s.hasShowers && 'showers', s.is24Hours && '24hr'].filter(Boolean).join(', ')}`
     ).join('\n');
 
-    const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max driving` : milesPerDay ? `${milesPerDay} miles per day max driving` : '8 hours per day max driving';
-    const mealStyle = mealPref === 'fast' ? 'fast food / drive-thrus preferred (Chick-fil-A, McDonalds, Wendys, etc) - traveler is in a hurry' 
-      : mealPref === 'sitdown' ? 'sit-down meals preferred - recommend local diners, family restaurants, or well-known chains with table service'
-      : 'balanced mix - fast food for quick stops, sit-down for dinner or when time allows';
-    const snackFreq = stopFrequency === 'none' ? 'no snack/rest stops - driver wants to push through'
-      : stopFrequency === 'frequent' ? 'frequent stops every 1-2 hours for snacks, coffee, or rest'
-      : 'a few stops - roughly every 3-4 hours for a quick break';
-    const fuelNote = rvFuelType === 'diesel'
-      ? 'RV runs on DIESEL - only recommend diesel truck stops: Pilot, Flying J, Love\'s, TA Travel Center, Petro, Sapp Bros. Do NOT suggest gas-only stations.'
-      : 'RV runs on regular GASOLINE - recommend any fuel stop including Pilot, Love\'s, Kwik Trip, Sheetz, Wawa, Casey\'s, Maverik.';
-    const sightseeingPref = wantSightseeing ? 'YES - recommend notable attractions, state parks, landmarks, or scenic viewpoints along the route. Add as ATTRACTION stops.' : 'NO - skip attractions, focus on efficient travel';
-    const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
-    const departureTimeInfo = departureTime ? `Preferred daily departure time: ${departureTime}` : 'Preferred daily departure time: 8:00 AM';
+    // ── Smart driving day calculation ───────────────────────────
+    const maxHoursPerDay = hoursPerDay || 8;
+    const maxMilesPerDay = milesPerDay || (maxHoursPerDay * 55);
+    let estimatedTotalMiles: number | null = null;
+    let estimatedDriveHours: number | null = null;
+    let minimumDrivingDays = 1;
 
-    const prompt = `You are an expert RV trip planner. Plan a ${nights}-night RV road trip with realistic driving constraints.
+    // Estimate actual route distance via HERE Maps
+    const HERE_API_KEY = process.env.HERE_API_KEY;
+    if (HERE_API_KEY && startLocation && destination) {
+      try {
+        const startGeo = await fetch(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(startLocation)}&in=countryCode:USA&limit=1&apiKey=${HERE_API_KEY}`);
+        const startData = await startGeo.json() as any;
+        const startPos = startData.items?.[0]?.position;
+
+        const destGeo = await fetch(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(destination)}&in=countryCode:USA&limit=1&apiKey=${HERE_API_KEY}`);
+        const destData = await destGeo.json() as any;
+        const destPos = destData.items?.[0]?.position;
+
+        if (startPos && destPos) {
+          const routeUrl = `https://router.hereapi.com/v8/routes?transportMode=truck&origin=${startPos.lat},${startPos.lng}&destination=${destPos.lat},${destPos.lng}&return=summary&truck[height]=400&truck[width]=250&truck[length]=1200&truck[grossWeight]=10000&apiKey=${HERE_API_KEY}`;
+          const routeRes = await fetch(routeUrl);
+          const routeData = await routeRes.json() as any;
+          if (routeData.routes?.[0]?.sections?.[0]?.summary) {
+            const summary = routeData.routes[0].sections[0].summary;
+            estimatedTotalMiles = Math.round(summary.length / 1609.34);
+            estimatedDriveHours = Math.round((summary.duration / 3600) * 10) / 10;
+          }
+        }
+      } catch (e) {
+        console.log('[ItineraryAI] Route estimation failed, using fallback');
+      }
+    }
+
+    // Calculate minimum driving days
+    if (estimatedDriveHours) {
+      minimumDrivingDays = Math.ceil(estimatedDriveHours / maxHoursPerDay);
+    } else if (estimatedTotalMiles) {
+      minimumDrivingDays = Math.ceil(estimatedTotalMiles / maxMilesPerDay);
+    }
+
+    // Enforce realistic nights
+    const minimumNights = minimumDrivingDays <= 1 ? 0 : minimumDrivingDays - 1;
+    let effectiveNights = nights;
+    let nightsOverrideNote = '';
+
+    if (estimatedDriveHours && estimatedDriveHours <= 3) {
+      // Short trip — no road overnights needed
+      effectiveNights = Math.max(nights, 0);
+      if (nights > 0 && estimatedDriveHours <= 2) {
+        nightsOverrideNote = `NOTE: This is only a ~${estimatedDriveHours}hr drive (~${estimatedTotalMiles} miles). User requested ${nights} night(s) — they likely want to STAY at the destination. Plan as a single-day drive with overnight(s) at the destination campground.`;
+      }
+    } else if (effectiveNights < minimumNights) {
+      effectiveNights = minimumNights;
+      nightsOverrideNote = `NOTE: User requested ${nights} night(s), but the drive is ~${estimatedTotalMiles} miles / ~${estimatedDriveHours}hrs. That requires at least ${minimumDrivingDays} driving day(s) and ${minimumNights} road overnight(s). Plan ${effectiveNights} nights of travel.`;
+    }
+
+    const distanceContext = estimatedTotalMiles
+      ? `ESTIMATED ROUTE: ~${estimatedTotalMiles} miles, ~${estimatedDriveHours} hours total driving\nMINIMUM DRIVING DAYS: ${minimumDrivingDays} (at ${maxHoursPerDay}hrs/day max)`
+      : '';
+
+    const drivingLimit = hoursPerDay ? `${hoursPerDay} hours per day max` : milesPerDay ? `${milesPerDay} miles per day max` : '8 hours per day max';
+    const mealStyle = mealPref === 'fast' ? 'fast food / drive-thrus preferred'
+      : mealPref === 'sitdown' ? 'sit-down meals preferred'
+      : 'balanced mix of fast food and sit-down';
+    const snackFreq = stopFrequency === 'none' ? 'no extra stops'
+      : stopFrequency === 'frequent' ? 'frequent stops every 1-2 hours'
+      : 'stops every 3-4 hours';
+    const sightseeingPref = wantSightseeing ? 'YES - include attractions' : 'NO - efficient travel only';
+    const avoidHwyStr = avoidHighways ? 'yes, prefer scenic routes' : 'no preference';
+    const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
+    const departureTimeInfo = departureTime ? `Departure time: ${departureTime}` : 'Departure time: 8:00 AM';
+    const fuelNote = rvFuelType === 'diesel'
+      ? 'DIESEL RV - only recommend diesel truck stops (Pilot, Flying J, Love\'s, TA).'
+      : 'GASOLINE RV - any fuel stop works.';
+
+    const prompt = `You are an expert RV trip planner. Plan a realistic RV road trip.
 
 START: ${startLocation}
 DESTINATION: ${destination || 'flexible / scenic route'}
-NIGHTS: ${nights}
+NIGHTS: ${effectiveNights}
 RV TYPE: ${rvType || 'Class A Motorhome'}
 DRIVING LIMIT: ${drivingLimit}
 ${departureTimeInfo}
 ${arrivalInfo}
-AVOID HIGHWAYS: \${avoidHighways ? 'yes, prefer scenic routes' : 'no preference'}
-MEAL PREFERENCE: \${mealStyle}
-SNACK/REST STOPS: \${snackFreq}
-SIGHTSEEING: \${sightseeingPref}
+${distanceContext}
+${nightsOverrideNote}
+AVOID HIGHWAYS: ${avoidHwyStr}
+MEALS: ${mealStyle}
+REST STOPS: ${snackFreq}
+SIGHTSEEING: ${sightseeingPref}
+FUEL: ${fuelNote}
 
-AVAILABLE CAMPGROUNDS IN OUR DATABASE (format: id|name|location|lat,lng|amenities):
+CAMPGROUNDS IN OUR DB (id|name|location|lat,lng|amenities):
 ${campgroundList}
 
-FREE OVERNIGHT STOPS IN OUR DATABASE (format: id|name|chain|location|lat,lng|amenities):
+FREE OVERNIGHT SPOTS IN OUR DB (id|name|chain|location|lat,lng|amenities):
 ${overnightSpotList}
 
-CRITICAL PLANNING RULES:
-1. RVs average 55-60 mph on highways, 45 mph on scenic routes
-2. Add 20-30% extra time for RV stops, weight stations, slower speeds
-3. Include a GAS STOP every 200-250 miles (most RVs get 8-12 mpg with 50-100 gal tanks)
-4. Include a FOOD stop for trips over 4 hours
-5. Space overnight stops based on the driving limit - do NOT exceed it
-6. Calculate recommended DEPARTURE DATE based on arrival date and number of driving days needed
-7. For OVERNIGHT stops, STRONGLY PREFER campgrounds from our database (use exact campgroundId)
-8. For WALMART/REST/FUEL stops, use spots from our FREE OVERNIGHT STOPS database (use freeOvernightSpotId field)
-9. Walmart, Flying J, Pilot, Love's, Cracker Barrel are excellent free overnight options - use them for mid-route nights
-8. Each day should have realistic mileage noted in the notes field
-9. RVParky search links will be auto-generated for overnight stops based on lat/lng
+CRITICAL RULES — YOU MUST FOLLOW ALL:
+1. NEVER exceed ${maxHoursPerDay} hours of driving in a single day. Hard maximum.
+2. If total drive > ${maxHoursPerDay} hours: MUST split across multiple days with overnights.
+3. Under 3 hours total: NO road overnights. Drive straight through, 1 fuel stop max.
+4. 3-${maxHoursPerDay} hours total: One driving day, no road overnights needed.
+5. Over ${maxHoursPerDay} hours total: MUST have overnight stops. Max ~${Math.round(maxHoursPerDay * 55)} miles/day.
+6. RVs average 55 mph highways, 45 mph scenic. Add 20-30% for RV overhead.
+7. GAS STOP every 200-250 miles.
+8. FOOD stop for driving days > 4 hours.
+9. OVERNIGHT stops: prefer campgrounds from our DB (use campgroundId).
+10. FUEL/REST stops: use free overnight spots from our DB (use freeOvernightSpotId).
+11. Each day notes: include "~X miles, ~Y hours driving".
+12. Departure date: work backwards from arrival date minus driving days.
 
 Respond ONLY with valid JSON:
 {
@@ -93,14 +158,14 @@ Respond ONLY with valid JSON:
   "recommendedDepartureTime": "8:00 AM",
   "totalDrivingDays": 3,
   "totalMiles": 1200,
-  "notes": "Brief planning notes about this route",
+  "notes": "Brief planning notes",
   "days": [
     {
       "dayNumber": 1,
       "type": "TRAVEL",
       "estimatedMiles": 280,
       "estimatedDriveHours": 5.5,
-      "notes": "Day summary with mileage",
+      "notes": "~280 miles, ~5.5 hours driving. Day summary.",
       "stops": [
         {
           "order": 0,
@@ -110,18 +175,8 @@ Respond ONLY with valid JSON:
           "latitude": 00.0000,
           "longitude": -00.0000,
           "notes": "Tip for this stop",
-          "campgroundId": null
-        },
-        {
-          "order": 1,
-          "type": "OVERNIGHT",
-          "customName": "Campground name",
-          "address": "City, State",
-          "latitude": 00.0000,
-          "longitude": -00.0000,
-          "notes": "Why this is a great overnight stop",
-          "campgroundId": "exact campground id or null",
-          "freeOvernightSpotId": "exact free overnight spot id or null"
+          "campgroundId": null,
+          "freeOvernightSpotId": null
         }
       ]
     }
@@ -142,6 +197,12 @@ Last day type should be ARRIVAL if destination is specific.`;
     if (!jsonMatch) return res.status(500).json({ error: 'AI did not return valid JSON' });
 
     const itinerary = JSON.parse(jsonMatch[0]);
+
+    // Include the distance estimation in the response for frontend context
+    if (estimatedTotalMiles) {
+      itinerary._routeEstimate = { totalMiles: estimatedTotalMiles, totalHours: estimatedDriveHours, minimumDrivingDays, effectiveNights, userRequestedNights: nights };
+    }
+
     res.json(itinerary);
   } catch (e: any) {
     console.error('Itinerary AI error:', e?.message);
