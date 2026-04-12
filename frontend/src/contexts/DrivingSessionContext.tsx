@@ -98,17 +98,20 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
   // ── Lifecycle state, hydrated from localStorage so refreshes don't drop the session ──
   const [isDriving, setIsDriving] = useState<boolean>(() => {
     if (localStorage.getItem(LS.driving) !== 'true') return false;
-    // Auto-expire stale sessions (>18 hours)
+    // Auto-expire stale sessions (>18 hours) or missing start time (corrupt state)
     const startStr = localStorage.getItem(LS.driveStart);
-    if (startStr) {
-      const startMs = parseInt(startStr, 10);
-      const hoursElapsed = (Date.now() - startMs) / (1000 * 60 * 60);
-      if (hoursElapsed > 18) {
-        localStorage.removeItem(LS.driving);
-        localStorage.removeItem(LS.driveStart);
-        localStorage.removeItem(LS.driveRole);
-        return false;
-      }
+    if (!startStr) {
+      // Corrupt: driving=true but no start time — clean up
+      localStorage.removeItem(LS.driving);
+      localStorage.removeItem(LS.driveRole);
+      return false;
+    }
+    const startMs = parseInt(startStr, 10);
+    if (isNaN(startMs) || (Date.now() - startMs) / (1000 * 60 * 60) > 18) {
+      localStorage.removeItem(LS.driving);
+      localStorage.removeItem(LS.driveStart);
+      localStorage.removeItem(LS.driveRole);
+      return false;
     }
     return true;
   });
