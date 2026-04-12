@@ -761,7 +761,8 @@ export default function EventsPage() {
               <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 {section === 'For You' && '🎯'}
                 {section === 'Popular with RVers' && '🔥'}
-                {section === 'Recent Trips' && '🗺️'}
+                {section === 'Upcoming Events' && '📅'}
+                {section === 'Past Trips from the Community' && '🗺️'}
                 {section === 'Explore' && '🧭'}
                 {section}
               </h3>
@@ -782,7 +783,14 @@ export default function EventsPage() {
                     <div className="p-3">
                       <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{event.title}</h4>
                       <p className="text-xs text-gray-500 mt-0.5">{event.location || event.campground?.location}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                      {/* Date + attendees for event cards */}
+                      {event.startDate && (
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          {new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {event._count?.attendees > 0 && ` · ${event._count.attendees} going`}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400 flex-wrap">
                         {event.campground?.hasFullHookups && <span className="bg-green-50 text-green-600 px-1.5 py-0.5 rounded">Full Hookups</span>}
                         {event.campground?.isPetFriendly && <span>🐾</span>}
                         {event.campground?.isBigRigFriendly && <span>🚐</span>}
@@ -790,6 +798,7 @@ export default function EventsPage() {
                           <span className="ml-auto flex items-center gap-1">
                             {event.organizer.profilePicture && <img src={event.organizer.profilePicture} className="w-4 h-4 rounded-full" alt="" />}
                             {event.organizer.firstName}
+                            {event.organizer.rvType && <span className="text-[10px] text-gray-300">{event.organizer.rvType.replace('_', ' ')}</span>}
                           </span>
                         )}
                       </div>

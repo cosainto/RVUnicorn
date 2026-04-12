@@ -365,24 +365,42 @@ router.get('/discover', authenticateToken, async (req, res) => {
       select: campgroundSelect,
     }) : [];
 
-    // 3. Recent public trips from other users
-    const recentTrips = await prisma.event.findMany({
+    // 3. Upcoming public events from other users (events people can join)
+    const now = new Date();
+    const upcomingEvents = await prisma.event.findMany({
       where: {
         privacy: 'PUBLIC',
         isWishlist: false,
         organizerId: { not: userId },
-        campgroundId: { not: null },
+        startDate: { gte: now },
       },
       include: {
-        organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvType: true } },
         campground: { select: campgroundSelect },
         _count: { select: { attendees: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startDate: 'asc' },
       take: 10,
     });
 
-    // 4. Random campgrounds for exploration
+    // 4. Past public trips from other users (inspiration)
+    const pastTrips = await prisma.event.findMany({
+      where: {
+        privacy: 'PUBLIC',
+        isWishlist: false,
+        organizerId: { not: userId },
+        startDate: { lt: now },
+      },
+      include: {
+        organizer: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvType: true } },
+        campground: { select: campgroundSelect },
+        _count: { select: { attendees: true } },
+      },
+      orderBy: { startDate: 'desc' },
+      take: 12,
+    });
+
+    // 5. Random campgrounds for exploration
     const totalCampgrounds = await prisma.campground.count({ where: { imageUrl: { not: null } } });
     const randomSkip = Math.max(0, Math.floor(Math.random() * Math.max(0, totalCampgrounds - 6)));
     const randomCampgrounds = await prisma.campground.findMany({
@@ -406,9 +424,10 @@ router.get('/discover', authenticateToken, async (req, res) => {
     });
 
     const results = [
+      ...upcomingEvents.map(t => ({ ...t, isDiscover: true, discoverSection: 'Upcoming Events' })),
       ...forYou.map(cg => campgroundToCard(cg, 'For You')),
+      ...pastTrips.map(t => ({ ...t, isDiscover: true, discoverSection: 'Past Trips from the Community' })),
       ...popular.map(cg => campgroundToCard(cg, 'Popular with RVers')),
-      ...recentTrips.map(t => ({ ...t, isDiscover: true, discoverSection: 'Recent Trips' })),
       ...randomCampgrounds.map(cg => campgroundToCard(cg, 'Explore')),
     ];
 
