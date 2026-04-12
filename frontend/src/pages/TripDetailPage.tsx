@@ -1743,51 +1743,7 @@ export default function EventDetailPage() {
             </div>
           )}
           {/* EventAlbum removed — merged into TripScrapbook below */}
-          {openPhases.has(phase.id) && phase.id === 'remember' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Trip Albums</h3>
-                {isOrganizer && (
-                  <button onClick={() => setShowAlbumModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700">
-                    <span>+</span> {isPastTrip ? 'Add Album' : 'Create Album'}
-                  </button>
-                )}
-              </div>
-              {tripAlbums.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                  <span className="text-4xl block mb-2">🗂️</span>
-                  <p className="font-medium">No albums yet</p>
-                  {isOrganizer && <p className="text-sm mt-1">Create an album or link an existing one to this trip</p>}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  {tripAlbums.map((album: any) => (
-                    <div key={album.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                      <div className="h-32 bg-gray-100 relative overflow-hidden grid grid-cols-2 gap-0.5">
-                        {album.photos?.slice(0, 4).map((p: any, i: number) => (
-                          <img key={i} src={p.imageUrl} className="w-full h-full object-cover" />
-                        ))}
-                        {(!album.photos || album.photos.length === 0) && (
-                          <div className="col-span-2 w-full h-full flex items-center justify-center text-3xl">📷</div>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <p className="font-semibold text-sm text-gray-900 truncate">{album.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{album._count?.photos || 0} photos • by {album.user?.firstName}</p>
-                        <div className="flex gap-2 mt-2">
-                          <a href={'/albums/' + album.id} className="text-xs text-primary-600 hover:underline">View →</a>
-                          {isOrganizer && (
-                            <button onClick={() => handleUnlinkAlbum(album.id)} className="text-xs text-red-400 hover:text-red-600 ml-auto">Remove</button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Trip Albums section removed — merged into TripScrapbook */}
           {openPhases.has(phase.id) && phase.id === 'prepare' && (
             <div id="meal-calendar" className="space-y-4">
               <HitchMealSuggestions
