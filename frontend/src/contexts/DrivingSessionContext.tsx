@@ -132,6 +132,32 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
 
   const watchIdRef = useRef<number | null>(null);
 
+  // ── Force-clean stale sessions on every mount/render cycle ──────────────
+  // The useState initializer only runs once. If React preserved stale state
+  // (HMR, cached tab, etc.), this effect catches it.
+  useEffect(() => {
+    const drivingFlag = localStorage.getItem(LS.driving);
+    const startStr = localStorage.getItem(LS.driveStart);
+    if (drivingFlag !== 'true') {
+      if (isDriving) setIsDriving(false);
+      return;
+    }
+    if (!startStr || isNaN(parseInt(startStr, 10))) {
+      localStorage.removeItem(LS.driving);
+      localStorage.removeItem(LS.driveStart);
+      localStorage.removeItem(LS.driveRole);
+      if (isDriving) setIsDriving(false);
+      return;
+    }
+    const hoursElapsed = (Date.now() - parseInt(startStr, 10)) / (1000 * 60 * 60);
+    if (hoursElapsed > 18) {
+      localStorage.removeItem(LS.driving);
+      localStorage.removeItem(LS.driveStart);
+      localStorage.removeItem(LS.driveRole);
+      if (isDriving) setIsDriving(false);
+    }
+  }, []); // runs once on mount
+
   // ── Session timer ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isDriving || !sessionStart) {
