@@ -7,6 +7,7 @@ import {
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import EmailPreferencesSection from '../components/EmailPreferencesSection';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -480,47 +481,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Email Notifications ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-          <Mail className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Email Notifications</h2>
-        </div>
-        <div className="p-6 space-y-3">
-          <p className="text-sm text-gray-500 mb-4">Choose which activities send you an email notification.</p>
-          {[
-            { key: 'emailOnMessage', label: 'New messages', desc: 'When someone sends you a direct message' },
-            { key: 'emailOnNotification', label: 'Alerts & activity', desc: 'Likes, comments, event updates' },
-            { key: 'emailOnFriendRequest', label: 'Friend requests', desc: 'When someone wants to connect' },
-            { key: 'emailOnMention', label: 'Mentions', desc: 'When someone tags you in a post' },
-            { key: 'emailOnTripUpdate', label: 'Trip updates', desc: 'Changes to trips you are part of' },
-          ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center justify-between py-2">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{label}</p>
-                <p className="text-xs text-gray-400">{desc}</p>
-              </div>
-              <button
-                onClick={() => setEmailPrefs(p => ({ ...p, [key]: !p[key as keyof typeof p] }))}
-                className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors " + (emailPrefs[key as keyof typeof emailPrefs] ? 'bg-primary-600' : 'bg-gray-200')}
-              >
-                <span className={"inline-block h-4 w-4 transform rounded-full bg-white transition-transform " + (emailPrefs[key as keyof typeof emailPrefs] ? 'translate-x-6' : 'translate-x-1')} />
-              </button>
-            </div>
-          ))}
-
-          {emailPrefsMsg && (
-            <div className={"flex items-center gap-2 p-3 rounded-lg text-sm font-medium " + (emailPrefsMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200')}>
-              {emailPrefsMsg.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-              {emailPrefsMsg.text}
-            </div>
-          )}
-
-          <button onClick={saveEmailPrefs} disabled={emailPrefsSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm transition disabled:opacity-50 mt-2">
-            {emailPrefsSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Preferences</>}
-          </button>
-        </div>
-      </div>
+      <EmailPreferencesSection />
 
       {/* ── Danger Zone ── */}
       <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
