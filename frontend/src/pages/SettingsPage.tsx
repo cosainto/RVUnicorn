@@ -35,15 +35,6 @@ export default function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
-  const [emailPrefs, setEmailPrefs] = useState({
-    emailOnMessage: true,
-    emailOnNotification: true,
-    emailOnFriendRequest: true,
-    emailOnTripUpdate: true,
-    emailOnMention: true,
-  });
-  const [emailPrefsSaving, setEmailPrefsSaving] = useState(false);
-  const [emailPrefsMsg, setEmailPrefsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [smsWeatherAlerts, setSmsWeatherAlerts] = useState(false);
   const [smsSaving, setSmsSaving] = useState(false);
   const [smsMsg, setSmsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -60,32 +51,11 @@ export default function SettingsPage() {
       setHomeCity(data.homeCity || '');
       setHomeState(data.homeState || '');
       setHomeZip(data.homeZipCode || '');
-      setEmailPrefs({
-        emailOnMessage: data.emailOnMessage !== false,
-        emailOnNotification: data.emailOnNotification !== false,
-        emailOnFriendRequest: data.emailOnFriendRequest !== false,
-        emailOnTripUpdate: data.emailOnTripUpdate !== false,
-        emailOnMention: data.emailOnMention !== false,
-      });
       setSmsWeatherAlerts(data.smsWeatherAlerts === true);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const saveEmailPrefs = async () => {
-    setEmailPrefsSaving(true);
-    setEmailPrefsMsg(null);
-    try {
-      await api.put(`/profile/${user?.username}`, emailPrefs);
-      setEmailPrefsMsg({ type: 'success', text: 'Email preferences saved!' });
-      setTimeout(() => setEmailPrefsMsg(null), 3000);
-    } catch {
-      setEmailPrefsMsg({ type: 'error', text: 'Failed to save preferences' });
-    } finally {
-      setEmailPrefsSaving(false);
     }
   };
 
@@ -448,8 +418,10 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500">Text alerts for time-sensitive situations when you're at a campground.</p>
 
           {!phone && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-              ⚠️ Add a phone number in your contact info above to enable SMS alerts.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+              <p className="font-semibold text-amber-900 mb-1">📱 Add your phone for SMS alerts</p>
+              <p className="text-amber-800 text-xs mb-3">Get trip safety warnings, check-in reminders, and activity invites via text.</p>
+              <p className="text-amber-700 text-[11px]">Add a phone number in your contact info above to enable SMS alerts.</p>
             </div>
           )}
 

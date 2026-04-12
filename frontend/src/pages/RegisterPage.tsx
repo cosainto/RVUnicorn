@@ -16,18 +16,54 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Format phone as (XXX) XXX-XXXX
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(formatPhone(value));
+    setPhoneError('');
+    // Clear consent if phone is emptied
+    if (value.replace(/\D/g, '').length === 0) setSmsConsent(false);
+  };
+
+  // Convert display phone to E.164
+  const phoneToE164 = (display: string) => {
+    const digits = display.replace(/\D/g, '');
+    if (digits.length !== 10) return null;
+    return `+1${digits}`;
+  };
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  const hasPhone = phoneDigits.length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate phone if entered
+    if (hasPhone && phoneDigits.length !== 10) {
+      setPhoneError('Please enter a valid US phone number');
+      return;
+    }
+
     setLoading(true);
     try {
-      await (register as any)(email, username, password, firstName, lastName, phone, inviteToken);
+      const phoneE164 = hasPhone ? phoneToE164(phone) : undefined;
+      const consentTs = smsConsent ? new Date().toISOString() : undefined;
+      await (register as any)(email, username, password, firstName, lastName, phoneE164, inviteToken, smsConsent, consentTs);
       navigate('/welcome');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to register');
@@ -122,15 +158,54 @@ export default function RegisterPage() {
 
               <div>
                 <label className="text-[12px] font-medium mb-1 block" style={labelStyle}>
-                  Phone <span style={{ color: 'rgba(245,240,232,0.25)' }}>(optional)</span>
+                  Mobile Phone Number <span style={{ color: 'rgba(245,240,232,0.25)' }}>(optional)</span>
                 </label>
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                <input type="tel" value={phone} onChange={e => handlePhoneChange(e.target.value)}
                   placeholder="(555) 555-5555"
                   className="w-full px-3 py-2.5 rounded-xl text-[14px] focus:outline-none transition"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#E8A838'}
                   onBlur={e => e.target.style.borderColor = 'rgba(232,168,56,0.12)'} />
+                {phoneError && (
+                  <p className="text-[11px] mt-1" style={{ color: '#D4621A' }}>{phoneError}</p>
+                )}
+                {!phoneError && (
+                  <p className="text-[11px] mt-1" style={{ color: 'rgba(245,240,232,0.25)' }}>
+                    Used for trip alerts and check-in reminders. You control which notifications you receive in settings.
+                  </p>
+                )}
               </div>
+
+              {/* SMS Consent — only visible when phone is entered */}
+              {hasPhone && (
+                <div>
+                  <label className="flex items-start gap-2.5 cursor-pointer py-1">
+                    <input
+                      type="checkbox"
+                      checked={smsConsent}
+                      onChange={e => setSmsConsent(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-2 flex-shrink-0 accent-amber-500"
+                      style={{ accentColor: '#E8A838' }}
+                    />
+                    <span className="text-[12px] leading-relaxed" style={{ color: 'rgba(245,240,232,0.55)' }}>
+                      I agree to receive{' '}
+                      <Link to="/sms-terms" target="_blank" style={{ color: '#E8A838' }}>SMS notifications</Link>{' '}
+                      from RVUnicorn including trip alerts, check-in reminders, and community updates.
+                      Message & data rates may apply.
+                      Reply STOP to{' '}
+                      <Link to="/sms-terms" target="_blank" style={{ color: '#E8A838' }}>opt out</Link>{' '}
+                      at any time.
+                    </span>
+                  </label>
+                  <p className="text-[11px] mt-1 ml-6" style={{ color: 'rgba(245,240,232,0.25)' }}>
+                    &#x1F512; We never share your number. Manage notification preferences anytime at Settings.
+                  </p>
+                  <p className="text-[11px] mt-1 ml-6" style={{ color: 'rgba(245,240,232,0.2)' }}>
+                    &#x1F4F1; STOP to unsubscribe &middot; Msg & data rates may apply &middot;{' '}
+                    <Link to="/sms-terms" target="_blank" style={{ color: 'rgba(232,168,56,0.4)' }}>rvunicorn.com/sms-terms</Link>
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="text-[12px] font-medium mb-1 block" style={labelStyle}>Password</label>

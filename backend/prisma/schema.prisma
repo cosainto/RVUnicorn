@@ -129,6 +129,8 @@ model User {
   rvSolarWatts                                    Int?
   campingInterests                                String[]                      @default([])
   phoneNumber                                     String?
+  smsOptIn                                        Boolean                       @default(false)
+  smsOptInAt                                      DateTime?
   emailOnFriendRequest                            Boolean                       @default(true)
   emailOnMention                                  Boolean                       @default(true)
   emailOnMessage                                  Boolean                       @default(true)

@@ -12,7 +12,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, username, phoneNumber, inviteToken } = req.body;
+    const { email, password, firstName, lastName, username, phoneNumber, inviteToken, smsConsent, smsConsentTimestamp } = req.body;
 
     if (!email || !password || !firstName || !lastName || !username) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -41,6 +41,7 @@ router.post('/register', async (req, res) => {
         lastName,
         username,
         ...(phoneNumber ? { phoneNumber } : {}),
+        ...(smsConsent && phoneNumber ? { smsOptIn: true, smsOptInAt: smsConsentTimestamp ? new Date(smsConsentTimestamp) : new Date() } : {}),
       },
       select: {
         id: true,

@@ -31,7 +31,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, username: string, password: string, firstName: string, lastName: string, phone?: string, inviteToken?: string) => Promise<void>;
+  register: (email: string, username: string, password: string, firstName: string, lastName: string, phone?: string, inviteToken?: string, smsConsent?: boolean, smsConsentTimestamp?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -71,8 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (email: string, username: string, password: string, firstName: string, lastName: string, phone?: string, inviteToken?: string) => {
-    const { data } = await api.post('/auth/register', { email, username, password, firstName, lastName, ...(phone ? { phoneNumber: phone } : {}), ...(inviteToken ? { inviteToken } : {}) });
+  const register = async (email: string, username: string, password: string, firstName: string, lastName: string, phone?: string, inviteToken?: string, smsConsent?: boolean, smsConsentTimestamp?: string) => {
+    const { data } = await api.post('/auth/register', {
+      email, username, password, firstName, lastName,
+      ...(phone ? { phoneNumber: phone } : {}),
+      ...(inviteToken ? { inviteToken } : {}),
+      ...(smsConsent !== undefined ? { smsConsent, smsConsentTimestamp } : {}),
+    });
     localStorage.setItem('token', data.token);
     setUser(data.user);
   };
