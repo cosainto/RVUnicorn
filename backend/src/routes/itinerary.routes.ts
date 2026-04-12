@@ -15,7 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
       where: { userId, ...(eventId ? { eventId: eventId as string } : {}) },
       include: {
         days: {
-          include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } }, orderBy: { order: 'asc' } } },
+          include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }, orderBy: { order: 'asc' } } },
           orderBy: { dayNumber: 'asc' }
         }
       },
@@ -206,7 +206,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       where: { id: req.params.id, userId },
       include: {
         days: {
-          include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } }, orderBy: { order: 'asc' } } },
+          include: { stops: { include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }, orderBy: { order: 'asc' } } },
           orderBy: { dayNumber: 'asc' }
         }
       }
@@ -318,7 +318,7 @@ router.post('/:id/days/:dayId/stops', authenticateToken, async (req, res) => {
     const { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, durationMins, cost, confirmed } = req.body;
     const stop = await prisma.tripStop.create({
       data: { tripDayId: req.params.dayId, order: order || 0, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, durationMins, cost, confirmed: confirmed || false },
-      include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } }
+      include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }
     });
     res.json(stop);
   } catch (e) {
@@ -337,7 +337,7 @@ router.put('/:id/days/:dayId/stops/:stopId', authenticateToken, async (req, res)
     const stop = await prisma.tripStop.update({
       where: { id: req.params.stopId },
       data: { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, durationMins, cost, confirmed },
-      include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } }
+      include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }
     });
     res.json(stop);
   } catch (e) {

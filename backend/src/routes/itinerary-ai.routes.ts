@@ -264,7 +264,7 @@ router.post('/create-from-suggestion', authenticateToken, async (req, res) => {
         days: {
           include: {
             stops: {
-              include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true } } },
+              include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } },
               orderBy: { order: 'asc' }
             }
           },

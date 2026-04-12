@@ -13,7 +13,7 @@ interface TripPlan {
   useHometown: boolean; routePreference: string; endLatitude?: number; endLongitude?: number;
   pitStops?: PitStop[];
 }
-interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; campground?: { id: string; name: string; location: string; state: string; latitude?: number; longitude?: number; }; }
+interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; campground?: { id: string; name: string; location: string; state: string; latitude?: number; longitude?: number; bookingUrl?: string; websiteUrl?: string; customSlug?: string; }; }
 interface TripDay { id: string; dayNumber: number; date?: string; type: string; notes?: string; stops: TripStop[]; }
 interface Trip { id: string; title: string; startDate?: string; days: TripDay[]; }
 
@@ -919,9 +919,23 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${st.color}`}>{st.icon} {st.label}</span>
                                 {stop.campgroundId && <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">✓ RVUnicorn</span>}
                               </div>
-                              <p className="text-sm font-medium text-gray-700 truncate mt-0.5">{name||'Unnamed stop'}</p>
+                              {stop.campgroundId ? (
+                                <a href={`/campgrounds/${stop.campground?.customSlug || stop.campgroundId}`} className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline truncate mt-0.5 block">
+                                  {name||'Unnamed stop'}
+                                </a>
+                              ) : (
+                                <p className="text-sm font-medium text-gray-700 truncate mt-0.5">{name||'Unnamed stop'}</p>
+                              )}
                               {stop.address && <p className="text-xs text-gray-400 truncate">{stop.address}</p>}
                               {stop.notes && <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-2">{stop.notes}</p>}
+                              {/* Booking link for overnight campground stops */}
+                              {stop.type === 'OVERNIGHT' && stop.campgroundId && (stop.campground?.bookingUrl || stop.campground?.websiteUrl) && (
+                                <a href={stop.campground?.bookingUrl || stop.campground?.websiteUrl}
+                                  target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-2.5 py-1 rounded-lg transition shadow-sm">
+                                  🏕️ Book This Campsite →
+                                </a>
+                              )}
                               {(stop.type==='OVERNIGHT'||stop.type==='FUEL'||stop.type==='FOOD'||stop.type==='ATTRACTION'||stop.type==='WALMART') && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   <button
