@@ -333,10 +333,10 @@ router.put('/:id/days/:dayId/stops/:stopId', authenticateToken, async (req, res)
     const userId = (req as any).userId;
     const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
-    const { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, durationMins, cost, confirmed } = req.body;
+    const { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, confirmationNumber, durationMins, cost, confirmed } = req.body;
     const stop = await prisma.tripStop.update({
       where: { id: req.params.stopId },
-      data: { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, durationMins, cost, confirmed },
+      data: { order, type, campgroundId, customName, address, latitude, longitude, notes, siteNumber, confirmationNumber, durationMins, cost, confirmed },
       include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }
     });
     res.json(stop);

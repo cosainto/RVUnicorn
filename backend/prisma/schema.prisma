@@ -512,20 +512,21 @@ model TripDay {
 }
 
 model TripStop {
-  id           String      @id @default(cuid())
-  tripDayId    String
-  order        Int
-  type         String
-  campgroundId String?
-  customName   String?
-  address      String?
-  latitude     Float?
-  longitude    Float?
-  notes        String?
-  siteNumber   String?
-  durationMins Int?
-  cost         Float?
-  confirmed    Boolean     @default(false)
+  id                 String      @id @default(cuid())
+  tripDayId          String
+  order              Int
+  type               String
+  campgroundId       String?
+  customName         String?
+  address            String?
+  latitude           Float?
+  longitude          Float?
+  notes              String?
+  siteNumber         String?
+  confirmationNumber String?
+  durationMins       Int?
+  cost               Float?
+  confirmed          Boolean     @default(false)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   campground   Campground? @relation(fields: [campgroundId], references: [id])

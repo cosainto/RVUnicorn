@@ -14,7 +14,7 @@ interface TripPlan {
   useHometown: boolean; routePreference: string; endLatitude?: number; endLongitude?: number;
   pitStops?: PitStop[];
 }
-interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; campground?: { id: string; name: string; location: string; state: string; latitude?: number; longitude?: number; bookingUrl?: string; websiteUrl?: string; customSlug?: string; }; }
+interface TripStop { id: string; order: number; type: string; campgroundId?: string; customName?: string; address?: string; notes?: string; confirmed: boolean; latitude?: number; longitude?: number; siteNumber?: string; confirmationNumber?: string; campground?: { id: string; name: string; location: string; state: string; latitude?: number; longitude?: number; bookingUrl?: string; websiteUrl?: string; customSlug?: string; }; }
 interface TripDay { id: string; dayNumber: number; date?: string; type: string; notes?: string; stops: TripStop[]; }
 interface Trip { id: string; title: string; startDate?: string; days: TripDay[]; }
 
@@ -317,6 +317,28 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       setTimeout(() => setRvSaved(false), 3000);
     } catch { alert('Failed to save RV specs'); }
     setRvSaving(false);
+  };
+
+  // Booking info inline editor
+  const [editingBooking, setEditingBooking] = useState<string | null>(null); // stop id
+  const [bookingForm, setBookingForm] = useState({ siteNumber: '', confirmationNumber: '' });
+  const [bookingSaving, setBookingSaving] = useState(false);
+
+  const saveBookingInfo = async (dayId: string, stop: TripStop) => {
+    if (!trip) return;
+    setBookingSaving(true);
+    try {
+      const { data } = await api.put(`/itinerary/${trip.id}/days/${dayId}/stops/${stop.id}`, {
+        order: stop.order,
+        type: stop.type,
+        siteNumber: bookingForm.siteNumber || null,
+        confirmationNumber: bookingForm.confirmationNumber || null,
+        confirmed: true,
+      });
+      setTrip(t => t ? { ...t, days: t.days.map(d => d.id === dayId ? { ...d, stops: d.stops.map(s => s.id === stop.id ? data : s) } : d) } : t);
+      setEditingBooking(null);
+    } catch { alert('Failed to save booking info'); }
+    setBookingSaving(false);
   };
 
   const [editingStop, setEditingStop] = useState<{dayId: string; stop: any} | null>(null);
@@ -1018,13 +1040,75 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                               )}
                               {stop.address && <p className="text-xs text-gray-400 truncate">{stop.address}</p>}
                               {stop.notes && <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-2">{stop.notes}</p>}
-                              {/* Booking link for overnight campground stops */}
-                              {stop.type === 'OVERNIGHT' && stop.campgroundId && (stop.campground?.bookingUrl || stop.campground?.websiteUrl) && (
-                                <a href={stop.campground?.bookingUrl || stop.campground?.websiteUrl}
-                                  target="_blank" rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-2.5 py-1 rounded-lg transition shadow-sm">
-                                  🏕️ Book This Campsite →
-                                </a>
+                              {/* Overnight booking section */}
+                              {stop.type === 'OVERNIGHT' && (
+                                <div className="mt-1.5 space-y-1.5">
+                                  {/* Booking status */}
+                                  {stop.confirmed && (stop.siteNumber || stop.confirmationNumber) ? (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-200">
+                                        ✅ Booked
+                                      </span>
+                                      {stop.siteNumber && (
+                                        <span className="text-xs text-gray-500">Site: <span className="font-medium text-gray-700">{stop.siteNumber}</span></span>
+                                      )}
+                                      {stop.confirmationNumber && (
+                                        <span className="text-xs text-gray-500">Conf#: <span className="font-medium text-gray-700">{stop.confirmationNumber}</span></span>
+                                      )}
+                                      <button onClick={() => { setEditingBooking(stop.id); setBookingForm({ siteNumber: stop.siteNumber || '', confirmationNumber: stop.confirmationNumber || '' }); }}
+                                        className="text-[10px] text-primary-500 hover:text-primary-700 ml-auto">Edit</button>
+                                    </div>
+                                  ) : stop.confirmed ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-200">
+                                        ✅ Confirmed
+                                      </span>
+                                      <button onClick={() => { setEditingBooking(stop.id); setBookingForm({ siteNumber: stop.siteNumber || '', confirmationNumber: stop.confirmationNumber || '' }); }}
+                                        className="text-[10px] text-primary-500 hover:text-primary-700">+ Add booking details</button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      {stop.campgroundId && (stop.campground?.bookingUrl || stop.campground?.websiteUrl) && (
+                                        <a href={stop.campground?.bookingUrl || stop.campground?.websiteUrl}
+                                          target="_blank" rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-2.5 py-1 rounded-lg transition shadow-sm">
+                                          🏕️ Book This Campsite →
+                                        </a>
+                                      )}
+                                      <button onClick={() => { setEditingBooking(stop.id); setBookingForm({ siteNumber: '', confirmationNumber: '' }); }}
+                                        className="text-xs text-primary-500 hover:text-primary-700 font-medium">
+                                        Already booked? Add details
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Inline booking editor */}
+                                  {editingBooking === stop.id && (
+                                    <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 space-y-2">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="text-[10px] text-green-700 font-medium block mb-0.5">Site Number</label>
+                                          <input value={bookingForm.siteNumber} onChange={e => setBookingForm(f => ({ ...f, siteNumber: e.target.value }))}
+                                            placeholder="e.g. A-23"
+                                            className="w-full border border-green-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-green-400" />
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-green-700 font-medium block mb-0.5">Confirmation #</label>
+                                          <input value={bookingForm.confirmationNumber} onChange={e => setBookingForm(f => ({ ...f, confirmationNumber: e.target.value }))}
+                                            placeholder="e.g. RES-12345"
+                                            className="w-full border border-green-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-green-400" />
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button onClick={() => saveBookingInfo(day.id, stop)} disabled={bookingSaving}
+                                          className="text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition disabled:opacity-50">
+                                          {bookingSaving ? 'Saving...' : '✓ Mark as Booked'}
+                                        </button>
+                                        <button onClick={() => setEditingBooking(null)} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                               {(stop.type==='OVERNIGHT'||stop.type==='FUEL'||stop.type==='FOOD'||stop.type==='ATTRACTION'||stop.type==='WALMART') && (
                                 <div className="flex flex-wrap gap-1 mt-1">
