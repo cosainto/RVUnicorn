@@ -326,49 +326,83 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
             </div>
           ) : (
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(245,240,232,0.4)' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: destFocused ? '#E8A838' : 'rgba(245,240,232,0.4)' }} />
               <input
                 type="text"
                 value={destQuery}
                 onChange={(e) => setDestQuery(e.target.value)}
                 onFocus={() => setDestFocused(true)}
-                onBlur={() => setTimeout(() => setDestFocused(false), 200)}
+                onBlur={() => setTimeout(() => setDestFocused(false), 250)}
                 placeholder="Search campgrounds or enter a city..."
-                className="w-full text-sm rounded-full pl-9 pr-4 py-2 outline-none"
-                style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.15)', color: '#F5F0E8' }}
+                className="w-full text-sm rounded-full pl-10 pr-4 py-2.5 outline-none transition-all"
+                style={{
+                  background: destFocused ? '#1e3455' : '#1a2d4a',
+                  border: destFocused ? '2px solid #E8A838' : '1px solid rgba(232,168,56,0.15)',
+                  color: '#F5F0E8',
+                  boxShadow: destFocused ? '0 0 16px rgba(232,168,56,0.2)' : 'none',
+                }}
               />
               {/* Dropdown results */}
               {destFocused && destResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-50 max-h-72 overflow-y-auto"
-                  style={{ background: '#0F1C35', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 max-h-80 overflow-y-auto"
+                  style={{ background: '#0d1a30', border: '2px solid rgba(232,168,56,0.4)', boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 20px rgba(232,168,56,0.1)' }}>
+                  {/* Header */}
+                  <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(232,168,56,0.15)', background: 'rgba(232,168,56,0.05)' }}>
+                    <Tent className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>
+                      {destResults.some(r => r.type === 'CAMPGROUND') ? 'Campgrounds & Locations' : 'Locations'}
+                    </span>
+                  </div>
                   {destResults.map((r) => (
                     <button key={r.id} onMouseDown={() => selectDestination(r)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition"
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1a2d4a'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                     >
                       {r.heroPhotoUrl ? (
-                        <img src={r.heroPhotoUrl} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" alt="" />
+                        <img src={r.heroPhotoUrl} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" style={{ border: '1px solid rgba(232,168,56,0.2)' }} alt="" />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(232,168,56,0.1)' }}>
-                          {r.type === 'CAMPGROUND' ? <Tent className="w-4 h-4 text-amber-400" /> : <MapPin className="w-4 h-4 text-blue-400" />}
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.12)' : 'rgba(59,130,246,0.12)', border: `1px solid ${r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.25)' : 'rgba(59,130,246,0.25)'}` }}>
+                          {r.type === 'CAMPGROUND' ? <Tent className="w-5 h-5 text-amber-400" /> : <MapPin className="w-5 h-5 text-blue-400" />}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: '#F5F0E8' }}>{r.name}</p>
-                        <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold truncate" style={{ color: '#F5F0E8' }}>{r.name}</p>
+                          {r.type === 'CAMPGROUND' && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                              style={{ background: 'rgba(232,168,56,0.15)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.25)' }}>
+                              CAMPGROUND
+                            </span>
+                          )}
+                          {r.type === 'LOCATION' && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                              style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}>
+                              LOCATION
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(245,240,232,0.5)' }}>
                           {[r.city, r.state].filter(Boolean).join(', ')}
-                          {r.type === 'LOCATION' && ' · Location'}
                         </p>
                       </div>
                       {r.rigFits !== null && (
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${r.rigFits ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                          {r.rigFits ? '✓ Fits' : '⚠ Check'}
+                        <span className={`text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0 ${r.rigFits ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
+                          style={{ border: `1px solid ${r.rigFits ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                          {r.rigFits ? '✓ Rig fits' : '⚠ Check size'}
                         </span>
                       )}
                     </button>
                   ))}
+                </div>
+              )}
+              {/* Hint when focused but no results yet */}
+              {destFocused && destQuery.length > 0 && destQuery.length < 2 && destResults.length === 0 && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-xl px-4 py-3 z-50"
+                  style={{ background: '#0d1a30', border: '1px solid rgba(232,168,56,0.2)' }}>
+                  <p className="text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>Keep typing to search 14,000+ campgrounds...</p>
                 </div>
               )}
             </div>
