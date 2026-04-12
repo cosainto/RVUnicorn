@@ -6,6 +6,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { extractActivityFromContent } from '../services/hitchActivityExtractor';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -401,6 +402,13 @@ router.post('/content', authenticateToken, async (req, res) => {
           })),
         });
       }
+
+      // Async Hitch activity extraction — don't block the response
+      if (campgroundId) {
+        extractActivityFromContent(content.id).catch((err) =>
+          console.error('[HitchExtractor] async extraction failed:', err)
+        );
+      }
     }
 
     res.status(201).json(content);
@@ -715,6 +723,13 @@ router.put('/content/:contentId', authenticateToken, async (req, res) => {
         publishedAt: status === 'PUBLISHED' && !existing.publishedAt ? new Date() : undefined,
       },
     });
+
+    // Trigger Hitch extraction if newly published with a campground
+    if (status === 'PUBLISHED' && !existing.publishedAt && content.campgroundId) {
+      extractActivityFromContent(content.id).catch((err) =>
+        console.error('[HitchExtractor] async extraction failed:', err)
+      );
+    }
 
     res.json(content);
   } catch (error) {

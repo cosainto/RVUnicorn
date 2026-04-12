@@ -10,6 +10,7 @@ import EventCampgroundMap from '../components/EventCampgroundMap';
 import LiveEventBadge from '../components/LiveEventBadge';
 import { useEventPresence } from '../hooks/useEventPresence';
 import { useEventLifecycle } from '../hooks/useEventLifecycle';
+import EventPlaybookTab from '../components/activity/EventPlaybookTab';
 
 const MODE_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
   FULL: { emoji: '🎪', label: 'Full', color: 'bg-amber-100 text-amber-800' },
@@ -25,7 +26,7 @@ export default function EventDetailPageV2() {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'event' | 'campground'>('event');
-  const [tab, setTab] = useState<'schedule' | 'announcements' | 'meals' | 'attendees'>('schedule');
+  const [tab, setTab] = useState<'schedule' | 'announcements' | 'meals' | 'attendees' | 'playbook'>('schedule');
   const [myAttendee, setMyAttendee] = useState<any>(null);
   const [joining, setJoining] = useState(false);
 
@@ -272,7 +273,7 @@ export default function EventDetailPageV2() {
           <div>
             {/* Tabs */}
             <div className="flex gap-1 mb-4 overflow-x-auto">
-              {(['schedule', 'announcements', 'meals', 'attendees'] as const).map(t => (
+              {(['schedule', 'announcements', 'meals', 'attendees', 'playbook'] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition capitalize ${tab === t ? 'bg-[#1B2B4B] text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
                   {t}
@@ -390,6 +391,17 @@ export default function EventDetailPageV2() {
                 </div>
               );
             })()}
+
+            {/* Playbook Tab */}
+            {tab === 'playbook' && (
+              <EventPlaybookTab
+                eventId={event.id}
+                organizerId={event.organizerId}
+                isLive={event.isLive}
+                isEnded={event.eventStatus === 'ENDED' || event.isTripMemory}
+                campgroundId={event.campgroundId}
+              />
+            )}
           </div>
         )}
 

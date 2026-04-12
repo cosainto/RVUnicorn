@@ -144,6 +144,7 @@ const CheckInPage = lazy(() => import('./pages/CheckInPage'));
 const OrganizerDashboard = lazy(() => import('./pages/OrganizerDashboard'));
 const DealersPage = lazy(() => import('./pages/DealersPage'));
 const DealerProfilePage = lazy(() => import('./pages/DealerProfilePage'));
+const ActivityInstancePage = lazy(() => import('./pages/ActivityInstancePage'));
 
 function PageLoader() {
   return (
@@ -237,6 +238,7 @@ function AppContent() {
           <Route path="/events-v2/:id/manage" element={<EventManagePage />} />
           <Route path="/organizer" element={<PrivateRoute><OrganizerDashboard /></PrivateRoute>} />
           <Route path="/checkin/:qrToken" element={<CheckInPage />} />
+          <Route path="/activities/:instanceId" element={<PrivateRoute><ActivityInstancePage /></PrivateRoute>} />
           <Route
             path="/feed"
             element={

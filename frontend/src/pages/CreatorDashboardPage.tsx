@@ -129,6 +129,8 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
   GUIDE: <FileText className="w-4 h-4" />,
 };
 
+import CreatorActivityQueue from '../components/activity/CreatorActivityQueue';
+
 export default function CreatorDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -312,6 +314,9 @@ export default function CreatorDashboardPage() {
 
       {/* ===== CONTENT AREA ===== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Hitch-extracted activity confirmation queue */}
+        {activeTab === 'overview' && <CreatorActivityQueue />}
+
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && stats && (
           <OverviewTab stats={stats} allContent={allContent} user={user} />

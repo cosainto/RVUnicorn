@@ -81,6 +81,7 @@ import CampMarket from '../components/CampMarket';
 import LastMinuteDeals from '../components/LastMinuteDeals';
 import WelcomeKit from '../components/WelcomeKit';
 import NatureInsightCards from '../components/NatureInsightCards';
+import DoThisNowSection from '../components/activity/DoThisNowSection';
 import BasecampTriviaCard from '../components/BasecampTriviaCard';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
@@ -2426,6 +2427,13 @@ export default function BasecampPage({ user }: BasecampProps) {
           <CampMarket campgroundId={nextEvent.campground.id} compact />
         )}
       </div>
+
+      {/* Do This Now — context-aware activity suggestions when checked in */}
+      {isCamping && activeCheckIn?.campground && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <DoThisNowSection campgroundName={activeCheckIn.campground.name} />
+        </div>
+      )}
 
       {/* Inspirational Quote (Planning Mode, no upcoming trip) */}
       {isPlanning && !nextEvent && (

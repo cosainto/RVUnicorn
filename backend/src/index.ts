@@ -145,6 +145,8 @@ import scrapbookAdvancedRoutes from './routes/scrapbookAdvanced.routes';
 import tripConfidenceRoutes from './routes/tripConfidence.routes';
 import tripIntelligenceRoutes from './routes/tripIntelligence.routes';
 import { registerConfidenceCron } from './cron/tripConfidence.cron';
+import { registerUtilityScoreCron } from './cron/utility-score.cron';
+import doThisHereRoutes from './routes/doThisHere.routes';
 
 
 import campgroundBadgesRoutes from './routes/campground-badges.routes';
@@ -360,6 +362,7 @@ app.use("/api/trip-confidence", tripConfidenceRoutes);
 app.use("/api/trip-intelligence", tripIntelligenceRoutes);
 app.use("/api/trip-kits", tripKitRoutes);
 app.use("/api/creator-events", creatorEventsRoutes);
+app.use("/api/actionable", doThisHereRoutes);
 
 
 
@@ -389,6 +392,7 @@ registerBroadcastCron();
 registerConfidenceCron();
 registerCreatorNetworkCrons();
 registerScrapbookAnniversaryCron();
+registerUtilityScoreCron();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

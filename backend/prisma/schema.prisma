@@ -395,6 +395,13 @@ model User {
   scrapbookComments                                ScrapbookComment[]
   scrapbookExports                                 ScrapbookExport[]
   scrapbookDiscoveries                             ScrapbookDiscovery[]
+  actionableContent                                ActionableContent[]           @relation("ActionableCreator")
+  organizedInstances                               ActivityInstance[]            @relation("ActivityOrganizer")
+  activityParticipants                             ActivityParticipant[]
+  activityMessages                                 ActivityMessage[]
+  activitySaves                                    ActivitySave[]
+  activityCompletions                              ActivityCompletion[]
+  eventPlaybooks                                   EventPlaybook[]
 
   @@index([email])
   @@index([username])
@@ -670,6 +677,8 @@ model Campground {
   creatorEventsHosted    CreatorEvent[]
   creatorPresences       CreatorPresence[]
   contentTripTags        ContentTripTag[]
+  actionableContent      ActionableContent[]
+  activityInstances      ActivityInstance[]
 
   @@index([state])
   @@index([name])
@@ -5815,4 +5824,159 @@ model ScrapbookAnalytics {
 
   @@unique([tripId, date])
   @@index([tripId])
+}
+
+// ─── Do This Here Engine ────────────────────────────────────
+
+model ActionableContent {
+  id                String    @id @default(cuid())
+  contentId         String?
+  campgroundId      String
+  campground        Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  creatorId         String?
+  creator           User?      @relation("ActionableCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  activityType      String     // HIKE | KAYAK | SWIM | FISH | BIKE | STARGAZING | CAMPFIRE | PHOTOGRAPHY | WILDLIFE | OFFROAD | SOCIAL | FOOD | OTHER
+  title             String
+  description       String?
+  durationMinutes   Int?
+  difficulty        String?    // EASY | MODERATE | HARD | ANY
+  whatToBring       String[]
+  bestTimeOfDay     String?    // MORNING | AFTERNOON | EVENING | NIGHT | ANY
+  bestSeason        String[]
+  rigRequired       Boolean    @default(false)
+  kidsOk            Boolean    @default(true)
+  dogsOk            Boolean    @default(true)
+
+  sourceType        String     @default("CREATOR") // CREATOR | HITCH_EXTRACTED | USER_SUBMITTED
+  hitchConfidence   Float?
+  creatorConfirmed  Boolean    @default(false)
+
+  saveCount         Int        @default(0)
+  joinCount         Int        @default(0)
+  completionCount   Int        @default(0)
+  utilityScore      Float      @default(0)
+
+  instances         ActivityInstance[]
+  saves             ActivitySave[]
+  completions       ActivityCompletion[]
+
+  status            String     @default("ACTIVE") // ACTIVE | ARCHIVED
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([campgroundId])
+  @@index([creatorId])
+  @@index([status, utilityScore])
+}
+
+model ActivityInstance {
+  id              String            @id @default(cuid())
+  actionableId    String
+  actionable      ActionableContent @relation(fields: [actionableId], references: [id], onDelete: Cascade)
+  campgroundId    String
+  campground      Campground        @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  organizerId     String
+  organizer       User              @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+
+  scheduledTime   DateTime?
+  isOpenInvite    Boolean    @default(true)
+  maxParticipants Int?
+  note            String?
+  status          String     @default("OPEN") // OPEN | HAPPENING_NOW | COMPLETED | CANCELLED
+
+  participants    ActivityParticipant[]
+  messages        ActivityMessage[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([campgroundId])
+  @@index([actionableId])
+  @@index([status, scheduledTime])
+}
+
+model ActivityParticipant {
+  id          String           @id @default(cuid())
+  instanceId  String
+  instance    ActivityInstance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String           @default("JOINED") // JOINED | INTERESTED | DECLINED
+  joinedAt    DateTime         @default(now())
+
+  @@unique([instanceId, userId])
+}
+
+model ActivityMessage {
+  id          String           @id @default(cuid())
+  instanceId  String
+  instance    ActivityInstance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String
+  createdAt   DateTime         @default(now())
+
+  @@index([instanceId, createdAt])
+}
+
+model ActivitySave {
+  id           String            @id @default(cuid())
+  actionableId String
+  actionable   ActionableContent @relation(fields: [actionableId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId       String?
+  createdAt    DateTime          @default(now())
+
+  @@unique([actionableId, userId])
+}
+
+model ActivityCompletion {
+  id           String            @id @default(cuid())
+  actionableId String
+  actionable   ActionableContent @relation(fields: [actionableId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instanceId   String?
+  note         String?
+  photoUrls    String[]
+  completedAt  DateTime          @default(now())
+
+  @@index([actionableId])
+  @@index([userId])
+}
+
+model EventPlaybook {
+  id             String                  @id @default(cuid())
+  eventId        String                  @unique
+  campgroundId   String
+  creatorId      String
+  creator        User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  content        EventPlaybookContent[]
+
+  packingList    String[]
+  whatToExpect    String?
+  hitchWelcome   String?
+
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([eventId])
+}
+
+model EventPlaybookContent {
+  id           String        @id @default(cuid())
+  playbookId   String
+  playbook     EventPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  phase        String        // BEFORE | DURING | AFTER
+  contentId    String?
+  actionableId String?
+  title        String
+  description  String?
+  sortOrder    Int           @default(0)
+  addedAt      DateTime      @default(now())
+
+  @@index([playbookId, phase])
 }

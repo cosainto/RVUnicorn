@@ -36,6 +36,7 @@ import CampgroundPriceWidget from '../components/CampgroundPriceWidget';
 import { getCampspotUrl, getCampspotSearchUrl } from '../utils/campspot';
 import CampspotBookButton from '../components/CampspotBookButton';
 import ThingsToDoSection from '../components/ThingsToDoSection';
+import CampgroundLiveFeed from '../components/campground/CampgroundLiveFeed';
 import ShareCard from '../components/ShareCard';
 import CommunityNudgeModal from '../components/CommunityNudgeModal';
 import StateCompletionModal from '../components/StateCompletionModal';
@@ -1820,6 +1821,11 @@ export default function CampgroundDetailPage() {
                 </div>
               )}
               
+              {/* Live Activity Feed */}
+              <div className="mb-4">
+                <CampgroundLiveFeed campgroundId={campground.id} />
+              </div>
+
               {/* Things to Do Nearby */}
               <div ref={thingsToDoRef}>
                 <ThingsToDoSection campgroundId={campground.id} campgroundName={campground.name} isAdmin={isAdmin} userInterests={userInterests} />
