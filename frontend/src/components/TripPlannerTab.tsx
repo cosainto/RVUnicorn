@@ -219,7 +219,9 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
     if (!trip) return;
     try {
       const { data } = await api.put(`/itinerary/${trip.id}/days/${dayId}/stops/${stop.id}`, {
-        ...stop,
+        order: stop.order,
+        type: stop.type,
+        campgroundId: null,
         customName: rec.name,
         address: rec.address,
         latitude: rec.latitude,
@@ -229,7 +231,10 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       });
       setTrip(t => t ? {...t, days: t.days.map(d => d.id === dayId ? {...d, stops: d.stops.map(s => s.id === stop.id ? data : s)} : d)} : t);
       setRecommendations(null);
-    } catch(e) {}
+    } catch(e: any) {
+      console.error('[TripPlanner] replaceStop failed:', e.response?.data || e.message);
+      alert('Failed to save stop — please try again.');
+    }
   };
 
   const deleteTrip = async () => {
