@@ -96,7 +96,22 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 
 export function DrivingSessionProvider({ children }: { children: ReactNode }) {
   // ── Lifecycle state, hydrated from localStorage so refreshes don't drop the session ──
-  const [isDriving, setIsDriving] = useState<boolean>(() => localStorage.getItem(LS.driving) === 'true');
+  const [isDriving, setIsDriving] = useState<boolean>(() => {
+    if (localStorage.getItem(LS.driving) !== 'true') return false;
+    // Auto-expire stale sessions (>18 hours)
+    const startStr = localStorage.getItem(LS.driveStart);
+    if (startStr) {
+      const startMs = parseInt(startStr, 10);
+      const hoursElapsed = (Date.now() - startMs) / (1000 * 60 * 60);
+      if (hoursElapsed > 18) {
+        localStorage.removeItem(LS.driving);
+        localStorage.removeItem(LS.driveStart);
+        localStorage.removeItem(LS.driveRole);
+        return false;
+      }
+    }
+    return true;
+  });
   const [drivingMinimized, setDrivingMinimized] = useState<boolean>(false);
   const [passengerFullView, setPassengerFullView] = useState<boolean>(false);
   const [role, setRoleState] = useState<Role>(() =>
