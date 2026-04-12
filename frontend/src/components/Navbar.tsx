@@ -283,6 +283,28 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16 gap-4">
 
+            {/* Campground Quick Access (for claimed campground owners) */}
+            {myCampground && (
+              <Link
+                to={`/business/${myCampground.id}`}
+                className="flex items-center gap-1.5 flex-shrink-0 px-2.5 py-1.5 rounded-lg transition-all duration-200 mr-1"
+                style={{
+                  background: location.pathname.startsWith('/business/') || location.pathname === '/organizer' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.08)',
+                  color: location.pathname.startsWith('/business/') || location.pathname === '/organizer' ? '#f59e0b' : 'rgba(255,255,255,0.7)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,158,11,0.15)'; (e.currentTarget as HTMLElement).style.color = '#f59e0b'; }}
+                onMouseLeave={e => {
+                  const isActive = location.pathname.startsWith('/business/') || location.pathname === '/organizer';
+                  (e.currentTarget as HTMLElement).style.background = isActive ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.08)';
+                  (e.currentTarget as HTMLElement).style.color = isActive ? '#f59e0b' : 'rgba(255,255,255,0.7)';
+                }}
+                title={myCampground.name || 'My Campground'}
+              >
+                <Tent className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline text-xs font-semibold truncate max-w-[120px]">{myCampground.name || 'My Site'}</span>
+              </Link>
+            )}
+
             {/* Logo */}
             <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
               <div className="relative">
