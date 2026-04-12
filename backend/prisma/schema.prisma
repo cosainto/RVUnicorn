@@ -391,6 +391,10 @@ model User {
   tripKitSaves                                    TripKitSave[]
   scrapbookSuggestions                             ScrapbookSuggestion[]
   tripAnniversaries                                TripAnniversary[]
+  scrapbookReactions                               ScrapbookReaction[]
+  scrapbookComments                                ScrapbookComment[]
+  scrapbookExports                                 ScrapbookExport[]
+  scrapbookDiscoveries                             ScrapbookDiscovery[]
 
   @@index([email])
   @@index([username])
@@ -861,6 +865,8 @@ model Event {
   publicViewCount       Int               @default(0)
   scrapbookPublic       Boolean           @default(false)
   scrapbookShareToken   String?           @unique
+  scrapbookPassword     String?
+  scrapbookPasswordHint String?
   ghostModeEnabled      Boolean           @default(false)
   popUps              EventPopUp[]
   highlights          EventHighlight[]
@@ -4557,11 +4563,16 @@ model ScrapbookPin {
   pinnedById String
   caption    String?
   position   Int      @default(0)
-  momentTag  String?  // BEST_MOMENT | FUNNIEST | MOST_UNEXPECTED | BEST_VIEW | CAMPFIRE | BREAKDOWN | WILDLIFE | FOOD | FIRST_DAY | LAST_DAY
-  createdAt  DateTime @default(now())
-  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  photo      Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  pinnedBy   User     @relation(fields: [pinnedById], references: [id], onDelete: Cascade)
+  momentTag     String?  // BEST_MOMENT | FUNNIEST | MOST_UNEXPECTED | BEST_VIEW | CAMPFIRE | BREAKDOWN | WILDLIFE | FOOD | FIRST_DAY | LAST_DAY
+  mediaType     String   @default("PHOTO") // PHOTO | VIDEO
+  videoUrl      String?
+  videoDuration Int?
+  videoThumbUrl String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  photo         Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  pinnedBy      User     @relation(fields: [pinnedById], references: [id], onDelete: Cascade)
 
   @@unique([eventId, photoId])
   @@index([eventId])
@@ -5724,4 +5735,83 @@ model TripAnniversary {
 
   @@unique([eventId, userId, tripYear])
   @@index([userId])
+}
+
+// ── Advanced Scrapbook ──────────────────────────────────────
+
+model ScrapbookReaction {
+  id        String   @id @default(cuid())
+  tripId    String
+  photoId   String?
+  visitorId String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([tripId, photoId, visitorId, emoji])
+  @@index([tripId])
+}
+
+model ScrapbookComment {
+  id        String   @id @default(cuid())
+  tripId    String
+  photoId   String?
+  visitorId String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  guestName String?
+  content   String   @db.VarChar(280)
+  approved  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([tripId])
+  @@index([photoId])
+}
+
+model ScrapbookExport {
+  id          String    @id @default(cuid())
+  tripId      String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  template    String
+  pdfUrl      String?
+  status      String    @default("PENDING")
+  pageCount   Int?
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([tripId])
+}
+
+model ScrapbookDiscovery {
+  id            String    @id @default(cuid())
+  tripId        String    @unique
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  optedIn       Boolean   @default(false)
+  featuredAt    DateTime?
+  region        String?
+  tags          String[]  @default([])
+  coverPhotoUrl String?
+  pinCount      Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([optedIn, featuredAt])
+}
+
+model ScrapbookAnalytics {
+  id          String   @id @default(cuid())
+  tripId      String
+  date        DateTime
+  views       Int      @default(0)
+  uniqueViews Int      @default(0)
+  reactions   Int      @default(0)
+  comments    Int      @default(0)
+  shareClicks Int      @default(0)
+  referrers   Json     @default("[]")
+
+  @@unique([tripId, date])
+  @@index([tripId])
 }

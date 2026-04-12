@@ -228,13 +228,14 @@ router.delete('/:eventId/share', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/scrapbook/public/:token — NO AUTH
+// GET /api/scrapbook/public/:token — NO AUTH (with password check)
 router.get('/public/:token', async (req, res) => {
   try {
     const event = await prisma.event.findFirst({
       where: { scrapbookShareToken: req.params.token, scrapbookPublic: true },
       select: {
         id: true, title: true, startDate: true, endDate: true,
+        scrapbookPassword: true, scrapbookPasswordHint: true,
         organizer: { select: { firstName: true, lastName: true, profilePicture: true, rvMake: true, rvYear: true } },
         campground: { select: { name: true, state: true } },
         scrapbookPins: {
@@ -242,11 +243,36 @@ router.get('/public/:token', async (req, res) => {
             photo: { select: { id: true, imageUrl: true, caption: true } },
             pinnedBy: { select: { firstName: true, profilePicture: true } },
           },
-          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+          orderBy: [{ sortOrder: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
         },
       },
     });
     if (!event) return res.status(404).json({ error: 'Scrapbook not found' });
+
+    // Password check
+    if (event.scrapbookPassword) {
+      const auth = req.headers.authorization;
+      if (auth?.startsWith('Bearer ')) {
+        try {
+          const jwt = require('jsonwebtoken');
+          jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'rvunicorn-secret');
+        } catch {
+          return res.status(401).json({ passwordRequired: true, hint: event.scrapbookPasswordHint });
+        }
+      } else {
+        return res.status(401).json({ passwordRequired: true, hint: event.scrapbookPasswordHint });
+      }
+    }
+
+    // Track analytics view
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    try {
+      await (prisma as any).scrapbookAnalytics.upsert({
+        where: { tripId_date: { tripId: event.id, date: today } },
+        update: { views: { increment: 1 } },
+        create: { tripId: event.id, date: today, views: 1 },
+      });
+    } catch {}
 
     res.json({
       tripTitle: event.title,
@@ -262,6 +288,10 @@ router.get('/public/:token', async (req, res) => {
         photoUrl: p.photo.imageUrl,
         caption: p.caption || p.photo.caption,
         momentTag: p.momentTag,
+        mediaType: p.mediaType || 'PHOTO',
+        videoUrl: p.videoUrl,
+        videoDuration: p.videoDuration,
+        videoThumbUrl: p.videoThumbUrl,
         pinnedByName: p.pinnedBy.firstName,
         pinnedByAvatar: p.pinnedBy.profilePicture,
       })),

@@ -127,6 +127,7 @@ const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
 const CampfireThreadAdminPage = lazy(() => import('./pages/admin/CampfireThreadAdminPage'));
 const TripKitEditorPage = lazy(() => import('./pages/creator/TripKitEditorPage'));
 const ScrapbookPublicPage = lazy(() => import('./pages/ScrapbookPublicPage'));
+const ScrapbookDiscoverPage = lazy(() => import('./pages/ScrapbookDiscoverPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const PublicTripViewPage = lazy(() => import('./pages/PublicTripViewPage'));
 const JoinCrewPage = lazy(() => import('./pages/JoinCrewPage'));
@@ -218,6 +219,7 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/s/:token" element={<ScrapbookPublicPage />} />
+          <Route path="/scrapbooks" element={<ScrapbookDiscoverPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/trips/:slug/view" element={<PublicTripViewPage />} />
           <Route path="/join" element={<JoinCrewPage />} />
