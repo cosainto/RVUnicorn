@@ -22,7 +22,7 @@ router.get('/:eventId/public', async (req, res) => {
           campground: { select: { name: true, state: true, location: true } },
           organizer: { select: { firstName: true, lastName: true, username: true, profilePicture: true } },
           attendees: {
-            where: { status: { in: ['ATTENDING', 'going'] } },
+            where: { status: { in: ['ATTENDING', 'going', 'GOING'] } },
             select: { user: { select: { firstName: true, profilePicture: true } } },
             take: 8,
           },
@@ -70,7 +70,7 @@ router.post('/:eventId/generate', authenticateToken, async (req, res) => {
         campground: { select: { name: true, state: true, location: true } },
         organizer: { select: { firstName: true, lastName: true } },
         attendees: {
-          where: { status: { in: ['ATTENDING', 'going'] } },
+          where: { status: { in: ['ATTENDING', 'going', 'GOING'] } },
           include: { user: { select: { firstName: true, lastName: true } } },
         },
         meals: {
@@ -93,9 +93,15 @@ router.post('/:eventId/generate', authenticateToken, async (req, res) => {
 
     if (!event) return res.status(404).json({ error: 'Trip not found' });
 
-    const isAttendee = event.organizerId === userId ||
-      event.attendees.some(a => a.userId === userId);
-    if (!isAttendee) return res.status(403).json({ error: 'Must be a trip attendee' });
+    // Allow organizer, any attendee (regardless of filtered status), or past trips
+    const isOrganizer = event.organizerId === userId;
+    const isAttendee = event.attendees.some((a: any) => a.userId === userId);
+    if (!isOrganizer && !isAttendee) {
+      // Check if user has ANY attendee record (status might not match filter)
+      const anyAttendee = await prisma.eventAttendee.findFirst({ where: { eventId, userId } });
+      const isPast = event.endDate ? new Date(event.endDate) < new Date() : event.startDate ? new Date(event.startDate) < new Date() : false;
+      if (!anyAttendee && !isPast) return res.status(403).json({ error: 'Must be a trip attendee' });
+    }
 
     // Fetch wildlife sightings if campground exists
     let wildlife: any[] = [];
