@@ -684,9 +684,42 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
               <li>🚛 RV-safe roads — no low bridges!</li>
             </ul>
           </div>
-          <button onClick={onEditTrip} className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2">
+          <button onClick={() => { setShowHitch(true); onEditTrip(); }} className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2">
             <img src="/hitch.png" className="w-5 h-5 rounded-full" /> Plan My Route with Hitch
           </button>
+
+          {/* Hitch AI form inline when no tripPlan */}
+          {showHitch && (
+            <div className="bg-primary-50 border border-primary-100 rounded-2xl p-4 max-w-sm w-full space-y-3 mt-4 text-left">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Starting From</label>
+                <input className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary-400"
+                  value={aiForm.startLocation} onChange={e=>setAiForm(f=>({...f,startLocation:e.target.value}))} placeholder="City, State" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Destination</label>
+                <input className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary-400"
+                  value={aiForm.destination} onChange={e=>setAiForm(f=>({...f,destination:e.target.value}))} placeholder="Campground or City, State" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Nights</label>
+                  <input type="number" min="0" max="14" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary-400"
+                    value={aiForm.nights} onChange={e=>setAiForm(f=>({...f,nights:parseInt(e.target.value)||1}))} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Max hrs/day</label>
+                  <input type="number" min="3" max="12" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary-400"
+                    value={aiForm.hoursPerDay} onChange={e=>setAiForm(f=>({...f,hoursPerDay:parseInt(e.target.value)||8}))} />
+                </div>
+              </div>
+              {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+              <button onClick={generateAI} disabled={aiLoading||!aiForm.startLocation}
+                className="w-full bg-primary-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm">
+                {aiLoading ? <><Loader className="w-4 h-4 animate-spin"/>Planning... (15-20s)</> : <><img src="/hitch.png" className="w-4 h-4 rounded-full"/>Generate My Itinerary</>}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
