@@ -9,8 +9,8 @@ async function areFriends(userId1: string, userId2: string): Promise<boolean> {
   const friendship = await prisma.friendship.findFirst({
     where: {
       OR: [
-        { initiatorId: userId1, receiverId: userId2, status: 'accepted' },
-        { initiatorId: userId2, receiverId: userId1, status: 'accepted' },
+        { initiatorId: userId1, receiverId: userId2, status: { in: ['accepted', 'ACCEPTED'] } },
+        { initiatorId: userId2, receiverId: userId1, status: { in: ['accepted', 'ACCEPTED'] } },
       ],
     },
   });
