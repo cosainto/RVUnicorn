@@ -340,6 +340,15 @@ export default function EventsPage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab === 'discover' && discoverEvents.length === 0) {
+      loadDiscoverEvents();
+    }
+    if (activeTab === 'friends' && friendsEvents.length === 0) {
+      loadFriendsEvents();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     if (activeTab === 'wishlist' && wishlistEvents.length === 0) {
       setWishlistLoading(true);
       api.get('/campground-actions/wishlist')
@@ -738,6 +747,62 @@ export default function EventsPage() {
 
       {/* Events Grid */}
       {filteredEvents.length > 0 ? (
+        <>
+        {/* Discover section headers */}
+        {activeTab === 'discover' && (() => {
+          const sections: Record<string, any[]> = {};
+          filteredEvents.forEach((e: any) => {
+            const s = e.discoverSection || 'Discover';
+            if (!sections[s]) sections[s] = [];
+            sections[s].push(e);
+          });
+          return Object.entries(sections).map(([section, items]) => (
+            <div key={section} className="mb-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                {section === 'For You' && '🎯'}
+                {section === 'Popular with RVers' && '🔥'}
+                {section === 'Recent Trips' && '🗺️'}
+                {section === 'Explore' && '🧭'}
+                {section}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((event: any) => (
+                  <Link key={event.id} to={event.campgroundId ? `/campgrounds/${event.campgroundId}` : `/trips/${event.id}`}
+                    className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition group border border-gray-100">
+                    <div className="h-36 bg-gradient-to-br from-green-100 to-blue-100 relative overflow-hidden">
+                      {(event.campground?.imageUrl || event.bannerImage) ? (
+                        <img src={event.campground?.imageUrl || event.bannerImage} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><span className="text-3xl">🏕️</span></div>
+                      )}
+                      {event.campground?.googleRating && (
+                        <span className="absolute top-2 right-2 bg-white/90 text-xs font-bold px-1.5 py-0.5 rounded-full">⭐ {event.campground.googleRating}</span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{event.title}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">{event.location || event.campground?.location}</p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                        {event.campground?.hasFullHookups && <span className="bg-green-50 text-green-600 px-1.5 py-0.5 rounded">Full Hookups</span>}
+                        {event.campground?.isPetFriendly && <span>🐾</span>}
+                        {event.campground?.isBigRigFriendly && <span>🚐</span>}
+                        {event.organizer && (
+                          <span className="ml-auto flex items-center gap-1">
+                            {event.organizer.profilePicture && <img src={event.organizer.profilePicture} className="w-4 h-4 rounded-full" alt="" />}
+                            {event.organizer.firstName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ));
+        })()}
+
+        {/* Regular events grid (non-discover tabs) */}
+        {activeTab !== 'discover' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map((event) => (
             <div
@@ -892,10 +957,12 @@ export default function EventsPage() {
             </div>
           ))}
         </div>
+        )}
+        </>
       ) : (
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No events found</p>
+          <p className="text-gray-600">{activeTab === 'discover' ? 'Loading recommendations...' : 'No events found'}</p>
         </div>
       )}
 
