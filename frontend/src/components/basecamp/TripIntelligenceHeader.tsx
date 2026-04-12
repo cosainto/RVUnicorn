@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent } from 'lucide-react';
+import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent, Navigation } from 'lucide-react';
 import api from '../../services/api';
 import PreTripIntelligenceCard from './PreTripIntelligenceCard';
 import { formatDistanceToNow } from 'date-fns';
@@ -53,7 +53,7 @@ const SEV_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   low: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'LOW' },
 };
 
-export default function TripIntelligenceHeader() {
+export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?: () => void } = {}) {
   const navigate = useNavigate();
 
   // Session data
@@ -395,13 +395,25 @@ export default function TripIntelligenceHeader() {
 
       {/* ── FORMAL MODE → delegate to PreTripIntelligenceCard ── */}
       {mode === 'FORMAL' && activeTrip && (
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 space-y-3">
           <PreTripIntelligenceCard
             eventId={activeTrip.id}
             tripTitle={activeTrip.title}
             departureDate={activeTrip.departureDate}
             destination={activeTrip.primaryCampground?.name || activeTrip.title}
           />
+          {onStartDrive && (
+            <button onClick={onStartDrive}
+              className="w-full flex items-center gap-3 rounded-xl px-4 py-3 transition hover:brightness-110"
+              style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.25)' }}>
+              <Navigation className="w-5 h-5 text-amber-400" />
+              <div className="flex-1 text-left">
+                <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>Start Driving Mode</p>
+                <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Guardian Mode · Fatigue score · Co-pilot</p>
+              </div>
+              <span className="text-xs font-semibold" style={{ color: '#E8A838' }}>Start →</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -519,7 +531,7 @@ export default function TripIntelligenceHeader() {
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <Link to={`/road-trips/new?destLabel=${encodeURIComponent(destLabel)}&destLat=${destLat}&destLon=${destLon}${destCampgroundId ? `&destCampgroundId=${destCampgroundId}` : ''}&startLabel=${encodeURIComponent(startLabel)}&startLat=${startLat}&startLon=${startLon}`}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
                   style={{ background: '#E8A838', color: '#0F1C35' }}>
@@ -532,6 +544,20 @@ export default function TripIntelligenceHeader() {
                   Refresh
                 </button>
               </div>
+
+              {/* Start Driving */}
+              {onStartDrive && (
+                <button onClick={onStartDrive}
+                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3 transition hover:brightness-110"
+                  style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.25)' }}>
+                  <Navigation className="w-5 h-5 text-amber-400" />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>Start Driving Mode</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Guardian Mode · Fatigue score · Co-pilot</p>
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: '#E8A838' }}>Start →</span>
+                </button>
+              )}
             </div>
           )}
         </>

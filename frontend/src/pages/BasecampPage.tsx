@@ -2418,23 +2418,12 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Trip Intelligence Header — unified FROM/TO search + confidence */}
+      {/* Trip Intelligence Header — unified FROM/TO search + confidence + driving */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
-        <TripIntelligenceHeader />
+        <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} />
         {hasFutureTrip && nextEvent?.campground?.id && (
           <CampMarket campgroundId={nextEvent.campground.id} compact />
         )}
-        <button
-          onClick={() => driveSession.startDrive(nextEvent as any)}
-          className="w-full flex items-center gap-3 bg-white border border-primary-200 rounded-2xl px-4 py-3.5 hover:border-primary-400 hover:shadow-sm transition-all text-left"
-        >
-          <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0 text-xl">🚐</div>
-          <div className="flex-1">
-            <p className="font-bold text-gray-900 text-sm">Start Driving Mode</p>
-            <p className="text-gray-500 text-xs">Guardian Mode · Fatigue score · Co-pilot</p>
-          </div>
-          <span className="text-primary-400 text-sm font-semibold">Start →</span>
-        </button>
       </div>
 
       {/* Inspirational Quote (Planning Mode, no upcoming trip) */}
