@@ -389,6 +389,8 @@ model User {
   creatorInsightActions                            CreatorInsightAction[]
   tripKitPurchases                                TripKitPurchase[]
   tripKitSaves                                    TripKitSave[]
+  scrapbookSuggestions                             ScrapbookSuggestion[]
+  tripAnniversaries                                TripAnniversary[]
 
   @@index([email])
   @@index([username])
@@ -856,8 +858,10 @@ model Event {
   tripSlug            String?           @unique
   shareToken          String?           @unique
   sharedAt            DateTime?
-  publicViewCount     Int               @default(0)
-  ghostModeEnabled    Boolean           @default(false)
+  publicViewCount       Int               @default(0)
+  scrapbookPublic       Boolean           @default(false)
+  scrapbookShareToken   String?           @unique
+  ghostModeEnabled      Boolean           @default(false)
   popUps              EventPopUp[]
   highlights          EventHighlight[]
   connections         EventConnection[]
@@ -4553,6 +4557,7 @@ model ScrapbookPin {
   pinnedById String
   caption    String?
   position   Int      @default(0)
+  momentTag  String?  // BEST_MOMENT | FUNNIEST | MOST_UNEXPECTED | BEST_VIEW | CAMPFIRE | BREAKDOWN | WILDLIFE | FOOD | FIRST_DAY | LAST_DAY
   createdAt  DateTime @default(now())
   event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   photo      Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
@@ -5690,4 +5695,33 @@ model CreatorInsightAction {
   expiresAt   DateTime
 
   @@index([creatorId, dismissed])
+}
+
+
+// ── Scrapbook Enhancements ──────────────────────────────────
+
+model ScrapbookSuggestion {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photoId   String
+  reason    String
+  accepted  Boolean?
+  createdAt DateTime @default(now())
+
+  @@index([eventId, userId])
+}
+
+model TripAnniversary {
+  id         String    @id @default(cuid())
+  eventId    String
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripYear   Int
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([eventId, userId, tripYear])
+  @@index([userId])
 }

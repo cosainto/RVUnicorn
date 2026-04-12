@@ -140,6 +140,7 @@ import { registerBroadcastCron } from './cron/broadcast.cron';
 import tripKitRoutes from './routes/tripKit.routes';
 import creatorEventsRoutes from './routes/creatorEvents.routes';
 import { registerCreatorNetworkCrons } from './cron/creatorNetwork.cron';
+import { registerScrapbookAnniversaryCron } from './cron/scrapbook-anniversary.cron';
 import tripConfidenceRoutes from './routes/tripConfidence.routes';
 import tripIntelligenceRoutes from './routes/tripIntelligence.routes';
 import { registerConfidenceCron } from './cron/tripConfidence.cron';
@@ -385,6 +386,7 @@ registerCampfireThreadCrons();
 registerBroadcastCron();
 registerConfidenceCron();
 registerCreatorNetworkCrons();
+registerScrapbookAnniversaryCron();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

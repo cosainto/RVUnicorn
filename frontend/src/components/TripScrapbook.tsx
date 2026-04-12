@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2 } from 'lucide-react';
+import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+
+const MOMENT_TAGS = [
+  { key: 'BEST_MOMENT', label: 'Best', icon: '🔥' },
+  { key: 'FUNNIEST', label: 'Funniest', icon: '😂' },
+  { key: 'BEST_VIEW', label: 'View', icon: '🌅' },
+  { key: 'MOST_UNEXPECTED', label: 'Unexpected', icon: '😮' },
+  { key: 'CAMPFIRE', label: 'Fire', icon: '🔥' },
+  { key: 'BREAKDOWN', label: 'Breakdown', icon: '🛠️' },
+  { key: 'WILDLIFE', label: 'Wildlife', icon: '🦅' },
+  { key: 'FOOD', label: 'Food', icon: '🍽️' },
+];
 
 interface Pin {
   id: string;
@@ -44,6 +55,16 @@ export default function TripScrapbook({ eventId, canPin }: { eventId: string; ca
   const [sharing, setSharing] = useState(false);
   const [shareDone, setShareDone] = useState(false);
 
+  // Scrapbook sharing
+  const [shareUrl, setShareUrlState] = useState('');
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+
+  // Hitch suggestions
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsHidden, setSuggestionsHidden] = useState(false);
+
   useEffect(() => {
     loadScrapbook();
   }, [eventId]);
@@ -64,6 +85,80 @@ export default function TripScrapbook({ eventId, canPin }: { eventId: string; ca
     } finally {
       setLoading(false);
     }
+  };
+
+  // Auto-fetch suggestions when scrapbook is empty
+  useEffect(() => {
+    if (!loading && pins.length === 0 && canPin && !suggestionsHidden && photos.length > 0) {
+      fetchSuggestions();
+    }
+  }, [loading, pins.length, photos.length]);
+
+  const fetchSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const { data } = await api.post(`/scrapbook/${eventId}/suggest`);
+      setSuggestions(data.suggestions || []);
+    } catch {}
+    setSuggestionsLoading(false);
+  };
+
+  const acceptSuggestion = async (photoId: string) => {
+    try {
+      const { data } = await api.post(`/scrapbook/${eventId}/suggest/${photoId}/accept`);
+      setPins(prev => [...prev, data]);
+      setSuggestions(prev => prev.filter(s => s.photoId !== photoId));
+    } catch (e: any) {
+      if (e.response?.status === 400) alert(e.response.data.error);
+    }
+  };
+
+  const dismissSuggestion = async (photoId: string) => {
+    try {
+      await api.post(`/scrapbook/${eventId}/suggest/${photoId}/dismiss`);
+      setSuggestions(prev => prev.filter(s => s.photoId !== photoId));
+    } catch {}
+  };
+
+  const acceptAllSuggestions = async () => {
+    try {
+      const { data } = await api.post(`/scrapbook/${eventId}/suggest/accept-all`);
+      await loadScrapbook();
+      setSuggestions([]);
+    } catch {}
+  };
+
+  const handleShare = async () => {
+    setShareLoading(true);
+    try {
+      const { data } = await api.post(`/scrapbook/${eventId}/share`);
+      setShareUrlState(data.shareUrl);
+      setShowShareSheet(true);
+    } catch { alert('Failed to create share link'); }
+    setShareLoading(false);
+  };
+
+  const handleStopSharing = async () => {
+    try {
+      await api.delete(`/scrapbook/${eventId}/share`);
+      setShareUrlState('');
+      setShowShareSheet(false);
+    } catch {}
+  };
+
+  const copyShareLink = async () => {
+    try { await navigator.clipboard.writeText(shareUrl); } catch {
+      const el = document.createElement('textarea'); el.value = shareUrl; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+    }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const setMomentTag = async (photoId: string, tag: string | null) => {
+    try {
+      await api.patch(`/scrapbook/${eventId}/pin/${photoId}/tag`, { momentTag: tag });
+      setPins(prev => prev.map(p => p.photoId === photoId ? { ...p, momentTag: tag } : p));
+    } catch {}
   };
 
   const pinPhoto = async (photoId: string) => {
@@ -162,15 +257,21 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
             <p className="text-sm text-gray-500">{pins.length} photo{pins.length !== 1 ? 's' : ''} pinned</p>
           </div>
         </div>
-        {canPin && (
-          <button
-            onClick={() => setShowPicker(!showPicker)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition"
-          >
-            <Plus className="w-4 h-4" />
-            {showPicker ? 'Done Picking' : 'Pin Photos'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canPin && pins.length > 0 && (
+            <button onClick={handleShare} disabled={shareLoading}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-50">
+              <Link2 className="w-4 h-4" /> Share
+            </button>
+          )}
+          {canPin && (
+            <button onClick={() => setShowPicker(!showPicker)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition">
+              <Plus className="w-4 h-4" />
+              {showPicker ? 'Done Picking' : 'Pin Photos'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Photo Picker */}
@@ -207,6 +308,59 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Share Sheet */}
+      {showShareSheet && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 className="w-5 h-5 text-green-500" />
+            <h3 className="font-bold text-gray-900">Your scrapbook is shareable!</h3>
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            <input readOnly value={shareUrl} className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-700" />
+            <button onClick={copyShareLink}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-primary-100 text-primary-700 hover:bg-primary-200'}`}>
+              {linkCopied ? '✓ Copied!' : 'Copy'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">Anyone with this link can view your scrapbook.</p>
+          <div className="flex items-center gap-3">
+            <button onClick={handleStopSharing} className="text-xs text-red-500 hover:text-red-600 font-semibold">Stop Sharing</button>
+            <button onClick={() => setShowShareSheet(false)} className="text-xs text-gray-400 hover:text-gray-600 ml-auto">Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Hitch Suggestions */}
+      {suggestions.length > 0 && !suggestionsHidden && (
+        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <img src="/hitch.png" className="w-6 h-6 rounded-full" alt="Hitch" />
+            <div>
+              <p className="text-sm font-bold text-gray-900">Hitch picked these for you</p>
+              <p className="text-xs text-gray-500">Based on your best shots — pin them all?</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+            {suggestions.map((s: any) => (
+              <div key={s.photoId} className="relative group">
+                <img src={s.photo?.imageUrl} alt="" className="w-full aspect-square object-cover rounded-xl" />
+                <p className="text-[10px] text-amber-800 mt-1 line-clamp-1 italic">"{s.reason}"</p>
+                <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                  <button onClick={() => acceptSuggestion(s.photoId)} className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">✓</button>
+                  <button onClick={() => dismissSuggestion(s.photoId)} className="w-5 h-5 bg-gray-400 text-white rounded-full flex items-center justify-center text-xs">✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <button onClick={acceptAllSuggestions} className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition">
+              <Check className="w-4 h-4" /> Pin All
+            </button>
+            <button onClick={() => setSuggestionsHidden(true)} className="text-sm text-gray-500 hover:text-gray-700">Start Fresh</button>
+          </div>
         </div>
       )}
 
@@ -278,10 +432,49 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
                   </div>
                 )}
                 <p className="text-[10px] text-gray-400 mt-0.5">📌 {pin.pinnedBy.firstName}</p>
+                {/* Moment tag pills */}
+                {canPin && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {MOMENT_TAGS.map(t => (
+                      <button key={t.key} onClick={() => setMomentTag(pin.photoId, (pin as any).momentTag === t.key ? null : t.key)}
+                        className={`text-[9px] px-1.5 py-0.5 rounded-full border transition ${
+                          (pin as any).momentTag === t.key
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-transparent text-gray-400 border-gray-200 hover:border-amber-200'
+                        }`}>
+                        {t.icon}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!canPin && (pin as any).momentTag && (
+                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 mt-1">
+                    {MOMENT_TAGS.find(t => t.key === (pin as any).momentTag)?.icon} {MOMENT_TAGS.find(t => t.key === (pin as any).momentTag)?.label}
+                  </span>
+                )}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Trip Story CTA — when pins exist but no story yet */}
+      {canPin && pins.length >= 3 && !story && (
+        <div className="rounded-xl p-4 border" style={{ borderLeft: '4px solid #E8A838', background: 'rgba(232,168,56,0.05)', borderColor: '#E8A838' }}>
+          <p className="text-sm font-bold text-gray-900 mb-1">✨ Ready to tell the story?</p>
+          <p className="text-xs text-gray-500 mb-2">You've pinned {pins.length} memories — Hitch can write your trip story from these.</p>
+          <button onClick={generateStory} disabled={storyLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50">
+            {storyLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Generate Trip Story →
+          </button>
+        </div>
+      )}
+
+      {canPin && story && pins.length >= 3 && (
+        <p className="text-xs text-green-600 flex items-center gap-1">
+          ✅ Trip Story generated — <button onClick={() => setShowStory(true)} className="underline hover:text-green-700">View it →</button>
+        </p>
       )}
 
       {/* ── Trip Story ─────────────────────────────── */}
