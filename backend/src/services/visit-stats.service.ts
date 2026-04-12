@@ -88,6 +88,48 @@ export async function recordCampgroundVisit(
   }
 }
 
+/**
+ * Fan out state visits to ALL attendees of an event.
+ * Call this when attendees are added, invited, or RSVP.
+ * Creates a StateVisit for each attendee who doesn't already have one
+ * for this event, plus household members of the organizer.
+ */
+export async function fanOutVisitsToAttendees(eventId: string): Promise<void> {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        campground: { select: { id: true, name: true, state: true } },
+        attendees: { select: { userId: true } },
+        organizer: { select: { id: true, householdId: true } },
+      },
+    });
+
+    if (!event || !event.campground?.state) return;
+
+    // Collect all user IDs who should have a StateVisit
+    const userIds = new Set<string>();
+    userIds.add(event.organizerId);
+    for (const a of event.attendees) userIds.add(a.userId);
+
+    // Add household members of the organizer
+    if (event.organizer.householdId) {
+      const householdMembers = await prisma.user.findMany({
+        where: { householdId: event.organizer.householdId },
+        select: { id: true },
+      });
+      for (const m of householdMembers) userIds.add(m.id);
+    }
+
+    // Create StateVisits for anyone who doesn't have one yet
+    for (const userId of userIds) {
+      await recordCampgroundVisit(userId, event, event.campground);
+    }
+  } catch (err) {
+    console.error('[visit-stats] fanOutVisitsToAttendees failed:', err);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // READS
 // ─────────────────────────────────────────────────────────────────

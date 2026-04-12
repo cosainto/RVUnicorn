@@ -1558,16 +1558,52 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         </Link>
                       )}
 
-                      {/* Attendees */}
+                      {/* Attendees / Co-travelers */}
                       {visit.attendees && visit.attendees.length > 0 && (
-                        <div className="flex items-center gap-2 mb-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          <Users className="w-3.5 h-3.5" />
-                          <span>{visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"}</span>
-                          <div className="flex -space-x-1.5">
-                            {visit.attendees.slice(0, 5).map((a: any) => (
-                              <img key={a.user?.id || a.id} src={a.user?.profilePicture || a.profilePicture || "/default-avatar.png"} alt="" className="w-5 h-5 rounded-full border" style={{ borderColor: 'rgba(15,26,46,0.9)' }} />
-                            ))}
-                            {visit.attendees.length > 5 && <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(15,26,46,0.9)' }}>+{visit.attendees.length - 5}</span>}
+                        <div className="mb-2">
+                          <p className="text-[11px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            <Users className="w-3.5 h-3.5" /> {visit.attendees.length} {visit.attendees.length === 1 ? "traveler" : "travelers"} on this trip
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {visit.attendees.slice(0, 8).map((a: any) => {
+                              const u = a.user || a;
+                              const name = u.firstName || u.username || 'Guest';
+                              return (
+                                <Link key={u.id} to={`/profile/${u.username || u.id}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:opacity-80 transition" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                  {u.profilePicture ? (
+                                    <img src={u.profilePicture} alt="" className="w-5 h-5 rounded-full border" style={{ borderColor: 'rgba(201,168,76,0.4)' }} />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: 'rgba(201,168,76,0.2)', color: '#C9A84C' }}>{name[0]}</div>
+                                  )}
+                                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{name}</span>
+                                </Link>
+                              );
+                            })}
+                            {visit.attendees.length > 8 && <span className="text-[11px] self-center" style={{ color: 'rgba(255,255,255,0.3)' }}>+{visit.attendees.length - 8} more</span>}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Event attendees (if no StateVisitAttendees but event has attendees) */}
+                      {(!visit.attendees || visit.attendees.length === 0) && visit.event?.attendees?.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-[11px] font-semibold mb-1.5 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            <Users className="w-3.5 h-3.5" /> Also on this trip
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {visit.event.attendees.slice(0, 6).map((a: any) => {
+                              const u = a.user || a;
+                              return (
+                                <Link key={u.id || a.userId} to={`/profile/${u.username || u.id || a.userId}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:opacity-80 transition" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                  {u.profilePicture ? (
+                                    <img src={u.profilePicture} alt="" className="w-5 h-5 rounded-full border" style={{ borderColor: 'rgba(201,168,76,0.4)' }} />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: 'rgba(201,168,76,0.2)', color: '#C9A84C' }}>{(u.firstName || '?')[0]}</div>
+                                  )}
+                                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{u.firstName || 'Guest'}</span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

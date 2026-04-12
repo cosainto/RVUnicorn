@@ -204,6 +204,13 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
         event: {
           select: {
             id: true, title: true, startDate: true, endDate: true, coverImage: true, location: true, privacy: true,
+            attendees: {
+              select: {
+                userId: true,
+                status: true,
+                user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+              },
+            },
             photoAlbums: {
               where: albumPrivacyValues ? { privacy: { in: albumPrivacyValues } } : undefined,
               select: {

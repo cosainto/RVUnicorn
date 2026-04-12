@@ -8,7 +8,7 @@ import { prisma } from '../index';
 import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
 import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
-import { recordCampgroundVisit } from '../services/visit-stats.service';
+import { recordCampgroundVisit, fanOutVisitsToAttendees } from '../services/visit-stats.service';
 
 const router = Router();
 
@@ -643,9 +643,9 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
-    // Auto-create StateVisit for organizer
+    // Auto-create StateVisit for organizer + all attendees + household
     if (event.campground) {
-      await createStateVisitForUser(userId, event, event.campground);
+      await fanOutVisitsToAttendees(event.id);
     }
 
     // Trigger Campfire Tip prompts for friends who visited this campground
@@ -903,17 +903,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Update or create StateVisit for organizer and all "going" attendees
+    // Update or create StateVisit for organizer + all attendees + household
     if (updatedEvent.campground) {
-      // Organizer
-      await createStateVisitForUser(userId, updatedEvent, updatedEvent.campground);
-      
-      // All "going" attendees
-      for (const attendee of updatedEvent.attendees) {
-        if (attendee.status === 'going') {
-          await createStateVisitForUser(attendee.userId, updatedEvent, updatedEvent.campground);
-        }
-      }
+      await fanOutVisitsToAttendees(updatedEvent.id);
     }
 
     if (notifyAttendees) {
@@ -1214,6 +1206,9 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
           },
         });
         attendees.push(attendee);
+
+        // Create StateVisit for the new attendee so their map reflects this trip
+        fanOutVisitsToAttendees(id).catch(() => {});
 
         // Look up the inviter so the notification can name them
         const inviter = await prisma.user.findUnique({
