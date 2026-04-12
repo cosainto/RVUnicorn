@@ -49,11 +49,11 @@ function rvParkyUrl(lat?: number|null, lng?: number|null, name?: string) {
 const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
 const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
 
-export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation }: {
+export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation, rvMpg, rvFuelGal, rvLength, rvType: userRvType }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
   eventStartDate?: string; eventEndDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
-  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string;
+  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string; rvMpg?: number; rvFuelGal?: number; rvLength?: number; rvType?: string;
 }) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
@@ -88,7 +88,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
   const [aiForm, setAiForm] = useState({
     startLocation: homeLocation||'', destination: campDest, nights: 3,
-    rvType: 'Class A Motorhome', avoidHighways: false,
+    rvType: userRvType || 'Class A Motorhome', avoidHighways: false,
     drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 8, milesPerDay: 300,
     departureTime: '8:00 AM', arrivalDate: arrivalDate||'', returnDate: '',
     wantSightseeing: false,
@@ -308,6 +308,9 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         stopFrequency: aiForm.stopFrequency,
         returnDate: aiForm.returnDate || undefined,
         rvFuelType: rvFuelType || 'gas',
+        rvMpg: rvMpg || null,
+        rvTankGallons: rvFuelGal || null,
+        rvLength: rvLength || null,
       });
       const { data: newTrip } = await api.post('/itinerary-ai/create-from-suggestion', {
         title: eventTitle ? `Itinerary for ${eventTitle}` : suggestion.title,

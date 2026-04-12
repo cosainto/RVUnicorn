@@ -1539,6 +1539,10 @@ export default function EventDetailPage() {
                 onEditTrip={openTripModal}
                 onReload={async () => { await loadEvent(); await loadTripPlan(); }}
                 rvFuelType={(user as any)?.rvFuelType || 'gas'}
+                rvMpg={(user as any)?.rvMpg}
+                rvFuelGal={(user as any)?.rvFuelGal}
+                rvLength={(user as any)?.rvLength}
+                rvType={(user as any)?.rvType}
               />
               {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}
               {false && <div className="bg-white rounded-lg border p-6">

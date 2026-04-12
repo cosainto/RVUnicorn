@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/suggest', authenticateToken, async (req, res) => {
   try {
-    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing, rvFuelType } = req.body;
+    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing, rvFuelType, rvMpg, rvTankGallons, rvLength } = req.body;
 
     if (!startLocation || !nights) {
       return res.status(400).json({ error: 'startLocation and nights are required' });
@@ -129,6 +129,7 @@ MEALS: ${mealStyle}
 REST STOPS: ${snackFreq}
 SIGHTSEEING: ${sightseeingPref}
 FUEL: ${fuelNote}
+RV SPECS: ${rvMpg ? `${rvMpg} MPG` : 'MPG unknown (assume 8-10)'}${rvTankGallons ? `, ${rvTankGallons} gallon tank (range ~${Math.round(rvTankGallons * (rvMpg || 8))} miles per fill)` : ''}${rvLength ? `, ${rvLength}ft length` : ''}
 
 CAMPGROUNDS IN OUR DB (id|name|location|lat,lng|amenities):
 ${campgroundList}
@@ -143,7 +144,7 @@ CRITICAL RULES — YOU MUST FOLLOW ALL:
 4. 3-${maxHoursPerDay} hours total: One driving day, no road overnights needed.
 5. Over ${maxHoursPerDay} hours total: MUST have overnight stops. Max ~${Math.round(maxHoursPerDay * 55)} miles/day.
 6. RVs average 55 mph highways, 45 mph scenic. Add 20-30% for RV overhead.
-7. GAS STOP every 200-250 miles.
+7. GAS STOP every ${rvTankGallons && rvMpg ? `${Math.round(rvTankGallons * rvMpg * 0.7)} miles (this RV has a ${rvTankGallons}-gallon tank at ${rvMpg} MPG — stop at 70% tank)` : '200-250 miles'}.
 8. FOOD stop for driving days > 4 hours.
 9. OVERNIGHT stops: prefer campgrounds from our DB (use campgroundId).
 10. FUEL/REST stops: use free overnight spots from our DB (use freeOvernightSpotId).
