@@ -4,6 +4,7 @@ import { Navigation, Plus, Trash2, Check, X, Loader, Edit2, ExternalLink, AlertC
 import FuelStopPrice from './FuelStopPrice';
 import MultiStopTripPlanner from './MultiStopTripPlanner';
 import HitchTripCostEstimator from './HitchTripCostEstimator';
+import { useAuth } from '../contexts/AuthContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface PitStop { id: string; name: string; stopType: string; location?: string; estimatedDuration?: number; notes?: string; }
@@ -293,6 +294,31 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
 
   const [justGenerated, setJustGenerated] = useState(false);
+  // Inline RV specs nudge
+  const { user: authUser, refreshUser } = useAuth() as any;
+  const missingRvSpecs = !rvMpg || !rvFuelGal;
+  const [showRvForm, setShowRvForm] = useState(false);
+  const [rvForm, setRvForm] = useState({ mpg: rvMpg || '', tankGal: rvFuelGal || '', length: rvLength || '' });
+  const [rvSaving, setRvSaving] = useState(false);
+  const [rvSaved, setRvSaved] = useState(false);
+
+  const saveRvSpecs = async () => {
+    if (!authUser?.username) return;
+    setRvSaving(true);
+    try {
+      await api.put(`/profile/${authUser.username}`, {
+        ...(rvForm.mpg ? { rvMpg: String(rvForm.mpg) } : {}),
+        ...(rvForm.tankGal ? { rvFuelGal: String(rvForm.tankGal) } : {}),
+        ...(rvForm.length ? { rvLength: String(rvForm.length) } : {}),
+      });
+      setRvSaved(true);
+      setShowRvForm(false);
+      if (refreshUser) refreshUser();
+      setTimeout(() => setRvSaved(false), 3000);
+    } catch { alert('Failed to save RV specs'); }
+    setRvSaving(false);
+  };
+
   const [editingStop, setEditingStop] = useState<{dayId: string; stop: any} | null>(null);
   const [editStopForm, setEditStopForm] = useState({ customName: '', address: '', notes: '', type: '' });
 
@@ -651,6 +677,63 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                   </label>
                 </div>
               </div>
+
+              {/* RV specs nudge — show when MPG or tank size missing */}
+              {missingRvSpecs && !rvSaved && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  {!showRvForm ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🚐</span>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-amber-800">Add your RV specs for a better route</p>
+                        <p className="text-[10px] text-amber-600">Hitch uses your MPG and tank size to plan fuel stops accurately</p>
+                      </div>
+                      <button onClick={() => setShowRvForm(true)}
+                        className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition">
+                        Add Now
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-amber-800">🚐 Quick RV Setup</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-amber-700 block mb-0.5">MPG</label>
+                          <input type="number" min="3" max="30" step="0.5" value={rvForm.mpg}
+                            onChange={e => setRvForm(f => ({ ...f, mpg: e.target.value }))}
+                            placeholder="e.g. 8"
+                            className="w-full border border-amber-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-amber-400" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-amber-700 block mb-0.5">Tank (gal)</label>
+                          <input type="number" min="10" max="200" value={rvForm.tankGal}
+                            onChange={e => setRvForm(f => ({ ...f, tankGal: e.target.value }))}
+                            placeholder="e.g. 80"
+                            className="w-full border border-amber-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-amber-400" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-amber-700 block mb-0.5">Length (ft)</label>
+                          <input type="number" min="10" max="50" value={rvForm.length}
+                            onChange={e => setRvForm(f => ({ ...f, length: e.target.value }))}
+                            placeholder="e.g. 31"
+                            className="w-full border border-amber-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-amber-400" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={saveRvSpecs} disabled={rvSaving || (!rvForm.mpg && !rvForm.tankGal)}
+                          className="text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-lg transition disabled:opacity-50">
+                          {rvSaving ? 'Saving...' : 'Save & Continue'}
+                        </button>
+                        <button onClick={() => setShowRvForm(false)} className="text-xs text-amber-600 hover:text-amber-700">Skip</button>
+                        <p className="text-[10px] text-amber-500 ml-auto">Saves to your RV profile</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {rvSaved && (
+                <p className="text-xs text-green-600 flex items-center gap-1">✅ RV specs saved — Hitch will use your real data!</p>
+              )}
 
               <div className="flex items-center justify-end gap-3">
                 {aiError && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{aiError}</p>}
