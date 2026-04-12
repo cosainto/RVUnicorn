@@ -802,6 +802,7 @@ export default function LandingPage() {
                     ['Contact', 'mailto:hello@rvunicorn.com'],
                     ['Privacy Policy', '/privacy'],
                     ['Terms of Service', '/terms'],
+                    ['SMS Terms', '/sms-terms'],
                   ].map(([label, href]) => (
                     href.startsWith('mailto')
                       ? <a key={label} href={href} className="block text-sm transition-colors hover:text-white" style={{ color: 'var(--muted)' }}>{label}</a>

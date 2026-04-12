@@ -1,85 +1,193 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronUp, ChevronDown, Menu } from 'lucide-react';
+
+const SECTIONS = [
+  { id: 'eligibility', title: '1. Eligibility' },
+  { id: 'account', title: '2. Your Account' },
+  { id: 'acceptable-use', title: '3. Acceptable Use' },
+  { id: 'content', title: '4. Content You Post' },
+  { id: 'creator', title: '5. Creator Program' },
+  { id: 'campground-owner', title: '6. Campground Owner Tools' },
+  { id: 'hitch-ai', title: '7. Hitch AI' },
+  { id: 'third-party', title: '8. Third-Party Services' },
+  { id: 'disclaimers', title: '9. Disclaimers' },
+  { id: 'liability', title: '10. Limitation of Liability' },
+  { id: 'termination', title: '11. Termination' },
+  { id: 'governing-law', title: '12. Governing Law' },
+  { id: 'changes', title: '13. Changes to Terms' },
+  { id: 'contact', title: '14. Contact' },
+];
+
 export default function TermsPage() {
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const H2 = ({ id, children }: { id: string; children: React.ReactNode }) => (
+    <h2 id={id} className="text-xl font-bold mt-12 mb-4 pt-4 scroll-mt-24" style={{ color: '#F5F0E8' }}>{children}</h2>
+  );
+  const P = ({ children }: { children: React.ReactNode }) => (
+    <p className="mb-4 leading-relaxed text-[15px]" style={{ color: 'rgba(245,240,232,0.75)' }}>{children}</p>
+  );
+  const Li = ({ children }: { children: React.ReactNode }) => (
+    <li className="mb-1.5 text-[15px] leading-relaxed" style={{ color: 'rgba(245,240,232,0.7)' }}>{children}</li>
+  );
+  const Caps = ({ children }: { children: React.ReactNode }) => (
+    <p className="mb-4 leading-relaxed text-[14px] uppercase" style={{ color: 'rgba(245,240,232,0.6)' }}>{children}</p>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-8 sm:p-12">
-        <div className="flex items-center gap-3 mb-8">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="h-10" />
-          <h1 className="text-3xl font-bold text-gray-900">Terms & Conditions</h1>
-        </div>
-        <p className="text-sm text-gray-500 mb-8">Effective Date: March 31, 2026</p>
+    <div className="min-h-screen" style={{ background: '#0F1C35', fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="max-w-6xl mx-auto px-4 py-12 lg:flex lg:gap-12">
 
-        <p className="text-gray-700 mb-8">
-          Welcome to RVUnicorn. By accessing or using our website, mobile application, or any related services (collectively, the "Platform"), you agree to be bound by these Terms & Conditions. Please read them carefully before using the Platform.
-        </p>
+        <aside className="lg:w-56 flex-shrink-0 mb-8 lg:mb-0">
+          <button onClick={() => setTocOpen(!tocOpen)} className="lg:hidden flex items-center gap-2 w-full p-3 rounded-lg mb-4" style={{ background: '#1a2d4a', color: '#E8A838' }}>
+            <Menu size={16} /> Table of Contents {tocOpen ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+          </button>
+          <nav className={`lg:sticky lg:top-24 space-y-1 ${tocOpen ? 'block' : 'hidden lg:block'}`}>
+            {SECTIONS.map(s => (
+              <a key={s.id} href={`#${s.id}`} onClick={() => setTocOpen(false)}
+                className="block text-[13px] py-1.5 px-2 rounded transition-colors hover:bg-white/5"
+                style={{ color: 'rgba(245,240,232,0.55)' }}
+              >{s.title}</a>
+            ))}
+          </nav>
+        </aside>
 
-        {[
-          {
-            title: "1. Acceptance of Terms",
-            content: `By creating an account or using RVUnicorn in any way, you confirm that you are at least 13 years of age, have read and agree to these Terms & Conditions, and agree to our Privacy Policy, which is incorporated herein by reference.\n\nIf you do not agree to these terms, please do not use the Platform.`
-          },
-          {
-            title: "2. Use of the Platform",
-            content: `RVUnicorn is a social platform for RV enthusiasts. You agree to use the Platform only for lawful purposes and in a manner that does not infringe the rights of others.\n\nYou agree not to:\n- Post content that is unlawful, harmful, threatening, abusive, or defamatory\n- Impersonate any person or entity\n- Upload or transmit viruses or malicious code\n- Scrape, crawl, or use automated tools to access the Platform without permission\n- Use the Platform to send unsolicited messages or spam`
-          },
-          {
-            title: "3. Accounts",
-            content: `You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. Notify us immediately at support@rvunicorn.com if you believe your account has been compromised.\n\nWe reserve the right to suspend or terminate accounts that violate these Terms or that have been inactive for an extended period.`
-          },
-          {
-            title: "4. User Content",
-            content: `You retain ownership of content you post on RVUnicorn. By posting content, you grant RVUnicorn a non-exclusive, royalty-free, worldwide license to use, display, reproduce, and distribute that content in connection with operating and promoting the Platform.\n\nYou represent that you have all rights necessary to grant this license and that your content does not violate any third-party rights.`
-          },
-          {
-            title: "5. SMS Messaging",
-            content: `RVUnicorn offers optional SMS notifications for safety alerts, trip updates, and platform activity. By opting in to SMS notifications through the app's Settings page, you consent to receive text messages from RVUnicorn.\n\nMessage frequency varies based on your activity and conditions at your campground. Message and data rates may apply. Reply STOP to unsubscribe at any time. Reply HELP for assistance.\n\nSMS consent is not required to use the Platform and will never be shared or sold to third parties.`
-          },
-          {
-            title: "6. Campground & Trip Information",
-            content: `RVUnicorn provides campground information, trip planning tools, and community-generated content for informational purposes only. We do not guarantee the accuracy, completeness, or timeliness of campground listings, availability, pricing, or conditions.\n\nAlways verify campground details directly with the campground before making travel decisions. RVUnicorn is not responsible for any loss or inconvenience resulting from inaccurate or outdated information.`
-          },
-          {
-            title: "7. Safety Features",
-            content: `Features such as Guardian Mode, weather alerts, and emergency broadcasts are provided as supplemental safety tools only. They are not a substitute for your own judgment, official emergency services, or professional advice.\n\nIn any emergency, always contact local emergency services (911) first. RVUnicorn is not liable for any harm resulting from reliance on these features.`
-          },
-          {
-            title: "8. Intellectual Property",
-            content: `All content, branding, logos, and technology comprising the RVUnicorn Platform are the property of RVUnicorn or its licensors and are protected by applicable intellectual property laws.\n\nYou may not copy, modify, distribute, or create derivative works from any part of the Platform without our prior written consent.`
-          },
-          {
-            title: "9. Disclaimers",
-            content: `THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. RVUNICORN DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF HARMFUL COMPONENTS.\n\nYOUR USE OF THE PLATFORM IS AT YOUR OWN RISK.`
-          },
-          {
-            title: "10. Limitation of Liability",
-            content: `TO THE FULLEST EXTENT PERMITTED BY LAW, RVUNICORN SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF OR INABILITY TO USE THE PLATFORM, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.\n\nOUR TOTAL LIABILITY TO YOU FOR ANY CLAIM ARISING OUT OF THESE TERMS SHALL NOT EXCEED $100.`
-          },
-          {
-            title: "11. Indemnification",
-            content: `You agree to indemnify and hold harmless RVUnicorn, its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including reasonable attorneys' fees) arising out of your use of the Platform, your content, or your violation of these Terms.`
-          },
-          {
-            title: "12. Governing Law",
-            content: `These Terms shall be governed by and construed in accordance with the laws of the State of Illinois, without regard to its conflict of law provisions. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the courts located in Illinois.`
-          },
-          {
-            title: "13. Changes to These Terms",
-            content: `We may update these Terms from time to time. When we do, we will update the effective date at the top of this page. Your continued use of the Platform after any changes constitutes your acceptance of the updated Terms.`
-          },
-          {
-            title: "14. Contact",
-            content: `If you have questions about these Terms & Conditions, please contact:\n\nRVUnicorn\nEmail: support@rvunicorn.com\nWebsite: https://rvunicorn.com`
-          }
-        ].map(({ title, content }) => (
-          <div key={title} className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">{title}</h2>
-            <p className="text-gray-700 whitespace-pre-line leading-relaxed">{content}</p>
+        <main className="flex-1 max-w-3xl">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-3xl">&#x1F984;</span>
+            <h1 className="text-3xl font-bold" style={{ color: '#F5F0E8' }}>RVUnicorn Terms of Service</h1>
           </div>
-        ))}
+          <p className="text-sm mb-8" style={{ color: 'rgba(245,240,232,0.5)' }}>Effective Date: April 12, 2026</p>
 
-        <div className="mt-12 pt-8 border-t border-gray-100 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} RVUnicorn. All rights reserved.
-        </div>
+          <P>Welcome to RVUnicorn. These Terms of Service ("Terms") are a legal agreement between you and RVUnicorn LLC ("RVUnicorn", "we", "our", "us") governing your use of our website, mobile application, Hitch AI, Basecamp, Creator Network, campground tools, and all associated services (collectively, the "Platform").</P>
+          <P>By creating an account or using RVUnicorn, you agree to these Terms. If you do not agree, do not use the Platform.</P>
+
+          <H2 id="eligibility">1. Eligibility</H2>
+          <P>You must be at least 13 years old to use RVUnicorn. By using the Platform, you represent that you meet this requirement. Users between 13 and 18 must have parental or guardian consent.</P>
+
+          <H2 id="account">2. Your Account</H2>
+          <P>You are responsible for:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>Maintaining the confidentiality of your password</Li>
+            <Li>All activity that occurs under your account</Li>
+            <Li>Providing accurate account information</Li>
+            <Li>Notifying us immediately of unauthorized access at <a href="mailto:hello@rvunicorn.com" style={{ color: '#E8A838' }}>hello@rvunicorn.com</a></Li>
+          </ul>
+          <P>RVUnicorn accounts are personal and non-transferable. You may not create accounts on behalf of others without authorization.</P>
+
+          <H2 id="acceptable-use">3. Acceptable Use</H2>
+          <P>You agree not to:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>Post false, misleading, or fraudulent content</Li>
+            <Li>Harass, threaten, or abuse other users</Li>
+            <Li>Post content that is illegal, defamatory, obscene, or violates others' privacy</Li>
+            <Li>Impersonate another person or organization</Li>
+            <Li>Use automated tools to scrape or extract data without written permission</Li>
+            <Li>Attempt to access accounts or systems you are not authorized to access</Li>
+            <Li>Post spam or unsolicited commercial messages</Li>
+            <Li>Interfere with the operation of the Platform</Li>
+            <Li>Use the Platform for any unlawful purpose</Li>
+            <Li>Post reviews for campgrounds where you have a financial interest or conflict of interest</Li>
+          </ul>
+          <P>Campground owners using the Organizer Dashboard and broadcast tools agree not to:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>Send misleading or false information to guests</Li>
+            <Li>Use broadcast tools for commercial solicitation unrelated to their campground</Li>
+            <Li>Misrepresent their campground's amenities, policies, or availability</Li>
+          </ul>
+
+          <H2 id="content">4. Content You Post</H2>
+          <P>You retain ownership of content you post on RVUnicorn (photos, videos, reviews, posts, Trip Kits, etc.).</P>
+          <P>By posting content, you grant RVUnicorn a worldwide, non-exclusive, royalty-free license to use, display, reproduce, and distribute that content on the Platform and in connection with RVUnicorn's services, including in promotional materials and the campground discovery feed.</P>
+          <P>You represent that:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>You own or have the right to post the content</Li>
+            <Li>The content does not violate any third party's rights including copyright, privacy, or publicity</Li>
+            <Li>The content complies with these Terms</Li>
+          </ul>
+          <P>We reserve the right to remove content that violates these Terms or that we determine is harmful to the community.</P>
+
+          <H2 id="creator">5. Creator Program</H2>
+          <P>RVUnicorn's Creator Network allows eligible users to publish content, create Trip Kits, and build a following on the Platform.</P>
+          <P>By participating as a creator you agree to:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>Only post content you have the right to share</Li>
+            <Li>Clearly disclose sponsored or affiliate content</Li>
+            <Li>Not use the creator program to mislead users about campgrounds, products, or services</Li>
+            <Li>Comply with FTC disclosure guidelines for any paid or affiliate-linked content</Li>
+          </ul>
+          <P>Trip Kits (both free and paid) must represent accurate route and campground information to the best of your knowledge.</P>
+
+          <H2 id="campground-owner">6. Campground Owner Tools</H2>
+          <P>Campground owners who claim a listing and subscribe to Base Camp or Summit tier agree to:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>Accurately represent their campground's amenities, pricing, policies, and availability</Li>
+            <Li>Only broadcast messages to guests who have opted in to SMS/push notifications</Li>
+            <Li>Not use guest contact data for purposes outside of RVUnicorn's platform</Li>
+            <Li>Maintain accurate campground profiles</Li>
+            <Li>Respond to reviews in good faith</Li>
+          </ul>
+          <P>RVUnicorn reserves the right to revoke campground owner access for violations of these terms, fraudulent activity, or guest complaints.</P>
+
+          <H2 id="hitch-ai">7. Hitch AI</H2>
+          <P>Hitch AI is an artificial intelligence assistant powered by Anthropic's Claude. Hitch provides general guidance, trip suggestions, and campground information based on available data.</P>
+          <P>Hitch AI responses are:</P>
+          <ul className="list-disc pl-6 mb-4">
+            <Li>For informational purposes only</Li>
+            <Li>Not a substitute for professional advice (legal, medical, financial, or safety)</Li>
+            <Li>Based on available data which may be outdated or incomplete</Li>
+            <Li>Not guaranteed to be accurate for specific campground conditions, road conditions, or rig compatibility</Li>
+          </ul>
+          <P>Always verify critical trip information (campground availability, road closures, weather conditions) through authoritative sources before departure. RVUnicorn is not liable for trip outcomes based on Hitch AI recommendations.</P>
+
+          <H2 id="third-party">8. Third-Party Services</H2>
+          <P>RVUnicorn integrates with third-party services including HERE Maps, Google Maps, Campspot, AWIN, Cloudinary, Resend, and Twilio. Use of these services through our Platform is subject to their respective terms of service. RVUnicorn is not responsible for third-party service availability, accuracy, or changes to their terms.</P>
+          <P>RVUnicorn participates in affiliate programs including AWIN (publisher ID: 2799516) and Campspot (merchant ID: 22326). We may earn commissions on qualifying bookings made through links on our Platform at no additional cost to you.</P>
+
+          <H2 id="disclaimers">9. Disclaimers</H2>
+          <Caps>THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. RVUNICORN DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE.</Caps>
+          <Caps>CAMPGROUND INFORMATION (HOURS, AMENITIES, AVAILABILITY, RIG RESTRICTIONS) IS SOURCED FROM PUBLIC DATABASES AND USER SUBMISSIONS AND MAY NOT BE CURRENT OR ACCURATE. ALWAYS VERIFY CAMPGROUND CONDITIONS DIRECTLY WITH THE CAMPGROUND BEFORE ARRIVAL.</Caps>
+          <Caps>TRIP INTELLIGENCE AND HITCH AI RECOMMENDATIONS ARE INFORMATIONAL ONLY AND DO NOT CONSTITUTE SAFETY GUARANTEES. YOU ARE RESPONSIBLE FOR YOUR OWN DRIVING SAFETY AND TRIP DECISIONS.</Caps>
+
+          <H2 id="liability">10. Limitation of Liability</H2>
+          <Caps>TO THE MAXIMUM EXTENT PERMITTED BY LAW, RVUNICORN SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING FROM YOUR USE OF THE PLATFORM, INCLUDING BUT NOT LIMITED TO TRIP INCIDENTS, CAMPGROUND DISPUTES, DATA LOSS, OR RELIANCE ON HITCH AI RECOMMENDATIONS.</Caps>
+
+          <H2 id="termination">11. Termination</H2>
+          <P>We may suspend or terminate your account if you violate these Terms, engage in fraudulent activity, or harm other users or the Platform. You may delete your account at any time in settings or by emailing <a href="mailto:hello@rvunicorn.com" style={{ color: '#E8A838' }}>hello@rvunicorn.com</a>.</P>
+
+          <H2 id="governing-law">12. Governing Law</H2>
+          <P>These Terms are governed by the laws of the State of Illinois, without regard to conflict of law provisions. Any disputes shall be resolved in the courts of DuPage County, Illinois.</P>
+
+          <H2 id="changes">13. Changes to Terms</H2>
+          <P>We may update these Terms from time to time. We will notify you of material changes via email and by posting updated Terms at rvunicorn.com/terms with a new effective date. Continued use after changes take effect constitutes acceptance.</P>
+
+          <H2 id="contact">14. Contact</H2>
+          <P>RVUnicorn LLC<br />
+          Email: <a href="mailto:hello@rvunicorn.com" style={{ color: '#E8A838' }}>hello@rvunicorn.com</a><br />
+          Privacy Policy: <Link to="/privacy" style={{ color: '#E8A838' }}>rvunicorn.com/privacy</Link><br />
+          SMS Terms: <Link to="/sms-terms" style={{ color: '#E8A838' }}>rvunicorn.com/sms-terms</Link></P>
+
+          <div className="mt-16 pt-8 text-center text-sm" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', color: 'rgba(245,240,232,0.35)' }}>
+            &copy; {new Date().getFullYear()} RVUnicorn LLC. All rights reserved.
+          </div>
+        </main>
       </div>
+
+      {showBackToTop && (
+        <button onClick={scrollToTop} className="fixed bottom-8 right-8 p-3 rounded-full shadow-lg z-50 hidden md:flex items-center justify-center" style={{ background: '#E8A838', color: '#0F1C35' }}>
+          <ChevronUp size={20} />
+        </button>
+      )}
     </div>
   );
 }
