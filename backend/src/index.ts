@@ -137,6 +137,9 @@ import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
 import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
 import { registerBroadcastCron } from './cron/broadcast.cron';
+import tripKitRoutes from './routes/tripKit.routes';
+import creatorEventsRoutes from './routes/creatorEvents.routes';
+import { registerCreatorNetworkCrons } from './cron/creatorNetwork.cron';
 import tripConfidenceRoutes from './routes/tripConfidence.routes';
 import tripIntelligenceRoutes from './routes/tripIntelligence.routes';
 import { registerConfidenceCron } from './cron/tripConfidence.cron';
@@ -352,6 +355,8 @@ app.use("/api/admin/campfire-threads", campfireThreadAdminRoutes);
 app.use("/api/organizer", organizerDashboardRoutes);
 app.use("/api/trip-confidence", tripConfidenceRoutes);
 app.use("/api/trip-intelligence", tripIntelligenceRoutes);
+app.use("/api/trip-kits", tripKitRoutes);
+app.use("/api/creator-events", creatorEventsRoutes);
 
 
 
@@ -379,6 +384,7 @@ registerTriviaCrons(io);
 registerCampfireThreadCrons();
 registerBroadcastCron();
 registerConfidenceCron();
+registerCreatorNetworkCrons();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -382,6 +382,13 @@ model User {
   organizerBroadcasts                             OrganizerBroadcast[]
   tripConfidenceSnapshots                         TripConfidenceSnapshot[]
   tripIntelligenceSession                         TripIntelligenceSession?
+  tripKits                                        TripKit[]
+  creatorEvents                                   CreatorEvent[]
+  creatorEventRsvps                               CreatorEventRsvp[]
+  creatorPresence                                  CreatorPresence[]
+  creatorInsightActions                            CreatorInsightAction[]
+  tripKitPurchases                                TripKitPurchase[]
+  tripKitSaves                                    TripKitSave[]
 
   @@index([email])
   @@index([username])
@@ -651,6 +658,11 @@ model Campground {
   campfireThreadDestinations CampfireThreadDestination[]
   organizerBroadcasts    OrganizerBroadcast[]
   hitchCampgroundConfig  HitchCampgroundConfig?
+  tripKitStops           TripKitStop[]
+  tripKitCampgrounds     TripKitCampground[]
+  creatorEventsHosted    CreatorEvent[]
+  creatorPresences       CreatorPresence[]
+  contentTripTags        ContentTripTag[]
 
   @@index([state])
   @@index([name])
@@ -2339,8 +2351,10 @@ model CreatorContent {
   likes          CreatorContentLike[]
   photos         CreatorContentPhoto[]
   taggedUsers    CreatorContentTag[]
-  reposts        CreatorRepost[]
-  saves          CreatorSave[]
+  reposts          CreatorRepost[]
+  saves            CreatorSave[]
+  tripKitContents  TripKitContent[]
+  contentTripTags  ContentTripTag[]
 
   @@index([creatorId])
   @@index([category])
@@ -5508,4 +5522,172 @@ model TripIntelligenceSession {
   activeTripId          String?
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
+}
+
+// ── Creator Network ─────────────────────────────────────────
+
+model TripKit {
+  id              String              @id @default(cuid())
+  creatorId       String
+  creator         User                @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  price           Float               @default(0)
+  coverImageUrl   String?
+  status          String              @default("DRAFT")
+  totalMiles      Float?
+  estimatedDays   Int?
+  rigType         String?
+  tags            String[]            @default([])
+  publishedAt     DateTime?
+  stops           TripKitStop[]
+  campgrounds     TripKitCampground[]
+  contentPieces   TripKitContent[]
+  purchases       TripKitPurchase[]
+  saves           TripKitSave[]
+  contentTripTags ContentTripTag[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([creatorId])
+  @@index([status])
+}
+
+model TripKitStop {
+  id           String      @id @default(cuid())
+  tripKitId    String
+  tripKit      TripKit     @relation(fields: [tripKitId], references: [id], onDelete: Cascade)
+  name         String
+  lat          Float?
+  lon          Float?
+  notes        String?
+  order        Int
+  campgroundId String?
+  campground   Campground? @relation(fields: [campgroundId], references: [id])
+
+  @@index([tripKitId])
+}
+
+model TripKitCampground {
+  id           String     @id @default(cuid())
+  tripKitId    String
+  tripKit      TripKit    @relation(fields: [tripKitId], references: [id], onDelete: Cascade)
+  campgroundId String
+  campground   Campground @relation(fields: [campgroundId], references: [id])
+  creatorNote  String?
+  order        Int
+
+  @@index([tripKitId])
+}
+
+model TripKitContent {
+  id        String         @id @default(cuid())
+  tripKitId String
+  tripKit   TripKit        @relation(fields: [tripKitId], references: [id], onDelete: Cascade)
+  contentId String
+  content   CreatorContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([tripKitId])
+}
+
+model TripKitPurchase {
+  id        String   @id @default(cuid())
+  tripKitId String
+  tripKit   TripKit  @relation(fields: [tripKitId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  pricePaid Float
+  createdAt DateTime @default(now())
+
+  @@index([tripKitId])
+}
+
+model TripKitSave {
+  id        String   @id @default(cuid())
+  tripKitId String
+  tripKit   TripKit  @relation(fields: [tripKitId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([tripKitId, userId])
+}
+
+model CreatorEvent {
+  id            String             @id @default(cuid())
+  creatorId     String
+  creator       User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  campgroundId  String?
+  campground    Campground?        @relation(fields: [campgroundId], references: [id])
+  title         String
+  description   String?
+  type          String             // MEETUP | CAMPFIRE_TALK | WORKSHOP | PHOTOGRAPHY_WALK | QA | OTHER
+  startTime     DateTime
+  endTime       DateTime?
+  maxAttendees  Int?
+  contentId     String?
+  status        String             @default("UPCOMING")
+  rsvps         CreatorEventRsvp[]
+  createdAt     DateTime           @default(now())
+
+  @@index([creatorId])
+  @@index([campgroundId])
+  @@index([startTime])
+}
+
+model CreatorEventRsvp {
+  id        String       @id @default(cuid())
+  eventId   String
+  event     CreatorEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model CreatorPresence {
+  id           String     @id @default(cuid())
+  creatorId    String
+  creator      User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  campgroundId String
+  campground   Campground @relation(fields: [campgroundId], references: [id])
+  type         String     // CHECKED_IN | HOSTING | VISITING
+  startedAt    DateTime   @default(now())
+  endedAt      DateTime?
+  isActive     Boolean    @default(true)
+  note         String?
+
+  @@index([creatorId])
+  @@index([campgroundId, isActive])
+}
+
+model ContentTripTag {
+  id           String          @id @default(cuid())
+  contentId    String
+  content      CreatorContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  campgroundId String?
+  campground   Campground?     @relation(fields: [campgroundId], references: [id])
+  tripKitId    String?
+  tripKit      TripKit?        @relation(fields: [tripKitId], references: [id])
+  createdAt    DateTime        @default(now())
+
+  @@index([contentId])
+  @@index([campgroundId])
+}
+
+model CreatorInsightAction {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  type        String   // POST_SUGGESTION | AUDIENCE_INSIGHT | TIMING_SUGGESTION | CONTENT_RECAP | TRIP_KIT_SUGGESTION
+  headline    String
+  detail      String
+  actionLabel String?
+  actionUrl   String?
+  dismissed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([creatorId, dismissed])
 }

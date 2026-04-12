@@ -125,6 +125,7 @@ const AdminSponsorCampaignsPage = lazy(() => import('./pages/AdminSponsorCampaig
 const AdminHostListingsPage = lazy(() => import('./pages/AdminHostListingsPage'));
 const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
 const CampfireThreadAdminPage = lazy(() => import('./pages/admin/CampfireThreadAdminPage'));
+const TripKitEditorPage = lazy(() => import('./pages/creator/TripKitEditorPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const PublicTripViewPage = lazy(() => import('./pages/PublicTripViewPage'));
 const JoinCrewPage = lazy(() => import('./pages/JoinCrewPage'));
@@ -313,6 +314,8 @@ function AppContent() {
           <Route path="/creator/dashboard" element={<PrivateRoute><CreatorDashboardPage /></PrivateRoute>} />
           <Route path="/creator/new" element={<PrivateRoute><CreatorContentEditorPage /></PrivateRoute>} />
           <Route path="/creator/edit/:contentId" element={<PrivateRoute><CreatorContentEditorPage /></PrivateRoute>} />
+          <Route path="/creator/trip-kits/new" element={<PrivateRoute><TripKitEditorPage /></PrivateRoute>} />
+          <Route path="/creator/trip-kits/:id/edit" element={<PrivateRoute><TripKitEditorPage /></PrivateRoute>} />
 
           <Route
             path="/groups/invites"
