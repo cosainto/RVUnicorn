@@ -14,7 +14,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const PROGRESS_FILE = path.join(__dirname, 'rv-database-progress.json');
 
 // Rate limit: be nice to NHTSA
@@ -109,7 +109,7 @@ async function fetchJSON(url: string, retries = 3): Promise<any> {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
-    } catch (e) {
+    } catch (e: any) {
       if (attempt === retries - 1) throw e;
       await delay(2000 * (attempt + 1));
     }
@@ -190,7 +190,7 @@ async function main() {
         allRVMakes.get(key)!.types.add(vType);
       }
       await delay(500);
-    } catch (e) {
+    } catch (e: any) {
       console.log(`  ⚠️ Failed for ${vType}, continuing...`);
     }
   }

@@ -10,7 +10,7 @@ const REALISTIC_DAILY_MILES = 400; // Max comfortable RV driving per day
 const CHECKIN_HOUR = 15; // 3 PM typical campground check-in
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // In-memory drive time cache — keyed by "lat,lng->lat,lng"
 // Survives for the lifetime of the backend process (cleared on restart)
@@ -86,7 +86,7 @@ const STOP_INCLUDE = {
 // GET /api/road-trips — list user's road trips
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const roadTrips = await prisma.roadTrip.findMany({
       where: { userId },
       include: {
@@ -106,7 +106,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
 // GET /api/road-trips/:id — get one road trip with all stops + pre-calculated drive times
 router.get('/:id', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const roadTrip = await prisma.roadTrip.findFirst({
       where: { id: req.params.id, userId },
       include: {
@@ -133,7 +133,7 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
       const fuelRes = await axios.get('https://www.fueleconomy.gov/ws/rest/fuelprices', { headers: { Accept: 'application/json' }, timeout: 3000 });
       if (fuelRes.data?.regular) gasolinePrice = parseFloat(fuelRes.data.regular) || 3.50;
       if (fuelRes.data?.diesel) dieselPrice = parseFloat(fuelRes.data.diesel) || 3.90;
-    } catch(e) { /* use defaults */ }
+    } catch (e: any) { /* use defaults */ }
 
     const fuelType = (user as any)?.rvFuelType || 'gas';
     const fuelPrice = fuelType === 'diesel' ? dieselPrice : gasolinePrice;
@@ -191,7 +191,7 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
     };
 
     if (stops.length >= 1) {
-      const addLeg = async (key: string, originCoords: any, destCoords: any, depDate?: string, arrDate?: string) => {
+      const addLeg = async (key: string, originCoords: any, destCoords: any, depDate?: any, arrDate?: any) => {
         if (!originCoords || !destCoords) return;
         try {
           const info = await getDriveTime(originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng, depDate, arrDate);
@@ -260,7 +260,7 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
 // POST /api/road-trips — create a road trip
 router.post('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { title, description, color, font, privacy } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
     const roadTrip = await prisma.roadTrip.create({
@@ -275,7 +275,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
 // PUT /api/road-trips/update-rv — update user's rvMpg and/or rvFuelType
 router.put('/update-rv', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { rvMpg, rvFuelType, tripOnly } = req.body;
     if (tripOnly) {
       return res.json({ saved: false, rvMpg, rvFuelType });
@@ -297,7 +297,7 @@ router.put('/update-rv', authenticateToken, async (req: any, res) => {
 // PUT /api/road-trips/:id — update road trip details
 router.put('/:id', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { title, description, color, font, privacy } = req.body;
     const existing = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) return res.status(404).json({ error: 'Road trip not found' });
@@ -314,7 +314,7 @@ router.put('/:id', authenticateToken, async (req: any, res) => {
 // DELETE /api/road-trips/:id — delete road trip (unlinks stops, doesn't delete events)
 router.delete('/:id', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const existing = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) return res.status(404).json({ error: 'Road trip not found' });
     // Unlink all stops first
@@ -329,7 +329,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
 // POST /api/road-trips/:id/stops — add an existing event as a stop
 router.post('/:id/stops', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { eventId, stopNumber } = req.body;
     const roadTrip = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!roadTrip) return res.status(404).json({ error: 'Road trip not found' });
@@ -395,7 +395,7 @@ router.post('/:id/stops', authenticateToken, async (req: any, res) => {
 // DELETE /api/road-trips/:id/stops/:eventId — remove a stop from road trip
 router.delete('/:id/stops/:eventId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const roadTrip = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!roadTrip) return res.status(404).json({ error: 'Road trip not found' });
@@ -423,7 +423,7 @@ router.delete('/:id/stops/:eventId', authenticateToken, async (req: any, res) =>
 // PUT /api/road-trips/:id/stops/reorder — reorder stops
 router.put('/:id/stops/reorder', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { stopOrder } = req.body; // [{ eventId, stopNumber }]
     const roadTrip = await prisma.roadTrip.findFirst({ where: { id: req.params.id, userId } });
     if (!roadTrip) return res.status(404).json({ error: 'Road trip not found' });
@@ -503,7 +503,7 @@ router.post('/drive-time', authenticateToken, async (req: any, res) => {
     let estimatedGasCost = null;
     let gasCostText = null;
     try {
-      const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { rvMpg: true } });
+      const user = await prisma.user.findUnique({ where: { id: (req as any).user.id }, select: { rvMpg: true } });
       const mpg = user?.rvMpg || 10; // Default RV MPG if not set
       const avgGasPrice = 3.50; // National average fallback ($/gal)
       const gallonsNeeded = distanceMiles / mpg;
@@ -532,7 +532,7 @@ router.post('/drive-time', authenticateToken, async (req: any, res) => {
 // POST /api/road-trips/:id/generate-plans -- auto-plans all legs with Hitch AI
 router.post('/:id/generate-plans', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { hitchPrefs = {} } = req.body;
     const roadTrip = await prisma.roadTrip.findFirst({
       where: { id: req.params.id, userId },
@@ -734,7 +734,7 @@ Stop types: FUEL, FOOD, OVERNIGHT, REST, ATTRACTION, WAYPOINT, WALMART`;
 // GET /api/road-trips/:id/map-route — returns route + new states for TravelMap
 router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const roadTrip = await prisma.roadTrip.findFirst({
       where: { id: req.params.id, userId },
       include: {
@@ -795,7 +795,7 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
     // Split into completed (past stops) vs upcoming (future stops)
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let splitIdx = 1; // default: only home is "completed"
-    roadTrip.stops.forEach((stop, i) => {
+    roadTrip.stops.forEach((stop: any, i: any) => {
       if (stop.endDate && new Date(stop.endDate) < today) {
         splitIdx = i + 2; // +2 because home is index 0
       }
@@ -814,7 +814,7 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
       where: { userId, startDate: { lte: today } },
       select: { state: true },
     });
-    const visitedStates = new Set(visitedStateVisits.map(v => v.state));
+    const visitedStates = new Set(visitedStateVisits.map((v: any) => v.state));
     const newStates = tripStates.filter(s => !visitedStates.has(s));
 
     res.json({
@@ -837,7 +837,7 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
 // GET /api/road-trips/:id/map-route — returns route + new states for TravelMap
 router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const roadTrip = await prisma.roadTrip.findFirst({
       where: { id: req.params.id, userId },
       include: {
@@ -898,7 +898,7 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
     // Split into completed (past stops) vs upcoming (future stops)
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let splitIdx = 1; // default: only home is "completed"
-    roadTrip.stops.forEach((stop, i) => {
+    roadTrip.stops.forEach((stop: any, i: any) => {
       if (stop.endDate && new Date(stop.endDate) < today) {
         splitIdx = i + 2; // +2 because home is index 0
       }
@@ -917,7 +917,7 @@ router.get('/:id/map-route', authenticateToken, async (req: any, res) => {
       where: { userId, startDate: { lte: today } },
       select: { state: true },
     });
-    const visitedStates = new Set(visitedStateVisits.map(v => v.state));
+    const visitedStates = new Set(visitedStateVisits.map((v: any) => v.state));
     const newStates = tripStates.filter(s => !visitedStates.has(s));
 
     res.json({

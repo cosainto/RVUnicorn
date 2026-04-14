@@ -20,11 +20,11 @@ export function registerCreatorNetworkCrons() {
       for (const creator of activeCreators) {
         try {
           await generateCreatorInsights(creator.id);
-        } catch (e) {
+        } catch (e: any) {
           console.error(`[CreatorInsightCron] Failed for ${creator.id}:`, e);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[CreatorInsightCron] Error:', e);
     }
   }, { timezone: 'America/Chicago' });
@@ -38,7 +38,7 @@ export function registerCreatorNetworkCrons() {
         data: { isActive: false, endedAt: new Date() },
       });
       if (count > 0) console.log(`[CreatorPresenceCron] Expired ${count} stale presences`);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[CreatorPresenceCron] Error:', e);
     }
   }, { timezone: 'America/Chicago' });

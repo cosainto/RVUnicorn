@@ -3,12 +3,12 @@ import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Create comment on photo or album
 router.post("/", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { photoId, albumId, content } = req.body;
 
     if (!content || (!photoId && !albumId)) {
@@ -51,7 +51,7 @@ router.post("/", authenticateToken, async (req: any, res) => {
     }
 
     res.status(201).json(comment);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create comment error:", error);
     res.status(500).json({ error: "Failed to create comment" });
   }
@@ -76,7 +76,7 @@ router.get("/", async (req, res) => {
     });
 
     res.json(comments);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get comments error:", error);
     res.status(500).json({ error: "Failed to fetch comments" });
   }
@@ -86,7 +86,7 @@ router.get("/", async (req, res) => {
 router.delete("/:commentId", authenticateToken, async (req: any, res) => {
   try {
     const { commentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const comment = await prisma.photoComment.findUnique({
       where: { id: commentId }
@@ -103,7 +103,7 @@ router.delete("/:commentId", authenticateToken, async (req: any, res) => {
     await prisma.photoComment.delete({ where: { id: commentId } });
 
     res.json({ message: "Comment deleted" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete comment error:", error);
     res.status(500).json({ error: "Failed to delete comment" });
   }

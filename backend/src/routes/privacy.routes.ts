@@ -5,6 +5,7 @@ import { prisma } from '../index';
 import { sendUserBlockedEmail, sendPrivacyChangedEmail } from '../services/security-emails';
 
 const router = Router();
+const db = prisma as any;
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -14,13 +15,13 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    let preferences = await prisma.userPreferences.findUnique({
+    let preferences = await db.userPreferences.findUnique({
       where: { userId }
     });
 
     // Create default preferences if none exist
     if (!preferences) {
-      preferences = await prisma.userPreferences.create({
+      preferences = await db.userPreferences.create({
         data: {
           userId,
           profileVisibility: 'PUBLIC',
@@ -38,7 +39,7 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     res.json(preferences);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get privacy settings error:', error);
     res.status(500).json({ error: 'Failed to get privacy settings' });
   }
@@ -62,11 +63,11 @@ router.put('/', async (req: Request, res: Response) => {
     } = req.body;
 
     // Get current settings to track changes
-    const currentSettings = await prisma.userPreferences.findUnique({
+    const currentSettings = await db.userPreferences.findUnique({
       where: { userId }
     });
 
-    const preferences = await prisma.userPreferences.upsert({
+    const preferences = await db.userPreferences.upsert({
       where: { userId },
       create: {
         userId,
@@ -113,7 +114,7 @@ router.put('/', async (req: Request, res: Response) => {
     }
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'PRIVACY_UPDATED',
@@ -125,7 +126,7 @@ router.put('/', async (req: Request, res: Response) => {
 
     // Send email notification if significant changes were made
     if (changes.length > 0) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await db.user.findUnique({ where: { id: userId } });
       if (user) {
         await sendPrivacyChangedEmail({
           email: user.email,
@@ -138,7 +139,7 @@ router.put('/', async (req: Request, res: Response) => {
     }
 
     res.json(preferences);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update privacy settings error:', error);
     res.status(500).json({ error: 'Failed to update privacy settings' });
   }
@@ -149,7 +150,7 @@ router.get('/blocked', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    const blockedUsers = await prisma.blockedUser.findMany({
+    const blockedUsers = await db.blockedUser.findMany({
       where: { userId },
       include: {
         blockedUser: {
@@ -166,7 +167,7 @@ router.get('/blocked', async (req: Request, res: Response) => {
     });
 
     res.json(blockedUsers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get blocked users error:', error);
     res.status(500).json({ error: 'Failed to get blocked users' });
   }
@@ -184,7 +185,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     }
 
     // Check if already blocked
-    const existingBlock = await prisma.blockedUser.findUnique({
+    const existingBlock = await db.blockedUser.findUnique({
       where: {
         userId_blockedUserId: {
           userId,
@@ -198,13 +199,13 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     }
 
     // Get target user info for email
-    const targetUser = await prisma.user.findUnique({
+    const targetUser = await db.user.findUnique({
       where: { id: targetUserId },
       select: { username: true }
     });
 
     // Create block
-    const block = await prisma.blockedUser.create({
+    const block = await db.blockedUser.create({
       data: {
         userId,
         blockedUserId: targetUserId,
@@ -213,7 +214,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     });
 
     // Remove any existing friendship
-    await prisma.friendship.deleteMany({
+    await db.friendship.deleteMany({
       where: {
         OR: [
           { initiatorId: userId, receiverId: targetUserId },
@@ -223,7 +224,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     });
 
     // Remove from top friends if present
-    await prisma.topFriend.deleteMany({
+    await db.topFriend.deleteMany({
       where: {
         OR: [
           { userId, friendId: targetUserId },
@@ -233,7 +234,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     });
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'USER_BLOCKED',
@@ -244,7 +245,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     });
 
     // Send email notification (optional - can be disabled)
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await db.user.findUnique({ where: { id: userId } });
     if (user && targetUser) {
       await sendUserBlockedEmail({
         email: user.email,
@@ -255,7 +256,7 @@ router.post('/block/:targetUserId', async (req: Request, res: Response) => {
     }
 
     res.json({ message: 'User blocked', block });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Block user error:', error);
     res.status(500).json({ error: 'Failed to block user' });
   }
@@ -267,7 +268,7 @@ router.delete('/block/:targetUserId', async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { targetUserId } = req.params;
 
-    const block = await prisma.blockedUser.findUnique({
+    const block = await db.blockedUser.findUnique({
       where: {
         userId_blockedUserId: {
           userId,
@@ -280,12 +281,12 @@ router.delete('/block/:targetUserId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Block not found' });
     }
 
-    await prisma.blockedUser.delete({
+    await db.blockedUser.delete({
       where: { id: block.id }
     });
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'USER_UNBLOCKED',
@@ -296,7 +297,7 @@ router.delete('/block/:targetUserId', async (req: Request, res: Response) => {
     });
 
     res.json({ message: 'User unblocked' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unblock user error:', error);
     res.status(500).json({ error: 'Failed to unblock user' });
   }
@@ -308,7 +309,7 @@ router.get('/is-blocked/:targetUserId', async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { targetUserId } = req.params;
 
-    const block = await prisma.blockedUser.findFirst({
+    const block = await db.blockedUser.findFirst({
       where: {
         OR: [
           { userId, blockedUserId: targetUserId },
@@ -322,7 +323,7 @@ router.get('/is-blocked/:targetUserId', async (req: Request, res: Response) => {
       blockedByMe: block?.userId === userId,
       blockedByThem: block?.userId === targetUserId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check block status error:', error);
     res.status(500).json({ error: 'Failed to check block status' });
   }
@@ -334,14 +335,14 @@ router.get('/activity-log', async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { limit = 20, offset = 0 } = req.query;
 
-    const activities = await prisma.accountActivityLog.findMany({
+    const activities = await db.accountActivityLog.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit as string),
       skip: parseInt(offset as string)
     });
 
-    const total = await prisma.accountActivityLog.count({
+    const total = await db.accountActivityLog.count({
       where: { userId }
     });
 
@@ -351,7 +352,7 @@ router.get('/activity-log', async (req: Request, res: Response) => {
       limit: parseInt(limit as string),
       offset: parseInt(offset as string)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get activity log error:', error);
     res.status(500).json({ error: 'Failed to get activity log' });
   }
@@ -364,7 +365,7 @@ router.put('/badge-position', authenticateToken, async (req: Request, res: Respo
     const userId = (req as any).userId;
     const { positions } = req.body;
 
-    await prisma.userPreferences.upsert({
+    await db.userPreferences.upsert({
       where: { userId },
       create: {
         userId,
@@ -376,7 +377,7 @@ router.put('/badge-position', authenticateToken, async (req: Request, res: Respo
     });
 
     res.json({ success: true, positions });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save badge position error:', error);
     res.status(500).json({ error: 'Failed to save badge position' });
   }
@@ -387,7 +388,7 @@ router.get('/badge-position/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
-    const prefs = await prisma.userPreferences.findUnique({
+    const prefs = await db.userPreferences.findUnique({
       where: { userId },
       select: { badgePosition: true }
     });
@@ -397,7 +398,7 @@ router.get('/badge-position/:userId', async (req: Request, res: Response) => {
       : { positions: {} };
 
     res.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get badge position error:', error);
     res.status(500).json({ error: 'Failed to get badge position' });
   }

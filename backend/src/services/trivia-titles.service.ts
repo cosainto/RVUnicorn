@@ -56,7 +56,7 @@ export async function updateTriviaTitle(userId: string): Promise<string | null> 
     }
 
     return highestTitle;
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TriviaTitle] Error:', e);
     return null;
   }

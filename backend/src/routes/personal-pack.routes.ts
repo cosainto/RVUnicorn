@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/personal-pack - Get user's personal pack list
 router.get('/', authenticateToken, async (req, res) => {
@@ -35,7 +35,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Get stats
     const totalItems = items.length;
-    const packedItems = items.filter((i) => i.isPacked).length;
+    const packedItems = items.filter((i: any) => i.isPacked).length;
 
     res.json({
       items,
@@ -46,7 +46,7 @@ router.get('/', authenticateToken, async (req, res) => {
         progress: totalItems > 0 ? Math.round((packedItems / totalItems) * 100) : 0,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get personal pack list error:', error);
     res.status(500).json({ error: 'Failed to get pack list' });
   }
@@ -83,7 +83,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add pack item error:', error);
     res.status(500).json({ error: 'Failed to add item' });
   }
@@ -127,7 +127,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pack item error:', error);
     res.status(500).json({ error: 'Failed to update item' });
   }
@@ -153,7 +153,7 @@ router.post('/:id/toggle', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle pack item error:', error);
     res.status(500).json({ error: 'Failed to toggle item' });
   }
@@ -176,7 +176,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     await prisma.personalPackItem.delete({ where: { id } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete pack item error:', error);
     res.status(500).json({ error: 'Failed to delete item' });
   }
@@ -198,7 +198,7 @@ router.post('/unpack-all', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unpack all error:', error);
     res.status(500).json({ error: 'Failed to unpack all' });
   }
@@ -220,7 +220,7 @@ router.post('/pack-all', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Pack all error:', error);
     res.status(500).json({ error: 'Failed to pack all' });
   }

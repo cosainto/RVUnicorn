@@ -12,7 +12,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dy6eetmh7',
@@ -71,7 +71,7 @@ async function deleteFolder(folderName: string): Promise<{ deleted: number }> {
   // Then delete the empty folder
   try {
     await cloudinary.api.delete_folder(`campgrounds/${folderName}`);
-  } catch (e) {
+  } catch (e: any) {
     // Folder might already be gone
   }
 
@@ -86,7 +86,7 @@ async function main() {
   // Step 1: Get current campground IDs
   console.log('\n📦 Step 1: Loading current campground IDs...');
   const currentIds = new Set(
-    (await prisma.campground.findMany({ select: { id: true } })).map(c => c.id)
+    (await prisma.campground.findMany({ select: { id: true } })).map((c: any) => c.id)
   );
   console.log(`  ${currentIds.size} campgrounds in database`);
 

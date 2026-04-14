@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Moment types
 const MOMENT_TYPES = {
@@ -21,7 +21,7 @@ const MOMENT_TYPES = {
 // Generate moments for a user (called periodically or on demand)
 router.post("/generate", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     
     const results = {
       timeBased: 0,
@@ -42,7 +42,7 @@ router.post("/generate", authenticateToken, async (req: any, res) => {
       message: "Moments generated successfully",
       created: results
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating moments:", error);
     res.status(500).json({ error: "Failed to generate moments" });
   }
@@ -128,7 +128,7 @@ async function generateTimeMoments(userId: string): Promise<number> {
 
       // Link photos to moment
       await prisma.momentPhoto.createMany({
-        data: cluster.photos.map((photo, index) => ({
+        data: cluster.photos.map((photo: any, index: any) => ({
           momentId: moment.id,
           photoId: photo.id,
           order: index
@@ -233,7 +233,7 @@ async function generateEventMoments(userId: string): Promise<number> {
       });
 
       await prisma.momentPhoto.createMany({
-        data: eventPhotos.map((photo, index) => ({
+        data: eventPhotos.map((photo: any, index: any) => ({
           momentId: moment.id,
           photoId: photo.id,
           order: index
@@ -331,7 +331,7 @@ async function generateLocationMoments(userId: string): Promise<number> {
 // Get all moments for a user
 router.get("/", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { includeHidden = false } = req.query;
 
     const moments = await prisma.photoMoment.findMany({
@@ -353,7 +353,7 @@ router.get("/", authenticateToken, async (req: any, res) => {
       orderBy: { startDate: "desc" }
     });
 
-    const formattedMoments = moments.map(m => ({
+    const formattedMoments = moments.map((m: any) => ({
       id: m.id,
       title: m.title,
       type: m.type,
@@ -362,11 +362,11 @@ router.get("/", authenticateToken, async (req: any, res) => {
       coverUrl: m.coverUrl,
       photoCount: m.photoCount,
       isHidden: m.isHidden,
-      previewPhotos: m.photos.map(p => p.photo.imageUrl)
+      previewPhotos: m.photos.map((p: any) => p.photo.imageUrl)
     }));
 
     res.json(formattedMoments);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching moments:", error);
     res.status(500).json({ error: "Failed to fetch moments" });
   }
@@ -376,7 +376,7 @@ router.get("/", authenticateToken, async (req: any, res) => {
 router.get("/:momentId", authenticateToken, async (req: any, res) => {
   try {
     const { momentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const moment = await prisma.photoMoment.findUnique({
       where: { id: momentId },
@@ -412,13 +412,13 @@ router.get("/:momentId", authenticateToken, async (req: any, res) => {
 
     res.json({
       ...moment,
-      photos: moment.photos.map(p => ({
+      photos: moment.photos.map((p: any) => ({
         ...p.photo,
         order: p.order,
         reactionCount: p.photo.reactions.length
       }))
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching moment:", error);
     res.status(500).json({ error: "Failed to fetch moment" });
   }
@@ -427,7 +427,7 @@ router.get("/:momentId", authenticateToken, async (req: any, res) => {
 // Create manual moment
 router.post("/", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { title, photoIds, coverUrl } = req.body;
 
     if (!title || !photoIds || photoIds.length < 2) {
@@ -444,7 +444,7 @@ router.post("/", authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: "Some photos not found or don't belong to you" });
     }
 
-    const sortedPhotos = photos.sort((a, b) => 
+    const sortedPhotos = photos.sort((a: any, b: any) => 
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
@@ -461,7 +461,7 @@ router.post("/", authenticateToken, async (req: any, res) => {
     });
 
     await prisma.momentPhoto.createMany({
-      data: sortedPhotos.map((photo, index) => ({
+      data: sortedPhotos.map((photo: any, index: any) => ({
         momentId: moment.id,
         photoId: photo.id,
         order: index
@@ -469,7 +469,7 @@ router.post("/", authenticateToken, async (req: any, res) => {
     });
 
     res.status(201).json(moment);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating moment:", error);
     res.status(500).json({ error: "Failed to create moment" });
   }
@@ -479,7 +479,7 @@ router.post("/", authenticateToken, async (req: any, res) => {
 router.patch("/:momentId", authenticateToken, async (req: any, res) => {
   try {
     const { momentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { title, coverUrl, isHidden } = req.body;
 
     const moment = await prisma.photoMoment.findUnique({
@@ -505,7 +505,7 @@ router.patch("/:momentId", authenticateToken, async (req: any, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating moment:", error);
     res.status(500).json({ error: "Failed to update moment" });
   }
@@ -515,7 +515,7 @@ router.patch("/:momentId", authenticateToken, async (req: any, res) => {
 router.post("/:momentId/photos", authenticateToken, async (req: any, res) => {
   try {
     const { momentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { photoIds } = req.body;
 
     const moment = await prisma.photoMoment.findUnique({
@@ -541,7 +541,7 @@ router.post("/:momentId/photos", authenticateToken, async (req: any, res) => {
     });
 
     await prisma.momentPhoto.createMany({
-      data: photos.map((photo) => ({
+      data: photos.map((photo: any) => ({
         momentId,
         photoId: photo.id,
         order: nextOrder++
@@ -557,7 +557,7 @@ router.post("/:momentId/photos", authenticateToken, async (req: any, res) => {
     });
 
     res.json({ added: photos.length, totalPhotos: count });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding photos to moment:", error);
     res.status(500).json({ error: "Failed to add photos" });
   }
@@ -567,7 +567,7 @@ router.post("/:momentId/photos", authenticateToken, async (req: any, res) => {
 router.delete("/:momentId/photos/:photoId", authenticateToken, async (req: any, res) => {
   try {
     const { momentId, photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const moment = await prisma.photoMoment.findUnique({
       where: { id: momentId }
@@ -595,7 +595,7 @@ router.delete("/:momentId/photos/:photoId", authenticateToken, async (req: any, 
     }
 
     res.json({ removed: true, remainingPhotos: count });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error removing photo from moment:", error);
     res.status(500).json({ error: "Failed to remove photo" });
   }
@@ -605,7 +605,7 @@ router.delete("/:momentId/photos/:photoId", authenticateToken, async (req: any, 
 router.delete("/:momentId", authenticateToken, async (req: any, res) => {
   try {
     const { momentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const moment = await prisma.photoMoment.findUnique({
       where: { id: momentId }
@@ -624,7 +624,7 @@ router.delete("/:momentId", authenticateToken, async (req: any, res) => {
     await prisma.photoMoment.delete({ where: { id: momentId } });
 
     res.json({ message: "Moment deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting moment:", error);
     res.status(500).json({ error: "Failed to delete moment" });
   }
@@ -634,7 +634,7 @@ router.delete("/:momentId", authenticateToken, async (req: any, res) => {
 router.patch("/:momentId/reorder", authenticateToken, async (req: any, res) => {
   try {
     const { momentId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { photoIds } = req.body; // Array of photo IDs in new order
 
     const moment = await prisma.photoMoment.findUnique({
@@ -654,7 +654,7 @@ router.patch("/:momentId/reorder", authenticateToken, async (req: any, res) => {
     }
 
     res.json({ reordered: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error reordering photos:", error);
     res.status(500).json({ error: "Failed to reorder photos" });
   }

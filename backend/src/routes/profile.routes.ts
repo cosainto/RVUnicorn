@@ -32,7 +32,7 @@ async function autoJoinRvGroup(prisma: any, userId: string, rvMake: string, rvMo
 }
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Helper function to geocode address
 async function geocodeAddress(city: string, state: string, zipCode?: string): Promise<{ lat: number; lon: number } | null> {
@@ -44,13 +44,13 @@ async function geocodeAddress(city: string, state: string, zipCode?: string): Pr
     const response = await fetch(url, {
       headers: { 'User-Agent': 'RVUnicorn/1.0' }
     });
-    const data = await response.json();
-    
+    const data: any = await response.json();
+
     if (data && data.length > 0) {
       return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Geocoding error:', error);
     return null;
   }
@@ -169,7 +169,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     };
 
     res.json(formattedProfile);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
   }
@@ -438,7 +438,7 @@ router.post('/:userId/friend-request', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true, message: 'Friend request sent' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Send friend request error:', error);
     res.status(500).json({ error: 'Failed to send friend request' });
   }
@@ -502,7 +502,7 @@ router.put('/:friendshipId/accept-friend', authenticateToken, async (req, res) =
     });
 
     res.json({ success: true, message: 'Friend request accepted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Accept friend request error:', error);
     res.status(500).json({ error: 'Failed to accept friend request' });
   }
@@ -532,7 +532,7 @@ router.delete('/:friendshipId/reject-friend', authenticateToken, async (req, res
     });
 
     res.json({ success: true, message: 'Friendship removed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove friend error:', error);
     res.status(500).json({ error: 'Failed to remove friend' });
   }
@@ -566,7 +566,7 @@ router.get('/:userId/friendship-status', authenticateToken, async (req, res) => 
       friendshipId: friendship.id,
       isInitiator: friendship.initiatorId === currentUserId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check friendship status error:', error);
     res.status(500).json({ error: 'Failed to check friendship status' });
   }
@@ -593,10 +593,10 @@ router.get('/:username/states', async (req, res) => {
       distinct: ['state'],
     });
 
-    const states = stateVisits.map((visit) => visit.state);
+    const states = stateVisits.map((visit: any) => visit.state);
 
     res.json({ states });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get visited states error:', error);
     res.status(500).json({ error: 'Failed to get visited states' });
   }
@@ -670,7 +670,7 @@ router.get('/:username/stats', async (req, res) => {
       mealsCooked,
       campsiteReviews: reviews,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get profile stats error:', error);
     res.status(500).json({ error: 'Failed to get profile stats' });
   }
@@ -727,14 +727,14 @@ router.get('/:username/friends', optionalAuth, async (req, res) => {
     });
 
     // Extract friend data
-    const friends = friendships.map((friendship) => {
+    const friends = friendships.map((friendship: any) => {
       return friendship.initiatorId === user.id
         ? friendship.receiver
         : friendship.initiator;
     });
 
     res.json({ friends });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get friends error:', error);
     res.status(500).json({ error: 'Failed to get friends' });
   }
@@ -781,7 +781,7 @@ router.get('/:username/feed', optionalAuth, async (req, res) => {
     });
 
     res.json({ posts });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user feed error:', error);
     res.status(500).json({ error: 'Failed to get user feed' });
   }
@@ -808,7 +808,7 @@ router.get('/:username/gear', optionalAuth, async (req, res) => {
     });
 
     res.json({ gear });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear error:', error);
     res.status(500).json({ error: 'Failed to get gear' });
   }
@@ -879,7 +879,7 @@ router.post('/:username/wall-post', authenticateToken, async (req, res) => {
     }
 
     res.json(post);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Wall post error:', error);
     res.status(500).json({ error: 'Failed to create wall post' });
   }
@@ -931,13 +931,13 @@ router.put('/:username/status', authenticateToken, async (req, res) => {
             isPublic: true,
           },
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to create status activity:', e);
       }
     }
 
     res.json(updatedUser);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update status error:', error);
     res.status(500).json({ error: 'Failed to update status' });
   }
@@ -1001,8 +1001,8 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
     }
 
     // Update status
-    const updatedUser = await prisma.user.update({
-      
+    const updatedUser = await (prisma.user as any).update({
+      where: { id: user.id },
       data: {
         status: newStatus,
         statusEmoji: newEmoji,
@@ -1020,23 +1020,23 @@ router.post('/:username/status/auto', authenticateToken, async (req, res) => {
     });
 
     // Create activity for status update
-    if (status) {
+    if (newStatus) {
       try {
         await prisma.activity.create({
           data: {
             userId,
             type: 'STATUS_UPDATE',
-            content: `${statusEmoji || ''} ${status}`.trim(),
+            content: `${newEmoji || ''} ${newStatus}`.trim(),
             isPublic: true,
           },
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to create status activity:', e);
       }
     }
 
     res.json(updatedUser);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Enable auto status error:', error);
     res.status(500).json({ error: 'Failed to enable automatic status' });
   }
@@ -1108,7 +1108,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         where: { userId: currentUserId },
         select: { mutedCampgroundId: true }
       });
-      mutedCampgroundIds = mutedEntities.filter(m => m.mutedCampgroundId).map(m => m.mutedCampgroundId as string);
+      mutedCampgroundIds = mutedEntities.filter((m: any) => m.mutedCampgroundId).map((m: any) => m.mutedCampgroundId as string);
     }
 
     // Get activities from the Activity model
@@ -1155,7 +1155,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           }
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       // Activity model might not exist yet, that's okay
       console.log('Activity model not available yet');
     }
@@ -1199,7 +1199,6 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       CAMPGROUND_ANNOUNCEMENT: { label: 'announced at', icon: '📢', feedType: 'CAMPGROUND_ANNOUNCEMENT' },
       PACKING_FOR_TRIP: { label: 'is packing for a camping trip! 🎒', icon: '🎒', feedType: 'PACKING' },
       CREATOR_VIDEO_UPLOAD: { label: 'uploaded a new video', icon: '🎬', feedType: 'CREATOR_VIDEO_UPLOAD' },
-      CREATOR_VIDEO_UPLOAD: { label: 'uploaded a new video', icon: '🎬', feedType: 'CREATOR_VIDEO_UPLOAD' },
       SHARED_CREATOR_VIDEO: { label: 'shared a video', icon: '🔄', feedType: 'SHARED_CREATOR_VIDEO' },
       NEW_CAMPING_BUDDY: { label: '', icon: '🏕️', feedType: 'FRIEND' },
       RECIPE_SHARED: { label: 'shared a recipe', icon: '🍳', feedType: 'RECIPE' },
@@ -1210,7 +1209,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
     };     
 
     // Transform posts into feed items
-    const postItems = posts.map((post) => ({
+    const postItems = posts.map((post: any) => ({
       id: post.id,
       type: 'POST',
       actor: post.user,
@@ -1256,7 +1255,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           const meta = typeof activity.metadata === "string" ? JSON.parse(activity.metadata) : activity.metadata;
           targetName = meta.title || "Untitled";
           targetLink = `/creators/${activity.user.username}/content/${meta.contentId}`;
-        } catch (e) {
+        } catch (e: any) {
           targetName = "a video";
         }
       } else if (activity.type === "SHARED_CREATOR_VIDEO" && activity.metadata) {
@@ -1264,7 +1263,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           const meta = typeof activity.metadata === "string" ? JSON.parse(activity.metadata) : activity.metadata;
           targetName = meta.title || "Untitled";
           targetLink = `/creators/${meta.originalCreatorUsername || activity.user.username}/content/${meta.contentId}`;
-        } catch (e) {
+        } catch (e: any) {
           targetName = "a video";
         }
         targetName = activity.title;
@@ -1279,14 +1278,14 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           imageUrl = meta?.badgeImage || null;
           targetName = meta?.badgeName || 'a badge';
           targetLink = '/badges';
-        } catch (e) {}
+        } catch (e: any) {}
       }
       if (activity.type === 'PHOTO_UPLOADED' && activity.metadata) {
         try {
           const meta = typeof activity.metadata === 'string' ? JSON.parse(activity.metadata) : activity.metadata;
           imageUrl = meta?.previewUrl || null;
           mediaIds = meta?.mediaIds || [];
-        } catch (e) {}
+        } catch (e: any) {}
       }
 
       // For PHOTO_UPLOADED with albumId, set targetName and targetLink
@@ -1308,7 +1307,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
               link: meta.campgroundSlug ? `/campground/${meta.campgroundSlug}` : `/campground/${meta.campgroundId}`,
             };
           }
-        } catch (e) {}
+        } catch (e: any) {}
       }
 
       return {
@@ -1329,8 +1328,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         activityType: activity.type,
         activityIcon: config.icon,
         activityLabel: activity.albumId ? 'shared trip photos from' : config.label,
-        campground: photoCampground,
-        campground: activity.campground,
+        campground: photoCampground || activity.campground,
         metadata: activity.metadata,
         imageUrl,
         mediaIds,
@@ -1354,7 +1352,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           _count: { select: { MediaReaction: true, MediaComment: true } }
         }
       });
-      mediaMap = Object.fromEntries(mediaItems.map(m => [m.id, { 
+      mediaMap = Object.fromEntries(mediaItems.map((m: any) => [m.id, { 
         ...m, 
         likeCount: m._count?.MediaReaction || 0, 
         commentCount: m._count?.MediaComment || 0 
@@ -1368,7 +1366,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
         where: { userId: currentUserId, mediaId: { in: mediaIdsToFetch } },
         select: { mediaId: true }
       });
-      userLikedMediaIds = new Set(userReactions.map(r => r.mediaId));
+      userLikedMediaIds = new Set(userReactions.map((r: any) => r.mediaId));
     }
 
     // Add videoUrl and counts to activity items
@@ -1423,7 +1421,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
           },
         });
 
-        basecampItems = basecampActivities.map((activity) => {
+        basecampItems = basecampActivities.map((activity: any) => {
           const meta = (activity.metadata as any) || {};
           const isRecipe = ['RECIPE_COMMENT_THREAD', 'RECIPE_MENTION'].includes(activity.type);
           const isThread = ['THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD'].includes(activity.type);
@@ -1458,7 +1456,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
             entityId: activity.entityId,
           };
         });
-      } catch (error) {
+      } catch (error: any) {
         console.log('BasecampActivity model not available');
       }
     }
@@ -1495,7 +1493,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
             userHasLiked = currentUserId ? likes.some((l: any) => l.userId === currentUserId) : false;
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         // Silently fail
       }
 
@@ -1512,7 +1510,7 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       hasMore,
       page,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get activity feed error:', error);
     res.status(500).json({ error: 'Failed to get activity feed' });
   }
@@ -1549,7 +1547,7 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const uploadedItems = uploadedRecipes.map(r => ({
+    const uploadedItems = uploadedRecipes.map((r: any) => ({
       ...r,
       author: r.user,
       source: 'uploaded',
@@ -1565,8 +1563,8 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
       });
 
       savedItems = savedRecipes
-        .filter(sr => sr.recipe.userId !== user.id)
-        .map(sr => ({
+        .filter((sr: any) => sr.recipe.userId !== user.id)
+        .map((sr: any) => ({
           ...sr.recipe,
           author: sr.recipe.user,
           isFavorite: sr.favorite,
@@ -1589,8 +1587,8 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
       const savedIds = new Set(savedItems.map((r: any) => r.id));
 
       likedItems = likedRecipes
-        .filter(lr => !uploadedIds.has(lr.recipe.id) && !savedIds.has(lr.recipe.id))
-        .map(lr => ({
+        .filter((lr: any) => !uploadedIds.has(lr.recipe.id) && !savedIds.has(lr.recipe.id))
+        .map((lr: any) => ({
           ...lr.recipe,
           author: lr.recipe.user,
           source: 'liked',
@@ -1606,7 +1604,7 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
       },
       profileName: `${user.firstName} ${user.lastName}`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user recipes error:', error);
     res.status(500).json({ error: 'Failed to get user recipes' });
   }
@@ -1614,7 +1612,7 @@ router.get('/:username/recipes', optionalAuth, async (req, res) => {
 
 
 // PUT /api/profile/social-links - Update social links
-router.put('/social-links', authenticateToken, async (req: Request, res: Response) => {
+router.put('/social-links', authenticateToken, async (req: any, res: any) => {
   try {
     const userId = (req as any).userId;
     const { facebookUrl, instagramUrl, twitterUrl, redditUrl, tiktokUrl, youtubeUrl, blueskyUrl } = req.body;
@@ -1628,7 +1626,7 @@ router.put('/social-links', authenticateToken, async (req: Request, res: Respons
     if (blueskyUrl !== undefined) data.blueskyUrl = blueskyUrl;
     const user = await prisma.user.update({ where: { id: userId }, data });
     res.json({ success: true, user });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update social links error:', error);
     res.status(500).json({ error: 'Failed to update social links' });
   }
@@ -1747,7 +1745,7 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
     };
 
     // Check pack items for brand mentions
-    packItems.forEach(item => {
+    packItems.forEach((item: any) => {
       const itemName = item.name.toLowerCase();
       for (const [brand, tag] of Object.entries(brandTags)) {
         if (itemName.includes(brand)) {
@@ -1769,7 +1767,7 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
       'power': 'Off-Grid',
     };
 
-    packItems.forEach(item => {
+    packItems.forEach((item: any) => {
       const category = item.category.toLowerCase();
       const itemName = item.name.toLowerCase();
       for (const [key, tag] of Object.entries(categoryTags)) {
@@ -1780,7 +1778,7 @@ router.get('/suggested-tags', authenticateToken, async (req, res) => {
     });
 
     res.json({ suggestedTags: [...new Set(suggestedTags)] });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get suggested tags error:', error);
     res.status(500).json({ error: 'Failed to get suggested tags' });
   }
@@ -1800,7 +1798,7 @@ router.get('/:userId/home-location', async (req, res) => {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         requestingUserId = (decoded as any).userId;
-      } catch (e) {
+      } catch (e: any) {
         // Not authenticated, that's okay
       }
     }
@@ -1822,7 +1820,7 @@ router.get('/:userId/home-location', async (req, res) => {
     }
 
     // Check privacy settings
-    const privacy = 'PUBLIC'; // TODO: Add hometownPrivacy field to schema
+    const privacy: string = 'PUBLIC'; // TODO: Add hometownPrivacy field to schema
     
     // If private, only show to self
     if (privacy === 'PRIVATE' && requestingUserId !== userId) {
@@ -1838,8 +1836,8 @@ router.get('/:userId/home-location', async (req, res) => {
       const friendship = await prisma.friendship.findFirst({
         where: {
           OR: [
-            { requesterId: requestingUserId, addresseeId: userId, status: 'ACCEPTED' },
-            { requesterId: userId, addresseeId: requestingUserId, status: 'ACCEPTED' },
+            { initiatorId: requestingUserId, receiverId: userId, status: 'ACCEPTED' },
+            { initiatorId: userId, receiverId: requestingUserId, status: 'ACCEPTED' },
           ]
         }
       });
@@ -1861,7 +1859,7 @@ router.get('/:userId/home-location', async (req, res) => {
     } else {
       res.json({ visible: false });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get home location error:', error);
     res.status(500).json({ error: 'Failed to get home location' });
   }

@@ -10,7 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const INPUT_FILE = path.join(process.cwd(), 'scrape-events-output.json');
 const LOG_FILE = path.join(process.cwd(), 'import-events.log');
 
@@ -201,7 +201,7 @@ async function main() {
       where: { campgroundId: item.campgroundId },
       select: { title: true, startDate: true },
     });
-    const existingKeys = new Set(existingEvents.map(e => `${e.title}|${e.startDate.toISOString()}`));
+    const existingKeys = new Set(existingEvents.map((e: any) => `${e.title}|${e.startDate.toISOString()}`));
 
     let campgroundInserted = 0;
 

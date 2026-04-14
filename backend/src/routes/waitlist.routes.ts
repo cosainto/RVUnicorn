@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const router = Router();
 const WAITLIST_FILE = path.join(process.cwd(), 'waitlist-emails.json');
@@ -74,7 +74,7 @@ router.get('/upcoming-events', async (req: Request, res: Response) => {
 
     // Deduplicate — one event per campground for variety
     const seen = new Set<string>();
-    const unique = events.filter(e => {
+    const unique = events.filter((e: any) => {
       const key = e.campground?.id || e.id;
       if (seen.has(key)) return false;
       seen.add(key);

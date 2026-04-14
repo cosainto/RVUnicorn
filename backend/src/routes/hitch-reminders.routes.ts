@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const authenticateToken = (req: Request, res: Response, next: any) => {
   const authHeader = req.headers['authorization'];
@@ -75,14 +75,14 @@ router.post('/scan', authenticateToken, async (req: Request, res: Response) => {
     // 4. Wishlist suggestions (every 2 weeks)
     if (!(await isIgnored(userId, 'WISHLIST_SUGGESTION')) && !(await hasRecent(userId, 'WISHLIST_SUGGESTION', 14))) {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } });
-      const wlIds = (await prisma.campgroundWishlist.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => [])).map(w => w.campgroundId).filter(Boolean);
+      const wlIds = (await prisma.campgroundWishlist.findMany({ where: { userId }, select: { campgroundId: true } }).catch(() => [])).map((w: any) => w.campgroundId).filter(Boolean);
       const suggestions = await prisma.campground.findMany({ where: { id: { notIn: wlIds }, googleRating: { gte: 4.0 } }, select: { id:true,name:true,location:true,state:true,googleRating:true }, take: 3, orderBy: { googleRating: 'desc' } });
       if (suggestions.length > 0) {
         await prisma.hitchReminder.create({ data: {
           userId, type: 'WISHLIST_SUGGESTION', entityType: 'CAMPGROUND', entityId: suggestions[0].id,
-          message: `Hey ${user?.firstName || 'there'}! \u{1f5fa}\ufe0f Check out these campgrounds for your wishlist: ${suggestions.map(s => s.name).join(', ')}. Want me to add any?`,
+          message: `Hey ${user?.firstName || 'there'}! \u{1f5fa}\ufe0f Check out these campgrounds for your wishlist: ${suggestions.map((s: any) => s.name).join(', ')}. Want me to add any?`,
           priority: 'LOW', nextRemindAt: daysFromNow(1),
-          metadata: { suggestions: suggestions.map(s => ({ id:s.id, name:s.name, location:s.location, rating:s.googleRating })), field: 'wishlist' },
+          metadata: { suggestions: suggestions.map((s: any) => ({ id:s.id, name:s.name, location:s.location, rating:s.googleRating })), field: 'wishlist' },
         }});
         created.push('Wishlist suggestions');
       }
@@ -198,7 +198,7 @@ router.post('/scan', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.json({ created, count: created.length });
-  } catch (error) { console.error('Scan error:', error); res.status(500).json({ error: 'Scan failed' }); }
+  } catch (error: any) { console.error('Scan error:', error); res.status(500).json({ error: 'Scan failed' }); }
 });
 
 router.get('/active', authenticateToken, async (req: Request, res: Response) => {
@@ -258,7 +258,7 @@ router.post('/:id/ignore-forever', authenticateToken, async (req: Request, res: 
 router.get('/ignored', authenticateToken, async (req: Request, res: Response) => {
   try {
     const ignored = await prisma.hitchReminder.findMany({ where: { userId: (req as any).userId, status: 'IGNORED_FOREVER' }, select: { type: true }, distinct: ['type'] });
-    res.json({ ignoredTypes: ignored.map(i => i.type) });
+    res.json({ ignoredTypes: ignored.map((i: any) => i.type) });
   } catch { res.status(500).json({ error: 'Failed' }); }
 });
 
@@ -355,7 +355,7 @@ router.post('/update', authenticateToken, async (req: Request, res: Response) =>
       await prisma.hitchReminder.updateMany({ where: { id: reminderId, userId }, data: { status: 'RESOLVED', resolvedAt: new Date() } });
     }
     res.json({ success: updated });
-  } catch (error) { console.error('Update error:', error); res.status(500).json({ error: 'Update failed' }); }
+  } catch (error: any) { console.error('Update error:', error); res.status(500).json({ error: 'Update failed' }); }
 });
 
 export default router;

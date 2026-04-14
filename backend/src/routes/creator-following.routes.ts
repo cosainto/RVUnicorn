@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/creators/following/:userId - Get who a user follows
 router.get('/following/:userId', async (req, res) => {
@@ -48,13 +48,13 @@ router.get('/following/:userId', async (req, res) => {
       where: { followerId: userId },
     });
 
-    let creators = following.map(f => ({
+    let creators = following.map((f: any) => ({
       ...f.creator,
       isFollowing: currentUserId === userId ? true : false,
     }));
 
     if (currentUserId && currentUserId !== userId) {
-      const creatorIds = following.map(f => f.creatorId);
+      const creatorIds = following.map((f: any) => f.creatorId);
       const myFollows = await prisma.creatorFollow.findMany({
         where: {
           followerId: currentUserId,
@@ -62,9 +62,9 @@ router.get('/following/:userId', async (req, res) => {
         },
         select: { creatorId: true },
       });
-      const myFollowingIds = new Set(myFollows.map(f => f.creatorId));
+      const myFollowingIds = new Set(myFollows.map((f: any) => f.creatorId));
 
-      creators = following.map(f => ({
+      creators = following.map((f: any) => ({
         ...f.creator,
         isFollowing: myFollowingIds.has(f.creator.id),
       }));
@@ -76,7 +76,7 @@ router.get('/following/:userId', async (req, res) => {
       hasMore: skip + following.length < total,
       page,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching following:', error);
     res.status(500).json({ error: 'Failed to fetch following' });
   }
@@ -115,12 +115,12 @@ router.get('/:creatorId/followers', async (req, res) => {
     });
 
     res.json({
-      followers: followers.map(f => f.follower),
+      followers: followers.map((f: any) => f.follower),
       total,
       hasMore: skip + followers.length < total,
       page,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching followers:', error);
     res.status(500).json({ error: 'Failed to fetch followers' });
   }
@@ -180,7 +180,7 @@ router.get('/:creatorId/similar', async (req, res) => {
     });
 
     if (currentUserId) {
-      const creatorIds = similarCreators.map(c => c.id);
+      const creatorIds = similarCreators.map((c: any) => c.id);
       const follows = await prisma.creatorFollow.findMany({
         where: {
           followerId: currentUserId,
@@ -188,10 +188,10 @@ router.get('/:creatorId/similar', async (req, res) => {
         },
         select: { creatorId: true },
       });
-      const followingIds = new Set(follows.map(f => f.creatorId));
+      const followingIds = new Set(follows.map((f: any) => f.creatorId));
 
       return res.json(
-        similarCreators.map(c => ({
+        similarCreators.map((c: any) => ({
           ...c,
           isFollowing: followingIds.has(c.id),
         }))
@@ -199,7 +199,7 @@ router.get('/:creatorId/similar', async (req, res) => {
     }
 
     res.json(similarCreators);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching similar creators:', error);
     res.status(500).json({ error: 'Failed to fetch similar creators' });
   }
@@ -264,7 +264,7 @@ router.get('/content/:contentId/related', async (req, res) => {
     });
 
     res.json(relatedContent);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching related content:', error);
     res.status(500).json({ error: 'Failed to fetch related content' });
   }

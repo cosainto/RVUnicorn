@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const BUSINESS_CATEGORIES = ['restaurant', 'gas_station', 'grocery', 'outdoor_gear', 'activities', 'brewery', 'coffee', 'laundry', 'repair', 'entertainment', 'other'];
 

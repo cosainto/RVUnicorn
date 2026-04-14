@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // YOU NEED TO ADD YOUR API KEY HERE!
 const RIDB_API_KEY = '0df4c4d6-1be3-4f76-99b0-0ab0a676a8fa';
@@ -177,7 +177,7 @@ async function main() {
   console.log('');
 
   // Check API key
-  if (RIDB_API_KEY === 'YOUR_API_KEY_HERE') {
+  if (RIDB_API_KEY === ('YOUR_API_KEY_HERE' as string)) {
     console.error('❌ ERROR: You need to add your API key!');
     console.error('');
     console.error('Steps:');

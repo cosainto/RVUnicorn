@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const RIDB_API_KEY = process.env.RIDB_API_KEY || '0df4c4d6-1be3-4f76-99b0-0ab0a676a8fa';
 const BASE_URL = 'https://ridb.recreation.gov/api/v1';
@@ -52,7 +52,7 @@ async function fetchCampgrounds(offset: number = 0, limit: number = 50): Promise
     throw new Error(`API error: ${response.status}`);
   }
   
-  const data = await response.json() as any;
+  const data: any = await response.json() as any;
   return {
     data: data.RECDATA || [],
     total: data.METADATA?.RESULTS?.TOTAL_COUNT || 0
@@ -158,7 +158,7 @@ async function updateCampgrounds() {
         break;
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching batch:', error);
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
@@ -174,7 +174,7 @@ async function updateCampgrounds() {
     select: { name: true, location: true, state: true }
   });
   console.log('\n📍 Sample campgrounds with location data:');
-  samples.forEach(s => console.log(`  - ${s.name}: ${s.location}, ${s.state}`));
+  samples.forEach((s: any) => console.log(`  - ${s.name}: ${s.location}, ${s.state}`));
 }
 
 updateCampgrounds()

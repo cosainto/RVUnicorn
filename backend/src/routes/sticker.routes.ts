@@ -9,6 +9,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
@@ -16,9 +17,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const isCampgroundAdmin = async (req: any, res: any, next: any) => {
   try {
     const { campgroundId } = req.params;
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
 
-    const admin = await prisma.campgroundAdmin.findUnique({
+    const admin = await db.campgroundAdmin.findUnique({
       where: {
         userId_campgroundId: {
           campgroundId,
@@ -32,7 +33,7 @@ const isCampgroundAdmin = async (req: any, res: any, next: any) => {
     }
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin check error:', error);
     res.status(500).json({ error: 'Authorization check failed' });
   }
@@ -45,9 +46,9 @@ const isCampgroundAdmin = async (req: any, res: any, next: any) => {
 // GET /api/stickers/my-stickers - Get current user's earned stickers
 router.get('/my-stickers', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     
-    const userStickers = await prisma.userSticker.findMany({
+    const userStickers = await db.userSticker.findMany({
       where: { userId },
       include: {
         sticker: {
@@ -65,7 +66,7 @@ router.get('/my-stickers', authenticateToken, async (req: any, res) => {
     });
 
     // Transform to expected format
-    const transformed = userStickers.map(us => ({
+    const transformed = userStickers.map((us: any) => ({
       id: us.id,
       earnedAt: us.earnedAt,
       sticker: {
@@ -79,7 +80,7 @@ router.get('/my-stickers', authenticateToken, async (req: any, res) => {
     }));
 
     res.json(transformed);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my stickers error:', error);
     res.status(500).json({ error: 'Failed to get stickers' });
   }
@@ -88,9 +89,9 @@ router.get('/my-stickers', authenticateToken, async (req: any, res) => {
 // GET /api/stickers/requests/user - Get user's sticker requests
 router.get('/requests/user', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     
-    const requests = await prisma.stickerRequest.findMany({
+    const requests = await db.stickerRequest.findMany({
       where: { userId },
       include: {
         sticker: {
@@ -108,7 +109,7 @@ router.get('/requests/user', authenticateToken, async (req: any, res) => {
     });
 
     res.json(requests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user requests error:', error);
     res.status(500).json({ error: 'Failed to get requests' });
   }
@@ -127,7 +128,7 @@ router.get('/requests/campground/:campgroundId', authenticateToken, isCampground
       whereClause.status = status;
     }
 
-    const requests = await prisma.stickerRequest.findMany({
+    const requests = await db.stickerRequest.findMany({
       where: whereClause,
       include: {
         sticker: true,
@@ -145,7 +146,7 @@ router.get('/requests/campground/:campgroundId', authenticateToken, isCampground
     });
 
     res.json(requests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get requests error:', error);
     res.status(500).json({ error: 'Failed to get requests' });
   }
@@ -156,7 +157,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
   try {
     const { requestId } = req.params;
     const { status, reviewNote } = req.body;
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
 
     if (!['approved', 'declined', 'APPROVED', 'DECLINED'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
@@ -164,7 +165,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
 
     const normalizedStatus = status.toLowerCase();
 
-    const request = await prisma.stickerRequest.findUnique({
+    const request = await db.stickerRequest.findUnique({
       where: { id: requestId },
       include: {
         sticker: true,
@@ -183,7 +184,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
     }
 
     // Check admin
-    const admin = await prisma.campgroundAdmin.findUnique({
+    const admin = await db.campgroundAdmin.findUnique({
       where: {
         userId_campgroundId: {
           campgroundId: request.sticker.campgroundId,
@@ -197,7 +198,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
     }
 
     // Update request
-    const updated = await prisma.stickerRequest.update({
+    const updated = await db.stickerRequest.update({
       where: { id: requestId },
       data: {
         status: normalizedStatus,
@@ -206,7 +207,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
 
     // If approved, create user sticker
     if (normalizedStatus === 'approved') {
-      await prisma.userSticker.create({
+      await db.userSticker.create({
         data: {
           stickerId: request.stickerId,
           userId: request.userId,
@@ -214,7 +215,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
       });
 
       // Create notification for user
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: request.userId,
           type: 'STICKER_AWARDED',
@@ -223,7 +224,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
       });
     } else {
       // Notify user of decline
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: request.userId,
           type: 'STICKER_DECLINED',
@@ -233,7 +234,7 @@ router.put('/requests/:requestId', authenticateToken, async (req: any, res) => {
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Review request error:', error);
     res.status(500).json({ error: 'Failed to review request' });
   }
@@ -244,7 +245,7 @@ router.get('/awards/user/:username', async (req, res) => {
   try {
     const { username } = req.params;
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { username }
     });
 
@@ -252,7 +253,7 @@ router.get('/awards/user/:username', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const userStickers = await prisma.userSticker.findMany({
+    const userStickers = await db.userSticker.findMany({
       where: { userId: user.id },
       include: {
         sticker: {
@@ -270,7 +271,7 @@ router.get('/awards/user/:username', async (req, res) => {
     });
 
     res.json(userStickers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get awards error:', error);
     res.status(500).json({ error: 'Failed to get awards' });
   }
@@ -287,7 +288,7 @@ router.post(
     body('description').optional().trim(),
     body('criteria').optional().trim(),
   ],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { campgroundId } = req.params;
       const { name, description, criteria, emoji, isLimited, maxQuantity } = req.body;
@@ -297,7 +298,7 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const sticker = await prisma.sticker.create({
+      const sticker = await db.sticker.create({
         data: {
           campgroundId,
           name,
@@ -311,7 +312,7 @@ router.post(
       });
 
       res.json(sticker);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create sticker error:', error);
       res.status(500).json({ error: 'Failed to create sticker' });
     }
@@ -329,7 +330,7 @@ router.get('/campground/:campgroundId', async (req, res) => {
       whereClause.isActive = true;
     }
 
-    const stickers = await prisma.sticker.findMany({
+    const stickers = await db.sticker.findMany({
       where: whereClause,
       include: {
         _count: {
@@ -343,7 +344,7 @@ router.get('/campground/:campgroundId', async (req, res) => {
     });
 
     res.json(stickers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get stickers error:', error);
     res.status(500).json({ error: 'Failed to get stickers' });
   }
@@ -358,7 +359,7 @@ router.get('/:stickerId', async (req, res) => {
   try {
     const { stickerId } = req.params;
 
-    const sticker = await prisma.sticker.findUnique({
+    const sticker = await db.sticker.findUnique({
       where: { id: stickerId },
       include: {
         campground: {
@@ -396,7 +397,7 @@ router.get('/:stickerId', async (req, res) => {
     }
 
     res.json(sticker);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sticker error:', error);
     res.status(500).json({ error: 'Failed to get sticker' });
   }
@@ -407,9 +408,9 @@ router.put('/:stickerId', authenticateToken, async (req: any, res) => {
   try {
     const { stickerId } = req.params;
     const { name, description, criteria, emoji, isLimited, maxQuantity, isActive } = req.body;
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
 
-    const sticker = await prisma.sticker.findUnique({
+    const sticker = await db.sticker.findUnique({
       where: { id: stickerId }
     });
 
@@ -418,7 +419,7 @@ router.put('/:stickerId', authenticateToken, async (req: any, res) => {
     }
 
     // Check admin
-    const admin = await prisma.campgroundAdmin.findUnique({
+    const admin = await db.campgroundAdmin.findUnique({
       where: {
         userId_campgroundId: {
           campgroundId: sticker.campgroundId,
@@ -431,7 +432,7 @@ router.put('/:stickerId', authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.sticker.update({
+    const updated = await db.sticker.update({
       where: { id: stickerId },
       data: {
         name,
@@ -445,7 +446,7 @@ router.put('/:stickerId', authenticateToken, async (req: any, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update sticker error:', error);
     res.status(500).json({ error: 'Failed to update sticker' });
   }
@@ -458,13 +459,13 @@ router.post(
   [
     body('evidence').optional().trim(),
   ],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { stickerId } = req.params;
       const { evidence } = req.body;
-      const userId = req.userId || req.user?.id;
+      const userId = req.userId || (req as any).user?.id;
 
-      const sticker = await prisma.sticker.findUnique({
+      const sticker = await db.sticker.findUnique({
         where: { id: stickerId },
         include: {
           _count: {
@@ -482,7 +483,7 @@ router.post(
       }
 
       // Check if user already has this sticker
-      const existingSticker = await prisma.userSticker.findUnique({
+      const existingSticker = await db.userSticker.findUnique({
         where: {
           userId_stickerId: {
             stickerId,
@@ -496,7 +497,7 @@ router.post(
       }
 
       // Check if there's already a pending request
-      const pendingRequest = await prisma.stickerRequest.findFirst({
+      const pendingRequest = await db.stickerRequest.findFirst({
         where: {
           stickerId,
           userId,
@@ -513,7 +514,7 @@ router.post(
         return res.status(400).json({ error: 'This sticker has reached its maximum number of earners' });
       }
 
-      const request = await prisma.stickerRequest.create({
+      const request = await db.stickerRequest.create({
         data: {
           stickerId,
           userId,
@@ -533,16 +534,16 @@ router.post(
       });
 
       // Notify campground admins
-      const admins = await prisma.campgroundAdmin.findMany({
+      const admins = await db.campgroundAdmin.findMany({
         where: { campgroundId: sticker.campgroundId },
         select: { userId: true }
       });
 
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await db.user.findUnique({ where: { id: userId } });
 
       await Promise.all(
-        admins.map(admin =>
-          prisma.notification.create({
+        admins.map((admin: any) =>
+          db.notification.create({
             data: {
               userId: admin.userId,
               type: 'STICKER_REQUEST',
@@ -553,7 +554,7 @@ router.post(
       );
 
       res.json(request);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Request sticker error:', error);
       res.status(500).json({ error: 'Failed to request sticker' });
     }
@@ -564,9 +565,9 @@ router.post(
 router.delete('/:stickerId', authenticateToken, async (req: any, res) => {
   try {
     const { stickerId } = req.params;
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
 
-    const sticker = await prisma.sticker.findUnique({
+    const sticker = await db.sticker.findUnique({
       where: { id: stickerId }
     });
 
@@ -575,7 +576,7 @@ router.delete('/:stickerId', authenticateToken, async (req: any, res) => {
     }
 
     // Check admin
-    const admin = await prisma.campgroundAdmin.findUnique({
+    const admin = await db.campgroundAdmin.findUnique({
       where: {
         userId_campgroundId: {
           campgroundId: sticker.campgroundId,
@@ -588,12 +589,12 @@ router.delete('/:stickerId', authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    await prisma.sticker.delete({
+    await db.sticker.delete({
       where: { id: stickerId }
     });
 
     res.json({ message: 'Sticker deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete sticker error:', error);
     res.status(500).json({ error: 'Failed to delete sticker' });
   }

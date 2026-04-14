@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
+const db = prisma as any;
 const router = Router();
 
 // Helper to check if users are friends
 async function areFriends(userId1: string, userId2: string): Promise<boolean> {
-  const friendship = await prisma.friendship.findFirst({
+  const friendship = await db.friendship.findFirst({
     where: {
       OR: [
         { initiatorId: userId1, receiverId: userId2, status: { in: ['accepted', 'ACCEPTED'] } },
@@ -31,7 +32,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
         viewerId = decoded.userId;
-      } catch (e) {
+      } catch (e: any) {
         // Token invalid or expired, continue as guest
       }
     }
@@ -57,7 +58,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
       }
     }
 
-    const stateVisits = await prisma.stateVisit.findMany({
+    const stateVisits = await db.stateVisit.findMany({
       where: whereClause,
       include: {
         campsite: {
@@ -126,13 +127,13 @@ router.get('/:userId', async (req: Request, res: Response) => {
     });
 
     // Transform for frontend
-    const transformedVisits = stateVisits.map(visit => ({
+    const transformedVisits = stateVisits.map((visit: any) => ({
       ...visit,
-      attendees: visit.attendees.map(a => ({ id: a.id, user: a.attendee })),
-      albums: visit.albums.map(a => a.album)
+      attendees: visit.attendees.map((a: any) => ({ id: a.id, user: a.attendee })),
+      albums: visit.albums.map((a: any) => a.album)
     }));
 
-    const visitedStates = [...new Set(stateVisits.map((v) => v.state))];
+    const visitedStates = [...new Set(stateVisits.map((v: any) => v.state))];
 
     res.json({
       visitedStates,
@@ -141,7 +142,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
       isOwnProfile,
       isFriend: !isOwnProfile && viewerId ? await areFriends(viewerId, userId) : false,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get travel map error:', error);
     res.status(500).json({ error: 'Failed to fetch travel map' });
   }
@@ -167,7 +168,7 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
 
     // Check travel map privacy
     if (!isOwnProfile) {
-      const prefs = await prisma.userPreferences.findUnique({ where: { userId } });
+      const prefs = await db.userPreferences.findUnique({ where: { userId } });
       const travelPrivacy = prefs?.showTravelMap || 'FRIENDS';
       const isFriend = viewerId ? await areFriends(viewerId, userId) : false;
 
@@ -195,7 +196,7 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
         ? ['PUBLIC', 'FRIENDS', 'FRIENDS_ONLY']
         : ['PUBLIC'];
 
-    const stateVisits = await prisma.stateVisit.findMany({
+    const stateVisits = await db.stateVisit.findMany({
       where: { userId, state: stateCode.toUpperCase(), ...visibilityFilter },
       include: {
         campsite: {
@@ -242,15 +243,15 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
     });
 
     // Filter albums by privacy and transform
-    const visits = stateVisits.map(visit => {
+    const visits = stateVisits.map((visit: any) => {
       const visitAlbums = visit.albums
-        .map(a => a.album)
-        .filter(a => !albumPrivacyValues || albumPrivacyValues.includes(a.privacy));
+        .map((a: any) => a.album)
+        .filter((a: any) => !albumPrivacyValues || albumPrivacyValues.includes(a.privacy));
       const eventAlbums = visit.event?.photoAlbums || [];
       // Merge and deduplicate
       const allAlbums = [...visitAlbums];
       for (const ea of eventAlbums) {
-        if (!allAlbums.find(a => a.id === ea.id)) allAlbums.push(ea);
+        if (!allAlbums.find((a: any) => a.id === ea.id)) allAlbums.push(ea);
       }
 
       return {
@@ -269,8 +270,8 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
           coverImage: visit.event.coverImage,
           location: visit.event.location,
         } : null,
-        attendees: visit.attendees.map(a => a.attendee),
-        albums: allAlbums.map(a => ({
+        attendees: visit.attendees.map((a: any) => a.attendee),
+        albums: allAlbums.map((a: any) => ({
           id: a.id,
           title: a.title,
           coverPhoto: a.coverPhotoUrl || a.photos?.[0]?.imageUrl || null,
@@ -280,7 +281,7 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
     });
 
     res.json({ stateCode: stateCode.toUpperCase(), visits, isOwnProfile, isFriend });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch state details' });
   }
 });
@@ -292,7 +293,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
     const { visitId } = req.params;
 
     // Get the original visit
-    const originalVisit = await prisma.stateVisit.findUnique({
+    const originalVisit = await db.stateVisit.findUnique({
       where: { id: visitId },
       include: {
         campsite: true,
@@ -317,7 +318,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
     }
 
     // Check if user already has this trip
-    const existingVisit = await prisma.stateVisit.findFirst({
+    const existingVisit = await db.stateVisit.findFirst({
       where: {
         userId,
         state: originalVisit.state,
@@ -331,7 +332,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
     }
 
     // Create copy (without attendees)
-    const newVisit = await prisma.stateVisit.create({
+    const newVisit = await db.stateVisit.create({
       data: {
         userId,
         state: originalVisit.state,
@@ -348,7 +349,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
     });
 
     res.json(newVisit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Copy visit error:', error);
     res.status(500).json({ error: 'Failed to copy trip' });
   }
@@ -381,7 +382,7 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
     }
 
     if (eventId) {
-      const existing = await prisma.stateVisit.findFirst({
+      const existing = await db.stateVisit.findFirst({
         where: { userId, eventId },
       });
       if (existing) {
@@ -389,7 +390,7 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
       }
     }
 
-    const visit = await prisma.stateVisit.create({
+    const visit = await db.stateVisit.create({
       data: {
         userId,
         state,
@@ -403,7 +404,7 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
     });
 
     if (attendeeIds && Array.isArray(attendeeIds) && attendeeIds.length > 0) {
-      await prisma.stateVisitAttendee.createMany({
+      await db.stateVisitAttendee.createMany({
         data: attendeeIds.map((friendId: string) => ({
           stateVisitId: visit.id,
           attendeeId: friendId,
@@ -412,7 +413,7 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
     }
 
     if (albumIds && Array.isArray(albumIds) && albumIds.length > 0) {
-      await prisma.stateVisitAlbum.createMany({
+      await db.stateVisitAlbum.createMany({
         data: albumIds.map((albumId: string) => ({
           stateVisitId: visit.id,
           albumId,
@@ -421,7 +422,7 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
     }
 
     res.json(visit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add state visit error:', error);
     res.status(500).json({ error: 'Failed to add state visit' });
   }
@@ -438,7 +439,7 @@ router.patch('/visits/:visitId/visibility', authenticateToken, async (req: Reque
       return res.status(400).json({ error: 'Invalid visibility. Must be PUBLIC, FRIENDS, or PRIVATE' });
     }
 
-    const visit = await prisma.stateVisit.findUnique({
+    const visit = await db.stateVisit.findUnique({
       where: { id: visitId },
     });
 
@@ -450,13 +451,13 @@ router.patch('/visits/:visitId/visibility', authenticateToken, async (req: Reque
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.stateVisit.update({
+    const updated = await db.stateVisit.update({
       where: { id: visitId },
       data: { visibility },
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle visibility error:', error);
     res.status(500).json({ error: 'Failed to update visibility' });
   }
@@ -469,7 +470,7 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
     const { visitId } = req.params;
     const { startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility } = req.body;
 
-    const visit = await prisma.stateVisit.findUnique({
+    const visit = await db.stateVisit.findUnique({
       where: { id: visitId },
     });
 
@@ -501,7 +502,7 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
       }
     }
 
-    const updatedVisit = await prisma.stateVisit.update({
+    const updatedVisit = await db.stateVisit.update({
       where: { id: visitId },
       data: {
         startDate: start,
@@ -514,12 +515,12 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
     });
 
     if (attendeeIds !== undefined) {
-      await prisma.stateVisitAttendee.deleteMany({
+      await db.stateVisitAttendee.deleteMany({
         where: { stateVisitId: visitId },
       });
 
       if (Array.isArray(attendeeIds) && attendeeIds.length > 0) {
-        await prisma.stateVisitAttendee.createMany({
+        await db.stateVisitAttendee.createMany({
           data: attendeeIds.map((friendId: string) => ({
             stateVisitId: visitId,
             attendeeId: friendId,
@@ -529,12 +530,12 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
     }
 
     if (albumIds !== undefined) {
-      await prisma.stateVisitAlbum.deleteMany({
+      await db.stateVisitAlbum.deleteMany({
         where: { stateVisitId: visitId },
       });
 
       if (Array.isArray(albumIds) && albumIds.length > 0) {
-        await prisma.stateVisitAlbum.createMany({
+        await db.stateVisitAlbum.createMany({
           data: albumIds.map((albumId: string) => ({
             stateVisitId: visitId,
             albumId,
@@ -544,7 +545,7 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
     }
 
     res.json(updatedVisit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update state visit error:', error);
     res.status(500).json({ error: 'Failed to update state visit' });
   }
@@ -556,7 +557,7 @@ router.delete('/visits/:visitId', authenticateToken, async (req: Request, res: R
     const userId = (req as any).userId;
     const { visitId } = req.params;
 
-    const visit = await prisma.stateVisit.findUnique({
+    const visit = await db.stateVisit.findUnique({
       where: { id: visitId },
     });
 
@@ -568,12 +569,12 @@ router.delete('/visits/:visitId', authenticateToken, async (req: Request, res: R
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    await prisma.stateVisit.delete({
+    await db.stateVisit.delete({
       where: { id: visitId },
     });
 
     res.json({ message: 'Visit deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete state visit error:', error);
     res.status(500).json({ error: 'Failed to delete state visit' });
   }

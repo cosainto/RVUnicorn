@@ -18,7 +18,7 @@ export function registerEmailCampaignCrons() {
     try {
       await sendPreTrip7Day();
       await sendPostTripRecap();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[EmailCampaigns] Daily trip emails failed:', err);
     }
   }, { timezone: 'America/Chicago' });
@@ -30,7 +30,7 @@ export function registerEmailCampaignCrons() {
       await sendProfileNudges();
       await sendConnectionNudges();
       await sendThirtyDayCheckins();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[EmailCampaigns] Onboarding nudges failed:', err);
     }
   }, { timezone: 'America/Chicago' });
@@ -42,7 +42,7 @@ export function registerEmailCampaignCrons() {
       await sendOwnerWeeklyDigests();
       await sendOwnerPotentialEnergy();
       await sendCreatorWeeklyDigests();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[EmailCampaigns] Monday digests failed:', err);
     }
   }, { timezone: 'America/Chicago' });
@@ -52,7 +52,7 @@ export function registerEmailCampaignCrons() {
     console.log('[EmailCampaigns] Running community digest...');
     try {
       await sendWeeklyCommunityDigest();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[EmailCampaigns] Community digest failed:', err);
     }
   }, { timezone: 'America/Chicago' });

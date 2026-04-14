@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic();
 
 // Context cache (10 min TTL)
@@ -59,7 +59,7 @@ router.get('/companion-context/:userId/:campgroundId', authenticateToken, async 
 
     const context = {
       displayName: user?.firstName || 'friend',
-      rvNickname: null, // RVShowcase title
+      rvNickname: null as string | null, // RVShowcase title
       rvYear: user?.rvYear || null,
       rvMake: user?.rvMake || null,
       rvModel: user?.rvModel || null,
@@ -126,7 +126,7 @@ router.post('/companion-opener', authenticateToken, async (req: any, res: Respon
 
     // Fetch context
     const ctxRes = await fetch(`${req.protocol}://${req.get('host')}/api/chat/companion-context/${userId}/${campgroundId}`, { headers: { Authorization: req.headers.authorization } });
-    const ctx = await ctxRes.json();
+    const ctx: any = await ctxRes.json();
 
     const prompts: Record<string, string> = {
       HITCH: `You are Hitch, a warm experienced RV traveler. Write ONE opening message (max 2 sentences) for someone who just entered a quiet campground chat at ${ctx.campgroundName} in ${ctx.campgroundState}. It is ${ctx.timeOfDay} in ${ctx.season}. The user's RV nickname is ${ctx.rvNickname || 'unknown'}. Rules: Calm, warm, understated. Reference the campground or setting naturally if it fits. Optional: end with a light question — but only if it feels completely natural. Do NOT offer help. Do NOT say 'I'm here if you need me'. Sound like a fellow camper, not a guide. Return only the message.`,
@@ -159,7 +159,7 @@ router.post('/companion-reply', authenticateToken, async (req: any, res: Respons
     const { userId, campgroundId, character, conversationHistory, userMessage } = req.body;
 
     const ctxRes = await fetch(`${req.protocol}://${req.get('host')}/api/chat/companion-context/${userId}/${campgroundId}`, { headers: { Authorization: req.headers.authorization } });
-    const ctx = await ctxRes.json();
+    const ctx: any = await ctxRes.json();
 
     const systemPrompts: Record<string, string> = {
       HITCH: `You are Hitch, a warm experienced RV traveler chatting with ${ctx.displayName} in a campground chat at ${ctx.campgroundName}. Context: Their RV: ${ctx.rvYear || ''} ${ctx.rvMake || ''} ${ctx.rvModel || ''} '${ctx.rvNickname || ''}'. Time: ${ctx.timeOfDay}, Season: ${ctx.season}. Weather: ${ctx.weatherDescription || 'unknown'}.${ctx.campgroundRules ? ` Campground rules: ${ctx.campgroundRules}.` : ''}${(ctx as any).activeJob ? ` Active job here: ${(ctx as any).activeJob}.` : ''} Rules for you: Max 2-3 sentences. MAX ONE question per reply. React to what they said first. If user asks about jobs, work, workamping, camp host, or earning money, mention the active job if one exists. Reference campground rules ONLY when asked. Sound like a fellow camper around a fire.`,

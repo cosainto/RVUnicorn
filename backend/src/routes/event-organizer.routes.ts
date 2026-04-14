@@ -5,7 +5,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -185,11 +185,11 @@ router.get('/:id/polls/:pollId/results', authenticateToken, async (req: any, res
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
 
     const total = poll.responses.length;
-    const options = poll.options.map((text, i) => {
-      const votes = poll.responses.filter(r => r.optionIndex === i).length;
+    const options = poll.options.map((text: any, i: any) => {
+      const votes = poll.responses.filter((r: any) => r.optionIndex === i).length;
       return { text, votes, percent: total > 0 ? Math.round((votes / total) * 100) : 0 };
     });
-    const userResponse = poll.responses.find(r => r.userId === req.userId)?.optionIndex;
+    const userResponse = poll.responses.find((r: any) => r.userId === req.userId)?.optionIndex;
 
     res.json({ question: poll.question, options, totalResponses: total, userResponse: userResponse ?? null, isActive: poll.isActive });
   } catch { res.status(500).json({ error: 'Failed' }); }

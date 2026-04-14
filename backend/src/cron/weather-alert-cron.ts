@@ -15,7 +15,7 @@ async function fetchNWSAlerts(lat: number, lng: number): Promise<any[]> {
       headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' },
     });
     if (!res.ok) return [];
-    const data = await res.json();
+    const data: any = await res.json();
     return data.features || [];
   } catch {
     return [];
@@ -120,7 +120,7 @@ export async function runWeatherAlertCron() {
     }
 
     console.log('[WeatherAlert] Done.');
-  } catch (e) {
+  } catch (e: any) {
     console.error('[WeatherAlert] Cron error:', e);
   }
 }

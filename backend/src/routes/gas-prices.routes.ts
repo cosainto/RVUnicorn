@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // AAA Gas Prices URL (we'll scrape or use cached data)
 // Note: In production, you'd want to use an official API or scrape responsibly
@@ -63,7 +63,7 @@ router.get('/update', async (req: Request, res: Response) => {
         fromCache: true,
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update gas prices error:', error);
     res.status(500).json({ error: 'Failed to update gas prices' });
   }
@@ -77,12 +77,12 @@ router.get('/current', async (req: Request, res: Response) => {
     });
 
     // Calculate national averages
-    const regularPrices = prices.map(p => p.regularPrice);
-    const dieselPrices = prices.map(p => p.dieselPrice);
+    const regularPrices = prices.map((p: any) => p.regularPrice);
+    const dieselPrices = prices.map((p: any) => p.dieselPrice);
     
     const nationalAverage = {
-      regular: regularPrices.reduce((a, b) => a + b, 0) / regularPrices.length,
-      diesel: dieselPrices.reduce((a, b) => a + b, 0) / dieselPrices.length,
+      regular: regularPrices.reduce((a: any, b: any) => a + b, 0) / regularPrices.length,
+      diesel: dieselPrices.reduce((a: any, b: any) => a + b, 0) / dieselPrices.length,
     };
 
     // Find cheapest and most expensive states
@@ -102,7 +102,7 @@ router.get('/current', async (req: Request, res: Response) => {
       },
       lastUpdated: prices[0]?.updatedAt || null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get current gas prices error:', error);
     res.status(500).json({ error: 'Failed to fetch gas prices' });
   }
@@ -128,7 +128,7 @@ async function fetchGasPricesFromSource(): Promise<GasPriceData[]> {
 
     // Simulate small price fluctuations (±5 cents)
     // In production, replace this with actual API call
-    const updatedPrices: GasPriceData[] = currentPrices.map(price => {
+    const updatedPrices: GasPriceData[] = currentPrices.map((price: any) => {
       const regularFluctuation = (Math.random() - 0.5) * 0.10; // ±5 cents
       const dieselFluctuation = (Math.random() - 0.5) * 0.10;
       
@@ -143,7 +143,7 @@ async function fetchGasPricesFromSource(): Promise<GasPriceData[]> {
     });
 
     return updatedPrices;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fetch gas prices error:', error);
     return [];
   }
@@ -166,11 +166,11 @@ async function fetchFromEIA(): Promise<void> {
     const url = `https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=${EIA_API_KEY}&frequency=weekly&data[0]=value&facets[product][]=EPMR&facets[duession][]=PG1&sort[0][column]=period&sort[0][direction]=desc&length=50`;
     
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
     
     console.log('EIA Data:', data);
     // Process and store the data...
-  } catch (error) {
+  } catch (error: any) {
     console.error('EIA API error:', error);
   }
 }

@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/suggest', authenticateToken, async (req, res) => {
@@ -22,7 +22,7 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const campgroundList = campgrounds.map(c =>
+    const campgroundList = campgrounds.map((c: any) =>
       `${c.id}|${c.name}|${c.city || c.location}, ${c.state}|${c.latitude},${c.longitude}|${[c.hasFullHookups && 'full hookups', c.hasElectricHookup && 'electric', c.hasDumpStation && 'dump station'].filter(Boolean).join(', ')}`
     ).join('\n');
 
@@ -33,7 +33,7 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       orderBy: { rating: 'desc' }
     });
 
-    const overnightSpotList = overnightSpots.map(s =>
+    const overnightSpotList = overnightSpots.map((s: any) =>
       `${s.id}|${s.name}|${s.chain}|${s.city}, ${s.state}|${s.latitude},${s.longitude}|${[s.hasFuel && 'fuel', s.hasFood && 'food', s.hasShowers && 'showers', s.is24Hours && '24hr'].filter(Boolean).join(', ')}`
     ).join('\n');
 
@@ -49,24 +49,24 @@ router.post('/suggest', authenticateToken, async (req, res) => {
     if (HERE_API_KEY && startLocation && destination) {
       try {
         const startGeo = await fetch(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(startLocation)}&in=countryCode:USA&limit=1&apiKey=${HERE_API_KEY}`);
-        const startData = await startGeo.json() as any;
+        const startData: any = await startGeo.json() as any;
         const startPos = startData.items?.[0]?.position;
 
         const destGeo = await fetch(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(destination)}&in=countryCode:USA&limit=1&apiKey=${HERE_API_KEY}`);
-        const destData = await destGeo.json() as any;
+        const destData: any = await destGeo.json() as any;
         const destPos = destData.items?.[0]?.position;
 
         if (startPos && destPos) {
           const routeUrl = `https://router.hereapi.com/v8/routes?transportMode=truck&origin=${startPos.lat},${startPos.lng}&destination=${destPos.lat},${destPos.lng}&return=summary&truck[height]=400&truck[width]=250&truck[length]=1200&truck[grossWeight]=10000&apiKey=${HERE_API_KEY}`;
           const routeRes = await fetch(routeUrl);
-          const routeData = await routeRes.json() as any;
+          const routeData: any = await routeRes.json() as any;
           if (routeData.routes?.[0]?.sections?.[0]?.summary) {
             const summary = routeData.routes[0].sections[0].summary;
             estimatedTotalMiles = Math.round(summary.length / 1609.34);
             estimatedDriveHours = Math.round((summary.duration / 3600) * 10) / 10;
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log('[ItineraryAI] Route estimation failed, using fallback');
       }
     }

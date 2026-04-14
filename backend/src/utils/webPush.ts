@@ -47,7 +47,7 @@ export async function sendWebPush(userId: string, payload: {
         }
       })
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error('[WebPush] Error:', e);
   }
 }

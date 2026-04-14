@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const db = prisma as any;
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for videos
@@ -38,7 +39,7 @@ async function canViewVideo(
   if (video.userId === viewerId) return true;
 
   if (video.visibility === "FRIENDS") {
-    const friendship = await prisma.friendship.findFirst({
+    const friendship = await db.friendship.findFirst({
       where: {
         status: "ACCEPTED",
         OR: [
@@ -63,7 +64,7 @@ function parseMentions(caption: string): string[] {
 
 // Helper: Check if user can tag another user
 async function canTagUser(taggerId: string, targetId: string): Promise<boolean> {
-  const blocked = await prisma.tagBlockedUser.findUnique({
+  const blocked = await db.tagBlockedUser.findUnique({
     where: {
       blockerId_blockedId: { blockerId: targetId, blockedId: taggerId }
     }
@@ -78,7 +79,7 @@ async function canTagUser(taggerId: string, targetId: string): Promise<boolean> 
 // Upload video (file or URL)
 router.post("/", authenticateToken, upload.single("video"), async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const {
       albumId,
       title,
@@ -133,16 +134,16 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
     let mentionUserIds: string[] = [];
     
     if (mentionUsernames.length > 0) {
-      const mentionedUsers = await prisma.user.findMany({
+      const mentionedUsers = await db.user.findMany({
         where: { username: { in: mentionUsernames } },
         select: { id: true }
       });
-      mentionUserIds = mentionedUsers.map(u => u.id);
+      mentionUserIds = mentionedUsers.map((u: any) => u.id);
     }
 
     const isScheduled = scheduledFor && new Date(scheduledFor) > new Date();
 
-    const video = await prisma.video.create({
+    const video = await db.video.create({
       data: {
         userId,
         albumId: albumId || null,
@@ -167,7 +168,7 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
 
     // Create activity and notifications
     if (!isScheduled && visibility === "PUBLIC") {
-      await prisma.activity.create({
+      await db.activity.create({
         data: {
           userId,
           type: "VIDEO_UPLOAD",
@@ -176,7 +177,7 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
       });
 
       if (mentionUserIds.length > 0) {
-        await prisma.notification.createMany({
+        await db.notification.createMany({
           data: mentionUserIds.map(mentionedUserId => ({
             userId: mentionedUserId,
             type: "VIDEO_MENTION",
@@ -188,7 +189,7 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
     }
 
     res.status(201).json(video);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error uploading video:", error);
     res.status(500).json({ error: "Failed to upload video" });
   }
@@ -200,7 +201,7 @@ router.get("/:videoId", authenticateToken, async (req: any, res) => {
     const { videoId } = req.params;
     const userId = (req as any).userId;
 
-    const video = await prisma.video.findUnique({
+    const video = await db.video.findUnique({
       where: { id: videoId },
       include: {
         user: {
@@ -231,7 +232,7 @@ router.get("/:videoId", authenticateToken, async (req: any, res) => {
 
     // Increment view count
     if (video.userId !== userId) {
-      await prisma.video.update({
+      await db.video.update({
         where: { id: videoId },
         data: { viewCount: { increment: 1 } }
       });
@@ -258,7 +259,7 @@ router.get("/:videoId", authenticateToken, async (req: any, res) => {
       saveCount: video.saves.length,
       viewCount: video.viewCount + (video.userId !== userId ? 1 : 0),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching video:", error);
     res.status(500).json({ error: "Failed to fetch video" });
   }
@@ -268,10 +269,10 @@ router.get("/:videoId", authenticateToken, async (req: any, res) => {
 router.patch("/:videoId", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { title, description, visibility, allowDownload, isPinned, thumbnailUrl } = req.body;
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -290,11 +291,11 @@ router.patch("/:videoId", authenticateToken, async (req: any, res) => {
       updateData.description = description;
       const mentionUsernames = parseMentions(description);
       if (mentionUsernames.length > 0) {
-        const mentionedUsers = await prisma.user.findMany({
+        const mentionedUsers = await db.user.findMany({
           where: { username: { in: mentionUsernames } },
           select: { id: true }
         });
-        updateData.mentions = mentionedUsers.map(u => u.id);
+        updateData.mentions = mentionedUsers.map((u: any) => u.id);
       } else {
         updateData.mentions = [];
       }
@@ -305,7 +306,7 @@ router.patch("/:videoId", authenticateToken, async (req: any, res) => {
     
     // Handle pinning
     if (isPinned === true) {
-      await prisma.video.updateMany({
+      await db.video.updateMany({
         where: { userId, isPinned: true },
         data: { isPinned: false }
       });
@@ -314,7 +315,7 @@ router.patch("/:videoId", authenticateToken, async (req: any, res) => {
       updateData.isPinned = false;
     }
 
-    const updatedVideo = await prisma.video.update({
+    const updatedVideo = await db.video.update({
       where: { id: videoId },
       data: updateData,
       include: {
@@ -325,7 +326,7 @@ router.patch("/:videoId", authenticateToken, async (req: any, res) => {
     });
 
     res.json(updatedVideo);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating video:", error);
     res.status(500).json({ error: "Failed to update video" });
   }
@@ -335,9 +336,9 @@ router.patch("/:videoId", authenticateToken, async (req: any, res) => {
 router.delete("/:videoId", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -354,10 +355,10 @@ router.delete("/:videoId", authenticateToken, async (req: any, res) => {
       await cloudinary.uploader.destroy(publicId, { resource_type: "video" }).catch(console.error);
     }
 
-    await prisma.video.delete({ where: { id: videoId } });
+    await db.video.delete({ where: { id: videoId } });
 
     res.json({ message: "Video deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting video:", error);
     res.status(500).json({ error: "Failed to delete video" });
   }
@@ -371,14 +372,14 @@ router.delete("/:videoId", authenticateToken, async (req: any, res) => {
 router.post("/:videoId/react", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { type = "LIKE" } = req.body;
 
     if (!REACTION_TYPES.includes(type)) {
       return res.status(400).json({ error: `Invalid reaction type. Must be one of: ${REACTION_TYPES.join(", ")}` });
     }
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -389,19 +390,19 @@ router.post("/:videoId/react", authenticateToken, async (req: any, res) => {
     }
 
     // Check for existing reaction
-    const existingLike = await prisma.videoLike.findUnique({
+    const existingLike = await db.videoLike.findUnique({
       where: { videoId_userId: { videoId, userId } },
     });
 
     if (existingLike) {
       if (existingLike.type === type) {
         // Remove reaction
-        await prisma.videoLike.delete({ where: { id: existingLike.id } });
+        await db.videoLike.delete({ where: { id: existingLike.id } });
         const counts = await getVideoReactionCounts(videoId);
         return res.json({ added: false, type, ...counts });
       } else {
         // Change reaction type
-        await prisma.videoLike.update({
+        await db.videoLike.update({
           where: { id: existingLike.id },
           data: { type }
         });
@@ -411,7 +412,7 @@ router.post("/:videoId/react", authenticateToken, async (req: any, res) => {
     }
 
     // Add reaction
-    await prisma.videoLike.create({
+    await db.videoLike.create({
       data: { videoId, userId, type },
     });
 
@@ -421,7 +422,7 @@ router.post("/:videoId/react", authenticateToken, async (req: any, res) => {
         LIKE: "❤️", FIRE: "🔥", LAUGH: "😂", CLAP: "👏", HEART: "💖"
       };
       
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: video.userId,
           type: "VIDEO_REACTION",
@@ -433,14 +434,14 @@ router.post("/:videoId/react", authenticateToken, async (req: any, res) => {
 
     const counts = await getVideoReactionCounts(videoId);
     res.json({ added: true, type, ...counts });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error reacting to video:", error);
     res.status(500).json({ error: "Failed to react to video" });
   }
 });
 
 async function getVideoReactionCounts(videoId: string) {
-  const likes = await prisma.videoLike.findMany({
+  const likes = await db.videoLike.findMany({
     where: { videoId },
   });
   
@@ -464,7 +465,7 @@ router.get("/:videoId/reactions", authenticateToken, async (req: any, res) => {
       where.type = type;
     }
 
-    const reactions = await prisma.videoLike.findMany({
+    const reactions = await db.videoLike.findMany({
       where,
       include: {
         user: {
@@ -475,7 +476,7 @@ router.get("/:videoId/reactions", authenticateToken, async (req: any, res) => {
     });
 
     res.json(reactions);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching reactions:", error);
     res.status(500).json({ error: "Failed to fetch reactions" });
   }
@@ -489,10 +490,10 @@ router.get("/:videoId/reactions", authenticateToken, async (req: any, res) => {
 router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { taggedUserId, timestamp } = req.body; // timestamp in seconds for video position
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -506,12 +507,12 @@ router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: "This user has blocked you from tagging them" });
     }
 
-    const existingTag = await prisma.videoTag.findUnique({
+    const existingTag = await db.videoTag.findUnique({
       where: { videoId_userId: { videoId, userId: taggedUserId } }
     });
 
     if (existingTag) {
-      const updatedTag = await prisma.videoTag.update({
+      const updatedTag = await db.videoTag.update({
         where: { id: existingTag.id },
         data: { timestamp },
         include: {
@@ -521,7 +522,7 @@ router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
       return res.json(updatedTag);
     }
 
-    const tag = await prisma.videoTag.create({
+    const tag = await db.videoTag.create({
       data: {
         videoId,
         userId: taggedUserId,
@@ -532,7 +533,7 @@ router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
       }
     });
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: taggedUserId,
         type: "VIDEO_TAG",
@@ -542,7 +543,7 @@ router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
     });
 
     res.status(201).json(tag);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error tagging user:", error);
     res.status(500).json({ error: "Failed to tag user" });
   }
@@ -552,9 +553,9 @@ router.post("/:videoId/tag", authenticateToken, async (req: any, res) => {
 router.delete("/:videoId/tag/:taggedUserId", authenticateToken, async (req: any, res) => {
   try {
     const { videoId, taggedUserId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -564,12 +565,12 @@ router.delete("/:videoId/tag/:taggedUserId", authenticateToken, async (req: any,
       return res.status(403).json({ error: "You can only remove your own tags or tags on your videos" });
     }
 
-    await prisma.videoTag.deleteMany({
+    await db.videoTag.deleteMany({
       where: { videoId, userId: taggedUserId }
     });
 
     res.json({ message: "Tag removed successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error removing tag:", error);
     res.status(500).json({ error: "Failed to remove tag" });
   }
@@ -583,9 +584,9 @@ router.delete("/:videoId/tag/:taggedUserId", authenticateToken, async (req: any,
 router.post("/:videoId/save", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -595,23 +596,23 @@ router.post("/:videoId/save", authenticateToken, async (req: any, res) => {
       return res.status(403).json({ error: "You don't have permission to save this video" });
     }
 
-    const existingSave = await prisma.videoSave.findUnique({
+    const existingSave = await db.videoSave.findUnique({
       where: { videoId_userId: { videoId, userId } }
     });
 
     if (existingSave) {
-      await prisma.videoSave.delete({ where: { id: existingSave.id } });
-      const saveCount = await prisma.videoSave.count({ where: { videoId } });
+      await db.videoSave.delete({ where: { id: existingSave.id } });
+      const saveCount = await db.videoSave.count({ where: { videoId } });
       return res.json({ saved: false, saveCount });
     }
 
-    await prisma.videoSave.create({
+    await db.videoSave.create({
       data: { videoId, userId }
     });
 
-    const saveCount = await prisma.videoSave.count({ where: { videoId } });
+    const saveCount = await db.videoSave.count({ where: { videoId } });
     res.json({ saved: true, saveCount });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving video:", error);
     res.status(500).json({ error: "Failed to save video" });
   }
@@ -620,10 +621,10 @@ router.post("/:videoId/save", authenticateToken, async (req: any, res) => {
 // Get saved videos
 router.get("/saved/mine", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { limit = 20, cursor } = req.query;
 
-    const saves = await prisma.videoSave.findMany({
+    const saves = await db.videoSave.findMany({
       where: { userId },
       include: {
         video: {
@@ -662,7 +663,7 @@ router.get("/saved/mine", authenticateToken, async (req: any, res) => {
       videos: visibleVideos,
       nextCursor: saves.length === parseInt(limit as string) ? saves[saves.length - 1].id : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching saved videos:", error);
     res.status(500).json({ error: "Failed to fetch saved videos" });
   }
@@ -676,20 +677,20 @@ router.get("/saved/mine", authenticateToken, async (req: any, res) => {
 router.post("/:videoId/report", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const reporterId = req.user.id;
+    const reporterId = (req as any).user.id;
     const { reason, details } = req.body;
 
     if (!REPORT_REASONS.includes(reason)) {
       return res.status(400).json({ error: `Invalid reason. Must be one of: ${REPORT_REASONS.join(", ")}` });
     }
 
-    const video = await prisma.video.findUnique({ where: { id: videoId } });
+    const video = await db.video.findUnique({ where: { id: videoId } });
 
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
     }
 
-    const existingReport = await prisma.videoReport.findFirst({
+    const existingReport = await db.videoReport.findFirst({
       where: { videoId, reporterId, status: "PENDING" }
     });
 
@@ -697,7 +698,7 @@ router.post("/:videoId/report", authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: "You have already reported this video" });
     }
 
-    await prisma.videoReport.create({
+    await db.videoReport.create({
       data: {
         videoId,
         reporterId,
@@ -707,7 +708,7 @@ router.post("/:videoId/report", authenticateToken, async (req: any, res) => {
     });
 
     res.json({ message: "Report submitted. Thank you for helping keep our community safe." });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error reporting video:", error);
     res.status(500).json({ error: "Failed to report video" });
   }
@@ -720,21 +721,21 @@ router.post("/:videoId/report", authenticateToken, async (req: any, res) => {
 // Get video feed
 router.get("/feed/recent", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { limit = 20, cursor } = req.query;
 
-    const friendships = await prisma.friendship.findMany({
+    const friendships = await db.friendship.findMany({
       where: {
         status: "ACCEPTED",
         OR: [{ initiatorId: userId }, { receiverId: userId }],
       },
     });
 
-    const friendIds = friendships.map((f) =>
+    const friendIds = friendships.map((f: any) =>
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
-    const videos = await prisma.video.findMany({
+    const videos = await db.video.findMany({
       where: {
         publishedAt: { not: null },
         OR: [
@@ -761,7 +762,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
       ...(cursor && { cursor: { id: cursor as string }, skip: 1 }),
     });
 
-    const videosWithDetails = videos.map((video) => {
+    const videosWithDetails = videos.map((video: any) => {
       const reactionCounts: Record<string, number> = {};
       const userReactions: string[] = [];
       
@@ -786,7 +787,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
       videos: videosWithDetails,
       nextCursor: videos.length === parseInt(limit as string) ? videos[videos.length - 1].id : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching video feed:", error);
     res.status(500).json({ error: "Failed to fetch video feed" });
   }
@@ -803,7 +804,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
     const friendIds: string[] = [];
 
     if (!isOwner && viewerId) {
-      const friendships = await prisma.friendship.findMany({
+      const friendships = await db.friendship.findMany({
         where: {
           status: "ACCEPTED",
           OR: [
@@ -812,7 +813,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
           ],
         },
       });
-      friendIds.push(...friendships.map(f => f.initiatorId === viewerId ? f.receiverId : f.initiatorId));
+      friendIds.push(...friendships.map((f: any) => f.initiatorId === viewerId ? f.receiverId : f.initiatorId));
     }
 
     const isFriend = friendIds.includes(targetUserId);
@@ -823,7 +824,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
         ? { visibility: { in: ["PUBLIC", "FRIENDS"] } }
         : { visibility: "PUBLIC" };
 
-    const videos = await prisma.video.findMany({
+    const videos = await db.video.findMany({
       where: {
         userId: targetUserId,
         publishedAt: { not: null },
@@ -840,7 +841,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
       ...(cursor && { cursor: { id: cursor as string }, skip: 1 }),
     });
 
-    const videosWithDetails = videos.map((video) => {
+    const videosWithDetails = videos.map((video: any) => {
       const reactionCounts: Record<string, number> = {};
       video.likes.forEach((l: any) => {
         const type = l.type || 'LIKE';
@@ -859,7 +860,7 @@ router.get("/user/:userId", authenticateToken, async (req: any, res) => {
       videos: videosWithDetails,
       nextCursor: videos.length === parseInt(limit as string) ? videos[videos.length - 1].id : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching user videos:", error);
     res.status(500).json({ error: "Failed to fetch videos" });
   }
@@ -871,7 +872,7 @@ router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
     const { userId: targetUserId } = req.params;
     const viewerId = (req as any).userId;
 
-    const pinnedVideo = await prisma.video.findFirst({
+    const pinnedVideo = await db.video.findFirst({
       where: { userId: targetUserId, isPinned: true },
       include: {
         user: {
@@ -890,7 +891,7 @@ router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
     }
 
     res.json(pinnedVideo);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching pinned video:", error);
     res.status(500).json({ error: "Failed to fetch pinned video" });
   }
@@ -899,7 +900,7 @@ router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
 // Bulk update visibility
 router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { videoIds, visibility } = req.body;
 
     if (!Array.isArray(videoIds) || videoIds.length === 0) {
@@ -910,22 +911,22 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: "Invalid visibility value" });
     }
 
-    const videos = await prisma.video.findMany({
+    const videos = await db.video.findMany({
       where: { id: { in: videoIds } },
     });
 
-    const notOwned = videos.filter((v) => v.userId !== userId);
+    const notOwned = videos.filter((v: any) => v.userId !== userId);
     if (notOwned.length > 0) {
       return res.status(403).json({ error: "You can only update your own videos" });
     }
 
-    await prisma.video.updateMany({
+    await db.video.updateMany({
       where: { id: { in: videoIds }, userId },
       data: { visibility },
     });
 
     res.json({ message: `Updated ${videoIds.length} videos to ${visibility}` });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error bulk updating videos:", error);
     res.status(500).json({ error: "Failed to update videos" });
   }
@@ -935,7 +936,7 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
 router.post("/:videoId/complete", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { watchedSeconds, totalDuration } = req.body;
 
     // Update completion stats (could be stored in a separate analytics table)
@@ -944,7 +945,7 @@ router.post("/:videoId/complete", authenticateToken, async (req: any, res) => {
       recorded: true,
       completionRate: totalDuration ? (watchedSeconds / totalDuration * 100).toFixed(1) : 0
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error recording completion:", error);
     res.status(500).json({ error: "Failed to record completion" });
   }

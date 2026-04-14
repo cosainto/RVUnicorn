@@ -20,7 +20,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const PROGRESS_FILE = path.join(__dirname, 'enrich-progress.json');
 
 cloudinary.config({
@@ -173,7 +173,7 @@ async function stage1(progress: Progress) {
       try {
         await prisma.campgroundPhoto.deleteMany({ where: { campgroundId: id } });
         await prisma.campground.delete({ where: { id } });
-      } catch (e) {
+      } catch (e: any) {
         // Skip if cascade handles it or already deleted
       }
     }
@@ -209,7 +209,7 @@ async function stage2(progress: Progress) {
       where: { state: stateCode },
       select: { name: true },
     });
-    const existingNames = new Set(existing.map(c => c.name.toLowerCase().trim()));
+    const existingNames = new Set(existing.map((c: any) => c.name.toLowerCase().trim()));
 
     let page = 0;
     let stateAdded = 0;
@@ -235,7 +235,7 @@ async function stage2(progress: Progress) {
             },
           });
           if (!altRes.ok) break;
-          const altData = await altRes.json();
+          const altData: any = await altRes.json();
           // Process alternative results
           const results = altData.data || altData.results || altData || [];
           if (!Array.isArray(results) || results.length === 0) break;
@@ -269,7 +269,7 @@ async function stage2(progress: Progress) {
           break; // Alt endpoint doesn't paginate well
         }
 
-        const data = await res.json();
+        const data: any = await res.json();
         const campgrounds = data.data || data.results || data.campgrounds || [];
         if (!Array.isArray(campgrounds) || campgrounds.length === 0) break;
 
@@ -391,7 +391,7 @@ async function stage3(progress: Progress) {
       // Use Place Search to find the campground
       const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(camp.name + ' ' + (camp.state || ''))}&inputtype=textquery&fields=place_id&locationbias=point:${camp.latitude},${camp.longitude}&key=${GOOGLE_API_KEY}`;
       const searchRes = await fetch(searchUrl);
-      const searchData = await searchRes.json() as any;
+      const searchData: any = await searchRes.json() as any;
 
       if (searchData.candidates && searchData.candidates.length > 0) {
         const placeId = searchData.candidates[0].place_id;
@@ -399,7 +399,7 @@ async function stage3(progress: Progress) {
         // Get Place Details
         const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_phone_number,website,opening_hours,rating,user_ratings_total,reviews,types,formatted_address&key=${GOOGLE_API_KEY}`;
         const detailRes = await fetch(detailUrl);
-        const detailData = await detailRes.json() as any;
+        const detailData: any = await detailRes.json() as any;
         const place = detailData.result;
 
         if (place) {

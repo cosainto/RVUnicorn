@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ============================================
 // BLOCKED USERS MANAGEMENT (Event Creator Only)
@@ -45,7 +45,7 @@ router.get('/:eventId/blocked-users', authenticateToken, async (req, res) => {
     });
 
     res.json(blockedUsers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get blocked users error:', error);
     res.status(500).json({ error: 'Failed to fetch blocked users' });
   }
@@ -131,7 +131,7 @@ router.post('/:eventId/blocked-users', authenticateToken, async (req, res) => {
     });
 
     res.json(blocked);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Block user error:', error);
     res.status(500).json({ error: 'Failed to block user' });
   }
@@ -164,7 +164,7 @@ router.delete('/:eventId/blocked-users/:blockedUserId', authenticateToken, async
     });
 
     res.json({ message: 'User unblocked' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unblock user error:', error);
     res.status(500).json({ error: 'Failed to unblock user' });
   }
@@ -198,7 +198,7 @@ router.get('/:eventId/subtab-privacy', authenticateToken, async (req, res) => {
     }));
 
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get subtab privacy error:', error);
     res.status(500).json({ error: 'Failed to fetch subtab privacy' });
   }
@@ -262,7 +262,7 @@ router.put('/:eventId/subtab-privacy', authenticateToken, async (req, res) => {
     });
 
     res.json(setting);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update subtab privacy error:', error);
     res.status(500).json({ error: 'Failed to update subtab privacy' });
   }
@@ -311,7 +311,7 @@ router.post('/:eventId/subtab-privacy/bulk', authenticateToken, async (req, res)
     }
 
     res.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Bulk update subtab privacy error:', error);
     res.status(500).json({ error: 'Failed to update subtab privacy' });
   }

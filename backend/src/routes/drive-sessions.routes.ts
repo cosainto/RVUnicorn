@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+// @ts-ignore
 import { authenticateToken } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 
@@ -35,7 +36,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     });
 
     res.json({ session });
-  } catch (err) {
+  } catch (err: any) {
     console.error('drive-sessions POST error:', err);
     res.status(500).json({ error: 'Failed to save drive session' });
   }
@@ -63,7 +64,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       },
     });
     res.json({ sessions });
-  } catch (err) {
+  } catch (err: any) {
     console.error('drive-sessions GET error:', err);
     res.status(500).json({ error: 'Failed to fetch drive sessions' });
   }

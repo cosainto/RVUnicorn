@@ -13,7 +13,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic();
 const LOG_FILE = path.join(process.cwd(), 'scrape-rules.log');
 const BATCH_SIZE = 5;
@@ -68,7 +68,7 @@ async function scrapeRulesFromPage(page: any, url: string): Promise<string> {
   }
 
   // Filter to rules-relevant text
-  const lines = allText.split('\n').filter(line => RULES_KEYWORDS.test(line));
+  const lines = allText.split('\n').filter((line: any) => RULES_KEYWORDS.test(line));
   return lines.join('\n').slice(0, 5000);
 }
 
@@ -139,7 +139,7 @@ async function main() {
     log(`\n── Batch ${Math.floor(i / BATCH_SIZE) + 1} (${i + 1}–${Math.min(i + BATCH_SIZE, campgrounds.length)} of ${campgrounds.length}) ──`);
 
     const results = await Promise.allSettled(
-      batch.map(async (cg) => {
+      batch.map(async (cg: any) => {
         const page = await browser.newPage();
         page.setDefaultTimeout(TIMEOUT_MS);
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');

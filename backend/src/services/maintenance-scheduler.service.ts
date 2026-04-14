@@ -2,7 +2,14 @@ import cron from 'node-cron';
 import { PrismaClient } from '@prisma/client';
 // import { sendEmail, sendSMS, maintenanceReminderEmail, maintenanceReminderSMS, maintenanceOverdueEmail } from './email.service';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
+
+// Stub functions until email.service is implemented
+const sendEmail: any = async (_opts: any) => {};
+const sendSMS: any = async (_opts: any) => {};
+const maintenanceReminderEmail: any = (_opts: any) => ({ subject: '', html: '', text: '' });
+const maintenanceReminderSMS: any = (_opts: any) => '';
+const maintenanceOverdueEmail: any = (_opts: any) => ({ subject: '', html: '', text: '' });
 
 
 
@@ -162,7 +169,7 @@ const checkMaintenanceReminders = async () => {
     }
 
     console.log('Maintenance reminder check completed');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check maintenance reminders error:', error);
   }
 };

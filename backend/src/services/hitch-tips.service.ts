@@ -190,7 +190,7 @@ Return exactly 3 tips as a JSON array of objects, each with "title" (max 60 char
           },
         });
         created += 1;
-      } catch (e) {
+      } catch (e: any) {
         console.error('[hitch-tips] Failed to insert tip:', e);
       }
     }

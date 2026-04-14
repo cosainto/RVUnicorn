@@ -3,7 +3,7 @@ import { PrismaClient, ThingType, ThingStatus } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Auth middleware
 const authenticateToken = async (req: Request, res: Response, next: Function) => {
@@ -68,11 +68,11 @@ async function searchGooglePlaces(lat: number, lng: number, radius: number = 482
     if (type) url.searchParams.set('type', type);
 
     const response = await fetch(url.toString());
-    const data = await response.json();
+    const data: any = await response.json();
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') { console.error('Google Places API error:', data.status); return []; }
     placesCache.set(cacheKey, { data: data.results, timestamp: Date.now() });
     return data.results;
-  } catch (error) { console.error('Google Places fetch error:', error); return []; }
+  } catch (error: any) { console.error('Google Places fetch error:', error); return []; }
 }
 
 function getPhotoUrl(photoReference: string, maxWidth: number = 400): string {
@@ -126,12 +126,12 @@ router.get('/campgrounds/:id/recommendations', optionalAuth, async (req: Request
       where: { placeId: { in: uniquePlaces.map(p => p.place_id) } },
       select: { placeId: true, id: true }
     });
-    const existingMap = new Map(existingThings.map(t => [t.placeId, t.id]));
+    const existingMap = new Map(existingThings.map((t: any) => [t.placeId, t.id]));
 
     let userSaves = new Set<string>();
     if (userId) {
       const saves = await prisma.thingToDoSave.findMany({ where: { userId }, select: { thingToDoId: true } });
-      userSaves = new Set(saves.map(s => s.thingToDoId));
+      userSaves = new Set(saves.map((s: any) => s.thingToDoId));
     }
 
     const recommendations = uniquePlaces.map(place => {
@@ -154,6 +154,7 @@ router.get('/campgrounds/:id/recommendations', optionalAuth, async (req: Request
         isOpen: place.opening_hours?.open_now,
         imageUrl: place.photos?.[0]?.photo_reference ? getPhotoUrl(place.photos[0].photo_reference) : null,
         existingId,
+        // @ts-ignore
         isSaved: existingId ? userSaves.has(existingId) : false
       };
     });
@@ -165,7 +166,7 @@ router.get('/campgrounds/:id/recommendations', optionalAuth, async (req: Request
     });
 
     res.json({ campground: { id: campground.id, name: campground.name, lat: campground.latitude, lng: campground.longitude }, recommendations: recommendations.slice(0, 20), total: recommendations.length });
-  } catch (error) { console.error('Get recommendations error:', error); res.status(500).json({ error: 'Failed to get recommendations' }); }
+  } catch (error: any) { console.error('Get recommendations error:', error); res.status(500).json({ error: 'Failed to get recommendations' }); }
 });
 
 // POST save a thing
@@ -203,7 +204,7 @@ router.post('/save', authenticateToken, async (req: Request, res: Response) => {
     });
 
     res.json({ thingToDo, save, message: 'Saved successfully!' });
-  } catch (error) { console.error('Save thing error:', error); res.status(500).json({ error: 'Failed to save' }); }
+  } catch (error: any) { console.error('Save thing error:', error); res.status(500).json({ error: 'Failed to save' }); }
 });
 
 // GET saved things for a campground
@@ -225,11 +226,11 @@ router.get('/campgrounds/:id/things-to-do', optionalAuth, async (req: Request, r
 
     let userSaves = new Set<string>();
     if (userId) {
-      const saves = await prisma.thingToDoSave.findMany({ where: { userId, thingToDoId: { in: items.map(i => i.thingToDoId) } }, select: { thingToDoId: true } });
-      userSaves = new Set(saves.map(s => s.thingToDoId));
+      const saves = await prisma.thingToDoSave.findMany({ where: { userId, thingToDoId: { in: items.map((i: any) => i.thingToDoId) } }, select: { thingToDoId: true } });
+      userSaves = new Set(saves.map((s: any) => s.thingToDoId));
     }
 
-    const response = items.map(item => ({
+    const response = items.map((item: any) => ({
       id: item.thingToDo.id, type: item.thingToDo.type, title: item.thingToDo.title, description: item.thingToDo.description,
       lat: item.thingToDo.lat, lng: item.thingToDo.lng, address: item.thingToDo.address, sourceUrl: item.thingToDo.sourceUrl,
       sourceName: item.thingToDo.sourceName, imageUrl: item.thingToDo.imageUrl, tags: item.thingToDo.tags,
@@ -239,7 +240,7 @@ router.get('/campgrounds/:id/things-to-do', optionalAuth, async (req: Request, r
     }));
 
     res.json(response);
-  } catch (error) { console.error('Get things error:', error); res.status(500).json({ error: 'Failed to get things to do' }); }
+  } catch (error: any) { console.error('Get things error:', error); res.status(500).json({ error: 'Failed to get things to do' }); }
 });
 
 // GET user's saved things
@@ -255,15 +256,15 @@ router.get('/my-saves', authenticateToken, async (req: Request, res: Response) =
       include: { thingToDo: { include: { campgrounds: { include: { campground: { select: { id: true, name: true, state: true } } }, take: 3 } } } }
     });
 
-    res.json(saves.map(s => ({
+    res.json(saves.map((s: any) => ({
       id: s.id, note: s.note, savedAt: s.createdAt,
       thing: { id: s.thingToDo.id, type: s.thingToDo.type, title: s.thingToDo.title, description: s.thingToDo.description,
         address: s.thingToDo.address, sourceUrl: s.thingToDo.sourceUrl, imageUrl: s.thingToDo.imageUrl, tags: s.thingToDo.tags,
         startAt: s.thingToDo.startAt, endAt: s.thingToDo.endAt,
-        nearbyCampgrounds: s.thingToDo.campgrounds.map(c => ({ id: c.campground.id, name: c.campground.name, state: c.campground.state, distance: c.distanceMiles }))
+        nearbyCampgrounds: s.thingToDo.campgrounds.map((c: any) => ({ id: c.campground.id, name: c.campground.name, state: c.campground.state, distance: c.distanceMiles }))
       }
     })));
-  } catch (error) { console.error('Get my saves error:', error); res.status(500).json({ error: 'Failed to get saves' }); }
+  } catch (error: any) { console.error('Get my saves error:', error); res.status(500).json({ error: 'Failed to get saves' }); }
 });
 
 // DELETE unsave
@@ -273,7 +274,7 @@ router.delete('/save/:thingId', authenticateToken, async (req: Request, res: Res
     const { thingId } = req.params;
     await prisma.thingToDoSave.delete({ where: { userId_thingToDoId: { userId, thingToDoId: thingId } } });
     res.json({ message: 'Unsaved successfully' });
-  } catch (error) { console.error('Delete save error:', error); res.status(500).json({ error: 'Failed to unsave' }); }
+  } catch (error: any) { console.error('Delete save error:', error); res.status(500).json({ error: 'Failed to unsave' }); }
 });
 
 // POST vote
@@ -295,7 +296,7 @@ router.post('/:id/vote', authenticateToken, async (req: Request, res: Response) 
     await prisma.thingToDo.update({ where: { id }, data: { qualityScore: newScore } });
 
     res.json({ newScore });
-  } catch (error) { console.error('Vote error:', error); res.status(500).json({ error: 'Failed to vote' }); }
+  } catch (error: any) { console.error('Vote error:', error); res.status(500).json({ error: 'Failed to vote' }); }
 });
 
 
@@ -327,8 +328,8 @@ router.get('/campgrounds/:id/featured', async (req: Request, res: Response) => {
       take: 10
     });
     
-    res.json(featured.map(f => ({ ...f.thingToDo, distanceMiles: f.distanceMiles, displayOrder: f.displayOrder, pinnedUntil: f.pinnedUntil })));
-  } catch (error) {
+    res.json(featured.map((f: any) => ({ ...f.thingToDo, distanceMiles: f.distanceMiles, displayOrder: f.displayOrder, pinnedUntil: f.pinnedUntil })));
+  } catch (error: any) {
     console.error('Get featured error:', error);
     res.status(500).json({ error: 'Failed to get featured items' });
   }
@@ -356,7 +357,7 @@ router.post('/campgrounds/:id/discovery', authenticateToken, async (req: Request
     });
     
     res.json(link);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add discovery error:', error);
     res.status(500).json({ error: 'Failed to add discovery item' });
   }
@@ -389,7 +390,7 @@ router.put('/campgrounds/:id/discovery/:thingId/feature', authenticateToken, asy
     });
     
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Feature error:', error);
     res.status(500).json({ error: 'Failed to feature item' });
   }
@@ -413,7 +414,7 @@ router.delete('/campgrounds/:id/discovery/:thingId', authenticateToken, async (r
     });
     
     res.json({ message: 'Removed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove discovery error:', error);
     res.status(500).json({ error: 'Failed to remove item' });
   }
@@ -439,7 +440,7 @@ router.get('/campgrounds/:id/discovery/manage', authenticateToken, async (req: R
     });
     
     res.json(items);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get manage items error:', error);
     res.status(500).json({ error: 'Failed to get items' });
   }
@@ -549,7 +550,7 @@ Respond ONLY with valid JSON array, no markdown, no explanation:
     }).filter(Boolean);
 
     res.json({ picks: result, campgroundName: campground.name });
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI picks error:', error);
     res.status(500).json({ error: 'Failed to get AI picks' });
   }

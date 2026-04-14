@@ -3,6 +3,7 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 import crypto from 'crypto';
 
+const db = prisma as any;
 const router = Router();
 
 // Helper to generate unique IDs
@@ -37,7 +38,7 @@ router.get('/sponsored', optionalAuth, async (req, res) => {
     }
 
     // Get ads, prioritize by bid amount
-    const ads = await prisma.gearAd.findMany({
+    const ads = await db.gearAd.findMany({
       where,
       orderBy: [
         { bidAmount: 'desc' },
@@ -60,7 +61,7 @@ router.get('/sponsored', optionalAuth, async (req, res) => {
 
     for (const ad of ads) {
       // Record impression
-      await prisma.gearAdEvent.create({
+      await db.gearAdEvent.create({
         data: {
           id: generateId(),
           adId: ad.id,
@@ -73,14 +74,14 @@ router.get('/sponsored', optionalAuth, async (req, res) => {
       });
 
       // Update impression count
-      await prisma.gearAd.update({
+      await db.gearAd.update({
         where: { id: ad.id },
         data: { impressions: { increment: 1 } }
       });
     }
 
     // Format response
-    const sponsoredItems = ads.map(ad => ({
+    const sponsoredItems = ads.map((ad: any) => ({
       id: ad.id,
       type: 'sponsored',
       name: ad.name,
@@ -94,7 +95,7 @@ router.get('/sponsored', optionalAuth, async (req, res) => {
     }));
 
     res.json(sponsoredItems);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sponsored ads error:', error);
     res.status(500).json({ error: 'Failed to get sponsored ads' });
   }
@@ -108,7 +109,7 @@ router.post('/:id/click', optionalAuth, async (req, res) => {
     const sessionId = req.headers['x-session-id'] as string || generateId();
     const ipHash = hashIP(req.ip || 'unknown');
 
-    const ad = await prisma.gearAd.findUnique({
+    const ad = await db.gearAd.findUnique({
       where: { id }
     });
 
@@ -117,7 +118,7 @@ router.post('/:id/click', optionalAuth, async (req, res) => {
     }
 
     // Record click
-    await prisma.gearAdEvent.create({
+    await db.gearAdEvent.create({
       data: {
         id: generateId(),
         adId: id,
@@ -130,7 +131,7 @@ router.post('/:id/click', optionalAuth, async (req, res) => {
     });
 
     // Update click count and spend
-    await prisma.gearAd.update({
+    await db.gearAd.update({
       where: { id },
       data: {
         clicks: { increment: 1 },
@@ -142,7 +143,7 @@ router.post('/:id/click', optionalAuth, async (req, res) => {
       success: true, 
       redirectUrl: ad.affiliateUrl || ad.linkUrl 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Track ad click error:', error);
     res.status(500).json({ error: 'Failed to track click' });
   }
@@ -216,7 +217,7 @@ router.post('/affiliate/click', optionalAuth, async (req, res) => {
     }
 
     // Track the click
-    await prisma.affiliateClick.create({
+    await db.affiliateClick.create({
       data: {
         id: generateId(),
         userId: userId || null,
@@ -230,7 +231,7 @@ router.post('/affiliate/click', optionalAuth, async (req, res) => {
     });
 
     res.json({ affiliateUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Affiliate click error:', error);
     res.status(500).json({ error: 'Failed to process affiliate click' });
   }
@@ -277,7 +278,7 @@ router.get('/affiliate/search/:query', async (req, res) => {
     ];
 
     res.json(searchLinks);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Affiliate search error:', error);
     res.status(500).json({ error: 'Failed to search products' });
   }
@@ -290,7 +291,7 @@ router.get('/affiliate/search/:query', async (req, res) => {
 // GET /api/gear-ads/marketplace/nearby - Get gear for sale at current campground
 router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.query;
 
     // If no campgroundId provided, try to find user's current check-in
@@ -298,7 +299,7 @@ router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
 
     if (!targetCampgroundId) {
       const now = new Date();
-      const currentCheckIn = await prisma.campgroundCheckIn.findFirst({
+      const currentCheckIn = await db.campgroundCheckIn.findFirst({
         where: {
           userId,
           checkInDate: { lte: now },
@@ -321,14 +322,14 @@ router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
     }
 
     // Get campground info
-    const campground = await prisma.campground.findUnique({
+    const campground = await db.campground.findUnique({
       where: { id: targetCampgroundId },
       select: { id: true, name: true, state: true }
     });
 
     // Find users currently at this campground
     const now = new Date();
-    const checkIns = await prisma.campgroundCheckIn.findMany({
+    const checkIns = await db.campgroundCheckIn.findMany({
       where: {
         campgroundId: targetCampgroundId,
         checkInDate: { lte: now },
@@ -341,10 +342,10 @@ router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
       }
     });
 
-    const userIds = checkIns.map(c => c.userId);
+    const userIds = checkIns.map((c: any) => c.userId);
 
     // Get gear for sale from these users
-    const gearForSale = await prisma.gearItem.findMany({
+    const gearForSale = await db.gearItem.findMany({
       where: {
         userId: { in: userIds },
         forSale: true
@@ -364,8 +365,8 @@ router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
     });
 
     // Add site number to each item
-    const itemsWithSite = gearForSale.map(item => {
-      const checkIn = checkIns.find(c => c.userId === item.userId);
+    const itemsWithSite = gearForSale.map((item: any) => {
+      const checkIn = checkIns.find((c: any) => c.userId === item.userId);
       return {
         ...item,
         siteNumber: checkIn?.siteNumber,
@@ -378,7 +379,7 @@ router.get('/marketplace/nearby', authenticateToken, async (req, res) => {
       campground,
       totalSellers: new Set(userIds).size
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get nearby marketplace error:', error);
     res.status(500).json({ error: 'Failed to get nearby gear' });
   }
@@ -416,7 +417,7 @@ router.get('/marketplace/all', optionalAuth, async (req, res) => {
     if (sort === 'price_low') orderBy = { price: 'asc' };
     if (sort === 'price_high') orderBy = { price: 'desc' };
 
-    const gearForSale = await prisma.gearItem.findMany({
+    const gearForSale = await db.gearItem.findMany({
       where,
       include: {
         user: {
@@ -439,17 +440,17 @@ router.get('/marketplace/all', optionalAuth, async (req, res) => {
     // Filter by seller's state if specified
     let filteredItems = gearForSale;
     if (state) {
-      filteredItems = gearForSale.filter(item => item.user.homeState === state);
+      filteredItems = gearForSale.filter((item: any) => item.user.homeState === state);
     }
 
-    const total = await prisma.gearItem.count({ where });
+    const total = await db.gearItem.count({ where });
 
     res.json({
-      items: filteredItems.map(item => ({ ...item, type: 'user-sale' })),
+      items: filteredItems.map((item: any) => ({ ...item, type: 'user-sale' })),
       total,
       hasMore: parseInt(offset as string) + filteredItems.length < total
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get marketplace error:', error);
     res.status(500).json({ error: 'Failed to get marketplace' });
   }
@@ -458,10 +459,10 @@ router.get('/marketplace/all', optionalAuth, async (req, res) => {
 // POST /api/gear-ads/marketplace/contact - Contact seller about an item
 router.post('/marketplace/contact', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { gearItemId, message } = req.body;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id: gearItemId },
       include: {
         user: {
@@ -483,7 +484,7 @@ router.post('/marketplace/contact', authenticateToken, async (req, res) => {
     }
 
     // Find or create message thread
-    let thread = await prisma.messageThread.findFirst({
+    let thread = await db.messageThread.findFirst({
       where: {
         OR: [
           { user1Id: userId, user2Id: gearItem.userId },
@@ -493,7 +494,7 @@ router.post('/marketplace/contact', authenticateToken, async (req, res) => {
     });
 
     if (!thread) {
-      thread = await prisma.messageThread.create({
+      thread = await db.messageThread.create({
         data: {
           id: generateId(),
           user1Id: userId,
@@ -503,7 +504,7 @@ router.post('/marketplace/contact', authenticateToken, async (req, res) => {
     }
 
     // Send message
-    await prisma.message.create({
+    await db.message.create({
       data: {
         id: generateId(),
         threadId: thread.id,
@@ -513,7 +514,7 @@ router.post('/marketplace/contact', authenticateToken, async (req, res) => {
     });
 
     // Update thread timestamp
-    await prisma.messageThread.update({
+    await db.messageThread.update({
       where: { id: thread.id },
       data: { updatedAt: new Date() }
     });
@@ -523,7 +524,7 @@ router.post('/marketplace/contact', authenticateToken, async (req, res) => {
       threadId: thread.id,
       message: 'Message sent to seller!' 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Contact seller error:', error);
     res.status(500).json({ error: 'Failed to contact seller' });
   }
@@ -554,7 +555,7 @@ router.post('/admin/create-ad', authenticateToken, async (req, res) => {
     } = req.body;
 
     // Verify advertiser exists
-    const advertiser = await prisma.advertiser.findUnique({
+    const advertiser = await db.advertiser.findUnique({
       where: { id: advertiserId }
     });
 
@@ -562,7 +563,7 @@ router.post('/admin/create-ad', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Advertiser not found' });
     }
 
-    const ad = await prisma.gearAd.create({
+    const ad = await db.gearAd.create({
       data: {
         id: generateId(),
         advertiserId,
@@ -584,7 +585,7 @@ router.post('/admin/create-ad', authenticateToken, async (req, res) => {
     });
 
     res.json(ad);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create ad error:', error);
     res.status(500).json({ error: 'Failed to create ad' });
   }
@@ -595,7 +596,7 @@ router.get('/admin/stats/:advertiserId', authenticateToken, async (req, res) => 
   try {
     const { advertiserId } = req.params;
 
-    const ads = await prisma.gearAd.findMany({
+    const ads = await db.gearAd.findMany({
       where: { advertiserId },
       select: {
         id: true,
@@ -608,9 +609,9 @@ router.get('/admin/stats/:advertiserId', authenticateToken, async (req, res) => 
       }
     });
 
-    const totals = ads.reduce((acc, ad) => ({
-      impressions: acc.impressions + ad.impressions,
-      clicks: acc.clicks + ad.clicks,
+    const totals = ads.reduce((acc: any, ad: any) => ({
+      impressions: acc.impressions + (ad.impressions || 0),
+      clicks: acc.clicks + (ad.clicks || 0),
       spent: acc.spent + Number(ad.spent || 0)
     }), { impressions: 0, clicks: 0, spent: 0 });
 
@@ -626,7 +627,7 @@ router.get('/admin/stats/:advertiserId', authenticateToken, async (req, res) => 
         avgCpc: totals.clicks > 0 ? (totals.spent / totals.clicks).toFixed(2) : '0.00'
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get advertiser stats error:', error);
     res.status(500).json({ error: 'Failed to get stats' });
   }

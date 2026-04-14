@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Get all posts
 router.get('/', optionalAuth, async (req: Request, res: Response) => {
@@ -46,14 +46,14 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
       }
     });
 
-    const formattedPosts = posts.map(post => ({
+    const formattedPosts = posts.map((post: any) => ({
       ...post,
       isLiked: currentUserId ? post.likes && (post.likes as any[]).length > 0 : false,
       likes: undefined
     }));
 
     res.json(formattedPosts);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get posts error:', error);
     res.status(500).json({ error: 'Failed to get posts' });
   }
@@ -114,7 +114,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     };
 
     res.json(formattedPost);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get post error:', error);
     res.status(500).json({ error: 'Failed to get post' });
   }
@@ -136,7 +136,7 @@ router.get('/feed/me', authenticateToken, async (req: Request, res: Response) =>
       }
     });
 
-    const friendIds = friendships.map(f => 
+    const friendIds = friendships.map((f: any) => 
       f.userId === userId ? f.friendId : f.userId
     );
 
@@ -170,14 +170,14 @@ router.get('/feed/me', authenticateToken, async (req: Request, res: Response) =>
       }
     });
 
-    const formattedPosts = posts.map(post => ({
+    const formattedPosts = posts.map((post: any) => ({
       ...post,
       isLiked: post.likes && post.likes.length > 0,
       likes: undefined
     }));
 
     res.json(formattedPosts);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get feed error:', error);
     res.status(500).json({ error: 'Failed to get feed' });
   }
@@ -225,7 +225,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     await parseAndCreateHashtags(content, post.id);
 
     res.status(201).json({ ...post, isLiked: false });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create post error:', error);
     res.status(500).json({ error: 'Failed to create post' });
   }
@@ -274,7 +274,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     });
 
     res.json(updatedPost);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update post error:', error);
     res.status(500).json({ error: 'Failed to update post' });
   }
@@ -299,7 +299,7 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
     await prisma.post.delete({ where: { id } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete post error:', error);
     res.status(500).json({ error: 'Failed to delete post' });
   }
@@ -345,7 +345,7 @@ router.post('/:id/like', authenticateToken, async (req: Request, res: Response) 
 
       res.json({ liked: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Like post error:', error);
     res.status(500).json({ error: 'Failed to like post' });
   }
@@ -405,7 +405,7 @@ router.post('/:id/comments', authenticateToken, async (req: Request, res: Respon
     }
 
     res.status(201).json(comment);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add comment error:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
@@ -430,7 +430,7 @@ router.delete('/comments/:commentId', authenticateToken, async (req: Request, re
     await prisma.comment.delete({ where: { id: commentId } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete comment error:', error);
     res.status(500).json({ error: 'Failed to delete comment' });
   }

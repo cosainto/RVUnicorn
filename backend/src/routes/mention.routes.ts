@@ -34,7 +34,7 @@ router.get('/search/users', authenticateToken, async (req, res) => {
     });
 
     res.json(users);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
   }
@@ -70,7 +70,7 @@ router.get('/search/campgrounds', authenticateToken, async (req, res) => {
     });
 
     res.json(campgrounds);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search campgrounds error:', error);
     res.status(500).json({ error: 'Failed to search campgrounds' });
   }
@@ -126,7 +126,7 @@ router.get('/search/all', authenticateToken, async (req, res) => {
     });
 
     res.json({ users, campgrounds });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search all error:', error);
     res.status(500).json({ error: 'Failed to search' });
   }
@@ -276,7 +276,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     });
 
     res.json(mentions);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get mentions error:', error);
     res.status(500).json({ error: 'Failed to get mentions' });
   }
@@ -310,7 +310,7 @@ router.get('/search/tags', authenticateToken, async (req: any, res) => {
     });
 
     res.json(tags);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Tag search error:', error);
     res.status(500).json({ error: 'Failed to search tags' });
   }

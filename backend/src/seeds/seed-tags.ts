@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const defaultTags = [
   { name: 'Question', slug: 'question', color: '#3B82F6' },
@@ -31,7 +31,7 @@ async function main() {
         create: tag
       });
       console.log(`  ✅ ${tag.name}`);
-    } catch (error) {
+    } catch (error: any) {
       console.log(`  ⚠️  ${tag.name} - already exists or error`);
     }
   }

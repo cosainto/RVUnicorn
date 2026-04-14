@@ -2,12 +2,12 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/basecamp-activity
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { limit = 20, offset = 0, unreadOnly = 'false' } = req.query;
 
     const whereClause: any = { userId };
@@ -25,7 +25,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
 
     const unreadCount = await prisma.basecampActivity.count({ where: { userId, isRead: false } });
 
-    const formatted = activities.map(a => ({
+    const formatted = activities.map((a: any) => ({
       ...a,
       message: formatMessage(a),
       icon: getIcon(a.type),
@@ -33,7 +33,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     }));
 
     res.json({ activities: formatted, unreadCount, hasMore: activities.length === parseInt(limit as string) });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get activity error:', error);
     res.status(500).json({ error: 'Failed to fetch activity' });
   }
@@ -42,9 +42,9 @@ router.get('/', authenticateToken, async (req: any, res) => {
 // GET /api/basecamp-activity/unread-count
 router.get('/unread-count', authenticateToken, async (req: any, res) => {
   try {
-    const count = await prisma.basecampActivity.count({ where: { userId: req.user.id, isRead: false } });
+    const count = await prisma.basecampActivity.count({ where: { userId: (req as any).user.id, isRead: false } });
     res.json({ count });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch count' });
   }
 });
@@ -52,9 +52,9 @@ router.get('/unread-count', authenticateToken, async (req: any, res) => {
 // PUT /api/basecamp-activity/:id/read
 router.put('/:id/read', authenticateToken, async (req: any, res) => {
   try {
-    await prisma.basecampActivity.updateMany({ where: { id: req.params.id, userId: req.user.id }, data: { isRead: true } });
+    await prisma.basecampActivity.updateMany({ where: { id: req.params.id, userId: (req as any).user.id }, data: { isRead: true } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to mark read' });
   }
 });
@@ -62,9 +62,9 @@ router.put('/:id/read', authenticateToken, async (req: any, res) => {
 // PUT /api/basecamp-activity/read-all
 router.put('/read-all', authenticateToken, async (req: any, res) => {
   try {
-    await prisma.basecampActivity.updateMany({ where: { userId: req.user.id, isRead: false }, data: { isRead: true } });
+    await prisma.basecampActivity.updateMany({ where: { userId: (req as any).user.id, isRead: false }, data: { isRead: true } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to mark all read' });
   }
 });
@@ -72,9 +72,9 @@ router.put('/read-all', authenticateToken, async (req: any, res) => {
 // DELETE /api/basecamp-activity/:id
 router.delete('/:id', authenticateToken, async (req: any, res) => {
   try {
-    await prisma.basecampActivity.deleteMany({ where: { id: req.params.id, userId: req.user.id } });
+    await prisma.basecampActivity.deleteMany({ where: { id: req.params.id, userId: (req as any).user.id } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete' });
   }
 });
@@ -82,7 +82,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
 // POST /api/basecamp-activity/shoutout
 router.post('/shoutout', authenticateToken, async (req: any, res) => {
   try {
-    const actorId = req.user.id;
+    const actorId = (req as any).user.id;
     const { targetUserId, campgroundId, message } = req.body;
     if (!targetUserId || !message?.trim()) return res.status(400).json({ error: 'targetUserId and message required' });
     if (targetUserId === actorId) return res.status(400).json({ error: 'Cannot shoutout yourself' });
@@ -107,7 +107,7 @@ router.post('/shoutout', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ success: true, activity });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Shoutout error:', error);
     res.status(500).json({ error: 'Failed to send shoutout' });
   }

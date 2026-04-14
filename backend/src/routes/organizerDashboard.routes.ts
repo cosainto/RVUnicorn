@@ -155,7 +155,7 @@ router.get('/:campgroundId/broadcasts', authenticateToken, async (req: any, res:
     });
 
     res.json({ broadcasts });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Broadcasts list error:', e);
     res.status(500).json({ error: 'Failed to load broadcasts' });
   }
@@ -256,7 +256,7 @@ router.delete('/:campgroundId/broadcasts/:broadcastId', authenticateToken, async
 
     await (prisma as any).organizerBroadcast.delete({ where: { id: broadcastId } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Broadcast delete error:', e);
     res.status(500).json({ error: 'Failed to cancel broadcast' });
   }
@@ -285,7 +285,7 @@ router.get('/:campgroundId/hitch-config', authenticateToken, async (req: any, re
     }
 
     res.json({ config });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Hitch config error:', e);
     res.status(500).json({ error: 'Failed to load hitch config' });
   }
@@ -320,7 +320,7 @@ router.put('/:campgroundId/hitch-config', authenticateToken, async (req: any, re
     });
 
     res.json({ config });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Hitch config update error:', e);
     res.status(500).json({ error: 'Failed to update hitch config' });
   }
@@ -367,7 +367,7 @@ router.post('/:campgroundId/hitch-config/upload-faq', authenticateToken, upload.
       totalChars: textContent.length,
       faqIndexedAt: config.faqIndexedAt,
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] FAQ upload error:', e);
     res.status(500).json({ error: 'Failed to process FAQ upload' });
   }
@@ -491,7 +491,7 @@ router.get('/:campgroundId/analytics', authenticateToken, async (req: any, res: 
         sentAt: b.sentAt,
       })),
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Analytics error:', e);
     res.status(500).json({ error: 'Failed to load analytics' });
   }
@@ -550,7 +550,7 @@ router.post('/:campgroundId/broadcast-assist', authenticateToken, async (req: an
 
     const result = aiRes.content[0].type === 'text' ? aiRes.content[0].text.trim() : '';
     res.json({ message: result });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[OrganizerDashboard] Broadcast assist error:', e);
     res.status(500).json({ error: 'Failed to process AI assist' });
   }

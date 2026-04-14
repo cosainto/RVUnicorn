@@ -102,7 +102,7 @@ export async function runStaySurveyPromptCron() {
             },
           });
           prompted++;
-        } catch (e) {
+        } catch (e: any) {
           console.error(
             `[StaySurveyPrompt] Failed for user ${attendee.user.id} on event ${event.id}:`,
             e,
@@ -116,7 +116,7 @@ export async function runStaySurveyPromptCron() {
         `[StaySurveyPrompt] sent=${prompted} skip-already-reviewed=${skippedAlreadyReviewed} skip-already-prompted=${skippedAlreadyPrompted}`,
       );
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[StaySurveyPrompt] Error:', e);
   }
 }

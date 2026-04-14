@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const RIG_FIELDS = {
   rvType: true, rvMake: true, rvModel: true, rvYear: true,
@@ -14,7 +14,7 @@ const RIG_FIELDS = {
 // POST /api/rig-connection/request — send co-pilot request
 router.post('/request', authenticateToken, async (req: any, res: Response) => {
   try {
-    const requesterId = req.userId || req.user?.id;
+    const requesterId = req.userId || (req as any).user?.id;
     const { username, email } = req.body;
     if (!username && !email) return res.status(400).json({ error: 'username or email required' });
 
@@ -55,11 +55,11 @@ router.post('/request', authenticateToken, async (req: any, res: Response) => {
         title: 'Co-Pilot Request',
         message: `${requester?.firstName || 'Someone'} wants to link to your ${requester?.rvMake ? `${requester.rvMake} ${requester.rvModel || ''}` : 'rig'} as a co-pilot`,
         data: { connectionId: connection.id, requesterId },
-      },
+      } as any,
     });
 
     res.json({ connection });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to send request' });
   }
 });
@@ -67,7 +67,7 @@ router.post('/request', authenticateToken, async (req: any, res: Response) => {
 // POST /api/rig-connection/:id/approve — approve request
 router.post('/:id/approve', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const connection = await prisma.rigConnection.findUnique({ where: { id: req.params.id } });
     if (!connection) return res.status(404).json({ error: 'Connection not found' });
     if (connection.receiverId !== userId) return res.status(403).json({ error: 'Only receiver can approve' });
@@ -113,11 +113,11 @@ router.post('/:id/approve', authenticateToken, async (req: any, res: Response) =
         title: 'Co-Pilot Approved!',
         message: `${updated.receiver.firstName} approved your co-pilot request! Your rigs are now linked.`,
         data: { connectionId: connection.id },
-      },
+      } as any,
     });
 
     res.json({ connection: updated });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to approve' });
   }
 });
@@ -125,7 +125,7 @@ router.post('/:id/approve', authenticateToken, async (req: any, res: Response) =
 // POST /api/rig-connection/:id/decline
 router.post('/:id/decline', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const connection = await prisma.rigConnection.findUnique({ where: { id: req.params.id } });
     if (!connection) return res.status(404).json({ error: 'Connection not found' });
     if (connection.receiverId !== userId) return res.status(403).json({ error: 'Only receiver can decline' });
@@ -136,7 +136,7 @@ router.post('/:id/decline', authenticateToken, async (req: any, res: Response) =
     });
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to decline' });
   }
 });
@@ -144,7 +144,7 @@ router.post('/:id/decline', authenticateToken, async (req: any, res: Response) =
 // GET /api/rig-connection/pending — pending for this user
 router.get('/pending', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const connections = await prisma.rigConnection.findMany({
       where: {
         OR: [{ requesterId: userId }, { receiverId: userId }],
@@ -157,7 +157,7 @@ router.get('/pending', authenticateToken, async (req: any, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json({ connections });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch pending' });
   }
 });
@@ -165,7 +165,7 @@ router.get('/pending', authenticateToken, async (req: any, res: Response) => {
 // GET /api/rig-connection/co-pilot — get approved co-pilot for this user
 router.get('/co-pilot', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const connection = await prisma.rigConnection.findFirst({
       where: {
         OR: [{ requesterId: userId }, { receiverId: userId }],
@@ -179,7 +179,7 @@ router.get('/co-pilot', authenticateToken, async (req: any, res: Response) => {
     if (!connection) return res.json({ coPilot: null });
     const coPilot = connection.requesterId === userId ? connection.receiver : connection.requester;
     res.json({ coPilot, connectionId: connection.id });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch co-pilot' });
   }
 });
@@ -200,7 +200,7 @@ router.get('/co-pilot/:userId', async (req, res) => {
     if (!connection) return res.json({ coPilot: null });
     const coPilot = connection.requesterId === req.params.userId ? connection.receiver : connection.requester;
     res.json({ coPilot });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed' });
   }
 });

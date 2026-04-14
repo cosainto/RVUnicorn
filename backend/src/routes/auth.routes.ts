@@ -1,4 +1,5 @@
 import express from 'express';
+// @ts-ignore
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
@@ -8,6 +9,7 @@ import { sendEmail, welcomeEmail } from '../services/email-sms.service';
 import crypto from 'crypto';
 
 const router = express.Router();
+const db = prisma as any;
 
 // Register
 router.post('/register', async (req, res) => {
@@ -18,7 +20,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await db.user.findFirst({
       where: {
         OR: [
           { email },
@@ -33,7 +35,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
+    const user = await db.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -59,12 +61,12 @@ router.post('/register', async (req, res) => {
     await awardBadge(user.id, 'rvunicorn-member');
     // Award Founding Member badge — limited to first 5,000 members
     try {
-      const foundingBadge = await prisma.badge.findUnique({ where: { slug: 'founding-member' } });
+      const foundingBadge = await db.badge.findUnique({ where: { slug: 'founding-member' } });
       if (foundingBadge) {
-        const issuedCount = await prisma.userBadge.count({ where: { badgeId: foundingBadge.id } });
+        const issuedCount = await db.userBadge.count({ where: { badgeId: foundingBadge.id } });
         if (issuedCount < 5000) {
           const badgeNumber = issuedCount + 1;
-          await prisma.userBadge.create({
+          await db.userBadge.create({
             data: { userId: user.id, badgeId: foundingBadge.id, badgeNumber },
           }).catch(() => {}); // Skip if already awarded
           console.log(`[Badge] Founding Member #${badgeNumber}/5000 awarded to ${user.email}`);
@@ -77,7 +79,7 @@ router.post('/register', async (req, res) => {
     try {
       const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
       if (user.id !== WILL_ID) {
-        await prisma.friendship.create({
+        await db.friendship.create({
           data: {
             initiatorId: WILL_ID,
             receiverId: user.id,
@@ -91,15 +93,15 @@ router.post('/register', async (req, res) => {
     // Process invite token — link new user to inviter
     if (inviteToken) {
       try {
-        const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
+        const invite = await db.invite.findUnique({ where: { token: inviteToken } });
         if (invite && invite.status === 'pending' && new Date() < invite.expiresAt) {
-          await prisma.invite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
+          await db.invite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
           // Auto-friend the inviter and new user
-          await prisma.friendship.create({ data: { initiatorId: invite.senderId, receiverId: user.id, status: 'ACCEPTED' } }).catch(() => {});
+          await db.friendship.create({ data: { initiatorId: invite.senderId, receiverId: user.id, status: 'ACCEPTED' } }).catch(() => {});
           // Award Trail Blazer badge to inviter
           try { await awardBadge(invite.senderId, 'trailblazer'); } catch {}
           // Notify the inviter
-          await prisma.notification.create({ data: { userId: invite.senderId, type: 'INVITE_ACCEPTED', content: `${firstName} ${lastName} joined RVUnicorn from your invite! You're now friends. 🎉`, link: `/profile/${username}` } }).catch(() => {});
+          await db.notification.create({ data: { userId: invite.senderId, type: 'INVITE_ACCEPTED', content: `${firstName} ${lastName} joined RVUnicorn from your invite! You're now friends. 🎉`, link: `/profile/${username}` } }).catch(() => {});
           console.log(`[Invite] ${email} joined via invite from ${invite.senderId}`);
         }
       } catch (inviteErr) { console.error('Invite processing error (non-fatal):', inviteErr); }
@@ -134,7 +136,7 @@ router.post('/register', async (req, res) => {
     );
 
     res.status(201).json({ user, token });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Failed to register user' });
   }
@@ -149,7 +151,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { email }
     });
 
@@ -183,7 +185,7 @@ router.post('/login', async (req, res) => {
     };
 
     res.json({ user: userResponse, token });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
@@ -194,7 +196,7 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -250,7 +252,7 @@ router.get('/me', authenticateToken, async (req, res) => {
     }
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get current user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
   }
@@ -263,7 +265,7 @@ router.put('/update-contact', authenticateToken, async (req: any, res) => {
     const { email, phoneNumber, currentPassword } = req.body;
     if (!currentPassword) return res.status(400).json({ error: 'Current password required' });
 
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    const user = await db.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(currentPassword, user.password);
@@ -271,11 +273,11 @@ router.put('/update-contact', authenticateToken, async (req: any, res) => {
 
     // Check email uniqueness if changing
     if (email && email !== user.email) {
-      const existing = await prisma.user.findUnique({ where: { email } });
+      const existing = await db.user.findUnique({ where: { email } });
       if (existing) return res.status(400).json({ error: 'Email already in use' });
     }
 
-    const updated = await prisma.user.update({
+    const updated = await db.user.update({
       where: { id: req.userId },
       data: {
         ...(email ? { email } : {}),
@@ -285,7 +287,7 @@ router.put('/update-contact', authenticateToken, async (req: any, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update contact error:', error);
     res.status(500).json({ error: 'Failed to update contact info' });
   }
@@ -298,17 +300,17 @@ router.put('/change-password', authenticateToken, async (req: any, res) => {
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
 
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    const user = await db.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(currentPassword, user.password);
     if (!valid) return res.status(401).json({ error: 'Incorrect current password' });
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id: req.userId }, data: { password: hashed } });
+    await db.user.update({ where: { id: req.userId }, data: { password: hashed } });
 
     res.json({ message: 'Password updated successfully' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to change password' });
   }
 });
@@ -319,7 +321,7 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required' });
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await db.user.findUnique({ where: { email } });
     if (!user) {
       // Don't reveal whether email exists
       return res.json({ success: true, message: 'If that email exists, we sent a reset link.' });
@@ -328,7 +330,7 @@ router.post('/forgot-password', async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    await prisma.user.update({
+    await db.user.update({
       where: { id: user.id },
       data: { passwordResetToken: token, passwordResetExpires: expires },
     });
@@ -374,14 +376,14 @@ router.post('/reset-password', async (req, res) => {
     if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-    const user = await prisma.user.findFirst({
+    const user = await db.user.findFirst({
       where: { passwordResetToken: token, passwordResetExpires: { gt: new Date() } },
     });
 
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
+    await db.user.update({
       where: { id: user.id },
       data: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null },
     });

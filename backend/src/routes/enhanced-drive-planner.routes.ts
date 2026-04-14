@@ -6,7 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const HERE_API_KEY = process.env.HERE_API_KEY;
@@ -220,7 +220,7 @@ router.get('/geocode/reverse', async (req, res) => {
     } else {
       res.json({ address: null });
     }
-  } catch (error) {
+  } catch (error: any) {
     res.json({ address: null });
   }
 });
@@ -305,7 +305,7 @@ router.get('/truck-stops', async (req, res) => {
     });
 
     res.json({ truckStops });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Truck stops error:', error);
     res.status(500).json({ error: 'Failed to fetch truck stops' });
   }
@@ -331,7 +331,7 @@ router.get('/rest-areas', async (req, res) => {
     });
 
     res.json({ restAreas });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Rest areas error:', error);
     res.status(500).json({ error: 'Failed to fetch rest areas' });
   }
@@ -395,7 +395,7 @@ router.post('/trips/from-route', async (req, res) => {
     }
 
     res.json(trip);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save trip error:', error);
     res.status(500).json({ error: 'Failed to save trip' });
   }
@@ -426,7 +426,7 @@ router.get('/trips/:id/route', async (req, res) => {
       ...trip,
       routeData,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trip route error:', error);
     res.status(500).json({ error: 'Failed to fetch trip route' });
   }
@@ -459,9 +459,9 @@ router.get('/users/:userId/favorites', async (req, res) => {
     });
 
     res.json({
-      favorites: favorites.map(f => f.campground),
+      favorites: favorites.map((f: any) => f.campground),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to fetch favorites' });
   }
@@ -501,13 +501,13 @@ router.get('/users/:userId/trips', async (req, res) => {
     });
     
     // Transform to include campground from first stay
-    const transformedTrips = trips.map(trip => ({
+    const transformedTrips = trips.map((trip: any) => ({
       ...trip,
       campground: trip.stays[0]?.campground || null,
     }));
 
     res.json({ trips: transformedTrips });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trips error:', error);
     res.status(500).json({ error: 'Failed to fetch trips' });
   }
@@ -533,7 +533,7 @@ router.get('/users/:userId/friends/checkins', async (req, res) => {
       },
     });
 
-    const friendIds = friendships.map(f => 
+    const friendIds = friendships.map((f: any) => 
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
@@ -573,7 +573,7 @@ router.get('/users/:userId/friends/checkins', async (req, res) => {
     });
 
     res.json({ checkIns });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get friend check-ins error:', error);
     res.status(500).json({ error: 'Failed to fetch check-ins' });
   }

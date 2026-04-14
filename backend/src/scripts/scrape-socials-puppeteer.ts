@@ -14,7 +14,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const BATCH_SIZE = 10;
@@ -157,7 +157,7 @@ async function main() {
 
   // Filter out already-scraped if configured
   const toScrape = SKIP_ALREADY_SCRAPED
-    ? campgrounds.filter(cg =>
+    ? campgrounds.filter((cg: any) =>
         !cg.facebookUrl || !cg.instagramUrl || !cg.youtubeUrl || !cg.twitterUrl || !cg.tiktokUrl
       )
     : campgrounds;
@@ -179,7 +179,7 @@ async function main() {
     log(`\n── Batch ${Math.floor(i / BATCH_SIZE) + 1} (${i + 1}–${Math.min(i + BATCH_SIZE, toScrape.length)} of ${toScrape.length}) ──`);
 
     const results = await Promise.allSettled(
-      batch.map(cg => scrapeOneCampground(browser, cg))
+      batch.map((cg: any) => scrapeOneCampground(browser, cg))
     );
 
     for (let j = 0; j < results.length; j++) {
@@ -194,7 +194,7 @@ async function main() {
         for (const [field, url] of Object.entries(socialsFound)) {
           // Only update if the field is currently empty
           if (!(cg as any)[field] && url) {
-            updateData[field] = url;
+            updateData[field] = url as string;
           }
         }
 

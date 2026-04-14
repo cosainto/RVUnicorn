@@ -4,6 +4,7 @@ import { pushNotification } from '../routes/notification.routes';
 export async function runTripCheckinReminder() {
   console.log('[TripCheckinReminder] Running...');
 
+  const now = new Date();
   // Auto check-in for trips that started 2 days ago with no check-in
   const twoDaysAgo = new Date(now);
   twoDaysAgo.setDate(now.getDate() - 2);
@@ -75,11 +76,10 @@ export async function runTripCheckinReminder() {
         console.log('[TripCheckinReminder] Auto checked in ' + attendee.user.firstName + ' at ' + trip.campground?.name);
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripCheckinReminder] Auto check-in error:', e);
   }
 
-  const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(now);
@@ -142,12 +142,12 @@ export async function runTripCheckinReminder() {
           // Push live via SSE
           pushNotification(attendee.user.id, notification);
           console.log(`[TripCheckinReminder] Notified ${attendee.user.firstName} for ${trip.campground.name}`);
-        } catch (e) {
+        } catch (e: any) {
           console.error(`[TripCheckinReminder] Failed for user ${attendee.user.id}:`, e);
         }
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripCheckinReminder] Error:', e);
   }
 }

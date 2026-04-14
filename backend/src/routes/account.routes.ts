@@ -1,5 +1,6 @@
 // account.routes.ts - Updated with email notifications
 import { Router, Request, Response } from 'express';
+// @ts-ignore
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -11,6 +12,7 @@ import {
 } from '../services/security-emails';
 
 const router = Router();
+const db = prisma as any;
 
 // All routes require authentication
 router.use(authenticateToken);
@@ -22,7 +24,7 @@ router.post('/request-deletion', async (req: Request, res: Response) => {
     const { password, reason, feedback } = req.body;
 
     // Get user
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId }
     });
 
@@ -37,7 +39,7 @@ router.post('/request-deletion', async (req: Request, res: Response) => {
     }
 
     // Check if deletion already requested
-    const existingDeletion = await prisma.accountDeletion.findUnique({
+    const existingDeletion = await db.accountDeletion.findUnique({
       where: { userId }
     });
 
@@ -50,7 +52,7 @@ router.post('/request-deletion', async (req: Request, res: Response) => {
     scheduledDeletionDate.setDate(scheduledDeletionDate.getDate() + 30);
 
     // Create or update deletion request
-    const deletion = await prisma.accountDeletion.upsert({
+    const deletion = await db.accountDeletion.upsert({
       where: { userId },
       create: {
         userId,
@@ -70,7 +72,7 @@ router.post('/request-deletion', async (req: Request, res: Response) => {
     });
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'ACCOUNT_DELETION_REQUESTED',
@@ -94,7 +96,7 @@ router.post('/request-deletion', async (req: Request, res: Response) => {
       scheduledDeletionDate,
       deletion
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Request deletion error:', error);
     res.status(500).json({ error: 'Failed to request deletion' });
   }
@@ -105,7 +107,7 @@ router.post('/cancel-deletion', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    const deletion = await prisma.accountDeletion.findUnique({
+    const deletion = await db.accountDeletion.findUnique({
       where: { userId }
     });
 
@@ -114,12 +116,12 @@ router.post('/cancel-deletion', async (req: Request, res: Response) => {
     }
 
     // Get user for email
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId }
     });
 
     // Cancel the deletion
-    await prisma.accountDeletion.update({
+    await db.accountDeletion.update({
       where: { userId },
       data: {
         status: 'CANCELLED',
@@ -128,7 +130,7 @@ router.post('/cancel-deletion', async (req: Request, res: Response) => {
     });
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'ACCOUNT_DELETION_CANCELLED',
@@ -147,7 +149,7 @@ router.post('/cancel-deletion', async (req: Request, res: Response) => {
     }
 
     res.json({ message: 'Account deletion cancelled' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cancel deletion error:', error);
     res.status(500).json({ error: 'Failed to cancel deletion' });
   }
@@ -158,7 +160,7 @@ router.get('/deletion-status', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    const deletion = await prisma.accountDeletion.findUnique({
+    const deletion = await db.accountDeletion.findUnique({
       where: { userId }
     });
 
@@ -177,7 +179,7 @@ router.get('/deletion-status', async (req: Request, res: Response) => {
       scheduledDeletionDate: deletion.scheduledDeletionDate,
       daysRemaining
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get deletion status error:', error);
     res.status(500).json({ error: 'Failed to get deletion status' });
   }
@@ -189,7 +191,7 @@ router.post('/request-email-verification', async (req: Request, res: Response) =
     const userId = (req as any).userId;
     const { type, newEmail } = req.body;
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId }
     });
 
@@ -203,7 +205,7 @@ router.post('/request-email-verification', async (req: Request, res: Response) =
     expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiry
 
     // Create verification record
-    await prisma.emailVerification.create({
+    await db.emailVerification.create({
       data: {
         userId,
         email: newEmail || user.email,
@@ -220,7 +222,7 @@ router.post('/request-email-verification', async (req: Request, res: Response) =
       // Remove this in production - only for testing
       token: process.env.NODE_ENV === 'development' ? token : undefined
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Request email verification error:', error);
     res.status(500).json({ error: 'Failed to request verification' });
   }
@@ -232,7 +234,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { token } = req.body;
 
-    const verification = await prisma.emailVerification.findFirst({
+    const verification = await db.emailVerification.findFirst({
       where: {
         userId,
         token,
@@ -246,20 +248,20 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     }
 
     // Mark as verified
-    await prisma.emailVerification.update({
+    await db.emailVerification.update({
       where: { id: verification.id },
       data: { verifiedAt: new Date() }
     });
 
     // If this is an email change verification, update the user's email
     if (verification.type === 'EMAIL_CHANGE') {
-      await prisma.user.update({
+      await db.user.update({
         where: { id: userId },
         data: { email: verification.email }
       });
 
       // Log activity
-      await prisma.accountActivityLog.create({
+      await db.accountActivityLog.create({
         data: {
           userId,
           action: 'EMAIL_CHANGED',
@@ -271,7 +273,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     }
 
     res.json({ message: 'Email verified successfully', type: verification.type });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Verify email error:', error);
     res.status(500).json({ error: 'Failed to verify email' });
   }
@@ -291,7 +293,7 @@ router.put('/change-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'New password must be at least 8 characters' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId }
     });
 
@@ -303,7 +305,7 @@ router.put('/change-password', async (req: Request, res: Response) => {
     const validPassword = await bcrypt.compare(currentPassword, user.password);
     if (!validPassword) {
       // Log failed attempt
-      await prisma.accountActivityLog.create({
+      await db.accountActivityLog.create({
         data: {
           userId,
           action: 'PASSWORD_CHANGE_FAILED',
@@ -320,13 +322,13 @@ router.put('/change-password', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password
-    await prisma.user.update({
+    await db.user.update({
       where: { id: userId },
       data: { password: hashedPassword }
     });
 
     // Log activity
-    await prisma.accountActivityLog.create({
+    await db.accountActivityLog.create({
       data: {
         userId,
         action: 'PASSWORD_CHANGED',
@@ -345,7 +347,7 @@ router.put('/change-password', async (req: Request, res: Response) => {
     });
 
     res.json({ message: 'Password changed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
   }
@@ -356,13 +358,13 @@ router.post('/heartbeat', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    await prisma.user.update({
+    await db.user.update({
       where: { id: userId },
       data: { lastActiveAt: new Date() }
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Heartbeat error:', error);
     res.status(500).json({ error: 'Failed to update activity' });
   }

@@ -29,7 +29,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     // 401 (not 403) — "you need to authenticate again", which lets the
     // frontend interceptor distinguish expired sessions from real
     // permission denials and auto-redirect to login.
@@ -51,7 +51,7 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
     (req as any).user = { id: decoded.userId, email: decoded.email };
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     // Invalid token, but it's optional so continue without auth
     next();
   }

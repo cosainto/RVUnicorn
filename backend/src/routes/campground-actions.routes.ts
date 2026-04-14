@@ -1,25 +1,24 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+const db = new PrismaClient() as any;
 
 // GET /api/campground-actions/:campgroundId/status - Get all action statuses
 router.get('/:campgroundId/status', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
     const [follow, wishlist, mute] = await Promise.all([
-      prisma.campgroundFollow.findUnique({
+      db.campgroundFollow.findUnique({
         where: { userId_campgroundId: { userId, campgroundId } }
       }),
-      prisma.campgroundWishlist.findUnique({
+      db.campgroundWishlist.findUnique({
         where: { userId_campgroundId: { userId, campgroundId } }
       }),
-      prisma.mutedEntity.findFirst({
+      db.mutedEntity.findFirst({
         where: { userId, mutedCampgroundId: campgroundId }
       })
     ]);
@@ -29,7 +28,7 @@ router.get('/:campgroundId/status', authenticateToken, async (req, res) => {
       inWishlist: !!wishlist,
       isMuted: !!mute
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get status error:', error);
     res.status(500).json({ error: 'Failed to get status' });
   }
@@ -38,23 +37,23 @@ router.get('/:campgroundId/status', authenticateToken, async (req, res) => {
 // POST /api/campground-actions/:campgroundId/favorite/toggle
 router.post('/:campgroundId/favorite/toggle', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
-    const existing = await prisma.campgroundFollow.findUnique({
+    const existing = await db.campgroundFollow.findUnique({
       where: { userId_campgroundId: { userId, campgroundId } }
     });
 
     if (existing) {
-      await prisma.campgroundFollow.delete({ where: { id: existing.id } });
+      await db.campgroundFollow.delete({ where: { id: existing.id } });
       res.json({ isFavorite: false });
     } else {
-      await prisma.campgroundFollow.create({
+      await db.campgroundFollow.create({
         data: { userId, campgroundId }
       });
       res.json({ isFavorite: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle favorite error:', error);
     res.status(500).json({ error: 'Failed to toggle favorite' });
   }
@@ -63,23 +62,23 @@ router.post('/:campgroundId/favorite/toggle', authenticateToken, async (req, res
 // POST /api/campground-actions/:campgroundId/mute/toggle
 router.post('/:campgroundId/mute/toggle', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
-    const existing = await prisma.mutedEntity.findFirst({
+    const existing = await db.mutedEntity.findFirst({
       where: { userId, mutedCampgroundId: campgroundId }
     });
 
     if (existing) {
-      await prisma.mutedEntity.delete({ where: { id: existing.id } });
+      await db.mutedEntity.delete({ where: { id: existing.id } });
       res.json({ isMuted: false });
     } else {
-      await prisma.mutedEntity.create({
+      await db.mutedEntity.create({
         data: { userId, mutedCampgroundId: campgroundId }
       });
       res.json({ isMuted: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle mute error:', error);
     res.status(500).json({ error: 'Failed to toggle mute' });
   }
@@ -88,9 +87,9 @@ router.post('/:campgroundId/mute/toggle', authenticateToken, async (req, res) =>
 // GET /api/campground-actions/favorites - Get user's favorite campgrounds
 router.get('/favorites', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
-    const favorites = await prisma.campgroundFollow.findMany({
+    const favorites = await db.campgroundFollow.findMany({
       where: { userId },
       include: {
         campground: {
@@ -107,7 +106,7 @@ router.get('/favorites', authenticateToken, async (req, res) => {
     });
 
     res.json(favorites);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to get favorites' });
   }
@@ -116,8 +115,8 @@ router.get('/favorites', authenticateToken, async (req, res) => {
 // GET /api/campground-actions/wishlist — get user's wishlisted campgrounds
 router.get('/wishlist', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
-    const items = await prisma.campgroundWishlist.findMany({
+    const userId = (req as any).user.id;
+    const items = await db.campgroundWishlist.findMany({
       where: { userId },
       include: { campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, latitude: true, longitude: true } } },
       orderBy: { createdAt: 'desc' },
@@ -131,8 +130,8 @@ router.get('/wishlist', authenticateToken, async (req: any, res) => {
 // GET /api/campground-actions/wishlist — get user's wishlisted campgrounds
 router.get('/wishlist', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
-    const items = await prisma.campgroundWishlist.findMany({
+    const userId = (req as any).user.id;
+    const items = await db.campgroundWishlist.findMany({
       where: { userId },
       include: { campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, latitude: true, longitude: true } } },
       orderBy: { createdAt: 'desc' },

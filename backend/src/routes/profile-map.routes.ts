@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const STATE_CODES: Record<string, string> = {
   'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
@@ -44,7 +44,7 @@ router.get('/users/:userId/states-visited', async (req, res) => {
       campgrounds: Map<string, { id: string; name: string; visitCount: number }>;
     }> = {};
 
-    stays.forEach(stay => {
+    stays.forEach((stay: any) => {
       const stateName = stay.campground?.state;
       if (!stateName) return;
       const code = STATE_CODES[stateName] || stateName;
@@ -79,7 +79,7 @@ router.get('/users/:userId/states-visited', async (req, res) => {
       }
     });
 
-    checkIns.forEach(checkIn => {
+    checkIns.forEach((checkIn: any) => {
       const stateName = checkIn.campground?.state;
       if (!stateName) return;
       const code = STATE_CODES[stateName] || stateName;
@@ -124,7 +124,7 @@ router.get('/users/:userId/states-visited', async (req, res) => {
     }));
 
     res.json({ states });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get states visited error:', error);
     res.status(500).json({ error: 'Failed to fetch states visited' });
   }
@@ -149,7 +149,7 @@ router.get('/users/:userId/trip-paths', async (req, res) => {
       take: limit,
     });
 
-    const tripPaths = trips.map(trip => {
+    const tripPaths = trips.map((trip: any) => {
       const firstStay = trip.stays[0];
       return {
         id: trip.id,
@@ -167,7 +167,7 @@ router.get('/users/:userId/trip-paths', async (req, res) => {
     });
 
     res.json({ trips: tripPaths });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trip paths error:', error);
     res.status(500).json({ error: 'Failed to fetch trip paths' });
   }
@@ -185,15 +185,15 @@ router.get('/users/:userId/travel-stats', async (req, res) => {
     ]);
 
     const visitedStates = new Set<string>();
-    stays.forEach(s => s.campground?.state && visitedStates.add(STATE_CODES[s.campground.state] || s.campground.state));
-    checkIns.forEach(c => c.campground?.state && visitedStates.add(STATE_CODES[c.campground.state] || c.campground.state));
+    stays.forEach((s: any) => s.campground?.state && visitedStates.add(STATE_CODES[s.campground.state] || s.campground.state));
+    checkIns.forEach((c: any) => c.campground?.state && visitedStates.add(STATE_CODES[c.campground.state] || c.campground.state));
 
     const visitedCampgrounds = new Set<string>();
-    stays.forEach(s => s.campgroundId && visitedCampgrounds.add(s.campgroundId));
-    checkIns.forEach(c => c.campgroundId && visitedCampgrounds.add(c.campgroundId));
+    stays.forEach((s: any) => s.campgroundId && visitedCampgrounds.add(s.campgroundId));
+    checkIns.forEach((c: any) => c.campgroundId && visitedCampgrounds.add(c.campgroundId));
 
     let totalNights = 0;
-    stays.forEach(stay => {
+    stays.forEach((stay: any) => {
       const nights = Math.ceil((new Date(stay.endDate).getTime() - new Date(stay.startDate).getTime()) / (1000 * 60 * 60 * 24));
       totalNights += Math.max(0, nights);
     });
@@ -215,7 +215,7 @@ router.get('/users/:userId/travel-stats', async (req, res) => {
       usProgress: Math.round((visitedStates.size / 50) * 100),
       mostVisitedState: mostVisited ? { code: mostVisited[0], visits: mostVisited[1] } : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get travel stats error:', error);
     res.status(500).json({ error: 'Failed to fetch travel stats' });
   }
@@ -238,7 +238,7 @@ router.post('/users/:userId/states-visited', async (req, res) => {
     });
 
     res.json(visit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark state visited error:', error);
     res.status(500).json({ error: 'Failed to mark state as visited' });
   }
@@ -255,7 +255,7 @@ router.delete('/users/:userId/states-visited/:state', async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove state visit error:', error);
     res.status(500).json({ error: 'Failed to remove state visit' });
   }

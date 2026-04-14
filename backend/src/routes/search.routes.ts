@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const authenticateToken = (req: Request, res: Response, next: any) => {
@@ -88,7 +88,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.json({ results, parsed: { aiSummary: parsed.aiSummary, type: parsed.type } });
-  } catch (error) { console.error('Search error:', error); res.status(500).json({ error: 'Search failed' }); }
+  } catch (error: any) { console.error('Search error:', error); res.status(500).json({ error: 'Search failed' }); }
 });
 
 router.get('/quick', authenticateToken, async (req: Request, res: Response) => {
@@ -100,8 +100,8 @@ router.get('/quick', authenticateToken, async (req: Request, res: Response) => {
       prisma.user.findMany({ where:{OR:[{firstName:{contains:q,mode:'insensitive'}},{lastName:{contains:q,mode:'insensitive'}},{username:{contains:q,mode:'insensitive'}}]}, select:{id:true,firstName:true,lastName:true,username:true,profilePicture:true}, take:5 }),
     ]);
     res.json({ results: [
-      ...camps.map(c => ({type:'campground',id:c.id,title:c.name,subtitle:`${c.location}${c.state?`, ${c.state}`:''}`,image:c.imageUrl,link:`/campgrounds/${c.id}`})),
-      ...users.map(u => ({type:'user',id:u.id,title:`${u.firstName} ${u.lastName}`,subtitle:`@${u.username}`,image:u.profilePicture,link:`/profile/${u.username}`})),
+      ...camps.map((c: any) => ({type:'campground',id:c.id,title:c.name,subtitle:`${c.location}${c.state?`, ${c.state}`:''}`,image:c.imageUrl,link:`/campgrounds/${c.id}`})),
+      ...users.map((u: any) => ({type:'user',id:u.id,title:`${u.firstName} ${u.lastName}`,subtitle:`@${u.username}`,image:u.profilePicture,link:`/profile/${u.username}`})),
     ]});
   } catch { res.json({ results: [] }); }
 });

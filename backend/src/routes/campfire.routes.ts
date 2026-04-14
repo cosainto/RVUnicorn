@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Trivia sessions in Central Time (hours, minutes)
 const TRIVIA_SESSIONS = [
@@ -339,7 +339,7 @@ router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, r
 
 // GET /api/campfire/:campgroundId/active-question
 // Returns the most recently asked question if still within time limit
-router.get('/:campgroundId/active-question', async (req: Request, res: Response) => {
+router.get('/:campgroundId/active-question', async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
 
@@ -383,7 +383,7 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
         askedAt: question.askedAt,
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get active question' });
   }
 });
@@ -392,7 +392,7 @@ router.get('/:campgroundId/active-question', async (req: Request, res: Response)
 
 // GET /api/campfire/:campgroundId/current-trivia
 // Returns the latest asked question the user hasn't answered yet (no time cutoff)
-router.get('/:campgroundId/current-trivia', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:campgroundId/current-trivia', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const userId = (req as any).userId;
@@ -455,13 +455,13 @@ router.get('/:campgroundId/current-trivia', authenticateToken, async (req: Reque
       },
       nextSession: getNextTriviaSession(),
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get trivia' });
   }
 });
 
 // POST /api/campfire/:campgroundId/answer
-router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:campgroundId/answer', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const userId = (req as any).userId;
@@ -545,10 +545,10 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
           data: { userId, currentStreak: 1, longestStreak: 1, lastPlayedAt: new Date() },
         });
       }
-    } catch (e) { }
+    } catch (e: any) { }
 
     res.json({ isCorrect, points, correctAnswer: question.answer, speedBonus, streak });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to submit answer' });
   }
 });
@@ -556,7 +556,7 @@ router.post('/:campgroundId/answer', authenticateToken, async (req: Request, res
 
 // GET /api/campfire/:campgroundId/question-results/:questionId
 // Returns who got it right/wrong for post-question trash talk
-router.get('/:campgroundId/question-results/:questionId', async (req: Request, res: Response) => {
+router.get('/:campgroundId/question-results/:questionId', async (req: any, res: any) => {
   try {
     const { questionId } = req.params;
 
@@ -576,14 +576,14 @@ router.get('/:campgroundId/question-results/:questionId', async (req: Request, r
     });
 
     res.json({ correct, wrong, correctAnswer: question?.answer, total: answers.length });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get results' });
   }
 });
 
 
 // POST /api/campfire/:campgroundId/chat-message (internal - posts Hitch message to chat)
-router.post('/:campgroundId/chat-message', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:campgroundId/chat-message', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const { content } = req.body;
@@ -601,7 +601,7 @@ router.post('/:campgroundId/chat-message', authenticateToken, async (req: Reques
     });
 
     res.json(message);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to post message' });
   }
 });
@@ -613,7 +613,7 @@ router.post('/:campgroundId/chat-message', authenticateToken, async (req: Reques
 const vibeCache: Record<string, { message: string; cachedAt: number }> = {};
 const VIBE_TTL = 3 * 60 * 60 * 1000; // 3 hours
 
-router.get('/:campgroundId/daily-vibe', async (req: Request, res: Response) => {
+router.get('/:campgroundId/daily-vibe', async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
 
@@ -721,14 +721,14 @@ Write 1-2 short sentences (under 160 characters). Sound like a real camp neighbo
     if (message) vibeCache[campgroundId] = { message, cachedAt: Date.now() };
 
     res.json({ message });
-  } catch (error) {
+  } catch (error: any) {
     res.json({ message: null });
   }
 });
 
 
 // POST /api/campfire/:campgroundId/recipe-of-night (admin — post tonight's recipe to chat)
-router.post('/:campgroundId/recipe-of-night', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:campgroundId/recipe-of-night', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
 
@@ -785,7 +785,7 @@ Make it a real, delicious camp recipe. Keep it simple — one pot, foil packet, 
     });
 
     res.json({ success: true, message });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to post recipe' });
   }
 });

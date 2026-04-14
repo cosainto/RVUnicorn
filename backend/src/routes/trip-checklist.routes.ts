@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { notificationService } from '../services/notification.service';
 
 const router = Router({ mergeParams: true });
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/events/:eventId/checklist - Get checklist items
 router.get('/', authenticateToken, async (req: any, res) => {
@@ -27,7 +27,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     });
 
     res.json(items);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get checklist error:', error);
     res.status(500).json({ error: 'Failed to get checklist' });
   }
@@ -38,7 +38,7 @@ router.post(
   '/',
   authenticateToken,
   [body('title').trim().notEmpty()],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { eventId } = req.params;
       const { title, assignedToId, dueDate } = req.body;
@@ -80,7 +80,7 @@ router.post(
       // If assigned to someone, notify them
       if (assignedToId) {
         const currentUser = await prisma.user.findUnique({
-          where: { id: req.user.id },
+          where: { id: (req as any).user.id },
           select: { firstName: true, lastName: true },
         });
 
@@ -93,14 +93,14 @@ router.post(
           itemTitle: title,
           dueDate: dueDate ? new Date(dueDate).toLocaleDateString() : undefined,
           assignedBy: {
-            id: req.user.id,
+            id: (req as any).user.id,
             name: `${currentUser?.firstName} ${currentUser?.lastName}`,
           },
         });
       }
 
       res.status(201).json(item);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add checklist item error:', error);
       res.status(500).json({ error: 'Failed to add checklist item' });
     }
@@ -149,14 +149,14 @@ router.put(
       // If marked as completed, notify attendees
       if (completed && !item.completed) {
         const currentUser = await prisma.user.findUnique({
-          where: { id: req.user.id },
+          where: { id: (req as any).user.id },
           select: { firstName: true, lastName: true },
         });
 
         const notifyIds = [
           item.event.creatorId,
-          ...item.event.invites.map(i => i.inviteeId),
-        ].filter(id => id !== req.user.id);
+          ...item.event.invites.map((i: any) => i.inviteeId),
+        ].filter(id => id !== (req as any).user.id);
 
         if (notifyIds.length > 0) {
           await notificationService.notifyChecklistCompleted({
@@ -167,7 +167,7 @@ router.put(
             campgroundName: item.event.campground?.name,
             itemTitle: item.title,
             completedBy: {
-              id: req.user.id,
+              id: (req as any).user.id,
               name: `${currentUser?.firstName} ${currentUser?.lastName}`,
             },
           });
@@ -175,7 +175,7 @@ router.put(
       }
 
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update checklist item error:', error);
       res.status(500).json({ error: 'Failed to update checklist item' });
     }

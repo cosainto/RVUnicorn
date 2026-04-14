@@ -8,6 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 const GEAR_CATEGORIES = [
   'Kitchen',
@@ -22,12 +23,12 @@ const GEAR_CATEGORIES = [
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // GET /api/gear - Get user's gear items
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req: any, res: any) => {
   try {
     const { category, visibility, borrowable, forSale } = req.query;
 
     let whereClause: any = {
-      userId: req.user!.id
+      userId: (req as any).user!.id
     };
 
     if (category) {
@@ -46,26 +47,26 @@ router.get('/', authenticateToken, async (req, res) => {
       whereClause.forSale = true;
     }
 
-    const gearItems = await prisma.gearItem.findMany({
+    const gearItems = await db.gearItem.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' }
     });
 
     res.json(gearItems);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear items error:', error);
     res.status(500).json({ error: 'Failed to get gear items' });
   }
 });
 
 // GET /api/gear/marketplace - Get items for sale
-router.get('/marketplace', authenticateToken, async (req, res) => {
+router.get('/marketplace', authenticateToken, async (req: any, res: any) => {
   try {
     const { category, visibility } = req.query;
 
     let whereClause: any = {
       forSale: true,
-      userId: { not: req.user!.id } // Don't show user's own items
+      userId: { not: (req as any).user!.id } // Don't show user's own items
     };
 
     if (category) {
@@ -79,7 +80,7 @@ router.get('/marketplace', authenticateToken, async (req, res) => {
       whereClause.visibility = 'CAMPGROUND';
     }
 
-    const gearItems = await prisma.gearItem.findMany({
+    const gearItems = await db.gearItem.findMany({
       where: whereClause,
       include: {
         user: {
@@ -96,18 +97,18 @@ router.get('/marketplace', authenticateToken, async (req, res) => {
     });
 
     res.json(gearItems);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get marketplace items error:', error);
     res.status(500).json({ error: 'Failed to get marketplace items' });
   }
 });
 
 // GET /api/gear/:id - Get single gear item
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id },
       include: {
         user: {
@@ -120,19 +121,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
           }
         }
       }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
     // Check if user has permission to view
-    if (gearItem.userId !== req.user!.id && gearItem.visibility === 'PRIVATE') {
+    if (gearItem.userId !== (req as any).user!.id && gearItem.visibility === 'PRIVATE') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     res.json(gearItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear item error:', error);
     res.status(500).json({ error: 'Failed to get gear item' });
   }
@@ -149,7 +150,7 @@ router.post(
     body('quantity').optional().isInt({ min: 1 }),
     body('visibility').optional().isIn(['PRIVATE', 'EVENT', 'CAMPGROUND']),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -158,9 +159,9 @@ router.post(
 
       const { name, category, quantity, notes, visibility, borrowable, rulesText, forSale, price, saleDescription } = req.body;
 
-      const gearItem = await prisma.gearItem.create({
+      const gearItem = await db.gearItem.create({
         data: {
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           name,
           category,
           quantity: quantity ? parseInt(quantity) : 1,
@@ -176,7 +177,7 @@ router.post(
       });
 
       res.json(gearItem);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create gear item error:', error);
       res.status(500).json({ error: 'Failed to create gear item' });
     }
@@ -184,20 +185,20 @@ router.post(
 );
 
 // PUT /api/gear/:id - Update gear item
-router.put('/:id', authenticateToken, upload.single('image'), async (req, res) => {
+router.put('/:id', authenticateToken, upload.single('image'), async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { name, category, quantity, notes, visibility, borrowable, rulesText, forSale, price, saleDescription } = req.body;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
-    if (gearItem.userId !== req.user!.id) {
+    if (gearItem.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -217,7 +218,7 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
     // Add image if uploaded
     if (req.file) {
       updateData.imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear');
-      
+
       // Delete old image if exists
       if (gearItem.imageUrl) {
         const oldImagePath = path.join(__dirname, '../../', gearItem.imageUrl);
@@ -227,32 +228,32 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req, res) =
       }
     }
 
-    const updatedItem = await prisma.gearItem.update({
+    const updatedItem = await db.gearItem.update({
       where: { id },
       data: updateData
     });
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update gear item error:', error);
     res.status(500).json({ error: 'Failed to update gear item' });
   }
 });
 
 // DELETE /api/gear/:id - Delete gear item
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
-    if (gearItem.userId !== req.user!.id) {
+    if (gearItem.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -264,30 +265,30 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    await prisma.gearItem.delete({
+    await db.gearItem.delete({
       where: { id }
     });
 
     res.json({ message: 'Gear item deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete gear item error:', error);
     res.status(500).json({ error: 'Failed to delete gear item' });
   }
 });
 
 // GET /api/gear/nearby/:campgroundId - Get borrowable gear at campground
-router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
+router.get('/nearby/:campgroundId', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const now = new Date();
 
     // Find users currently checked into this campground
-    const checkIns = await prisma.campgroundCheckIn.findMany({
+    const checkIns = await db.campgroundCheckIn.findMany({
       where: {
         campgroundId,
         checkInDate: { lte: now },
         checkOutDate: { gte: now },
-        userId: { not: req.user!.id } // Exclude current user
+        userId: { not: (req as any).user!.id } // Exclude current user
       },
       select: {
         userId: true,
@@ -295,10 +296,10 @@ router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
       }
     });
 
-    const userIds = checkIns.map(c => c.userId);
+    const userIds = checkIns.map((c: any) => c.userId);
 
     // Get borrowable gear from these users
-    const gearItems = await prisma.gearItem.findMany({
+    const gearItems = await db.gearItem.findMany({
       where: {
         userId: { in: userIds },
         visibility: 'CAMPGROUND',
@@ -319,8 +320,8 @@ router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
     });
 
     // Add site number to each item
-    const itemsWithSite = gearItems.map(item => {
-      const checkIn = checkIns.find(c => c.userId === item.userId);
+    const itemsWithSite = gearItems.map((item: any) => {
+      const checkIn = checkIns.find((c: any) => c.userId === item.userId);
       return {
         ...item,
         siteNumber: checkIn?.siteNumber,
@@ -328,7 +329,7 @@ router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
     });
 
     res.json(itemsWithSite);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get nearby gear error:', error);
     res.status(500).json({ error: 'Failed to get nearby gear' });
   }
@@ -336,29 +337,29 @@ router.get('/nearby/:campgroundId', authenticateToken, async (req, res) => {
 
 
 // GET /api/gear/:id/history - Get usage history for a gear item
-router.get('/:id/history', authenticateToken, async (req, res) => {
+router.get('/:id/history', authenticateToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id },
       include: {
         user: {
           select: { id: true }
         }
       }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
-    if (gearItem.userId !== req.user!.id) {
+    if (gearItem.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Find all TripPackItems that reference this gear item
-    const usageHistory = await prisma.tripPackItem.findMany({
+    const usageHistory = await db.tripPackItem.findMany({
       where: {
         gearItemId: id,
         isPacked: true
@@ -393,7 +394,7 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
 
     res.json({
       gearItem,
-      usageHistory: usageHistory.map(item => ({
+      usageHistory: usageHistory.map((item: any) => ({
         id: item.id,
         packedAt: item.packedAt,
         trip: item.trip,
@@ -404,21 +405,21 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
         date: item.trip?.startDate || item.event?.startDate
       }))
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear history error:', error);
     res.status(500).json({ error: 'Failed to get gear history' });
   }
 });
 
 // GET /api/gear/upcoming-trips - Get user's upcoming trips for "Add to Trip" feature
-router.get('/trips/upcoming', authenticateToken, async (req, res) => {
+router.get('/trips/upcoming', authenticateToken, async (req: any, res: any) => {
   try {
     const now = new Date();
 
     // Get upcoming events
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
-        organizerId: req.user!.id,
+        organizerId: (req as any).user!.id,
         startDate: { gte: now }
       },
       select: {
@@ -439,9 +440,9 @@ router.get('/trips/upcoming', authenticateToken, async (req, res) => {
     });
 
     // Get upcoming trip plans
-    const trips = await prisma.tripPlan.findMany({
+    const trips = await db.tripPlan.findMany({
       where: {
-        userId: req.user!.id,
+        userId: (req as any).user!.id,
         startDate: { gte: now }
       },
       select: {
@@ -455,14 +456,14 @@ router.get('/trips/upcoming', authenticateToken, async (req, res) => {
     });
 
     res.json({ events, trips });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get upcoming trips error:', error);
     res.status(500).json({ error: 'Failed to get upcoming trips' });
   }
 });
 
 // POST /api/gear/:id/add-to-trip - Add gear item to a trip's pack list
-router.post('/:id/add-to-trip', authenticateToken, async (req, res) => {
+router.post('/:id/add-to-trip', authenticateToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { tripId, eventId, quantity = 1 } = req.body;
@@ -471,20 +472,20 @@ router.post('/:id/add-to-trip', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Must specify tripId or eventId' });
     }
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
-    if (gearItem.userId !== req.user!.id) {
+    if (gearItem.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Check if already added to this trip
-    const existing = await prisma.tripPackItem.findFirst({
+    const existing = await db.tripPackItem.findFirst({
       where: {
         gearItemId: id,
         ...(tripId ? { tripId } : {}),
@@ -497,7 +498,7 @@ router.post('/:id/add-to-trip', authenticateToken, async (req, res) => {
     }
 
     // Create the pack item
-    const packItem = await prisma.tripPackItem.create({
+    const packItem = await db.tripPackItem.create({
       data: {
         gearItemId: id,
         tripId: tripId || null,
@@ -506,44 +507,44 @@ router.post('/:id/add-to-trip', authenticateToken, async (req, res) => {
         customCategory: gearItem.category,
         quantity,
         isPacked: false,
-        createdById: req.user!.id
+        createdById: (req as any).user!.id
       },
       include: {
         trip: { select: { title: true } },
         event: { select: { title: true } }
       }
-    });
+    }) as any;
 
     res.json({
       message: 'Added to pack list',
       packItem,
       tripName: packItem.trip?.title || packItem.event?.title
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add to trip error:', error);
     res.status(500).json({ error: 'Failed to add to trip' });
   }
 });
 
 // POST /api/gear/:id/mark-used - Mark gear as used (updates lastUsedAt)
-router.post('/:id/mark-used', authenticateToken, async (req, res) => {
+router.post('/:id/mark-used', authenticateToken, async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { tripId, eventId } = req.body;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id }
-    });
+    }) as any;
 
     if (!gearItem) {
       return res.status(404).json({ error: 'Gear item not found' });
     }
 
-    if (gearItem.userId !== req.user!.id) {
+    if (gearItem.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.gearItem.update({
+    const updated = await db.gearItem.update({
       where: { id },
       data: {
         lastUsedAt: new Date(),
@@ -553,40 +554,40 @@ router.post('/:id/mark-used', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark used error:', error);
     res.status(500).json({ error: 'Failed to mark as used' });
   }
 });
 
 // GET /api/gear/stats - Get gear statistics
-router.get('/stats/summary', authenticateToken, async (req, res) => {
+router.get('/stats/summary', authenticateToken, async (req: any, res: any) => {
   try {
-    const totalItems = await prisma.gearItem.count({
-      where: { userId: req.user!.id }
+    const totalItems = await db.gearItem.count({
+      where: { userId: (req as any).user!.id }
     });
 
-    const byCategory = await prisma.gearItem.groupBy({
+    const byCategory = await db.gearItem.groupBy({
       by: ['category'],
-      where: { userId: req.user!.id },
+      where: { userId: (req as any).user!.id },
       _count: { id: true }
     });
 
-    const borrowable = await prisma.gearItem.count({
-      where: { userId: req.user!.id, borrowable: true }
+    const borrowable = await db.gearItem.count({
+      where: { userId: (req as any).user!.id, borrowable: true }
     });
 
-    const forSale = await prisma.gearItem.count({
-      where: { userId: req.user!.id, forSale: true }
+    const forSale = await db.gearItem.count({
+      where: { userId: (req as any).user!.id, forSale: true }
     });
 
     // Items not used in 6+ months
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const notRecentlyUsed = await prisma.gearItem.count({
+    const notRecentlyUsed = await db.gearItem.count({
       where: {
-        userId: req.user!.id,
+        userId: (req as any).user!.id,
         OR: [
           { lastUsedAt: null },
           { lastUsedAt: { lt: sixMonthsAgo } }
@@ -596,12 +597,12 @@ router.get('/stats/summary', authenticateToken, async (req, res) => {
 
     res.json({
       totalItems,
-      byCategory: byCategory.map(c => ({ category: c.category, count: c._count.id })),
+      byCategory: byCategory.map((c: any) => ({ category: c.category, count: c._count.id })),
       borrowable,
       forSale,
       notRecentlyUsed
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear stats error:', error);
     res.status(500).json({ error: 'Failed to get gear stats' });
   }

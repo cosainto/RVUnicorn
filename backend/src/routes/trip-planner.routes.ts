@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Get trip plan for an event (for current user)
 router.get('/event/:eventId/my-trip', authenticateToken, async (req: Request, res: Response) => {
@@ -24,7 +24,7 @@ router.get('/event/:eventId/my-trip', authenticateToken, async (req: Request, re
     });
 
     res.json(tripPlan);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trip plan error:', error);
     res.status(500).json({ error: 'Failed to get trip plan' });
   }
@@ -52,7 +52,7 @@ router.get('/event/:eventId/all-trips', authenticateToken, async (req: Request, 
     });
 
     res.json(tripPlans);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get all trip plans error:', error);
     res.status(500).json({ error: 'Failed to get trip plans' });
   }
@@ -234,7 +234,7 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
     });
 
     res.json(pitStop);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add pit stop error:', error);
     res.status(500).json({ error: 'Failed to add pit stop' });
   }
@@ -262,7 +262,7 @@ router.put('/pit-stop/:pitStopId', authenticateToken, async (req: Request, res: 
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pit stop error:', error);
     res.status(500).json({ error: 'Failed to update pit stop' });
   }
@@ -299,7 +299,7 @@ router.delete('/pit-stop/:pitStopId', authenticateToken, async (req: Request, re
     }
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete pit stop error:', error);
     res.status(500).json({ error: 'Failed to delete pit stop' });
   }
@@ -344,7 +344,7 @@ router.post('/trip/:tripId/complete', authenticateToken, async (req: Request, re
     }
 
     res.json(updatedTrip);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Complete trip error:', error);
     res.status(500).json({ error: 'Failed to complete trip' });
   }
@@ -381,7 +381,7 @@ router.post('/process-auto-mileage', authenticateToken, async (req: Request, res
       departureLogDay.setHours(0, 0, 0, 0);
 
       const departureKey = `Departed to ${trip.event.title}`;
-      const alreadyLoggedDeparture = trip.mileageLogs.some(l => l.description === departureKey);
+      const alreadyLoggedDeparture = trip.mileageLogs.some((l: any) => l.description === departureKey);
 
       if (!alreadyLoggedDeparture && now >= departureLogDay) {
         await prisma.userMileageLog.create({
@@ -402,7 +402,7 @@ router.post('/process-auto-mileage', authenticateToken, async (req: Request, res
       returnLogDay.setHours(12, 0, 0, 0);
 
       const returnKey = `Returned from ${trip.event.title}`;
-      const alreadyLoggedReturn = trip.mileageLogs.some(l => l.description === returnKey);
+      const alreadyLoggedReturn = trip.mileageLogs.some((l: any) => l.description === returnKey);
 
       if (!alreadyLoggedReturn && now >= returnLogDay) {
         await prisma.userMileageLog.create({
@@ -428,7 +428,7 @@ router.post('/process-auto-mileage', authenticateToken, async (req: Request, res
     }
 
     res.json({ processed: logged.length, logged });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Auto mileage error:', error);
     res.status(500).json({ error: 'Failed to process auto mileage' });
   }
@@ -451,10 +451,10 @@ router.get('/my-mileage', authenticateToken, async (req: Request, res: Response)
       }
     });
 
-    const totalMiles = logs.reduce((sum, log) => sum + log.miles, 0);
+    const totalMiles = logs.reduce((sum: any, log: any) => sum + log.miles, 0);
     const thisYear = logs
-      .filter(l => new Date(l.tripDate).getFullYear() === new Date().getFullYear())
-      .reduce((sum, log) => sum + log.miles, 0);
+      .filter((l: any) => new Date(l.tripDate).getFullYear() === new Date().getFullYear())
+      .reduce((sum: any, log: any) => sum + log.miles, 0);
 
     res.json({
       totalMiles,
@@ -462,7 +462,7 @@ router.get('/my-mileage', authenticateToken, async (req: Request, res: Response)
       tripCount: logs.length,
       logs
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get mileage error:', error);
     res.status(500).json({ error: 'Failed to get mileage' });
   }
@@ -480,7 +480,7 @@ async function calculateRoute(
 
     if (!geoResponse.ok) return { distanceMiles: null, durationMinutes: null };
 
-    const geoData = await geoResponse.json();
+    const geoData: any = await geoResponse.json();
     if (!geoData.results?.length) return { distanceMiles: null, durationMinutes: null };
 
     const originLat = geoData.results[0].geometry.location.lat;
@@ -500,7 +500,7 @@ async function calculateRoute(
     const duration = Math.round((roadDistance / 50) * 60);
 
     return { distanceMiles: roadDistance, durationMinutes: duration };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Route calculation error:', error);
     return { distanceMiles: null, durationMinutes: null };
   }
@@ -604,7 +604,7 @@ router.get('/trip/:tripId/full-itinerary', authenticateToken, async (req: Reques
 
     const totalMiles = legs.reduce((sum: number, l: any) => sum + l.distanceMiles, 0);
     res.json({ tripPlanId: tripId, waypoints, legs, totalMiles });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Full itinerary error:', error);
     res.status(500).json({ error: 'Failed to get itinerary' });
   }
@@ -667,7 +667,7 @@ router.post('/trip/:tripId/campground-stop', authenticateToken, async (req: Requ
     });
 
     res.json(pitStop);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add campground stop error:', error);
     res.status(500).json({ error: 'Failed to add campground stop' });
   }

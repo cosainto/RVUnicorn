@@ -47,7 +47,7 @@ export function registerEventSockets(io: Server) {
       }));
 
       socket.emit('presence:snapshot', { lifecycle, presence });
-    } catch (e) {
+    } catch (e: any) {
       console.error('[EventSocket] Snapshot error:', e);
     }
 

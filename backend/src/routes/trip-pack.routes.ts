@@ -3,13 +3,14 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = express.Router();
+const db = prisma as any;
 
 // GET /api/event-pack/:eventId - Get pack list for event
 router.get('/:eventId', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    const event = await prisma.campsiteEvent.findUnique({
+    const event = await db.campsiteEvent.findUnique({
       where: { id: eventId }
     });
 
@@ -17,7 +18,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    const items = await prisma.eventPackItem.findMany({
+    const items = await db.eventPackItem.findMany({
       where: { eventId },
       include: {
         assignedUser: {
@@ -37,7 +38,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     });
 
     res.json(items);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pack items error:', error);
     res.status(500).json({ error: 'Failed to fetch pack items' });
   }
@@ -52,7 +53,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Event, name, and category are required' });
     }
 
-    const event = await prisma.campsiteEvent.findUnique({
+    const event = await db.campsiteEvent.findUnique({
       where: { id: eventId }
     });
 
@@ -60,7 +61,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    const item = await prisma.eventPackItem.create({
+    const item = await db.eventPackItem.create({
       data: {
         eventId,
         name,
@@ -84,7 +85,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add pack item error:', error);
     res.status(500).json({ error: 'Failed to add item' });
   }
@@ -96,7 +97,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name, category, quantity, assignedTo, isChecked, notes } = req.body;
 
-    const item = await prisma.eventPackItem.findUnique({
+    const item = await db.eventPackItem.findUnique({
       where: { id }
     });
 
@@ -104,7 +105,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    const updatedItem = await prisma.eventPackItem.update({
+    const updatedItem = await db.eventPackItem.update({
       where: { id },
       data: {
         name: name || undefined,
@@ -128,7 +129,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pack item error:', error);
     res.status(500).json({ error: 'Failed to update item' });
   }
@@ -139,7 +140,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const item = await prisma.eventPackItem.findUnique({
+    const item = await db.eventPackItem.findUnique({
       where: { id }
     });
 
@@ -147,12 +148,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    await prisma.eventPackItem.delete({
+    await db.eventPackItem.delete({
       where: { id }
     });
 
     res.json({ message: 'Item deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete pack item error:', error);
     res.status(500).json({ error: 'Failed to delete item' });
   }

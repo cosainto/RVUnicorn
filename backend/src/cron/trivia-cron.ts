@@ -85,7 +85,7 @@ export async function kickoffNewWeek() {
   try {
     questions = await generateWeekQuestions(theme, character);
     console.log(`[TriviaCron] Generated ${questions.length} questions`);
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TriviaCron] Question generation failed:', e);
     return;
   }
@@ -142,7 +142,7 @@ export async function kickoffNewWeek() {
       });
 
       console.log(`[TriviaCron] Week created for campground ${room.campgroundId}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(`[TriviaCron] Failed for campground ${room.campgroundId}:`, e);
     }
   }
@@ -167,7 +167,7 @@ export async function ensureTriviaWeek(campgroundId: string, io?: any) {
   let questions: any[] = [];
   try {
     questions = await generateWeekQuestions(theme, character);
-  } catch (e) {
+  } catch (e: any) {
     console.error(`[TriviaCron] On-demand question generation failed for ${campgroundId}:`, e);
     return;
   }
@@ -637,7 +637,7 @@ export async function postRecipeOfNight() {
       });
 
       console.log(`[RecipeCron] Posted recipe for ${room.campgroundId}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(`[RecipeCron] Failed for ${room.campgroundId}:`, e);
     }
   }
@@ -692,7 +692,7 @@ Keep it under 150 words. Suggest real-sounding trails appropriate for the area a
       });
 
       console.log(`[TrailsCron] Posted morning trails for ${room.campgroundId}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(`[TrailsCron] Failed for ${room.campgroundId}:`, e);
     }
   }
@@ -787,7 +787,7 @@ export function registerTriviaCrons(io: any) {
       }
 
       if (recentlyExpired.length > 0) console.log(`[CampMarket] Sent feedback reminders for ${recentlyExpired.length} listings`);
-    } catch (e) { console.error('[CampMarket] Expire cron error:', e); }
+    } catch (e: any) { console.error('[CampMarket] Expire cron error:', e); }
   }, { timezone: 'America/Chicago' });
 
   // Daily 9 AM — suggest weather-triggered deals to campground owners

@@ -5,7 +5,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { notificationService } from '../services/notification.service';
 
 const router = Router({ mergeParams: true });
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/events/:eventId/notes - Get event notes
 router.get('/', authenticateToken, async (req: any, res) => {
@@ -27,7 +27,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     });
 
     res.json(notes);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get notes error:', error);
     res.status(500).json({ error: 'Failed to get notes' });
   }
@@ -38,7 +38,7 @@ router.post(
   '/',
   authenticateToken,
   [body('content').trim().notEmpty()],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { eventId } = req.params;
       const { content } = req.body;
@@ -63,7 +63,7 @@ router.post(
       const note = await prisma.eventNote.create({
         data: {
           eventId,
-          authorId: req.user.id,
+          authorId: (req as any).user.id,
           content,
         },
         include: {
@@ -79,15 +79,15 @@ router.post(
 
       // Get current user info
       const currentUser = await prisma.user.findUnique({
-        where: { id: req.user.id },
+        where: { id: (req as any).user.id },
         select: { firstName: true, lastName: true },
       });
 
       // Notify all attendees (except the note author)
       const notifyIds = [
         event.creatorId,
-        ...event.invites.map(i => i.inviteeId),
-      ].filter(id => id !== req.user.id);
+        ...event.invites.map((i: any) => i.inviteeId),
+      ].filter(id => id !== (req as any).user.id);
 
       if (notifyIds.length > 0) {
         const notePreview = content.length > 100 ? content.substring(0, 100) + '...' : content;
@@ -99,14 +99,14 @@ router.post(
           campgroundName: event.campground?.name,
           notePreview,
           addedBy: {
-            id: req.user.id,
+            id: (req as any).user.id,
             name: `${currentUser?.firstName} ${currentUser?.lastName}`,
           },
         });
       }
 
       res.status(201).json(note);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add note error:', error);
       res.status(500).json({ error: 'Failed to add note' });
     }

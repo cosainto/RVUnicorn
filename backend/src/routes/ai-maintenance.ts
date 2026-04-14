@@ -4,14 +4,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Toggle AI monitoring on/off ───────────────────────────────────────────────
 router.post("/toggle", authenticateToken, async (req: any, res) => {
   try {
     const { enabled } = req.body;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     console.log("TOGGLE HIT - userId:", userId, "enabled:", enabled);
     if (!userId) return res.status(400).json({ error: "No userId" });
     const updated = await prisma.user.update({
@@ -29,7 +29,7 @@ router.post("/toggle", authenticateToken, async (req: any, res) => {
 // ── Update current odometer ───────────────────────────────────────────────────
 router.post("/odometer", authenticateToken, async (req: any, res) => {
   const { mileage } = req.body;
-  const userId = req.user.id;
+  const userId = (req as any).user.id;
 
   try {
     await prisma.user.update({
@@ -46,7 +46,7 @@ router.post("/odometer", authenticateToken, async (req: any, res) => {
 // ── Get recommendations for a specific RV ────────────────────────────────────
 router.get("/recommendations/:rvId", authenticateToken, async (req: any, res) => {
   const { rvId } = req.params;
-  const userId = req.user.id;
+  const userId = (req as any).user.id;
 
   try {
     const recommendations = await prisma.maintenanceRecommendation.findMany({
@@ -63,7 +63,7 @@ router.get("/recommendations/:rvId", authenticateToken, async (req: any, res) =>
 // ── Dismiss a recommendation ──────────────────────────────────────────────────
 router.post("/recommendations/:id/dismiss", authenticateToken, async (req: any, res) => {
   const { id } = req.params;
-  const userId = req.user.id;
+  const userId = (req as any).user.id;
 
   try {
     await prisma.maintenanceRecommendation.update({
@@ -80,7 +80,7 @@ router.post("/recommendations/:id/dismiss", authenticateToken, async (req: any, 
 router.post("/recommendations/:id/schedule", authenticateToken, async (req: any, res) => {
   const { id } = req.params;
   const { scheduledDate } = req.body;
-  const userId = req.user.id;
+  const userId = (req as any).user.id;
 
   try {
     const rec = await prisma.maintenanceRecommendation.findFirst({ where: { id, userId } });
@@ -104,7 +104,7 @@ router.post("/recommendations/:id/schedule", authenticateToken, async (req: any,
 // ── Manual trigger: run AI analysis now ──────────────────────────────────────
 router.post("/analyze/:rvId", authenticateToken, async (req: any, res) => {
   const { rvId } = req.params;
-  const userId = req.user.id;
+  const userId = (req as any).user.id;
 
   try {
     const count = await runAIAnalysis(rvId, userId);
@@ -227,7 +227,7 @@ Only include services that are actually due or coming up soon based on the data.
       if (rec.urgency === "high" || rec.urgency === "critical") {
         await createMaintenanceNotification(userId, rv, rec);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to save recommendation:", e);
     }
   }
@@ -250,7 +250,7 @@ async function createMaintenanceNotification(userId: string, rv: any, rec: any) 
         content: `Hitch thinks your ${rv.rvYear || ""} ${rv.rvMake || ""} ${rv.rvModel || ""} needs a ${rec.serviceType}. ${rec.reason}`,
       },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("Failed to create maintenance notification:", e);
   }
 }

@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/bookings/campground/:campgroundId/sites - Get all available sites for a campground
 router.get('/campground/:campgroundId/sites', async (req, res) => {
@@ -26,7 +27,7 @@ router.get('/campground/:campgroundId/sites', async (req, res) => {
       };
     }
 
-    let sites = await prisma.campsiteSite.findMany({
+    let sites = await db.campsiteSite.findMany({
       where: whereClause,
       orderBy: [
         { siteType: 'asc' },
@@ -39,7 +40,7 @@ router.get('/campground/:campgroundId/sites', async (req, res) => {
       const checkInDate = new Date(checkIn as string);
       const checkOutDate = new Date(checkOut as string);
 
-      const bookedSites = await prisma.booking.findMany({
+      const bookedSites = await db.booking.findMany({
         where: {
           campgroundId,
           status: {
@@ -69,12 +70,12 @@ router.get('/campground/:campgroundId/sites', async (req, res) => {
         select: { siteId: true }
       });
 
-      const bookedSiteIds = new Set(bookedSites.map(b => b.siteId));
-      sites = sites.filter(site => !bookedSiteIds.has(site.id));
+      const bookedSiteIds = new Set(bookedSites.map((b: any) => b.siteId));
+      sites = sites.filter((site: any) => !bookedSiteIds.has(site.id));
     }
 
     res.json(sites);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sites error:', error);
     res.status(500).json({ error: 'Failed to get sites' });
   }
@@ -85,7 +86,7 @@ router.get('/site/:siteId', async (req, res) => {
   try {
     const { siteId } = req.params;
 
-    const site = await prisma.campsiteSite.findUnique({
+    const site = await db.campsiteSite.findUnique({
       where: { id: siteId },
       include: {
         campground: {
@@ -104,7 +105,7 @@ router.get('/site/:siteId', async (req, res) => {
     }
 
     res.json(site);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get site error:', error);
     res.status(500).json({ error: 'Failed to get site' });
   }
@@ -120,7 +121,7 @@ router.post('/site/:siteId/check-availability', async (req, res) => {
     const checkOut = new Date(checkOutDate);
 
     // Check for existing bookings
-    const conflictingBookings = await prisma.booking.findMany({
+    const conflictingBookings = await db.booking.findMany({
       where: {
         siteId,
         status: {
@@ -155,7 +156,7 @@ router.post('/site/:siteId/check-availability', async (req, res) => {
       available,
       conflicts: conflictingBookings.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check availability error:', error);
     res.status(500).json({ error: 'Failed to check availability' });
   }
@@ -164,13 +165,13 @@ router.post('/site/:siteId/check-availability', async (req, res) => {
 // GET /api/bookings/user/events - Get user's events for linking
 router.get('/user/events', authenticateToken, async (req, res) => {
   try {
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
         OR: [
-          { createdById: req.user!.id },
+          { createdById: (req as any).user!.id },
           {
             attendees: {
-              some: { userId: req.user!.id }
+              some: { userId: (req as any).user!.id }
             }
           }
         ]
@@ -186,7 +187,7 @@ router.get('/user/events', authenticateToken, async (req, res) => {
     });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user events error:', error);
     res.status(500).json({ error: 'Failed to get events' });
   }
@@ -205,18 +206,18 @@ router.post(
     body('createEvent').optional().isBoolean(),
     body('eventTitle').optional(),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { 
-        siteId, 
-        checkInDate, 
-        checkOutDate, 
-        guests, 
+      const {
+        siteId,
+        checkInDate,
+        checkOutDate,
+        guests,
         specialRequests,
         eventId,
         createEvent,
@@ -236,7 +237,7 @@ router.post(
       }
 
       // Get site
-      const site = await prisma.campsiteSite.findUnique({
+      const site = await db.campsiteSite.findUnique({
         where: { id: siteId },
         include: {
           campground: {
@@ -264,7 +265,7 @@ router.post(
       }
 
       // Check availability
-      const conflictingBookings = await prisma.booking.findMany({
+      const conflictingBookings = await db.booking.findMany({
         where: {
           siteId,
           status: {
@@ -306,37 +307,37 @@ router.post(
 
       if (createEvent && eventTitle) {
         // Create a new event for this booking
-        const newEvent = await prisma.event.create({
+        const newEvent = await db.event.create({
           data: {
             title: eventTitle,
             description: `Camping trip at ${site.campground.name}`,
             location: site.campground.location,
             startDate: checkIn,
             endDate: checkOut,
-            createdById: req.user!.id,
+            createdById: (req as any).user!.id,
           }
         });
 
         finalEventId = newEvent.id;
 
         // Add user as attendee
-        await prisma.eventAttendee.create({
+        await db.eventAttendee.create({
           data: {
             eventId: newEvent.id,
-            userId: req.user!.id,
+            userId: (req as any).user!.id,
             status: 'attending',
           }
         });
       } else if (eventId) {
         // Verify user has access to this event
-        const event = await prisma.event.findFirst({
+        const event = await db.event.findFirst({
           where: {
             id: eventId,
             OR: [
-              { createdById: req.user!.id },
+              { createdById: (req as any).user!.id },
               {
                 attendees: {
-                  some: { userId: req.user!.id }
+                  some: { userId: (req as any).user!.id }
                 }
               }
             ]
@@ -349,11 +350,11 @@ router.post(
       }
 
       // Create booking
-      const booking = await prisma.booking.create({
+      const booking = await db.booking.create({
         data: {
           campgroundId: site.campgroundId,
           siteId,
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           eventId: finalEventId,
           checkInDate: checkIn,
           checkOutDate: checkOut,
@@ -382,35 +383,35 @@ router.post(
       });
 
       // Create payment record
-      await prisma.payment.create({
+      await db.payment.create({
         data: {
           bookingId: booking.id,
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           amount: totalPrice,
           status: 'PENDING',
         }
       });
 
       // Notify campground admins
-      const admins = await prisma.campsiteAdmin.findMany({
+      const admins = await db.campsiteAdmin.findMany({
         where: { campgroundId: site.campgroundId },
         select: { userId: true }
       });
 
       await Promise.all(
-        admins.map(admin =>
-          prisma.notification.create({
+        admins.map((admin: any) =>
+          db.notification.create({
             data: {
               userId: admin.userId,
               type: 'NEW_BOOKING',
-              content: `New booking for ${site.name} from ${req.user!.firstName} ${req.user!.lastName}`,
+              content: `New booking for ${site.name} from ${(req as any).user!.firstName} ${(req as any).user!.lastName}`,
             }
           })
         )
       );
 
       res.json(booking);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create booking error:', error);
       res.status(500).json({ error: 'Failed to create booking' });
     }
@@ -423,14 +424,14 @@ router.get('/user', authenticateToken, async (req, res) => {
     const { status } = req.query;
 
     const whereClause: any = {
-      userId: req.user!.id
+      userId: (req as any).user!.id
     };
 
     if (status) {
       whereClause.status = status;
     }
 
-    const bookings = await prisma.booking.findMany({
+    const bookings = await db.booking.findMany({
       where: whereClause,
       include: {
         site: true,
@@ -454,7 +455,7 @@ router.get('/user', authenticateToken, async (req, res) => {
     });
 
     res.json(bookings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user bookings error:', error);
     res.status(500).json({ error: 'Failed to get bookings' });
   }
@@ -465,7 +466,7 @@ router.get('/:bookingId', authenticateToken, async (req, res) => {
   try {
     const { bookingId } = req.params;
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
         site: true,
@@ -502,12 +503,12 @@ router.get('/:bookingId', authenticateToken, async (req, res) => {
     }
 
     // Check authorization
-    const isOwner = booking.userId === req.user!.id;
-    const isAdmin = await prisma.campsiteAdmin.findUnique({
+    const isOwner = booking.userId === (req as any).user!.id;
+    const isAdmin = await db.campsiteAdmin.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId: booking.campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -517,7 +518,7 @@ router.get('/:bookingId', authenticateToken, async (req, res) => {
     }
 
     res.json(booking);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get booking error:', error);
     res.status(500).json({ error: 'Failed to get booking' });
   }
@@ -528,7 +529,7 @@ router.put('/:bookingId/cancel', authenticateToken, async (req, res) => {
   try {
     const { bookingId } = req.params;
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
         payment: true,
@@ -542,7 +543,7 @@ router.put('/:bookingId/cancel', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    if (booking.userId !== req.user!.id) {
+    if (booking.userId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -555,30 +556,30 @@ router.put('/:bookingId/cancel', authenticateToken, async (req, res) => {
     }
 
     // Update booking status
-    const updated = await prisma.booking.update({
+    const updated = await db.booking.update({
       where: { id: bookingId },
       data: { status: 'CANCELED' }
     });
 
     // Update payment status if it exists
     if (booking.payment) {
-      await prisma.payment.update({
+      await db.payment.update({
         where: { id: booking.payment.id },
         data: { status: 'REFUNDED' }
       });
     }
 
     // Notify user
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
-        userId: req.user!.id,
+        userId: (req as any).user!.id,
         type: 'BOOKING_CANCELED',
         content: `Your booking at ${booking.campground.name} has been canceled.`,
       }
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cancel booking error:', error);
     res.status(500).json({ error: 'Failed to cancel booking' });
   }
@@ -589,7 +590,7 @@ router.put('/:bookingId/confirm', authenticateToken, async (req, res) => {
   try {
     const { bookingId } = req.params;
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await db.booking.findUnique({
       where: { id: bookingId }
     });
 
@@ -598,11 +599,11 @@ router.put('/:bookingId/confirm', authenticateToken, async (req, res) => {
     }
 
     // Check admin
-    const admin = await prisma.campsiteAdmin.findUnique({
+    const admin = await db.campsiteAdmin.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId: booking.campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -611,13 +612,13 @@ router.put('/:bookingId/confirm', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.booking.update({
+    const updated = await db.booking.update({
       where: { id: bookingId },
       data: { status: 'CONFIRMED' }
     });
 
     // Notify user
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: booking.userId,
         type: 'BOOKING_CONFIRMED',
@@ -626,7 +627,7 @@ router.put('/:bookingId/confirm', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Confirm booking error:', error);
     res.status(500).json({ error: 'Failed to confirm booking' });
   }
@@ -639,11 +640,11 @@ router.get('/campground/:campgroundId/all', authenticateToken, async (req, res) 
     const { status } = req.query;
 
     // Check admin
-    const admin = await prisma.campsiteAdmin.findUnique({
+    const admin = await db.campsiteAdmin.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -657,7 +658,7 @@ router.get('/campground/:campgroundId/all', authenticateToken, async (req, res) 
       whereClause.status = status;
     }
 
-    const bookings = await prisma.booking.findMany({
+    const bookings = await db.booking.findMany({
       where: whereClause,
       include: {
         site: true,
@@ -681,7 +682,7 @@ router.get('/campground/:campgroundId/all', authenticateToken, async (req, res) 
     });
 
     res.json(bookings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground bookings error:', error);
     res.status(500).json({ error: 'Failed to get bookings' });
   }

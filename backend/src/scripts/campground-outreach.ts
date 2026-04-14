@@ -13,7 +13,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const OUTPUT_CSV = path.join(process.cwd(), 'outreach-emails.csv');
 const OUTPUT_JSON = path.join(process.cwd(), 'outreach-emails.json');
 
@@ -58,14 +58,14 @@ async function main() {
   console.log(`Found ${campgrounds.length} unclaimed campgrounds`);
 
   // Filter to those with email addresses
-  const withEmail = campgrounds.filter(c => c.businessEmail);
-  const withoutEmail = campgrounds.filter(c => !c.businessEmail && c.websiteUrl);
+  const withEmail = campgrounds.filter((c: any) => c.businessEmail);
+  const withoutEmail = campgrounds.filter((c: any) => !c.businessEmail && c.websiteUrl);
 
   console.log(`  ${withEmail.length} with business email (ready to send)`);
   console.log(`  ${withoutEmail.length} with website only (need email lookup)`);
 
   // Generate personalized email data
-  const emailRecords = withEmail.map(cg => {
+  const emailRecords = withEmail.map((cg: any) => {
     const slug = cg.customSlug || cg.id;
     const profileUrl = `https://rvunicorn.com/campgrounds/${slug}`;
     const claimUrl = `https://rvunicorn.com/campgrounds/${slug}`; // Claim button is on the page
@@ -102,11 +102,11 @@ async function main() {
   });
 
   // Sort by engagement (highest first — these are warmest leads)
-  emailRecords.sort((a, b) => b.totalEngagement - a.totalEngagement);
+  emailRecords.sort((a: any, b: any) => b.totalEngagement - a.totalEngagement);
 
   // Write CSV
   const csvHeader = 'email,campground_name,location,subject,hook,profile_url,claim_url,followers,checkins,reviews,photos,events,google_rating,website\n';
-  const csvRows = emailRecords.map(r =>
+  const csvRows = emailRecords.map((r: any) =>
     `"${r.email}","${r.campgroundName.replace(/"/g, '""')}","${r.location}","${r.subject.replace(/"/g, '""')}","${r.hook.replace(/"/g, '""')}","${r.profileUrl}","${r.claimUrl}",${r.followers},${r.checkIns},${r.reviews},${r.photos},${r.events},${r.googleRating || ''},${r.websiteUrl}`
   ).join('\n');
 
@@ -117,7 +117,7 @@ async function main() {
   console.log(`  CSV: ${OUTPUT_CSV} (${emailRecords.length} records)`);
   console.log(`  JSON: ${OUTPUT_JSON}`);
   console.log(`\nTop 10 warmest leads:`);
-  emailRecords.slice(0, 10).forEach((r, i) => {
+  emailRecords.slice(0, 10).forEach((r: any, i: any) => {
     console.log(`  ${i + 1}. ${r.campgroundName} — ${r.email} (${r.totalEngagement} engagement)`);
   });
 

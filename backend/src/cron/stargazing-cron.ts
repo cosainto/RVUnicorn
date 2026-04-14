@@ -113,7 +113,7 @@ export async function runWalletChaosCron() {
     }
 
     console.log('[Wallet] Chaos deployed!');
-  } catch (e) {
+  } catch (e: any) {
     console.error('[Wallet] Error:', e);
   }
 }
@@ -247,11 +247,11 @@ export async function runStargazingCron() {
 
         // Small delay between campgrounds to avoid API rate limits
         await new Promise(r => setTimeout(r, 1500));
-      } catch (e) {
+      } catch (e: any) {
         console.error(`[Stargazing] Failed for campground ${cgId}:`, e);
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[Stargazing] Cron error:', e);
   }
 }

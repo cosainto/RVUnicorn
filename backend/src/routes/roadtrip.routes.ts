@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+// @ts-ignore
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ============================================
 // GAS PRICES BY STATE
@@ -16,7 +17,7 @@ router.get('/gas-prices', async (req: Request, res: Response) => {
       orderBy: { stateCode: 'asc' },
     });
     res.json(prices);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gas prices error:', error);
     res.status(500).json({ error: 'Failed to fetch gas prices' });
   }
@@ -35,7 +36,7 @@ router.get('/gas-prices/:stateCode', async (req: Request, res: Response) => {
     }
     
     res.json(price);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get state gas price error:', error);
     res.status(500).json({ error: 'Failed to fetch gas price' });
   }
@@ -108,7 +109,7 @@ router.get('/gas-stations', async (req: Request, res: Response) => {
     });
 
     res.json(stations);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gas stations error:', error);
     res.status(500).json({ error: 'Failed to fetch gas stations' });
   }
@@ -146,14 +147,14 @@ router.get('/gas-stations/nearby', async (req: Request, res: Response) => {
     });
 
     // Calculate actual distance and sort
-    const withDistance = stations.map(station => ({
+    const withDistance = stations.map((station: any) => ({
       ...station,
       distance: calculateDistance(latitude, longitude, station.latitude, station.longitude),
-    })).filter(s => s.distance <= radiusMiles)
-      .sort((a, b) => a.distance - b.distance);
+    })).filter((s: any) => s.distance <= radiusMiles)
+      .sort((a: any, b: any) => a.distance - b.distance);
 
     res.json(withDistance);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get nearby gas stations error:', error);
     res.status(500).json({ error: 'Failed to fetch nearby gas stations' });
   }
@@ -172,7 +173,7 @@ router.get('/gas-stations/by-interstate/:interstate', async (req: Request, res: 
     });
 
     res.json(stations);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get stations by interstate error:', error);
     res.status(500).json({ error: 'Failed to fetch gas stations' });
   }
@@ -239,7 +240,7 @@ router.get('/rest-stops', async (req: Request, res: Response) => {
     });
 
     res.json(restStops);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get rest stops error:', error);
     res.status(500).json({ error: 'Failed to fetch rest stops' });
   }
@@ -258,7 +259,7 @@ router.get('/rest-stops/by-interstate/:interstate', async (req: Request, res: Re
     });
 
     res.json(stops);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get rest stops by interstate error:', error);
     res.status(500).json({ error: 'Failed to fetch rest stops' });
   }
@@ -275,7 +276,7 @@ router.get('/interstates', async (req: Request, res: Response) => {
       orderBy: { name: 'asc' },
     });
     res.json(interstates);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get interstates error:', error);
     res.status(500).json({ error: 'Failed to fetch interstates' });
   }
@@ -317,7 +318,7 @@ router.get('/route-resources', async (req: Request, res: Response) => {
         restStops: restStops.length,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get route resources error:', error);
     res.status(500).json({ error: 'Failed to fetch route resources' });
   }

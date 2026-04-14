@@ -33,7 +33,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PrismaClient } from '@prisma/client';
 import { detectEngine, extractPriceFromHtml, PricingEngine } from '../services/pricing-engines.service';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const REQUEST_DELAY_MS = 500;
@@ -193,9 +193,9 @@ async function main() {
 
   if (shuffle) {
     pool = pool
-      .map((c, i) => ({ c, k: (i * 2654435761) % 2 ** 32 }))
-      .sort((a, b) => a.k - b.k)
-      .map((x) => x.c);
+      .map((c: any, i: any) => ({ c, k: (i * 2654435761) % 2 ** 32 }))
+      .sort((a: any, b: any) => a.k - b.k)
+      .map((x: any) => x.c);
   }
 
   const targets = pool.slice(0, requestedLimit);

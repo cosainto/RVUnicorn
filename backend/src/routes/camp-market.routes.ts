@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const uploadToCloudinary = (buffer: Buffer): Promise<any> => {
@@ -28,8 +28,8 @@ async function recomputeStats(userId: string) {
     where: { revieweeId: userId, role: 'BUYER' },
     select: { rating: true },
   });
-  const avgSeller = sellerFeedback.length ? sellerFeedback.reduce((s, f) => s + f.rating, 0) / sellerFeedback.length : 0;
-  const avgBuyer = buyerFeedback.length ? buyerFeedback.reduce((s, f) => s + f.rating, 0) / buyerFeedback.length : 0;
+  const avgSeller = sellerFeedback.length ? sellerFeedback.reduce((s: any, f: any) => s + f.rating, 0) / sellerFeedback.length : 0;
+  const avgBuyer = buyerFeedback.length ? buyerFeedback.reduce((s: any, f: any) => s + f.rating, 0) / buyerFeedback.length : 0;
 
   await prisma.campMarketStats.upsert({
     where: { userId },
@@ -67,7 +67,7 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json({ listings });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market fetch error:', e);
     res.status(500).json({ error: 'Failed to fetch listings' });
   }
@@ -76,7 +76,7 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
 // POST /api/camp-market/:campgroundId — create listing
 router.post('/:campgroundId', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { campgroundId } = req.params;
     const { title, description, price, siteNumber } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
@@ -113,7 +113,7 @@ router.post('/:campgroundId', authenticateToken, upload.single('image'), async (
     });
 
     res.json({ listing });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market create error:', e);
     res.status(500).json({ error: 'Failed to create listing' });
   }
@@ -122,7 +122,7 @@ router.post('/:campgroundId', authenticateToken, upload.single('image'), async (
 // DELETE /api/camp-market/listing/:id — soft-delete listing
 router.delete('/listing/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const listing = await prisma.campMarketListing.findUnique({ where: { id: req.params.id } });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
     if (listing.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
@@ -132,7 +132,7 @@ router.delete('/listing/:id', authenticateToken, async (req: any, res: Response)
       data: { isActive: false },
     });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market delete error:', e);
     res.status(500).json({ error: 'Failed to delete listing' });
   }
@@ -141,7 +141,7 @@ router.delete('/listing/:id', authenticateToken, async (req: any, res: Response)
 // POST /api/camp-market/listing/:id/interest — express interest + create record
 router.post('/listing/:id/interest', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const listing = await prisma.campMarketListing.findUnique({
       where: { id: req.params.id },
     });
@@ -167,7 +167,7 @@ router.post('/listing/:id/interest', authenticateToken, async (req: any, res: Re
     }
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market interest error:', e);
     res.status(500).json({ error: 'Failed to express interest' });
   }
@@ -176,7 +176,7 @@ router.post('/listing/:id/interest', authenticateToken, async (req: any, res: Re
 // GET /api/camp-market/listing/:id/interests — seller sees interested buyers
 router.get('/listing/:id/interests', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const listing = await prisma.campMarketListing.findUnique({ where: { id: req.params.id } });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
     if (listing.userId !== userId) return res.status(403).json({ error: 'Only seller can view interests' });
@@ -187,7 +187,7 @@ router.get('/listing/:id/interests', authenticateToken, async (req: any, res: Re
       orderBy: { createdAt: 'desc' },
     });
     res.json({ interests, completedBuyerId: listing.completedBuyerId });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch interests' });
   }
 });
@@ -195,7 +195,7 @@ router.get('/listing/:id/interests', authenticateToken, async (req: any, res: Re
 // POST /api/camp-market/listing/:id/complete — mark listing as sold to a buyer
 router.post('/listing/:id/complete', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { buyerId } = req.body;
     if (!buyerId) return res.status(400).json({ error: 'buyerId required' });
 
@@ -233,7 +233,7 @@ router.post('/listing/:id/complete', authenticateToken, async (req: any, res: Re
     });
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market complete error:', e);
     res.status(500).json({ error: 'Failed to complete listing' });
   }
@@ -242,7 +242,7 @@ router.post('/listing/:id/complete', authenticateToken, async (req: any, res: Re
 // POST /api/camp-market/listing/:id/feedback — submit feedback
 router.post('/listing/:id/feedback', authenticateToken, async (req: any, res: Response) => {
   try {
-    const reviewerId = req.userId || req.user?.id;
+    const reviewerId = req.userId || (req as any).user?.id;
     const { rating, comment } = req.body;
     if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1-5' });
 
@@ -281,7 +281,7 @@ router.post('/listing/:id/feedback', authenticateToken, async (req: any, res: Re
     await recomputeStats(revieweeId);
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Camp market feedback error:', e);
     res.status(500).json({ error: 'Failed to submit feedback' });
   }
@@ -292,7 +292,7 @@ router.get('/user/:userId/stats', async (req: Request, res: Response) => {
   try {
     const stats = await prisma.campMarketStats.findUnique({ where: { userId: req.params.userId } });
     res.json(stats || { totalSales: 0, totalPurchases: 0, avgSellerRating: 0, avgBuyerRating: 0, totalFeedbackCount: 0 });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
@@ -316,7 +316,7 @@ router.get('/user/:userId/feedback', async (req: Request, res: Response) => {
     });
     const total = await prisma.campMarketFeedback.count({ where });
     res.json({ feedback, total });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch feedback' });
   }
 });
@@ -324,7 +324,7 @@ router.get('/user/:userId/feedback', async (req: Request, res: Response) => {
 // GET /api/camp-market/pending-feedback — listings needing feedback from this user
 router.get('/pending-feedback/me', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const now = new Date();
 
     // Listings where user is seller or completed buyer, within feedback window, no feedback yet
@@ -340,10 +340,10 @@ router.get('/pending-feedback/me', authenticateToken, async (req: any, res: Resp
       },
     });
 
-    const pending = completedListings.filter(l => {
+    const pending = completedListings.filter((l: any) => {
       const deadline = new Date(l.expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       return deadline > now && l.feedback.length === 0;
-    }).map(l => ({
+    }).map((l: any) => ({
       listingId: l.id,
       title: l.title,
       otherParty: l.userId === userId
@@ -353,7 +353,7 @@ router.get('/pending-feedback/me', authenticateToken, async (req: any, res: Resp
     }));
 
     res.json({ pending });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch pending feedback' });
   }
 });

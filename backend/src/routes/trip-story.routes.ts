@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/trip-story/:eventId/public - Full public story page data
 router.get('/:eventId/public', async (req, res) => {
@@ -37,7 +37,7 @@ router.get('/:eventId/public', async (req, res) => {
     if (!story || !event) return res.status(404).json({ error: 'Story not found' });
     if (!story.isPublic) return res.status(403).json({ error: 'This story is private' });
     res.json({ story, event });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get public story error:', error);
     res.status(500).json({ error: 'Failed to fetch story' });
   }
@@ -50,7 +50,7 @@ router.get('/:eventId', async (req, res) => {
       where: { eventId: req.params.eventId },
     });
     res.json(story || null);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trip story error:', error);
     res.status(500).json({ error: 'Failed to fetch story' });
   }
@@ -121,21 +121,21 @@ router.post('/:eventId/generate', authenticateToken, async (req, res) => {
       ? Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 1;
 
-    const attendeeNames = event.attendees.map(a => a.user.firstName).join(', ');
+    const attendeeNames = event.attendees.map((a: any) => a.user.firstName).join(', ');
     const mealHighlights = event.meals
-      .filter(m => m.recipe)
-      .map(m => m.recipe!.title)
+      .filter((m: any) => m.recipe)
+      .map((m: any) => m.recipe!.title)
       .slice(0, 5)
       .join(', ');
     const activities = event.eventActivities
-      .map(a => a.title || a.description)
+      .map((a: any) => a.title || a.description)
       .filter(Boolean)
       .slice(0, 8)
       .join(', ');
     const wildlifeList = wildlife.map(w => `${w.emoji} ${w.animal}`).join(', ');
     const scrapbookCaptions = event.scrapbookPins
-      .filter(p => p.caption)
-      .map(p => `"${p.caption}" — ${p.pinnedBy.firstName}`)
+      .filter((p: any) => p.caption)
+      .map((p: any) => `"${p.caption}" — ${p.pinnedBy.firstName}`)
       .join('\n');
     const pinCount = event.scrapbookPins.length;
 
@@ -178,7 +178,7 @@ Write a 3-5 paragraph trip story (250-400 words). Do not use headers or bullet p
     });
 
     if (!response.ok) throw new Error(`Claude API error: ${response.status}`);
-    const aiData = await response.json() as any;
+    const aiData: any = await response.json() as any;
     const content = aiData.content?.[0]?.text || '';
     if (!content) throw new Error('No content returned from Claude');
 
@@ -190,7 +190,7 @@ Write a 3-5 paragraph trip story (250-400 words). Do not use headers or bullet p
     });
 
     res.json(story);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Generate trip story error:', error);
     res.status(500).json({ error: 'Failed to generate story' });
   }
@@ -205,7 +205,7 @@ router.delete('/:eventId', authenticateToken, async (req, res) => {
     if (event?.organizerId !== userId) return res.status(403).json({ error: 'Only the organizer can delete the story' });
     await prisma.tripStory.delete({ where: { eventId } });
     res.json({ message: 'Story deleted' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete story' });
   }
 });
@@ -259,7 +259,7 @@ router.post('/:eventId/share-to-feed', authenticateToken, async (req, res) => {
     await (prisma as any).board.update({ where: { id: board.id }, data: { postCount: { increment: 1 } } });
 
     res.json({ post, boardSlug: 'trip-reports' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Share to feed error:', error);
     res.status(500).json({ error: 'Failed to share story' });
   }

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail, notificationEmail, friendRequestEmail, mentionEmail } from './email-sms.service';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 interface NotificationData {
   userId: string;
@@ -63,7 +63,7 @@ export const notificationService = {
       }
 
       return notification;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create notification error:', error);
     }
   },

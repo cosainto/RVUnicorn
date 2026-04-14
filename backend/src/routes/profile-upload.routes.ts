@@ -5,7 +5,7 @@ import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Configure multer to use memory storage for Cloudinary
 const upload = multer({ 
@@ -40,7 +40,7 @@ router.post('/picture', authenticateToken, upload.single('photo'), async (req, r
     });
 
     res.json({ success: true, imageUrl, user: updatedUser });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload profile picture error:', error);
     res.status(500).json({ error: 'Failed to upload profile picture' });
   }
@@ -65,7 +65,7 @@ router.post('/cover', authenticateToken, upload.single('photo'), async (req, res
     });
 
     res.json({ success: true, imageUrl, user: updatedUser });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload cover photo error:', error);
     res.status(500).json({ error: 'Failed to upload cover photo' });
   }

@@ -120,7 +120,7 @@ router.post('/:eventId/household-review', authenticateToken, async (req: any, re
     }
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripConfidence] Household review error:', e);
     res.status(500).json({ error: 'Failed to record review' });
   }

@@ -36,7 +36,7 @@ router.post('/posts/:postId/reactions', authenticateToken, async (req, res) => {
     });
 
     res.json(reaction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add post reaction error:', error);
     res.status(500).json({ error: 'Failed to add reaction' });
   }
@@ -68,7 +68,7 @@ router.get('/posts/:postId/reactions', authenticateToken, async (req, res) => {
     }, {} as Record<string, number>);
 
     res.json({ reactions, summary, total: reactions.length });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get post reactions error:', error);
     res.status(500).json({ error: 'Failed to get reactions' });
   }
@@ -99,7 +99,7 @@ router.post('/comments/:commentId/reactions', authenticateToken, async (req, res
     });
 
     res.json(reaction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add comment reaction error:', error);
     res.status(500).json({ error: 'Failed to add reaction' });
   }
@@ -125,7 +125,7 @@ router.get('/comments/:commentId/reactions', authenticateToken, async (req, res)
     }, {} as Record<string, number>);
 
     res.json({ reactions, summary, total: reactions.length });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get comment reactions error:', error);
     res.status(500).json({ error: 'Failed to get reactions' });
   }
@@ -180,7 +180,7 @@ router.post('/comments/:commentId/replies', authenticateToken, async (req, res) 
     }
 
     res.status(201).json(reply);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add reply error:', error);
     res.status(500).json({ error: 'Failed to add reply' });
   }
@@ -202,7 +202,7 @@ router.get('/comments/:commentId/replies', authenticateToken, async (req, res) =
     });
 
     res.json(replies);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get replies error:', error);
     res.status(500).json({ error: 'Failed to get replies' });
   }
@@ -240,7 +240,7 @@ router.put('/replies/:replyId', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Edit reply error:', error);
     res.status(500).json({ error: 'Failed to edit reply' });
   }
@@ -265,7 +265,7 @@ router.delete('/replies/:replyId', authenticateToken, async (req, res) => {
     await prisma.commentReply.delete({ where: { id: replyId } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete reply error:', error);
     res.status(500).json({ error: 'Failed to delete reply' });
   }
@@ -305,7 +305,7 @@ router.put('/comments/:commentId', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Edit comment error:', error);
     res.status(500).json({ error: 'Failed to edit comment' });
   }
@@ -329,7 +329,7 @@ router.get('/comments/:commentId/history', authenticateToken, async (req, res) =
       current: { content: comment.content, editedAt: comment.updatedAt },
       history: comment.editHistory || []
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get comment history error:', error);
     res.status(500).json({ error: 'Failed to get history' });
   }
@@ -380,7 +380,7 @@ router.post('/posts/:postId/pin-comment', authenticateToken, async (req, res) =>
     });
 
     res.json(pinned);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Pin comment error:', error);
     res.status(500).json({ error: 'Failed to pin comment' });
   }
@@ -405,7 +405,7 @@ router.delete('/posts/:postId/pin-comment', authenticateToken, async (req, res) 
     await prisma.pinnedComment.deleteMany({ where: { postId } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unpin comment error:', error);
     res.status(500).json({ error: 'Failed to unpin comment' });
   }
@@ -454,7 +454,7 @@ router.get('/hashtags/trending', authenticateToken, async (req, res) => {
     });
 
     res.json(hashtags);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trending hashtags error:', error);
     res.status(500).json({ error: 'Failed to get hashtags' });
   }
@@ -476,7 +476,7 @@ router.get('/hashtags/search', authenticateToken, async (req, res) => {
     });
 
     res.json(hashtags);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search hashtags error:', error);
     res.status(500).json({ error: 'Failed to search hashtags' });
   }
@@ -524,7 +524,7 @@ router.get('/hashtags/:tag/posts', authenticateToken, async (req, res) => {
       page: pageNum,
       totalPages: Math.ceil(total / limitNum)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get hashtag posts error:', error);
     res.status(500).json({ error: 'Failed to get posts' });
   }
@@ -571,7 +571,7 @@ router.post('/posts/:postId/comments', authenticateToken, async (req, res) => {
     }
 
     res.status(201).json(comment);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add comment error:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }

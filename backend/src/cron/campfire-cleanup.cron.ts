@@ -9,7 +9,7 @@ export async function runCampfireCleanup() {
     if (result.count > 0) {
       console.log(`[CampfireCleanup] Deleted ${result.count} messages older than 24h`);
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireCleanup] Error:', e);
   }
 }

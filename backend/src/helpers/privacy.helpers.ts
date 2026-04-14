@@ -2,12 +2,13 @@
 // Add this file to: ~/Downloads/kindletribe-mvp/backend/src/helpers/privacy.helpers.ts
 
 import { prisma } from '../index';
+const db = prisma as any;
 
 /**
  * Check if two users are friends (accepted friendship)
  */
 export async function areFriends(userId1: string, userId2: string): Promise<boolean> {
-  const friendship = await prisma.friendship.findFirst({
+  const friendship = await db.friendship.findFirst({
     where: {
       OR: [
         { initiatorId: userId1, receiverId: userId2, status: 'ACCEPTED' },
@@ -22,7 +23,7 @@ export async function areFriends(userId1: string, userId2: string): Promise<bool
  * Check if a user is blocked (either direction)
  */
 export async function isBlocked(userId1: string, userId2: string): Promise<boolean> {
-  const block = await prisma.blockedUser.findFirst({
+  const block = await db.blockedUser.findFirst({
     where: {
       OR: [
         { userId: userId1, blockedUserId: userId2 },
@@ -65,7 +66,7 @@ export async function canViewContent(
  * Get user's privacy settings
  */
 export async function getUserPrivacySettings(userId: string) {
-  let preferences = await prisma.userPreferences.findUnique({
+  let preferences = await db.userPreferences.findUnique({
     where: { userId }
   });
 
@@ -114,7 +115,7 @@ export async function canSendFriendRequest(
 
   if (targetSettings.friendRequestSetting === 'FRIENDS_OF_FRIENDS') {
     // Check if they share a mutual friend
-    const viewerFriends = await prisma.friendship.findMany({
+    const viewerFriends = await db.friendship.findMany({
       where: {
         OR: [
           { initiatorId: viewerId, status: 'ACCEPTED' },
@@ -127,11 +128,11 @@ export async function canSendFriendRequest(
       }
     });
 
-    const viewerFriendIds = viewerFriends.map(f => 
+    const viewerFriendIds = viewerFriends.map((f: any) => 
       f.initiatorId === viewerId ? f.receiverId : f.initiatorId
     );
 
-    const targetFriends = await prisma.friendship.findMany({
+    const targetFriends = await db.friendship.findMany({
       where: {
         OR: [
           { initiatorId: targetUserId, status: 'ACCEPTED' },
@@ -144,11 +145,11 @@ export async function canSendFriendRequest(
       }
     });
 
-    const targetFriendIds = targetFriends.map(f => 
+    const targetFriendIds = targetFriends.map((f: any) => 
       f.initiatorId === targetUserId ? f.receiverId : f.initiatorId
     );
 
-    const hasMutualFriend = viewerFriendIds.some(id => targetFriendIds.includes(id));
+    const hasMutualFriend = viewerFriendIds.some((id: any) => targetFriendIds.includes(id));
     
     if (!hasMutualFriend) {
       return { allowed: false, reason: 'This user only accepts friend requests from friends of friends' };

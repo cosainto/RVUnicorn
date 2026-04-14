@@ -33,19 +33,61 @@ export default function HitchFloatingChat() {
   const guide = getGuide(selectedGuideId);
   const { isUnlocked, getProgress } = useGuideUnlocks();
 
+  // Build a personalized welcome message using onboarding data
+  const buildHitchWelcome = () => {
+    const name = (user as any)?.firstName || '';
+    const camperType = userContext?.camperType;
+    const region = userContext?.region;
+    const rigType = userContext?.rigType;
+    const hasRv = userContext?.rv?.type || userContext?.rv?.make;
+
+    // Base greeting
+    let msg = `Hey${name ? ', ' + name : ''}! I'm Hitch 🦄 `;
+
+    // Tailor based on camper style
+    if (camperType === 'first_trip_ever') {
+      msg += `Welcome to the RV world — so excited you're here! I remember my first trip too. I'll help you every step of the way, from picking the right campground to knowing what to pack. No question is too basic, I promise. `;
+    } else if (camperType === 'first_big_trip') {
+      msg += `Planning your first big trip is a big deal — and you picked the right crew to help! I can help you map out the route, find the best stops, and make sure you're ready to roll. `;
+    } else if (camperType === 'full_timer') {
+      msg += `A fellow full-timer! 🙌 You know the road life. I'm here when you need a new spot to park for a while, want to find fellow full-timers nearby, or just need someone to talk shop with. `;
+    } else if (camperType === 'weekend_warrior') {
+      msg += `Love a good weekend escape! I can help you find spots close to home that'll make the most of your time — quick getaways, hidden gems, the works. `;
+    } else if (camperType === 'occasional') {
+      msg += `Great to have you here! Whether you camp once a season or whenever the mood strikes, I'll make sure every trip counts. `;
+    } else {
+      msg += `Need help finding a campground, planning a route, or anything RV related? I'm right here! `;
+    }
+
+    // Add region flavor
+    if (region === 'west') msg += `I see you love the Pacific West — can't blame you, those coastal campgrounds are unreal. `;
+    else if (region === 'mountain') msg += `Mountain country, nice! Nothing beats waking up to those views. `;
+    else if (region === 'midwest') msg += `The Midwest has so many underrated gems — I know all the best ones. `;
+    else if (region === 'south') msg += `The Southeast has year-round camping and some of the friendliest campgrounds out there. `;
+    else if (region === 'northeast') msg += `New England camping is something special — fall foliage, coastal spots, so much to explore. `;
+
+    // Nudge about rig if not set up yet
+    if (!hasRv && rigType) {
+      msg += `\n\nBy the way, tell me about your ${rigType.replace(/_/g, ' ').toLowerCase()} when you get a chance — I'll give you better campground fits when I know your rig!`;
+    }
+
+    msg += `\n\nWhat's on your mind?`;
+    return msg;
+  };
+
   // Set welcome message when guide changes
   useEffect(() => {
     const welcomes: Record<string, string> = {
-      hitch: `Hey${user ? ', ' + ((user as any).firstName || '') : ''}! I'm Hitch 🦄 Need help finding a campground, planning a route, or anything RV related? I'm right here!`,
-      walter: `Well, well, well. Another camper who can't figure it out on their own. 🎭 Fine — ask me. I've been to more campgrounds than I care to admit. What do you need?`,
-      rose: `Hello, darling! ✨ I'm Rosé Merlot, your glamping guru. Whether you're looking for a stunning sunset view, a winery nearby, or the most Instagram-worthy campsite — I'm your girl. What are we planning? 🍷`,
-      scout: `Hey! 🏔️ Ready for an adventure? I'm Scout — let's find you some epic trails, hidden gems, and the kind of camping stories you'll tell forever. What are we exploring?`,
-      diesel: `Diesel Dave here. 🚛 Give me your rig specs and where you're headed and I'll tell you exactly what you're getting into. No campground is too tight if you know the approach. What's your rig?`,
-      luna: `Hi there! 🌙 I'm Luna — the family and pet camping expert. Whether you're wrangling kids, dogs, or both, I've got you covered. What kind of trip are you planning?`,
+      hitch: buildHitchWelcome(),
+      walter: `Well, well, well${user ? ', ' + ((user as any).firstName || '') : ''}. Another camper who can't figure it out on their own. 🎭 Fine — ask me. I've been to more campgrounds than I care to admit. What do you need?`,
+      rose: `Hello${user ? ', ' + ((user as any).firstName || '') : ''}, darling! ✨ I'm Rosé Merlot, your glamping guru. Whether you're looking for a stunning sunset view, a winery nearby, or the most Instagram-worthy campsite — I'm your girl. What are we planning? 🍷`,
+      scout: `Hey${user ? ', ' + ((user as any).firstName || '') : ''}! 🏔️ Ready for an adventure? I'm Scout — let's find you some epic trails, hidden gems, and the kind of camping stories you'll tell forever. What are we exploring?`,
+      diesel: `Diesel Dave here. 🚛${user ? ' ' + ((user as any).firstName || '') + ',' : ''} give me your rig specs and where you're headed and I'll tell you exactly what you're getting into. No campground is too tight if you know the approach. What's your rig?`,
+      luna: `Hi${user ? ', ' + ((user as any).firstName || '') : ''} there! 🌙 I'm Luna — the family and pet camping expert. Whether you're wrangling kids, dogs, or both, I've got you covered. What kind of trip are you planning?`,
     };
     setMessages([{ role: 'assistant', content: welcomes[selectedGuideId] || welcomes.hitch }]);
     setFeedback({});
-  }, [selectedGuideId, user]);
+  }, [selectedGuideId, user, userContext]);
 
   useEffect(() => {
     if (user) {

@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { checkAndAwardBadges, BadgeTrigger } from '../services/badge.service';
 import { recordCampgroundVisit } from '../services/visit-stats.service';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const router = Router();
 
 // Helper function to generate slug
@@ -59,7 +59,7 @@ router.get('/', optionalAuth, async (req, res) => {
     });
 
     res.json(groups);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get groups error:', error);
     res.status(500).json({ error: 'Failed to fetch groups' });
   }
@@ -113,18 +113,18 @@ router.get('/my', authenticateToken, async (req, res) => {
     const groupNotifCounts: { [key: string]: number } = {};
     
     // Get events for each group to map notifications
-    const groupIds = memberships.map(m => m.group.id);
+    const groupIds = memberships.map((m: any) => m.group.id);
     const groupEvents = await prisma.event.findMany({
       where: { groupId: { in: groupIds } },
       select: { id: true, groupId: true },
     });
     
     const eventToGroup: { [key: string]: string } = {};
-    groupEvents.forEach(e => {
+    groupEvents.forEach((e: any) => {
       if (e.groupId) eventToGroup[e.id] = e.groupId;
     });
 
-    unreadNotifications.forEach(n => {
+    unreadNotifications.forEach((n: any) => {
       if (n.link) {
         const match = n.link.match(/\/trips\/([a-zA-Z0-9]+)/);
         if (match) {
@@ -137,7 +137,7 @@ router.get('/my', authenticateToken, async (req, res) => {
       }
     });
 
-    const groups = memberships.map((m) => ({
+    const groups = memberships.map((m: any) => ({
       ...m.group,
       myRole: m.role,
       joinedAt: m.createdAt,
@@ -145,7 +145,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     }));
 
     res.json(groups);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my groups error:', error);
     res.status(500).json({ error: 'Failed to fetch groups' });
   }
@@ -164,7 +164,7 @@ router.get('/invites/my', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(invites);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my invites error:', error);
     res.status(500).json({ error: 'Failed to fetch invites' });
   }
@@ -182,7 +182,7 @@ router.post('/invites/:inviteId/accept', authenticateToken, async (req, res) => 
     await prisma.groupMember.create({ data: { groupId: invite.groupId, userId, role: 'MEMBER', status: 'ACTIVE' } });
     await prisma.groupInvite.update({ where: { id: inviteId }, data: { status: 'ACCEPTED' } });
     res.json({ message: 'Joined group successfully', group: invite.group });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Accept invite error:', error);
     res.status(500).json({ error: 'Failed to accept invite' });
   }
@@ -198,7 +198,7 @@ router.post('/invites/:inviteId/decline', authenticateToken, async (req, res) =>
     if (invite.inviteeId !== userId) return res.status(403).json({ error: 'This invite is not for you' });
     await prisma.groupInvite.update({ where: { id: inviteId }, data: { status: 'DECLINED' } });
     res.json({ message: 'Invite declined' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Decline invite error:', error);
     res.status(500).json({ error: 'Failed to decline invite' });
   }
@@ -212,7 +212,7 @@ router.post(
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('privacy').isIn(['PUBLIC', 'PRIVATE', 'CLOSED']),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -265,7 +265,7 @@ router.post(
       });
 
       res.status(201).json(group);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create group error:', error);
       res.status(500).json({ error: 'Failed to create group' });
     }
@@ -317,14 +317,14 @@ router.get('/:slug', optionalAuth, async (req, res) => {
     }
 
     if (group.privacy !== 'PUBLIC') {
-      const isMember = group.members.some((m) => m.userId === currentUserId);
+      const isMember = group.members.some((m: any) => m.userId === currentUserId);
       if (!isMember) {
         return res.status(403).json({ error: 'Access denied' });
       }
     }
 
     res.json(group);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get group error:', error);
     res.status(500).json({ error: 'Failed to fetch group' });
   }
@@ -346,7 +346,7 @@ router.put('/:slug', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId);
+    const member = group.members.find((m: any) => m.userId === userId);
     if (!member || member.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
@@ -362,7 +362,7 @@ router.put('/:slug', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update group error:', error);
     res.status(500).json({ error: 'Failed to update group' });
   }
@@ -383,7 +383,7 @@ router.delete('/:slug', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId);
+    const member = group.members.find((m: any) => m.userId === userId);
     if (!member || member.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
@@ -391,7 +391,7 @@ router.delete('/:slug', authenticateToken, async (req, res) => {
     await prisma.group.delete({ where: { slug } });
 
     res.json({ message: 'Group deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete group error:', error);
     res.status(500).json({ error: 'Failed to delete group' });
   }
@@ -412,7 +412,7 @@ router.post('/:slug/join', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const existingMember = group.members.find((m) => m.userId === userId);
+    const existingMember = group.members.find((m: any) => m.userId === userId);
     if (existingMember) {
       return res.status(400).json({ error: 'Already a member' });
     }
@@ -432,7 +432,7 @@ router.post('/:slug/join', authenticateToken, async (req, res) => {
     }
 
     res.json({ message: group.privacy === 'CLOSED' ? 'Join request sent' : 'Joined group' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Join group error:', error);
     res.status(500).json({ error: 'Failed to join group' });
   }
@@ -453,12 +453,12 @@ router.post('/:slug/leave', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId);
+    const member = group.members.find((m: any) => m.userId === userId);
     if (!member) {
       return res.status(400).json({ error: 'Not a member' });
     }
 
-    if (member.role === 'ADMIN' && group.members.filter((m) => m.role === 'ADMIN').length === 1) {
+    if (member.role === 'ADMIN' && group.members.filter((m: any) => m.role === 'ADMIN').length === 1) {
       return res.status(400).json({ error: 'Cannot leave - you are the only admin' });
     }
 
@@ -467,7 +467,7 @@ router.post('/:slug/leave', authenticateToken, async (req, res) => {
     });
 
     res.json({ message: 'Left group' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Leave group error:', error);
     res.status(500).json({ error: 'Failed to leave group' });
   }
@@ -489,7 +489,7 @@ router.post('/:slug/invite', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const inviterMember = group.members.find((m) => m.userId === inviterId);
+    const inviterMember = group.members.find((m: any) => m.userId === inviterId);
     if (!inviterMember) {
       return res.status(403).json({ error: 'You must be a member to invite others' });
     }
@@ -503,7 +503,7 @@ router.post('/:slug/invite', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const existingMember = group.members.find((m) => m.userId === invitee.id);
+    const existingMember = group.members.find((m: any) => m.userId === invitee.id);
     if (existingMember) {
       return res.status(400).json({ error: 'User is already a member' });
     }
@@ -535,7 +535,7 @@ router.post('/:slug/invite', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json(invite);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Invite to group error:', error);
     res.status(500).json({ error: 'Failed to send invite' });
   }
@@ -568,7 +568,7 @@ router.get('/:slug/posts', optionalAuth, async (req, res) => {
     });
 
     res.json(posts);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get group posts error:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
@@ -590,7 +590,7 @@ router.post('/:slug/posts', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId && m.status === 'ACTIVE');
+    const member = group.members.find((m: any) => m.userId === userId && m.status === 'ACTIVE');
     if (!member) {
       return res.status(403).json({ error: 'Must be a member to post' });
     }
@@ -616,7 +616,7 @@ router.post('/:slug/posts', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json(post);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create group post error:', error);
     res.status(500).json({ error: 'Failed to create post' });
   }
@@ -662,7 +662,7 @@ router.get('/:slug/events', optionalAuth, async (req, res) => {
     });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get group events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
   }
@@ -684,7 +684,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId);
+    const member = group.members.find((m: any) => m.userId === userId);
     if (!member) {
       return res.status(403).json({ error: 'Must be a member to create events' });
     }
@@ -722,7 +722,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
     }
 
     // Auto-invite all group members as attendees
-    const attendeeData = group.members.map((m) => ({
+    const attendeeData = group.members.map((m: any) => ({
       eventId: event.id,
       userId: m.userId,
       status: m.userId === userId ? 'GOING' : 'INVITED',
@@ -734,8 +734,8 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
 
     // Notify all group members about the new event (except creator)
     const notificationData = group.members
-      .filter((m) => m.userId !== userId)
-      .map((m) => ({
+      .filter((m: any) => m.userId !== userId)
+      .map((m: any) => ({
         userId: m.userId,
         type: 'GROUP_EVENT',
         content: `${event.organizer.firstName} created a new event "${event.title}" in ${group.name}`,
@@ -749,7 +749,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
     }
 
     res.status(201).json(event);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create group event error:', error);
     res.status(500).json({ error: 'Failed to create event' });
   }
@@ -793,7 +793,7 @@ router.get('/:slug/events', optionalAuth, async (req, res) => {
     });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get group events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
   }
@@ -815,7 +815,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const member = group.members.find((m) => m.userId === userId);
+    const member = group.members.find((m: any) => m.userId === userId);
     if (!member) {
       return res.status(403).json({ error: 'Must be a member to create events' });
     }
@@ -853,7 +853,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
     }
 
     // Auto-invite all group members as attendees
-    const attendeeData = group.members.map((m) => ({
+    const attendeeData = group.members.map((m: any) => ({
       eventId: event.id,
       userId: m.userId,
       status: m.userId === userId ? 'GOING' : 'INVITED',
@@ -865,8 +865,8 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
 
     // Notify all group members about the new event (except creator)
     const notificationData = group.members
-      .filter((m) => m.userId !== userId)
-      .map((m) => ({
+      .filter((m: any) => m.userId !== userId)
+      .map((m: any) => ({
         userId: m.userId,
         type: 'GROUP_EVENT',
         content: `${event.organizer.firstName} created a new event "${event.title}" in ${group.name}`,
@@ -880,7 +880,7 @@ router.post('/:slug/events', authenticateToken, async (req, res) => {
     }
 
     res.status(201).json(event);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create group event error:', error);
     res.status(500).json({ error: 'Failed to create event' });
   }
@@ -901,7 +901,7 @@ router.get('/:slug/pending', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const currentMember = group.members.find((m) => m.userId === userId);
+    const currentMember = group.members.find((m: any) => m.userId === userId);
     if (!currentMember || currentMember.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Only admins can view pending requests' });
     }
@@ -923,7 +923,7 @@ router.get('/:slug/pending', authenticateToken, async (req, res) => {
     });
 
     res.json(pendingMembers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pending members error:', error);
     res.status(500).json({ error: 'Failed to fetch pending requests' });
   }
@@ -944,7 +944,7 @@ router.post('/:slug/pending/:memberId/approve', authenticateToken, async (req, r
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const currentMember = group.members.find((m) => m.userId === userId);
+    const currentMember = group.members.find((m: any) => m.userId === userId);
     if (!currentMember || currentMember.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Only admins can approve requests' });
     }
@@ -974,7 +974,7 @@ router.post('/:slug/pending/:memberId/approve', authenticateToken, async (req, r
     });
 
     res.json({ message: 'Member approved' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Approve member error:', error);
     res.status(500).json({ error: 'Failed to approve member' });
   }
@@ -995,7 +995,7 @@ router.post('/:slug/pending/:memberId/deny', authenticateToken, async (req, res)
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const currentMember = group.members.find((m) => m.userId === userId);
+    const currentMember = group.members.find((m: any) => m.userId === userId);
     if (!currentMember || currentMember.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Only admins can deny requests' });
     }
@@ -1013,7 +1013,7 @@ router.post('/:slug/pending/:memberId/deny', authenticateToken, async (req, res)
     });
 
     res.json({ message: 'Request denied' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Deny member error:', error);
     res.status(500).json({ error: 'Failed to deny request' });
   }

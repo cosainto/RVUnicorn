@@ -133,7 +133,7 @@ Return null if the content is not about a specific activity (e.g. gear reviews, 
     }
 
     return extracted;
-  } catch (err) {
+  } catch (err: any) {
     console.error('[HitchActivityExtractor] extraction failed:', err);
     return null;
   }

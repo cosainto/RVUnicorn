@@ -8,7 +8,7 @@ export async function runRoadChatCleanup() {
     if (result.count > 0) {
       console.log(`[RoadChatCleanup] Deleted ${result.count} expired road chat log entries`);
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[RoadChatCleanup] Error:', e);
   }
 }

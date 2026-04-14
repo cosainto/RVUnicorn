@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3959;
@@ -16,7 +16,7 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 // ── Owner: POST /api/last-minute — create deal ──
 router.post('/', authenticateToken, async (req: any, res: Response) => {
   try {
-    const ownerId = req.userId || req.user?.id;
+    const ownerId = req.userId || (req as any).user?.id;
     const { campgroundId, title, description, availableFrom, availableTo, sitesAvailable, originalPrice, discountPrice, maxRigLength, requiresHookups, allowsPets } = req.body;
     if (!campgroundId || !title || !availableFrom || !availableTo) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -50,7 +50,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
 // ── Owner: GET /api/last-minute/my-deals ──
 router.get('/my-deals', authenticateToken, async (req: any, res: Response) => {
   try {
-    const ownerId = req.userId || req.user?.id;
+    const ownerId = req.userId || (req as any).user?.id;
     const deals = await prisma.lastMinuteDeal.findMany({
       where: { ownerId },
       include: { campground: { select: { id: true, name: true, imageUrl: true } }, _count: { select: { views: true } } },
@@ -64,7 +64,7 @@ router.get('/my-deals', authenticateToken, async (req: any, res: Response) => {
 // ── Owner: PATCH /api/last-minute/:id ──
 router.patch('/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    const ownerId = req.userId || req.user?.id;
+    const ownerId = req.userId || (req as any).user?.id;
     const deal = await prisma.lastMinuteDeal.findUnique({ where: { id: req.params.id } });
     if (!deal || deal.ownerId !== ownerId) return res.status(403).json({ error: 'Not authorized' });
     const updated = await prisma.lastMinuteDeal.update({ where: { id: deal.id }, data: req.body });
@@ -75,7 +75,7 @@ router.patch('/:id', authenticateToken, async (req: any, res: Response) => {
 // ── Owner: DELETE /api/last-minute/:id ──
 router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
   try {
-    const ownerId = req.userId || req.user?.id;
+    const ownerId = req.userId || (req as any).user?.id;
     const deal = await prisma.lastMinuteDeal.findUnique({ where: { id: req.params.id } });
     if (!deal || deal.ownerId !== ownerId) return res.status(403).json({ error: 'Not authorized' });
     await prisma.lastMinuteDeal.update({ where: { id: deal.id }, data: { isActive: false } });
@@ -102,9 +102,9 @@ router.get('/nearby', optionalAuth, async (req: Request, res: Response) => {
           take: 20,
         });
         if (checkIns.length > 0) {
-          const distances = checkIns.filter(c => c.campground?.latitude && c.campground?.longitude)
-            .map(c => haversine(userLat, userLon, c.campground!.latitude!, c.campground!.longitude!));
-          const avg = distances.length > 0 ? distances.reduce((a, b) => a + b, 0) / distances.length : 150;
+          const distances = checkIns.filter((c: any) => c.campground?.latitude && c.campground?.longitude)
+            .map((c: any) => haversine(userLat, userLon, c.campground!.latitude!, c.campground!.longitude!));
+          const avg = distances.length > 0 ? distances.reduce((a: any, b: any) => a + b, 0) / distances.length : 150;
           radius = avg > 200 ? 200 : avg > 100 ? 150 : 75;
         }
       } catch {}
@@ -125,15 +125,15 @@ router.get('/nearby', optionalAuth, async (req: Request, res: Response) => {
     }
 
     const filtered = deals
-      .filter(d => d.campground.latitude && d.campground.longitude)
-      .map(d => ({
+      .filter((d: any) => d.campground.latitude && d.campground.longitude)
+      .map((d: any) => ({
         ...d,
         distance: Math.round(haversine(userLat, userLon, d.campground.latitude!, d.campground.longitude!)),
       }))
-      .filter(d => d.distance <= radius)
-      .filter(d => !d.maxRigLength || !userRig?.rvLength || userRig.rvLength <= d.maxRigLength)
-      .filter(d => d.allowsPets || !userRig?.hasPets)
-      .sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0) || a.distance - b.distance);
+      .filter((d: any) => d.distance <= radius)
+      .filter((d: any) => !d.maxRigLength || !userRig?.rvLength || userRig.rvLength <= d.maxRigLength)
+      .filter((d: any) => d.allowsPets || !userRig?.hasPets)
+      .sort((a: any, b: any) => (b.discountPercent || 0) - (a.discountPercent || 0) || a.distance - b.distance);
 
     res.json({ deals: filtered, radius });
   } catch {
@@ -170,7 +170,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // ── POST /api/last-minute/:id/view ──
 router.post('/:id/view', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     await prisma.lastMinuteDealView.upsert({
       where: { dealId_userId: { dealId: req.params.id, userId } },
       create: { dealId: req.params.id, userId },
@@ -214,7 +214,7 @@ async function pushDealNotifications(deal: any) {
       distinct: ['userId'],
       take: 100,
     });
-    visitors.forEach(v => userIds.add(v.userId));
+    visitors.forEach((v: any) => userIds.add(v.userId));
 
     // Priority 3: Users who favorited
     const favs = await prisma.campgroundFollow.findMany({
@@ -222,7 +222,7 @@ async function pushDealNotifications(deal: any) {
       select: { userId: true },
       take: 100,
     });
-    favs.forEach(f => userIds.add(f.userId));
+    favs.forEach((f: any) => userIds.add(f.userId));
 
     // Remove the owner
     userIds.delete(deal.ownerId);

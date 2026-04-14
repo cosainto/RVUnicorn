@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/pack-list/:eventId - Get event pack list
 router.get('/:eventId', authenticateToken, async (req, res) => {
@@ -11,11 +12,11 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     const { eventId } = req.params;
 
     // Check if user is event attendee
-    const attendee = await prisma.eventAttendee.findUnique({
+    const attendee = await db.eventAttendee.findUnique({
       where: {
         eventId_userId: {
           eventId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -24,7 +25,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized - must be event attendee' });
     }
 
-    const packItems = await prisma.eventPackItem.findMany({
+    const packItems = await db.eventPackItem.findMany({
       where: { eventId },
       include: {
         assignedTo: {
@@ -59,7 +60,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     });
 
     res.json(packItems);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pack list error:', error);
     res.status(500).json({ error: 'Failed to get pack list' });
   }
@@ -74,7 +75,7 @@ router.post(
     body('name').trim().notEmpty(),
     body('quantity').optional().isInt({ min: 1 }),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -84,11 +85,11 @@ router.post(
       const { eventId, name, quantity, notes, neededBy, linkedGearId } = req.body;
 
       // Check if user is event attendee
-      const attendee = await prisma.eventAttendee.findUnique({
+      const attendee = await db.eventAttendee.findUnique({
         where: {
           eventId_userId: {
             eventId,
-            userId: req.user!.id
+            userId: (req as any).user!.id
           }
         }
       });
@@ -97,7 +98,7 @@ router.post(
         return res.status(403).json({ error: 'Not authorized - must be event attendee' });
       }
 
-      const packItem = await prisma.eventPackItem.create({
+      const packItem = await db.eventPackItem.create({
         data: {
           eventId,
           name,
@@ -105,7 +106,7 @@ router.post(
           notes,
           neededBy: neededBy ? new Date(neededBy) : null,
           linkedGearId,
-          createdById: req.user!.id,
+          createdById: (req as any).user!.id,
         },
         include: {
           assignedTo: {
@@ -129,7 +130,7 @@ router.post(
       });
 
       res.json(packItem);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add pack item error:', error);
       res.status(500).json({ error: 'Failed to add pack item' });
     }
@@ -142,7 +143,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name, quantity, notes, neededBy, status, assignedToId, linkedGearId } = req.body;
 
-    const packItem = await prisma.eventPackItem.findUnique({
+    const packItem = await db.eventPackItem.findUnique({
       where: { id },
       include: {
         event: {
@@ -158,12 +159,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user is event attendee
-    const isAttendee = packItem.event.attendees.some(a => a.userId === req.user!.id);
+    const isAttendee = packItem.event.attendees.some((a: any) => a.userId === (req as any).user!.id);
     if (!isAttendee) {
       return res.status(403).json({ error: 'Not authorized - must be event attendee' });
     }
 
-    const updatedItem = await prisma.eventPackItem.update({
+    const updatedItem = await db.eventPackItem.update({
       where: { id },
       data: {
         name,
@@ -188,7 +189,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pack item error:', error);
     res.status(500).json({ error: 'Failed to update pack item' });
   }
@@ -199,7 +200,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const packItem = await prisma.eventPackItem.findUnique({
+    const packItem = await db.eventPackItem.findUnique({
       where: { id },
       include: {
         event: true
@@ -211,16 +212,16 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Only event creator can delete items
-    if (packItem.event.createdById !== req.user!.id) {
+    if (packItem.event.createdById !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized - only event organizer can delete items' });
     }
 
-    await prisma.eventPackItem.delete({
+    await db.eventPackItem.delete({
       where: { id }
     });
 
     res.json({ message: 'Pack item deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete pack item error:', error);
     res.status(500).json({ error: 'Failed to delete pack item' });
   }
@@ -232,7 +233,7 @@ router.post('/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { assignedToId } = req.body;
 
-    const packItem = await prisma.eventPackItem.findUnique({
+    const packItem = await db.eventPackItem.findUnique({
       where: { id },
       include: {
         event: {
@@ -248,18 +249,18 @@ router.post('/:id/assign', authenticateToken, async (req, res) => {
     }
 
     // Check if user is event attendee
-    const isAttendee = packItem.event.attendees.some(a => a.userId === req.user!.id);
+    const isAttendee = packItem.event.attendees.some((a: any) => a.userId === (req as any).user!.id);
     if (!isAttendee) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Check if assignee is event attendee
-    const assigneeIsAttendee = packItem.event.attendees.some(a => a.userId === assignedToId);
+    const assigneeIsAttendee = packItem.event.attendees.some((a: any) => a.userId === assignedToId);
     if (!assigneeIsAttendee) {
       return res.status(400).json({ error: 'Assignee must be event attendee' });
     }
 
-    const updatedItem = await prisma.eventPackItem.update({
+    const updatedItem = await db.eventPackItem.update({
       where: { id },
       data: {
         assignedToId,
@@ -279,8 +280,8 @@ router.post('/:id/assign', authenticateToken, async (req, res) => {
     });
 
     // Create notification for assignee
-    if (assignedToId !== req.user!.id) {
-      await prisma.notification.create({
+    if (assignedToId !== (req as any).user!.id) {
+      await db.notification.create({
         data: {
           userId: assignedToId,
           type: 'PACK_ASSIGNMENT',
@@ -290,7 +291,7 @@ router.post('/:id/assign', authenticateToken, async (req, res) => {
     }
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Assign pack item error:', error);
     res.status(500).json({ error: 'Failed to assign pack item' });
   }
@@ -301,7 +302,7 @@ router.post('/:id/mark-packed', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const packItem = await prisma.eventPackItem.findUnique({
+    const packItem = await db.eventPackItem.findUnique({
       where: { id },
       include: {
         event: {
@@ -317,14 +318,14 @@ router.post('/:id/mark-packed', authenticateToken, async (req, res) => {
     }
 
     // Only assigned person or event organizer can mark as packed
-    const isAssignee = packItem.assignedToId === req.user!.id;
-    const isOrganizer = packItem.event.createdById === req.user!.id;
+    const isAssignee = packItem.assignedToId === (req as any).user!.id;
+    const isOrganizer = packItem.event.createdById === (req as any).user!.id;
     
     if (!isAssignee && !isOrganizer) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updatedItem = await prisma.eventPackItem.update({
+    const updatedItem = await db.eventPackItem.update({
       where: { id },
       data: {
         status: 'PACKED',
@@ -343,7 +344,7 @@ router.post('/:id/mark-packed', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark packed error:', error);
     res.status(500).json({ error: 'Failed to mark as packed' });
   }
@@ -355,7 +356,7 @@ router.post('/:id/cant-bring', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    const packItem = await prisma.eventPackItem.findUnique({
+    const packItem = await db.eventPackItem.findUnique({
       where: { id },
       include: {
         event: true
@@ -367,11 +368,11 @@ router.post('/:id/cant-bring', authenticateToken, async (req, res) => {
     }
 
     // Only assigned person can mark can't bring
-    if (packItem.assignedToId !== req.user!.id) {
+    if (packItem.assignedToId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updatedItem = await prisma.eventPackItem.update({
+    const updatedItem = await db.eventPackItem.update({
       where: { id },
       data: {
         status: 'OPEN',
@@ -381,16 +382,16 @@ router.post('/:id/cant-bring', authenticateToken, async (req, res) => {
     });
 
     // Notify event organizer
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: packItem.event.createdById,
         type: 'PACK_CANT_BRING',
-        content: `${req.user!.firstName} can't bring "${packItem.name}" for ${packItem.event.title}`,
+        content: `${(req as any).user!.firstName} can't bring "${packItem.name}" for ${packItem.event.title}`,
       }
     });
 
     res.json(updatedItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark cant bring error:', error);
     res.status(500).json({ error: 'Failed to mark cant bring' });
   }

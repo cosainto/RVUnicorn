@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { runAIAnalysis } from "../routes/ai-maintenance";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 export async function runMaintenanceCron() {
   try {
@@ -20,13 +20,13 @@ export async function runMaintenanceCron() {
         totalRecommendations += count;
         console.log(`[MaintenanceCron] ${user.rvYear || ''} ${user.rvMake || ''} ${user.rvModel || ''}: ${count} recommendations`);
         await new Promise(r => setTimeout(r, 500));
-      } catch (e) {
+      } catch (e: any) {
         console.error(`[MaintenanceCron] Failed for user ${user.id}:`, e);
       }
     }
 
     console.log(`[MaintenanceCron] Done. ${totalRecommendations} total recommendations generated.`);
-  } catch (e) {
+  } catch (e: any) {
     console.error("[MaintenanceCron] Cron job failed:", e);
   } finally {
     await prisma.$disconnect();

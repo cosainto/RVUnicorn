@@ -9,7 +9,7 @@ import { emitOrganizerActivity } from '../campfire/organizer.socket';
 function getIO() { return require('../index').io; }
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // POST /api/checkins - Check in to a location
 router.post('/', authenticateToken, async (req: any, res) => {
@@ -219,7 +219,7 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
           where: { userId, campgroundId: activeCheckIn.campgroundId, isActive: true },
           data: { isActive: false },
         });
-      } catch (e) { }
+      } catch (e: any) { }
 
       // Emit presence:departed for any live events at this campground
       try {
@@ -261,7 +261,7 @@ router.get('/history', authenticateToken, async (req: any, res) => {
       },
     });
     res.json(checkins);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get checkin history error:', error);
     res.status(500).json({ error: 'Failed to fetch checkin history' });
   }
@@ -352,7 +352,7 @@ router.get('/active', authenticateToken, async (req: any, res) => {
           where: { userId, id: { not: checkIn.id } },
           select: { campground: { select: { state: true } } },
         });
-        const prevStates = new Set(prevCheckins.map(c => c.campground?.state).filter(Boolean));
+        const prevStates = new Set(prevCheckins.map((c: any) => c.campground?.state).filter(Boolean));
         totalStates = prevStates.size;
         if (!prevStates.has(checkIn.campground.state)) {
           newStateUnlocked = checkIn.campground.state;
@@ -506,7 +506,7 @@ router.get('/nearby-friends', authenticateToken, async (req, res) => {
       return { ...c, distanceMiles, sameCampground: !!(myCI?.campgroundId && myCI.campgroundId === c.campgroundId) };
     });
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch nearby campers' });
   }
 });

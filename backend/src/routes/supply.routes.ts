@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const include = {
   createdBy: { select: { id: true, firstName: true, lastName: true, profilePicture: true } },
@@ -19,7 +19,7 @@ router.get('/:eventId', authenticateToken, async (req: any, res: Response) => {
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     });
     res.json(items);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch supply list' });
   }
 });
@@ -40,7 +40,7 @@ router.post('/:eventId', authenticateToken, async (req: any, res: Response) => {
       include,
     });
     res.json(item);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to create supply item' });
   }
 });
@@ -72,9 +72,9 @@ router.patch('/:eventId/:itemId/claim', authenticateToken, async (req: any, res:
       if (event && claimer) {
         const name = `${claimer.firstName} ${claimer.lastName}`.trim();
         const notifyIds = event.attendees
-          .map(a => a.userId)
-          .filter(id => id !== req.userId);
-        await Promise.all(notifyIds.map(userId =>
+          .map((a: any) => a.userId)
+          .filter((id: any) => id !== req.userId);
+        await Promise.all(notifyIds.map((userId: any) =>
           prisma.notification.create({
             data: {
               userId,
@@ -88,7 +88,7 @@ router.patch('/:eventId/:itemId/claim', authenticateToken, async (req: any, res:
     }
 
     res.json(updated);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to update supply item' });
   }
 });
@@ -101,7 +101,7 @@ router.delete('/:eventId/:itemId', authenticateToken, async (req: any, res: Resp
     if (item.createdById !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await prisma.supplyItem.delete({ where: { id: req.params.itemId } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete supply item' });
   }
 });

@@ -3,12 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/top-friends - Get user's ranked top 8 friends
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const topFriends = await prisma.topFriend.findMany({
       where: { userId },
@@ -26,11 +26,11 @@ router.get('/', authenticateToken, async (req: any, res) => {
       },
     });
 
-    res.json(topFriends.map(tf => ({
+    res.json(topFriends.map((tf: any) => ({
       ...tf.friend,
       rank: tf.rank,
     })));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get top friends error:', error);
     res.status(500).json({ error: 'Failed to get top friends' });
   }
@@ -39,7 +39,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
 // PUT /api/top-friends - Update all rankings at once
 router.put('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { rankings } = req.body; // Array of { friendId, rank }
 
     if (!rankings || !Array.isArray(rankings)) {
@@ -54,7 +54,7 @@ router.put('/', authenticateToken, async (req: any, res) => {
     }
 
     // Delete existing rankings and insert new ones in a transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Remove all current top friends for this user
       await tx.topFriend.deleteMany({
         where: { userId },
@@ -89,11 +89,11 @@ router.put('/', authenticateToken, async (req: any, res) => {
       },
     });
 
-    res.json(topFriends.map(tf => ({
+    res.json(topFriends.map((tf: any) => ({
       ...tf.friend,
       rank: tf.rank,
     })));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update top friends error:', error);
     res.status(500).json({ error: 'Failed to update top friends' });
   }
@@ -102,7 +102,7 @@ router.put('/', authenticateToken, async (req: any, res) => {
 // POST /api/top-friends/:friendId - Add a friend to top 8
 router.post('/:friendId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { friendId } = req.params;
     const { rank } = req.body;
 
@@ -151,7 +151,7 @@ router.post('/:friendId', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ success: true, rank: useRank });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add top friend error:', error);
     res.status(500).json({ error: 'Failed to add top friend' });
   }
@@ -160,7 +160,7 @@ router.post('/:friendId', authenticateToken, async (req: any, res) => {
 // DELETE /api/top-friends/:friendId - Remove from top 8
 router.delete('/:friendId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { friendId } = req.params;
 
     await prisma.topFriend.deleteMany({
@@ -168,7 +168,7 @@ router.delete('/:friendId', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove top friend error:', error);
     res.status(500).json({ error: 'Failed to remove top friend' });
   }

@@ -6,7 +6,7 @@ import { notificationService } from '../services/notification.service';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ═══════════════════════════════════════════════════════════
@@ -61,13 +61,13 @@ router.get('/:campgroundId', optionalAuth, async (req: any, res: Response) => {
     let savedSet = new Set<string>();
     if (userId) {
       const saves = await prisma.activitySave.findMany({
-        where: { userId, actionableId: { in: actionables.map((a) => a.id) } },
+        where: { userId, actionableId: { in: actionables.map((a: any) => a.id) } },
         select: { actionableId: true },
       });
-      savedSet = new Set(saves.map((s) => s.actionableId));
+      savedSet = new Set(saves.map((s: any) => s.actionableId));
     }
 
-    const results = actionables.map((a) => ({
+    const results = actionables.map((a: any) => ({
       ...a,
       userSaved: savedSet.has(a.id),
       recentCompletions: a.completions,
@@ -75,7 +75,7 @@ router.get('/:campgroundId', optionalAuth, async (req: any, res: Response) => {
     }));
 
     res.json(results);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] GET /:campgroundId', err);
     res.status(500).json({ error: 'Failed to load activities' });
   }
@@ -133,7 +133,7 @@ router.get('/campground/:campgroundId/live-feed', optionalAuth, async (req: any,
 
     const feed: any[] = [];
 
-    completions.forEach((c) => {
+    completions.forEach((c: any) => {
       feed.push({
         type: 'COMPLETION',
         id: c.id,
@@ -145,7 +145,7 @@ router.get('/campground/:campgroundId/live-feed', optionalAuth, async (req: any,
       });
     });
 
-    instances.forEach((i) => {
+    instances.forEach((i: any) => {
       feed.push({
         type: 'PLAN',
         id: i.id,
@@ -165,7 +165,7 @@ router.get('/campground/:campgroundId/live-feed', optionalAuth, async (req: any,
       items: feed.slice(0, 20),
       checkedInCount: checkinCount,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] live-feed', err);
     res.status(500).json({ error: 'Failed to load live feed' });
   }
@@ -206,7 +206,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json(actionable);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] POST /', err);
     res.status(500).json({ error: 'Failed to create activity' });
   }
@@ -231,7 +231,7 @@ router.patch('/:id/confirm', authenticateToken, async (req: any, res: Response) 
     });
 
     res.json(updated);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] PATCH confirm', err);
     res.status(500).json({ error: 'Failed to confirm' });
   }
@@ -253,7 +253,7 @@ router.patch('/:id', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json(updated);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] PATCH /:id', err);
     res.status(500).json({ error: 'Failed to update' });
   }
@@ -275,7 +275,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json({ archived: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] DELETE', err);
     res.status(500).json({ error: 'Failed to archive' });
   }
@@ -337,7 +337,7 @@ router.post('/:id/save', authenticateToken, async (req: any, res: Response) => {
     }
 
     res.json({ saved: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] save', err);
     res.status(500).json({ error: 'Failed to save' });
   }
@@ -393,7 +393,7 @@ router.post('/:id/complete', authenticateToken, async (req: any, res: Response) 
     }
 
     res.json(completion);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] complete', err);
     res.status(500).json({ error: 'Failed to complete' });
   }
@@ -458,7 +458,7 @@ router.post('/:id/instances', authenticateToken, async (req: any, res: Response)
     }
 
     res.json(instance);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] create instance', err);
     res.status(500).json({ error: 'Failed to create instance' });
   }
@@ -498,12 +498,12 @@ router.get('/instances/:instanceId', optionalAuth, async (req: any, res: Respons
 
     let userStatus = 'NOT_JOINED';
     if (userId) {
-      const participant = instance.participants.find((p) => p.userId === userId);
+      const participant = instance.participants.find((p: any) => p.userId === userId);
       if (participant) userStatus = participant.status;
     }
 
     res.json({ ...instance, userStatus, messages: instance.messages.reverse() });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] GET instance', err);
     res.status(500).json({ error: 'Failed to load instance' });
   }
@@ -552,7 +552,7 @@ router.post('/instances/:instanceId/join', authenticateToken, async (req: any, r
     });
 
     res.json({ joined: status === 'JOINED', participantCount: count });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] join', err);
     res.status(500).json({ error: 'Failed to join' });
   }
@@ -594,7 +594,7 @@ router.post('/instances/:instanceId/messages', authenticateToken, async (req: an
     }
 
     res.json(message);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] message', err);
     res.status(500).json({ error: 'Failed to send message' });
   }
@@ -645,7 +645,7 @@ router.patch('/instances/:instanceId', authenticateToken, async (req: any, res: 
     }
 
     res.json(updated);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] PATCH instance', err);
     res.status(500).json({ error: 'Failed to update' });
   }
@@ -745,12 +745,12 @@ router.get('/do-this-now', authenticateToken, async (req: any, res: Response) =>
       },
       select: { initiatorId: true, receiverId: true },
     });
-    const friendIds = friendships.map((f) =>
+    const friendIds = friendships.map((f: any) =>
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
     const results = await Promise.all(
-      activities.map(async (a) => {
+      activities.map(async (a: any) => {
         const friendCompletions = await prisma.activityCompletion.findMany({
           where: { actionableId: a.id, userId: { in: friendIds } },
           take: 3,
@@ -782,13 +782,13 @@ router.get('/do-this-now', authenticateToken, async (req: any, res: Response) =>
           actionable: a,
           hitchReason,
           activeInstance: a.instances[0] || null,
-          friendsWhoDidThis: friendCompletions.map((c) => c.user),
+          friendsWhoDidThis: friendCompletions.map((c: any) => c.user),
         };
       })
     );
 
     res.json(results);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] do-this-now', err);
     res.status(500).json({ error: 'Failed to load suggestions' });
   }
@@ -817,7 +817,7 @@ router.get('/creator/pending', authenticateToken, async (req: any, res: Response
     });
 
     res.json(pending);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] pending', err);
     res.status(500).json({ error: 'Failed to load pending' });
   }
@@ -862,7 +862,7 @@ router.post('/events/:eventId/playbook', authenticateToken, async (req: any, res
     });
 
     res.json(playbook);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] playbook create', err);
     res.status(500).json({ error: 'Failed to save playbook' });
   }
@@ -897,7 +897,7 @@ router.post('/events/:eventId/playbook/content', authenticateToken, async (req: 
     });
 
     res.json(item);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] playbook content', err);
     res.status(500).json({ error: 'Failed to add content' });
   }
@@ -917,7 +917,7 @@ router.delete('/events/:eventId/playbook/content/:contentItemId', authenticateTo
 
     await prisma.eventPlaybookContent.delete({ where: { id: contentItemId } });
     res.json({ deleted: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] delete playbook content', err);
     res.status(500).json({ error: 'Failed to delete' });
   }
@@ -941,12 +941,12 @@ router.get('/events/:eventId/playbook', optionalAuth, async (req: any, res: Resp
     if (!playbook) return res.status(404).json({ error: 'Playbook not found' });
 
     // Group content by phase
-    const before = playbook.content.filter((c) => c.phase === 'BEFORE');
-    const during = playbook.content.filter((c) => c.phase === 'DURING');
-    const after = playbook.content.filter((c) => c.phase === 'AFTER');
+    const before = playbook.content.filter((c: any) => c.phase === 'BEFORE');
+    const during = playbook.content.filter((c: any) => c.phase === 'DURING');
+    const after = playbook.content.filter((c: any) => c.phase === 'AFTER');
 
     res.json({ ...playbook, beforeContent: before, duringContent: during, afterContent: after });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] GET playbook', err);
     res.status(500).json({ error: 'Failed to load playbook' });
   }
@@ -995,11 +995,11 @@ router.get('/events/:eventId/playbook/live-feed', optionalAuth, async (req: any,
     ]);
 
     const items: any[] = [];
-    completions.forEach((c) => items.push({ type: 'COMPLETION', ...c }));
-    activeInstances.forEach((i) => items.push({ type: 'ACTIVE_INSTANCE', ...i }));
+    completions.forEach((c: any) => items.push({ type: 'COMPLETION', ...c }));
+    activeInstances.forEach((i: any) => items.push({ type: 'ACTIVE_INSTANCE', ...i }));
 
     res.json({ items, attendeeCheckIns: checkInCount });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[DoThisHere] playbook live-feed', err);
     res.status(500).json({ error: 'Failed to load live feed' });
   }

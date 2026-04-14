@@ -22,7 +22,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const PROGRESS_FILE = path.join(__dirname, 'map-scraper-progress.json');
 
 cloudinary.config({

@@ -1,4 +1,5 @@
 import { prisma } from '../index';
+const db = prisma as any;
 import { Resend } from 'resend';
 
 const SITE = 'https://www.rvunicorn.com';
@@ -50,7 +51,7 @@ const DRIPS: DripConfig[] = [
     emailType: 'community',
     delayHours: 48,
     buildEmail: async (user) => {
-      const posts = await prisma.boardPost.findMany({
+      const posts = await db.boardPost.findMany({
         orderBy: { voteScore: 'desc' },
         take: 3,
         include: { board: { select: { name: true, slug: true } } },
@@ -58,7 +59,7 @@ const DRIPS: DripConfig[] = [
       if (posts.length === 0) return null;
       const boardName = posts[0].board?.name || 'the community';
       const slug = posts[0].board?.slug || '';
-      const postCards = posts.map(p => `<div style="padding:10px 0;border-bottom:1px solid #f3f4f6;"><strong style="color:#1a1a1a;font-size:14px;">${p.title}</strong><br/><span style="color:#9ca3af;font-size:12px;">🔥 ${p.voteScore} votes</span></div>`).join('');
+      const postCards = posts.map((p: any) => `<div style="padding:10px 0;border-bottom:1px solid #f3f4f6;"><strong style="color:#1a1a1a;font-size:14px;">${p.title}</strong><br/><span style="color:#9ca3af;font-size:12px;">🔥 ${p.voteScore} votes</span></div>`).join('');
       return {
         subject: `💬 3 conversations happening right now in ${boardName}`,
         html: emailWrap(`
@@ -75,13 +76,13 @@ const DRIPS: DripConfig[] = [
     buildEmail: async (user) => {
       const state = user.homeState;
       if (!state) return null;
-      const nearby = await prisma.user.findMany({
+      const nearby = await db.user.findMany({
         where: { homeState: state, id: { not: user.id } },
         select: { firstName: true, rvMake: true, homeCity: true, profilePicture: true },
         take: 3,
       });
       if (nearby.length === 0) return null;
-      const cards = nearby.map(u => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;">${u.profilePicture ? `<img src="${u.profilePicture}" width="36" height="36" style="border-radius:50%;object-fit:cover;" />` : '<div style="width:36px;height:36px;border-radius:50%;background:#fed7aa;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c2410c;">' + (u.firstName?.[0] || '?') + '</div>'}<div><strong style="color:#1a1a1a;font-size:13px;">${u.firstName}</strong><br/><span style="color:#9ca3af;font-size:11px;">${u.rvMake || ''} · ${u.homeCity || state}</span></div></div>`).join('');
+      const cards = nearby.map((u: any) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;">${u.profilePicture ? `<img src="${u.profilePicture}" width="36" height="36" style="border-radius:50%;object-fit:cover;" />` : '<div style="width:36px;height:36px;border-radius:50%;background:#fed7aa;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c2410c;">' + (u.firstName?.[0] || '?') + '</div>'}<div><strong style="color:#1a1a1a;font-size:13px;">${u.firstName}</strong><br/><span style="color:#9ca3af;font-size:11px;">${u.rvMake || ''} · ${u.homeCity || state}</span></div></div>`).join('');
       return {
         subject: `👋 ${nearby.length} RVers near ${state} want to connect`,
         html: emailWrap(`
@@ -109,7 +110,7 @@ const DRIPS: DripConfig[] = [
     emailType: 'first_trip',
     delayHours: 168,
     buildEmail: async (user) => {
-      const hasTrip = await prisma.event.count({ where: { organizerId: user.id } });
+      const hasTrip = await db.event.count({ where: { organizerId: user.id } });
       if (hasTrip > 0) return null;
       const state = user.homeState || 'your area';
       return {
@@ -133,10 +134,10 @@ export async function runEmailDripCron() {
       const maxAge = new Date(Date.now() - (drip.delayHours + 24) * 60 * 60 * 1000);
 
       // Find users who signed up within the drip window and haven't received this email
-      const users = await prisma.user.findMany({
+      const users = await db.user.findMany({
         where: {
           createdAt: { gte: maxAge, lte: cutoffTime },
-          email: { not: null },
+          email: { not: null as any },
           emailDripLogs: { none: { emailType: drip.emailType } },
         },
         select: {
@@ -159,7 +160,7 @@ export async function runEmailDripCron() {
             html: email.html,
           });
 
-          await prisma.emailDripLog.create({
+          await db.emailDripLog.create({
             data: { userId: user.id, emailType: drip.emailType },
           });
         } catch {}

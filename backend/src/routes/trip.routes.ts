@@ -11,6 +11,7 @@ import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
 import { recordCampgroundVisit, fanOutVisitsToAttendees } from '../services/visit-stats.service';
 
 const router = Router();
+const db = prisma as any;
 
 // Local alias — the canonical implementation lives in
 // services/visit-stats.service.ts so every event creation path can
@@ -22,7 +23,7 @@ const createStateVisitForUser = recordCampgroundVisit;
 router.get('/', async (req, res) => {
   try {
     const events = await req.query.userId
-      ? await prisma.event.findMany({
+      ? await db.event.findMany({
           where: { organizerId: req.query.userId as string },
           include: {
             organizer: {
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
           },
           orderBy: { startDate: 'desc' },
         })
-      : await prisma.event.findMany({
+      : await db.event.findMany({
           include: {
             organizer: {
               select: {
@@ -85,7 +86,7 @@ router.get('/', async (req, res) => {
         });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
   }
@@ -97,7 +98,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Get events where user is organizer OR attendee
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
         OR: [
           { organizerId: userId },
@@ -187,7 +188,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     });
 
     // Also get StateVisits (trips from Travel Map)
-    const stateVisits = await prisma.stateVisit.findMany({
+    const stateVisits = await db.stateVisit.findMany({
       where: { userId },
       include: {
         campsite: {
@@ -205,7 +206,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     });
 
     // Convert StateVisits to event-like format and merge
-    const stateVisitEvents = stateVisits.map(sv => ({
+    const stateVisitEvents = stateVisits.map((sv: any) => ({
       id: sv.id,
       title: sv.campsite?.name || `Trip to ${sv.state}`,
       name: sv.campsite?.name || `Trip to ${sv.state}`,
@@ -219,7 +220,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     }));
 
     // Add myAttendee to each event so frontend can get siteNumber + attendeeId
-    const eventsWithMyAttendee = events.map(event => ({
+    const eventsWithMyAttendee = events.map((event: any) => ({
       ...event,
       myAttendee: event.attendees.find((a: any) => a.userId === userId) || null,
     }));
@@ -230,7 +231,7 @@ router.get('/my', authenticateToken, async (req, res) => {
     );
 
     res.json(allTrips);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
   }
@@ -243,7 +244,7 @@ router.get('/upcoming', authenticateToken, async (req, res) => {
     const now = new Date();
 
     // Find future events where user is organizer OR an attendee with "going" status
-    const upcomingEvents = await prisma.event.findMany({
+    const upcomingEvents = await db.event.findMany({
       where: {
         startDate: { gte: now },
         isWishlist: false, // Exclude wishlist events
@@ -285,7 +286,7 @@ router.get('/upcoming', authenticateToken, async (req, res) => {
     });
 
     res.json(upcomingEvents);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get upcoming events error:', error);
     res.status(500).json({ error: 'Failed to fetch upcoming events' });
   }
@@ -295,7 +296,7 @@ router.get('/upcoming', authenticateToken, async (req, res) => {
 router.get('/my-events', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
         OR: [
           { organizerId: userId },
@@ -314,7 +315,7 @@ router.get('/my-events', authenticateToken, async (req, res) => {
       take: 20,
     });
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my events error:', error);
     res.status(500).json({ error: 'Failed to get events' });
   }
@@ -324,7 +325,7 @@ router.get('/my-events', authenticateToken, async (req, res) => {
 router.get('/discover', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       select: { rvType: true, homeState: true, campingStyles: true, campingInterests: true },
     });
@@ -344,7 +345,7 @@ router.get('/discover', authenticateToken, async (req, res) => {
       profileWhere.state = user.homeState;
     }
 
-    const forYou = await prisma.campground.findMany({
+    const forYou = await db.campground.findMany({
       where: { ...profileWhere, imageUrl: { not: null } },
       select: campgroundSelect,
       orderBy: { googleRating: 'desc' },
@@ -352,22 +353,22 @@ router.get('/discover', authenticateToken, async (req, res) => {
     });
 
     // 2. Popular campgrounds — most check-ins
-    const popularCampgrounds = await prisma.checkIn.groupBy({
+    const popularCampgrounds = await db.checkIn.groupBy({
       by: ['campgroundId'],
       where: { campgroundId: { not: null } },
       _count: { campgroundId: true },
       orderBy: { _count: { campgroundId: 'desc' } },
       take: 8,
     });
-    const popularIds = popularCampgrounds.map(c => c.campgroundId).filter(Boolean) as string[];
-    const popular = popularIds.length > 0 ? await prisma.campground.findMany({
+    const popularIds = popularCampgrounds.map((c: any) => c.campgroundId).filter(Boolean) as string[];
+    const popular = popularIds.length > 0 ? await db.campground.findMany({
       where: { id: { in: popularIds }, imageUrl: { not: null } },
       select: campgroundSelect,
     }) : [];
 
     // 3. Upcoming public events from other users (events people can join)
     const now = new Date();
-    const upcomingEvents = await prisma.event.findMany({
+    const upcomingEvents = await db.event.findMany({
       where: {
         privacy: 'PUBLIC',
         isWishlist: false,
@@ -384,7 +385,7 @@ router.get('/discover', authenticateToken, async (req, res) => {
     });
 
     // 4. Past public trips from other users (inspiration)
-    const pastTrips = await prisma.event.findMany({
+    const pastTrips = await db.event.findMany({
       where: {
         privacy: 'PUBLIC',
         isWishlist: false,
@@ -401,9 +402,9 @@ router.get('/discover', authenticateToken, async (req, res) => {
     });
 
     // 5. Random campgrounds for exploration
-    const totalCampgrounds = await prisma.campground.count({ where: { imageUrl: { not: null } } });
+    const totalCampgrounds = await db.campground.count({ where: { imageUrl: { not: null } } });
     const randomSkip = Math.max(0, Math.floor(Math.random() * Math.max(0, totalCampgrounds - 6)));
-    const randomCampgrounds = await prisma.campground.findMany({
+    const randomCampgrounds = await db.campground.findMany({
       where: { imageUrl: { not: null } },
       select: campgroundSelect,
       skip: randomSkip,
@@ -424,15 +425,15 @@ router.get('/discover', authenticateToken, async (req, res) => {
     });
 
     const results = [
-      ...upcomingEvents.map(t => ({ ...t, isDiscover: true, discoverSection: 'Upcoming Events' })),
-      ...forYou.map(cg => campgroundToCard(cg, 'For You')),
-      ...pastTrips.map(t => ({ ...t, isDiscover: true, discoverSection: 'Past Trips from the Community' })),
-      ...popular.map(cg => campgroundToCard(cg, 'Popular with RVers')),
-      ...randomCampgrounds.map(cg => campgroundToCard(cg, 'Explore')),
+      ...upcomingEvents.map((t: any) => ({ ...t, isDiscover: true, discoverSection: 'Upcoming Events' })),
+      ...forYou.map((cg: any) => campgroundToCard(cg, 'For You')),
+      ...pastTrips.map((t: any) => ({ ...t, isDiscover: true, discoverSection: 'Past Trips from the Community' })),
+      ...popular.map((cg: any) => campgroundToCard(cg, 'Popular with RVers')),
+      ...randomCampgrounds.map((cg: any) => campgroundToCard(cg, 'Explore')),
     ];
 
     res.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Discover events error:', error);
     res.status(500).json({ error: 'Failed to fetch discover content' });
   }
@@ -442,7 +443,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: {
         organizer: {
@@ -545,7 +546,7 @@ router.get('/:id', async (req, res) => {
 
     // Log activity for friend feed (only for non-private events)
     res.json(event);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event error:', error?.message || error);
     res.status(500).json({ error: 'Failed to fetch event', detail: String(error?.message || error) });
   }
@@ -560,11 +561,11 @@ router.post('/', authenticateToken, async (req, res) => {
     // Auto-use campground image if no banner provided
     let resolvedBanner = bannerImage || null;
     if (!resolvedBanner && campgroundId) {
-      const cg = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { imageUrl: true } });
+      const cg = await db.campground.findUnique({ where: { id: campgroundId }, select: { imageUrl: true } });
       resolvedBanner = cg?.imageUrl || null;
     }
 
-    const event = await prisma.event.create({
+    const event = await db.event.create({
       data: {
         organizerId: userId,
         title,
@@ -606,31 +607,31 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     // Auto-add organizer as ATTENDING
-    await prisma.eventAttendee.upsert({
+    await db.eventAttendee.upsert({
       where: { eventId_userId: { eventId: event.id, userId } },
       create: { eventId: event.id, userId, status: 'ATTENDING' },
       update: { status: 'ATTENDING' },
     }).catch(() => {});
 
     // Auto-handle household partner
-    const organizer = await prisma.user.findUnique({
+    const organizer = await db.user.findUnique({
       where: { id: userId },
       select: { householdId: true },
     });
     if (organizer?.householdId) {
-      const partner = await prisma.user.findFirst({
+      const partner = await db.user.findFirst({
         where: { householdId: organizer.householdId, id: { not: userId } },
         select: { id: true },
       });
       if (partner) {
         const isFuture = new Date(startDate) >= new Date();
-        await prisma.eventAttendee.upsert({
+        await db.eventAttendee.upsert({
           where: { eventId_userId: { eventId: event.id, userId: partner.id } },
           create: { eventId: event.id, userId: partner.id, status: isFuture ? 'ATTENDING' : 'PENDING' },
           update: {},
         }).catch(() => {});
         if (!isFuture) {
-          await prisma.notification.create({
+          await db.notification.create({
             data: {
               userId: partner.id,
               type: 'TRIP_INVITE',
@@ -666,7 +667,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
       // Auto-create completed check-in for past trips with a campground
       if (event.campgroundId && new Date(startDate) < new Date()) {
-        const existing = await prisma.checkIn.findFirst({
+        const existing = await db.checkIn.findFirst({
           where: {
             userId,
             campgroundId: event.campgroundId,
@@ -677,7 +678,7 @@ router.post('/', authenticateToken, async (req, res) => {
           },
         });
         if (!existing) {
-          await prisma.checkIn.create({
+          await db.checkIn.create({
             data: {
               userId,
               campgroundId: event.campgroundId,
@@ -694,9 +695,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Send Hitch welcome message on first trip creation
     try {
-      const tripCount = await prisma.event.count({ where: { organizerId: userId } });
+      const tripCount = await db.event.count({ where: { organizerId: userId } });
       if (tripCount === 1) {
-        const conversation = await prisma.hitchConversation.create({
+        const conversation = await db.hitchConversation.create({
           data: {
             userId,
             title: 'Welcome to Trip Planning!',
@@ -728,7 +729,7 @@ router.post('/', authenticateToken, async (req, res) => {
           "Ready to build out your trip? Ask me anything — I can suggest campgrounds, help you plan a route, recommend gear, or just help you get excited for the road ahead. 🚐✨",
         ].join("\n");
 
-        await prisma.hitchMessage.create({
+        await db.hitchMessage.create({
           data: {
             conversationId: conversation.id,
             role: 'assistant',
@@ -741,7 +742,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     res.json(event);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create event error:', error);
     res.status(500).json({ error: 'Failed to create event' });
   }
@@ -752,12 +753,12 @@ router.post('/', authenticateToken, async (req, res) => {
 // PUT /api/trips/:id/my-site — save user's campsite details for this event
 router.put('/:id/my-site', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id || req.userId;
+    const userId = (req as any).user?.id || req.userId;
     const { id: eventId } = req.params;
     const { siteNumber, confirmationNumber, notes, siteVisibility } = req.body;
 
     // Upsert attendee record with site details
-    const attendee = await prisma.eventAttendee.upsert({
+    const attendee = await db.eventAttendee.upsert({
       where: { eventId_userId: { eventId, userId } },
       create: {
         eventId,
@@ -787,12 +788,12 @@ router.put('/:id/my-site', authenticateToken, async (req: any, res) => {
 // PUT /api/trips/:id/my-site — save user's campsite details for this event
 router.put('/:id/my-site', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id || req.userId;
+    const userId = (req as any).user?.id || req.userId;
     const { id: eventId } = req.params;
     const { siteNumber, confirmationNumber, notes, siteVisibility } = req.body;
 
     // Upsert attendee record with site details
-    const attendee = await prisma.eventAttendee.upsert({
+    const attendee = await db.eventAttendee.upsert({
       where: { eventId_userId: { eventId, userId } },
       create: {
         eventId,
@@ -824,7 +825,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage } = req.body;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: { attendees: true },
     });
@@ -837,7 +838,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this event' });
     }
 
-    const updatedEvent = await prisma.event.update({
+    const updatedEvent = await db.event.update({
       where: { id },
       data: {
         title: title || undefined,
@@ -881,16 +882,16 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Handle privacy changes for activity feed
     if (privacy === 'PRIVATE') {
       // Delete activity records so it doesn't show in feeds
-      await prisma.activity.deleteMany({
+      await db.activity.deleteMany({
         where: { eventId: id }
       });
     } else if (privacy === 'PUBLIC' || privacy === 'FRIENDS') {
       // If changing to PUBLIC or FRIENDS, create activity if it doesn't exist
-      const existingActivity = await prisma.activity.findFirst({
+      const existingActivity = await db.activity.findFirst({
         where: { eventId: id, type: 'EVENT_CREATED' }
       });
       if (!existingActivity) {
-        await prisma.activity.create({
+        await db.activity.create({
           data: {
             userId,
             type: 'EVENT_CREATED',
@@ -910,20 +911,20 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     if (notifyAttendees) {
       const notificationData = updatedEvent.attendees
-        .filter((a) => a.userId !== userId)
-        .map((a) => ({
+        .filter((a: any) => a.userId !== userId)
+        .map((a: any) => ({
           userId: a.userId,
           type: "EVENT_UPDATED",
           content: updatedEvent.organizer.firstName + " updated the event " + updatedEvent.title,
           link: "/trips/" + updatedEvent.id,
         }));
       if (notificationData.length > 0) {
-        await prisma.notification.createMany({ data: notificationData });
+        await db.notification.createMany({ data: notificationData });
       }
     }
 
     res.json(updatedEvent);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update event error:', error);
     res.status(500).json({ error: 'Failed to update event' });
   }
@@ -939,7 +940,7 @@ router.put('/:id/transfer-organizer', authenticateToken, async (req: any, res) =
 
     if (!newOrganizerId) return res.status(400).json({ error: 'newOrganizerId is required' });
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: { attendees: { select: { userId: true } } },
     });
@@ -951,7 +952,7 @@ router.put('/:id/transfer-organizer', authenticateToken, async (req: any, res) =
     const isAttendee = event.attendees.some((a: any) => a.userId === newOrganizerId);
     if (!isAttendee) return res.status(400).json({ error: 'New organizer must be an attendee of this event' });
 
-    await prisma.event.update({
+    await db.event.update({
       where: { id },
       data: { organizerId: newOrganizerId },
     });
@@ -967,7 +968,7 @@ router.put('/:id/transfer-organizer', authenticateToken, async (req: any, res) =
     }).catch(() => {});
 
     res.json({ message: 'Organizer transferred successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Transfer organizer error:', error);
     res.status(500).json({ error: 'Failed to transfer organizer' });
   }
@@ -978,7 +979,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     const { id } = req.params;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: {
         organizer: { select: {
@@ -1002,8 +1003,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Notify attendees about event deletion (except organizer)
     const notificationData = event.attendees
-      .filter((a) => a.userId !== userId)
-      .map((a) => ({
+      .filter((a: any) => a.userId !== userId)
+      .map((a: any) => ({
         userId: a.userId,
         type: 'EVENT_DELETED',
         content: `${event.organizer.firstName} cancelled the event "${event.title}"${event.group ? ` in ${event.group.name}` : ''}`,
@@ -1011,24 +1012,24 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       }));
 
     if (notificationData.length > 0) {
-      await prisma.notification.createMany({
+      await db.notification.createMany({
         data: notificationData,
       });
     }
 
     // Delete all associated records before deleting event
-    await prisma.stateVisit.deleteMany({ where: { eventId: id } });
-    await prisma.eventActivity.deleteMany({ where: { eventId: id } });
-    await prisma.eventMeal.deleteMany({ where: { eventId: id } });
-    await prisma.eventAttendee.deleteMany({ where: { eventId: id } });
-    await prisma.tripPlan.deleteMany({ where: { eventId: id } });
+    await db.stateVisit.deleteMany({ where: { eventId: id } });
+    await db.eventActivity.deleteMany({ where: { eventId: id } });
+    await db.eventMeal.deleteMany({ where: { eventId: id } });
+    await db.eventAttendee.deleteMany({ where: { eventId: id } });
+    await db.tripPlan.deleteMany({ where: { eventId: id } });
 
-    await prisma.event.delete({
+    await db.event.delete({
       where: { id }
     });
 
     res.json({ message: 'Event deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete event error:', error);
     res.status(500).json({ error: 'Failed to delete event' });
   }
@@ -1050,7 +1051,7 @@ router.get('/:id/attendees', async (req, res) => {
       } catch { /* invalid/expired token — treat as unauthenticated */ }
     }
 
-    const attendees = await prisma.eventAttendee.findMany({
+    const attendees = await db.eventAttendee.findMany({
       where: { eventId: id },
       include: {
         user: {
@@ -1069,7 +1070,7 @@ router.get('/:id/attendees', async (req, res) => {
 
     if (!requesterId) {
       // Unauthenticated — strip all campsite details
-      const stripped = attendees.map(a => ({
+      const stripped = attendees.map((a: any) => ({
         ...a,
         siteNumber: null,
         notes: null,
@@ -1079,7 +1080,7 @@ router.get('/:id/attendees', async (req, res) => {
     }
 
     // Get requester's accepted friend IDs (both directions)
-    const friendships = await prisma.friendship.findMany({
+    const friendships = await db.friendship.findMany({
       where: {
         status: 'ACCEPTED',
         OR: [{ initiatorId: requesterId }, { receiverId: requesterId }],
@@ -1087,18 +1088,18 @@ router.get('/:id/attendees', async (req, res) => {
       select: { initiatorId: true, receiverId: true },
     });
     const friendIds = new Set(
-      friendships.map(f => f.initiatorId === requesterId ? f.receiverId : f.initiatorId)
+      friendships.map((f: any) => f.initiatorId === requesterId ? f.receiverId : f.initiatorId)
     );
 
     // Get requester's householdId
-    const requester = await prisma.user.findUnique({
+    const requester = await db.user.findUnique({
       where: { id: requesterId },
       select: { householdId: true },
     });
     const requesterHouseholdId = requester?.householdId ?? null;
 
     // Apply visibility rules per attendee
-    const result = attendees.map(a => {
+    const result = attendees.map((a: any) => {
       const attendeeUserId = a.userId;
       const attendeeHouseholdId = (a.user as any).householdId ?? null;
       const visibility = a.siteVisibility || 'PRIVATE';
@@ -1132,7 +1133,7 @@ router.get('/:id/attendees', async (req, res) => {
     });
 
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get attendees error:', error);
     res.status(500).json({ error: 'Failed to fetch attendees' });
   }
@@ -1154,7 +1155,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'userIds array is required' });
     }
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
     });
 
@@ -1163,7 +1164,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
     }
 
     if (event.organizerId !== userId) {
-      const myAttendance = await prisma.eventAttendee.findUnique({
+      const myAttendance = await db.eventAttendee.findUnique({
         where: { eventId_userId: { eventId: id, userId } },
         select: { id: true },
       });
@@ -1174,7 +1175,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
 
     const attendees = [];
     for (const invitedUserId of userIds) {
-      const existing = await prisma.eventAttendee.findUnique({
+      const existing = await db.eventAttendee.findUnique({
         where: {
           eventId_userId: {
             eventId: id,
@@ -1187,7 +1188,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
         const isPastTrip = event.endDate ? new Date(event.endDate) < new Date() : new Date(event.startDate) < new Date();
         const attendeeStatus = isPastTrip ? 'going' : 'invited';
 
-        const attendee = await prisma.eventAttendee.create({
+        const attendee = await db.eventAttendee.create({
           data: {
             eventId: id,
             userId: invitedUserId,
@@ -1211,7 +1212,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
         fanOutVisitsToAttendees(id).catch(() => {});
 
         // Look up the inviter so the notification can name them
-        const inviter = await prisma.user.findUnique({
+        const inviter = await db.user.findUnique({
           where: { id: userId },
           select: { firstName: true, lastName: true },
         });
@@ -1219,7 +1220,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
           ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || 'Someone'
           : 'Someone';
 
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: invitedUserId,
             type: 'EVENT_INVITE',
@@ -1239,7 +1240,7 @@ router.post('/:id/attendees', authenticateToken, async (req, res) => {
     }
 
     res.json(attendees);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add attendees error:', error);
     res.status(500).json({ error: 'Failed to add attendees' });
   }
@@ -1252,7 +1253,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
     const { id, attendeeId } = req.params;
     const { status, siteNumber } = req.body;
 
-    const attendee = await prisma.eventAttendee.findUnique({
+    const attendee = await db.eventAttendee.findUnique({
       where: { id: attendeeId },
     });
 
@@ -1268,7 +1269,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
     if (status !== undefined) updateData.status = status;
     if (siteNumber !== undefined) updateData.siteNumber = siteNumber;
 
-    const updated = await prisma.eventAttendee.update({
+    const updated = await db.eventAttendee.update({
       where: { id: attendeeId },
       data: updateData,
       include: {
@@ -1286,7 +1287,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
 
     // If status is "going", auto-create StateVisit for this attendee
     if (status === 'going') {
-      const event = await prisma.event.findUnique({
+      const event = await db.event.findUnique({
         where: { id },
         include: {
           campground: {
@@ -1306,7 +1307,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
 
     // If status changed FROM "going" to something else, optionally remove StateVisit
     if (status !== 'going' && attendee.status === 'going') {
-      await prisma.stateVisit.deleteMany({
+      await db.stateVisit.deleteMany({
         where: {
           userId,
           eventId: id,
@@ -1315,7 +1316,7 @@ router.put('/:id/attendees/:attendeeId', authenticateToken, async (req, res) => 
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update attendee error:', error);
     res.status(500).json({ error: 'Failed to update attendee' });
   }
@@ -1327,7 +1328,7 @@ router.delete('/:id/attendees/:attendeeId', authenticateToken, async (req, res) 
     const userId = (req as any).userId;
     const { id, attendeeId } = req.params;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
     });
 
@@ -1335,7 +1336,7 @@ router.delete('/:id/attendees/:attendeeId', authenticateToken, async (req, res) 
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    const attendee = await prisma.eventAttendee.findUnique({
+    const attendee = await db.eventAttendee.findUnique({
       where: { id: attendeeId },
     });
 
@@ -1348,19 +1349,19 @@ router.delete('/:id/attendees/:attendeeId', authenticateToken, async (req, res) 
     }
 
     // Remove their StateVisit for this event
-    await prisma.stateVisit.deleteMany({
+    await db.stateVisit.deleteMany({
       where: {
         userId: attendee.userId,
         eventId: id,
       },
     });
 
-    await prisma.eventAttendee.delete({
+    await db.eventAttendee.delete({
       where: { id: attendeeId },
     });
 
     res.json({ message: 'Attendee removed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove attendee error:', error);
     res.status(500).json({ error: 'Failed to remove attendee' });
   }
@@ -1373,7 +1374,7 @@ router.post('/:id/meals', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { recipeId, mealType, scheduledAt, notes } = req.body;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: {
         attendees: {
@@ -1393,7 +1394,7 @@ router.post('/:id/meals', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Only the organizer or attending members can add meals' });
     }
 
-    const meal = await prisma.eventMeal.create({
+    const meal = await db.eventMeal.create({
       data: {
         eventId: id,
         recipeId: recipeId || null,
@@ -1413,7 +1414,7 @@ router.post('/:id/meals', authenticateToken, async (req, res) => {
     });
 
     res.json(meal);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add meal error:', error);
     res.status(500).json({ error: 'Failed to add meal' });
   }
@@ -1425,7 +1426,7 @@ router.delete('/:id/meals/:mealId', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     const { id, mealId } = req.params;
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id },
       include: {
         attendees: {
@@ -1445,12 +1446,12 @@ router.delete('/:id/meals/:mealId', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Only the organizer or attending members can remove meals' });
     }
 
-    await prisma.eventMeal.delete({
+    await db.eventMeal.delete({
       where: { id: mealId },
     });
 
     res.json({ message: 'Meal removed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove meal error:', error);
     res.status(500).json({ error: 'Failed to remove meal' });
   }
@@ -1464,7 +1465,7 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
     const { startDate, endDate, isWishlist, copyMealPlan } = req.body;
 
     // Get the original event
-    const originalEvent = await prisma.event.findUnique({
+    const originalEvent = await db.event.findUnique({
       where: { id },
       include: {
         campground: true,
@@ -1497,7 +1498,7 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
     }
 
     // Create the copied event
-    const copiedEvent = await prisma.event.create({
+    const copiedEvent = await db.event.create({
       data: {
         title: originalEvent.title,
         description: originalEvent.description,
@@ -1513,7 +1514,7 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
     // Copy meals if requested
     if (copyMealPlan && originalEvent.meals && originalEvent.meals.length > 0) {
       for (const meal of originalEvent.meals) {
-        await prisma.eventMeal.create({
+        await db.eventMeal.create({
           data: {
             eventId: copiedEvent.id,
             mealType: meal.mealType,
@@ -1526,7 +1527,7 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
     }
 
     // Add organizer as attendee
-    await prisma.eventAttendee.create({
+    await db.eventAttendee.create({
       data: {
         eventId: copiedEvent.id,
         userId: userId,
@@ -1535,7 +1536,7 @@ router.post('/:id/copy', authenticateToken, async (req: Request, res: Response) 
     });
 
     res.json(copiedEvent);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Copy event error:', error);
     res.status(500).json({ error: 'Failed to copy event' });
   }
@@ -1551,7 +1552,7 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     // Get friend IDs
-    const friendships = await prisma.friendship.findMany({
+    const friendships = await db.friendship.findMany({
       where: {
         status: 'ACCEPTED',
         OR: [
@@ -1565,7 +1566,7 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
       },
     });
 
-    const friendIds = friendships.map(f => 
+    const friendIds = friendships.map((f: any) => 
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
@@ -1573,7 +1574,7 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
       return res.json([]);
     }
 
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
         organizerId: { in: friendIds },
         isWishlist: false,
@@ -1618,7 +1619,7 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
     });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Friends events error:', error);
     res.status(500).json({ error: 'Failed to fetch friends events' });
   }
@@ -1631,7 +1632,7 @@ router.get('/friends-events', authenticateToken, async (req, res) => {
 router.get('/:id/albums', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const albums = await prisma.photoAlbum.findMany({
+    const albums = await db.photoAlbum.findMany({
       where: { eventId: id },
       include: {
         user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
@@ -1641,7 +1642,7 @@ router.get('/:id/albums', authenticateToken, async (req: any, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(albums);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch albums' });
   }
 });
@@ -1655,10 +1656,10 @@ router.post('/:id/albums', authenticateToken, async (req: any, res) => {
 
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
-    const event = await prisma.event.findUnique({ where: { id } });
+    const event = await db.event.findUnique({ where: { id } });
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const album = await prisma.photoAlbum.create({
+    const album = await db.photoAlbum.create({
       data: { userId, eventId: id, title, description, privacy: privacy || 'PUBLIC' },
       include: {
         user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
@@ -1666,7 +1667,7 @@ router.post('/:id/albums', authenticateToken, async (req: any, res) => {
       },
     });
     res.status(201).json(album);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create album' });
   }
 });
@@ -1678,11 +1679,11 @@ router.post('/:id/albums/link', authenticateToken, async (req: any, res) => {
     const { id } = req.params;
     const { albumId } = req.body;
 
-    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    const album = await db.photoAlbum.findUnique({ where: { id: albumId } });
     if (!album) return res.status(404).json({ error: 'Album not found' });
     if (album.userId !== userId) return res.status(403).json({ error: 'Not your album' });
 
-    const updated = await prisma.photoAlbum.update({
+    const updated = await db.photoAlbum.update({
       where: { id: albumId },
       data: { eventId: id },
       include: {
@@ -1691,7 +1692,7 @@ router.post('/:id/albums/link', authenticateToken, async (req: any, res) => {
       },
     });
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to link album' });
   }
 });
@@ -1702,13 +1703,13 @@ router.delete('/:id/albums/:albumId/unlink', authenticateToken, async (req: any,
     const userId = req.userId;
     const { albumId } = req.params;
 
-    const album = await prisma.photoAlbum.findUnique({ where: { id: albumId } });
+    const album = await db.photoAlbum.findUnique({ where: { id: albumId } });
     if (!album) return res.status(404).json({ error: 'Album not found' });
     if (album.userId !== userId) return res.status(403).json({ error: 'Not your album' });
 
-    await prisma.photoAlbum.update({ where: { id: albumId }, data: { eventId: null } });
+    await db.photoAlbum.update({ where: { id: albumId }, data: { eventId: null } });
     res.json({ message: 'Album unlinked' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to unlink album' });
   }
 });
@@ -1720,7 +1721,7 @@ router.get('/active-route/:userId', async (req, res) => {
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
 
-    const activeEvent = await prisma.event.findFirst({
+    const activeEvent = await db.event.findFirst({
       where: {
         OR: [
           { organizerId: userId },
@@ -1801,7 +1802,7 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { copyAttendees = false } = req.body;
 
-    const source = await prisma.event.findUnique({
+    const source = await db.event.findUnique({
       where: { id },
       include: {
         tripPackItems: true,
@@ -1814,7 +1815,7 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
     if (source.organizerId !== userId) return res.status(403).json({ error: 'Only the organizer can duplicate this trip' });
 
     // Create new event — clear dates, keep everything else
-    const newEvent = await prisma.event.create({
+    const newEvent = await db.event.create({
       data: {
         title: source.title + ' (Copy)',
         description: source.description,
@@ -1831,16 +1832,16 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
     });
 
     // Always add organizer as attendee
-    await prisma.eventAttendee.create({
+    await db.eventAttendee.create({
       data: { eventId: newEvent.id, userId, status: 'ATTENDING' },
     });
 
     // Optionally copy attendees
     if (copyAttendees && source.attendees.length > 0) {
-      const otherAttendees = source.attendees.filter(a => a.userId !== userId);
+      const otherAttendees = source.attendees.filter((a: any) => a.userId !== userId);
       if (otherAttendees.length > 0) {
-        await prisma.eventAttendee.createMany({
-          data: otherAttendees.map(a => ({
+        await db.eventAttendee.createMany({
+          data: otherAttendees.map((a: any) => ({
             eventId: newEvent.id,
             userId: a.userId,
             status: 'PENDING',
@@ -1852,8 +1853,8 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
 
     // Copy pack list items
     if (source.tripPackItems.length > 0) {
-      await prisma.tripPackItem.createMany({
-        data: source.tripPackItems.map(item => ({
+      await db.tripPackItem.createMany({
+        data: source.tripPackItems.map((item: any) => ({
           eventId: newEvent.id,
           name: item.name,
           category: item.category,
@@ -1879,7 +1880,7 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
     }
 
     res.json({ event: newEvent, message: 'Trip duplicated successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Duplicate trip error:', error);
     res.status(500).json({ error: 'Failed to duplicate trip' });
   }
@@ -1894,7 +1895,7 @@ router.patch('/:id/rsvp-presence', authenticateToken, async (req, res) => {
     const { siteNumber, loopArea, siteVisibility, isOpenToVisitors, campfireActive, digitalFlag, hasDogs } = req.body;
     if (digitalFlag && digitalFlag.length > 60) return res.status(400).json({ error: 'Digital flag max 60 chars' });
 
-    const attendee = await prisma.eventAttendee.update({
+    const attendee = await db.eventAttendee.update({
       where: { eventId_userId: { eventId: req.params.id, userId } },
       data: {
         siteNumber: siteNumber !== undefined ? siteNumber : undefined,
@@ -1920,7 +1921,7 @@ router.patch('/:id/arrival-status', authenticateToken, async (req, res) => {
     const { status } = req.body;
     if (!['NOT_ARRIVED', 'CHECKED_IN', 'CAMPFIRE_ACTIVE'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
-    const attendee = await prisma.eventAttendee.update({
+    const attendee = await db.eventAttendee.update({
       where: { eventId_userId: { eventId: req.params.id, userId } },
       data: {
         arrivalStatus: status,
@@ -1933,18 +1934,18 @@ router.patch('/:id/arrival-status', authenticateToken, async (req, res) => {
     // Notify friends at this event
     if (status === 'CHECKED_IN' || status === 'CAMPFIRE_ACTIVE') {
       try {
-        const friendships = await prisma.friendship.findMany({
+        const friendships = await db.friendship.findMany({
           where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'accepted' },
           select: { initiatorId: true, receiverId: true },
         });
-        const friendIds = new Set(friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId));
+        const friendIds = new Set(friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId));
 
-        const others = await prisma.eventAttendee.findMany({
+        const others = await db.eventAttendee.findMany({
           where: { eventId: req.params.id, userId: { not: userId }, arrivalStatus: { in: ['CHECKED_IN', 'CAMPFIRE_ACTIVE'] } },
           select: { userId: true },
         });
 
-        const toNotify = others.filter(o => friendIds.has(o.userId)).slice(0, 10);
+        const toNotify = others.filter((o: any) => friendIds.has(o.userId)).slice(0, 10);
         const siteInfo = attendee.siteNumber ? ` — Site ${attendee.siteNumber}` : '';
         const loopInfo = attendee.loopArea ? `, ${attendee.loopArea}` : '';
         const flagInfo = attendee.digitalFlag ? ` "${attendee.digitalFlag}"` : '';
@@ -1958,7 +1959,7 @@ router.patch('/:id/arrival-status', authenticateToken, async (req, res) => {
           : `${attendee.user.firstName} checked in${siteInfo}${loopInfo} 🏕️`;
 
         for (const target of toNotify) {
-          await prisma.notification.create({
+          await db.notification.create({
             data: { userId: target.userId, type: notifType, title, content: body, link: `/trips/${req.params.id}`, category: 'SOCIAL', actorId: userId },
           }).catch(() => {});
         }
@@ -1975,12 +1976,12 @@ router.patch('/:id/arrival-status', authenticateToken, async (req, res) => {
 router.get('/:id/campground-map', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: req.params.id },
       select: { campgroundId: true, campground: { select: { id: true, name: true } } },
     });
 
-    const attendees = await prisma.eventAttendee.findMany({
+    const attendees = await db.eventAttendee.findMany({
       where: { eventId: req.params.id, status: { in: ['ATTENDING', 'CHECKED_IN'] } },
       include: {
         user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvType: true, rvMake: true, rvModel: true, rvYear: true, rvLength: true } },
@@ -1988,24 +1989,24 @@ router.get('/:id/campground-map', authenticateToken, async (req, res) => {
     });
 
     // Get viewer's rig for twin matching
-    const viewer = await prisma.user.findUnique({ where: { id: userId }, select: { rvMake: true, rvModel: true } });
+    const viewer = await db.user.findUnique({ where: { id: userId }, select: { rvMake: true, rvModel: true } });
 
     // Get friends
-    const friendships = await prisma.friendship.findMany({
+    const friendships = await db.friendship.findMany({
       where: { OR: [{ initiatorId: userId }, { receiverId: userId }], status: 'accepted' },
       select: { initiatorId: true, receiverId: true },
     });
-    const friendIds = new Set(friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId));
+    const friendIds = new Set(friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId));
 
     // Get map image
     let mapImageUrl: string | null = null;
     if (event?.campgroundId) {
-      const kit = await prisma.welcomeKit.findUnique({ where: { campgroundId: event.campgroundId }, select: { mapImageUrl: true } });
+      const kit = await db.welcomeKit.findUnique({ where: { campgroundId: event.campgroundId }, select: { mapImageUrl: true } });
       mapImageUrl = kit?.mapImageUrl || null;
     }
 
     // Filter by visibility
-    const visible = attendees.filter(a => {
+    const visible = attendees.filter((a: any) => {
       if (a.userId === userId) return true;
       if (a.siteVisibility === 'HIDDEN') return false;
       if (a.siteVisibility === 'FRIENDS') return friendIds.has(a.userId);
@@ -2013,7 +2014,7 @@ router.get('/:id/campground-map', authenticateToken, async (req, res) => {
     });
 
     // Build response with rig twin and friend flags
-    const enriched = visible.map(a => ({
+    const enriched = visible.map((a: any) => ({
       ...a,
       isRigTwin: !!(viewer?.rvMake && a.user.rvMake && viewer.rvMake.toLowerCase() === a.user.rvMake.toLowerCase() && viewer.rvModel && a.user.rvModel && viewer.rvModel.toLowerCase() === a.user.rvModel.toLowerCase()),
       isFriend: friendIds.has(a.userId),
@@ -2031,7 +2032,7 @@ router.get('/:id/campground-map', authenticateToken, async (req, res) => {
     res.json({
       loops,
       totalVisible: enriched.length,
-      viewerIsHidden: attendees.find(a => a.userId === userId)?.siteVisibility === 'HIDDEN',
+      viewerIsHidden: attendees.find((a: any) => a.userId === userId)?.siteVisibility === 'HIDDEN',
       mapImageUrl,
     });
   } catch {
@@ -2055,7 +2056,7 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: 'Provide at least one username or email' });
     }
 
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
       include: {
         campground: { select: { name: true, location: true, state: true } },
@@ -2064,7 +2065,7 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
     });
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const sender = await prisma.user.findUnique({
+    const sender = await db.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true, username: true },
     });
@@ -2090,14 +2091,14 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
       const username = String(rawUsername).trim().replace(/^@/, '');
       if (!username) continue;
 
-      const target = await prisma.user.findUnique({ where: { username }, select: { id: true, firstName: true } });
+      const target = await db.user.findUnique({ where: { username }, select: { id: true, firstName: true } });
       if (!target) {
         internalResults.push({ username, status: 'not_found' });
         continue;
       }
       if (target.id === userId) continue;
 
-      const existing = await prisma.eventAttendee.findUnique({
+      const existing = await db.eventAttendee.findUnique({
         where: { eventId_userId: { eventId, userId: target.id } },
       });
       if (existing) {
@@ -2105,13 +2106,13 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
         continue;
       }
 
-      await prisma.eventAttendee.create({
+      await db.eventAttendee.create({
         data: { eventId, userId: target.id, status: 'INVITED' },
       });
 
       // In-app notification
       try {
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: target.id,
             type: 'EVENT_INVITE',
@@ -2123,7 +2124,7 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
             metadata: { eventId, message: message || null },
           },
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error('Notification create failed', e);
       }
 
@@ -2135,7 +2136,7 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
       const email = String(rawEmail).trim().toLowerCase();
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
 
-      const existing = await prisma.invite.findFirst({
+      const existing = await db.invite.findFirst({
         where: { senderId: userId, email, eventId, status: 'pending' },
       });
       if (existing) {
@@ -2146,7 +2147,7 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
-      await prisma.invite.create({
+      await db.invite.create({
         data: { senderId: userId, email, token, expiresAt, eventId, personalMessage: message || null },
       });
 

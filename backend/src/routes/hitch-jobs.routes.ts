@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const HITCH_USER_ID = 'hitch-ai-bot-user-rvunicorn';
 
@@ -48,7 +48,7 @@ router.post('/meal-reminder', async (req, res) => {
         select: { username: true },
       });
 
-      const mentions = users.map(u => `@${u.username}`).join(' ');
+      const mentions = users.map((u: any) => `@${u.username}`).join(' ');
 
       const message = `Hey ${mentions} 👋\n\nOne of the best parts of camping together is sharing meals! 🍳🌭 Use the **Meal Plan** tab to claim your day and add a recipe link so everyone knows what you'll be cooking. And don't forget to invite the crew!`;
 
@@ -104,7 +104,7 @@ router.post('/meal-reminder', async (req, res) => {
     }
 
     res.json({ success: true, reminded });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Hitch meal reminder error:', error);
     res.status(500).json({ error: 'Failed to run meal reminder' });
   }
@@ -142,7 +142,7 @@ router.post('/pack-reminder', async (req, res) => {
 
       const userIds = [event.organizerId, ...event.attendees.filter((a: any) => a.status === 'GOING').map((a: any) => a.userId)];
       const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { username: true } });
-      const mentions = users.map(u => `@${u.username}`).join(' ');
+      const mentions = users.map((u: any) => `@${u.username}`).join(' ');
 
       const message = `Hey ${mentions} 👋\n\nYour trip is coming up soon and the pack list is still empty! 🎒 Head to the **Pack List** tab and add what you're bringing — it's the easiest way to make sure nobody forgets the bug spray (or the s'mores). Trust me on this one. 🔥`;
 
@@ -168,7 +168,7 @@ router.post('/pack-reminder', async (req, res) => {
     }
 
     res.json({ success: true, reminded });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Hitch pack reminder error:', error);
     res.status(500).json({ error: 'Failed' });
   }
@@ -204,7 +204,7 @@ router.post('/schedule-reminder', async (req, res) => {
 
       const userIds = [event.organizerId, ...event.attendees.filter((a: any) => a.status === 'GOING').map((a: any) => a.userId)];
       const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { username: true } });
-      const mentions = users.map(u => `@${u.username}`).join(' ');
+      const mentions = users.map((u: any) => `@${u.username}`).join(' ');
 
       const message = `Hey ${mentions} 👋\n\nTrip's almost here and the schedule is wide open! 📅 Jump into the **Schedule** tab and add some activities — hikes, meals, fire time, whatever you're planning. Your crew will thank you when nobody's standing around asking "so what are we doing today?" 😄`;
 
@@ -230,7 +230,7 @@ router.post('/schedule-reminder', async (req, res) => {
     }
 
     res.json({ success: true, reminded });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Hitch schedule reminder error:', error);
     res.status(500).json({ error: 'Failed' });
   }
@@ -329,7 +329,7 @@ router.post('/daily-digest', async (req, res) => {
     }
 
     res.json({ success: true, digested });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Daily digest error:', error);
     res.status(500).json({ error: 'Failed to send digest' });
   }

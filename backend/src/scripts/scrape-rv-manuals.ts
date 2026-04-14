@@ -583,12 +583,12 @@ async function fillFallbackManualUrls() {
   console.log(`   Found ${modelsWithoutManual.length} models without manuals`);
 
   // Known manufacturer support URL patterns
-  const SUPPORT_URL_PATTERNS: { [make: string]: (name: string) => string } = {
-    'coachmen':         (n, y) => `https://www.coachmenrv.com/resources/owners-manuals/?search=${encodeURIComponent(n)}`,
-    'coachman':         (n, y) => `https://www.coachmenrv.com/resources/owners-manuals/?search=${encodeURIComponent(n)}`,
-    'winnebago':        (n, y) => `https://www.winnebago.com/owners/manuals?model=${encodeURIComponent(n)}${y ? `&year=${y}` : ''}`,
-    'jayco':            (n, y) => `https://www.jayco.com/owners/manuals/?model=${encodeURIComponent(n)}`,
-    'forest river':     (n, y) => `https://www.forestriverinc.com/owners/manuals?search=${encodeURIComponent(n)}`,
+  const SUPPORT_URL_PATTERNS: { [make: string]: (name: string, y?: any) => string } = {
+    'coachmen':         (n: string, y?: any) => `https://www.coachmenrv.com/resources/owners-manuals/?search=${encodeURIComponent(n)}`,
+    'coachman':         (n: string, y?: any) => `https://www.coachmenrv.com/resources/owners-manuals/?search=${encodeURIComponent(n)}`,
+    'winnebago':        (n: string, y?: any) => `https://www.winnebago.com/owners/manuals?model=${encodeURIComponent(n)}${y ? `&year=${y}` : ''}`,
+    'jayco':            (n: string, y?: any) => `https://www.jayco.com/owners/manuals/?model=${encodeURIComponent(n)}`,
+    'forest river':     (n: string, y?: any) => `https://www.forestriverinc.com/owners/manuals?search=${encodeURIComponent(n)}`,
     'grand design':     (_) => `https://www.granddesignrv.com/owner-resources/owners-manuals/`,
     'keystone':         (_) => `https://www.keystonerv.com/owners/`,
     'heartland':        (_) => `https://www.heartlandrvs.com/owners/`,
@@ -669,7 +669,7 @@ async function main() {
       progress.manualCount = totalSaved;
       saveProgress(progress);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(`   ❌ Error scraping ${mfr.slug}:`, (err as Error).message);
     } finally {
       await page.close();

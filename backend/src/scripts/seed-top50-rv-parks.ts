@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 interface RVPark {
   name: string; location: string; city: string; state: string; zipCode: string;

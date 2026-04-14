@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/overnight-spots/near?lat=&lng=&radius=&categories=&limit=
 router.get('/near', authenticateToken, async (req, res) => {
@@ -34,15 +34,15 @@ router.get('/near', authenticateToken, async (req, res) => {
     });
 
     // Haversine distance filter + sort
-    const withDistance = spots.map(s => {
+    const withDistance = spots.map((s: any) => {
       const R = 3959;
       const dLat = (s.latitude - lat) * Math.PI / 180;
       const dLng = (s.longitude - lng) * Math.PI / 180;
       const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180) * Math.cos(s.latitude*Math.PI/180) * Math.sin(dLng/2)**2;
       const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return { ...s, distanceMiles: Math.round(distance * 10) / 10 };
-    }).filter(s => s.distanceMiles <= radius)
-      .sort((a, b) => a.distanceMiles - b.distanceMiles)
+    }).filter((s: any) => s.distanceMiles <= radius)
+      .sort((a: any, b: any) => a.distanceMiles - b.distanceMiles)
       .slice(0, limit);
 
     res.json(withDistance);
@@ -88,7 +88,7 @@ router.get('/along-route', authenticateToken, async (req, res) => {
 
     // Filter to spots within radius of at least one route point
     const R = 3959;
-    const nearby = spots.filter(spot => {
+    const nearby = spots.filter((spot: any) => {
       return points.some(pt => {
         const dLat = (spot.latitude - pt.lat) * Math.PI / 180;
         const dLng = (spot.longitude - pt.lng) * Math.PI / 180;
@@ -176,7 +176,7 @@ router.get('/:id', async (req: any, res) => {
     });
     if (!spot) return res.status(404).json({ error: 'Not found' });
     const avgRating = spot.reviews.length
-      ? (spot.reviews.reduce((a, r) => a + r.rating, 0) / spot.reviews.length).toFixed(1)
+      ? (spot.reviews.reduce((a: any, r: any) => a + r.rating, 0) / spot.reviews.length).toFixed(1)
       : null;
     res.json({ ...spot, avgRating, reviewCount: spot.reviews.length });
   } catch (e: any) {
@@ -202,7 +202,7 @@ router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
 
     // Update spot rating cache
     const allReviews = await prisma.freeOvernightSpotReview.findMany({ where: { spotId: id }, select: { rating: true } });
-    const avgRating = allReviews.reduce((a, r) => a + r.rating, 0) / allReviews.length;
+    const avgRating = allReviews.reduce((a: any, r: any) => a + r.rating, 0) / allReviews.length;
     await prisma.freeOvernightSpot.update({
       where: { id },
       data: { rating: avgRating, reviewCount: allReviews.length }

@@ -36,7 +36,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json({ event });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] Create error:', e);
     res.status(500).json({ error: 'Failed to create event' });
   }
@@ -60,7 +60,7 @@ router.get('/:id', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json({ event: { ...event, userHasRsvped: !!rsvped } });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] Get error:', e);
     res.status(500).json({ error: 'Failed to load event' });
   }
@@ -88,7 +88,7 @@ router.get('/creator/:creatorId', async (req: any, res: Response) => {
       },
     });
     res.json({ events });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] List error:', e);
     res.status(500).json({ error: 'Failed to list events' });
   }
@@ -127,7 +127,7 @@ router.post('/:id/rsvp', authenticateToken, async (req: any, res: Response) => {
 
     const count = await (prisma as any).creatorEventRsvp.count({ where: { eventId: req.params.id } });
     res.json({ rsvped: true, rsvpCount: count });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] RSVP error:', e);
     res.status(500).json({ error: 'Failed to RSVP' });
   }
@@ -163,7 +163,7 @@ router.patch('/:id', authenticateToken, async (req: any, res: Response) => {
     }
 
     res.json({ event });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] Update error:', e);
     res.status(500).json({ error: 'Failed to update event' });
   }
@@ -176,7 +176,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
     if (!existing || existing.creatorId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await (prisma as any).creatorEvent.update({ where: { id: req.params.id }, data: { status: 'CANCELLED' } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorEvent] Delete error:', e);
     res.status(500).json({ error: 'Failed to cancel event' });
   }
@@ -205,7 +205,7 @@ router.post('/presence', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json({ presence });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorPresence] Create error:', e);
     res.status(500).json({ error: 'Failed to set presence' });
   }
@@ -221,7 +221,7 @@ router.delete('/presence/:id', authenticateToken, async (req: any, res: Response
       data: { isActive: false, endedAt: new Date() },
     });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorPresence] End error:', e);
     res.status(500).json({ error: 'Failed to end presence' });
   }
@@ -259,7 +259,7 @@ router.get('/campground-presence/:campgroundId', async (req: any, res: Response)
     );
 
     res.json({ presences: enriched });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorPresence] Campground error:', e);
     res.status(500).json({ error: 'Failed to load creator presence' });
   }
@@ -335,7 +335,7 @@ router.get('/discover-for-trip/:eventId', authenticateToken, async (req: any, re
     result.sort((a, b) => b.relevantContentCount - a.relevantContentCount);
 
     res.json({ creators: result.slice(0, 8) });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorDiscovery] For-trip error:', e);
     res.status(500).json({ error: 'Failed to discover creators' });
   }
@@ -351,7 +351,7 @@ router.get('/insights', authenticateToken, async (req: any, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json({ insights });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorInsights] Error:', e);
     res.status(500).json({ error: 'Failed to load insights' });
   }
@@ -365,7 +365,7 @@ router.patch('/insights/:id/dismiss', authenticateToken, async (req: any, res: R
       data: { dismissed: true },
     });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorInsights] Dismiss error:', e);
     res.status(500).json({ error: 'Failed to dismiss insight' });
   }
@@ -385,7 +385,7 @@ router.get('/campground-content/:campgroundId', async (req: any, res: Response) 
       },
     });
     res.json({ content });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CreatorContent] Campground error:', e);
     res.status(500).json({ error: 'Failed to load content' });
   }

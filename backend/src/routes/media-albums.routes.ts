@@ -7,7 +7,7 @@ const { randomUUID } = require('crypto');
 const createId = () => randomUUID().replace(/-/g, '').slice(0, 25);
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,7 +23,7 @@ const upload = multer({
   },
 });
 
-const getUserId = (req: any): string | null => req.user?.userId || req.user?.id || req.userId || null;
+const getUserId = (req: any): string | null => (req as any).user?.userId || (req as any).user?.id || req.userId || null;
 const isVideo = (mimetype: string, filename: string): boolean => 
   mimetype.startsWith('video/') || /\.(mp4|mov|webm|avi)$/i.test(filename);
 
@@ -66,7 +66,7 @@ router.get('/', optionalAuth, async (req, res) => {
     });
 
     // Get media counts and previews
-    const albumsWithData = await Promise.all(albums.map(async (album) => {
+    const albumsWithData = await Promise.all(albums.map(async (album: any) => {
       const mediaCount = await prisma.media.count({ where: { albumId: album.id } });
       const previewMedia = await prisma.media.findMany({
         where: { albumId: album.id },
@@ -82,7 +82,7 @@ router.get('/', optionalAuth, async (req, res) => {
     }));
 
     res.json(albumsWithData);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching albums:', error);
     res.status(500).json({ error: 'Failed to fetch albums' });
   }
@@ -110,7 +110,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const mediaCount = await prisma.media.count({ where: { albumId: id } });
 
     res.json({ ...album, user, media, mediaCount });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching album:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
   }
@@ -156,7 +156,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json({ ...album, user });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating album:', error);
     res.status(500).json({ error: 'Failed to create album' });
   }
@@ -186,7 +186,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating album:', error);
     res.status(500).json({ error: 'Failed to update album' });
   }
@@ -209,14 +209,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         await cloudinary.uploader.destroy(media.cloudinaryId, {
           resource_type: media.type === 'VIDEO' ? 'video' : 'image',
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to delete from Cloudinary:', e);
       }
     }
 
     await prisma.album.delete({ where: { id } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting album:', error);
     res.status(500).json({ error: 'Failed to delete album' });
   }
@@ -328,7 +328,7 @@ router.post('/:albumId/media', authenticateToken, upload.array('files', 50), asy
     });
 
     res.status(201).json({ uploaded: createdMedia.length, media: createdMedia });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading media:', error);
     res.status(500).json({ error: 'Failed to upload media' });
   }
@@ -350,13 +350,13 @@ router.delete('/:albumId/media/:mediaId', authenticateToken, async (req, res) =>
       await cloudinary.uploader.destroy(media.cloudinaryId, {
         resource_type: media.type === 'VIDEO' ? 'video' : 'image',
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to delete from Cloudinary:', e);
     }
 
     await prisma.media.delete({ where: { id: mediaId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting media:', error);
     res.status(500).json({ error: 'Failed to delete media' });
   }
@@ -373,21 +373,21 @@ router.get('/media/:mediaId/tags', optionalAuth, async (req, res) => {
     });
 
     // Get user info for each tag
-    const userIds = [...new Set([...tags.map(t => t.taggedUserId), ...tags.map(t => t.taggedById)])];
+    const userIds = [...new Set([...tags.map((t: any) => t.taggedUserId), ...tags.map((t: any) => t.taggedById)])];
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
     });
-    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
 
-    const tagsWithUsers = tags.map(t => ({
+    const tagsWithUsers = tags.map((t: any) => ({
       ...t,
       taggedUser: userMap[t.taggedUserId],
       taggedBy: userMap[t.taggedById],
     }));
 
     res.json(tagsWithUsers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching tags:', error);
     res.status(500).json({ error: 'Failed to fetch tags' });
   }
@@ -517,7 +517,7 @@ router.delete('/media/:mediaId/tags/:tagId', authenticateToken, async (req, res)
 
     await prisma.mediaTag.delete({ where: { id: tagId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing tag:', error);
     res.status(500).json({ error: 'Failed to remove tag' });
   }
@@ -542,7 +542,7 @@ router.patch('/media/:mediaId/tags/:tagId', authenticateToken, async (req, res) 
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating tag:', error);
     res.status(500).json({ error: 'Failed to update tag' });
   }
@@ -569,7 +569,7 @@ router.post('/media/:mediaId/reactions', authenticateToken, async (req, res) => 
     });
 
     res.status(201).json(reaction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding reaction:', error);
     res.status(500).json({ error: 'Failed to add reaction' });
   }
@@ -584,7 +584,7 @@ router.delete('/media/:mediaId/reactions/:type', authenticateToken, async (req, 
 
     await prisma.mediaReaction.deleteMany({ where: { mediaId, userId, type: type as any } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing reaction:', error);
     res.status(500).json({ error: 'Failed to remove reaction' });
   }
@@ -606,16 +606,16 @@ router.get('/media/:mediaId/comments', optionalAuth, async (req, res) => {
     });
 
     // Get users for comments
-    const userIds = [...new Set(comments.map(c => c.userId))];
+    const userIds = [...new Set(comments.map((c: any) => c.userId))];
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
     });
-    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
 
-    const commentsWithUsers = comments.map(c => ({ ...c, user: userMap[c.userId] }));
+    const commentsWithUsers = comments.map((c: any) => ({ ...c, user: userMap[c.userId] }));
     res.json(commentsWithUsers);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching comments:', error);
     res.status(500).json({ error: 'Failed to fetch comments' });
   }
@@ -653,7 +653,7 @@ router.post('/media/:mediaId/comments', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json({ ...comment, user });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding comment:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
@@ -677,7 +677,7 @@ router.delete('/media/:mediaId/comments/:commentId', authenticateToken, async (r
 
     await prisma.mediaComment.delete({ where: { id: commentId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting comment:', error);
     res.status(500).json({ error: 'Failed to delete comment' });
   }
@@ -700,7 +700,7 @@ router.post('/media/:mediaId/impressions', optionalAuth, async (req, res) => {
     });
 
     res.status(201).json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error logging impression:', error);
     res.status(500).json({ error: 'Failed to log impression' });
   }
@@ -729,7 +729,7 @@ router.post('/media/:mediaId/reports', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json(report);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating report:', error);
     res.status(500).json({ error: 'Failed to create report' });
   }
@@ -763,7 +763,7 @@ router.post('/webhooks/cloudinary', async (req, res) => {
     }
 
     res.sendStatus(200);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cloudinary webhook error:', error);
     res.sendStatus(500);
   }

@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/borrow/requests - Get borrow requests (sent or received)
 router.get('/requests', authenticateToken, async (req, res) => {
@@ -13,20 +14,20 @@ router.get('/requests', authenticateToken, async (req, res) => {
     let whereClause: any = {};
 
     if (type === 'sent') {
-      whereClause.requesterId = req.user!.id;
+      whereClause.requesterId = (req as any).user!.id;
     } else if (type === 'received') {
-      whereClause.ownerId = req.user!.id;
+      whereClause.ownerId = (req as any).user!.id;
     } else {
       // Get both sent and received
       whereClause = {
         OR: [
-          { requesterId: req.user!.id },
-          { ownerId: req.user!.id }
+          { requesterId: (req as any).user!.id },
+          { ownerId: (req as any).user!.id }
         ]
       };
     }
 
-    const requests = await prisma.borrowRequest.findMany({
+    const requests = await db.borrowRequest.findMany({
       where: whereClause,
       include: {
         gearItem: true,
@@ -60,7 +61,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
     });
 
     res.json(requests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get borrow requests error:', error);
     res.status(500).json({ error: 'Failed to get borrow requests' });
   }
@@ -76,7 +77,7 @@ router.post(
     body('startAt').isISO8601(),
     body('endAt').isISO8601(),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -86,7 +87,7 @@ router.post(
       const { gearItemId, campgroundId, startAt, endAt, message } = req.body;
 
       // Get gear item
-      const gearItem = await prisma.gearItem.findUnique({
+      const gearItem = await db.gearItem.findUnique({
         where: { id: gearItemId }
       });
 
@@ -98,22 +99,22 @@ router.post(
         return res.status(400).json({ error: 'This item is not available for borrowing' });
       }
 
-      if (gearItem.userId === req.user!.id) {
+      if (gearItem.userId === (req as any).user!.id) {
         return res.status(400).json({ error: 'Cannot borrow your own item' });
       }
 
       // Check if both users are checked into the campground
       const now = new Date();
-      const requesterCheckIn = await prisma.campgroundCheckIn.findFirst({
+      const requesterCheckIn = await db.campgroundCheckIn.findFirst({
         where: {
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           campgroundId,
           checkInDate: { lte: now },
           checkOutDate: { gte: now },
         }
       });
 
-      const ownerCheckIn = await prisma.campgroundCheckIn.findFirst({
+      const ownerCheckIn = await db.campgroundCheckIn.findFirst({
         where: {
           userId: gearItem.userId,
           campgroundId,
@@ -127,12 +128,12 @@ router.post(
       }
 
       // Create borrow request
-      const borrowRequest = await prisma.borrowRequest.create({
+      const borrowRequest = await db.borrowRequest.create({
         data: {
           gearItemId,
           campgroundId,
           ownerId: gearItem.userId,
-          requesterId: req.user!.id,
+          requesterId: (req as any).user!.id,
           startAt: new Date(startAt),
           endAt: new Date(endAt),
           message,
@@ -167,16 +168,16 @@ router.post(
       });
 
       // Create notification for owner
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: gearItem.userId,
           type: 'BORROW_REQUEST',
-          content: `${req.user!.firstName} wants to borrow your ${gearItem.name}`,
+          content: `${(req as any).user!.firstName} wants to borrow your ${gearItem.name}`,
         }
       });
 
       res.json(borrowRequest);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create borrow request error:', error);
       res.status(500).json({ error: 'Failed to create borrow request' });
     }
@@ -189,7 +190,7 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { responseMessage, proposedStartAt, proposedEndAt } = req.body;
 
-    const borrowRequest = await prisma.borrowRequest.findUnique({
+    const borrowRequest = await db.borrowRequest.findUnique({
       where: { id },
       include: {
         gearItem: true,
@@ -207,7 +208,7 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Borrow request not found' });
     }
 
-    if (borrowRequest.ownerId !== req.user!.id) {
+    if (borrowRequest.ownerId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized - only owner can approve' });
     }
 
@@ -218,7 +219,7 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
     // If proposing new times, set status to PROPOSED
     const status = (proposedStartAt || proposedEndAt) ? 'PROPOSED' : 'APPROVED';
 
-    const updatedRequest = await prisma.borrowRequest.update({
+    const updatedRequest = await db.borrowRequest.update({
       where: { id },
       data: {
         status,
@@ -251,10 +252,10 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
 
     // Create notification for requester
     const notificationContent = status === 'APPROVED'
-      ? `${req.user!.firstName} approved your request to borrow ${borrowRequest.gearItem.name}`
-      : `${req.user!.firstName} proposed new times for borrowing ${borrowRequest.gearItem.name}`;
+      ? `${(req as any).user!.firstName} approved your request to borrow ${borrowRequest.gearItem.name}`
+      : `${(req as any).user!.firstName} proposed new times for borrowing ${borrowRequest.gearItem.name}`;
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: borrowRequest.requesterId,
         type: status === 'APPROVED' ? 'BORROW_APPROVED' : 'BORROW_PROPOSED',
@@ -263,7 +264,7 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedRequest);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Approve borrow request error:', error);
     res.status(500).json({ error: 'Failed to approve borrow request' });
   }
@@ -275,7 +276,7 @@ router.post('/:id/decline', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { responseMessage } = req.body;
 
-    const borrowRequest = await prisma.borrowRequest.findUnique({
+    const borrowRequest = await db.borrowRequest.findUnique({
       where: { id },
       include: {
         gearItem: true
@@ -286,11 +287,11 @@ router.post('/:id/decline', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Borrow request not found' });
     }
 
-    if (borrowRequest.ownerId !== req.user!.id) {
+    if (borrowRequest.ownerId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized - only owner can decline' });
     }
 
-    const updatedRequest = await prisma.borrowRequest.update({
+    const updatedRequest = await db.borrowRequest.update({
       where: { id },
       data: {
         status: 'DECLINED',
@@ -320,7 +321,7 @@ router.post('/:id/decline', authenticateToken, async (req, res) => {
     });
 
     // Create notification for requester
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: borrowRequest.requesterId,
         type: 'BORROW_DECLINED',
@@ -329,7 +330,7 @@ router.post('/:id/decline', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedRequest);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Decline borrow request error:', error);
     res.status(500).json({ error: 'Failed to decline borrow request' });
   }
@@ -340,7 +341,7 @@ router.post('/:id/accept-proposal', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const borrowRequest = await prisma.borrowRequest.findUnique({
+    const borrowRequest = await db.borrowRequest.findUnique({
       where: { id },
       include: {
         gearItem: true
@@ -351,7 +352,7 @@ router.post('/:id/accept-proposal', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Borrow request not found' });
     }
 
-    if (borrowRequest.requesterId !== req.user!.id) {
+    if (borrowRequest.requesterId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized - only requester can accept' });
     }
 
@@ -359,7 +360,7 @@ router.post('/:id/accept-proposal', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'No proposal to accept' });
     }
 
-    const updatedRequest = await prisma.borrowRequest.update({
+    const updatedRequest = await db.borrowRequest.update({
       where: { id },
       data: {
         status: 'APPROVED',
@@ -390,16 +391,16 @@ router.post('/:id/accept-proposal', authenticateToken, async (req, res) => {
     });
 
     // Notify owner
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: borrowRequest.ownerId,
         type: 'BORROW_ACCEPTED',
-        content: `${req.user!.firstName} accepted your proposed times for ${borrowRequest.gearItem.name}`,
+        content: `${(req as any).user!.firstName} accepted your proposed times for ${borrowRequest.gearItem.name}`,
       }
     });
 
     res.json(updatedRequest);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Accept proposal error:', error);
     res.status(500).json({ error: 'Failed to accept proposal' });
   }
@@ -410,7 +411,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const borrowRequest = await prisma.borrowRequest.findUnique({
+    const borrowRequest = await db.borrowRequest.findUnique({
       where: { id },
       include: {
         gearItem: true
@@ -421,11 +422,11 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Borrow request not found' });
     }
 
-    if (borrowRequest.requesterId !== req.user!.id && borrowRequest.ownerId !== req.user!.id) {
+    if (borrowRequest.requesterId !== (req as any).user!.id && borrowRequest.ownerId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updatedRequest = await prisma.borrowRequest.update({
+    const updatedRequest = await db.borrowRequest.update({
       where: { id },
       data: {
         status: 'CANCELED',
@@ -433,11 +434,11 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
     });
 
     // Notify the other party
-    const notifyUserId = borrowRequest.requesterId === req.user!.id
+    const notifyUserId = borrowRequest.requesterId === (req as any).user!.id
       ? borrowRequest.ownerId
       : borrowRequest.requesterId;
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: notifyUserId,
         type: 'BORROW_CANCELED',
@@ -446,7 +447,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedRequest);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cancel borrow request error:', error);
     res.status(500).json({ error: 'Failed to cancel borrow request' });
   }
@@ -457,7 +458,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const borrowRequest = await prisma.borrowRequest.findUnique({
+    const borrowRequest = await db.borrowRequest.findUnique({
       where: { id },
       include: {
         gearItem: true
@@ -468,7 +469,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Borrow request not found' });
     }
 
-    if (borrowRequest.ownerId !== req.user!.id) {
+    if (borrowRequest.ownerId !== (req as any).user!.id) {
       return res.status(403).json({ error: 'Not authorized - only owner can mark as complete' });
     }
 
@@ -476,7 +477,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Can only complete approved requests' });
     }
 
-    const updatedRequest = await prisma.borrowRequest.update({
+    const updatedRequest = await db.borrowRequest.update({
       where: { id },
       data: {
         status: 'COMPLETED',
@@ -484,7 +485,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedRequest);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Complete borrow error:', error);
     res.status(500).json({ error: 'Failed to complete borrow' });
   }

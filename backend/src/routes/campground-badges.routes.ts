@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Middleware to verify authenticated user
 const requireAuth = (req: Request, res: Response, next: any) => {
@@ -68,7 +68,7 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
       orderBy: { sortOrder: 'asc' },
     });
     res.json({ badges });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground badges error:', error);
     res.status(500).json({ error: 'Failed to get badges' });
   }
@@ -88,7 +88,7 @@ router.get('/:campgroundId/my-awards', requireAuth, async (req: Request, res: Re
       },
     });
     res.json({ awards });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get awards' });
   }
 });
@@ -160,7 +160,7 @@ router.post('/:campgroundId', requireAuth, async (req: Request, res: Response) =
     console.log(`🏅 NEW BADGE PENDING REVIEW: "${name}" for campground ${campgroundId} by user ${userId}`);
 
     res.status(201).json({ badge, message: 'Badge created and submitted for review!' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create campground badge error:', error);
     res.status(500).json({ error: 'Failed to create badge' });
   }
@@ -200,7 +200,7 @@ router.patch('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: R
     });
 
     res.json({ badge });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update badge' });
   }
 });
@@ -217,7 +217,7 @@ router.delete('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: 
 
     await prisma.campgroundBadge.delete({ where: { id: badgeId } });
     res.json({ message: 'Badge deleted' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete badge' });
   }
 });
@@ -259,7 +259,7 @@ router.post('/:campgroundId/:badgeId/manual-award', requireAuth, async (req: Req
           data: { campgroundBadgeId: badgeId, userId: targetUserId },
         });
         awards.push(award);
-      } catch (e) {
+      } catch (e: any) {
         // Skip duplicates
       }
     }
@@ -282,7 +282,7 @@ router.post('/:campgroundId/:badgeId/manual-award', requireAuth, async (req: Req
     }
 
     res.json({ awarded: awards.length, message: `Awarded badge to ${awards.length} user(s)` });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to award badge' });
   }
 });
@@ -313,7 +313,7 @@ router.get('/admin/pending', requireAuth, async (req: Request, res: Response) =>
     });
 
     res.json({ pending });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get pending badges' });
   }
 });
@@ -337,7 +337,7 @@ router.post('/admin/:badgeId/approve', requireAuth, async (req: Request, res: Re
     console.log(`✅ BADGE APPROVED: "${badge.name}" for ${badge.campground.name}`);
 
     res.json({ badge, message: 'Badge approved!' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to approve badge' });
   }
 });
@@ -361,7 +361,7 @@ router.post('/admin/:badgeId/reject', requireAuth, async (req: Request, res: Res
     console.log(`❌ BADGE REJECTED: "${badge.name}" - Reason: ${reason}`);
 
     res.json({ badge, message: 'Badge rejected' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to reject badge' });
   }
 });
@@ -385,7 +385,7 @@ router.get('/admin/stats', requireAuth, async (req: Request, res: Response) => {
     ]);
 
     res.json({ total, pending, approved, rejected, totalAwards, limitedEdition });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get stats' });
   }
 });
@@ -428,7 +428,7 @@ async function sendCampgroundBadgeHitchMessage(userId: string, badgeName: string
     await prisma.hitchMessage.create({
       data: { conversationId: conversation.id, role: 'assistant', content: msg }
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Campground badge Hitch message error (non-fatal):', e);
   }
 }
@@ -479,7 +479,7 @@ router.post('/auto-award/:campgroundId/:userId', async (req: Request, res: Respo
             where: { userId, campgroundId, checkOutDate: { not: null } },
             select: { checkInDate: true, checkOutDate: true },
           });
-          const totalNights = checkIns.reduce((sum, ci) => {
+          const totalNights = checkIns.reduce((sum: any, ci: any) => {
             if (!ci.checkOutDate) return sum;
             const diff = Math.ceil((ci.checkOutDate.getTime() - ci.checkInDate.getTime()) / (1000 * 60 * 60 * 24));
             return sum + Math.max(diff, 1);
@@ -527,14 +527,14 @@ router.post('/auto-award/:campgroundId/:userId', async (req: Request, res: Respo
             ? badge.maxIssues - (badge.issuedCount + 1)
             : null;
           await sendCampgroundBadgeHitchMessage(userId, badge.name, badge.iconEmoji, cg?.name || 'the campground', badge.isLimitedEdition, remaining);
-        } catch (e) {
+        } catch (e: any) {
           // Duplicate - skip
         }
       }
     }
 
     res.json({ awarded, count: awarded.length });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Auto-award error:', error);
     res.status(500).json({ error: 'Failed to auto-award' });
   }
@@ -556,7 +556,7 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     });
 
     res.json({ awards });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get user awards' });
   }
 });
@@ -574,7 +574,7 @@ router.get('/:campgroundId/tier-info', requireAuth, async (req: Request, res: Re
       currentBadgeCount: currentCount,
       remainingBadges: limits.maxBadges - currentCount,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get tier info' });
   }
 });

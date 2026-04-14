@@ -4,13 +4,14 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/friends - Get user's friends
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
 
-    const friendships = await prisma.friendship.findMany({
+    const friendships = await db.friendship.findMany({
       where: {
         OR: [
           { initiatorId: userId, status: 'ACCEPTED' },
@@ -40,13 +41,13 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     });
 
     // Map to return the friend with the friendshipId
-    const friends = friendships.map(f => ({
+    const friends = friendships.map((f: any) => ({
       ...(f.initiatorId === userId ? f.receiver : f.initiator),
       friendshipId: f.id
     }));
 
     res.json(friends);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get friends error:', error);
     res.status(500).json({ error: 'Failed to fetch friends' });
   }
@@ -57,7 +58,7 @@ router.get('/requests', authenticateToken, async (req: Request, res: Response) =
   try {
     const userId = (req as any).userId;
 
-    const requests = await prisma.friendship.findMany({
+    const requests = await db.friendship.findMany({
       where: {
         receiverId: userId,
         status: 'PENDING'
@@ -76,7 +77,7 @@ router.get('/requests', authenticateToken, async (req: Request, res: Response) =
     });
 
     res.json(requests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get friend requests error:', error);
     res.status(500).json({ error: 'Failed to fetch friend requests' });
   }
@@ -87,7 +88,7 @@ router.get('/sent-requests', authenticateToken, async (req: Request, res: Respon
   try {
     const userId = (req as any).userId;
 
-    const sentRequests = await prisma.friendship.findMany({
+    const sentRequests = await db.friendship.findMany({
       where: {
         initiatorId: userId,
         status: 'PENDING'
@@ -106,7 +107,7 @@ router.get('/sent-requests', authenticateToken, async (req: Request, res: Respon
     });
 
     res.json(sentRequests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sent requests error:', error);
     res.status(500).json({ error: 'Failed to fetch sent requests' });
   }
@@ -127,7 +128,7 @@ router.post('/request', authenticateToken, async (req: Request, res: Response) =
     }
 
     // Check if friendship already exists
-    const existing = await prisma.friendship.findFirst({
+    const existing = await db.friendship.findFirst({
       where: {
         OR: [
           { initiatorId: initiatorId, receiverId: friendId },
@@ -140,7 +141,7 @@ router.post('/request', authenticateToken, async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Friendship already exists' });
     }
 
-    const friendship = await prisma.friendship.create({
+    const friendship = await db.friendship.create({
       data: {
         initiatorId: initiatorId,
         receiverId: friendId,
@@ -169,7 +170,7 @@ router.post('/request', authenticateToken, async (req: Request, res: Response) =
     });
 
     // Create notification for the friend request recipient
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: friendId,
         type: 'FRIEND_REQUEST',
@@ -180,7 +181,7 @@ router.post('/request', authenticateToken, async (req: Request, res: Response) =
     });
 
     // Create BasecampActivity for friend request (shows in Basecamp feed with Accept/Decline)
-    await prisma.basecampActivity.create({
+    await db.basecampActivity.create({
       data: {
         userId: friendId,
         actorId: initiatorId,
@@ -196,7 +197,7 @@ router.post('/request', authenticateToken, async (req: Request, res: Response) =
     });
 
     res.json(friendship);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Send friend request error:', error);
     res.status(500).json({ error: 'Failed to send friend request' });
   }
@@ -208,7 +209,7 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
     const userId = (req as any).userId;
     const { friendshipId } = req.params;
 
-    const friendship = await prisma.friendship.findUnique({
+    const friendship = await db.friendship.findUnique({
       where: { id: friendshipId }
     });
 
@@ -220,7 +221,7 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.friendship.update({
+    const updated = await db.friendship.update({
       where: { id: friendshipId },
       data: { status: 'ACCEPTED' },
       include: {
@@ -246,7 +247,7 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
     });
 
     // Create notification for the person who sent the request
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: updated.initiatorId,
         type: 'FRIEND_ACCEPT',
@@ -259,7 +260,7 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
     // Clean up the FRIEND_REQUEST BasecampActivity row left over from when
     // the request was first sent — it's no longer relevant now that the
     // request has been accepted.
-    await prisma.basecampActivity.deleteMany({
+    await db.basecampActivity.deleteMany({
       where: {
         userId: userId,
         type: 'FRIEND_REQUEST',
@@ -280,7 +281,7 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
     await logFriendAdded(updated.receiverId, updated.initiatorId, updated.initiator.firstName + ' ' + updated.initiator.lastName);
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Accept friend request error:', error);
     res.status(500).json({ error: 'Failed to accept friend request' });
   }
@@ -292,7 +293,7 @@ router.delete('/:friendshipId', authenticateToken, async (req: Request, res: Res
     const userId = (req as any).userId;
     const { friendshipId } = req.params;
 
-    const friendship = await prisma.friendship.findUnique({
+    const friendship = await db.friendship.findUnique({
       where: { id: friendshipId }
     });
 
@@ -304,12 +305,12 @@ router.delete('/:friendshipId', authenticateToken, async (req: Request, res: Res
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    await prisma.friendship.delete({
+    await db.friendship.delete({
       where: { id: friendshipId }
     });
 
     res.json({ message: 'Friendship removed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove friend error:', error);
     res.status(500).json({ error: 'Failed to remove friend' });
   }
@@ -321,7 +322,7 @@ router.get('/status/:targetUserId', authenticateToken, async (req: Request, res:
     const userId = (req as any).userId;
     const { targetUserId } = req.params;
 
-    const friendship = await prisma.friendship.findFirst({
+    const friendship = await db.friendship.findFirst({
       where: {
         OR: [
           { initiatorId: userId, receiverId: targetUserId },
@@ -339,7 +340,7 @@ router.get('/status/:targetUserId', authenticateToken, async (req: Request, res:
       friendshipId: friendship.id,
       isInitiator: friendship.initiatorId === userId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get friendship status error:', error);
     res.status(500).json({ error: 'Failed to get friendship status' });
   }

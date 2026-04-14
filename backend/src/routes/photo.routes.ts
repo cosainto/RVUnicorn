@@ -6,7 +6,7 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
@@ -75,7 +75,7 @@ async function canTagUser(taggerId: string, targetId: string): Promise<boolean> 
 // Upload photo with visibility, mentions, scheduled publishing
 router.post("/", authenticateToken, upload.single("image"), async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { 
       albumId, 
       eventId, 
@@ -110,7 +110,7 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
         where: { username: { in: mentionUsernames } },
         select: { id: true }
       });
-      mentionUserIds = mentionedUsers.map(u => u.id);
+      mentionUserIds = mentionedUsers.map((u: any) => u.id);
     }
 
     // Determine if published now or scheduled
@@ -159,7 +159,7 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
     }
 
     res.status(201).json(photo);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error uploading photo:", error);
     res.status(500).json({ error: "Failed to upload photo" });
   }
@@ -169,7 +169,7 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
 router.get("/:photoId", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
 
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
@@ -217,7 +217,7 @@ router.get("/:photoId", authenticateToken, async (req: any, res) => {
     const reactionCounts: Record<string, number> = {};
     const userReactions: string[] = [];
     
-    photo.reactions.forEach(r => {
+    photo.reactions.forEach((r: any) => {
       reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
       if (r.userId === userId) {
         userReactions.push(r.type);
@@ -229,11 +229,11 @@ router.get("/:photoId", authenticateToken, async (req: any, res) => {
       reactionCounts,
       userReactions,
       totalReactions: photo.reactions.length,
-      isSaved: photo.saves.some(s => s.userId === userId),
+      isSaved: photo.saves.some((s: any) => s.userId === userId),
       saveCount: photo.saves.length,
       viewCount: photo.viewCount + (photo.userId !== userId ? 1 : 0),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching photo:", error);
     res.status(500).json({ error: "Failed to fetch photo" });
   }
@@ -243,7 +243,7 @@ router.get("/:photoId", authenticateToken, async (req: any, res) => {
 router.patch("/:photoId", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { caption, visibility, allowDownload, isPinned } = req.body;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
@@ -267,7 +267,7 @@ router.patch("/:photoId", authenticateToken, async (req: any, res) => {
           where: { username: { in: mentionUsernames } },
           select: { id: true }
         });
-        updateData.mentions = mentionedUsers.map(u => u.id);
+        updateData.mentions = mentionedUsers.map((u: any) => u.id);
       } else {
         updateData.mentions = [];
       }
@@ -300,7 +300,7 @@ router.patch("/:photoId", authenticateToken, async (req: any, res) => {
     });
 
     res.json(updatedPhoto);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating photo:", error);
     res.status(500).json({ error: "Failed to update photo" });
   }
@@ -310,7 +310,7 @@ router.patch("/:photoId", authenticateToken, async (req: any, res) => {
 router.delete("/:photoId", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
 
@@ -330,7 +330,7 @@ router.delete("/:photoId", authenticateToken, async (req: any, res) => {
     await prisma.photo.delete({ where: { id: photoId } });
 
     res.json({ message: "Photo deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting photo:", error);
     res.status(500).json({ error: "Failed to delete photo" });
   }
@@ -344,7 +344,7 @@ router.delete("/:photoId", authenticateToken, async (req: any, res) => {
 router.post("/:photoId/react", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { type } = req.body;
 
     if (!REACTION_TYPES.includes(type)) {
@@ -401,7 +401,7 @@ router.post("/:photoId/react", authenticateToken, async (req: any, res) => {
 
     const counts = await getReactionCounts(photoId);
     res.json({ added: true, type, ...counts });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error reacting to photo:", error);
     res.status(500).json({ error: "Failed to react to photo" });
   }
@@ -414,7 +414,7 @@ async function getReactionCounts(photoId: string) {
   });
   
   const reactionCounts: Record<string, number> = {};
-  reactions.forEach(r => {
+  reactions.forEach((r: any) => {
     reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
   });
   
@@ -443,7 +443,7 @@ router.get("/:photoId/reactions", authenticateToken, async (req: any, res) => {
     });
 
     res.json(reactions);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching reactions:", error);
     res.status(500).json({ error: "Failed to fetch reactions" });
   }
@@ -457,7 +457,7 @@ router.get("/:photoId/reactions", authenticateToken, async (req: any, res) => {
 router.post("/:photoId/tag", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { taggedUserId, xPosition, yPosition } = req.body;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
@@ -517,7 +517,7 @@ router.post("/:photoId/tag", authenticateToken, async (req: any, res) => {
     });
 
     res.status(201).json(tag);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error tagging user:", error);
     res.status(500).json({ error: "Failed to tag user" });
   }
@@ -527,7 +527,7 @@ router.post("/:photoId/tag", authenticateToken, async (req: any, res) => {
 router.delete("/:photoId/tag/:taggedUserId", authenticateToken, async (req: any, res) => {
   try {
     const { photoId, taggedUserId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
 
@@ -545,7 +545,7 @@ router.delete("/:photoId/tag/:taggedUserId", authenticateToken, async (req: any,
     });
 
     res.json({ message: "Tag removed successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error removing tag:", error);
     res.status(500).json({ error: "Failed to remove tag" });
   }
@@ -555,7 +555,7 @@ router.delete("/:photoId/tag/:taggedUserId", authenticateToken, async (req: any,
 router.post("/block-tagging/:blockedUserId", authenticateToken, async (req: any, res) => {
   try {
     const { blockedUserId } = req.params;
-    const blockerId = req.user.id;
+    const blockerId = (req as any).user.id;
 
     if (blockerId === blockedUserId) {
       return res.status(400).json({ error: "Cannot block yourself" });
@@ -568,7 +568,7 @@ router.post("/block-tagging/:blockedUserId", authenticateToken, async (req: any,
     });
 
     res.json({ message: "User blocked from tagging you" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error blocking user:", error);
     res.status(500).json({ error: "Failed to block user" });
   }
@@ -578,14 +578,14 @@ router.post("/block-tagging/:blockedUserId", authenticateToken, async (req: any,
 router.delete("/block-tagging/:blockedUserId", authenticateToken, async (req: any, res) => {
   try {
     const { blockedUserId } = req.params;
-    const blockerId = req.user.id;
+    const blockerId = (req as any).user.id;
 
     await prisma.tagBlockedUser.deleteMany({
       where: { blockerId, blockedId: blockedUserId }
     });
 
     res.json({ message: "User unblocked" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error unblocking user:", error);
     res.status(500).json({ error: "Failed to unblock user" });
   }
@@ -599,7 +599,7 @@ router.delete("/block-tagging/:blockedUserId", authenticateToken, async (req: an
 router.post("/:photoId/save", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
 
@@ -629,7 +629,7 @@ router.post("/:photoId/save", authenticateToken, async (req: any, res) => {
 
     const saveCount = await prisma.photoSave.count({ where: { photoId } });
     res.json({ saved: true, saveCount });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving photo:", error);
     res.status(500).json({ error: "Failed to save photo" });
   }
@@ -638,7 +638,7 @@ router.post("/:photoId/save", authenticateToken, async (req: any, res) => {
 // Get saved photos
 router.get("/saved/mine", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { limit = 20, cursor } = req.query;
 
     const saves = await prisma.photoSave.findMany({
@@ -665,7 +665,7 @@ router.get("/saved/mine", authenticateToken, async (req: any, res) => {
         visiblePhotos.push({
           ...save.photo,
           savedAt: save.createdAt,
-          reactionCounts: save.photo.reactions.reduce((acc: any, r) => {
+          reactionCounts: save.photo.reactions.reduce((acc: any, r: any) => {
             acc[r.type] = (acc[r.type] || 0) + 1;
             return acc;
           }, {}),
@@ -678,7 +678,7 @@ router.get("/saved/mine", authenticateToken, async (req: any, res) => {
       photos: visiblePhotos,
       nextCursor: saves.length === parseInt(limit as string) ? saves[saves.length - 1].id : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching saved photos:", error);
     res.status(500).json({ error: "Failed to fetch saved photos" });
   }
@@ -692,7 +692,7 @@ router.get("/saved/mine", authenticateToken, async (req: any, res) => {
 router.post("/:photoId/report", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const reporterId = req.user.id;
+    const reporterId = (req as any).user.id;
     const { reason, details } = req.body;
 
     if (!REPORT_REASONS.includes(reason)) {
@@ -724,7 +724,7 @@ router.post("/:photoId/report", authenticateToken, async (req: any, res) => {
     });
 
     res.json({ message: "Report submitted. Thank you for helping keep our community safe." });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error reporting photo:", error);
     res.status(500).json({ error: "Failed to report photo" });
   }
@@ -737,7 +737,7 @@ router.post("/:photoId/report", authenticateToken, async (req: any, res) => {
 // Get photo feed (with reactions)
 router.get("/feed/recent", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { limit = 20, cursor } = req.query;
 
     const friendships = await prisma.friendship.findMany({
@@ -747,7 +747,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
       },
     });
 
-    const friendIds = friendships.map((f) =>
+    const friendIds = friendships.map((f: any) =>
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
@@ -778,11 +778,11 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
       ...(cursor && { cursor: { id: cursor as string }, skip: 1 }),
     });
 
-    const photosWithDetails = photos.map((photo) => {
+    const photosWithDetails = photos.map((photo: any) => {
       const reactionCounts: Record<string, number> = {};
       const userReactions: string[] = [];
-      
-      photo.reactions.forEach(r => {
+
+      photo.reactions.forEach((r: any) => {
         reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
         if (r.userId === userId) {
           userReactions.push(r.type);
@@ -802,7 +802,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
       photos: photosWithDetails,
       nextCursor: photos.length === parseInt(limit as string) ? photos[photos.length - 1].id : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching photo feed:", error);
     res.status(500).json({ error: "Failed to fetch photo feed" });
   }
@@ -812,7 +812,7 @@ router.get("/feed/recent", authenticateToken, async (req: any, res) => {
 router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
   try {
     const { userId: targetUserId } = req.params;
-    const viewerId = req.user?.id;
+    const viewerId = (req as any).user?.id;
 
     const pinnedPhoto = await prisma.photo.findFirst({
       where: { userId: targetUserId, isPinned: true },
@@ -833,7 +833,7 @@ router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
     }
 
     res.json(pinnedPhoto);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching pinned photo:", error);
     res.status(500).json({ error: "Failed to fetch pinned photo" });
   }
@@ -843,7 +843,7 @@ router.get("/user/:userId/pinned", authenticateToken, async (req: any, res) => {
 router.get("/album/:albumId", authenticateToken, async (req: any, res) => {
   try {
     const { albumId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
 
     const album = await prisma.photoAlbum.findUnique({
       where: { id: albumId },
@@ -903,15 +903,15 @@ router.get("/album/:albumId", authenticateToken, async (req: any, res) => {
     for (const photo of album.photos) {
       if (await canViewPhoto(photo, userId)) {
         const reactionCounts: Record<string, number> = {};
-        photo.reactions.forEach(r => {
+        photo.reactions.forEach((r: any) => {
           reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
         });
-        
+
         visiblePhotos.push({
           ...photo,
           reactionCounts,
           totalReactions: photo.reactions.length,
-          userReactions: photo.reactions.filter(r => r.userId === userId).map(r => r.type),
+          userReactions: photo.reactions.filter((r: any) => r.userId === userId).map((r: any) => r.type),
         });
       }
     }
@@ -921,7 +921,7 @@ router.get("/album/:albumId", authenticateToken, async (req: any, res) => {
       photos: visiblePhotos,
       photoCount: visiblePhotos.length,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching album photos:", error);
     res.status(500).json({ error: "Failed to fetch photos" });
   }
@@ -966,7 +966,7 @@ router.patch("/album/:albumId/cover", authenticateToken, async (req: any, res) =
     });
 
     res.json(updatedAlbum);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error setting album cover:", error);
     res.status(500).json({ error: "Failed to set album cover" });
   }
@@ -975,7 +975,7 @@ router.patch("/album/:albumId/cover", authenticateToken, async (req: any, res) =
 // Bulk update visibility
 router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { photoIds, visibility } = req.body;
 
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
@@ -990,7 +990,7 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
       where: { id: { in: photoIds } },
     });
 
-    const notOwned = photos.filter((p) => p.userId !== userId);
+    const notOwned = photos.filter((p: any) => p.userId !== userId);
     if (notOwned.length > 0) {
       return res.status(403).json({ error: "You can only update your own photos" });
     }
@@ -1001,7 +1001,7 @@ router.patch("/bulk/visibility", authenticateToken, async (req: any, res) => {
     });
 
     res.json({ message: `Updated ${photoIds.length} photos to ${visibility}` });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error bulk updating photos:", error);
     res.status(500).json({ error: "Failed to update photos" });
   }

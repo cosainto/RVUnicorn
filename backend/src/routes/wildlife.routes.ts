@@ -34,7 +34,7 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
       },
     });
     res.json({ sightings });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch sightings' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch sightings' }); }
 });
 
 // POST /api/wildlife/:campgroundId — log a sighting
@@ -73,10 +73,10 @@ router.post('/:campgroundId', authenticateToken, async (req: any, res: Response)
           data: { roomId: room.id, userId: req.userId, isSystem: true, content: msg },
         });
       }
-    } catch (e) { /* non-fatal */ }
+    } catch (e: any) { /* non-fatal */ }
 
     res.json({ sighting });
-  } catch (e) { res.status(500).json({ error: 'Failed to log sighting' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to log sighting' }); }
 });
 
 export default router;

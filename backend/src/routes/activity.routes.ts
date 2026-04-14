@@ -3,12 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // POST /api/activity/:id/like - Like/unlike an activity
 router.post('/:id/like', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const activityId = req.params.id;
 
     // Check if activity exists
@@ -56,7 +56,7 @@ router.post('/:id/like', authenticateToken, async (req: any, res) => {
       
       return res.json({ liked: true, likeCount });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity like error:', error);
     res.status(500).json({ error: 'Failed to like activity' });
   }
@@ -84,7 +84,7 @@ router.get('/:id/likes', async (req, res) => {
     });
 
     res.json(likes);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get activity likes error:', error);
     res.status(500).json({ error: 'Failed to fetch likes' });
   }

@@ -110,7 +110,7 @@ export async function generateConfidenceReport(eventId: string, userId: string):
 
   if (tripPlan?.distanceMiles) {
     driveMiles = tripPlan.distanceMiles;
-    driveHours = tripPlan.durationMinutes ? tripPlan.durationMinutes / 60 : driveMiles / 50;
+    driveHours = tripPlan.durationMinutes ? tripPlan.durationMinutes / 60 : driveMiles! / 50;
   } else if (user.homeLatitude && user.homeLongitude && campground?.latitude && campground?.longitude) {
     // Haversine fallback
     const R = 3958.8;
@@ -158,12 +158,12 @@ export async function generateConfidenceReport(eventId: string, userId: string):
       const weatherUrl = `https://api.weather.gov/points/${campground.latitude},${campground.longitude}`;
       const pointRes = await fetch(weatherUrl, { headers: { 'User-Agent': 'rvunicorn.com' } });
       if (pointRes.ok) {
-        const pointData = await pointRes.json();
+        const pointData: any = await pointRes.json();
         const forecastUrl = pointData.properties?.forecast;
         if (forecastUrl) {
           const fcRes = await fetch(forecastUrl, { headers: { 'User-Agent': 'rvunicorn.com' } });
           if (fcRes.ok) {
-            const fcData = await fcRes.json();
+            const fcData: any = await fcRes.json();
             const periods = fcData.properties?.periods || [];
             if (periods.length > 0) {
               const current = periods[0];
@@ -178,7 +178,7 @@ export async function generateConfidenceReport(eventId: string, userId: string):
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[TripConfidence] Weather fetch failed:', e);
     }
   }
@@ -343,7 +343,7 @@ export async function generateConfidenceReport(eventId: string, userId: string):
         const eiaUrl = `https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=${process.env.EIA_API_KEY}&frequency=weekly&data[0]=value&facets[product][]=${user.rvFuelType === 'diesel' ? 'EPD2D' : 'EMM_EPMR_PTE_NUS_DPG'}&sort[0][column]=period&sort[0][direction]=desc&length=1`;
         const eiaRes = await fetch(eiaUrl);
         if (eiaRes.ok) {
-          const eiaData = await eiaRes.json();
+          const eiaData: any = await eiaRes.json();
           const price = eiaData?.response?.data?.[0]?.value;
           if (price) fuelPricePerGallon = parseFloat(price);
         }

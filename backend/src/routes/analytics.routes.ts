@@ -4,6 +4,7 @@ import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const db = prisma as any;
 
 // ============================================
 // VIDEO WATCH TRACKING
@@ -13,11 +14,11 @@ const prisma = new PrismaClient();
 router.post("/video/:videoId/watch", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user?.id;
-    const { 
-      sessionId, 
-      watchedSeconds, 
-      totalDuration, 
+    const userId = (req as any).user?.id;
+    const {
+      sessionId,
+      watchedSeconds,
+      totalDuration,
       dropOffSecond,
       rewatchCount = 0,
       source = "FEED",
@@ -28,7 +29,7 @@ router.post("/video/:videoId/watch", authenticateToken, async (req: any, res) =>
       return res.status(400).json({ error: "sessionId required" });
     }
 
-    const video = await prisma.video.findUnique({ 
+    const video = await db.video.findUnique({
       where: { id: videoId },
       select: { userId: true }
     });
@@ -40,18 +41,18 @@ router.post("/video/:videoId/watch", authenticateToken, async (req: any, res) =>
     // Check if viewer is a follower
     let isFollower = false;
     if (userId && video.userId !== userId) {
-      const follow = await prisma.follow.findFirst({
+      const follow = await db.follow.findFirst({
         where: { followerId: userId, followingId: video.userId }
       });
       isFollower = !!follow;
     }
 
-    const completionRate = totalDuration > 0 
-      ? Math.min(100, (watchedSeconds / totalDuration) * 100) 
+    const completionRate = totalDuration > 0
+      ? Math.min(100, (watchedSeconds / totalDuration) * 100)
       : 0;
 
     // Upsert watch record for this session
-    const watch = await prisma.videoWatch.upsert({
+    const watch = await db.videoWatch.upsert({
       where: {
         id: `${videoId}-${sessionId}` // Composite key workaround
       },
@@ -78,7 +79,7 @@ router.post("/video/:videoId/watch", authenticateToken, async (req: any, res) =>
     });
 
     res.json({ recorded: true, completionRate: completionRate.toFixed(1) });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error tracking video watch:", error);
     res.status(500).json({ error: "Failed to track watch" });
   }
@@ -91,7 +92,7 @@ router.post("/video/:videoId/watch", authenticateToken, async (req: any, res) =>
 // Get creator dashboard overview
 router.get("/dashboard", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { period = "7d" } = req.query;
 
     const periodDays = period === "30d" ? 30 : period === "90d" ? 90 : 7;
@@ -103,27 +104,27 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
 
     // Follower growth
     const [currentFollowers, previousFollowers, totalFollowers] = await Promise.all([
-      prisma.follow.count({
+      db.follow.count({
         where: { followingId: userId, createdAt: { gte: startDate } }
       }),
-      prisma.follow.count({
-        where: { 
-          followingId: userId, 
-          createdAt: { gte: previousStartDate, lt: startDate } 
+      db.follow.count({
+        where: {
+          followingId: userId,
+          createdAt: { gte: previousStartDate, lt: startDate }
         }
       }),
-      prisma.follow.count({ where: { followingId: userId } })
+      db.follow.count({ where: { followingId: userId } })
     ]);
 
     // Content metrics
     const [videos, photos] = await Promise.all([
-      prisma.video.findMany({
+      db.video.findMany({
         where: { userId, publishedAt: { not: null } },
         select: { id: true, viewCount: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 100
       }),
-      prisma.photo.findMany({
+      db.photo.findMany({
         where: { userId, publishedAt: { not: null } },
         select: { id: true, viewCount: true, createdAt: true },
         orderBy: { createdAt: "desc" },
@@ -131,21 +132,21 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
       })
     ]);
 
-    const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0) +
-                       photos.reduce((sum, p) => sum + p.viewCount, 0);
+    const totalViews = (videos as any[]).reduce((sum: number, v: any) => sum + v.viewCount, 0) +
+                       (photos as any[]).reduce((sum: number, p: any) => sum + p.viewCount, 0);
 
     // Engagement metrics
     const [videoReactions, photoReactions, videoSaves, photoSaves] = await Promise.all([
-      prisma.videoLike.count({
+      db.videoLike.count({
         where: { video: { userId }, createdAt: { gte: startDate } }
       }),
-      prisma.photoReaction.count({
+      db.photoReaction.count({
         where: { photo: { userId }, createdAt: { gte: startDate } }
       }),
-      prisma.videoSave.count({
+      db.videoSave.count({
         where: { video: { userId }, createdAt: { gte: startDate } }
       }),
-      prisma.photoSave.count({
+      db.photoSave.count({
         where: { photo: { userId }, createdAt: { gte: startDate } }
       })
     ]);
@@ -153,8 +154,8 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
     const totalEngagement = videoReactions + photoReactions + videoSaves + photoSaves;
 
     // Video-specific metrics
-    const videoWatches = await prisma.videoWatch.findMany({
-      where: { 
+    const videoWatches = await db.videoWatch.findMany({
+      where: {
         video: { userId },
         createdAt: { gte: startDate }
       },
@@ -167,20 +168,20 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
     });
 
     const avgCompletion = videoWatches.length > 0
-      ? videoWatches.reduce((sum, w) => sum + w.completionRate, 0) / videoWatches.length
+      ? videoWatches.reduce((sum: any, w: any) => sum + w.completionRate, 0) / videoWatches.length
       : 0;
 
-    const totalWatchTime = videoWatches.reduce((sum, w) => sum + w.watchedSeconds, 0);
+    const totalWatchTime = videoWatches.reduce((sum: any, w: any) => sum + w.watchedSeconds, 0);
 
     // Source breakdown
-    const sourceBreakdown = videoWatches.reduce((acc: any, w) => {
+    const sourceBreakdown = videoWatches.reduce((acc: any, w: any) => {
       acc[w.source] = (acc[w.source] || 0) + 1;
       return acc;
     }, {});
 
     // Follower vs non-follower views
-    const followerViews = videoWatches.filter(w => w.isFollower).length;
-    const nonFollowerViews = videoWatches.filter(w => !w.isFollower).length;
+    const followerViews = videoWatches.filter((w: any) => w.isFollower).length;
+    const nonFollowerViews = videoWatches.filter((w: any) => !w.isFollower).length;
 
     res.json({
       period: periodDays,
@@ -188,7 +189,7 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
         total: totalFollowers,
         gained: currentFollowers,
         previousPeriod: previousFollowers,
-        growthRate: previousFollowers > 0 
+        growthRate: previousFollowers > 0
           ? ((currentFollowers - previousFollowers) / previousFollowers * 100).toFixed(1)
           : currentFollowers > 0 ? 100 : 0
       },
@@ -196,14 +197,14 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
         totalVideos: videos.length,
         totalPhotos: photos.length,
         totalViews,
-        recentVideos: videos.filter(v => v.createdAt >= startDate).length,
-        recentPhotos: photos.filter(p => p.createdAt >= startDate).length
+        recentVideos: (videos as any[]).filter((v: any) => v.createdAt >= startDate).length,
+        recentPhotos: (photos as any[]).filter((p: any) => p.createdAt >= startDate).length
       },
       engagement: {
         total: totalEngagement,
         reactions: videoReactions + photoReactions,
         saves: videoSaves + photoSaves,
-        engagementRate: totalViews > 0 
+        engagementRate: totalViews > 0
           ? ((totalEngagement / totalViews) * 100).toFixed(2)
           : 0
       },
@@ -211,7 +212,7 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
         totalWatches: videoWatches.length,
         avgCompletionRate: avgCompletion.toFixed(1),
         totalWatchTimeMinutes: Math.round(totalWatchTime / 60),
-        avgWatchTimeSeconds: videoWatches.length > 0 
+        avgWatchTimeSeconds: videoWatches.length > 0
           ? Math.round(totalWatchTime / videoWatches.length)
           : 0
       },
@@ -224,7 +225,7 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
       },
       sourceBreakdown
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching dashboard:", error);
     res.status(500).json({ error: "Failed to fetch dashboard" });
   }
@@ -238,9 +239,9 @@ router.get("/dashboard", authenticateToken, async (req: any, res) => {
 router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
-    const video = await prisma.video.findUnique({
+    const video: any = await db.video.findUnique({
       where: { id: videoId },
       include: {
         user: { select: { id: true } },
@@ -261,22 +262,22 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
     }
 
     // Get all watch data
-    const watches = await prisma.videoWatch.findMany({
+    const watches: any[] = await db.videoWatch.findMany({
       where: { videoId },
       orderBy: { createdAt: "desc" }
     });
 
     // Calculate metrics
     const totalViews = watches.length;
-    const uniqueViewers = new Set(watches.map(w => w.userId || w.sessionId)).size;
+    const uniqueViewers = new Set(watches.map((w: any) => w.userId || w.sessionId)).size;
     const avgCompletion = totalViews > 0
-      ? watches.reduce((sum, w) => sum + w.completionRate, 0) / totalViews
+      ? watches.reduce((sum: number, w: any) => sum + w.completionRate, 0) / totalViews
       : 0;
-    const totalWatchTime = watches.reduce((sum, w) => sum + w.watchedSeconds, 0);
+    const totalWatchTime = watches.reduce((sum: number, w: any) => sum + w.watchedSeconds, 0);
 
     // Drop-off analysis (where people stop watching)
     const dropOffPoints: Record<number, number> = {};
-    watches.forEach(w => {
+    watches.forEach((w: any) => {
       if (w.dropOffSecond && w.completionRate < 95) {
         // Group into 5-second buckets
         const bucket = Math.floor(w.dropOffSecond / 5) * 5;
@@ -299,7 +300,7 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
       '50-75%': 0,
       '75-100%': 0
     };
-    watches.forEach(w => {
+    watches.forEach((w: any) => {
       if (w.completionRate < 25) completionBuckets['0-25%']++;
       else if (w.completionRate < 50) completionBuckets['25-50%']++;
       else if (w.completionRate < 75) completionBuckets['50-75%']++;
@@ -307,23 +308,23 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
     });
 
     // Source breakdown
-    const sources = watches.reduce((acc: any, w) => {
+    const sources = watches.reduce((acc: any, w: any) => {
       acc[w.source] = (acc[w.source] || 0) + 1;
       return acc;
     }, {});
 
     // Audience breakdown
-    const followerViews = watches.filter(w => w.isFollower).length;
-    const avgFollowerCompletion = watches.filter(w => w.isFollower).length > 0
-      ? watches.filter(w => w.isFollower).reduce((sum, w) => sum + w.completionRate, 0) / followerViews
+    const followerViews = watches.filter((w: any) => w.isFollower).length;
+    const avgFollowerCompletion = watches.filter((w: any) => w.isFollower).length > 0
+      ? watches.filter((w: any) => w.isFollower).reduce((sum: number, w: any) => sum + w.completionRate, 0) / followerViews
       : 0;
-    const avgNonFollowerCompletion = watches.filter(w => !w.isFollower).length > 0
-      ? watches.filter(w => !w.isFollower).reduce((sum, w) => sum + w.completionRate, 0) / (totalViews - followerViews)
+    const avgNonFollowerCompletion = watches.filter((w: any) => !w.isFollower).length > 0
+      ? watches.filter((w: any) => !w.isFollower).reduce((sum: number, w: any) => sum + w.completionRate, 0) / (totalViews - followerViews)
       : 0;
 
     // Reaction breakdown
     const reactionCounts: Record<string, number> = {};
-    video.likes.forEach(l => {
+    video.likes.forEach((l: any) => {
       const type = l.type || 'LIKE';
       reactionCounts[type] = (reactionCounts[type] || 0) + 1;
     });
@@ -331,22 +332,22 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
     // Daily views trend (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const dailyViews: Record<string, number> = {};
-    watches.filter(w => w.createdAt >= thirtyDaysAgo).forEach(w => {
+    watches.filter((w: any) => w.createdAt >= thirtyDaysAgo).forEach((w: any) => {
       const date = w.createdAt.toISOString().split('T')[0];
       dailyViews[date] = (dailyViews[date] || 0) + 1;
     });
 
     // Device breakdown
-    const devices = watches.reduce((acc: any, w) => {
+    const devices = watches.reduce((acc: any, w: any) => {
       const device = w.deviceType || 'UNKNOWN';
       acc[device] = (acc[device] || 0) + 1;
       return acc;
     }, {});
 
     // Rewatch rate
-    const rewatches = watches.filter(w => w.rewatchCount > 0).length;
+    const rewatches = watches.filter((w: any) => w.rewatchCount > 0).length;
     const rewatchRate = totalViews > 0 ? (rewatches / totalViews) * 100 : 0;
 
     res.json({
@@ -372,7 +373,7 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
         dropOffAnalysis: {
           points: dropOffPoints,
           biggestDropOff: maxDropOff,
-          insight: maxDropOff.count > 0 
+          insight: maxDropOff.count > 0
             ? `${maxDropOff.count} viewers stopped watching around ${maxDropOff.second} seconds`
             : null
         },
@@ -399,7 +400,7 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
         totalReactions: video.likes.length,
         saves: video.saves.length,
         taggedUsers: video.tags.length,
-        engagementRate: totalViews > 0 
+        engagementRate: totalViews > 0
           ? ((video.likes.length + video.saves.length) / totalViews * 100).toFixed(2)
           : 0
       },
@@ -408,7 +409,7 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
         peakDay: Object.entries(dailyViews).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || null
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching video analytics:", error);
     res.status(500).json({ error: "Failed to fetch analytics" });
   }
@@ -421,13 +422,13 @@ router.get("/video/:videoId", authenticateToken, async (req: any, res) => {
 // Get top performing content
 router.get("/top-content", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { type = "all", metric = "views", limit = 10 } = req.query;
 
     // Get videos
     let videos: any[] = [];
     if (type === "all" || type === "video") {
-      videos = await prisma.video.findMany({
+      videos = await db.video.findMany({
         where: { userId, publishedAt: { not: null } },
         include: {
           likes: true,
@@ -444,7 +445,7 @@ router.get("/top-content", authenticateToken, async (req: any, res) => {
     // Get photos
     let photos: any[] = [];
     if (type === "all" || type === "photo") {
-      photos = await prisma.photo.findMany({
+      photos = await db.photo.findMany({
         where: { userId, publishedAt: { not: null } },
         include: {
           reactions: true,
@@ -457,7 +458,7 @@ router.get("/top-content", authenticateToken, async (req: any, res) => {
 
     // Calculate scores
     const scoredContent = [
-      ...videos.map(v => ({
+      ...videos.map((v: any) => ({
         id: v.id,
         type: 'VIDEO',
         title: v.title,
@@ -466,14 +467,14 @@ router.get("/top-content", authenticateToken, async (req: any, res) => {
         views: v.viewCount,
         reactions: v.likes.length,
         saves: v.saves.length,
-        avgCompletion: v.watches.length > 0 
+        avgCompletion: v.watches.length > 0
           ? v.watches.reduce((sum: number, w: any) => sum + w.completionRate, 0) / v.watches.length
           : 0,
-        engagementRate: v.viewCount > 0 
+        engagementRate: v.viewCount > 0
           ? ((v.likes.length + v.saves.length) / v.viewCount * 100)
           : 0
       })),
-      ...photos.map(p => ({
+      ...photos.map((p: any) => ({
         id: p.id,
         type: 'PHOTO',
         title: p.caption?.slice(0, 50) || 'Untitled',
@@ -483,7 +484,7 @@ router.get("/top-content", authenticateToken, async (req: any, res) => {
         reactions: p.reactions.length,
         saves: p.saves.length,
         avgCompletion: null,
-        engagementRate: p.viewCount > 0 
+        engagementRate: p.viewCount > 0
           ? ((p.reactions.length + p.saves.length) / p.viewCount * 100)
           : 0
       }))
@@ -510,7 +511,7 @@ router.get("/top-content", authenticateToken, async (req: any, res) => {
       metric,
       insights: generateContentInsights(sortedContent)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching top content:", error);
     res.status(500).json({ error: "Failed to fetch top content" });
   }
@@ -524,11 +525,11 @@ function generateContentInsights(content: any[]) {
   // Video vs photo performance
   const videos = content.filter(c => c.type === 'VIDEO');
   const photos = content.filter(c => c.type === 'PHOTO');
-  
+
   if (videos.length > 0 && photos.length > 0) {
     const avgVideoEngagement = videos.reduce((sum, v) => sum + v.engagementRate, 0) / videos.length;
     const avgPhotoEngagement = photos.reduce((sum, p) => sum + p.engagementRate, 0) / photos.length;
-    
+
     if (avgVideoEngagement > avgPhotoEngagement * 1.2) {
       insights.push("Your videos get 20%+ higher engagement than photos");
     } else if (avgPhotoEngagement > avgVideoEngagement * 1.2) {
@@ -558,10 +559,10 @@ function generateContentInsights(content: any[]) {
 // Get audience insights
 router.get("/audience", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     // Get followers
-    const followers = await prisma.follow.findMany({
+    const followers: any[] = await db.follow.findMany({
       where: { followingId: userId },
       include: {
         follower: {
@@ -579,7 +580,7 @@ router.get("/audience", authenticateToken, async (req: any, res) => {
     });
 
     // Get most engaged followers (based on reactions)
-    const engagedFollowers = await prisma.user.findMany({
+    const engagedFollowers: any[] = await db.user.findMany({
       where: {
         following: { some: { followingId: userId } }
       },
@@ -601,52 +602,52 @@ router.get("/audience", authenticateToken, async (req: any, res) => {
     });
 
     const sortedEngaged = engagedFollowers
-      .map(f => ({
+      .map((f: any) => ({
         ...f,
         engagementCount: f.videoLikes.length + f.photoReactions.length
       }))
-      .filter(f => f.engagementCount > 0)
-      .sort((a, b) => b.engagementCount - a.engagementCount)
+      .filter((f: any) => f.engagementCount > 0)
+      .sort((a: any, b: any) => b.engagementCount - a.engagementCount)
       .slice(0, 20);
 
     // Follower growth by week
     const twelveWeeksAgo = new Date();
     twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
-    
+
     const weeklyGrowth: Record<string, number> = {};
     followers
-      .filter(f => f.createdAt >= twelveWeeksAgo)
-      .forEach(f => {
+      .filter((f: any) => f.createdAt >= twelveWeeksAgo)
+      .forEach((f: any) => {
         const weekStart = getWeekStart(f.createdAt);
         weeklyGrowth[weekStart] = (weeklyGrowth[weekStart] || 0) + 1;
       });
 
     // New vs returning viewers (from video watches)
-    const recentWatches = await prisma.videoWatch.findMany({
-      where: { 
+    const recentWatches: any[] = await db.videoWatch.findMany({
+      where: {
         video: { userId },
         createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       },
       select: { userId: true, isFollower: true }
     });
 
-    const uniqueWatchers = new Set(recentWatches.map(w => w.userId).filter(Boolean));
+    const uniqueWatchers = new Set(recentWatches.map((w: any) => w.userId).filter(Boolean));
 
     res.json({
       overview: {
         totalFollowers: followers.length,
-        newFollowers7d: followers.filter(f => 
+        newFollowers7d: followers.filter((f: any) =>
           f.createdAt >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
         ).length,
-        newFollowers30d: followers.filter(f => 
+        newFollowers30d: followers.filter((f: any) =>
           f.createdAt >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         ).length
       },
-      recentFollowers: followers.slice(0, 10).map(f => ({
+      recentFollowers: followers.slice(0, 10).map((f: any) => ({
         ...f.follower,
         followedAt: f.createdAt
       })),
-      topEngagedFollowers: sortedEngaged.slice(0, 10).map(f => ({
+      topEngagedFollowers: sortedEngaged.slice(0, 10).map((f: any) => ({
         id: f.id,
         username: f.username,
         firstName: f.firstName,
@@ -659,11 +660,11 @@ router.get("/audience", authenticateToken, async (req: any, res) => {
       },
       viewerInsights: {
         uniqueViewers30d: uniqueWatchers.size,
-        followerViewers: recentWatches.filter(w => w.isFollower).length,
-        nonFollowerViewers: recentWatches.filter(w => !w.isFollower).length
+        followerViewers: recentWatches.filter((w: any) => w.isFollower).length,
+        nonFollowerViewers: recentWatches.filter((w: any) => !w.isFollower).length
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching audience insights:", error);
     res.status(500).json({ error: "Failed to fetch audience insights" });
   }
@@ -682,7 +683,7 @@ function getWeekStart(date: Date): string {
 // Get AI-powered recommendations
 router.get("/recommendations", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const recommendations: Array<{
       type: string;
@@ -693,9 +694,9 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
     }> = [];
 
     // Get recent content performance
-    const recentVideos = await prisma.video.findMany({
-      where: { 
-        userId, 
+    const recentVideos: any[] = await db.video.findMany({
+      where: {
+        userId,
         publishedAt: { not: null },
         createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       },
@@ -706,9 +707,9 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
       }
     });
 
-    const recentPhotos = await prisma.photo.findMany({
-      where: { 
-        userId, 
+    const recentPhotos: any[] = await db.photo.findMany({
+      where: {
+        userId,
         publishedAt: { not: null },
         createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       },
@@ -731,9 +732,9 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
 
     // Check video completion rates
     if (recentVideos.length > 0) {
-      const avgCompletion = recentVideos.reduce((sum, v) => {
+      const avgCompletion = recentVideos.reduce((sum: number, v: any) => {
         const videoAvg = v.watches.length > 0
-          ? v.watches.reduce((s, w) => s + w.completionRate, 0) / v.watches.length
+          ? v.watches.reduce((s: number, w: any) => s + w.completionRate, 0) / v.watches.length
           : 0;
         return sum + videoAvg;
       }, 0) / recentVideos.length;
@@ -757,11 +758,11 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
     }
 
     // Check save rates
-    const totalSaves = recentVideos.reduce((sum, v) => sum + v.saves.length, 0) +
-                       recentPhotos.reduce((sum, p) => sum + p.saves.length, 0);
-    const totalViews = recentVideos.reduce((sum, v) => sum + v.viewCount, 0) +
-                       recentPhotos.reduce((sum, p) => sum + p.viewCount, 0);
-    
+    const totalSaves = recentVideos.reduce((sum: number, v: any) => sum + v.saves.length, 0) +
+                       recentPhotos.reduce((sum: number, p: any) => sum + p.saves.length, 0);
+    const totalViews = recentVideos.reduce((sum: number, v: any) => sum + v.viewCount, 0) +
+                       recentPhotos.reduce((sum: number, p: any) => sum + p.viewCount, 0);
+
     if (totalViews > 100 && totalSaves / totalViews > 0.05) {
       recommendations.push({
         type: 'HIGH_SAVES',
@@ -773,9 +774,9 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
     }
 
     // Check discovery sources
-    const allWatches = recentVideos.flatMap(v => v.watches);
-    const discoveryViews = allWatches.filter(w => w.source === 'DISCOVERY').length;
-    
+    const allWatches = recentVideos.flatMap((v: any) => v.watches);
+    const discoveryViews = allWatches.filter((w: any) => w.source === 'DISCOVERY').length;
+
     if (discoveryViews > allWatches.length * 0.1) {
       recommendations.push({
         type: 'DISCOVERY_SUCCESS',
@@ -795,9 +796,9 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
 
     // Content type recommendation
     if (recentVideos.length > 0 && recentPhotos.length > 0) {
-      const videoEngagement = recentVideos.reduce((sum, v) => sum + v.likes.length + v.saves.length, 0) / recentVideos.length;
-      const photoEngagement = recentPhotos.reduce((sum, p) => sum + p.reactions.length + p.saves.length, 0) / recentPhotos.length;
-      
+      const videoEngagement = recentVideos.reduce((sum: number, v: any) => sum + v.likes.length + v.saves.length, 0) / recentVideos.length;
+      const photoEngagement = recentPhotos.reduce((sum: number, p: any) => sum + p.reactions.length + p.saves.length, 0) / recentPhotos.length;
+
       if (videoEngagement > photoEngagement * 1.5) {
         recommendations.push({
           type: 'CONTENT_TYPE',
@@ -822,7 +823,7 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
       }),
       lastUpdated: new Date()
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching recommendations:", error);
     res.status(500).json({ error: "Failed to fetch recommendations" });
   }
@@ -836,14 +837,14 @@ router.get("/recommendations", authenticateToken, async (req: any, res) => {
 router.post("/profile-visit/:profileUserId", authenticateToken, async (req: any, res) => {
   try {
     const { profileUserId } = req.params;
-    const visitorId = req.user?.id;
+    const visitorId = (req as any).user?.id;
     const { source = "DIRECT", sourceContentId } = req.body;
 
     if (visitorId === profileUserId) {
       return res.json({ recorded: false, reason: "own_profile" });
     }
 
-    await prisma.profileVisit.create({
+    await db.profileVisit.create({
       data: {
         profileUserId,
         visitorId,
@@ -853,7 +854,7 @@ router.post("/profile-visit/:profileUserId", authenticateToken, async (req: any,
     });
 
     res.json({ recorded: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error tracking profile visit:", error);
     res.status(500).json({ error: "Failed to track visit" });
   }
@@ -862,14 +863,14 @@ router.post("/profile-visit/:profileUserId", authenticateToken, async (req: any,
 // Get profile visit funnel
 router.get("/profile-funnel", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { period = "30d" } = req.query;
 
     const periodDays = period === "7d" ? 7 : period === "90d" ? 90 : 30;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - periodDays);
 
-    const visits = await prisma.profileVisit.findMany({
+    const visits: any[] = await db.profileVisit.findMany({
       where: {
         profileUserId: userId,
         createdAt: { gte: startDate }
@@ -881,7 +882,7 @@ router.get("/profile-funnel", authenticateToken, async (req: any, res) => {
       }
     });
 
-    const follows = await prisma.follow.count({
+    const follows = await db.follow.count({
       where: {
         followingId: userId,
         createdAt: { gte: startDate }
@@ -889,13 +890,13 @@ router.get("/profile-funnel", authenticateToken, async (req: any, res) => {
     });
 
     // Source breakdown
-    const sources = visits.reduce((acc: any, v) => {
+    const sources = visits.reduce((acc: any, v: any) => {
       acc[v.source] = (acc[v.source] || 0) + 1;
       return acc;
     }, {});
 
     // Conversion rate
-    const conversionRate = visits.length > 0 
+    const conversionRate = visits.length > 0
       ? (follows / visits.length * 100).toFixed(1)
       : 0;
 
@@ -905,13 +906,13 @@ router.get("/profile-funnel", authenticateToken, async (req: any, res) => {
       newFollowers: follows,
       conversionRate,
       sources,
-      insight: parseFloat(conversionRate as string) > 10 
+      insight: parseFloat(conversionRate as string) > 10
         ? "Great conversion rate! Your profile makes a strong impression."
         : parseFloat(conversionRate as string) < 5 && visits.length > 20
           ? "Consider updating your profile to convert more visitors to followers."
           : null
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching profile funnel:", error);
     res.status(500).json({ error: "Failed to fetch funnel data" });
   }

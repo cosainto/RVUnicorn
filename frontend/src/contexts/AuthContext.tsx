@@ -80,6 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     localStorage.setItem('token', data.token);
     setUser(data.user);
+    // Meta Pixel: track new sign-up
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'CompleteRegistration');
+    }
   };
 
   const logout = () => {

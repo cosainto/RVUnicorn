@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Auth middleware helper
 const getAuthUserId = (req: any): string | null => {
@@ -37,7 +37,7 @@ router.post('/pin/:contentId', requireAuth, async (req, res) => {
     await prisma.user.update({ where: { id: userId }, data: { creatorPinnedContentIds: [...pinned, contentId] } });
     await prisma.creatorContent.update({ where: { id: contentId }, data: { isPinned: true } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Pin error:', error);
     res.status(500).json({ error: 'Failed to pin' });
   }
@@ -56,7 +56,7 @@ router.delete('/pin/:contentId', requireAuth, async (req, res) => {
     });
     await prisma.creatorContent.update({ where: { id: contentId }, data: { isPinned: false } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to unpin' });
   }
 });
@@ -82,7 +82,7 @@ router.get('/series/:creatorId', async (req, res) => {
       },
     });
     res.json(series);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch series' });
   }
 });
@@ -96,7 +96,7 @@ router.post('/series', requireAuth, async (req, res) => {
       data: { creatorId: userId, title, description, coverImage },
     });
     res.json(series);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create series' });
   }
 });
@@ -111,7 +111,7 @@ router.put('/series/:seriesId', requireAuth, async (req, res) => {
       data: { title, description, coverImage, isPublished },
     });
     res.json(series);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update series' });
   }
 });
@@ -124,7 +124,7 @@ router.delete('/series/:seriesId', requireAuth, async (req, res) => {
     await prisma.creatorContent.updateMany({ where: { seriesId }, data: { seriesId: null, seriesOrder: null } });
     await prisma.creatorSeries.delete({ where: { id: seriesId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete series' });
   }
 });
@@ -140,7 +140,7 @@ router.put('/series/:seriesId/add-content', requireAuth, async (req, res) => {
       data: { seriesId, seriesOrder: count },
     });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to add to series' });
   }
 });
@@ -154,7 +154,7 @@ router.put('/series/:seriesId/remove-content', requireAuth, async (req, res) => 
       data: { seriesId: null, seriesOrder: null },
     });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to remove from series' });
   }
 });
@@ -177,7 +177,7 @@ router.get('/polls/:creatorId', async (req, res) => {
       },
     });
     res.json(polls);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch polls' });
   }
 });
@@ -201,7 +201,7 @@ router.post('/polls', requireAuth, async (req, res) => {
       include: { options: true },
     });
     res.json(poll);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create poll' });
   }
 });
@@ -229,7 +229,7 @@ router.post('/polls/:pollId/vote', requireAuth, async (req, res) => {
     ]);
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to vote' });
   }
 });
@@ -240,7 +240,7 @@ router.delete('/polls/:pollId', requireAuth, async (req, res) => {
     const { pollId } = req.params;
     await prisma.creatorPoll.delete({ where: { id: pollId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete poll' });
   }
 });
@@ -259,7 +259,7 @@ router.get('/stories/:creatorId', async (req, res) => {
       include: { creator: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
     });
     res.json(stories);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
@@ -274,7 +274,7 @@ router.post('/stories', requireAuth, async (req, res) => {
       data: { creatorId: userId, imageUrl, text, bgColor, linkUrl, linkLabel, expiresAt },
     });
     res.json(story);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create story' });
   }
 });
@@ -284,7 +284,7 @@ router.delete('/stories/:storyId', requireAuth, async (req, res) => {
   try {
     await prisma.creatorStory.delete({ where: { id: req.params.storyId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete story' });
   }
 });
@@ -294,7 +294,7 @@ router.post('/stories/:storyId/view', async (req, res) => {
   try {
     await prisma.creatorStory.update({ where: { id: req.params.storyId }, data: { viewCount: { increment: 1 } } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed' });
   }
 });
@@ -316,7 +316,7 @@ router.get('/shoutouts/:creatorId', async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(shoutouts);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch shoutouts' });
   }
 });
@@ -342,7 +342,7 @@ router.delete('/shoutouts/:shoutoutId', requireAuth, async (req, res) => {
   try {
     await prisma.creatorShoutout.delete({ where: { id: req.params.shoutoutId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete shoutout' });
   }
 });
@@ -360,7 +360,7 @@ router.get('/milestones/:creatorId', async (req, res) => {
       orderBy: { achievedAt: 'desc' },
     });
     res.json(milestones);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch milestones' });
   }
 });
@@ -397,7 +397,7 @@ router.post('/check-milestones', requireAuth, async (req, res) => {
               data: { userId, type: check.type, threshold },
             });
             newMilestones.push(m);
-          } catch (e) {
+          } catch (e: any) {
             // Already exists (unique constraint), skip
           }
         }
@@ -405,7 +405,7 @@ router.post('/check-milestones', requireAuth, async (req, res) => {
     }
 
     res.json({ newMilestones, stats: { followerCount, contentCount, views, likes } });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to check milestones' });
   }
 });
@@ -415,7 +415,7 @@ router.post('/milestones/:milestoneId/celebrate', requireAuth, async (req, res) 
   try {
     await prisma.creatorMilestone.update({ where: { id: req.params.milestoneId }, data: { celebrated: true } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed' });
   }
 });
@@ -439,7 +439,7 @@ router.put('/monetization', requireAuth, async (req, res) => {
       },
     });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update monetization settings' });
   }
 });
@@ -455,7 +455,7 @@ router.put('/theme', requireAuth, async (req, res) => {
     const { themeColor } = req.body;
     await prisma.user.update({ where: { id: userId }, data: { creatorThemeColor: themeColor } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update theme' });
   }
 });
@@ -496,7 +496,7 @@ router.get('/suggested', async (req, res) => {
       },
     });
     res.json(creators);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch suggested creators' });
   }
 });

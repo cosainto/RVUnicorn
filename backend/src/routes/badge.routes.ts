@@ -10,13 +10,14 @@ import {
 } from '../services/badge.service';
 
 const router = Router();
+const db = prisma as any;
 
 
 
 // GET /api/badges - Get all available badges
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const badges = await prisma.badge.findMany({
+    const badges = await db.badge.findMany({
       where: { isActive: true },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
       include: {
@@ -26,13 +27,13 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
-    const badgesWithStats = badges.map(badge => ({
+    const badgesWithStats = badges.map((badge: any) => ({
       ...badge,
       earnedByCount: badge._count.userBadges
     }));
 
     res.json(badgesWithStats);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get all badges error:', error);
     res.status(500).json({ error: 'Failed to get badges' });
   }
@@ -44,7 +45,7 @@ router.get('/my', authenticateToken, async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const badges = await getUserBadges(userId);
     res.json(badges);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my badges error:', error);
     res.status(500).json({ error: 'Failed to get badges' });
   }
@@ -55,21 +56,21 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     
-    const earnedBadges = await prisma.userBadge.findMany({
+    const earnedBadges = await db.userBadge.findMany({
       where: { userId },
       include: { badge: true },
       orderBy: { earnedAt: 'desc' }
     });
 
     res.json({
-      badges: earnedBadges.map(ub => ({
+      badges: earnedBadges.map((ub: any) => ({
         ...ub.badge,
         earnedAt: ub.earnedAt,
         badgeNumber: ub.badgeNumber,
       })),
       count: earnedBadges.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user badges error:', error);
     res.status(500).json({ error: 'Failed to get user badges' });
   }
@@ -83,7 +84,7 @@ router.get('/progress/:badgeSlug', authenticateToken, async (req: Request, res: 
 
     const progress = await getBadgeProgress(userId, badgeSlug);
     res.json(progress);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get badge progress error:', error);
     res.status(500).json({ error: 'Failed to get badge progress' });
   }
@@ -99,7 +100,7 @@ router.post('/check', authenticateToken, async (req: Request, res: Response) => 
       message: awarded.length > 0 ? 'New badges earned!' : 'No new badges earned',
       newBadges: awarded.filter(r => r.awarded).map(r => r.badge)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check badges error:', error);
     res.status(500).json({ error: 'Failed to check badges' });
   }
@@ -110,15 +111,15 @@ router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
     const { limit = 10 } = req.query;
 
-    const leaderboard = await prisma.userBadge.groupBy({
+    const leaderboard = await db.userBadge.groupBy({
       by: ['userId'],
       _count: { badgeId: true },
       orderBy: { _count: { badgeId: 'desc' } },
       take: parseInt(limit as string)
     });
 
-    const userIds = leaderboard.map(l => l.userId);
-    const users = await prisma.user.findMany({
+    const userIds = leaderboard.map((l: any) => l.userId);
+    const users = await db.user.findMany({
       where: { id: { in: userIds } },
       select: {
         id: true,
@@ -129,16 +130,16 @@ router.get('/leaderboard', async (req: Request, res: Response) => {
       }
     });
 
-    const userMap = new Map(users.map(u => [u.id, u]));
+    const userMap = new Map(users.map((u: any) => [u.id, u]));
 
-    const results = leaderboard.map((entry, index) => ({
+    const results = leaderboard.map((entry: any, index: any) => ({
       rank: index + 1,
       user: userMap.get(entry.userId),
       badgeCount: entry._count.badgeId
     }));
 
     res.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get badge leaderboard error:', error);
     res.status(500).json({ error: 'Failed to get leaderboard' });
   }
@@ -149,7 +150,7 @@ router.get('/:badgeSlug', async (req: Request, res: Response) => {
   try {
     const { badgeSlug } = req.params;
 
-    const badge = await prisma.badge.findUnique({
+    const badge = await db.badge.findUnique({
       where: { slug: badgeSlug },
       include: {
         userBadges: {
@@ -180,12 +181,12 @@ router.get('/:badgeSlug', async (req: Request, res: Response) => {
     res.json({
       ...badge,
       earnedByCount: badge._count.userBadges,
-      recentEarners: badge.userBadges.map(ub => ({
+      recentEarners: badge.userBadges.map((ub: any) => ({
         user: ub.user,
         earnedAt: ub.earnedAt
       }))
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get badge details error:', error);
     res.status(500).json({ error: 'Failed to get badge details' });
   }
@@ -203,7 +204,7 @@ router.post('/seed', async (req, res) => {
     ];
 
     for (const badge of badges) {
-      await prisma.badge.upsert({
+      await db.badge.upsert({
         where: { slug: badge.slug },
         update: badge,
         create: badge,
@@ -211,7 +212,7 @@ router.post('/seed', async (req, res) => {
     }
 
     res.json({ success: true, message: 'Badges seeded!' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Seed badges error:', error);
     res.status(500).json({ error: 'Failed to seed badges' });
   }
@@ -228,7 +229,7 @@ router.post('/award', authenticateToken, async (req: any, res) => {
 
     const result = await awardBadge(userId, badgeSlug);
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Award badge error:', error);
     res.status(500).json({ error: 'Failed to award badge' });
   }
@@ -245,7 +246,7 @@ router.get('/campground/:campgroundId', async (req: Request, res: Response) => {
     const { getBadgesForCampground } = require('../services/badge.service');
     const badges = await getBadgesForCampground(campgroundId);
     res.json(badges);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground badges error:', error);
     res.status(500).json({ error: 'Failed to get campground badges' });
   }
@@ -264,7 +265,7 @@ router.get('/location-progress/:badgeSlug', authenticateToken, async (req: Reque
     }
     
     res.json(progress);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get location badge progress error:', error);
     res.status(500).json({ error: 'Failed to get badge progress' });
   }

@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/harvest-hosts?lat=&lng=&radius=&type=&state=
 router.get('/', optionalAuth, async (req: any, res) => {
@@ -48,7 +48,7 @@ router.get('/', optionalAuth, async (req: any, res) => {
     }));
 
     res.json(enriched);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch harvest hosts' });
   }
 });
@@ -67,9 +67,9 @@ router.get('/:id', optionalAuth, async (req: any, res) => {
       },
     });
     if (!host) return res.status(404).json({ error: 'Not found' });
-    const avgRating = host.reviews.length ? host.reviews.reduce((a, r) => a + r.rating, 0) / host.reviews.length : null;
+    const avgRating = host.reviews.length ? host.reviews.reduce((a: any, r: any) => a + r.rating, 0) / host.reviews.length : null;
     res.json({ ...host, avgRating });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch host' });
   }
 });
@@ -94,7 +94,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
       },
     });
     res.status(201).json(host);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create harvest host' });
   }
 });
@@ -132,7 +132,7 @@ router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
       include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
     });
     res.json(review);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to submit review' });
   }
 });
@@ -145,7 +145,7 @@ router.post('/scrape', authenticateToken, async (req: any, res) => {
     const { url, networkType } = req.body;
     if (!url) return res.status(400).json({ error: 'URL required' });
 
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
 
     // Store submission for admin review
     await (prisma as any).harvestHostSubmission?.create?.({
@@ -163,7 +163,7 @@ router.post('/scrape', authenticateToken, async (req: any, res) => {
     }).catch(() => null);
 
     res.json({ success: true, message: 'Submitted for review' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Scrape submission error:', error);
     res.status(500).json({ error: 'Failed to submit' });
   }
@@ -173,7 +173,7 @@ router.post('/scrape', authenticateToken, async (req: any, res) => {
 router.post('/:id/claim', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const host = await (prisma as any).harvestHost.findUnique({ where: { id } });
     if (!host) return res.status(404).json({ error: 'Not found' });
     if (host.claimedByUserId) return res.status(400).json({ error: 'Already claimed' });
@@ -191,7 +191,7 @@ router.post('/:id/claim', authenticateToken, async (req: any, res) => {
       }
     }).catch(() => null);
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to claim' });
   }
 });
@@ -200,14 +200,14 @@ router.post('/:id/claim', authenticateToken, async (req: any, res) => {
 router.put('/:id', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const host = await (prisma as any).harvestHost.findUnique({ where: { id } });
     if (!host) return res.status(404).json({ error: 'Not found' });
     const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
     if (host.claimedByUserId !== userId && !isAdmin) return res.status(403).json({ error: 'Not authorized' });
     const updated = await (prisma as any).harvestHost.update({ where: { id }, data: req.body });
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update' });
   }
 });
@@ -227,7 +227,7 @@ router.get('/:id/events', async (req: any, res) => {
 // POST /api/harvest-hosts/:id/events
 router.post('/:id/events', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const host = await (prisma as any).harvestHost.findUnique({ where: { id: req.params.id } });
     if (!host) return res.status(404).json({ error: 'Not found' });
     const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
@@ -250,7 +250,7 @@ router.post('/:id/events', authenticateToken, async (req: any, res) => {
 // DELETE /api/harvest-hosts/:id/events/:eventId
 router.delete('/:id/events/:eventId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const isAdmin = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'].includes(userId);
     const event = await prisma.campgroundEvent.findUnique({ where: { id: req.params.eventId } });
     if (!event) return res.status(404).json({ error: 'Not found' });

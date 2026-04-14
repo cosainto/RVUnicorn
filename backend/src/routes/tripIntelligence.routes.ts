@@ -130,13 +130,13 @@ router.post('/quick-check', authenticateToken, async (req: any, res: Response) =
       try {
         const url = `${HERE_ROUTING_URL}?transportMode=truck&origin=${startLat},${startLon}&destination=${destLat},${destLon}&return=summary&truck[height]=400&truck[width]=250&truck[length]=1200&truck[grossWeight]=10000&apiKey=${HERE_API_KEY}`;
         const routeRes = await fetch(url);
-        const routeData = await routeRes.json() as any;
+        const routeData: any = await routeRes.json() as any;
         if (routeData.routes?.[0]?.sections?.[0]?.summary) {
           const summary = routeData.routes[0].sections[0].summary;
           driveMiles = Math.round(summary.length / 1609.34); // meters to miles
           driveHours = Math.round((summary.duration / 3600) * 10) / 10; // seconds to hours
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('[TripIntelligence] HERE routing error:', e);
       }
     }
@@ -157,12 +157,12 @@ router.post('/quick-check', authenticateToken, async (req: any, res: Response) =
     try {
       const pointRes = await fetch(`https://api.weather.gov/points/${destLat},${destLon}`, { headers: { 'User-Agent': 'rvunicorn.com' } });
       if (pointRes.ok) {
-        const pointData = await pointRes.json();
+        const pointData: any = await pointRes.json();
         const forecastUrl = pointData.properties?.forecast;
         if (forecastUrl) {
           const fcRes = await fetch(forecastUrl, { headers: { 'User-Agent': 'rvunicorn.com' } });
           if (fcRes.ok) {
-            const fcData = await fcRes.json();
+            const fcData: any = await fcRes.json();
             const periods = fcData.properties?.periods || [];
             if (periods[0]) {
               const windMatch = (periods[0].windSpeed || '').match(/(\d+)/);
@@ -332,7 +332,7 @@ router.get('/destination-search', authenticateToken, async (req: any, res: Respo
         const geoRes = await fetch(
           `${HERE_GEOCODE_URL}?q=${encodeURIComponent(q)}&in=countryCode:USA&limit=${8 - results.length}&apiKey=${HERE_API_KEY}`
         );
-        const geoData = await geoRes.json() as any;
+        const geoData: any = await geoRes.json() as any;
         for (const item of (geoData.items || [])) {
           if (!item.position) continue;
           results.push({

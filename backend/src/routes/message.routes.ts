@@ -6,7 +6,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { sendEmail, newMessageEmail } from '../services/email-sms.service';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Hydrate participantIds into compact user summaries so the UI can render
 // "Reply All to Stefanie, Mark, +2" without doing N round trips.
@@ -17,7 +17,7 @@ async function hydrateParticipants(ids: string[]) {
     select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
   });
   // Preserve original order
-  const map = new Map(users.map(u => [u.id, u]));
+  const map = new Map(users.map((u: any) => [u.id, u]));
   return ids.map(id => map.get(id)).filter(Boolean);
 }
 
@@ -29,7 +29,7 @@ async function attachParticipants<T extends { participantIds: string[] }>(messag
     where: { id: { in: allIds } },
     select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
   });
-  const map = new Map(users.map(u => [u.id, u]));
+  const map = new Map(users.map((u: any) => [u.id, u]));
   return messages.map(m => ({
     ...m,
     participants: (m.participantIds || []).map(id => map.get(id)).filter(Boolean),
@@ -39,7 +39,7 @@ async function attachParticipants<T extends { participantIds: string[] }>(messag
 // GET /api/messages/unread-count - Get unread message count (must be before /:messageId)
 router.get('/unread-count', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const count = await prisma.message.count({
       where: {
         recipientId: userId,
@@ -47,7 +47,7 @@ router.get('/unread-count', authenticateToken, async (req: any, res) => {
       }
     });
     res.json({ count });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get unread count error:', error);
     res.status(500).json({ error: 'Failed to get unread count' });
   }
@@ -57,7 +57,7 @@ router.get('/unread-count', authenticateToken, async (req: any, res) => {
 router.get('/', authenticateToken, async (req: any, res) => {
   try {
     const messages = await prisma.message.findMany({
-      where: { recipientId: req.user.id },
+      where: { recipientId: (req as any).user.id },
       include: {
         sender: {
           select: {
@@ -73,7 +73,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     });
 
     res.json(await attachParticipants(messages));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get messages error:', error);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
@@ -83,7 +83,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
 router.get('/sent', authenticateToken, async (req: any, res) => {
   try {
     const messages = await prisma.message.findMany({
-      where: { senderId: req.user.id },
+      where: { senderId: (req as any).user.id },
       include: {
         recipient: {
           select: {
@@ -99,7 +99,7 @@ router.get('/sent', authenticateToken, async (req: any, res) => {
     });
 
     res.json(await attachParticipants(messages));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sent messages error:', error);
     res.status(500).json({ error: 'Failed to fetch sent messages' });
   }
@@ -138,11 +138,11 @@ router.get('/:messageId', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    if (message.recipientId !== req.user.id && message.senderId !== req.user.id) {
+    if (message.recipientId !== (req as any).user.id && message.senderId !== (req as any).user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    if (message.recipientId === req.user.id && !message.isRead) {
+    if (message.recipientId === (req as any).user.id && !message.isRead) {
       await prisma.message.update({
         where: { id: messageId },
         data: { isRead: true },
@@ -151,7 +151,7 @@ router.get('/:messageId', authenticateToken, async (req: any, res) => {
 
     const participants = await hydrateParticipants(message.participantIds || []);
     res.json({ ...message, participants });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get message error:', error);
     res.status(500).json({ error: 'Failed to fetch message' });
   }
@@ -181,7 +181,7 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const senderId: string = req.user.id;
+      const senderId: string = (req as any).user.id;
       const { recipientId, subject, content, inReplyToId } = req.body;
       const rawCc: string[] = Array.isArray(req.body.ccUserIds) ? req.body.ccUserIds : [];
 
@@ -198,7 +198,7 @@ router.post(
       const validCcUsers = ccUserIds.length > 0
         ? await prisma.user.findMany({ where: { id: { in: ccUserIds } }, select: { id: true } })
         : [];
-      const validCcIds = validCcUsers.map(u => u.id);
+      const validCcIds = validCcUsers.map((u: any) => u.id);
 
       // If this is a reply, inherit the parent's threadId so the chain stays linked
       let threadId: string;
@@ -251,7 +251,7 @@ router.post(
       const senderName = `${sender?.firstName || 'Someone'} ${sender?.lastName || ''}`.trim();
 
       Promise.all(
-        created.map(m =>
+        created.map((m: any) =>
           prisma.notification.create({
             data: {
               userId: m.recipientId,
@@ -274,7 +274,7 @@ router.post(
           const emailContent = newMessageEmail({
             recipientName: r.firstName || 'there',
             senderName,
-            senderUsername: req.user.username || '',
+            senderUsername: (req as any).user.username || '',
             preview: content,
           });
           sendEmail({ to: r.email, ...emailContent }).catch((e: any) => console.error('Message email error:', e));
@@ -287,7 +287,7 @@ router.post(
       const primary = created[0];
       const participants = await hydrateParticipants(participantIds);
       res.status(201).json({ ...primary, participants, threadId });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Send message error:', error);
       res.status(500).json({ error: 'Failed to send message' });
     }
@@ -307,7 +307,7 @@ router.delete('/:messageId', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    if (message.recipientId !== req.user.id) {
+    if (message.recipientId !== (req as any).user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -316,7 +316,7 @@ router.delete('/:messageId', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ message: 'Message deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete message error:', error);
     res.status(500).json({ error: 'Failed to delete message' });
   }
@@ -335,7 +335,7 @@ router.put('/:messageId/read', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    if (message.recipientId !== req.user.id) {
+    if (message.recipientId !== (req as any).user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -345,7 +345,7 @@ router.put('/:messageId/read', authenticateToken, async (req: any, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark read error:', error);
     res.status(500).json({ error: 'Failed to mark as read' });
   }

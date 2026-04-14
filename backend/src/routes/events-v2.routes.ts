@@ -6,7 +6,7 @@ import { sendWebPush } from '../utils/webPush';
 import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ── Events CRUD ─────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
     }
 
     res.json({ event });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to create event' });
   }
 });
@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
       take: parseInt(String(limit)),
     });
 
-    const enriched = events.map(e => ({
+    const enriched = events.map((e: any) => ({
       ...e,
       lifecycle: computeEventLifecycle(e),
     }));
@@ -107,14 +107,14 @@ router.get('/:id', async (req, res) => {
         where: { campgroundId: event.campgroundId, isActive: true },
         select: { userId: true },
       });
-      checkIns.forEach(c => activeCheckInUserIds.add(c.userId));
+      checkIns.forEach((c: any) => activeCheckInUserIds.add(c.userId));
     }
     // Also check EventCheckIn records
     const eventCheckIns = await prisma.eventCheckIn.findMany({
       where: { eventId: event.id },
       select: { userId: true },
     });
-    eventCheckIns.forEach(c => activeCheckInUserIds.add(c.userId));
+    eventCheckIns.forEach((c: any) => activeCheckInUserIds.add(c.userId));
 
     const attendeesWithPresence = (event.attendees || []).map((a: any) => ({
       ...a,
@@ -258,7 +258,7 @@ router.get('/:id/waitlist-position', authenticateToken, async (req: any, res: Re
       orderBy: { createdAt: 'asc' },
       select: { userId: true },
     });
-    const position = waitlisted.findIndex(w => w.userId === req.userId) + 1;
+    const position = waitlisted.findIndex((w: any) => w.userId === req.userId) + 1;
     res.json({ position: position > 0 ? position : null, total: waitlisted.length });
   } catch {
     res.status(500).json({ error: 'Failed' });
@@ -280,12 +280,12 @@ router.post('/:id/weather-check', authenticateToken, async (req: any, res: Respo
     try {
       const pointRes = await fetch(`https://api.weather.gov/points/${event.latitude},${event.longitude}`, { headers: { 'User-Agent': 'RVUnicorn/1.0' } });
       if (!pointRes.ok) return res.json({ forecast: null, warning: 'Could not fetch weather data' });
-      const pointData = await pointRes.json();
+      const pointData: any = await pointRes.json();
       const forecastUrl = pointData.properties?.forecast;
       if (!forecastUrl) return res.json({ forecast: null, warning: null });
 
       const forecastRes = await fetch(forecastUrl, { headers: { 'User-Agent': 'RVUnicorn/1.0' } });
-      const forecastData = await forecastRes.json();
+      const forecastData: any = await forecastRes.json();
       const periods = forecastData.properties?.periods || [];
 
       // Check for rain/severe weather near event date
@@ -332,7 +332,7 @@ router.post('/:id/activate-plan-b', authenticateToken, async (req: any, res: Res
     const planBMsg = `Plan B activated for ${event.title}! ${planBDescription || 'Check the event for updated details.'}`;
     if (attendees.length > 0) {
       await prisma.notification.createMany({
-        data: attendees.map(a => ({ userId: a.userId, type: 'EVENT_PLAN_B', content: planBMsg, link: `/trips/${req.params.id}` })),
+        data: attendees.map((a: any) => ({ userId: a.userId, type: 'EVENT_PLAN_B', content: planBMsg, link: `/trips/${req.params.id}` })),
         skipDuplicates: true,
       });
       // Send push to all attendees
@@ -657,7 +657,7 @@ router.post('/:id/location-check', authenticateToken, async (req: any, res: Resp
     }
 
     return res.json({ status: 'FAR', distance });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed' });
   }
 });

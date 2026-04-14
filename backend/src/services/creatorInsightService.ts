@@ -208,7 +208,7 @@ export async function generateCreatorInsights(creatorId: string): Promise<void> 
         },
       });
     }
-  } catch (e) {
+  } catch (e: any) {
     // Fallback: save without AI polish
     for (const ins of rawInsights) {
       await (prisma as any).creatorInsightAction.create({

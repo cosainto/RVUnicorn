@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const uploadToCloudinary = (buffer: Buffer, folder: string): Promise<any> => {
@@ -144,7 +144,7 @@ router.post('/:campgroundId/sections/:sectionId/upload-document', authenticateTo
 // ── Guest: Published kit for checked-in user ──
 router.get('/:campgroundId/guest', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const checkIn = await prisma.checkIn.findFirst({ where: { userId, campgroundId: req.params.campgroundId, isActive: true } });
     if (!checkIn) return res.status(403).json({ error: 'Must be checked in' });
 

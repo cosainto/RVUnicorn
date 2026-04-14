@@ -69,7 +69,7 @@ export function registerOrganizerSockets(io: Server) {
     try {
       const snapshot = await buildActivitySnapshot(campgroundId);
       socket.emit('activity:snapshot', snapshot);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[OrganizerSocket] Snapshot error:', e);
     }
 

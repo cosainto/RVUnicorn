@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ─── Email Preferences ─────────────────────────────────────
 
@@ -18,7 +18,7 @@ router.get('/', authenticateToken, async (req: any, res: Response) => {
     }
 
     res.json(prefs);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[EmailPrefs] GET', err);
     res.status(500).json({ error: 'Failed to load preferences' });
   }
@@ -56,7 +56,7 @@ router.patch('/', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json(prefs);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[EmailPrefs] PATCH', err);
     res.status(500).json({ error: 'Failed to update preferences' });
   }
@@ -83,7 +83,7 @@ router.get('/unsubscribe/:token', async (req: any, res: Response) => {
       return res.redirect(`${base}/settings?unsub=${type}&token=${token}`);
     }
     return res.redirect(`${base}/settings?unsub=all&token=${token}`);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Unsubscribe] GET', err);
     res.status(500).json({ error: 'Failed to process unsubscribe' });
   }
@@ -140,7 +140,7 @@ router.post('/unsubscribe/:token', async (req: any, res: Response) => {
     }
 
     res.json({ success: true, type: type || 'all' });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Unsubscribe] POST', err);
     res.status(500).json({ error: 'Failed to unsubscribe' });
   }

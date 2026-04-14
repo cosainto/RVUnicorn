@@ -85,11 +85,11 @@ async function sendScheduledBroadcasts() {
         });
 
         console.log(`[BroadcastCron] Sent "${broadcast.message.slice(0, 40)}..." → ${recipientIds.length} recipients`);
-      } catch (e) {
+      } catch (e: any) {
         console.error(`[BroadcastCron] Failed to send broadcast ${broadcast.id}:`, e);
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[BroadcastCron] Error:', e);
   }
 }

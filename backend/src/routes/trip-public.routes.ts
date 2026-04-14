@@ -4,7 +4,7 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import crypto from 'crypto';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 function generateSlug(ownerLastName: string, tripTitle: string): string {
   const year = new Date().getFullYear();

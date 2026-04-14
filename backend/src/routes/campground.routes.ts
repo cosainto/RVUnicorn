@@ -8,6 +8,7 @@ import {
 } from '../services/campground-pricing.service';
 
 const router = Router();
+const db = prisma as any;
 
 // Admin email that can delete/edit campgrounds
 const ADMIN_EMAILS = ['wroberts82@yahoo.com', 'deanna@rvunicorn.com'];
@@ -16,7 +17,7 @@ const ADMIN_EMAILS = ['wroberts82@yahoo.com', 'deanna@rvunicorn.com'];
 const isAdmin = async (req: Request, res: Response, next: Function) => {
   try {
     const userId = (req as any).userId;
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       select: { email: true }
     });
@@ -26,7 +27,7 @@ const isAdmin = async (req: Request, res: Response, next: Function) => {
     }
     
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin check error:', error);
     res.status(500).json({ error: 'Failed to verify admin status' });
   }
@@ -62,11 +63,11 @@ router.get('/', async (req: Request, res: Response) => {
     let skipCount = (pageNum - 1) * takeCount;
     if (isDefaultBrowse && pageNum === 1) {
       // Random offset for first page to show different campgrounds each visit
-      const total = await prisma.campground.count({ where });
+      const total = await db.campground.count({ where });
       skipCount = Math.floor(Math.random() * Math.max(0, total - takeCount));
     }
 
-    const campgrounds = await prisma.campground.findMany({
+    const campgrounds = await db.campground.findMany({
       where,
       take: takeCount,
       skip: skipCount,
@@ -110,7 +111,7 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
-    const total = await prisma.campground.count({ where });
+    const total = await db.campground.count({ where });
 
     res.json({
       campgrounds,
@@ -118,7 +119,7 @@ router.get('/', async (req: Request, res: Response) => {
       limit: limit ? parseInt(limit as string) : 50,
       offset: offset ? parseInt(offset as string) : 0, totalPages: Math.ceil(total / (limit ? parseInt(limit as string) : 50)),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campgrounds error:', error);
     res.status(500).json({ error: 'Failed to get campgrounds' });
   }
@@ -129,7 +130,7 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/campgrounds/following - Get campgrounds the user follows
 router.get("/following", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id || req.userId;
+    const userId = (req as any).user?.id || req.userId;
     const now = new Date();
     
     // claimedBy and admins are relations on Campground — not on Follow/CheckIn/Stay.
@@ -138,12 +139,12 @@ router.get("/following", authenticateToken, async (req: any, res) => {
     // we just include the campground summary on each query.
     const campgroundSelect = { id: true, name: true, location: true, city: true, imageUrl: true, state: true };
 
-    const follows = await prisma.campgroundFollow.findMany({
+    const follows = await db.campgroundFollow.findMany({
       where: { userId },
       include: { campground: { select: campgroundSelect } },
     });
 
-    const activeCheckIns = await prisma.checkIn.findMany({
+    const activeCheckIns = await db.checkIn.findMany({
       where: {
         userId,
         isActive: true,
@@ -156,7 +157,7 @@ router.get("/following", authenticateToken, async (req: any, res) => {
       include: { campground: { select: campgroundSelect } },
     });
 
-    const stays = await prisma.stay.findMany({
+    const stays = await db.stay.findMany({
       where: { userId },
       include: { campground: { select: campgroundSelect } },
       orderBy: { startDate: 'desc' },
@@ -165,22 +166,22 @@ router.get("/following", authenticateToken, async (req: any, res) => {
     // Combine and deduplicate. Skip rows whose campground is null (e.g. a
     // HarvestHost-only check-in) — they have no campgroundId to key on.
     const campgroundMap = new Map();
-    activeCheckIns.forEach(c => {
+    activeCheckIns.forEach((c: any) => {
       if (c.campground) campgroundMap.set(c.campground.id, { ...c.campground, source: 'checked-in' });
     });
-    follows.forEach(f => {
+    follows.forEach((f: any) => {
       if (f.campground && !campgroundMap.has(f.campground.id)) {
         campgroundMap.set(f.campground.id, { ...f.campground, source: 'following' });
       }
     });
-    stays.forEach(s => {
+    stays.forEach((s: any) => {
       if (s.campground && !campgroundMap.has(s.campground.id)) {
         campgroundMap.set(s.campground.id, { ...s.campground, source: 'visited' });
       }
     });
     
     res.json(Array.from(campgroundMap.values()));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get followed campgrounds error:", error);
     res.status(500).json({ error: "Failed to get followed campgrounds" });
   }
@@ -190,7 +191,7 @@ router.get('/favorites/my', authenticateToken, async (req: Request, res: Respons
   try {
     const userId = (req as any).userId;
 
-    const favorites = await prisma.campgroundFollow.findMany({
+    const favorites = await db.campgroundFollow.findMany({
       where: { userId },
       include: {
         campground: {
@@ -205,13 +206,13 @@ router.get('/favorites/my', authenticateToken, async (req: Request, res: Respons
 
     // Deduplicate by campground id
     const seen = new Set();
-    const unique = favorites.filter(f => {
+    const unique = favorites.filter((f: any) => {
       if (seen.has(f.campground.id)) return false;
       seen.add(f.campground.id);
       return true;
     });
-    res.json(unique.map(f => f.campground));
-  } catch (error) {
+    res.json(unique.map((f: any) => f.campground));
+  } catch (error: any) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to get favorites' });
   }
@@ -223,7 +224,7 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
     const { id } = req.params;
     const userId = (req as any).userId;
 
-    const existing = await prisma.campgroundFollow.findUnique({
+    const existing = await db.campgroundFollow.findUnique({
       where: {
         userId_campgroundId: {
           userId,
@@ -236,7 +237,7 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
       return res.status(400).json({ error: 'Already following this campground' });
     }
 
-    const follow = await prisma.campgroundFollow.create({
+    const follow = await db.campgroundFollow.create({
       data: {
         userId,
         campgroundId: id,
@@ -244,7 +245,7 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
     });
 
     res.json(follow);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Favorite campground error:', error);
     res.status(500).json({ error: 'Failed to favorite campground' });
   }
@@ -256,7 +257,7 @@ router.delete('/:id/favorite', authenticateToken, async (req: Request, res: Resp
     const { id } = req.params;
     const userId = (req as any).userId;
 
-    await prisma.campgroundFollow.deleteMany({
+    await db.campgroundFollow.deleteMany({
       where: {
         userId,
         campgroundId: id,
@@ -264,7 +265,7 @@ router.delete('/:id/favorite', authenticateToken, async (req: Request, res: Resp
     });
 
     res.json({ message: 'Unfollowed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unfavorite campground error:', error);
     res.status(500).json({ error: 'Failed to unfavorite campground' });
   }
@@ -276,7 +277,7 @@ router.get('/:id/is-favorited', authenticateToken, async (req: Request, res: Res
     const { id } = req.params;
     const userId = (req as any).userId;
 
-    const follow = await prisma.campgroundFollow.findUnique({
+    const follow = await db.campgroundFollow.findUnique({
       where: {
         userId_campgroundId: {
           userId,
@@ -286,7 +287,7 @@ router.get('/:id/is-favorited', authenticateToken, async (req: Request, res: Res
     });
 
     res.json({ isFavorited: !!follow });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check favorite error:', error);
     res.status(500).json({ error: 'Failed to check favorite status' });
   }
@@ -298,7 +299,7 @@ router.get('/:id/followers', optionalAuth, async (req: Request, res: Response) =
     const { id } = req.params;
     const { limit = '20', offset = '0' } = req.query;
 
-    const followers = await prisma.campgroundFollow.findMany({
+    const followers = await db.campgroundFollow.findMany({
       where: { campgroundId: id },
       take: parseInt(limit as string),
       skip: parseInt(offset as string),
@@ -317,16 +318,16 @@ router.get('/:id/followers', optionalAuth, async (req: Request, res: Response) =
       }
     });
 
-    const total = await prisma.campgroundFollow.count({
+    const total = await db.campgroundFollow.count({
       where: { campgroundId: id }
     });
 
     res.json({
-      followers: followers.map(f => f.user),
+      followers: followers.map((f: any) => f.user),
       total,
       hasMore: parseInt(offset as string) + followers.length < total
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground followers error:', error);
     res.status(500).json({ error: 'Failed to get followers' });
   }
@@ -339,7 +340,7 @@ router.put('/:id', authenticateToken, isAdmin, async (req: Request, res: Respons
     const updateData = req.body;
 
     // Check if campground exists
-    const existing = await prisma.campground.findUnique({
+    const existing = await db.campground.findUnique({
       where: { id }
     });
 
@@ -347,13 +348,13 @@ router.put('/:id', authenticateToken, isAdmin, async (req: Request, res: Respons
       return res.status(404).json({ error: 'Campground not found' });
     }
 
-    const campground = await prisma.campground.update({
+    const campground = await db.campground.update({
       where: { id },
       data: updateData
     });
 
     res.json(campground);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update campground error:', error);
     res.status(500).json({ error: 'Failed to update campground' });
   }
@@ -365,7 +366,7 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
     const { id } = req.params;
 
     // Check if campground exists
-    const existing = await prisma.campground.findUnique({
+    const existing = await db.campground.findUnique({
       where: { id }
     });
 
@@ -375,52 +376,52 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
 
     // Handle relations that don't have onDelete: Cascade
     // Nullify optional campground references
-    await prisma.event.updateMany({ 
+    await db.event.updateMany({ 
       where: { campgroundId: id },
       data: { campgroundId: null }
     });
     
-    await prisma.activity.updateMany({ 
+    await db.activity.updateMany({ 
       where: { campgroundId: id },
       data: { campgroundId: null }
     });
     
-    await prisma.creatorContent.updateMany({ 
+    await db.creatorContent.updateMany({ 
       where: { campgroundId: id },
       data: { campgroundId: null }
     });
     
-    await prisma.creatorContentTag.updateMany({ 
+    await db.creatorContentTag.updateMany({ 
       where: { campgroundId: id },
       data: { campgroundId: null }
     });
     
     // Nullify stateVisit campsite reference
-    await prisma.stateVisit.updateMany({ 
+    await db.stateVisit.updateMany({ 
       where: { campsiteId: id },
       data: { campsiteId: null }
     });
 
     // Delete muted entities (uses entityId not campgroundId)
     // MutedEntity has onDelete: Cascade, handled automatically
-    // await prisma.mutedEntity.deleteMany({ 
+    // await db.mutedEntity.deleteMany({ 
     //       where: { entityId: id, entityType: 'CAMPGROUND' } 
     //     });
     //     
     // Delete sticker-related records before deleting stickers
-    const stickers = await prisma.sticker.findMany({ 
+    const stickers = await db.sticker.findMany({ 
       where: { campgroundId: id }, 
       select: { id: true } 
     });
-    const stickerIds = stickers.map(s => s.id);
+    const stickerIds = stickers.map((s: any) => s.id);
     
     if (stickerIds.length > 0) {
-      await prisma.userSticker.deleteMany({ where: { stickerId: { in: stickerIds } } });
-      await prisma.stickerRequest.deleteMany({ where: { stickerId: { in: stickerIds } } });
+      await db.userSticker.deleteMany({ where: { stickerId: { in: stickerIds } } });
+      await db.stickerRequest.deleteMany({ where: { stickerId: { in: stickerIds } } });
     }
 
     // Delete the campground - Prisma cascade will handle the rest
-    await prisma.campground.delete({
+    await db.campground.delete({
       where: { id }
     });
 
@@ -438,7 +439,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const campground = await prisma.campground.findUnique({
+    const campground = await db.campground.findUnique({
       where: { id },
       include: {
         claimedBy: {
@@ -501,7 +502,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.json(campground);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground error:', error);
     res.status(500).json({ error: 'Failed to get campground' });
   }
@@ -517,7 +518,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     const camperMap = new Map();
 
     // Get events at this campground (current and upcoming within 2 weeks)
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       where: {
         campgroundId: id,
         endDate: { gte: now },
@@ -555,7 +556,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     });
 
     // Add event organizers and attendees
-    events.forEach(event => {
+    events.forEach((event: any) => {
       if (event.organizer.showCampingStatus !== false) {
         const isCurrentlyHere = new Date(event.startDate) <= now && new Date(event.endDate) >= now;
         camperMap.set(event.organizer.id, {
@@ -573,7 +574,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
         });
       }
       
-      event.attendees.forEach(attendee => {
+      event.attendees.forEach((attendee: any) => {
         if (attendee.user.showCampingStatus !== false && !camperMap.has(attendee.user.id)) {
           const isCurrentlyHere = new Date(event.startDate) <= now && new Date(event.endDate) >= now;
           camperMap.set(attendee.user.id, {
@@ -594,7 +595,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     });
 
     // Get stays at this campground (current and upcoming within 2 weeks)
-    const stays = await prisma.stay.findMany({
+    const stays = await db.stay.findMany({
       where: {
         campgroundId: id,
         endDate: { gte: now },
@@ -619,7 +620,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     });
 
     // Add stay users
-    stays.forEach(stay => {
+    stays.forEach((stay: any) => {
       if (stay.user.showCampingStatus !== false && !camperMap.has(stay.user.id)) {
         const isCurrentlyHere = new Date(stay.startDate) <= now && new Date(stay.endDate) >= now;
         camperMap.set(stay.user.id, {
@@ -639,7 +640,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     });
 
     // Get state visits at this campground (current and upcoming within 2 weeks)
-    const stateVisits = await prisma.stateVisit.findMany({
+    const stateVisits = await db.stateVisit.findMany({
       where: {
         campsiteId: id,
         OR: [
@@ -664,7 +665,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
     });
 
     // Add state visit users
-    stateVisits.forEach(visit => {
+    stateVisits.forEach((visit: any) => {
       if (visit.user.showCampingStatus !== false && !camperMap.has(visit.user.id)) {
         const endDate = visit.endDate || new Date(new Date(visit.startDate).getTime() + 24 * 60 * 60 * 1000);
         const isCurrentlyHere = new Date(visit.startDate) <= now && endDate >= now;
@@ -697,7 +698,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
       currentCampers: campers.filter(c => c.isCurrentlyHere),
       upcomingCampers: campers.filter(c => !c.isCurrentlyHere),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground campers error:', error);
     res.status(500).json({ error: 'Failed to get campers' });
   }
@@ -707,7 +708,7 @@ router.get('/:id/campers', optionalAuth, async (req: Request, res: Response) => 
 router.get('/:id/regulars', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const checkIns = await prisma.checkIn.groupBy({
+    const checkIns = await db.checkIn.groupBy({
       by: ['userId'],
       where: { campgroundId: id },
       _count: { userId: true },
@@ -715,11 +716,11 @@ router.get('/:id/regulars', async (req: Request, res: Response) => {
       take: 5,
     });
     if (checkIns.length === 0) return res.json({ regulars: [], total: 0 });
-    const users = await prisma.user.findMany({
-      where: { id: { in: checkIns.map(c => c.userId) } },
+    const users = await db.user.findMany({
+      where: { id: { in: checkIns.map((c: any) => c.userId) } },
       select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
     });
-    const total = await prisma.checkIn.groupBy({ by: ['userId'], where: { campgroundId: id }, _count: { userId: true } });
+    const total = await db.checkIn.groupBy({ by: ['userId'], where: { campgroundId: id }, _count: { userId: true } });
     res.json({ regulars: users, total: total.length });
   } catch { res.json({ regulars: [], total: 0 }); }
 });
@@ -748,7 +749,7 @@ router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Respo
       pricePerNight, seasonStart, seasonEnd, minRvYear,
     } = req.body;
 
-    const campground = await prisma.campground.update({
+    const campground = await db.campground.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
@@ -796,7 +797,7 @@ router.put('/:id/admin-edit', authenticateToken, async (req: Request, res: Respo
     });
 
     res.json(campground);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin edit error:', error);
     res.status(500).json({ error: 'Failed to update campground' });
   }
@@ -807,7 +808,7 @@ router.patch('/:id/banner-position', authenticateToken, async (req: any, res) =>
   try {
     const { id } = req.params;
     const { bannerPosition } = req.body;
-    await prisma.campground.update({ where: { id }, data: { bannerPosition } });
+    await db.campground.update({ where: { id }, data: { bannerPosition } });
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -821,7 +822,7 @@ router.get('/:id/pulse-feed', async (req: any, res: any) => {
     const pulseEvents: any[] = [];
 
     // Recent check-ins
-    const checkIns = await prisma.checkIn.findMany({
+    const checkIns = await db.checkIn.findMany({
       where: { campgroundId, createdAt: { gte: since } },
       include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } },
       orderBy: { createdAt: 'desc' },
@@ -838,7 +839,7 @@ router.get('/:id/pulse-feed', async (req: any, res: any) => {
     }
 
     // Recent photos
-    const photos = await prisma.photo.findMany({
+    const photos = await db.photo.findMany({
       where: { event: { campgroundId }, createdAt: { gte: since } },
       include: { user: { select: { id: true, firstName: true } } },
       orderBy: { createdAt: 'desc' },
@@ -891,7 +892,7 @@ router.get('/:id/pulse-feed', async (req: any, res: any) => {
     // Sort by time, take 20
     pulseEvents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     res.json({ events: pulseEvents.slice(0, 20) });
-  } catch (e) {
+  } catch (e: any) {
     res.json({ events: [] });
   }
 });
@@ -914,7 +915,7 @@ router.post("/:id/price-report", authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: "pricePaid must be a number between 0 and 1000" });
     }
 
-    const campground = await prisma.campground.findUnique({
+    const campground = await db.campground.findUnique({
       where: { id: campgroundId },
       select: { id: true },
     });

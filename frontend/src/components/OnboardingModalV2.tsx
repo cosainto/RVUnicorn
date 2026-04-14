@@ -1,7 +1,36 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import api from '../services/api';
+
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+
+const ONBOARDING_STATE_NAME_TO_CODE: Record<string, string> = {
+  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+  'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+  'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+  'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+  'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+  'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+  'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+  'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+  'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+};
+
+const VISITED_STATES = ['OR', 'MT', 'WY', 'SD', 'WI', 'MI', 'NY', 'MA', 'PA', 'IN', 'KY', 'TX', 'NM', 'AZ', 'UT', 'GA', 'FL'];
+
+const CAMPING_FRIENDS = [
+  { name: 'Mike R.', initials: 'MR', spot: 'Zion NP, UT', color: '#E8622A', lng: -113.0, lat: 37.3 },
+  { name: 'Sarah J.', initials: 'SJ', spot: 'Glacier NP, MT', color: '#3B82F6', lng: -113.8, lat: 48.7 },
+  { name: 'The Robinsons', initials: 'TR', spot: 'Joshua Tree, CA', color: '#10B981', lng: -116.0, lat: 34.0 },
+  { name: 'Jenny L.', initials: 'JL', spot: 'Yellowstone, WY', color: '#8B5CF6', lng: -110.6, lat: 44.6 },
+  { name: 'Dave & Kim', initials: 'DK', spot: 'Acadia NP, ME', color: '#EC4899', lng: -68.3, lat: 44.3 },
+  { name: 'Carlos M.', initials: 'CM', spot: 'Big Bend, TX', color: '#F59E0B', lng: -103.3, lat: 29.3 },
+  { name: 'The Nguyens', initials: 'TN', spot: 'Smoky Mts, TN', color: '#06B6D4', lng: -83.5, lat: 35.6 },
+  { name: 'Pam W.', initials: 'PW', spot: 'Olympic NP, WA', color: '#EF4444', lng: -123.5, lat: 47.8 },
+];
 
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png';
 
@@ -74,6 +103,10 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
   const handleComplete = async () => {
     await api.patch('/onboarding/complete', { totalTimeSeconds: Math.round((Date.now() - state.startedAt) / 1000) }).catch(() => {});
+    // Meta Pixel: track onboarding completion
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'Subscribe');
+    }
     dismiss();
   };
 
@@ -222,57 +255,95 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
           {/* Slide 4: Travel Map Mock */}
           {slide === 4 && (
-            <div className="space-y-3">
-              {/* Mock US Map with highlighted states */}
-              <div className="rounded-xl p-4 relative" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
-                <div className="flex items-center justify-between mb-2">
+            <div className="space-y-2">
+              {/* Real US Map with highlighted states + friend avatars */}
+              <div className="rounded-xl p-3 relative" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
+                <div className="flex items-center justify-between mb-1">
                   <div>
                     <p className="text-[12px] font-bold" style={{ color: '#F5F0E8' }}>Deanna's Travel Map</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>14 states visited</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>17 states visited</p>
                   </div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>Live</span>
                 </div>
-                {/* Simplified US map as state dots */}
-                <div className="relative" style={{ height: '120px' }}>
-                  {/* Visited states as gold dots positioned roughly geographically */}
-                  {[
-                    { st: 'OR', x: '8%', y: '15%' }, { st: 'MT', x: '20%', y: '10%' }, { st: 'WY', x: '25%', y: '22%' },
-                    { st: 'SD', x: '35%', y: '18%' }, { st: 'WI', x: '48%', y: '18%' }, { st: 'MI', x: '55%', y: '15%' },
-                    { st: 'NY', x: '78%', y: '18%' }, { st: 'MA', x: '85%', y: '16%' }, { st: 'PA', x: '76%', y: '25%' },
-                    { st: 'IN', x: '55%', y: '32%' }, { st: 'KY', x: '60%', y: '40%' }, { st: 'TX', x: '32%', y: '65%' },
-                    { st: 'NM', x: '22%', y: '55%' }, { st: 'AZ', x: '15%', y: '55%' }, { st: 'UT', x: '18%', y: '35%' },
-                    { st: 'GA', x: '65%', y: '55%' }, { st: 'FL', x: '70%', y: '72%' },
-                  ].map(s => (
-                    <div key={s.st} className="absolute flex flex-col items-center" style={{ left: s.x, top: s.y }}>
-                      <div className="w-3 h-3 rounded-full" style={{ background: '#E8A838', boxShadow: '0 0 6px rgba(232,168,56,0.4)' }} />
-                      <span className="text-[7px] font-bold mt-0.5" style={{ color: 'rgba(232,168,56,0.6)' }}>{s.st}</span>
-                    </div>
-                  ))}
-                  {/* Unvisited states as dim dots */}
-                  {[
-                    { x: '5%', y: '35%' }, { x: '12%', y: '45%' }, { x: '42%', y: '30%' }, { x: '50%', y: '45%' },
-                    { x: '68%', y: '35%' }, { x: '72%', y: '45%' }, { x: '38%', y: '50%' }, { x: '45%', y: '60%' },
-                    { x: '30%', y: '40%' }, { x: '82%', y: '30%' }, { x: '60%', y: '60%' },
-                  ].map((d, i) => (
-                    <div key={i} className="absolute w-2 h-2 rounded-full" style={{ left: d.x, top: d.y, background: 'rgba(255,255,255,0.08)' }} />
-                  ))}
+                <div style={{ margin: '0 -8px' }}>
+                  <ComposableMap
+                    projection="geoAlbersUsa"
+                    projectionConfig={{ scale: 700 }}
+                    width={600}
+                    height={360}
+                    style={{ width: '100%', height: 'auto' }}
+                  >
+                    <Geographies geography={GEO_URL}>
+                      {({ geographies }) =>
+                        geographies.map((geo) => {
+                          const code = ONBOARDING_STATE_NAME_TO_CODE[geo.properties.name];
+                          const isVisited = code && VISITED_STATES.includes(code);
+                          return (
+                            <Geography
+                              key={geo.rsmKey}
+                              geography={geo}
+                              style={{
+                                default: {
+                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
+                                  stroke: 'rgba(245,240,232,0.15)',
+                                  strokeWidth: 0.5,
+                                  outline: 'none',
+                                },
+                                hover: {
+                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
+                                  stroke: 'rgba(245,240,232,0.15)',
+                                  strokeWidth: 0.5,
+                                  outline: 'none',
+                                },
+                                pressed: {
+                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
+                                  stroke: 'rgba(245,240,232,0.15)',
+                                  strokeWidth: 0.5,
+                                  outline: 'none',
+                                },
+                              }}
+                            />
+                          );
+                        })
+                      }
+                    </Geographies>
+                    {/* Friend avatar markers */}
+                    {CAMPING_FRIENDS.map((f) => (
+                      <Marker key={f.name} coordinates={[f.lng, f.lat]}>
+                        <circle cx={0} cy={0} r={11} fill={f.color} stroke="#fff" strokeWidth={2} />
+                        <text
+                          x={0}
+                          y={1}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize={7}
+                          fontWeight="bold"
+                          fill="#fff"
+                          style={{ pointerEvents: 'none' }}
+                        >
+                          {f.initials}
+                        </text>
+                        {/* Live pulse ring */}
+                        <circle cx={0} cy={0} r={11} fill="none" stroke={f.color} strokeWidth={2} opacity={0.5}>
+                          <animate attributeName="r" from="11" to="18" dur="2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                      </Marker>
+                    ))}
+                  </ComposableMap>
                 </div>
               </div>
 
-              {/* Friends camping now */}
+              {/* Friends legend - compact 2-column grid */}
               <div className="rounded-xl p-3" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
-                <p className="text-[11px] font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F4CD}'} Friends Camping Now</p>
-                <div className="space-y-2">
-                  {[
-                    { name: 'Mike R.', spot: 'Zion National Park, UT', color: '#E8622A', emoji: '\u{1F3D5}' },
-                    { name: 'Sarah J.', spot: 'Glacier NP, MT', color: '#3B82F6', emoji: '\u{1F3D4}' },
-                    { name: 'The Robinsons', spot: 'Joshua Tree, CA', color: '#10B981', emoji: '\u{1F335}' },
-                  ].map(f => (
-                    <div key={f.name} className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{ background: f.color, color: 'white' }}>{f.name[0]}</div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[11px] font-medium" style={{ color: '#F5F0E8' }}>{f.name}</span>
-                        <span className="text-[10px] ml-1.5" style={{ color: 'rgba(245,240,232,0.35)' }}>{f.emoji} {f.spot}</span>
+                <p className="text-[11px] font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F4CD}'} 8 Friends Camping Now</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                  {CAMPING_FRIENDS.map(f => (
+                    <div key={f.name} className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold flex-shrink-0" style={{ background: f.color, color: 'white' }}>{f.initials}</div>
+                      <div className="flex-1 min-w-0 truncate">
+                        <span className="text-[10px] font-medium" style={{ color: '#F5F0E8' }}>{f.name}</span>
+                        <span className="text-[9px] ml-1" style={{ color: 'rgba(245,240,232,0.35)' }}>{f.spot}</span>
                       </div>
                       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
                     </div>

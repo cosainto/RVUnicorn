@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/onboarding/status - Check onboarding status
 router.get('/status', authenticateToken, async (req, res) => {
@@ -40,7 +40,7 @@ router.get('/status', authenticateToken, async (req, res) => {
       hasRV: !!user.rvType,
       hasTravelParty: !!user.travelPartyType,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get onboarding status error:', error);
     res.status(500).json({ error: 'Failed to get onboarding status' });
   }
@@ -57,13 +57,13 @@ async function geocodeAddress(city: string, state: string, zipCode?: string): Pr
     const response = await fetch(url, {
       headers: { 'User-Agent': 'RVUnicorn/1.0' }
     });
-    const data = await response.json();
+    const data: any = await response.json();
     
     if (data && data.length > 0) {
       return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Geocoding error:', error);
     return null;
   }
@@ -111,7 +111,7 @@ router.put('/hometown', authenticateToken, async (req, res) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save hometown error:', error);
     res.status(500).json({ error: 'Failed to save hometown' });
   }
@@ -145,7 +145,7 @@ router.put('/rv', authenticateToken, async (req, res) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save RV info error:', error);
     res.status(500).json({ error: 'Failed to save RV info' });
   }
@@ -177,7 +177,7 @@ router.put('/travel-party', authenticateToken, async (req, res) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save travel party error:', error);
     res.status(500).json({ error: 'Failed to save travel party info' });
   }
@@ -213,7 +213,7 @@ router.put('/social-links', authenticateToken, async (req, res) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save social links error:', error);
     res.status(500).json({ error: 'Failed to save social links' });
   }
@@ -240,7 +240,7 @@ router.put('/complete', authenticateToken, async (req, res) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Complete onboarding error:', error);
     res.status(500).json({ error: 'Failed to complete onboarding' });
   }
@@ -259,7 +259,7 @@ router.put('/skip', authenticateToken, async (req, res) => {
     });
 
     res.json({ message: 'Onboarding skipped' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Skip onboarding error:', error);
     res.status(500).json({ error: 'Failed to skip onboarding' });
   }
@@ -301,7 +301,7 @@ router.get('/home-location', authenticateToken, async (req, res) => {
       formattedAddress,
       hasHomeLocation: !!(user.homeCity && user.homeState)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get home location error:', error);
     res.status(500).json({ error: 'Failed to get home location' });
   }

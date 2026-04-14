@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
+const db = prisma as any;
 
 // Activity config
 const ACTIVITY_CONFIG: Record<string, { icon: string; label: string; color?: string }> = {
@@ -155,14 +156,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
     // Get blocked users
     let blockedUserIds = new Set<string>();
     try {
-      const blockedRelations = await prisma.blockedUser.findMany({
+      const blockedRelations = await db.blockedUser.findMany({
         where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
         select: { blockerId: true, blockedId: true }
       });
       blockedUserIds = new Set(
-        blockedRelations.map(b => b.blockerId === userId ? b.blockedId : b.blockerId)
+        blockedRelations.map((b: any) => b.blockerId === userId ? b.blockedId : b.blockerId)
       );
-    } catch (e) {
+    } catch (e: any) {
       console.log('BlockedUser model not available');
     }
 
@@ -355,7 +356,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
                 userHasLikedMedia = !!userReaction;
               }
             }
-          } catch (e) {}
+          } catch (e: any) {}
         }
 
         allActivities.push({
@@ -380,7 +381,6 @@ router.get('/feed', authenticateToken, async (req, res) => {
           mediaLikeCount,
           mediaCommentCount,
           userHasLikedMedia,
-          videoUrl,
           isFriendActivity: friendIdSet.has(activity.userId),
           hasMutualFriendInteraction: !!secondaryUserInfo,
           userHasLiked,
@@ -391,7 +391,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isBasecampActivity: activity.type === 'RECIPE_COMMENTED',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('Activity model error:', error);
     }
 
@@ -425,7 +425,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
 
     // 3. Photos from friends
     try {
-      const photos = await prisma.photo.findMany({
+      const photos = await db.photo.findMany({
         where: {
           userId: { in: visibleUserIds },
           visibility: { in: ['PUBLIC', 'FRIENDS'] },
@@ -446,7 +446,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         },
       });
 
-      photos.forEach((photo) => {
+      photos.forEach((photo: any) => {
         if (blockedUserIds.has(photo.userId)) return;
         // Resolve campground from event or campgroundTags
         const photoCampground = photo.event?.campground || photo.campgroundTags?.[0]?.campground || null;
@@ -475,7 +475,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isBasecampActivity: true,
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('Photo model not available');
     }
 
@@ -519,13 +519,13 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isBasecampActivity: true,
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('PhotoAlbum model not available');
     }
 
     // 5. Trips from friends
     try {
-      const trips = await prisma.tripPlan.findMany({
+      const trips = await db.tripPlan.findMany({
         where: { userId: { in: visibleUserIds } },
         take: limit,
         skip,
@@ -535,7 +535,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         },
       });
 
-      trips.forEach((trip) => {
+      trips.forEach((trip: any) => {
         if (blockedUserIds.has(trip.userId)) return;
         allActivities.push({
           id: 'trip-' + trip.id,
@@ -552,7 +552,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isFriendActivity: friendIdSet.has(trip.userId),
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('TripPlan model not available');
     }
 
@@ -593,7 +593,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isFriendActivity: friendIdSet.has(event.organizerId),
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('Event model error:', error);
     }
 
@@ -630,7 +630,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           isFriendActivity: friendIdSet.has(recipe.userId),
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('Recipe model error:', error);
     }
 
@@ -824,7 +824,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           replyContent: meta.replyContent || meta.commentPreview || null,
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log('BasecampActivity model error:', error);
     }
 
@@ -917,7 +917,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
                 });
                 userHasLiked = !!userLike;
               }
-            } catch (e) { /* comment might not exist */ }
+            } catch (e: any) { /* comment might not exist */ }
           } else if (commentId) {
             try {
               const likes = await prisma.recipeCommentLike.findMany({
@@ -929,7 +929,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
               sourceLikeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
               sourceLikers = likes.map(l => l.user);
               userHasLiked = likes.some(l => l.userId === userId);
-            } catch (e) { /* comment might not exist */ }
+            } catch (e: any) { /* comment might not exist */ }
           } else if (recipeId) {
             const likes = await prisma.recipeLike.findMany({
               where: { recipeId },
@@ -954,10 +954,10 @@ router.get('/feed', authenticateToken, async (req, res) => {
               sourceLikeCount = await prisma.creatorContentLike.count({ where: { contentId } });
               sourceLikers = likes.map(l => l.user);
               userHasLiked = likes.some(l => l.userId === userId);
-            } catch (e) { /* content might not exist */ }
+            } catch (e: any) { /* content might not exist */ }
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         // Silently fail - don't break the feed
       }
 
@@ -973,7 +973,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
     }));
 
     res.json({ feedItems: enrichedActivities, hasMore, page });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get basecamp feed error:', error);
     res.status(500).json({ error: 'Failed to get basecamp feed' });
   }
@@ -983,14 +983,14 @@ router.get('/feed', authenticateToken, async (req, res) => {
 router.get('/trips/upcoming', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const upcomingTrips = await prisma.tripPlan.findMany({
+    const upcomingTrips = await db.tripPlan.findMany({
       where: { userId, startDate: { gte: new Date() } },
       orderBy: { startDate: 'asc' },
       take: 1,
       select: { id: true, name: true, startDate: true, endDate: true },
     });
     res.json(upcomingTrips);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get upcoming trips error:', error);
     res.json([]);
   }
@@ -1438,7 +1438,7 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
     });
 
     res.json({ feedItems, hasMore: allActivities.length === limit });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground feed error:', error);
     res.status(500).json({ error: 'Failed to get campground feed' });
   }
@@ -1702,7 +1702,7 @@ router.post('/activity/:id/react', authenticateToken, async (req, res) => {
       sourceLikeCount,
       sourceLikers
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('React to activity error:', error);
     res.status(500).json({ error: 'Failed to react to activity' });
   }
@@ -1741,13 +1741,13 @@ router.delete('/activity/:id', authenticateToken, async (req, res) => {
             // Delete the media item
             await prisma.media.delete({ where: { id: meta.mediaId } }).catch(() => {});
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log('Media cleanup skipped:', e);
         }
       }
 
       // Delete related notifications
-      await prisma.notification.deleteMany({
+      await db.notification.deleteMany({
         where: { relatedId: id }
       }).catch(() => {});
 
@@ -1757,7 +1757,7 @@ router.delete('/activity/:id', authenticateToken, async (req, res) => {
     }
 
     return res.status(404).json({ error: 'Activity not found' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete activity error:', error);
     res.status(500).json({ error: 'Failed to delete activity' });
   }
@@ -1894,7 +1894,7 @@ router.get('/campground-official-feed', authenticateToken, async (req, res) => {
     // Get campground details for check-in counts
     const campgroundsWithCheckIns = await prisma.campground.findMany({
       where: {
-        id: { in: checkInCounts.filter(c => c._count.id > 0).map(c => c.campgroundId) },
+        id: { in: checkInCounts.filter((c: any) => c._count.id > 0).map((c: any) => c.campgroundId).filter(Boolean) as string[] },
       },
       select: { id: true, name: true, location: true, state: true, imageUrl: true },
     });
@@ -1922,7 +1922,7 @@ router.get('/campground-official-feed', authenticateToken, async (req, res) => {
 
     // Merge and sort all items
     const allItems = [...announcementItems, ...eventItems, ...postItems, ...checkInItems]
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         // Pinned items first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -1932,7 +1932,7 @@ router.get('/campground-official-feed', authenticateToken, async (req, res) => {
       .slice(0, limit);
 
     res.json({ feedItems: allItems, hasMore: allItems.length === limit });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground official feed error:', error);
     res.status(500).json({ error: 'Failed to get campground updates' });
   }

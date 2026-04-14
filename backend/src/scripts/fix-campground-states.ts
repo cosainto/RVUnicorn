@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // US State bounding boxes (approximate) - [minLat, maxLat, minLng, maxLng]
 const STATE_BOUNDS: Record<string, [number, number, number, number]> = {

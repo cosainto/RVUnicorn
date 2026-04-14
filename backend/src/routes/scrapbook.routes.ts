@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { nanoid } from 'nanoid';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // GET /api/scrapbook/:eventId - Get all pinned photos for a trip
@@ -30,7 +30,7 @@ router.get('/:eventId', async (req, res) => {
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
     res.json(pins);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get scrapbook error:', error);
     res.status(500).json({ error: 'Failed to fetch scrapbook' });
   }
@@ -49,7 +49,7 @@ router.get('/:eventId/photos', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(photos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event photos error:', error);
     res.status(500).json({ error: 'Failed to fetch photos' });
   }
@@ -132,7 +132,7 @@ router.delete('/:eventId/pin/:photoId', authenticateToken, async (req, res) => {
 
     await prisma.scrapbookPin.delete({ where: { eventId_photoId: { eventId, photoId } } });
     res.json({ message: 'Photo unpinned' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unpin photo error:', error);
     res.status(500).json({ error: 'Failed to unpin photo' });
   }
@@ -156,7 +156,7 @@ router.patch('/:eventId/pin/:photoId', authenticateToken, async (req, res) => {
       data: { caption },
     });
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pin error:', error);
     res.status(500).json({ error: 'Failed to update pin' });
   }
@@ -183,7 +183,7 @@ router.patch('/:eventId/pin/:photoId/tag', authenticateToken, async (req, res) =
       data: { momentTag: momentTag || null },
     });
     res.json(updated);
-  } catch (e) {
+  } catch (e: any) {
     console.error('Update moment tag error:', e);
     res.status(500).json({ error: 'Failed to update tag' });
   }
@@ -210,7 +210,7 @@ router.post('/:eventId/share', authenticateToken, async (req, res) => {
     const token = nanoid(10);
     await prisma.event.update({ where: { id: eventId }, data: { scrapbookPublic: true, scrapbookShareToken: token } });
     res.json({ shareUrl: `https://www.rvunicorn.com/s/${token}` });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Share scrapbook error:', e);
     res.status(500).json({ error: 'Failed to share' });
   }
@@ -226,7 +226,7 @@ router.delete('/:eventId/share', authenticateToken, async (req, res) => {
 
     await prisma.event.update({ where: { id: eventId }, data: { scrapbookPublic: false, scrapbookShareToken: null } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Unshare scrapbook error:', e);
     res.status(500).json({ error: 'Failed to unshare' });
   }
@@ -301,7 +301,7 @@ router.get('/public/:token', async (req, res) => {
       })),
       totalPins: event.scrapbookPins.length,
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Public scrapbook error:', e);
     res.status(500).json({ error: 'Failed to load scrapbook' });
   }
@@ -324,7 +324,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
         where: { id: { in: cached.map((s: any) => s.photoId) } },
         select: { id: true, imageUrl: true, caption: true },
       });
-      const photoMap = Object.fromEntries(photos.map(p => [p.id, p]));
+      const photoMap = Object.fromEntries(photos.map((p: any) => [p.id, p]));
       return res.json({
         suggestions: cached.map((s: any) => ({ ...s, photo: photoMap[s.photoId] })),
       });
@@ -342,7 +342,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     });
 
     // Exclude already-pinned photos
-    const unpinned = photos.filter(p => p.scrapbookPins.length === 0);
+    const unpinned = photos.filter((p: any) => p.scrapbookPins.length === 0);
     if (unpinned.length === 0) return res.json({ suggestions: [] });
 
     // Score photos
@@ -354,7 +354,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     const tripEnd = event?.endDate ? new Date(event.endDate).getTime() : Date.now();
     const tripDuration = tripEnd - tripStart || 1;
 
-    const scored = unpinned.map(p => {
+    const scored = unpinned.map((p: any) => {
       let score = 0;
       // Engagement
       score += Math.min(3, (p.likes?.length || 0));
@@ -367,8 +367,8 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
 
     // Ensure time distribution
     const byThird: Record<number, typeof scored> = { 0: [], 1: [], 2: [] };
-    scored.forEach(p => { const t = Math.min(2, Math.max(0, p.third)); byThird[t].push(p); });
-    for (const t of [0, 1, 2]) byThird[t].sort((a, b) => b.score - a.score);
+    scored.forEach((p: any) => { const t = Math.min(2, Math.max(0, p.third)); byThird[t].push(p); });
+    for (const t of [0, 1, 2]) byThird[t].sort((a: any, b: any) => b.score - a.score);
 
     // Select up to 8: 2-3 from each third
     const selected: typeof scored = [];
@@ -378,7 +378,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     }
     // Fill remaining from highest scored
     if (selected.length < 8) {
-      const remaining = scored.filter(p => !selected.find(s => s.id === p.id)).sort((a, b) => b.score - a.score);
+      const remaining = scored.filter((p: any) => !selected.find((s: any) => s.id === p.id)).sort((a: any, b: any) => b.score - a.score);
       selected.push(...remaining.slice(0, 8 - selected.length));
     }
     const final = selected.slice(0, 8);
@@ -386,7 +386,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     // Ask Hitch for reasons
     let reasons: Record<string, string> = {};
     try {
-      const photoData = final.map(p => ({ photoId: p.id, uploadedAt: p.createdAt, campgroundName: event?.campground?.name, likeCount: p.likes?.length || 0 }));
+      const photoData = final.map((p: any) => ({ photoId: p.id, uploadedAt: p.createdAt, campgroundName: event?.campground?.name, likeCount: p.likes?.length || 0 }));
       const aiRes = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
@@ -411,7 +411,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     }
 
     res.json({ suggestions });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Suggest pins error:', e);
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
@@ -461,7 +461,7 @@ router.post('/:eventId/suggest/:photoId/dismiss', authenticateToken, async (req,
       data: { accepted: false },
     });
     res.json({ dismissed: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Dismiss suggestion error:', e);
     res.status(500).json({ error: 'Failed to dismiss' });
   }
@@ -494,7 +494,7 @@ router.post('/:eventId/suggest/accept-all', authenticateToken, async (req, res) 
     }
 
     res.json({ pinned, skipped });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Accept all error:', e);
     res.status(500).json({ error: 'Failed to accept all' });
   }

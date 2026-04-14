@@ -82,7 +82,7 @@ export async function recordCampgroundVisit(
         visibility: 'PUBLIC',
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     // Non-fatal — visit fanout failures shouldn't break event creation
     console.error('[visit-stats] recordCampgroundVisit failed:', err);
   }
@@ -125,7 +125,7 @@ export async function fanOutVisitsToAttendees(eventId: string): Promise<void> {
     for (const userId of userIds) {
       await recordCampgroundVisit(userId, event, event.campground);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[visit-stats] fanOutVisitsToAttendees failed:', err);
   }
 }

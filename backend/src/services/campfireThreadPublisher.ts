@@ -144,7 +144,7 @@ export async function publishCampfireThread(threadId: string): Promise<void> {
   // Tag experts
   try {
     await tagExperts(threadId);
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireThread] Expert tagging failed:', e);
   }
 

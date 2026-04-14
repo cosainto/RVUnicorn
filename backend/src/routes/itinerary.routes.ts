@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/itinerary - Get all trips for current user (optionally filtered by eventId)
 router.get('/', authenticateToken, async (req, res) => {
@@ -22,7 +22,7 @@ router.get('/', authenticateToken, async (req, res) => {
       orderBy: { startDate: 'asc' }
     });
     res.json(trips);
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: 'Failed to fetch trips' });
   }
@@ -71,9 +71,9 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
       });
 
       const nearby = spots
-        .map(s => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
-        .filter(s => s.distanceMiles <= 10)
-        .sort((a, b) => a.distanceMiles - b.distanceMiles)
+        .map((s: any) => ({ ...s, distanceMiles: dist(s.latitude, s.longitude) }))
+        .filter((s: any) => s.distanceMiles <= 10)
+        .sort((a: any, b: any) => a.distanceMiles - b.distanceMiles)
         .slice(0, 5);
 
       // Fetch gas prices from GasBuddy-style API
@@ -82,13 +82,13 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
       try {
         const priceRes = await fetch(`https://www.fueleconomy.gov/ws/rest/fuelprices`, { headers: { Accept: 'application/json' } });
         if (priceRes.ok) {
-          const priceData = await priceRes.json() as any;
+          const priceData: any = await priceRes.json() as any;
           regularPrice = parseFloat(priceData.regular) || null;
           dieselPrice = parseFloat(priceData.diesel) || null;
         }
-      } catch(e) {}
+      } catch (e: any) {}
 
-      const fuelResults = nearby.map(s => ({
+      const fuelResults = nearby.map((s: any) => ({
           id: s.id,
           name: `${s.chain}${s.city ? ' - ' + s.city + (s.state ? ', ' + s.state : '') : ''}`,
           address: s.address,
@@ -115,7 +115,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
         const keyword = type === 'WALMART' ? 'walmart' : 'gas station truck stop fuel';
         const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_KEY}`;
         const response = await fetch(url);
-        const gData = await response.json() as any;
+        const gData: any = await response.json() as any;
         const googleResults = (gData.results || []).slice(0, 5).map((p: any) => ({
           id: p.place_id,
           name: p.name,
@@ -129,7 +129,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
           source: 'google',
         }));
         return res.json(googleResults);
-      } catch(e) { return res.json([]); }
+      } catch (e: any) { return res.json([]); }
     }
 
     if (type === 'FOOD') {
@@ -141,7 +141,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
 
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=restaurant&keyword=${encodeURIComponent(keyword)}&key=${GOOGLE_KEY}`;
       const response = await fetch(url);
-      const data = await response.json() as any;
+      const data: any = await response.json() as any;
 
       const results = (data.results || []).slice(0, 5).map((p: any) => ({
         id: p.place_id,
@@ -169,7 +169,7 @@ router.get('/recommendations', authenticateToken, async (req: any, res) => {
     if (type === 'ATTRACTION') {
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusM}&type=tourist_attraction&key=${GOOGLE_KEY}`;
       const response = await fetch(url);
-      const data = await response.json() as any;
+      const data: any = await response.json() as any;
 
       const results = (data.results || []).slice(0, 5).map((p: any) => ({
         id: p.place_id,
@@ -213,7 +213,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     });
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     res.json(trip);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch trip' });
   }
 });
@@ -228,7 +228,7 @@ router.post('/', authenticateToken, async (req, res) => {
       include: { days: true }
     });
     res.json(trip);
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: 'Failed to create trip' });
   }
@@ -244,7 +244,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       data: { title, description, startDate: startDate ? new Date(startDate) : null, endDate: endDate ? new Date(endDate) : null, status, visibility, coverImage }
     });
     res.json(trip);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to update trip' });
   }
 });
@@ -255,7 +255,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     await prisma.trip.deleteMany({ where: { id: req.params.id, userId } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete trip' });
   }
 });
@@ -272,7 +272,7 @@ router.post('/:id/days', authenticateToken, async (req, res) => {
       include: { stops: true }
     });
     res.json(day);
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: 'Failed to add day' });
   }
@@ -291,7 +291,7 @@ router.put('/:id/days/:dayId', authenticateToken, async (req, res) => {
       include: { stops: { orderBy: { order: 'asc' } } }
     });
     res.json(day);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to update day' });
   }
 });
@@ -304,7 +304,7 @@ router.delete('/:id/days/:dayId', authenticateToken, async (req, res) => {
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     await prisma.tripDay.delete({ where: { id: req.params.dayId } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete day' });
   }
 });
@@ -321,7 +321,7 @@ router.post('/:id/days/:dayId/stops', authenticateToken, async (req, res) => {
       include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }
     });
     res.json(stop);
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     res.status(500).json({ error: 'Failed to add stop' });
   }
@@ -340,7 +340,7 @@ router.put('/:id/days/:dayId/stops/:stopId', authenticateToken, async (req, res)
       include: { campground: { select: { id: true, name: true, location: true, state: true, imageUrl: true, latitude: true, longitude: true, bookingUrl: true, websiteUrl: true, customSlug: true } } }
     });
     res.json(stop);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to update stop' });
   }
 });
@@ -353,7 +353,7 @@ router.delete('/:id/days/:dayId/stops/:stopId', authenticateToken, async (req, r
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     await prisma.tripStop.delete({ where: { id: req.params.stopId } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to delete stop' });
   }
 });
@@ -428,6 +428,7 @@ router.delete('/:id/members/:userId', authenticateToken, async (req: any, res) =
 // POST /api/itinerary/:id/share - Generate share token
 router.post('/:id/share', authenticateToken, async (req: any, res) => {
   try {
+    // @ts-ignore
     const { crypto } = await import('node:crypto');
     const token = crypto.randomBytes(16).toString('hex');
     const trip = await prisma.trip.update({

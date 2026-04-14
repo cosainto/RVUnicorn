@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const createSlug = (title: string): string => {
   return title
@@ -44,7 +44,7 @@ const createActivity = async (data: {
       }
     });
     console.log('Activity created:', activity.id);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create activity error:', error);
   }
 };
@@ -57,10 +57,10 @@ const getThreadScore = async (threadId: string, userId?: string) => {
       where: { threadId },
       select: { voteType: true, userId: true }
     });
-    const upvotes = votes.filter(v => v.voteType === 'UP').length;
-    const downvotes = votes.filter(v => v.voteType === 'DOWN').length;
+    const upvotes = votes.filter((v: any) => v.voteType === 'UP').length;
+    const downvotes = votes.filter((v: any) => v.voteType === 'DOWN').length;
     const score = upvotes - downvotes;
-    const userVote = userId ? votes.find(v => v.userId === userId)?.voteType || null : null;
+    const userVote = userId ? votes.find((v: any) => v.userId === userId)?.voteType || null : null;
     return { score, userVote };
   } catch {
     return { score: 0, userVote: null };
@@ -145,7 +145,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
 
     // Calculate popularity score for each thread
     const now = new Date();
-    const formattedThreads = threads.map(t => {
+    const formattedThreads = threads.map((t: any) => {
       // Time decay: hours since last activity
       const lastActivity = new Date(t.updatedAt);
       const hoursSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
@@ -169,7 +169,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
     
     // Sort by popularity if requested
     if (usePopularityScore) {
-      formattedThreads.sort((a, b) => {
+      formattedThreads.sort((a: any, b: any) => {
         // Pinned threads always first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -180,7 +180,7 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
     // Enrich with vote scores
     const enrichedThreads = await enrichThreadsWithScores(formattedThreads, userId);
     res.json(enrichedThreads);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get threads error:', error);
     res.status(500).json({ error: 'Failed to get threads' });
   }
@@ -205,8 +205,8 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         where: { userId },
         select: { threadId: true }
       });
-      ignoredThreadIds = ignored.map(i => i.threadId);
-    } catch (e) {
+      ignoredThreadIds = ignored.map((i: any) => i.threadId);
+    } catch (e: any) {
       // ThreadIgnore model might not exist yet
       console.log('ThreadIgnore model not found, skipping ignore filter');
     }
@@ -221,7 +221,7 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
       },
       select: { initiatorId: true, receiverId: true }
     });
-    const friendIds = friendships.map(f => 
+    const friendIds = friendships.map((f: any) =>
       f.initiatorId === userId ? f.receiverId : f.initiatorId
     );
 
@@ -232,8 +232,8 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         where: { followerId: userId },
         select: { creatorId: true }
       });
-      followedCreatorIds = creatorFollows.map(f => f.creatorId);
-    } catch (e) {
+      followedCreatorIds = creatorFollows.map((f: any) => f.creatorId);
+    } catch (e: any) {
       console.log('CreatorFollow not found');
     }
 
@@ -244,8 +244,8 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         where: { userId },
         select: { campgroundId: true }
       });
-      followedCampgroundIds = campgroundFollows.map(f => f.campgroundId);
-    } catch (e) {
+      followedCampgroundIds = campgroundFollows.map((f: any) => f.campgroundId);
+    } catch (e: any) {
       console.log('CampgroundFollow not found');
     }
 
@@ -264,8 +264,8 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         select: { campgroundId: true }
       });
       tripCampgroundIds = savedTrips
-        .filter(t => t.campgroundId)
-        .map(t => t.campgroundId as string);
+        .filter((t: any) => t.campgroundId)
+        .map((t: any) => t.campgroundId as string);
 
       // Also check Trip model
       const trips = await prisma.trip.findMany({
@@ -277,9 +277,9 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
       });
       tripCampgroundIds = [
         ...tripCampgroundIds,
-        ...trips.filter(t => t.campgroundId).map(t => t.campgroundId as string)
+        ...trips.filter((t: any) => t.campgroundId).map((t: any) => t.campgroundId as string)
       ];
-    } catch (e) {
+    } catch (e: any) {
       console.log('Trip models not found');
     }
 
@@ -294,9 +294,9 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
         select: { threadId: true }
       });
       mentionedThreadIds = mentions
-        .filter(m => m.threadId)
-        .map(m => m.threadId as string);
-    } catch (e) {
+        .filter((m: any) => m.threadId)
+        .map((m: any) => m.threadId as string);
+    } catch (e: any) {
       console.log('Mention model not found');
     }
 
@@ -347,7 +347,7 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
     });
 
     // Format and add context about WHY each thread is in the feed
-    const formattedThreads = threads.map(t => {
+    const formattedThreads = threads.map((t: any) => {
       let feedReason = 'community';
       
       if (t.authorId === userId) {
@@ -373,7 +373,7 @@ router.get('/feed', authenticateToken, async (req: Request, res: Response) => {
     });
 
     res.json(formattedThreads);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get feed error:', error);
     res.status(500).json({ error: 'Failed to get feed' });
   }
@@ -458,7 +458,7 @@ router.get('/ignored', authenticateToken, async (req: Request, res: Response) =>
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(ignored.map(i => ({ ...i.thread, ignoredAt: i.createdAt })));
+    res.json(ignored.map((i: any) => ({ ...i.thread, ignoredAt: i.createdAt })));
   } catch (error: any) {
     if (error.code === 'P2021' || error.message?.includes('does not exist')) {
       return res.json([]); // Return empty if model doesn't exist
@@ -495,8 +495,8 @@ router.get('/favorites', authenticateToken, async (req: Request, res: Response) 
       }
     });
 
-    res.json(favorites.map(f => ({ ...f.thread, isFavorited: true })));
-  } catch (error) {
+    res.json(favorites.map((f: any) => ({ ...f.thread, isFavorited: true })));
+  } catch (error: any) {
     console.error('Get favorites error:', error);
     res.status(500).json({ error: 'Failed to get favorites' });
   }
@@ -508,7 +508,7 @@ router.get('/tags/all', async (req: Request, res: Response) => {
       orderBy: { name: 'asc' }
     });
     res.json(tags);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get tags error:', error);
     res.status(500).json({ error: 'Failed to get tags' });
   }
@@ -567,7 +567,7 @@ router.get('/user/:userId', optionalAuth, async (req: Request, res: Response) =>
 
     const enriched = await enrichThreadsWithScores(formatted, viewerId);
     res.json(enriched);
-  } catch (error) {
+  } catch (error: any) {
     console.error('User threads error:', error);
     res.status(500).json({ error: 'Failed to fetch user threads' });
   }
@@ -643,7 +643,8 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     formattedPosts.forEach((post: any) => {
       const postWithReplies = postMap.get(post.id);
       if (post.parentId && postMap.has(post.parentId)) {
-        postMap.get(post.parentId).replies.push(postWithReplies);
+        // @ts-ignore
+        (postMap.get(post.parentId) as any).replies.push(postWithReplies);
       } else if (!post.parentId) {
         rootPosts.push(postWithReplies);
       }
@@ -657,7 +658,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     };
 
     res.json(formattedThread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get thread error:', error);
     res.status(500).json({ error: 'Failed to get thread' });
   }
@@ -745,7 +746,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       }
     });
     
-    const friendIds = friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    const friendIds = friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
     
     for (const friendId of friendIds) {
       await prisma.basecampActivity.create({
@@ -792,8 +793,8 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
       // Combine and dedupe user IDs
       const userIdsToNotify = [...new Set([
-        ...followers.map(f => f.userId),
-        ...checkedInUsers.map(u => u.id)
+        ...followers.map((f: any) => f.userId),
+        ...checkedInUsers.map((u: any) => u.id)
       ])];
 
       // Create basecamp activity for each user
@@ -818,7 +819,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.status(201).json(thread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create thread error:', error);
     res.status(500).json({ error: 'Failed to create thread' });
   }
@@ -955,7 +956,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
       }
     });
     
-    const friendIdsForComment = friendshipsForComment.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    const friendIdsForComment = friendshipsForComment.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
     
     for (const friendId of friendIdsForComment) {
       // Don't notify if they're the thread author (already notified above)
@@ -1029,7 +1030,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
       },
       select: { userId: true }
     });
-    const ignoredUserIds = ignoredByUsers.map(i => i.userId);
+    const ignoredUserIds = ignoredByUsers.map((i: any) => i.userId);
 
     // Create basecamp activity for followers
     for (const favorite of threadFavorites) {
@@ -1089,7 +1090,7 @@ router.post('/:id/posts', authenticateToken, async (req: Request, res: Response)
     }
 
     res.status(201).json({ ...post, isLiked: false });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create post error:', error);
     res.status(500).json({ error: 'Failed to create post' });
   }
@@ -1116,7 +1117,7 @@ router.post('/posts/:postId/like', authenticateToken, async (req: Request, res: 
       });
       res.json({ liked: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Like post error:', error);
     res.status(500).json({ error: 'Failed to like post' });
   }
@@ -1143,7 +1144,7 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
       });
       res.json({ favorited: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Favorite thread error:', error);
     res.status(500).json({ error: 'Failed to favorite thread' });
   }
@@ -1194,7 +1195,7 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
     await prisma.thread.delete({ where: { id } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete thread error:', error);
     res.status(500).json({ error: 'Failed to delete thread' });
   }
@@ -1220,7 +1221,7 @@ router.delete('/posts/:postId', authenticateToken, async (req: Request, res: Res
     await prisma.threadPost.delete({ where: { id: postId } });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete post error:', error);
     res.status(500).json({ error: 'Failed to delete post' });
   }
@@ -1309,7 +1310,7 @@ router.get('/active-trip', authenticateToken, async (req: Request, res: Response
     } else {
       res.json({ campground: null });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Active trip error:', error);
     res.json({ campground: null });
   }
@@ -1355,7 +1356,7 @@ router.post('/:threadId/posts/:postId/vote', authenticateToken, async (req: Requ
       });
       return res.json({ voteType: created.voteType });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Vote post error:', error);
     res.status(500).json({ error: 'Failed to vote on post' });
   }

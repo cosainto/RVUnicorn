@@ -4,6 +4,7 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/recipes - Get all recipes with privacy filtering (Community Box - NO PRIVATE)
 // GET /api/recipes/saved - Get current user's saved recipes
@@ -11,7 +12,7 @@ router.get('/saved', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
 
-    const savedRecipes = await prisma.savedRecipe.findMany({
+    const savedRecipes = await db.savedRecipe.findMany({
       where: { userId },
       include: {
         recipe: {
@@ -38,7 +39,7 @@ router.get('/saved', authenticateToken, async (req, res) => {
     });
 
     res.json(savedRecipes);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get saved recipes error:', error);
     res.status(500).json({ error: 'Failed to fetch saved recipes' });
   }
@@ -66,7 +67,7 @@ router.get('/', optionalAuth, async (req, res) => {
 
     if (currentUserId) {
       // Get user's accepted friendships
-      const friendships = await prisma.friendship.findMany({
+      const friendships = await db.friendship.findMany({
         where: {
           OR: [
             { initiatorId: currentUserId, status: 'ACCEPTED' },
@@ -75,7 +76,7 @@ router.get('/', optionalAuth, async (req, res) => {
         }
       });
 
-      friendIds = friendships.map(f => 
+      friendIds = friendships.map((f: any) => 
         f.initiatorId === currentUserId ? f.receiverId : f.initiatorId
       );
 
@@ -151,7 +152,7 @@ router.get('/', optionalAuth, async (req, res) => {
           break;
         case 'by_user':
           if (creatorUsername) {
-            const targetUser = await prisma.user.findUnique({
+            const targetUser = await db.user.findUnique({
               where: { username: creatorUsername as string },
               select: { id: true }
             });
@@ -171,26 +172,26 @@ router.get('/', optionalAuth, async (req, res) => {
           andConditions.push({ userId: currentUserId });
           break;
         case 'liked':
-          const likedRecipes = await prisma.recipeLike.findMany({
+          const likedRecipes = await db.recipeLike.findMany({
             where: { userId: currentUserId },
             select: { recipeId: true }
           });
-          relationshipRecipeIds = likedRecipes.map(l => l.recipeId);
+          relationshipRecipeIds = likedRecipes.map((l: any) => l.recipeId);
           break;
         case 'saved':
-          const savedRecipes = await prisma.savedRecipe.findMany({
+          const savedRecipes = await db.savedRecipe.findMany({
             where: { userId: currentUserId },
             select: { recipeId: true }
           });
-          relationshipRecipeIds = savedRecipes.map(s => s.recipeId);
+          relationshipRecipeIds = savedRecipes.map((s: any) => s.recipeId);
           break;
         case 'commented':
-          const commentedRecipes = await prisma.recipeComment.findMany({
+          const commentedRecipes = await db.recipeComment.findMany({
             where: { userId: currentUserId },
             select: { recipeId: true },
             distinct: ['recipeId']
           });
-          relationshipRecipeIds = commentedRecipes.map(c => c.recipeId);
+          relationshipRecipeIds = commentedRecipes.map((c: any) => c.recipeId);
           break;
       }
     }
@@ -212,7 +213,7 @@ router.get('/', optionalAuth, async (req, res) => {
     }
     // For most_liked, most_commented, most_saved, trending - we'll sort after fetching
 
-    const recipes = await prisma.recipe.findMany({
+    const recipes = await db.recipe.findMany({
       where: whereClause,
       take: limit ? parseInt(limit as string) : 24,
       include: {
@@ -238,23 +239,23 @@ router.get('/', optionalAuth, async (req, res) => {
     });
 
     // Enrich recipes with additional data - batched to avoid N+1
-    const recipeIds = recipes.map(r => r.id);
+    const recipeIds = recipes.map((r: any) => r.id);
 
     const [allRatings, allSaved, allLiked] = await Promise.all([
-      prisma.recipeRating.findMany({ where: { recipeId: { in: recipeIds } }, select: { recipeId: true, rating: true } }),
-      currentUserId ? prisma.savedRecipe.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true, favorite: true } }) : Promise.resolve([]),
-      currentUserId ? prisma.recipeLike.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true } }) : Promise.resolve([]),
+      db.recipeRating.findMany({ where: { recipeId: { in: recipeIds } }, select: { recipeId: true, rating: true } }),
+      currentUserId ? db.savedRecipe.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true, favorite: true } }) : Promise.resolve([]),
+      currentUserId ? db.recipeLike.findMany({ where: { userId: currentUserId, recipeId: { in: recipeIds } }, select: { recipeId: true } }) : Promise.resolve([]),
     ]);
 
-    const ratingsByRecipe = recipeIds.reduce((acc, id) => {
-      const r = allRatings.filter(r => r.recipeId === id);
-      acc[id] = r.length > 0 ? r.reduce((s, x) => s + x.rating, 0) / r.length : 0;
+    const ratingsByRecipe = recipeIds.reduce((acc: any, id: any) => {
+      const r = allRatings.filter((r: any) => r.recipeId === id);
+      acc[id] = r.length > 0 ? r.reduce((s: any, x: any) => s + x.rating, 0) / r.length : 0;
       return acc;
     }, {} as Record<string, number>);
-    const savedByRecipe = Object.fromEntries(allSaved.map(s => [s.recipeId, s]));
-    const likedByRecipe = Object.fromEntries(allLiked.map(l => [l.recipeId, true]));
+    const savedByRecipe = Object.fromEntries(allSaved.map((s: any) => [s.recipeId, s]));
+    const likedByRecipe = Object.fromEntries(allLiked.map((l: any) => [l.recipeId, true]));
 
-    const recipesWithRatings = recipes.map((recipe) => {
+    const recipesWithRatings = recipes.map((recipe: any) => {
         const savedRecipe = savedByRecipe[recipe.id] || null;
         const averageRating = ratingsByRecipe[recipe.id] || 0;
         const placeholder = null; // keep structure compatible
@@ -275,15 +276,15 @@ router.get('/', optionalAuth, async (req, res) => {
     // Sort by engagement metrics if needed
     let sortedRecipes = recipesWithRatings;
     if (sortByValue === 'most_liked') {
-      sortedRecipes = recipesWithRatings.sort((a, b) => b.likeCount - a.likeCount);
+      sortedRecipes = recipesWithRatings.sort((a: any, b: any) => b.likeCount - a.likeCount);
     } else if (sortByValue === 'most_commented') {
-      sortedRecipes = recipesWithRatings.sort((a, b) => b.commentCount - a.commentCount);
+      sortedRecipes = recipesWithRatings.sort((a: any, b: any) => b.commentCount - a.commentCount);
     } else if (sortByValue === 'most_saved') {
-      sortedRecipes = recipesWithRatings.sort((a, b) => b.saveCount - a.saveCount);
+      sortedRecipes = recipesWithRatings.sort((a: any, b: any) => b.saveCount - a.saveCount);
     } else if (sortByValue === 'trending') {
       // Trending = weighted score of likes + comments + recency
       const now = Date.now();
-      sortedRecipes = recipesWithRatings.sort((a, b) => {
+      sortedRecipes = recipesWithRatings.sort((a: any, b: any) => {
         const ageA = (now - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24); // days
         const ageB = (now - new Date(b.createdAt).getTime()) / (1000 * 60 * 60 * 24);
         const scoreA = (a.likeCount * 2 + a.commentCount * 3 + a.saveCount) / Math.max(1, Math.sqrt(ageA));
@@ -291,7 +292,7 @@ router.get('/', optionalAuth, async (req, res) => {
         return scoreB - scoreA;
       });
     } else if (sortByValue === 'top_rated') {
-      sortedRecipes = recipesWithRatings.sort((a, b) => b.averageRating - a.averageRating);
+      sortedRecipes = recipesWithRatings.sort((a: any, b: any) => b.averageRating - a.averageRating);
     }
 
     res.json({ recipes: sortedRecipes });
@@ -307,7 +308,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const { id } = req.params;
     const currentUserId = (req as any).userId;
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id },
       include: {
         user: {
@@ -342,7 +343,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const isFriend = await prisma.friendship.findFirst({
+      const isFriend = await db.friendship.findFirst({
         where: {
           OR: [
             { initiatorId: currentUserId, receiverId: recipe.userId, status: 'ACCEPTED' },
@@ -357,18 +358,18 @@ router.get('/:id', optionalAuth, async (req, res) => {
     }
 
     // Get average rating
-    const ratings = await prisma.recipeRating.findMany({
+    const ratings = await db.recipeRating.findMany({
       where: { recipeId: recipe.id },
       select: { rating: true }
     });
 
     const averageRating = ratings.length > 0
-      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+      ? ratings.reduce((sum: any, r: any) => sum + r.rating, 0) / ratings.length
       : 0;
 
     // Get user's rating if logged in
     const userRating = currentUserId
-      ? await prisma.recipeRating.findUnique({
+      ? await db.recipeRating.findUnique({
           where: {
             recipeId_userId: {
               recipeId: recipe.id,
@@ -380,7 +381,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
     // Check if current user saved this recipe
     const savedRecipe = currentUserId
-      ? await prisma.savedRecipe.findUnique({
+      ? await db.savedRecipe.findUnique({
           where: {
             userId_recipeId: {
               userId: currentUserId,
@@ -399,7 +400,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     };
 
     res.json(formattedRecipe);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get recipe error:', error);
     res.status(500).json({ error: 'Failed to get recipe' });
   }
@@ -428,7 +429,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Title, ingredients, and instructions are required' });
     }
 
-    const recipe = await prisma.recipe.create({
+    const recipe = await db.recipe.create({
       data: {
         userId,
         title,
@@ -459,7 +460,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     await logRecipeCreated(userId, recipe.id, recipe.title);
     res.status(201).json(recipe);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create recipe error:', error);
     res.status(500).json({ error: 'Failed to create recipe' });
   }
@@ -486,7 +487,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     } = req.body;
 
     // Check ownership
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id }
     });
 
@@ -513,7 +514,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (privacy !== undefined) updateData.privacy = privacy;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
 
-    const updated = await prisma.recipe.update({
+    const updated = await db.recipe.update({
       where: { id },
       data: updateData,
       include: {
@@ -530,7 +531,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update recipe error:', error);
     res.status(500).json({ error: 'Failed to update recipe' });
   }
@@ -542,7 +543,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const userId = (req as any).userId;
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id }
     });
 
@@ -554,12 +555,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    await prisma.recipe.delete({
+    await db.recipe.delete({
       where: { id }
     });
 
     res.json({ message: 'Recipe deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete recipe error:', error);
     res.status(500).json({ error: 'Failed to delete recipe' });
   }
@@ -577,7 +578,7 @@ router.post('/:id/rate', authenticateToken, async (req, res) => {
     }
 
     // Check if recipe exists
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId }
     });
 
@@ -586,7 +587,7 @@ router.post('/:id/rate', authenticateToken, async (req, res) => {
     }
 
     // Upsert rating (create or update)
-    const recipeRating = await prisma.recipeRating.upsert({
+    const recipeRating = await db.recipeRating.upsert({
       where: {
         recipeId_userId: {
           recipeId,
@@ -606,7 +607,7 @@ router.post('/:id/rate', authenticateToken, async (req, res) => {
     });
 
     res.json(recipeRating);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Rate recipe error:', error);
     res.status(500).json({ error: 'Failed to rate recipe' });
   }
@@ -625,7 +626,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     try {
       // Try with likes
       // Fetch ALL comments flat, then build tree structure (supports unlimited nesting)
-      const allComments = await prisma.recipeComment.findMany({
+      const allComments = await db.recipeComment.findMany({
         where: { recipeId },
         include: {
           user: {
@@ -655,10 +656,10 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
 
       // Build tree structure from flat list
       const commentMap = new Map();
-      allComments.forEach(c => commentMap.set(c.id, { ...c, replies: [] }));
+      allComments.forEach((c: any) => commentMap.set(c.id, { ...c, replies: [] }));
       
       const rootComments: any[] = [];
-      allComments.forEach(c => {
+      allComments.forEach((c: any) => {
         const comment = commentMap.get(c.id);
         if (c.parentId && commentMap.has(c.parentId)) {
           commentMap.get(c.parentId).replies.push(comment);
@@ -677,7 +678,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         let userHasLiked = false;
         let userReaction = null;
         if (userId) {
-          const userLike = await prisma.recipeCommentLike.findFirst({
+          const userLike = await db.recipeCommentLike.findFirst({
             where: {
               commentId: comment.id,
               userId: userId
@@ -688,15 +689,15 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         }
         
         // Get counts by reaction type
-        const reactionCounts = await prisma.recipeCommentLike.groupBy({
+        const reactionCounts = await db.recipeCommentLike.groupBy({
           by: ['reaction'],
           where: { commentId: comment.id },
           _count: true
         });
         
-        const likeCount = reactionCounts.find(r => r.reaction === 'like' || r.reaction === null)?._count || 0;
-        const loveCount = reactionCounts.find(r => r.reaction === 'love')?._count || 0;
-        const dislikeCount = reactionCounts.find(r => r.reaction === 'dislike')?._count || 0;
+        const likeCount = reactionCounts.find((r: any) => r.reaction === 'like' || r.reaction === null)?._count || 0;
+        const loveCount = reactionCounts.find((r: any) => r.reaction === 'love')?._count || 0;
+        const dislikeCount = reactionCounts.find((r: any) => r.reaction === 'dislike')?._count || 0;
         
         return {
           ...comment,
@@ -704,7 +705,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
           loveCount,
           dislikeCount,
           totalReactions: likeCount + loveCount + dislikeCount,
-          likers: comment.likes.map(l => l.user),
+          likers: comment.likes.map((l: any) => l.user),
           userHasLiked,
           userReaction
         };
@@ -712,7 +713,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     } catch (likesError) {
       // Fallback without likes if table doesn't exist
       console.log('Likes query failed, falling back:', likesError);
-      comments = await prisma.recipeComment.findMany({
+      comments = await db.recipeComment.findMany({
         where: { recipeId },
         include: {
           user: {
@@ -730,7 +731,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         }
       });
 
-      commentsWithLikes = comments.map(comment => ({
+      commentsWithLikes = comments.map((comment: any) => ({
         ...comment,
         likeCount: 0,
         likers: [],
@@ -739,7 +740,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     }
 
     res.json(commentsWithLikes);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get comments error:', error);
     res.status(500).json({ error: 'Failed to get comments' });
   }
@@ -756,7 +757,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Comment content is required' });
     }
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId },
       select: { userId: true, title: true }
     });
@@ -766,12 +767,12 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     }
 
     // Get the commenter's info for notifications
-    const commenter = await prisma.user.findUnique({
+    const commenter = await db.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true, username: true }
     });
 
-    const comment = await prisma.recipeComment.create({
+    const comment = await db.recipeComment.create({
       data: {
         recipeId,
         userId,
@@ -794,11 +795,11 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     });
 
     // Get users who have muted this recipe's comment notifications
-    const mutedUsers = await prisma.recipeCommentMute.findMany({
+    const mutedUsers = await db.recipeCommentMute.findMany({
       where: { recipeId },
       select: { userId: true }
     });
-    const mutedUserIds = new Set(mutedUsers.map(m => m.userId));
+    const mutedUserIds = new Set(mutedUsers.map((m: any) => m.userId));
 
     const commenterName = commenter?.firstName && commenter?.lastName 
       ? `${commenter.firstName} ${commenter.lastName}`
@@ -811,14 +812,14 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 
     if (parentId) {
       // === THIS IS A REPLY - Notify ONLY the direct parent author ===
-      const parentComment = await prisma.recipeComment.findUnique({
+      const parentComment = await db.recipeComment.findUnique({
         where: { id: parentId },
         select: { userId: true, user: { select: { firstName: true } } }
       });
 
       if (parentComment && parentComment.userId !== userId && !mutedUserIds.has(parentComment.userId)) {
         // Notify the parent comment author
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: parentComment.userId,
             type: 'COMMENT',
@@ -829,7 +830,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 
         // Create Activity for parent comment author's basecamp feed
         try {
-          await prisma.activity.create({
+          await db.activity.create({
             data: {
               userId: userId,
               targetUserId: parentComment.userId,
@@ -850,7 +851,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 
     // === NOTIFY MENTIONED USERS ===
     if (mentions && mentions.length > 0) {
-      const mentionedUsers = await prisma.user.findMany({
+      const mentionedUsers = await db.user.findMany({
         where: { username: { in: mentions } },
         select: { id: true }
       });
@@ -862,7 +863,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         }
 
         // Create notification
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: mentionedUser.id,
             type: 'RECIPE_MENTION',
@@ -872,7 +873,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
         });
 
         // Create Basecamp activity
-        await prisma.basecampActivity.create({
+        await db.basecampActivity.create({
           data: {
             userId: mentionedUser.id,
             actorId: userId,
@@ -898,7 +899,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       : '';
     
     // Activity for commenter's PROFILE feed
-    await prisma.activity.create({
+    await db.activity.create({
       data: {
         userId,
         type: 'RECIPE_COMMENTED',
@@ -916,7 +917,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     });
 
     // BasecampActivity for commenter's BASECAMP feed
-    await prisma.basecampActivity.create({
+    await db.basecampActivity.create({
       data: {
         userId,
         actorId: userId,
@@ -934,7 +935,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json(comment);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add comment error:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
@@ -946,7 +947,7 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId },
       select: { userId: true, title: true }
     });
@@ -956,7 +957,7 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
     }
 
     // Check if already saved
-    const existingSave = await prisma.savedRecipe.findUnique({
+    const existingSave = await db.savedRecipe.findUnique({
       where: {
         userId_recipeId: {
           userId,
@@ -970,7 +971,7 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
     }
 
     // Save recipe
-    const savedRecipe = await prisma.savedRecipe.create({
+    const savedRecipe = await db.savedRecipe.create({
       data: {
         userId,
         recipeId,
@@ -980,7 +981,7 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
 
     // Create notification for recipe owner (if not saving own recipe)
     if (recipe.userId !== userId) {
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: recipe.userId,
           type: 'RECIPE_SAVE',
@@ -992,12 +993,12 @@ router.post('/:id/save', authenticateToken, async (req, res) => {
 
     // Log activity for friend feed
     if (recipe.userId !== userId) {
-      const recipeOwner = await prisma.user.findUnique({ where: { id: recipe.userId }, select: { firstName: true, lastName: true } });
+      const recipeOwner = await db.user.findUnique({ where: { id: recipe.userId }, select: { firstName: true, lastName: true } });
       await logRecipeLiked(userId, recipeId, recipe.title, recipe.userId, (recipeOwner?.firstName || '') + ' ' + (recipeOwner?.lastName || ''));
     }
 
     res.status(201).json({ message: 'Recipe saved', savedRecipe });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save recipe error:', error);
     res.status(500).json({ error: 'Failed to save recipe' });
   }
@@ -1009,7 +1010,7 @@ router.delete('/:id/save', authenticateToken, async (req, res) => {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
-    await prisma.savedRecipe.delete({
+    await db.savedRecipe.delete({
       where: {
         userId_recipeId: {
           userId,
@@ -1019,7 +1020,7 @@ router.delete('/:id/save', authenticateToken, async (req, res) => {
     });
 
     res.json({ message: 'Recipe unsaved' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unsave recipe error:', error);
     res.status(500).json({ error: 'Failed to unsave recipe' });
   }
@@ -1032,7 +1033,7 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Find the saved recipe
-    let savedRecipe = await prisma.savedRecipe.findUnique({
+    let savedRecipe = await db.savedRecipe.findUnique({
       where: {
         userId_recipeId: {
           userId,
@@ -1043,7 +1044,7 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
 
     // If not saved yet, auto-save it and mark as favorite
     if (!savedRecipe) {
-      savedRecipe = await prisma.savedRecipe.create({
+      savedRecipe = await db.savedRecipe.create({
         data: {
           userId,
           recipeId,
@@ -1058,7 +1059,7 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
     }
 
     // Toggle favorite
-    const updated = await prisma.savedRecipe.update({
+    const updated = await db.savedRecipe.update({
       where: {
         userId_recipeId: {
           userId,
@@ -1074,7 +1075,7 @@ router.put('/:id/favorite', authenticateToken, async (req, res) => {
       message: updated.favorite ? 'Marked as favorite' : 'Removed from favorites',
       favorite: updated.favorite 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle favorite error:', error);
     res.status(500).json({ error: 'Failed to toggle favorite' });
   }
@@ -1087,7 +1088,7 @@ router.post('/:id/mute-comments', authenticateToken, async (req, res) => {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId }
     });
 
@@ -1095,7 +1096,7 @@ router.post('/:id/mute-comments', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    const existing = await prisma.recipeCommentMute.findUnique({
+    const existing = await db.recipeCommentMute.findUnique({
       where: {
         userId_recipeId: { userId, recipeId }
       }
@@ -1105,12 +1106,12 @@ router.post('/:id/mute-comments', authenticateToken, async (req, res) => {
       return res.json({ message: 'Already muted', muted: true });
     }
 
-    await prisma.recipeCommentMute.create({
+    await db.recipeCommentMute.create({
       data: { userId, recipeId }
     });
 
     res.json({ message: 'Recipe comment notifications muted', muted: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mute recipe comments error:', error);
     res.status(500).json({ error: 'Failed to mute recipe comments' });
   }
@@ -1122,12 +1123,12 @@ router.delete('/:id/mute-comments', authenticateToken, async (req, res) => {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
-    await prisma.recipeCommentMute.deleteMany({
+    await db.recipeCommentMute.deleteMany({
       where: { userId, recipeId }
     });
 
     res.json({ message: 'Recipe comment notifications unmuted', muted: false });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unmute recipe comments error:', error);
     res.status(500).json({ error: 'Failed to unmute recipe comments' });
   }
@@ -1139,14 +1140,14 @@ router.get('/:id/mute-status', authenticateToken, async (req, res) => {
     const { id: recipeId } = req.params;
     const userId = (req as any).userId;
 
-    const muted = await prisma.recipeCommentMute.findUnique({
+    const muted = await db.recipeCommentMute.findUnique({
       where: {
         userId_recipeId: { userId, recipeId }
       }
     });
 
     res.json({ muted: !!muted });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check mute status error:', error);
     res.status(500).json({ error: 'Failed to check mute status' });
   }
@@ -1160,7 +1161,7 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Check if recipe exists
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId }
     });
 
@@ -1169,7 +1170,7 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
     }
 
     // Check if already liked
-    const existingLike = await prisma.recipeLike.findUnique({
+    const existingLike = await db.recipeLike.findUnique({
       where: {
         recipeId_userId: { recipeId, userId }
       }
@@ -1177,28 +1178,28 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
 
     if (existingLike) {
       // Unlike
-      await prisma.recipeLike.delete({
+      await db.recipeLike.delete({
         where: { id: existingLike.id }
       });
       
-      const likeCount = await prisma.recipeLike.count({ where: { recipeId } });
+      const likeCount = await db.recipeLike.count({ where: { recipeId } });
       return res.json({ liked: false, likeCount });
     } else {
       // Like
-      await prisma.recipeLike.create({
+      await db.recipeLike.create({
         data: { recipeId, userId }
       });
       
-      const likeCount = await prisma.recipeLike.count({ where: { recipeId } });
+      const likeCount = await db.recipeLike.count({ where: { recipeId } });
 
       // Notify recipe owner (if not self-like)
       if (recipe.userId !== userId) {
-        const liker = await prisma.user.findUnique({
+        const liker = await db.user.findUnique({
           where: { id: userId },
           select: { firstName: true, lastName: true }
         });
         
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: recipe.userId,
             type: 'RECIPE_LIKE',
@@ -1210,7 +1211,7 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
 
       return res.json({ liked: true, likeCount });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Recipe like error:', error);
     res.status(500).json({ error: 'Failed to like recipe' });
   }
@@ -1223,7 +1224,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     const { message, mentions } = req.body;
 
-    const recipe = await prisma.recipe.findUnique({
+    const recipe = await db.recipe.findUnique({
       where: { id: recipeId },
       include: {
         user: {
@@ -1236,7 +1237,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Recipe not found' });
     }
 
-    const sharer = await prisma.user.findUnique({
+    const sharer = await db.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true, username: true }
     });
@@ -1250,11 +1251,11 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     let taggedUserNames: string[] = [];
     
     if (taggedUsernames.length > 0) {
-      const taggedUsers = await prisma.user.findMany({
+      const taggedUsers = await db.user.findMany({
         where: { username: { in: taggedUsernames } },
         select: { firstName: true, lastName: true, username: true }
       });
-      taggedUserNames = taggedUsers.map(u => `${u.firstName} ${u.lastName}`);
+      taggedUserNames = taggedUsers.map((u: any) => `${u.firstName} ${u.lastName}`);
     }
 
     // Build the share content for display
@@ -1262,7 +1263,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     const messageDisplay = activityContent ? `: "${activityContent}"` : '';
 
     // Create Activity for sharer's PROFILE feed
-    await prisma.activity.create({
+    await db.activity.create({
       data: {
         userId,
         type: 'RECIPE_SHARED',
@@ -1281,7 +1282,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     });
 
     // Create BasecampActivity for sharer's BASECAMP feed
-    await prisma.basecampActivity.create({
+    await db.basecampActivity.create({
       data: {
         userId,
         actorId: userId,
@@ -1301,7 +1302,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
 
     // Notify recipe owner (if not self-share)
     if (recipe.userId !== userId) {
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           userId: recipe.userId,
           type: 'RECIPE_SHARE',
@@ -1313,7 +1314,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
 
     // Notify mentioned users and create activities on their feeds
     if (mentions && mentions.length > 0) {
-      const mentionedUsers = await prisma.user.findMany({
+      const mentionedUsers = await db.user.findMany({
         where: { username: { in: mentions } },
         select: { id: true, username: true, firstName: true, lastName: true }
       });
@@ -1330,7 +1331,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
           : `${sharerName} shared "${recipe.title}" with you`;
 
         // Create notification with the actual message
-        await prisma.notification.create({
+        await db.notification.create({
           data: {
             userId: mentionedUser.id,
             type: 'RECIPE_SHARE_TAG',
@@ -1340,7 +1341,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         });
 
         // Create Activity for tagged user's PROFILE feed ONLY
-        await prisma.activity.create({
+        await db.activity.create({
           data: {
             userId: mentionedUser.id,
             type: 'RECIPE_SHARE_TAG',
@@ -1358,7 +1359,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
         });
 
         // Create BasecampActivity for tagged user's BASECAMP feed ONLY
-        await prisma.basecampActivity.create({
+        await db.basecampActivity.create({
           data: {
             userId: mentionedUser.id,
             actorId: userId,
@@ -1379,7 +1380,7 @@ router.post('/:id/share', authenticateToken, async (req, res) => {
     }
 
     res.json({ shared: true, message: 'Recipe shared to your feed!' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Recipe share error:', error);
     res.status(500).json({ error: 'Failed to share recipe' });
   }
@@ -1392,7 +1393,7 @@ router.post('/comments/:commentId/like', authenticateToken, async (req, res) => 
     const { commentId } = req.params;
 
     // Check if comment exists
-    const comment = await prisma.recipeComment.findUnique({
+    const comment = await db.recipeComment.findUnique({
       where: { id: commentId }
     });
 
@@ -1401,26 +1402,26 @@ router.post('/comments/:commentId/like', authenticateToken, async (req, res) => 
     }
 
     // Check if already liked
-    const existingLike = await prisma.recipeCommentLike.findUnique({
+    const existingLike = await db.recipeCommentLike.findUnique({
       where: { commentId_userId: { commentId, userId } }
     });
 
     if (existingLike) {
       // Unlike
-      await prisma.recipeCommentLike.delete({
+      await db.recipeCommentLike.delete({
         where: { id: existingLike.id }
       });
-      const likeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+      const likeCount = await db.recipeCommentLike.count({ where: { commentId } });
       return res.json({ liked: false, likeCount });
     } else {
       // Like
-      await prisma.recipeCommentLike.create({
+      await db.recipeCommentLike.create({
         data: { commentId, userId }
       });
-      const likeCount = await prisma.recipeCommentLike.count({ where: { commentId } });
+      const likeCount = await db.recipeCommentLike.count({ where: { commentId } });
       return res.json({ liked: true, likeCount });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Comment like error:', error);
     res.status(500).json({ error: 'Failed to like comment' });
   }
@@ -1432,7 +1433,7 @@ router.get('/comments/:commentId/likes', optionalAuth, async (req, res) => {
     const userId = (req as any).userId;
     const { commentId } = req.params;
 
-    const likes = await prisma.recipeCommentLike.findMany({
+    const likes = await db.recipeCommentLike.findMany({
       where: { commentId },
       include: {
         user: {
@@ -1443,11 +1444,11 @@ router.get('/comments/:commentId/likes', optionalAuth, async (req, res) => {
     });
 
     const likeCount = likes.length;
-    const userHasLiked = userId ? likes.some(l => l.userId === userId) : false;
-    const likers = likes.map(l => l.user);
+    const userHasLiked = userId ? likes.some((l: any) => l.userId === userId) : false;
+    const likers = likes.map((l: any) => l.user);
 
     res.json({ likeCount, userHasLiked, likers });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get comment likes error:', error);
     res.status(500).json({ error: 'Failed to get likes' });
   }
@@ -1466,7 +1467,7 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
     }
 
     // Check if comment exists
-    const comment = await prisma.recipeComment.findUnique({
+    const comment = await db.recipeComment.findUnique({
       where: { id: commentId }
     });
 
@@ -1475,7 +1476,7 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
     }
 
     // Check existing reaction
-    const existingReaction = await prisma.recipeCommentLike.findUnique({
+    const existingReaction = await db.recipeCommentLike.findUnique({
       where: { commentId_userId: { commentId, userId } }
     });
 
@@ -1483,12 +1484,12 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
     if (existingReaction) {
       if (existingReaction.reaction === reaction) {
         // Same reaction - remove it (toggle off)
-        await prisma.recipeCommentLike.delete({
+        await db.recipeCommentLike.delete({
           where: { id: existingReaction.id }
         });
       } else {
         // Different reaction - update it
-        await prisma.recipeCommentLike.update({
+        await db.recipeCommentLike.update({
           where: { id: existingReaction.id },
           data: { reaction }
         });
@@ -1496,22 +1497,22 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
       }
     } else {
       // No existing reaction - create new
-      await prisma.recipeCommentLike.create({
+      await db.recipeCommentLike.create({
         data: { commentId, userId, reaction }
       });
       newReaction = reaction;
     }
 
     // Get updated counts
-    const reactionCounts = await prisma.recipeCommentLike.groupBy({
+    const reactionCounts = await db.recipeCommentLike.groupBy({
       by: ['reaction'],
       where: { commentId },
       _count: true
     });
 
-    const likeCount = reactionCounts.find(r => r.reaction === 'like' || r.reaction === null)?._count || 0;
-    const loveCount = reactionCounts.find(r => r.reaction === 'love')?._count || 0;
-    const dislikeCount = reactionCounts.find(r => r.reaction === 'dislike')?._count || 0;
+    const likeCount = reactionCounts.find((r: any) => r.reaction === 'like' || r.reaction === null)?._count || 0;
+    const loveCount = reactionCounts.find((r: any) => r.reaction === 'love')?._count || 0;
+    const dislikeCount = reactionCounts.find((r: any) => r.reaction === 'dislike')?._count || 0;
 
     res.json({ 
       success: true, 
@@ -1520,7 +1521,7 @@ router.post('/comments/:commentId/react', authenticateToken, async (req, res) =>
       loveCount,
       dislikeCount
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Comment reaction error:', error);
     res.status(500).json({ error: 'Failed to react to comment' });
   }
@@ -1597,9 +1598,9 @@ router.post('/:id/moderate-photo/:submissionId', authenticateToken, async (req: 
         `;
 
         // Award Camp Kitchen badge
-        const campKitchenBadge = await prisma.badge.findFirst({ where: { name: { contains: 'Camp Kitchen', mode: 'insensitive' } } }).catch(() => null);
+        const campKitchenBadge = await db.badge.findFirst({ where: { name: { contains: 'Camp Kitchen', mode: 'insensitive' } } }).catch(() => null);
         if (campKitchenBadge) {
-          await prisma.userBadge.upsert({
+          await db.userBadge.upsert({
             where: { userId_badgeId: { userId: sub.userId, badgeId: campKitchenBadge.id } },
             create: { userId: sub.userId, badgeId: campKitchenBadge.id },
             update: {},
@@ -1607,10 +1608,10 @@ router.post('/:id/moderate-photo/:submissionId', authenticateToken, async (req: 
         }
 
         // Create Basecamp notification
-        const recipe = await prisma.recipe.findUnique({ where: { id }, select: { title: true } });
-        const uploader = await prisma.user.findUnique({ where: { id: sub.userId }, select: { firstName: true, username: true } });
+        const recipe = await db.recipe.findUnique({ where: { id }, select: { title: true } });
+        const uploader = await db.user.findUnique({ where: { id: sub.userId }, select: { firstName: true, username: true } });
         if (recipe && uploader) {
-          await prisma.notification.create({
+          await db.notification.create({
             data: {
               userId: sub.userId,
               type: 'BADGE',
@@ -1656,7 +1657,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Get user's saved recipes to find preferences
-    const savedRecipes = await prisma.savedRecipe.findMany({
+    const savedRecipes = await db.savedRecipe.findMany({
       where: { userId },
       include: {
         recipe: {
@@ -1666,24 +1667,24 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     });
 
     // Get IDs of recipes user has created or saved (to exclude)
-    const userRecipes = await prisma.recipe.findMany({
+    const userRecipes = await db.recipe.findMany({
       where: { userId },
       select: { id: true },
     });
     const excludeIds = [
-      ...userRecipes.map(r => r.id),
-      ...savedRecipes.map(s => s.recipeId),
+      ...userRecipes.map((r: any) => r.id),
+      ...savedRecipes.map((s: any) => s.recipeId),
     ];
 
     let suggestions: any[] = [];
 
     if (savedRecipes.length > 0) {
       // User has saved recipes - find similar ones
-      const categories = [...new Set(savedRecipes.map(s => s.recipe.category).filter(Boolean))];
-      const dietaryPrefs = [...new Set(savedRecipes.flatMap(s => s.recipe.dietaryPreferences || []))];
+      const categories = [...new Set(savedRecipes.map((s: any) => s.recipe.category).filter(Boolean))];
+      const dietaryPrefs = [...new Set(savedRecipes.flatMap((s: any) => s.recipe.dietaryPreferences || []))];
 
       // Find recipes with similar traits
-      suggestions = await prisma.recipe.findMany({
+      suggestions = await db.recipe.findMany({
         where: {
           id: { notIn: excludeIds },
           privacy: 'PUBLIC',
@@ -1712,7 +1713,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
       const needed = 3 - suggestions.length;
       const existingIds = [...excludeIds, ...suggestions.map(s => s.id)];
 
-      const randomRecipes = await prisma.recipe.findMany({
+      const randomRecipes = await db.recipe.findMany({
         where: {
           id: { notIn: existingIds },
           privacy: 'PUBLIC',
@@ -1734,7 +1735,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     }
 
     res.json({ suggestions });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get recipe suggestions error:', error);
     res.status(500).json({ error: 'Failed to get suggestions' });
   }
@@ -1746,7 +1747,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     // Get user's saved recipes to find preferences
-    const savedRecipes = await prisma.savedRecipe.findMany({
+    const savedRecipes = await db.savedRecipe.findMany({
       where: { userId },
       include: {
         recipe: {
@@ -1756,24 +1757,24 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     });
 
     // Get IDs of recipes user has created or saved (to exclude)
-    const userRecipes = await prisma.recipe.findMany({
+    const userRecipes = await db.recipe.findMany({
       where: { userId },
       select: { id: true },
     });
     const excludeIds = [
-      ...userRecipes.map(r => r.id),
-      ...savedRecipes.map(s => s.recipeId),
+      ...userRecipes.map((r: any) => r.id),
+      ...savedRecipes.map((s: any) => s.recipeId),
     ];
 
     let suggestions: any[] = [];
 
     if (savedRecipes.length > 0) {
       // User has saved recipes - find similar ones
-      const categories = [...new Set(savedRecipes.map(s => s.recipe.category).filter(Boolean))];
-      const dietaryPrefs = [...new Set(savedRecipes.flatMap(s => s.recipe.dietaryPreferences || []))];
+      const categories = [...new Set(savedRecipes.map((s: any) => s.recipe.category).filter(Boolean))];
+      const dietaryPrefs = [...new Set(savedRecipes.flatMap((s: any) => s.recipe.dietaryPreferences || []))];
 
       // Find recipes with similar traits
-      suggestions = await prisma.recipe.findMany({
+      suggestions = await db.recipe.findMany({
         where: {
           id: { notIn: excludeIds },
           privacy: 'PUBLIC',
@@ -1802,7 +1803,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
       const needed = 3 - suggestions.length;
       const existingIds = [...excludeIds, ...suggestions.map(s => s.id)];
 
-      const randomRecipes = await prisma.recipe.findMany({
+      const randomRecipes = await db.recipe.findMany({
         where: {
           id: { notIn: existingIds },
           privacy: 'PUBLIC',
@@ -1824,7 +1825,7 @@ router.get('/suggestions', authenticateToken, async (req, res) => {
     }
 
     res.json({ suggestions });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get recipe suggestions error:', error);
     res.status(500).json({ error: 'Failed to get suggestions' });
   }

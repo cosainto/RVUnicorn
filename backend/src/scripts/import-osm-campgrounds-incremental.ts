@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 interface OSMElement {
   type: string;

@@ -3,11 +3,11 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Middleware to check if user is campground admin
 const requireCampgroundAdmin = async (req: any, res: Response, next: Function) => {
-  const userId = req.user?.id || req.userId;
+  const userId = (req as any).user?.id || req.userId;
   const { campgroundId } = req.params;
 
   const admin = await prisma.campgroundAdmin.findUnique({
@@ -69,7 +69,7 @@ router.get('/:campgroundId/recipients', authenticateToken, requireCampgroundAdmi
         orderBy: { checkInDate: 'desc' }
       });
 
-      results.checkedIn = checkedIn.map(c => ({
+      results.checkedIn = checkedIn.map((c: any) => ({
         id: c.id,
         type: 'checkin',
         user: c.user,
@@ -146,7 +146,7 @@ router.get('/:campgroundId/recipients', authenticateToken, requireCampgroundAdmi
       // Combine stays and event attendees, deduplicate by user
       const userMap = new Map();
 
-      upcoming.forEach(s => {
+      upcoming.forEach((s: any) => {
         if (!userMap.has(s.user.id)) {
           userMap.set(s.user.id, {
             id: s.id,
@@ -159,8 +159,8 @@ router.get('/:campgroundId/recipients', authenticateToken, requireCampgroundAdmi
         }
       });
 
-      upcomingEvents.forEach(event => {
-        event.attendees.forEach(attendee => {
+      upcomingEvents.forEach((event: any) => {
+        event.attendees.forEach((attendee: any) => {
           if (!userMap.has(attendee.user.id)) {
             userMap.set(attendee.user.id, {
               id: attendee.id,
@@ -189,7 +189,7 @@ router.get('/:campgroundId/recipients', authenticateToken, requireCampgroundAdmi
     results.counts.total = results.counts.checkedIn + results.counts.upcoming;
 
     res.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get recipients error:', error);
     res.status(500).json({ error: 'Failed to get recipients' });
   }
@@ -200,7 +200,7 @@ router.get('/:campgroundId/recipients', authenticateToken, requireCampgroundAdmi
 router.post('/:campgroundId/send', authenticateToken, requireCampgroundAdmin, async (req: any, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = req.user?.id || req.userId;
+    const userId = (req as any).user?.id || req.userId;
     const { 
       recipientIds,      // Array of user IDs to message
       subject,
@@ -244,7 +244,7 @@ router.post('/:campgroundId/send', authenticateToken, requireCampgroundAdmin, as
           },
           select: { userId: true }
         });
-        targetUserIds.push(...checkedIn.map(c => c.userId));
+        targetUserIds.push(...checkedIn.map((c: any) => c.userId));
       }
 
       if (includeUpcoming) {
@@ -258,7 +258,7 @@ router.post('/:campgroundId/send', authenticateToken, requireCampgroundAdmin, as
           },
           select: { userId: true }
         });
-        targetUserIds.push(...upcoming.map(s => s.userId));
+        targetUserIds.push(...upcoming.map((s: any) => s.userId));
 
         // Also get event attendees
         const events = await prisma.event.findMany({
@@ -273,8 +273,8 @@ router.post('/:campgroundId/send', authenticateToken, requireCampgroundAdmin, as
             }
           }
         });
-        events.forEach(e => {
-          targetUserIds.push(...e.attendees.map(a => a.userId));
+        events.forEach((e: any) => {
+          targetUserIds.push(...e.attendees.map((a: any) => a.userId));
         });
       }
 
@@ -321,7 +321,7 @@ router.post('/:campgroundId/send', authenticateToken, requireCampgroundAdmin, as
       messagesSent: messages.length,
       recipientCount: targetUserIds.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Send campground message error:', error);
     res.status(500).json({ error: 'Failed to send messages' });
   }
@@ -338,7 +338,7 @@ router.get('/:campgroundId/sent', authenticateToken, requireCampgroundAdmin, asy
       where: { campgroundId },
       select: { userId: true }
     });
-    const adminIds = admins.map(a => a.userId);
+    const adminIds = admins.map((a: any) => a.userId);
 
     // Get campground name for filtering
     const campground = await prisma.campground.findUnique({
@@ -372,7 +372,7 @@ router.get('/:campgroundId/sent', authenticateToken, requireCampgroundAdmin, asy
     });
 
     res.json(messages);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sent messages error:', error);
     res.status(500).json({ error: 'Failed to get sent messages' });
   }

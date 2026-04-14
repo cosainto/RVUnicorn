@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const authenticateToken = (req: Request, res: Response, next: any) => {
@@ -28,6 +28,8 @@ async function buildSystemPrompt(userId: string): Promise<string> {
       rvSlideouts: true, rvMpg: true, rvTankGallons: true,
       rvDescription: true, rvFeatures: true, hitchPreferences: true,
       currentCampsite: true, bio: true,
+      onboardingCamperType: true, onboardingRigType: true, onboardingRegion: true,
+      campingInterests: true, homeState: true,
     },
   });
 
@@ -54,11 +56,11 @@ async function buildSystemPrompt(userId: string): Promise<string> {
   }
 
   let sections = '';
-  if (recentTrips.length > 0) sections += `\n## Recent Trips\n${recentTrips.map(t => `- ${t.name}`).join('\n')}\n`;
-  if (visitedStates.length > 0) sections += `\n## States Visited: ${visitedStates.map(s => s.state).join(', ')}\n`;
-  if (wishlist.length > 0) sections += `\n## Wishlist\n${wishlist.map(w => `- ${w.campground?.name || 'Unknown'}`).join('\n')}\n`;
-  if (user?.hitchPreferences?.length) sections += `\n## Learned Preferences\n${user.hitchPreferences.map(p => `- ${p}`).join('\n')}\n`;
-  if (recentConvos.length > 0) sections += `\n## Recent Conversations\n${recentConvos.map(c => `- ${c.title || 'Chat'}${c.summary ? `: ${c.summary}` : ''}`).join('\n')}\n`;
+  if (recentTrips.length > 0) sections += `\n## Recent Trips\n${recentTrips.map((t: any) => `- ${t.name}`).join('\n')}\n`;
+  if (visitedStates.length > 0) sections += `\n## States Visited: ${visitedStates.map((s: any) => s.state).join(', ')}\n`;
+  if (wishlist.length > 0) sections += `\n## Wishlist\n${wishlist.map((w: any) => `- ${w.campground?.name || 'Unknown'}`).join('\n')}\n`;
+  if (user?.hitchPreferences?.length) sections += `\n## Learned Preferences\n${user.hitchPreferences.map((p: any) => `- ${p}`).join('\n')}\n`;
+  if (recentConvos.length > 0) sections += `\n## Recent Conversations\n${recentConvos.map((c: any) => `- ${c.title || 'Chat'}${c.summary ? `: ${c.summary}` : ''}`).join('\n')}\n`;
 
   return `You are Hitch \u{1f984}, the friendly AI trail guide for RVUnicorn.
 
@@ -71,9 +73,21 @@ async function buildSystemPrompt(userId: string): Promise<string> {
 
 ## About the User
 - Name: ${user?.firstName || 'Camper'} ${user?.lastName || ''}
-- Location: ${user?.location || 'Not specified'}
+- Location: ${user?.location || user?.homeState || 'Not specified'}
 - Current Campsite: ${user?.currentCampsite || 'Not checked in'}
+${user?.onboardingCamperType ? `- Camper Style: ${user.onboardingCamperType.replace(/_/g, ' ')}` : ''}
+${user?.onboardingRigType ? `- Rig Type: ${user.onboardingRigType.replace(/_/g, ' ')}` : ''}
+${user?.onboardingRegion ? `- Favorite Region: ${user.onboardingRegion}` : ''}
+${user?.campingInterests?.length ? `- Camping Interests: ${user.campingInterests.join(', ')}` : ''}
 ${rvProfile}${sections}
+
+## Personalization
+Use the user's camper style to tailor your tone and advice:
+- "weekend warrior": They camp on weekends — suggest nearby getaways, quick trip ideas, and time-saving tips.
+- "full timer": They live on the road — talk like a fellow traveler, discuss long-term stays, mail forwarding, seasonal moves.
+- "occasional": Keep it simple and encouraging. Don't assume deep knowledge.
+- "first big trip" or "first trip ever": Be extra welcoming and supportive. Offer beginner-friendly tips without being condescending. Celebrate their excitement.
+Reference their preferred region naturally when suggesting destinations. If they haven't filled in RV details yet, gently ask about their rig to give better advice — but don't nag.
 
 ## Update Instructions
 When the user provides info to update (site number, bio, RV details, social URLs, etc.), include this format in your response:
@@ -159,7 +173,7 @@ router.post('/chat', authenticateToken, async (req: Request, res: Response) => {
     if (isCampQ) {
       const camps = await searchCampgrounds(lastMsg, user?.rvLength);
       if (camps.length > 0) {
-        campCtx = '\n\n## Campgrounds from Database\n' + camps.map((c, i) => {
+        campCtx = '\n\n## Campgrounds from Database\n' + camps.map((c: any, i: any) => {
           let d = `${i+1}. **${c.name}** - ${c.location}${c.state?`, ${c.state}`:''}`;
           if (c.googleRating) d += ` | ${c.googleRating}/5`;
           if (c.pricePerNight) d += ` | $${c.pricePerNight}/night`;
@@ -214,7 +228,7 @@ router.post('/chat', authenticateToken, async (req: Request, res: Response) => {
           const { title, summary } = await summarizeConversation(allMsgs);
           await prisma.hitchConversation.update({ where: { id: cid }, data: { title, summary } });
         }
-      } catch (e) { console.error('Save error:', e); }
+      } catch (e: any) { console.error('Save error:', e); }
     });
 
     res.write('data: [DONE]\n\n');
@@ -315,11 +329,11 @@ router.post('/drive-debrief', authenticateToken, async (req: Request, res: Respo
       }),
     });
 
-    const data = await response.json() as any;
+    const data: any = await response.json() as any;
     const debrief = data?.content?.[0]?.text || 'Great drive! Remember to keep breaks consistent on your next trip.';
 
     res.json({ grade, debrief });
-  } catch (err) {
+  } catch (err: any) {
     console.error('drive-debrief error:', err);
     res.status(500).json({ grade: 'B', debrief: 'Great drive! Remember to rest well before your next trip.' });
   }

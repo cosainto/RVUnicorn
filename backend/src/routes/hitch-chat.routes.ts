@@ -5,12 +5,13 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // POST /api/hitch/chat
 router.post('/chat', authenticateToken, async (req: any, res) => {
   try {
+    const userId = req.user?.id || req.userId;
     const { message, history = [], userContext, guideId = 'hitch' } = req.body;
 
     const GUIDE_PERSONAS: Record<string, string> = {
@@ -21,7 +22,6 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
       diesel: "You are Diesel Dave 🚛, a big rig expert. Direct, technical. ALWAYS address big rig compatibility first.",
       holden_hannah: "You are Holden & Hannah 🏕️, Junior Rangers. Enthusiastic kids exploring campgrounds. Highlight playgrounds, swimming, kid activities. Playful energetic voice.",
       luna: "You are Luna 🌙, a family/pet camping expert. Warm, practical. Highlight kid-friendly features and pet policies.",
-      wallet: "You are Wallet 🪨, a chaotic but G-rated gremlin who has somehow accessed RVUnicorn. You speak in caps sometimes, make wild but harmless observations, treat everything like a massive discovery, and disappear quickly. Keep it family-friendly and fun. Max 2 sentences — you never stay long.",
       wallet: "You are Wallet 🪨, a chaotic but G-rated gremlin who has somehow accessed RVUnicorn. You speak in caps sometimes, make wild but harmless observations, treat everything like a massive discovery, and disappear quickly. Keep it family-friendly and fun. Max 2 sentences — you never stay long.",
     };
     const personaPrefix = GUIDE_PERSONAS[guideId] || GUIDE_PERSONAS.hitch;
@@ -44,8 +44,8 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
         take: 3,
       });
       if (campgrounds.length > 0) {
-        contextData += `\nNearby campgrounds: ${campgrounds.map(c => `${c.name} in ${c.state}`).join(', ')}`;
-        suggestions.push(...campgrounds.map(c => ({
+        contextData += `\nNearby campgrounds: ${campgrounds.map((c: any) => `${c.name} in ${c.state}`).join(', ')}`;
+        suggestions.push(...campgrounds.map((c: any) => ({
           type: 'campground', id: c.id, name: c.name,
           location: [c.city, c.state].filter(Boolean).join(', '),
           rating: c.googleRating, icon: '🏕️'
@@ -92,8 +92,8 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
         take: 3,
       });
       if (spots.length > 0) {
-        contextData += `\nFree overnight spots: ${spots.map(s => `${s.name} in ${s.state}`).join(', ')}`;
-        suggestions.push(...spots.map(s => ({
+        contextData += `\nFree overnight spots: ${spots.map((s: any) => `${s.name} in ${s.state}`).join(', ')}`;
+        suggestions.push(...spots.map((s: any) => ({
           type: 'overnight_spot', id: s.id, name: s.name,
           location: [s.city, s.state].filter(Boolean).join(', '),
           rating: (s as any).rating || null, icon: '🅿️'
@@ -103,15 +103,16 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
 
     // If userContext not passed from frontend, fetch it server-side using auth token
     let resolvedContext = userContext;
-    if (!resolvedContext?.name && req.user?.id) {
+    if (!resolvedContext?.name && userId) {
       try {
-        const userId = req.user.id;
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: {
             firstName: true, username: true,
             campingInterests: true, rvType: true, rvLength: true,
             rvMake: true, rvModel: true, rvYear: true, rvFuelType: true,
+            onboardingCamperType: true, onboardingRigType: true, onboardingRegion: true,
+            homeState: true,
           }
         });
         if (user) {
@@ -136,6 +137,9 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
             homeState: (user as any).homeState,
             interests: user.campingInterests || [],
             rv: { type: user.rvType, length: user.rvLength, make: user.rvMake, model: user.rvModel, year: user.rvYear, fuelType: user.rvFuelType },
+            camperType: (user as any).onboardingCamperType,
+            rigType: (user as any).onboardingRigType,
+            region: (user as any).onboardingRegion,
             friends,
           };
         }
@@ -147,6 +151,9 @@ router.post('/chat', authenticateToken, async (req: any, res) => {
       userContextStr += `\nUser: ${userContext.name} (@${userContext.username})`;
       if (userContext.homeState) userContextStr += `, home state: ${userContext.homeState}`;
       if (userContext.rv?.type) userContextStr += `\nRV: ${userContext.rv.year || ''} ${userContext.rv.make || ''} ${userContext.rv.model || ''} ${userContext.rv.type || ''} (${userContext.rv.length || '?'}ft, ${userContext.rv.fuelType || 'gas'})`;
+      if (userContext.camperType) userContextStr += `\nCamper style: ${userContext.camperType.replace(/_/g, ' ')}`;
+      if (userContext.rigType) userContextStr += `\nPreferred rig type: ${userContext.rigType.replace(/_/g, ' ')}`;
+      if (userContext.region) userContextStr += `\nFavorite region: ${userContext.region}`;
       if (userContext.interests?.length) userContextStr += `\nCamping interests: ${userContext.interests.join(', ')}`;
       if (userContext.badges?.earned?.length) userContextStr += `\nBadges earned (${userContext.badges.totalEarned}): ${userContext.badges.earned.slice(0,5).join(', ')}`;
       if (userContext.badges?.suggestions?.length) userContextStr += `\nBadges they haven't earned yet: ${userContext.badges.suggestions.map((b: any) => b.name).join(', ')}`;
@@ -175,7 +182,14 @@ Current date and time: ${dateStr} at ${timeStr}. You help users:
 - Help with fuel planning based on RV type and distance
 
 Your personality: enthusiastic, knowledgeable about RV travel, friendly, and a little playful. Use camping/RV metaphors occasionally.
-IMPORTANT: You already know this user. Their name, RV, trips, friends, and badges are all listed above. Use that information naturally and confidently — never say you don't know who they are or that you don't have their account. If asked about a friend, check the friends list above and answer directly.
+IMPORTANT: You already know this user. Their name, RV, trips, friends, badges, camper style, and preferred region are all listed above. Use that information naturally and confidently — never say you don't know who they are or that you don't have their account. If asked about a friend, check the friends list above and answer directly.
+
+Personalization by camper style:
+- "weekend warrior": Suggest nearby getaways, quick trips, time-saving tips.
+- "full timer": Talk like a fellow road-lifer — long-term stays, seasonal moves, mail forwarding, community.
+- "occasional": Keep it simple, encouraging, no jargon overload.
+- "first big trip" / "first trip ever": Be extra welcoming, offer beginner tips without being condescending. Celebrate their excitement.
+Always reference their preferred region naturally when suggesting destinations.
 
 You have access to web search. USE IT PROACTIVELY for:
 - Weather questions ("what's the weather in X", "will it rain this weekend")
@@ -329,7 +343,7 @@ Keep responses helpful and specific. Reference the user by name when you have it
                 headers: { 'Content-Type': 'application/json', 'Authorization': req.headers.authorization || '' },
                 body: JSON.stringify({ dayNumber: day.dayNumber, type: day.type || 'TRAVEL', notes: day.notes }),
               }).then(r => r.json()).catch(() => ({ data: null }));
-            } catch(e) {}
+            } catch (e: any) {}
           }
           routePlanned = { eventId: routeData.eventId, days: routeData.days.length };
         }
@@ -375,7 +389,7 @@ router.post('/campers-like-you', authenticateToken, async (req: any, res) => {
       take: 100,
     });
 
-    const similarUserIds = similarUsers.map(u => u.id);
+    const similarUserIds = similarUsers.map((u: any) => u.id);
 
     // Find campgrounds these similar users have checked into
     const checkIns = await prisma.checkIn.findMany({
@@ -620,7 +634,7 @@ router.post('/find-similar-campground', async (req: any, res) => {
       return res.json({ matches: [], message: `No campgrounds found in ${targetState} yet.` });
     }
 
-    const campgroundList = campgrounds.map((c, i) =>
+    const campgroundList = campgrounds.map((c: any, i: any) =>
       `${i + 1}. ${c.name} in ${c.city}, ${c.state} (rating: ${c.googleRating || 'unrated'})`
     ).join('\n');
 
@@ -706,7 +720,7 @@ Return only the description text, no quotes, no markdown.`;
 // GET /api/hitch/user-context - Get current user's context for Hitch
 router.get('/user-context', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     if (!userId) return res.json({});
 
     const user = await prisma.user.findUnique({
@@ -723,6 +737,9 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         rvModel: true,
         rvYear: true,
         rvFuelType: true,
+        onboardingCamperType: true,
+        onboardingRigType: true,
+        onboardingRegion: true,
         badges: {
           include: { badge: { select: { name: true, category: true } } },
           take: 20,
@@ -755,7 +772,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
     });
 
     const earnedBadgeIds = new Set((user as any).badges?.map((ub: any) => ub.badge?.name).filter(Boolean) || []);
-    const unearnedBadges = allBadges.filter(b => !earnedBadgeIds.has(b.name)).slice(0, 8);
+    const unearnedBadges = allBadges.filter((b: any) => !earnedBadgeIds.has(b.name)).slice(0, 8);
 
     // Get users with similar interests
     const similarUsers = user.campingInterests?.length > 0
@@ -848,6 +865,9 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
       username: user.username,
       homeState: user.homeState,
       interests: user.campingInterests || [],
+      camperType: (user as any).onboardingCamperType,
+      rigType: (user as any).onboardingRigType,
+      region: (user as any).onboardingRegion,
       rv: {
         type: user.rvType,
         length: user.rvLength,
@@ -859,18 +879,18 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
       badges: {
         earned: ((user as any).badges || []).map((ub: any) => ub.badge?.name).filter(Boolean),
         totalEarned: (user as any).badges?.length || 0,
-        suggestions: unearnedBadges.map(b => ({ name: b.name, description: b.description })),
+        suggestions: unearnedBadges.map((b: any) => ({ name: b.name, description: b.description })),
       },
-      visitedStates: stateVisits.map(sv => sv.state),
+      visitedStates: stateVisits.map((sv: any) => sv.state),
       upcomingTrips: trips,
-      similarUsers: similarUsers.map(u => ({
+      similarUsers: similarUsers.map((u: any) => ({
         username: u.username,
         name: u.firstName,
         sharedInterests: (u.campingInterests as string[] || []).filter((i: string) =>
           (user.campingInterests as string[] || []).includes(i)
         ),
       })),
-      popularTrips: popularTrips.map(t => ({
+      popularTrips: popularTrips.map((t: any) => ({
         id: t.id,
         title: t.title,
         campground: t.campground?.name,
@@ -879,7 +899,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         attendeeCount: t.attendees.length,
         startDate: t.startDate,
       })),
-      topCampgrounds: topCampgrounds.map(c => ({
+      topCampgrounds: topCampgrounds.map((c: any) => ({
         id: c.id,
         name: c.name,
         location: [c.city, c.state].filter(Boolean).join(', '),
@@ -888,7 +908,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         wishlists: c._count.wishlists,
       })),
       friends: following.map((f: any) => { const r = f.initiatorId === userId ? f.receiver : f.initiator; return r ? { username: r.username, name: r.firstName } : null; }).filter(Boolean),
-      friendTrips: friendTrips.map(t => ({
+      friendTrips: friendTrips.map((t: any) => ({
         id: t.id,
         title: t.title,
         campground: t.campground?.name,
@@ -898,7 +918,7 @@ router.get('/user-context', authenticateToken, async (req: any, res) => {
         attendeeCount: t.attendees.length,
         startDate: t.startDate,
       })),
-      friendCheckIns: friendCheckIns.map(c => ({
+      friendCheckIns: friendCheckIns.map((c: any) => ({
         user: c.user.firstName || c.user.username,
         location: c.campground?.name || (c.harvestHost as any)?.name,
         type: c.campground ? 'campground' : 'host',
@@ -975,11 +995,11 @@ router.post('/campground-chat', async (req: any, res) => {
     }).catch(() => []);
 
     const avgRating = reviews.length
-      ? (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1)
+      ? (reviews.reduce((a: any, r: any) => a + r.rating, 0) / reviews.length).toFixed(1)
       : null;
 
     const reviewSummary = reviews.length > 0
-      ? reviews.slice(0, 8).map(r => `${r.rating}★: ${r.review?.substring(0, 100) || 'No comment'}`).join('\n')
+      ? reviews.slice(0, 8).map((r: any) => `${r.rating}★: ${r.review?.substring(0, 100) || 'No comment'}`).join('\n')
       : 'No reviews yet';
 
     // Build user RV context
@@ -1063,8 +1083,8 @@ router.post('/analyze-campground', async (req: any, res) => {
       take: 30,
     }).catch(() => []);
 
-    const reviewText = reviews.map(r => r.review).filter(Boolean).join(' ');
-    const avgRating = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
+    const reviewText = reviews.map((r: any) => r.review).filter(Boolean).join(' ');
+    const avgRating = reviews.length ? reviews.reduce((a: any, r: any) => a + r.rating, 0) / reviews.length : null;
 
     const prompt = `Analyze this campground and return ONLY valid JSON, no markdown.
 
@@ -1131,7 +1151,7 @@ rigStressScore: 1=easy, 5=very difficult. vibeLabel options: Peaceful Retreat, W
 // POST /api/hitch/feedback - Log user feedback on Hitch responses
 router.post('/feedback', async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const { messageId, rating, question, answer, action } = req.body;
     // Store in notifications table as a feedback record for now
     // action can be: 'thumbs_up', 'thumbs_down', 'saved_campground', 'created_trip', 'viewed_campground'
@@ -1175,11 +1195,11 @@ router.get('/hidden-gems', async (req: any, res) => {
 
     // Score each campground: high rating + low followers = hidden gem
     const scored = campgrounds
-      .map(c => ({
+      .map((c: any) => ({
         ...c,
         gemScore: ((c as any).googleRating || 0) * 20 - Math.log(Math.max((c as any)._count?.followers + 1 || 1, 1)) * 5,
       }))
-      .sort((a, b) => b.gemScore - a.gemScore)
+      .sort((a: any, b: any) => b.gemScore - a.gemScore)
       .slice(0, parseInt(limit as string));
 
     // Use AI to add personality to top gems
@@ -1192,7 +1212,7 @@ Write a one-line "why it's special" for each. Return ONLY valid JSON:
   ]
 }
 Campgrounds:
-${scored.slice(0, 5).map((c, i) => `${i}. ${c.name} in ${c.city}, ${c.state} (${c.googleRating}★, ${c._count.followers} followers)`).join('\n')}`;
+${scored.slice(0, 5).map((c: any, i: any) => `${i}. ${c.name} in ${c.city}, ${c.state} (${c.googleRating}★, ${c._count.followers} followers)`).join('\n')}`;
 
       try {
         const response = await anthropic.messages.create({

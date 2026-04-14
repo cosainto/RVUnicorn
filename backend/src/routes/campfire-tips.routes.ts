@@ -4,7 +4,7 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── GET /api/campfire-tips/:campgroundId — all tips for a campground ──
@@ -51,7 +51,7 @@ router.get('/trip/:tripId', optionalAuth, async (req: Request, res: Response) =>
 // ── POST /api/campfire-tips — create a tip ──
 router.post('/', authenticateToken, async (req: any, res: Response) => {
   try {
-    const authorId = req.userId || req.user?.id;
+    const authorId = req.userId || (req as any).user?.id;
     const { campgroundId, tripId, recipientId, title, content, category } = req.body;
     if (!campgroundId || !content?.trim()) return res.status(400).json({ error: 'campgroundId and content required' });
 
@@ -101,7 +101,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
 // ── POST /api/campfire-tips/:tipId/react — react to a tip ──
 router.post('/:tipId/react', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { type } = req.body; // HELPFUL, SAVE, APPRECIATE
     if (!['HELPFUL', 'SAVE', 'APPRECIATE'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
@@ -147,7 +147,7 @@ router.post('/:tipId/react', authenticateToken, async (req: any, res: Response) 
 // ── POST /api/campfire-tips/smart-prompt — generate pre-filled tip for a friend's trip ──
 router.post('/smart-prompt', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { campgroundId, recipientFirstName } = req.body;
 
     const campground = await prisma.campground.findUnique({
@@ -224,7 +224,7 @@ router.get('/user/:userId/stats', async (req: Request, res: Response) => {
 // ── POST /api/campfire-tips/match-trip — find relevant tip-givers for a trip ──
 router.post('/match-trip', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { campgroundId } = req.body;
     if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
 
@@ -236,7 +236,7 @@ router.post('/match-trip', authenticateToken, async (req: any, res: Response) =>
       },
       select: { initiatorId: true, receiverId: true },
     });
-    const friendIds = friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    const friendIds = friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
 
     const visitors = await prisma.checkIn.findMany({
       where: { campgroundId, userId: { in: friendIds } },
@@ -246,7 +246,7 @@ router.post('/match-trip', authenticateToken, async (req: any, res: Response) =>
       take: 3,
     });
 
-    res.json({ matches: visitors.map(v => ({ ...v.user, lastVisit: v.createdAt })) });
+    res.json({ matches: visitors.map((v: any) => ({ ...v.user, lastVisit: v.createdAt })) });
   } catch {
     res.json({ matches: [] });
   }
@@ -255,7 +255,7 @@ router.post('/match-trip', authenticateToken, async (req: any, res: Response) =>
 // ── GET /api/campfire-tips/draft/:campgroundId — AI-generated draft tip ──
 router.get('/draft/:campgroundId', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { campgroundId } = req.params;
 
     const [campground, checkIns, review, userProfile] = await Promise.all([
@@ -308,7 +308,7 @@ export async function triggerTipPromptsForTrip(tripId: string, creatorId: string
     ]);
     if (!campground || !creator) return;
 
-    const friendIds = friendships.map(f => f.initiatorId === creatorId ? f.receiverId : f.initiatorId);
+    const friendIds = friendships.map((f: any) => f.initiatorId === creatorId ? f.receiverId : f.initiatorId);
     if (friendIds.length === 0) return;
 
     // Score candidates
@@ -324,7 +324,7 @@ export async function triggerTipPromptsForTrip(tripId: string, creatorId: string
       if (checkIns.length === 0) continue;
 
       let score = checkIns.length * 40;
-      const lastVisit = checkIns.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.createdAt;
+      const lastVisit = checkIns.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.createdAt;
       if (lastVisit && lastVisit > sixMonthsAgo) score += 20;
       if (review) score += 20;
       if (friend?.rvType === creator.rvType && creator.rvType) score += 20;

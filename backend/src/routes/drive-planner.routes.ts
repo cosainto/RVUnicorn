@@ -3,7 +3,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const HERE_API_KEY = process.env.HERE_API_KEY;
 const HERE_ROUTING_URL = 'https://router.hereapi.com/v8/routes';
@@ -23,9 +23,9 @@ router.get('/geocode', async (req: Request, res: Response) => {
       `${HERE_GEOCODE_URL}?q=${encodeURIComponent(q as string)}&in=countryCode:USA&apiKey=${HERE_API_KEY}`
     );
     
-    const data = await response.json();
+    const data: any = await response.json();
     res.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Geocode error:', error);
     res.status(500).json({ error: 'Failed to geocode address' });
   }
@@ -44,9 +44,9 @@ router.get('/autocomplete', async (req: Request, res: Response) => {
       `${HERE_AUTOCOMPLETE_URL}?q=${encodeURIComponent(q as string)}&in=countryCode:USA&limit=5&apiKey=${HERE_API_KEY}`
     );
     
-    const data = await response.json();
+    const data: any = await response.json();
     res.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Autocomplete error:', error);
     res.status(500).json({ error: 'Failed to get autocomplete suggestions' });
   }
@@ -84,7 +84,7 @@ router.post('/route', async (req: Request, res: Response) => {
       `&apiKey=${HERE_API_KEY}`;
 
     const response = await fetch(url);
-    const data = await response.json() as any;
+    const data: any = await response.json() as any;
     
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
@@ -106,7 +106,7 @@ router.post('/route', async (req: Request, res: Response) => {
     } else {
       res.status(400).json({ error: 'No route found', details: data });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Route calculation error:', error);
     res.status(500).json({ error: 'Failed to calculate route' });
   }
@@ -153,7 +153,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
     // Using simplified distance check to nearest route point
     const maxDistanceKm = maxDistance * 1.60934;
     
-    const nearbyGasStations = gasStations.filter(station => {
+    const nearbyGasStations = gasStations.filter((station: any) => {
       return routePoints.some((point: { lat: number; lng: number }) => {
         const dist = haversineDistance(
           station.latitude,
@@ -165,7 +165,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
       });
     });
 
-    const nearbyRestStops = restStops.filter(stop => {
+    const nearbyRestStops = restStops.filter((stop: any) => {
       return routePoints.some((point: { lat: number; lng: number }) => {
         const dist = haversineDistance(
           stop.latitude,
@@ -195,7 +195,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
           });
           
           const response = await fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params}`);
-          const data = await response.json();
+          const data: any = await response.json();
           
           if (data.results) {
             for (const place of data.results) {
@@ -225,7 +225,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
               }
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Google gas station fetch error:', err);
         }
       }
@@ -233,7 +233,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
 
     // Combine database + Google gas stations
     const allGasStations = [
-      ...nearbyGasStations.map(s => ({ ...s, source: 'database' })),
+      ...nearbyGasStations.map((s: any) => ({ ...s, source: 'database' })),
       ...googleGasStations
     ];
 
@@ -247,7 +247,7 @@ router.post('/stops-along-route', async (req: Request, res: Response) => {
         fromGoogle: googleGasStations.length,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Find stops along route error:', error);
     res.status(500).json({ error: 'Failed to find stops along route' });
   }
@@ -274,7 +274,7 @@ router.post('/fuel-estimate', async (req: Request, res: Response) => {
       });
       
       if (prices.length > 0) {
-        avgPrice = prices.reduce((sum, p) => sum + p.dieselPrice, 0) / prices.length;
+        avgPrice = prices.reduce((sum: number, p: any) => sum + p.dieselPrice, 0) / prices.length;
       }
     }
 
@@ -287,7 +287,7 @@ router.post('/fuel-estimate', async (req: Request, res: Response) => {
       estimatedCost: Math.round(estimatedCost * 100) / 100,
       mpgUsed: mpg,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fuel estimate error:', error);
     res.status(500).json({ error: 'Failed to estimate fuel cost' });
   }
@@ -360,7 +360,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
             reason: `Refuel (~${Math.round(point.milesFromStart)} mi, every ${gasRange} mi)`,
             places: stations.map(formatPlace)
           });
-        } catch (e) { console.error('Gas search error:', e); }
+        } catch (e: any) { console.error('Gas search error:', e); }
       }
     }
 
@@ -386,7 +386,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
               ...cabelas.map((s: any) => ({ ...formatPlace(s), parkingType: 'Cabelas/Bass Pro', note: 'Most locations welcome overnight RV parking' })),
             ]
           });
-        } catch (e) { console.error('Overnight search error:', e); }
+        } catch (e: any) { console.error('Overnight search error:', e); }
       }
     }
 
@@ -404,7 +404,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
             restaurants: restaurants.slice(0, 3).map(formatPlace),
             restAreas: restAreas.map(formatPlace)
           });
-        } catch (e) { console.error('Food search error:', e); }
+        } catch (e: any) { console.error('Food search error:', e); }
       }
     }
 
@@ -422,7 +422,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
               places: dumps.map(formatPlace)
             });
           }
-        } catch (e) { console.error('Dump search error:', e); }
+        } catch (e: any) { console.error('Dump search error:', e); }
       }
     }
 
@@ -450,7 +450,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
               places: unique.slice(0, 5).map(formatPlace)
             });
           }
-        } catch (e) { console.error('Attraction search error:', e); }
+        } catch (e: any) { console.error('Attraction search error:', e); }
       }
     }
     allStops.sort((a: any, b: any) => a.milesFromStart - b.milesFromStart);
@@ -467,7 +467,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
         avgGasPrice = totalRegular / allPrices.length;
         // If budget priority, find cheapest states; if comfort, use avg
       }
-    } catch (e) { console.error('Gas price lookup error:', e); }
+    } catch (e: any) { console.error('Gas price lookup error:', e); }
 
     const estimatedGallons = Math.round(totalMiles / mpg);
     const estimatedFuelCost = Math.round(estimatedGallons * avgGasPrice);
@@ -485,7 +485,7 @@ router.post('/smart-stops', async (req: Request, res: Response) => {
       },
       stops: allStops,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Smart stops error:', error);
     res.status(500).json({ error: 'Failed to calculate smart stops' });
   }
@@ -551,9 +551,9 @@ async function searchNearbyPlaces(
   if (keyword) params.append('keyword', keyword);
   try {
     const response = await fetch(`${GOOGLE_PLACES_URL}?${params}`);
-    const data = await response.json();
+    const data: any = await response.json();
     return (data.results || []).slice(0, maxResults);
-  } catch (e) {
+  } catch (e: any) {
     console.error('Places search error:', e);
     return [];
   }
@@ -601,7 +601,7 @@ router.post('/google-route', async (req: Request, res: Response) => {
     if (avoid.length > 0) params.append('avoid', avoid.join('|'));
 
     const response = await fetch(`${GOOGLE_DIRECTIONS_URL}?${params}`);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (data.status !== 'OK') {
       console.error('Google Directions error:', data.status, data.error_message);
@@ -646,7 +646,7 @@ router.post('/google-route', async (req: Request, res: Response) => {
         maneuver: step.maneuver
       }))
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Google route error:', error);
     res.status(500).json({ error: 'Failed to get route' });
   }
@@ -708,7 +708,7 @@ router.post('/attractions-along-route', async (req: Request, res: Response) => {
           });
 
           const response = await fetch(`${GOOGLE_PLACES_URL}?${params}`);
-          const data = await response.json();
+          const data: any = await response.json();
 
           if (data.results) {
             for (const place of data.results) {
@@ -742,7 +742,7 @@ router.post('/attractions-along-route', async (req: Request, res: Response) => {
               }
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Place search error:', err);
         }
       }
@@ -771,7 +771,7 @@ router.post('/attractions-along-route', async (req: Request, res: Response) => {
       total: allPlaces.length,
       ...categorized
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Attractions along route error:', error);
     res.status(500).json({ error: 'Failed to find attractions' });
   }
@@ -815,7 +815,7 @@ router.post('/add-waypoint', async (req: Request, res: Response) => {
     });
 
     res.json({ success: true, waypoint: newWaypoint, trip: updated });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add waypoint error:', error);
     res.status(500).json({ error: 'Failed to add waypoint' });
   }
@@ -845,7 +845,7 @@ router.post('/route-with-waypoints', async (req: Request, res: Response) => {
       }
 
       const response = await fetch(`${GOOGLE_DIRECTIONS_URL}?${params}`);
-      const data = await response.json();
+      const data: any = await response.json();
 
       if (data.status !== 'OK') {
         return res.status(400).json({ error: 'Failed to calculate route' });
@@ -895,7 +895,7 @@ router.post('/route-with-waypoints', async (req: Request, res: Response) => {
       // ... existing HERE implementation
       res.status(400).json({ error: 'HERE waypoints not implemented yet' });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Route with waypoints error:', error);
     res.status(500).json({ error: 'Failed to calculate route' });
   }
@@ -942,7 +942,7 @@ router.get('/gas-prices', async (req: Request, res: Response) => {
     const result = { price: regularPrice, diesel: dieselPrice, midgrade: midgradePrice, premium: premiumPrice, timestamp: Date.now(), source: 'fueleconomy.gov', state: cacheKey };
     gasPriceCache.set(cacheKey, result);
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gas price error:', error);
     // Return reasonable fallback
     res.json({ price: 3.35, diesel: 3.85, source: 'estimate', state: req.query.state || 'US' });

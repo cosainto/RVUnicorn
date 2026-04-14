@@ -9,7 +9,7 @@ import { uploadBufferToCloudinary } from '../utils/cloudinary';
 const SITE_ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // File upload setup - memory storage for Cloudinary
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -38,11 +38,11 @@ router.get('/:campgroundId/reviews', async (req: Request, res: Response) => {
 
     // Calculate average rating
     const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      ? reviews.reduce((sum: any, r: any) => sum + r.rating, 0) / reviews.length
       : 0;
 
     res.json({ reviews, averageRating: avgRating, totalReviews: reviews.length });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get reviews error:', error);
     res.status(500).json({ error: 'Failed to get reviews' });
   }
@@ -134,7 +134,7 @@ router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, re
     });
 
     res.status(201).json(newReview);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create review error:', error);
     res.status(500).json({ error: 'Failed to create review' });
   }
@@ -153,7 +153,7 @@ router.delete('/:campgroundId/reviews/:reviewId', authenticateToken, async (req:
 
     await prisma.campgroundReview.delete({ where: { id: reviewId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete review error:', error);
     res.status(500).json({ error: 'Failed to delete review' });
   }
@@ -175,7 +175,7 @@ router.get('/:campgroundId/photos', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(photos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get photos error:', error);
     res.status(500).json({ error: 'Failed to get photos' });
   }
@@ -205,7 +205,7 @@ router.get('/:campgroundId/photos/pending', authenticateToken, async (req: Reque
       orderBy: { createdAt: 'desc' },
     });
     res.json(photos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pending photos error:', error);
     res.status(500).json({ error: 'Failed to get pending photos' });
   }
@@ -286,7 +286,7 @@ router.post('/:campgroundId/photos', authenticateToken, upload.single('photo'), 
     });
 
     res.status(201).json(photo);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submit photo error:', error);
     res.status(500).json({ error: 'Failed to submit photo' });
   }
@@ -313,7 +313,7 @@ router.put('/:campgroundId/photos/:photoId/review', authenticateToken, async (re
     });
 
     res.json(photo);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Review photo error:', error);
     res.status(500).json({ error: 'Failed to review photo' });
   }
@@ -338,7 +338,7 @@ router.delete('/:campgroundId/photos/:photoId', authenticateToken, async (req: R
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Failed to delete photo' });
   }
@@ -373,7 +373,7 @@ router.put('/:campgroundId/photos/:photoId/set-banner', authenticateToken, async
     });
 
     res.json({ success: true, imageUrl: campground.imageUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Set banner error:', error);
     res.status(500).json({ error: 'Failed to set banner' });
   }
@@ -398,7 +398,7 @@ router.get('/:campgroundId/events', async (req: Request, res: Response) => {
       orderBy: { startDate: 'asc' },
     });
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get events error:', error);
     res.status(500).json({ error: 'Failed to get events' });
   }
@@ -434,7 +434,7 @@ router.post('/:campgroundId/events', authenticateToken, async (req: Request, res
     });
 
     res.status(201).json(event);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create event error:', error);
     res.status(500).json({ error: 'Failed to create event' });
   }
@@ -455,7 +455,7 @@ router.delete('/:campgroundId/events/:eventId', authenticateToken, async (req: R
 
     await prisma.campgroundEvent.delete({ where: { id: eventId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete event error:', error);
     res.status(500).json({ error: 'Failed to delete event' });
   }
@@ -499,13 +499,13 @@ router.get('/:campgroundId/announcements', async (req: Request, res: Response) =
     // Increment view count for published announcements
     if (includeScheduled !== 'true' && announcements.length > 0) {
       await prisma.campgroundAnnouncement.updateMany({
-        where: { id: { in: announcements.map(a => a.id) } },
+        where: { id: { in: announcements.map((a: any) => a.id) } },
         data: { viewCount: { increment: 1 } }
       });
     }
 
     res.json(announcements);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get announcements error:', error);
     res.status(500).json({ error: 'Failed to get announcements' });
   }
@@ -560,7 +560,7 @@ router.get('/:campgroundId/announcements/featured', async (req: Request, res: Re
     });
 
     res.json(featuredAnnouncements);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get featured announcements error:', error);
     res.status(500).json({ error: 'Failed to get featured announcements' });
   }
@@ -688,8 +688,8 @@ router.post('/:campgroundId/announcements', authenticateToken, async (req: Reque
 
       // Combine unique user IDs (followers + checked-in)
       const allUserIds = new Set([
-        ...followers.map(f => f.userId),
-        ...checkedInUsers.map(c => c.userId)
+        ...followers.map((f: any) => f.userId),
+        ...checkedInUsers.map((c: any) => c.userId)
       ]);
 
       // Create activity for each user
@@ -717,7 +717,7 @@ router.post('/:campgroundId/announcements', authenticateToken, async (req: Reque
           where: { mutedCampgroundId: campgroundId },
           select: { userId: true }
         });
-        const mutedUserIds = new Set(mutedUsers.map(m => m.userId));
+        const mutedUserIds = new Set(mutedUsers.map((m: any) => m.userId));
 
         // Filter out muted users
         const notifyUserIds = Array.from(allUserIds).filter(id => !mutedUserIds.has(id));
@@ -746,7 +746,7 @@ router.post('/:campgroundId/announcements', authenticateToken, async (req: Reque
         currentTier: tier
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create announcement error:', error);
     res.status(500).json({ error: 'Failed to create announcement' });
   }
@@ -769,7 +769,7 @@ router.delete('/:campgroundId/announcements/:announcementId', authenticateToken,
 
     await prisma.campgroundAnnouncement.delete({ where: { id: announcementId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete announcement error:', error);
     res.status(500).json({ error: 'Failed to delete announcement' });
   }
@@ -787,7 +787,7 @@ router.get('/:campgroundId/is-admin', authenticateToken, async (req: Request, re
     });
 
     res.json({ isAdmin: !!isAdmin });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check admin error:', error);
     res.status(500).json({ error: 'Failed to check admin status' });
   }
@@ -805,7 +805,7 @@ router.get('/:campgroundId/map', async (req: Request, res: Response) => {
       select: { campgroundMapUrl: true },
     });
     res.json({ mapUrl: campground?.campgroundMapUrl || null });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get map error:', error);
     res.status(500).json({ error: 'Failed to get map' });
   }
@@ -839,7 +839,7 @@ router.post('/:campgroundId/map', authenticateToken, upload.single('map'), async
     });
 
     res.json({ mapUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload map error:', error);
     res.status(500).json({ error: 'Failed to upload map' });
   }
@@ -865,7 +865,7 @@ router.delete('/:campgroundId/map', authenticateToken, async (req: Request, res:
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete map error:', error);
     res.status(500).json({ error: 'Failed to delete map' });
   }
@@ -968,13 +968,13 @@ router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) 
     });
 
     // Calculate distance and sort
-    const withDistance = nearDest.map(cg => {
+    const withDistance = nearDest.map((cg: any) => {
       const dLat = ((cg.latitude || 0) - lat) * Math.PI / 180;
       const dLng = ((cg.longitude || 0) - lng) * Math.PI / 180;
       const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180) * Math.cos((cg.latitude||0)*Math.PI/180) * Math.sin(dLng/2)**2;
       const miles = 3959 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return { ...cg, distanceMiles: Math.round(miles * 10) / 10 };
-    }).sort((a, b) => a.distanceMiles - b.distanceMiles);
+    }).sort((a: any, b: any) => a.distanceMiles - b.distanceMiles);
 
     // If we have origin, also find midpoint stops
     let midpointStops: any[] = [];
@@ -993,11 +993,11 @@ router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) 
         },
         take: 20,
       });
-      midpointStops = nearMid.slice(0, 3).map(cg => ({ ...cg, suggestion: 'midpoint', label: 'Good halfway stop' }));
+      midpointStops = nearMid.slice(0, 3).map((cg: any) => ({ ...cg, suggestion: 'midpoint', label: 'Good halfway stop' }));
     }
 
     // Build Hitch-style suggestions
-    const suggestions = withDistance.slice(0, limit).map(cg => {
+    const suggestions = withDistance.slice(0, limit).map((cg: any) => {
       let hitchTip = '';
       if (cg.googleRating && cg.googleRating >= 4.5) hitchTip = `Highly rated — ${cg.googleRating}/5 stars!`;
       else if (cg.isBigRigFriendly) hitchTip = 'Big rig friendly — Diesel approves.';

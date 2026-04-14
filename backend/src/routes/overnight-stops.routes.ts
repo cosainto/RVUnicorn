@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/overnight-stops?lat=&lng=&radius=&type=
 router.get('/', optionalAuth, async (req: any, res) => {
@@ -48,7 +48,7 @@ router.get('/', optionalAuth, async (req: any, res) => {
     }));
 
     res.json(enriched);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Overnight stops error:', error);
     res.status(500).json({ error: 'Failed to fetch overnight stops' });
   }
@@ -74,11 +74,11 @@ router.get('/:id', optionalAuth, async (req: any, res) => {
     });
     if (!stop) return res.status(404).json({ error: 'Not found' });
 
-    const avgRating = stop.reviews.length ? stop.reviews.reduce((a, r) => a + r.rating, 0) / stop.reviews.length : null;
-    const avgSafetyRating = stop.reviews.length ? stop.reviews.reduce((a, r) => a + r.safetyRating, 0) / stop.reviews.length : null;
+    const avgRating = stop.reviews.length ? stop.reviews.reduce((a: any, r: any) => a + r.rating, 0) / stop.reviews.length : null;
+    const avgSafetyRating = stop.reviews.length ? stop.reviews.reduce((a: any, r: any) => a + r.safetyRating, 0) / stop.reviews.length : null;
 
     res.json({ ...stop, avgRating, avgSafetyRating });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch stop' });
   }
 });
@@ -94,7 +94,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
       data: { name, address, city, state, latitude: parseFloat(latitude), longitude: parseFloat(longitude), stopType, website, phone, notes, maxNights: maxNights ? parseInt(maxNights) : null, requiresPermission: requiresPermission ?? false },
     });
     res.status(201).json(stop);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create stop' });
   }
 });
@@ -111,7 +111,7 @@ router.post('/:id/reviews', authenticateToken, async (req: any, res) => {
       include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
     });
     res.json(review);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to submit review' });
   }
 });
@@ -126,7 +126,7 @@ router.post('/:id/updates', authenticateToken, async (req: any, res) => {
       include: { user: { select: { id: true, firstName: true, username: true, profilePicture: true } } },
     });
     res.json(update);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to post update' });
   }
 });
@@ -170,20 +170,20 @@ router.get('/:id/travelers', optionalAuth, async (req: any, res) => {
     // Deduplicate by userId
     const seen = new Set<string>();
     const travelers = pitStops
-      .filter(ps => {
+      .filter((ps: any) => {
         const uid = ps.tripPlan?.user?.id;
         if (!uid || seen.has(uid)) return false;
         seen.add(uid);
         return true;
       })
-      .map(ps => ({
+      .map((ps: any) => ({
         user: ps.tripPlan.user,
         estimatedArrival: ps.estimatedArrival,
         tripTitle: ps.tripPlan.event?.title,
       }));
 
     res.json({ count: travelers.length, travelers });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Travelers error:', error);
     res.status(500).json({ error: 'Failed to fetch travelers' });
   }

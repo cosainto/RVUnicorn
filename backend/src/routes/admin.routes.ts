@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
@@ -66,7 +66,7 @@ router.post('/campgrounds', authenticateToken, requireWill, async (req: Request,
     });
 
     res.status(201).json(campground);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create campground error:', error);
     res.status(500).json({ error: 'Failed to create campground' });
   }
@@ -98,7 +98,7 @@ router.get('/campgrounds', authenticateToken, requireWill, async (req: Request, 
     ]);
 
     res.json({ campgrounds, total, pages: Math.ceil(total / 50) });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch campgrounds' });
   }
 });
@@ -117,7 +117,7 @@ router.put('/campgrounds/:id', authenticateToken, requireWill, async (req: Reque
       data,
     });
     res.json(campground);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update campground' });
   }
 });
@@ -127,7 +127,7 @@ router.delete('/campgrounds/:id', authenticateToken, requireWill, async (req: Re
   try {
     await prisma.campground.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete campground' });
   }
 });
@@ -148,7 +148,7 @@ router.get('/hosts', authenticateToken, requireWill, async (req: Request, res: R
       }
     });
     res.json(hosts);
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
 });
 
 // PUT /api/admin/hosts/:id/approve
@@ -179,7 +179,7 @@ router.put('/hosts/:id/approve', authenticateToken, requireWill, async (req: Req
       }
     }
     res.json(host);
-  } catch (e) { res.status(500).json({ error: 'Failed to approve' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to approve' }); }
 });
 
 // PUT /api/admin/hosts/:id/reject
@@ -201,7 +201,7 @@ router.put('/hosts/:id/reject', authenticateToken, requireWill, async (req: Requ
       });
     }
     res.json(host);
-  } catch (e) { res.status(500).json({ error: 'Failed to reject' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to reject' }); }
 });
 
 // ===== HOST LISTINGS ADMIN =====
@@ -218,7 +218,7 @@ router.get('/hosts', authenticateToken, requireWill, async (req: Request, res: R
       }
     });
     res.json(hosts);
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch hosts' }); }
 });
 
 // PUT /api/admin/hosts/:id/approve
@@ -249,7 +249,7 @@ router.put('/hosts/:id/approve', authenticateToken, requireWill, async (req: Req
       }
     }
     res.json(host);
-  } catch (e) { res.status(500).json({ error: 'Failed to approve' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to approve' }); }
 });
 
 // PUT /api/admin/hosts/:id/reject
@@ -271,7 +271,7 @@ router.put('/hosts/:id/reject', authenticateToken, requireWill, async (req: Requ
       });
     }
     res.json(host);
-  } catch (e) { res.status(500).json({ error: 'Failed to reject' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to reject' }); }
 });
 
 // ── Campground Claims Queue ─────────────────────────────────────

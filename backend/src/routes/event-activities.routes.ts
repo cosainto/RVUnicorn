@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { logActivityAdded, logActivityCompleted } from '../services/activity.service';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Get activities for an event
 router.get('/events/:eventId/activities', authenticateToken, async (req, res) => {
@@ -32,7 +32,7 @@ router.get('/events/:eventId/activities', authenticateToken, async (req, res) =>
     });
     
     res.json(activities);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event activities error:', error);
     res.status(500).json({ error: 'Failed to fetch activities' });
   }
@@ -42,7 +42,7 @@ router.get('/events/:eventId/activities', authenticateToken, async (req, res) =>
 router.post('/events/:eventId/activities', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = (req as any).user?.id || req.user?.id;
+    const userId = (req as any).user?.id || (req as any).user?.id;
     const { thingToDoId, title, description, scheduledDate, scheduledTime, duration, notes } = req.body;
     
     // Verify user has access to this event (is organizer or attendee)
@@ -94,13 +94,13 @@ router.post('/events/:eventId/activities', authenticateToken, async (req, res) =
     prisma.eventAttendee.findMany({
       where: { eventId, status: { in: ['ATTENDING', 'GOING'] } },
       select: { userId: true }
-    }).then(attendees => {
+    }).then((attendees: any) => {
       const adder = activity.addedBy;
       const name = adder ? `${adder.firstName} ${adder.lastName}`.trim() : 'Someone';
       return Promise.all(
         attendees
-          .filter(a => a.userId !== userId)
-          .map(a => prisma.notification.create({
+          .filter((a: any) => a.userId !== userId)
+          .map((a: any) => prisma.notification.create({
             data: {
               userId: a.userId,
               type: 'SCHEDULE_ACTIVITY_ADDED',
@@ -125,7 +125,7 @@ router.post('/events/:eventId/activities', authenticateToken, async (req, res) =
 router.patch('/events/:eventId/activities/:activityId', authenticateToken, async (req, res) => {
   try {
     const { eventId, activityId } = req.params;
-    const userId = (req as any).user?.id || req.user?.id;
+    const userId = (req as any).user?.id || (req as any).user?.id;
     const { scheduledDate, scheduledTime, duration, notes, status } = req.body;
     
     // Verify user has access
@@ -164,7 +164,7 @@ router.patch('/events/:eventId/activities/:activityId', authenticateToken, async
     }
 
     res.json(activity);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update event activity error:', error);
     res.status(500).json({ error: 'Failed to update activity' });
   }
@@ -174,7 +174,7 @@ router.patch('/events/:eventId/activities/:activityId', authenticateToken, async
 router.delete('/events/:eventId/activities/:activityId', authenticateToken, async (req, res) => {
   try {
     const { eventId, activityId } = req.params;
-    const userId = (req as any).user?.id || req.user?.id;
+    const userId = (req as any).user?.id || (req as any).user?.id;
     
     // Verify user has access
     const event = await prisma.event.findFirst({
@@ -196,7 +196,7 @@ router.delete('/events/:eventId/activities/:activityId', authenticateToken, asyn
     });
     
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete event activity error:', error);
     res.status(500).json({ error: 'Failed to delete activity' });
   }
@@ -206,7 +206,7 @@ router.delete('/events/:eventId/activities/:activityId', authenticateToken, asyn
 router.get('/campgrounds/:campgroundId/things-to-do/saved', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = (req as any).user?.id || req.user?.id;
+    const userId = (req as any).user?.id || (req as any).user?.id;
     
     // Get things to do near this campground that the user has saved
     const saved = await prisma.thingToDoSave.findMany({
@@ -223,10 +223,10 @@ router.get('/campgrounds/:campgroundId/things-to-do/saved', authenticateToken, a
     });
     
     // Filter to only those associated with this campground
-    const filtered = saved.filter(s => s.thingToDo.campgrounds.length > 0);
+    const filtered = saved.filter((s: any) => s.thingToDo.campgrounds.length > 0);
     
-    res.json(filtered.map(s => s.thingToDo));
-  } catch (error) {
+    res.json(filtered.map((s: any) => s.thingToDo));
+  } catch (error: any) {
     console.error('Get saved things error:', error);
     res.status(500).json({ error: 'Failed to fetch saved things' });
   }
@@ -236,7 +236,7 @@ router.get('/campgrounds/:campgroundId/things-to-do/saved', authenticateToken, a
 router.get('/campgrounds/:campgroundId/my-events', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
-    const userId = (req as any).user?.id || req.user?.id;
+    const userId = (req as any).user?.id || (req as any).user?.id;
     
     const events = await prisma.event.findMany({
       where: {
@@ -257,7 +257,7 @@ router.get('/campgrounds/:campgroundId/my-events', authenticateToken, async (req
     });
     
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my events error:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
   }

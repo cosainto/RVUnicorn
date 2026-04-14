@@ -88,7 +88,7 @@ export const sendSMS = async (options: SMSOptions): Promise<void> => {
       to: options.to,
     });
     console.log(`SMS sent to ${options.to}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Send SMS error:', error);
     // Don't throw - just log the error so app continues
   }

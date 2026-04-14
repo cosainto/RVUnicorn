@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { logPhotoUploaded } from '../services/activity.service';
 import { prisma } from '../index';
+const db = prisma as any;
 
 const router = Router({ mergeParams: true });
 
@@ -10,7 +12,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const { eventId } = req.params;
 
     // Check if event exists
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
     });
 
@@ -19,7 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     // Find or create album for this event
-    let album = await prisma.album.findFirst({
+    let album = await db.album.findFirst({
       where: { eventId },
       include: {
         photos: {
@@ -56,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Create album if it doesn't exist
     if (!album) {
-      album = await prisma.album.create({
+      album = await db.album.create({
         data: {
           userId: event.userId,
           eventId,
@@ -93,7 +95,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     res.json(album);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event album error:', error);
     res.status(500).json({ error: 'Failed to get event album' });
   }
@@ -111,12 +113,12 @@ router.post('/photos', authenticateToken, async (req, res) => {
     }
 
     // Get or create album
-    let album = await prisma.album.findFirst({
+    let album = await db.album.findFirst({
       where: { eventId },
     });
 
     if (!album) {
-      const event = await prisma.event.findUnique({
+      const event = await db.event.findUnique({
         where: { id: eventId },
       });
 
@@ -124,7 +126,7 @@ router.post('/photos', authenticateToken, async (req, res) => {
         return res.status(404).json({ error: 'Event not found' });
       }
 
-      album = await prisma.album.create({
+      album = await db.album.create({
         data: {
           userId: event.userId,
           eventId,
@@ -136,7 +138,7 @@ router.post('/photos', authenticateToken, async (req, res) => {
     }
 
     // Fetch full event details to determine privacy + structured caption
-    const fullEvent = await prisma.event.findUnique({
+    const fullEvent = await db.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
@@ -164,7 +166,7 @@ router.post('/photos', authenticateToken, async (req, res) => {
     }
 
     // Create photo — set eventId so it surfaces in the user's profile gallery
-    const photo = await prisma.photo.create({
+    const photo = await db.photo.create({
       data: {
         albumId: album.id,
         userId,
@@ -187,7 +189,7 @@ router.post('/photos', authenticateToken, async (req, res) => {
     // Tag the photo with the campground so the frontend can render a link
     if (fullEvent?.campground?.id && fullEvent.privacy !== 'PRIVATE') {
       try {
-        await prisma.photoCampgroundTag.create({
+        await db.photoCampgroundTag.create({
           data: {
             photoId: photo.id,
             campgroundId: fullEvent.campground.id,
@@ -211,7 +213,7 @@ router.post('/photos', authenticateToken, async (req, res) => {
     }
     // ────────────────────────────────────────────────────────────────────────
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add photo error:', error);
     res.status(500).json({ error: 'Failed to add photo' });
   }

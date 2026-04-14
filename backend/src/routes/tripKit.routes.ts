@@ -84,7 +84,7 @@ router.get('/:id', authenticateToken, async (req: any, res: Response) => {
     });
 
     res.json({ kit: { ...kit, userHasSaved: !!saved } });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripKit] Get error:', e);
     res.status(500).json({ error: 'Failed to load trip kit' });
   }
@@ -102,7 +102,7 @@ router.get('/creator/:creatorId', async (req: any, res: Response) => {
       },
     });
     res.json({ kits });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripKit] List error:', e);
     res.status(500).json({ error: 'Failed to list trip kits' });
   }
@@ -130,7 +130,7 @@ router.patch('/:id', authenticateToken, async (req: any, res: Response) => {
 
     const kit = await (prisma as any).tripKit.update({ where: { id: req.params.id }, data });
     res.json({ kit });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripKit] Update error:', e);
     res.status(500).json({ error: 'Failed to update trip kit' });
   }
@@ -143,7 +143,7 @@ router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
     if (!existing || existing.creatorId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await (prisma as any).tripKit.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripKit] Delete error:', e);
     res.status(500).json({ error: 'Failed to delete trip kit' });
   }
@@ -161,7 +161,7 @@ router.post('/:id/save', authenticateToken, async (req: any, res: Response) => {
     }
     await (prisma as any).tripKitSave.create({ data: { tripKitId: req.params.id, userId: req.userId } });
     res.json({ saved: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[TripKit] Save error:', e);
     res.status(500).json({ error: 'Failed to toggle save' });
   }

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 async function main() {
   console.log('🧵 Seeding sample threads...');
@@ -17,11 +17,11 @@ async function main() {
   
   // Get tags
   const tags = await prisma.threadTag.findMany();
-  const questionTag = tags.find(t => t.slug === 'question');
-  const tipsTag = tags.find(t => t.slug === 'tips-tricks');
-  const reviewTag = tags.find(t => t.slug === 'review');
-  const gearTag = tags.find(t => t.slug === 'gear');
-  const wildlifeTag = tags.find(t => t.slug === 'wildlife');
+  const questionTag = tags.find((t: any) => t.slug === 'question');
+  const tipsTag = tags.find((t: any) => t.slug === 'tips-tricks');
+  const reviewTag = tags.find((t: any) => t.slug === 'review');
+  const gearTag = tags.find((t: any) => t.slug === 'gear');
+  const wildlifeTag = tags.find((t: any) => t.slug === 'wildlife');
 
   const sampleThreads = [
     {

@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 cloudinary.config({
   cloud_name: 'dy6eetmh7',

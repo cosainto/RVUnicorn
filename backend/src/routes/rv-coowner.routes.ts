@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Get my co-owners
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
@@ -14,7 +14,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       include: { coOwner: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } } }
     });
     res.json(coOwners);
-  } catch (e) { res.status(500).json({ error: 'Failed' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed' }); }
 });
 
 // Get RVs I co-own (someone shared their RV with me)
@@ -40,7 +40,7 @@ router.get('/shared-with-me', authenticateToken, async (req: Request, res: Respo
       }
     });
     res.json(shared);
-  } catch (e) { res.status(500).json({ error: 'Failed' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed' }); }
 });
 
 // Add co-owner
@@ -78,7 +78,7 @@ router.delete('/:coOwnerId', authenticateToken, async (req: Request, res: Respon
   try {
     await prisma.rVCoOwner.deleteMany({ where: { ownerId: userId, coOwnerId } });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: 'Failed' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed' }); }
 });
 
 export default router;

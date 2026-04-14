@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Get tags for a photo
 router.get('/:photoId/tags', async (req: Request, res: Response) => {
@@ -37,7 +37,7 @@ router.get('/:photoId/tags', async (req: Request, res: Response) => {
     });
 
     res.json({ userTags, campgroundTags });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get photo tags error:', error);
     res.status(500).json({ error: 'Failed to get photo tags' });
   }
@@ -92,7 +92,7 @@ router.post('/:photoId/tag/user', authenticateToken, async (req: Request, res: R
     }
 
     res.status(201).json(tag);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Tag user in photo error:', error);
     res.status(500).json({ error: 'Failed to tag user' });
   }
@@ -133,7 +133,7 @@ router.post('/:photoId/tag/campground', authenticateToken, async (req: Request, 
     });
 
     res.status(201).json(tag);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Tag campground in photo error:', error);
     res.status(500).json({ error: 'Failed to tag campground' });
   }
@@ -158,7 +158,7 @@ router.delete('/:photoId/tag/user/self', authenticateToken, async (req: Request,
     });
 
     res.json({ message: 'Tag removed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove self tag error:', error);
     res.status(500).json({ error: 'Failed to remove tag' });
   }
@@ -193,7 +193,7 @@ router.delete('/:photoId/tag/user/:userId', authenticateToken, async (req: Reque
     });
 
     res.json({ message: 'Tag removed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove user tag error:', error);
     res.status(500).json({ error: 'Failed to remove tag' });
   }
@@ -228,7 +228,7 @@ router.delete('/:photoId/tag/campground/:campgroundId', authenticateToken, async
     });
 
     res.json({ message: 'Tag removed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove campground tag error:', error);
     res.status(500).json({ error: 'Failed to remove tag' });
   }
@@ -256,8 +256,8 @@ router.get('/user/:userId/tagged', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(tags.map(t => t.photo));
-  } catch (error) {
+    res.json(tags.map((t: any) => t.photo));
+  } catch (error: any) {
     console.error('Get tagged photos error:', error);
     res.status(500).json({ error: 'Failed to get tagged photos' });
   }
@@ -290,7 +290,7 @@ router.get('/search/users', authenticateToken, async (req: Request, res: Respons
     });
 
     res.json(users);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
   }
@@ -322,7 +322,7 @@ router.get('/search/campgrounds', authenticateToken, async (req: Request, res: R
     });
 
     res.json(campgrounds);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search campgrounds error:', error);
     res.status(500).json({ error: 'Failed to search campgrounds' });
   }

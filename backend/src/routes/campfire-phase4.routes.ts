@@ -148,7 +148,7 @@ router.post('/tone/:campgroundId', authenticateToken, async (req: any, res) => {
     }
     // Check user is checked in
     const checkIn = await prisma.checkIn.findFirst({
-      where: { userId: req.user.id, campgroundId, isActive: true },
+      where: { userId: (req as any).user.id, campgroundId, isActive: true },
     });
     if (!checkIn) return res.status(403).json({ error: 'Must be checked in to change tone' });
 
@@ -174,7 +174,7 @@ function generateCode(): string {
 router.post('/private/create', authenticateToken, async (req: any, res) => {
   try {
     const { topic = 'general' } = req.body;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const code = generateCode();
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
 
@@ -229,7 +229,7 @@ Return ONLY a JSON array, no markdown:
 router.post('/private/join', authenticateToken, async (req: any, res) => {
   try {
     const { code } = req.body;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const room = await prisma.privateTriviaRoom.findUnique({
       where: { code: code.toUpperCase() },
@@ -278,7 +278,7 @@ router.get('/private/:code', authenticateToken, async (req: any, res) => {
 router.post('/private/:code/answer', authenticateToken, async (req: any, res) => {
   try {
     const { questionId, answer, answeredAt } = req.body;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const room = await prisma.privateTriviaRoom.findUnique({
       where: { code: req.params.code.toUpperCase() },
@@ -313,7 +313,7 @@ router.post('/private/:code/end', authenticateToken, async (req: any, res) => {
       include: { participants: { orderBy: { totalPoints: 'desc' }, include: { user: { select: { id: true, firstName: true } } } } },
     });
     if (!room) return res.status(404).json({ error: 'Not found' });
-    if (room.hostId !== req.user.id) return res.status(403).json({ error: 'Only host can end' });
+    if (room.hostId !== (req as any).user.id) return res.status(403).json({ error: 'Only host can end' });
 
     const winner = room.participants[0];
     await prisma.privateTriviaRoom.update({

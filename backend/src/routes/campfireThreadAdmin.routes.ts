@@ -130,7 +130,7 @@ router.get('/', async (req: any, res: Response) => {
     );
 
     res.json({ threads: withEngagement });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireThreadAdmin] List error:', e);
     res.status(500).json({ error: 'Failed to list threads' });
   }
@@ -163,7 +163,7 @@ router.patch('/:id', async (req: any, res: Response) => {
     });
 
     res.json({ thread });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireThreadAdmin] Update error:', e);
     res.status(500).json({ error: 'Failed to update thread' });
   }
@@ -180,7 +180,7 @@ router.delete('/:id', async (req: any, res: Response) => {
 
     await (prisma as any).campfireThread.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireThreadAdmin] Delete error:', e);
     res.status(500).json({ error: 'Failed to delete thread' });
   }

@@ -1,14 +1,15 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, AuthRequest } from '../middleware/auth.middleware';
+import { authenticateToken } from '../middleware/auth.middleware';
+type AuthRequest = any;
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/campground-posts/my-feed - Get posts from followed campgrounds
-router.get('/my-feed', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/my-feed', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -19,7 +20,7 @@ router.get('/my-feed', authenticateToken, async (req: AuthRequest, res: Response
       select: { campgroundId: true }
     });
 
-    const campgroundIds = follows.map(f => f.campgroundId);
+    const campgroundIds = follows.map((f: any) => f.campgroundId);
 
     if (campgroundIds.length === 0) {
       return res.json({ posts: [], total: 0, page, totalPages: 0 });
@@ -64,9 +65,9 @@ router.get('/my-feed', authenticateToken, async (req: AuthRequest, res: Response
     ]);
 
     // Add isLiked flag for current user
-    const postsWithLikeStatus = posts.map(post => ({
+    const postsWithLikeStatus = posts.map((post: any) => ({
       ...post,
-      isLiked: post.likes.some(like => like.userId === userId)
+      isLiked: post.likes.some((like: any) => like.userId === userId)
     }));
 
     res.json({
@@ -75,17 +76,17 @@ router.get('/my-feed', authenticateToken, async (req: AuthRequest, res: Response
       page,
       totalPages: Math.ceil(total / limit)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my feed error:', error);
     res.status(500).json({ error: 'Failed to fetch feed' });
   }
 });
 
 // GET /api/campground-posts/campground/:campgroundId - Get posts for a specific campground
-router.get('/campground/:campgroundId', async (req: AuthRequest, res: Response) => {
+router.get('/campground/:campgroundId', async (req: any, res: Response) => {
   try {
     const { campgroundId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -125,9 +126,9 @@ router.get('/campground/:campgroundId', async (req: AuthRequest, res: Response) 
       prisma.campgroundPost.count({ where: { campgroundId } })
     ]);
 
-    const postsWithLikeStatus = posts.map(post => ({
+    const postsWithLikeStatus = posts.map((post: any) => ({
       ...post,
-      isLiked: userId ? post.likes.some(like => like.userId === userId) : false
+      isLiked: userId ? post.likes.some((like: any) => like.userId === userId) : false
     }));
 
     res.json({
@@ -136,16 +137,16 @@ router.get('/campground/:campgroundId', async (req: AuthRequest, res: Response) 
       page,
       totalPages: Math.ceil(total / limit)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campground posts error:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });
 
 // POST /api/campground-posts - Create a new campground post (admin only)
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId, title, content, imageUrl } = req.body;
 
     // Check if user is admin of this campground
@@ -181,16 +182,16 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json(post);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create campground post error:', error);
     res.status(500).json({ error: 'Failed to create post' });
   }
 });
 
 // PUT /api/campground-posts/:postId/like - Toggle like on a post
-router.put('/:postId/like', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.put('/:postId/like', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { postId } = req.params;
 
     const existingLike = await prisma.campgroundPostLike.findUnique({
@@ -210,16 +211,16 @@ router.put('/:postId/like', authenticateToken, async (req: AuthRequest, res: Res
       });
       res.json({ liked: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle like error:', error);
     res.status(500).json({ error: 'Failed to toggle like' });
   }
 });
 
 // POST /api/campground-posts/:postId/comments - Add a comment to a post
-router.post('/:postId/comments', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/:postId/comments', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { postId } = req.params;
     const { content } = req.body;
 
@@ -241,16 +242,16 @@ router.post('/:postId/comments', authenticateToken, async (req: AuthRequest, res
     });
 
     res.status(201).json(comment);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add comment error:', error);
     res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 
 // DELETE /api/campground-posts/:postId - Delete a post (admin only)
-router.delete('/:postId', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.delete('/:postId', authenticateToken, async (req: any, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { postId } = req.params;
 
     const post = await prisma.campgroundPost.findUnique({
@@ -276,7 +277,7 @@ router.delete('/:postId', authenticateToken, async (req: AuthRequest, res: Respo
     await prisma.campgroundPost.delete({ where: { id: postId } });
 
     res.json({ message: 'Post deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete post error:', error);
     res.status(500).json({ error: 'Failed to delete post' });
   }

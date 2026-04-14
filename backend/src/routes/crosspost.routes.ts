@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ============================================
 // CROSS-POST: Share to Album + Basecamp
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 // Cross-post a new photo (upload to album AND share to basecamp)
 router.post("/photo", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const {
       imageUrl,
       caption,
@@ -75,7 +75,7 @@ router.post("/photo", authenticateToken, async (req: any, res) => {
       });
 
       await prisma.notification.createMany({
-        data: mentionedUsers.map(u => ({
+        data: mentionedUsers.map((u: any) => ({
           userId: u.id,
           type: "PHOTO_MENTION",
           content: `mentioned you in a photo`,
@@ -89,7 +89,7 @@ router.post("/photo", authenticateToken, async (req: any, res) => {
       activity,
       crossPosted: shareToBasecamp
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error cross-posting photo:", error);
     res.status(500).json({ error: "Failed to cross-post photo" });
   }
@@ -98,7 +98,7 @@ router.post("/photo", authenticateToken, async (req: any, res) => {
 // Cross-post a new video
 router.post("/video", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const {
       videoUrl,
       thumbnailUrl,
@@ -170,7 +170,7 @@ router.post("/video", authenticateToken, async (req: any, res) => {
       });
 
       await prisma.notification.createMany({
-        data: mentionedUsers.map(u => ({
+        data: mentionedUsers.map((u: any) => ({
           userId: u.id,
           type: "VIDEO_MENTION",
           content: `mentioned you in a video`,
@@ -184,7 +184,7 @@ router.post("/video", authenticateToken, async (req: any, res) => {
       activity,
       crossPosted: shareToBasecamp
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error cross-posting video:", error);
     res.status(500).json({ error: "Failed to cross-post video" });
   }
@@ -194,7 +194,7 @@ router.post("/video", authenticateToken, async (req: any, res) => {
 router.post("/photo/:photoId/share", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { message, visibility = "PUBLIC" } = req.body;
 
     const photo = await prisma.photo.findUnique({
@@ -248,7 +248,7 @@ router.post("/photo/:photoId/share", authenticateToken, async (req: any, res) =>
       activity,
       message: "Photo shared to basecamp"
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sharing photo:", error);
     res.status(500).json({ error: "Failed to share photo" });
   }
@@ -258,7 +258,7 @@ router.post("/photo/:photoId/share", authenticateToken, async (req: any, res) =>
 router.post("/video/:videoId/share", authenticateToken, async (req: any, res) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { message, visibility = "PUBLIC" } = req.body;
 
     const video = await prisma.video.findUnique({
@@ -311,7 +311,7 @@ router.post("/video/:videoId/share", authenticateToken, async (req: any, res) =>
       activity,
       message: "Video shared to basecamp"
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sharing video:", error);
     res.status(500).json({ error: "Failed to share video" });
   }
@@ -320,7 +320,7 @@ router.post("/video/:videoId/share", authenticateToken, async (req: any, res) =>
 // Share multiple photos as a collection to basecamp
 router.post("/collection", authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { photoIds, title, message, visibility = "PUBLIC" } = req.body;
 
     if (!photoIds || photoIds.length === 0) {
@@ -361,12 +361,12 @@ router.post("/collection", authenticateToken, async (req: any, res) => {
         metadata: {
           title,
           photoCount: photos.length,
-          photos: photos.map(p => ({
+          photos: photos.map((p: any) => ({
             id: p.id,
             imageUrl: p.imageUrl,
             caption: p.caption
           })),
-          previewImages: photos.slice(0, 4).map(p => p.imageUrl)
+          previewImages: photos.slice(0, 4).map((p: any) => p.imageUrl)
         }
       }
     });
@@ -375,7 +375,7 @@ router.post("/collection", authenticateToken, async (req: any, res) => {
       activity,
       message: `${photos.length} photos shared to basecamp`
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sharing collection:", error);
     res.status(500).json({ error: "Failed to share collection" });
   }

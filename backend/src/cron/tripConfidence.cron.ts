@@ -54,11 +54,11 @@ export function registerConfidenceCron() {
           if (event.campgroundId) {
             await emitConfidenceEvents(report, event.id, event.campgroundId, event.organizerId).catch(() => {});
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error(`[ConfidenceCron] Failed for event ${event.id}:`, e);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[ConfidenceCron] Error:', e);
     }
   }, { timezone: 'America/Chicago' });

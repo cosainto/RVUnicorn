@@ -5,7 +5,7 @@ import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import multer from 'multer';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /api/rv-enhancements
@@ -16,7 +16,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(enhancements);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fetch enhancements error:', error);
     res.status(500).json({ error: 'Failed to fetch enhancements' });
   }
@@ -32,7 +32,7 @@ router.get('/user/:userId', optionalAuth, async (req: any, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(enhancements);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch enhancements' });
   }
 });
@@ -64,7 +64,7 @@ router.post('/', authenticateToken, upload.fields([{ name: 'image', maxCount: 1 
       },
     });
     res.status(201).json(enhancement);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create enhancement error:', error);
     res.status(500).json({ error: 'Failed to create enhancement' });
   }
@@ -97,7 +97,7 @@ router.patch('/:id', authenticateToken, upload.fields([{ name: 'image', maxCount
       },
     });
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to update enhancement' });
   }
 });
@@ -109,7 +109,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
     await prisma.rvEnhancement.delete({ where: { id: req.params.id } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete enhancement' });
   }
 });

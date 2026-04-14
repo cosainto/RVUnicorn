@@ -13,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 // Helper to get user ID from request
 const getUserId = (req: any): string => {
-  return req.user?.userId || req.userId;
+  return (req as any).user?.userId || req.userId;
 };
 
 // Create album
@@ -89,7 +89,7 @@ router.post('/', authenticateToken, upload.array('photos', 100), async (req, res
     });
 
     res.json(albumWithPhotos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create album error:', error);
     res.status(500).json({ error: 'Failed to create album' });
   }
@@ -151,7 +151,7 @@ router.get('/', authenticateToken, async (req, res) => {
     });
 
     res.json(albums);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get albums error:', error);
     res.status(500).json({ error: 'Failed to fetch albums' });
   }
@@ -260,7 +260,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
     tagged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     res.json(tagged);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user albums error:', error);
     res.status(500).json({ error: 'Failed to fetch albums' });
   }
@@ -337,7 +337,7 @@ router.get('/:albumId', authenticateToken, async (req, res) => {
       canWrite: access.canWrite,
       canManage: access.canManage,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get album error:', error);
     res.status(500).json({ error: 'Failed to fetch album' });
   }
@@ -389,7 +389,7 @@ router.put('/:albumId', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedAlbum);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update album error:', error);
     res.status(500).json({ error: 'Failed to update album' });
   }
@@ -427,7 +427,7 @@ router.delete('/:albumId', authenticateToken, async (req, res) => {
     });
 
     res.json({ message: 'Album deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete album error:', error);
     res.status(500).json({ error: 'Failed to delete album' });
   }
@@ -449,7 +449,7 @@ router.get('/:albumId/collaborators', authenticateToken, async (req, res) => {
       orderBy: { addedAt: 'asc' },
     });
     res.json(collaborators);
-  } catch (error) {
+  } catch (error: any) {
     console.error('List collaborators error:', error);
     res.status(500).json({ error: 'Failed to list collaborators' });
   }
@@ -497,7 +497,7 @@ router.post('/:albumId/collaborators', authenticateToken, async (req, res) => {
       }
       throw e;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add collaborator error:', error);
     res.status(500).json({ error: 'Failed to add collaborator' });
   }
@@ -522,7 +522,7 @@ router.delete('/:albumId/collaborators/:collaboratorUserId', authenticateToken, 
       where: { albumId, userId: collaboratorUserId },
     });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove collaborator error:', error);
     res.status(500).json({ error: 'Failed to remove collaborator' });
   }
@@ -560,7 +560,7 @@ router.post('/:albumId/photos', authenticateToken, upload.array('photos', 100), 
     const photos = await Promise.all(photoPromises);
 
     res.json(photos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add photos error:', error);
     res.status(500).json({ error: 'Failed to add photos' });
   }
@@ -592,7 +592,7 @@ router.put('/photos/:photoId', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedPhoto);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update photo error:', error);
     res.status(500).json({ error: 'Failed to update photo' });
   }
@@ -628,7 +628,7 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
     });
 
     res.json({ message: 'Photo deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Failed to delete photo' });
   }

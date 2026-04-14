@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { prisma } from '../prisma';
+import { prisma as _prisma } from '../prisma';
+const prisma = _prisma as any;
 import { generateHitchMessage, type HitchSkin, type HitchEventContext } from './hitchEventService';
 import { computeEventLifecycle } from '../helpers/event-status';
 
@@ -66,7 +67,7 @@ async function generateWhatToBring(event: any) {
     },
   });
 
-  const rigSummary = attendees.map(a => {
+  const rigSummary = attendees.map((a: any) => {
     const u = a.user as any;
     return `${u.firstName}: ${u.rvType || 'unknown'} ${u.rvMake || ''} ${u.rvModel || ''}`.trim();
   }).join('\n');
@@ -114,7 +115,7 @@ async function serendipityCheck(event: any) {
 
   // Check RV profiles for shared attributes
   const userProfiles = await Promise.all(
-    nearbyAttendees.map(async (a) => {
+    nearbyAttendees.map(async (a: any) => {
       const rv = await (prisma as any).rvShowcase?.findFirst?.({
         where: { userId: a.userId },
       }).catch(() => null);
@@ -137,7 +138,7 @@ async function serendipityCheck(event: any) {
     where: { eventId: event.id },
     select: { triggeredBy: true },
   });
-  const existingTriggers = new Set(existingPopUps.map(p => p.triggeredBy));
+  const existingTriggers = new Set(existingPopUps.map((p: any) => p.triggeredBy));
 
   const ACTIVITY_LABELS: Record<string, string> = {
     hasEBike: 'e-bike ride',
@@ -221,11 +222,11 @@ export async function checkEventMemoryTransitions() {
 
     try {
       // Calculate connections — users who chatted but don't follow each other
-      const attendeeIds = event.attendees.map(a => a.userId);
+      const attendeeIds = event.attendees.map((a: any) => a.userId);
       let newConnections = 0;
 
       // Generate "Next Time" suggestions from highlights
-      const highlightText = event.highlights.map(h => h.messageSnippet).join('\n');
+      const highlightText = event.highlights.map((h: any) => h.messageSnippet).join('\n');
       let suggestions: string[] = [];
       if (highlightText.length > 20) {
         try {
@@ -272,24 +273,24 @@ export async function checkEventMemoryTransitions() {
         }).catch(() => {});
 
         // Follow suggestions — suggest other attendees they're not already friends with
-        const others = event.attendees.filter(a => a.userId !== attendee.userId).slice(0, 3);
+        const others = event.attendees.filter((a: any) => a.userId !== attendee.userId).slice(0, 3);
         if (others.length > 0) {
           const existingFriends = await prisma.friendship.findMany({
             where: {
               status: 'ACCEPTED',
               OR: [
-                { initiatorId: attendee.userId, receiverId: { in: others.map(o => o.userId) } },
-                { receiverId: attendee.userId, initiatorId: { in: others.map(o => o.userId) } },
+                { initiatorId: attendee.userId, receiverId: { in: others.map((o: any) => o.userId) } },
+                { receiverId: attendee.userId, initiatorId: { in: others.map((o: any) => o.userId) } },
               ],
             },
             select: { initiatorId: true, receiverId: true },
           }).catch(() => []);
 
           const friendIds = new Set(existingFriends.map((f: any) => f.initiatorId === attendee.userId ? f.receiverId : f.initiatorId));
-          const newPeople = others.filter(o => !friendIds.has(o.userId));
+          const newPeople = others.filter((o: any) => !friendIds.has(o.userId));
 
           if (newPeople.length > 0) {
-            const names = newPeople.map(p => p.user.firstName).join(', ');
+            const names = newPeople.map((p: any) => p.user.firstName).join(', ');
             await prisma.notification.create({
               data: {
                 userId: attendee.userId,
@@ -303,7 +304,7 @@ export async function checkEventMemoryTransitions() {
       }
 
       console.log(`[Autopilot] Trip memory created for event ${event.id}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(`[Autopilot] Memory transition failed for ${event.id}:`, e);
     }
   }

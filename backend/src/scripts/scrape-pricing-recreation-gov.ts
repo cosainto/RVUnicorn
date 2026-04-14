@@ -36,7 +36,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const FACILITIES_PATH = '/tmp/Facilities_API_v1.json';
 const RG_BASE = 'https://www.recreation.gov/camping/campgrounds';

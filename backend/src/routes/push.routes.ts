@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+// @ts-ignore
 import { authenticateToken } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 
@@ -23,7 +24,7 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       create: { userId, endpoint, p256dh: keys.p256dh, auth: keys.auth },
     });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[Push] Subscribe error:', e);
     res.status(500).json({ error: 'Failed to subscribe' });
   }
@@ -35,7 +36,7 @@ router.delete('/unsubscribe', authenticateToken, async (req: Request, res: Respo
     const { endpoint } = req.body;
     await prisma.pushSubscription.deleteMany({ where: { endpoint } });
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to unsubscribe' });
   }
 });

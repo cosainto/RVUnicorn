@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 interface OSMElement {
   type: string;

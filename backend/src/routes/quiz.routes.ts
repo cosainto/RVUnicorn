@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // POST /api/quiz/recommendations
@@ -62,7 +62,7 @@ router.post('/recommendations', async (req: Request, res: Response) => {
     }
 
     // Ask Claude to rank and pick the best 8
-    const campSummaries = candidates.slice(0, 50).map(c => ({
+    const campSummaries = candidates.slice(0, 50).map((c: any) => ({
       id: c.id, name: c.name, state: c.state, city: c.city,
       amenities: [
         c.hasPool && 'pool', c.hasFullHookups && 'full hookups',
@@ -103,7 +103,7 @@ Be specific in the reasons — reference their RV type, vibe, or priorities. Be 
 
     // Build full results
     const recommendations = picks.slice(0, 8).map(pick => {
-      const cg = candidates.find(c => c.id === pick.id);
+      const cg = candidates.find((c: any) => c.id === pick.id);
       if (!cg) return null;
       return { ...cg, reason: pick.reason };
     }).filter(Boolean);
@@ -124,7 +124,7 @@ Be specific in the reasons — reference their RV type, vibe, or priorities. Be 
     });
 
     res.json({ recommendations });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Quiz recommendation error:', e);
     res.status(500).json({ error: 'Failed to generate recommendations' });
   }
@@ -188,7 +188,7 @@ router.post('/send-email', async (req: Request, res: Response) => {
     });
 
     res.json({ success: true });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Quiz email error:', e);
     res.status(500).json({ error: 'Failed to send email' });
   }

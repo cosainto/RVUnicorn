@@ -1,7 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 cloudinary.config({
   cloud_name: 'dy6eetmh7',
@@ -19,7 +19,7 @@ async function main() {
     where: { campgroundMapUrl: { contains: 'cloudinary' } },
     select: { campgroundMapUrl: true },
   });
-  const linkedUrls = new Set(linked.map(c => c.campgroundMapUrl));
+  const linkedUrls = new Set(linked.map((c: any) => c.campgroundMapUrl));
   console.log('Maps linked in DB:', linkedUrls.size);
 
   // List all resources in the maps folder

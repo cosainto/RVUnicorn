@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = express.Router();
+const db = prisma as any;
 
 // GET /api/event-meals/:eventId - Get meal plan for event
 router.get('/:eventId', authenticateToken, async (req, res) => {
@@ -10,7 +11,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     const { eventId } = req.params;
 
     // Verify event exists
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId }
     });
 
@@ -18,7 +19,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    const meals = await prisma.eventMeal.findMany({
+    const meals = await db.eventMeal.findMany({
       where: { eventId },
       include: {
         rsvps: {
@@ -63,7 +64,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     });
 
     // Transform to match frontend expectations
-    const transformedMeals = meals.map(meal => ({
+    const transformedMeals = meals.map((meal: any) => ({
       id: meal.id,
       eventId: meal.eventId,
       date: meal.scheduledAt.toISOString().split('T')[0],
@@ -79,7 +80,7 @@ router.get('/:eventId', authenticateToken, async (req, res) => {
     }));
 
     res.json(transformedMeals);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event meals error:', error);
     res.status(500).json({ error: 'Failed to fetch event meals' });
   }
@@ -96,7 +97,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Verify event exists and check permissions
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
       include: {
         attendees: {
@@ -118,7 +119,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // If menuItems provided but no recipeId, we'll just store the notes
     // The schema requires scheduledAt and mealType
-    const meal = await prisma.eventMeal.create({
+    const meal = await db.eventMeal.create({
       data: {
         eventId,
         scheduledAt: new Date(date),
@@ -183,7 +184,7 @@ router.post('/', authenticateToken, async (req, res) => {
     };
 
     res.json(transformedMeal);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add event meal error:', error);
     res.status(500).json({ error: 'Failed to add meal' });
   }
@@ -196,7 +197,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { date, mealType, menuItems, recipeId, notes, assignedTo, scheduledTime } = req.body;
 
-    const meal = await prisma.eventMeal.findUnique({
+    const meal = await db.eventMeal.findUnique({
       where: { id },
       include: { event: true }
     });
@@ -206,7 +207,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: meal.eventId },
       include: {
         attendees: {
@@ -222,7 +223,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Only the organizer or attending members can update meals' });
     }
 
-    const updatedMeal = await prisma.eventMeal.update({
+    const updatedMeal = await db.eventMeal.update({
       where: { id },
       data: {
         scheduledAt: date ? new Date(date) : undefined,
@@ -283,7 +284,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     };
 
     res.json(transformedMeal);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update event meal error:', error);
     res.status(500).json({ error: 'Failed to update meal' });
   }
@@ -295,7 +296,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
     const { id } = req.params;
 
-    const meal = await prisma.eventMeal.findUnique({
+    const meal = await db.eventMeal.findUnique({
       where: { id }
     });
 
@@ -304,7 +305,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: meal.eventId },
       include: {
         attendees: {
@@ -320,12 +321,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Only the organizer or attending members can delete meals' });
     }
 
-    await prisma.eventMeal.delete({
+    await db.eventMeal.delete({
       where: { id }
     });
 
     res.json({ message: 'Meal deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete event meal error:', error);
     res.status(500).json({ error: 'Failed to delete meal' });
   }
@@ -345,7 +346,7 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
     }
 
     // Check meal exists
-    const meal = await prisma.eventMeal.findUnique({
+    const meal = await db.eventMeal.findUnique({
       where: { id: mealId }
     });
 
@@ -354,7 +355,7 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
     }
 
     // Check user is attending the event
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: meal.eventId },
       include: {
         attendees: {
@@ -371,7 +372,7 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
     }
 
     // Upsert the RSVP
-    const rsvp = await prisma.mealRSVP.upsert({
+    const rsvp = await db.mealRSVP.upsert({
       where: {
         mealId_userId: {
           mealId,
@@ -397,7 +398,7 @@ router.post('/:id/rsvp', authenticateToken, async (req, res) => {
     });
 
     res.json(rsvp);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Meal RSVP error:', error);
     res.status(500).json({ error: 'Failed to RSVP to meal' });
   }
@@ -416,7 +417,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     }
 
     // Get meal with event info
-    const meal = await prisma.eventMeal.findUnique({
+    const meal = await db.eventMeal.findUnique({
       where: { id: mealId },
       include: {
         event: {
@@ -437,7 +438,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     // Check permissions - only organizer or going attendees can assign
     const isOrganizer = meal.event.organizerId === userId;
     const isGoingAttendee = meal.event.attendees.some(
-      a => a.userId === userId && ['GOING', 'going'].includes(a.status)
+      (a: any) => a.userId === userId && ['GOING', 'going'].includes(a.status)
     );
 
     if (!isOrganizer && !isGoingAttendee) {
@@ -446,7 +447,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
 
     // Verify the cook is an attendee of the event
     const cookIsAttendee = meal.event.attendees.some(
-      a => a.userId === cookId && ['GOING', 'going'].includes(a.status)
+      (a: any) => a.userId === cookId && ['GOING', 'going'].includes(a.status)
     ) || meal.event.organizerId === cookId;
 
     if (!cookIsAttendee) {
@@ -454,7 +455,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     }
 
     // Update meal with cook assignment
-    const updatedMeal = await prisma.eventMeal.update({
+    const updatedMeal = await db.eventMeal.update({
       where: { id: mealId },
       data: {
         cookId,
@@ -474,13 +475,13 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     });
 
     // Get assigner info
-    const assigner = await prisma.user.findUnique({
+    const assigner = await db.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true }
     });
 
     // Create notification for the cook
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: cookId,
         type: 'MEAL_ASSIGNMENT',
@@ -490,7 +491,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     });
 
     // Create activity for Basecamp feed
-    await prisma.basecampActivity.create({
+    await db.basecampActivity.create({
       data: {
         userId: cookId,
         actorId: userId,
@@ -511,7 +512,7 @@ router.post('/:id/assign-cook', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedMeal);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Assign cook error:', error);
     res.status(500).json({ error: 'Failed to assign cook' });
   }
@@ -529,7 +530,7 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
     }
 
     // Get meal
-    const meal = await prisma.eventMeal.findUnique({
+    const meal = await db.eventMeal.findUnique({
       where: { id: mealId },
       include: {
         event: {
@@ -551,7 +552,7 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
     }
 
     // Update meal status
-    const updatedMeal = await prisma.eventMeal.update({
+    const updatedMeal = await db.eventMeal.update({
       where: { id: mealId },
       data: { cookStatus: status },
       include: {
@@ -568,13 +569,13 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
     });
 
     // Get cook info
-    const cook = await prisma.user.findUnique({
+    const cook = await db.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true }
     });
 
     // Notify event organizer of response
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: meal.event.organizerId,
         type: 'MEAL_ASSIGNMENT_RESPONSE',
@@ -584,7 +585,7 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
     });
 
     // Mark the basecamp activity as read
-    await prisma.basecampActivity.updateMany({
+    await db.basecampActivity.updateMany({
       where: {
         userId,
         entityId: mealId,
@@ -595,7 +596,7 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
 
     // If accepted, create activity for profile feed (respects event privacy)
     if (status === 'ACCEPTED' && updatedMeal.event.privacy !== 'PRIVATE') {
-      await prisma.activity.create({
+      await db.activity.create({
         data: {
           userId,
           type: 'MEAL_ACCEPTED',
@@ -608,7 +609,7 @@ router.put('/:id/cook-response', authenticateToken, async (req, res) => {
     }
 
     res.json(updatedMeal);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cook response error:', error);
     res.status(500).json({ error: 'Failed to update response' });
   }
@@ -619,7 +620,7 @@ router.get('/my-assignments', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
 
-    const assignments = await prisma.eventMeal.findMany({
+    const assignments = await db.eventMeal.findMany({
       where: {
         cookId: userId,
         event: {
@@ -638,7 +639,7 @@ router.get('/my-assignments', authenticateToken, async (req, res) => {
     });
 
     res.json(assignments);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get assignments error:', error);
     res.status(500).json({ error: 'Failed to fetch assignments' });
   }

@@ -42,7 +42,7 @@ async function generateChimeIn(character: typeof CHARACTERS[0], context: { drive
       headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
     });
-    const data = await res.json() as any;
+    const data: any = await res.json() as any;
     return data?.content?.[0]?.text?.trim() || '';
   } catch { return ''; }
 }
@@ -239,7 +239,7 @@ export function registerRoadChatSockets(io: Server) {
                 system: 'You are Hitch, the friendly unicorn AI co-pilot for RVUnicorn, a social platform for RV enthusiasts. Help RVers with: campground tips, route planning, driving safety, RV maintenance, campfire recipes, outdoor activities, weather, road conditions, and community questions. Personality: warm, encouraging, occasionally playful. Rules: keep responses to 1-3 sentences. Always be appropriate and family-friendly. If asked about anything unrelated to RV life, travel, outdoors, or community, gently redirect. Never discuss politics, violence, adult content, or anything harmful. Remember conversation context for follow-up questions.',
                 messages: history.slice(-10) }),
             });
-            const aiData = await res.json() as any;
+            const aiData: any = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               history.push({ role: 'assistant', content: reply });
@@ -252,7 +252,7 @@ export function registerRoadChatSockets(io: Server) {
                 user: { id: 'char-Hitch', firstName: 'Hitch', profilePicture: null },
               });
             }
-          } catch (e) { console.error('[RoadChat @Hitch] error:', e); }
+          } catch (e: any) { console.error('[RoadChat @Hitch] error:', e); }
         }, 1000);
       }
 
@@ -321,7 +321,7 @@ export function registerRoadChatSockets(io: Server) {
               });
               socket.emit('message:new', { id: `rv-${Date.now()}`, content: `🦄 Thanks ${user!.firstName}! Review of ${rs.campgroundName} saved — fellow RVers will love it! 🏠`, isSystem: false, isCharacter: true, characterName: 'Hitch', createdAt: new Date().toISOString(), user: { id: 'char-Hitch', firstName: 'Hitch', profilePicture: null } });
               reviewSessions.delete(socket.id);
-            } catch (e) { console.error('[RoadChat] Review save error:', e); }
+            } catch (e: any) { console.error('[RoadChat] Review save error:', e); }
           }
         }, 1500);
       }

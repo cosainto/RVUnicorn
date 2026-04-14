@@ -5,7 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { sendWebPush } from '../utils/webPush';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic();
 
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png';
@@ -259,7 +259,7 @@ export async function weeklyPromptCron() {
     });
 
     console.log(`[Community AI] Posted weekly prompt to ${bestBoard.name}: "${question}"`);
-  } catch (e) { console.error('[Community AI] Weekly prompt error:', e); }
+  } catch (e: any) { console.error('[Community AI] Weekly prompt error:', e); }
 }
 
 export async function boardRevivalCron() {
@@ -309,5 +309,5 @@ export async function boardRevivalCron() {
       await (prisma as any).boardRevival.create({ data: { boardId: board.id } });
       console.log(`[Community AI] Revived ${board.name}: "${question}"`);
     }
-  } catch (e) { console.error('[Community AI] Board revival error:', e); }
+  } catch (e: any) { console.error('[Community AI] Board revival error:', e); }
 }

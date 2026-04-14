@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/basecamp/creator-feed - Get videos from followed creators
 router.get('/creator-feed', authenticateToken, async (req, res) => {
@@ -20,7 +20,7 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
       select: { creatorId: true },
     });
 
-    const followedCreatorIds = followedCreators.map(f => f.creatorId);
+    const followedCreatorIds = followedCreators.map((f: any) => f.creatorId);
 
     if (followedCreatorIds.length === 0) {
       // Return trending content instead
@@ -69,7 +69,7 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
         },
       });
 
-      const contentIds = trendingContent.map(c => c.id);
+      const contentIds = trendingContent.map((c: any) => c.id);
       const [likes, saves] = await Promise.all([
         prisma.creatorContentLike.findMany({
           where: { userId, contentId: { in: contentIds } },
@@ -81,11 +81,11 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
         }),
       ]);
 
-      const likedIds = new Set(likes.map(l => l.contentId));
-      const savedIds = new Set(saves.map(s => s.contentId));
+      const likedIds = new Set(likes.map((l: any) => l.contentId));
+      const savedIds = new Set(saves.map((s: any) => s.contentId));
 
       return res.json({
-        content: trendingContent.map(c => ({
+        content: trendingContent.map((c: any) => ({
           ...c,
           isLiked: likedIds.has(c.id),
           isSaved: savedIds.has(c.id),
@@ -139,7 +139,7 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
       },
     });
 
-    const contentIds = content.map(c => c.id);
+    const contentIds = content.map((c: any) => c.id);
     const [likes, saves] = await Promise.all([
       prisma.creatorContentLike.findMany({
         where: { userId, contentId: { in: contentIds } },
@@ -151,11 +151,11 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
       }),
     ]);
 
-    const likedIds = new Set(likes.map(l => l.contentId));
-    const savedIds = new Set(saves.map(s => s.contentId));
+    const likedIds = new Set(likes.map((l: any) => l.contentId));
+    const savedIds = new Set(saves.map((s: any) => s.contentId));
 
     res.json({
-      content: content.map(c => ({
+      content: content.map((c: any) => ({
         ...c,
         isLiked: likedIds.has(c.id),
         isSaved: savedIds.has(c.id),
@@ -164,7 +164,7 @@ router.get('/creator-feed', authenticateToken, async (req, res) => {
       hasMore: content.length === limit,
       page,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get creator feed error:', error);
     res.status(500).json({ error: 'Failed to get creator feed' });
   }

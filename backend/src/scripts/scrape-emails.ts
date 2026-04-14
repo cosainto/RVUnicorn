@@ -13,7 +13,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const LOG_FILE = path.join(process.cwd(), 'scrape-emails.log');
 const BATCH_SIZE = 10;
 const DELAY_MS = 1500;

@@ -4,7 +4,7 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import crypto from 'crypto';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ═══════════════════════════════════════════════════════════════
 // RV DATABASE LOOKUP
@@ -15,7 +15,7 @@ router.get('/types', async (_req, res) => {
   try {
     const types = await prisma.rVType.findMany({ orderBy: { name: 'asc' } });
     res.json(types);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch RV types' });
   }
 });
@@ -30,15 +30,15 @@ router.get('/makes', async (req, res) => {
     });
 
     if (type) {
-      makes = makes.filter(m => m.types.includes(type as string));
+      makes = makes.filter((m: any) => m.types.includes(type as string));
     }
     if (q) {
       const query = (q as string).toLowerCase();
-      makes = makes.filter(m => m.name.toLowerCase().includes(query));
+      makes = makes.filter((m: any) => m.name.toLowerCase().includes(query));
     }
 
     res.json(makes);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch RV makes' });
   }
 });
@@ -58,7 +58,7 @@ router.get('/makes/:makeId/models', async (req, res) => {
       include: { make: { select: { name: true } } },
     });
     res.json(models);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch models' });
   }
 });
@@ -91,7 +91,7 @@ router.get('/search', async (req, res) => {
     ]);
 
     res.json({ makes, models });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to search' });
   }
 });
@@ -105,7 +105,7 @@ router.get('/models/:modelId', async (req, res) => {
     });
     if (!model) return res.status(404).json({ error: 'Model not found' });
     res.json(model);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch model' });
   }
 });
@@ -125,7 +125,7 @@ router.get('/manual', async (req, res) => {
     });
 
     res.json({ manualUrl: model?.manualUrl || null });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch manual URL' });
   }
 });
@@ -188,7 +188,7 @@ router.post('/lookup', async (req, res) => {
       stockImage: dbModel?.stockImage || null,
       year, make, model,
     });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to lookup rig specs' });
   }
 });
@@ -262,7 +262,7 @@ router.post('/autofill', authenticateToken, async (req: any, res) => {
     }
 
     res.json({ user, appliedModel: model.name });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Autofill error:', error);
     res.status(500).json({ error: 'Failed to autofill' });
   }
@@ -296,7 +296,7 @@ router.post('/link/search', authenticateToken, async (req: any, res) => {
     });
 
     res.json(users);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to search users' });
   }
 });
@@ -375,7 +375,7 @@ router.post('/link/request', authenticateToken, async (req: any, res) => {
     });
 
     res.status(201).json(link);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Link request error:', error);
     res.status(500).json({ error: 'Failed to create link request' });
   }
@@ -466,7 +466,7 @@ router.put('/link/:linkId/respond', authenticateToken, async (req: any, res) => 
       });
       res.json({ success: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Link respond error:', error);
     res.status(500).json({ error: 'Failed to respond to link' });
   }
@@ -484,7 +484,7 @@ router.delete('/link/:linkId', authenticateToken, async (req: any, res) => {
 
     await prisma.sharedVehicle.delete({ where: { id: linkId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete link' });
   }
 });
@@ -506,7 +506,7 @@ router.get('/link/mine', authenticateToken, async (req: any, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json(links);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch links' });
   }
 });
@@ -530,7 +530,7 @@ router.post('/link/invite', authenticateToken, async (req: any, res) => {
 
     const inviteUrl = `${req.headers.origin || 'https://www.rvunicorn.com'}/join-vehicle/${code}`;
     res.json({ code, url: inviteUrl });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to generate invite' });
   }
 });
@@ -590,7 +590,7 @@ router.post('/link/invite/redeem', authenticateToken, async (req: any, res) => {
     }
 
     res.json({ link, creator: invite.creator });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Redeem invite error:', error);
     res.status(500).json({ error: 'Failed to redeem invite' });
   }
@@ -611,7 +611,7 @@ router.get('/link/invite/:code', async (req, res) => {
     if (invite.expiresAt < new Date()) return res.status(400).json({ error: 'Expired' });
 
     res.json({ creator: invite.creator, expiresAt: invite.expiresAt });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get invite info' });
   }
 });

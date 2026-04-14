@@ -41,7 +41,7 @@ export function registerUtilityScoreCron() {
       }
 
       console.log(`[UtilityScore] updated ${updated} activities`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[UtilityScore] cron failed:', err);
     }
   }, { timezone: 'America/Chicago' });

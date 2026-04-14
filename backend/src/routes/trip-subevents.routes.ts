@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router({ mergeParams: true });
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/events/:eventId/subevents - Get all sub-events for an event
 router.get('/', authenticateToken, async (req: any, res) => {
@@ -46,7 +46,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     });
 
     res.json(subEvents);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get sub-events error:', error);
     res.status(500).json({ error: 'Failed to get sub-events' });
   }
@@ -61,7 +61,7 @@ router.post(
     body('date').isISO8601(),
     body('activityType').isIn(['HIKE', 'SWIM', 'GAME', 'ENTERTAINMENT', 'CRAFT', 'RANGER_TALK', 'OTHER']),
   ],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { eventId } = req.params;
       const { title, description, date, startTime, endTime, activityType, hostId, location } = req.body;
@@ -138,7 +138,7 @@ router.post(
       // Notify all attendees
       const notifyIds = [
         event.userId,
-        ...event.attendees.map(a => a.userId),
+        ...event.attendees.map((a: any) => a.userId),
       ].filter((id): id is string => !!id && id !== userId);
 
       if (notifyIds.length > 0) {
@@ -161,7 +161,7 @@ router.post(
       }
 
       res.status(201).json(subEvent);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create sub-event error:', error);
       res.status(500).json({ error: 'Failed to create sub-event' });
     }
@@ -229,7 +229,7 @@ router.put(
       });
 
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update sub-event error:', error);
       res.status(500).json({ error: 'Failed to update sub-event' });
     }
@@ -254,7 +254,7 @@ router.delete('/:subEventId', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete sub-event error:', error);
     res.status(500).json({ error: 'Failed to delete sub-event' });
   }
@@ -265,7 +265,7 @@ router.post(
   '/:subEventId/rsvp',
   authenticateToken,
   [body('status').isIn(['INTERESTED', 'ATTENDING', 'MAYBE', 'NOT_ATTENDING'])],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const { eventId, subEventId } = req.params;
       const { status } = req.body;
@@ -333,7 +333,7 @@ router.post(
       }
 
       res.json(attendee);
-    } catch (error) {
+    } catch (error: any) {
       console.error('RSVP sub-event error:', error);
       res.status(500).json({ error: 'Failed to RSVP' });
     }

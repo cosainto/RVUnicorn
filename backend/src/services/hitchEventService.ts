@@ -70,7 +70,7 @@ export async function generateHitchMessage(
     });
     const text = response.content[0].type === 'text' ? response.content[0].text.trim() : null;
     return text;
-  } catch (e) {
+  } catch (e: any) {
     console.error('[HitchEvent] Message generation failed:', e);
     return null;
   }

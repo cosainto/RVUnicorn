@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const STATE_NAMES: Record<string, string> = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
@@ -52,7 +52,7 @@ export async function updateGasPrices() {
       if (res.data && res.data.regular) nationalRegular = parseFloat(res.data.regular);
       if (res.data && res.data.diesel) nationalDiesel = parseFloat(res.data.diesel);
       console.log('[GasPriceCron] Live prices: Regular $' + nationalRegular.toFixed(2) + ' | Diesel $' + nationalDiesel.toFixed(2));
-    } catch (e) {
+    } catch (e: any) {
       console.log('[GasPriceCron] fueleconomy.gov unavailable, using defaults');
     }
 

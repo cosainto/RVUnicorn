@@ -16,7 +16,7 @@ async function publishNextScheduledThread() {
       await publishCampfireThread(thread.id);
       console.log(`[CampfireThreadCron] Published scheduled thread: ${thread.title}`);
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('[CampfireThreadCron] Error publishing scheduled thread:', e);
   }
 }

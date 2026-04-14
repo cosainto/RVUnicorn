@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
@@ -53,7 +54,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req: any, res
       url: result.secure_url,
       publicId: result.public_id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Upload failed' });
   }
@@ -62,7 +63,7 @@ router.post('/', authenticateToken, upload.single('image'), async (req: any, res
 // POST /api/upload/image - Upload image (also creates Photo record if eventId/albumId provided)
 router.post('/image', authenticateToken, upload.single('image'), async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { eventId, albumId, caption } = req.body;
 
     if (!req.file) {
@@ -81,7 +82,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
     if (eventId || albumId) {
       // Verify event participation if eventId provided
       if (eventId) {
-        const event = await prisma.event.findUnique({
+        const event = await db.event.findUnique({
           where: { id: eventId },
           include: { attendees: true },
         });
@@ -91,7 +92,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
         }
 
         const isParticipant =
-          event.organizerId === userId || event.attendees.some((a) => a.userId === userId);
+          event.organizerId === userId || event.attendees.some((a: any) => a.userId === userId);
 
         if (!isParticipant) {
           return res.status(403).json({ error: 'Only event participants can upload photos' });
@@ -100,7 +101,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
 
       // Verify album ownership if albumId provided
       if (albumId) {
-        const album = await prisma.photoAlbum.findUnique({
+        const album = await db.photoAlbum.findUnique({
           where: { id: albumId },
         });
 
@@ -110,7 +111,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
       }
 
       // Create Photo record linked to event/album
-      const photo = await prisma.photo.create({
+      const photo = await db.photo.create({
         data: {
           userId,
           imageUrl,
@@ -148,7 +149,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
       imageUrl,
       publicId: result.public_id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload image error:', error);
     res.status(500).json({ error: 'Upload failed' });
   }
@@ -157,7 +158,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
 // POST /api/upload/multiple - Upload multiple images
 router.post('/multiple', authenticateToken, upload.array('images', 10), async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { eventId, albumId } = req.body;
 
     if (!req.files || req.files.length === 0) {
@@ -177,7 +178,7 @@ router.post('/multiple', authenticateToken, upload.array('images', 10), async (r
     if (eventId || albumId) {
       const photos = await Promise.all(
         images.map((img) =>
-          prisma.photo.create({
+          db.photo.create({
             data: {
               userId,
               imageUrl: img.url,
@@ -196,7 +197,7 @@ router.post('/multiple', authenticateToken, upload.array('images', 10), async (r
     }
 
     res.json({ images });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Upload failed' });
   }
@@ -205,7 +206,7 @@ router.post('/multiple', authenticateToken, upload.array('images', 10), async (r
 // POST /api/upload/event/:eventId - Upload photo directly to an event
 router.post('/event/:eventId', authenticateToken, upload.single('image'), async (req: any, res) => {
   try {
-    const userId = req.userId || req.user?.id;
+    const userId = req.userId || (req as any).user?.id;
     const { eventId } = req.params;
     const { caption } = req.body;
 
@@ -214,7 +215,7 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
     }
 
     // Verify event exists and user is participant
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
       include: { attendees: true },
     });
@@ -224,7 +225,7 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
     }
 
     const isParticipant =
-      event.organizerId === userId || event.attendees.some((a) => a.userId === userId);
+      event.organizerId === userId || event.attendees.some((a: any) => a.userId === userId);
 
     if (!isParticipant) {
       return res.status(403).json({ error: 'Only event participants can upload photos' });
@@ -234,7 +235,7 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
     const result = await uploadToCloudinary(req.file.buffer, `kindletribe/events/${eventId}`);
 
     // Create Photo record
-    const photo = await prisma.photo.create({
+    const photo = await db.photo.create({
       data: {
         userId,
         imageUrl: result.secure_url,
@@ -266,7 +267,7 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
       publicId: result.public_id,
       photo,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Event photo upload error:', error);
     res.status(500).json({ error: 'Upload failed' });
   }

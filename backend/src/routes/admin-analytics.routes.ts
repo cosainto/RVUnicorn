@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { requireAdmin } from '../middleware/admin.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Cache with 5 min TTL
 const cache = new Map<string, { data: any; expires: number }>();
@@ -77,7 +77,7 @@ router.get('/user-growth', async (req, res: Response) => {
 
     // Group by day
     const byDay: Record<string, number> = {};
-    users.forEach(u => {
+    users.forEach((u: any) => {
       const day = u.createdAt.toISOString().split('T')[0];
       byDay[day] = (byDay[day] || 0) + 1;
     });
@@ -104,7 +104,7 @@ router.get('/dau', async (req, res: Response) => {
     });
 
     const byDay: Record<string, Set<string>> = {};
-    users.forEach(u => {
+    users.forEach((u: any) => {
       if (!u.lastActiveAt) return;
       const day = u.lastActiveAt.toISOString().split('T')[0];
       if (!byDay[day]) byDay[day] = new Set();
@@ -118,7 +118,7 @@ router.get('/dau', async (req, res: Response) => {
     });
 
     const dauByDay: Record<string, Set<string>> = {};
-    activities.forEach(a => {
+    activities.forEach((a: any) => {
       const day = a.createdAt.toISOString().split('T')[0];
       if (!dauByDay[day]) dauByDay[day] = new Set();
       dauByDay[day].add(a.userId);
@@ -146,7 +146,7 @@ router.get('/checkins', async (req, res: Response) => {
     // Daily counts
     const byDay: Record<string, number> = {};
     const byCampground: Record<string, number> = {};
-    checkins.forEach(c => {
+    checkins.forEach((c: any) => {
       const day = c.createdAt.toISOString().split('T')[0];
       byDay[day] = (byDay[day] || 0) + 1;
       if (c.campgroundId) byCampground[c.campgroundId] = (byCampground[c.campgroundId] || 0) + 1;
@@ -158,7 +158,7 @@ router.get('/checkins', async (req, res: Response) => {
       where: { id: { in: topIds.map(t => t[0]) } },
       select: { id: true, name: true },
     });
-    const nameMap = Object.fromEntries(campgrounds.map(c => [c.id, c.name]));
+    const nameMap = Object.fromEntries(campgrounds.map((c: any) => [c.id, c.name]));
 
     res.json({
       daily: Object.entries(byDay).sort().map(([date, count]) => ({ date, count })),
@@ -207,7 +207,7 @@ router.get('/signups-by-state', async (req, res: Response) => {
     });
 
     const byState: Record<string, number> = {};
-    users.forEach(u => {
+    users.forEach((u: any) => {
       const state = u.location?.split(',').pop()?.trim() || 'Unknown';
       byState[state] = (byState[state] || 0) + 1;
     });
@@ -241,7 +241,7 @@ router.get('/recent-users', async (req, res: Response) => {
         select: {
           id: true, firstName: true, lastName: true, username: true, email: true,
           profilePicture: true, createdAt: true, location: true, rvType: true,
-          _count: { select: { checkIns: true, organizedEvents: true } },
+          _count: { select: { checkIns: true, organizedEvents: true } as any },
         },
         orderBy: { [sort]: order } as any,
         skip: (page - 1) * limit,

@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function evaluateUnlocks(userId: string) {

@@ -1,5 +1,6 @@
 // badge.service.ts
 import { prisma } from '../index';
+const db = prisma as any;
 
 export enum BadgeTrigger {
   ACCOUNT_CREATED = 'ACCOUNT_CREATED',
@@ -34,7 +35,7 @@ interface BadgeAwardResult {
 
 export async function awardBadge(userId: string, badgeSlug: string): Promise<BadgeAwardResult> {
   try {
-    const badge = await prisma.badge.findUnique({
+    const badge = await db.badge.findUnique({
       where: { slug: badgeSlug }
     });
 
@@ -43,7 +44,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       return { awarded: false };
     }
 
-    const existing = await prisma.userBadge.findUnique({
+    const existing = await db.userBadge.findUnique({
       where: {
         userId_badgeId: {
           userId,
@@ -56,7 +57,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       return { awarded: false, alreadyHad: true, badge };
     }
 
-    const userBadge = await prisma.userBadge.create({
+    const userBadge = await db.userBadge.create({
       data: {
         userId,
         badgeId: badge.id
@@ -66,7 +67,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       }
     });
 
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId,
         type: 'BADGE_EARNED',
@@ -76,7 +77,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
     });
 
     try {
-      await prisma.thread.create({
+      await db.thread.create({
         data: {
           title: `🏆 Just earned the "${badge.name}" badge!`,
           content: badge.description || '',
@@ -107,7 +108,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       const reason = badgeDescriptions[badge.slug] || badge.description || 'You met all the requirements for this achievement.';
 
       const hitchMsg = [
-        '&#x1F3C6; **You just earned the "' + badge.name + '" badge!** ' + (badge.icon || '') ,
+        '&#x1F3C6; **You just earned the "' + badge.name + '" badge!** ' + ((badge as any).icon || '') ,
         '',
         reason,
         '',
@@ -121,12 +122,12 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
       ].join('\n');
 
       // Find or create a Hitch conversation for badge celebrations
-      let conversation = await prisma.hitchConversation.findFirst({
+      let conversation = await db.hitchConversation.findFirst({
         where: { userId, title: 'Your Badges & Achievements' }
       });
 
       if (!conversation) {
-        conversation = await prisma.hitchConversation.create({
+        conversation = await db.hitchConversation.create({
           data: {
             userId,
             title: 'Your Badges & Achievements',
@@ -135,7 +136,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
         });
       }
 
-      await prisma.hitchMessage.create({
+      await db.hitchMessage.create({
         data: {
           conversationId: conversation.id,
           role: 'assistant',
@@ -148,7 +149,7 @@ export async function awardBadge(userId: string, badgeSlug: string): Promise<Bad
 
     console.log(`Badge "${badge.name}" awarded to user ${userId}`);
     return { awarded: true, badge: userBadge.badge };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Award badge error:', error);
     return { awarded: false };
   }
@@ -158,7 +159,7 @@ export async function checkAndAwardBadges(userId: string, triggerType: BadgeTrig
   const results: BadgeAwardResult[] = [];
 
   try {
-    const badges = await prisma.badge.findMany({
+    const badges = await db.badge.findMany({
       where: {
         triggerType,
         isActive: true
@@ -174,7 +175,7 @@ export async function checkAndAwardBadges(userId: string, triggerType: BadgeTrig
     }
 
     return results;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check and award badges error:', error);
     return results;
   }
@@ -189,19 +190,19 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
         return true;
 
       case BadgeTrigger.GROUP_JOINED: {
-        const groupCount = await prisma.groupMember.count({
+        const groupCount = await db.groupMember.count({
           where: { userId, status: 'ACTIVE' }
         });
         return groupCount >= triggerValue;
       }
 
       case BadgeTrigger.STAYS_COUNT: {
-        const stayCount = await prisma.stay.count({ where: { userId } });
+        const stayCount = await db.stay.count({ where: { userId } });
         return stayCount >= triggerValue;
       }
 
       case BadgeTrigger.DAYS_CAMPED: {
-        const stays = await prisma.stay.findMany({
+        const stays = await db.stay.findMany({
           where: { userId },
           select: { startDate: true, endDate: true }
         });
@@ -216,7 +217,7 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.WEEKEND_STAYS: {
-        const allStays = await prisma.stay.findMany({
+        const allStays = await db.stay.findMany({
           where: { userId },
           select: { startDate: true, endDate: true }
         });
@@ -230,7 +231,7 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.FRIENDS_COUNT: {
-        const friendCount = await prisma.friendship.count({
+        const friendCount = await db.friendship.count({
           where: {
             OR: [
               { initiatorId: userId, status: 'ACCEPTED' },
@@ -242,14 +243,14 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.RECIPES_SHARED: {
-        const recipeCount = await prisma.recipe.count({
+        const recipeCount = await db.recipe.count({
           where: { userId, privacy: 'PUBLIC' }
         });
         return recipeCount >= triggerValue;
       }
 
       case BadgeTrigger.STATES_VISITED: {
-        const statesCount = await prisma.stateVisit.groupBy({
+        const statesCount = await db.stateVisit.groupBy({
           by: ['state'],
           where: { userId }
         });
@@ -257,46 +258,46 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.REVIEWS_WRITTEN: {
-        const reviewCount = await prisma.campgroundReview.count({
+        const reviewCount = await db.campgroundReview.count({
           where: { userId }
         });
         return reviewCount >= triggerValue;
       }
 
       case BadgeTrigger.POSTS_CREATED: {
-        const postCount = await prisma.post.count({ where: { userId } });
+        const postCount = await db.post.count({ where: { userId } });
         return postCount >= triggerValue;
       }
 
       case BadgeTrigger.TRIPS_CREATED: {
-        const tripCount = await prisma.event.count({
+        const tripCount = await db.event.count({
           where: { organizerId: userId }
         });
         return tripCount >= triggerValue;
       }
 
       case BadgeTrigger.GEAR_ITEMS: {
-        const gearCount = await prisma.gearItem.count({ where: { userId } });
+        const gearCount = await db.gearItem.count({ where: { userId } });
         return gearCount >= triggerValue;
       }
 
       case BadgeTrigger.PHOTOS_UPLOADED: {
-        const photoCount = await prisma.photo.count({ where: { userId } });
+        const photoCount = await db.photo.count({ where: { userId } });
         return photoCount >= triggerValue;
       }
 
       case BadgeTrigger.ALBUMS_CREATED: {
-        const albumCount = await prisma.album.count({ where: { userId } });
+        const albumCount = await db.album.count({ where: { userId } });
         return albumCount >= triggerValue;
       }
 
       case BadgeTrigger.TOP8_ADDED: {
-        const top8Count = await prisma.topFriend.count({ where: { friendId: userId } });
+        const top8Count = await db.topFriend.count({ where: { friendId: userId } });
         return top8Count >= triggerValue;
       }
 
       case BadgeTrigger.RV_REGISTERED: {
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
           where: { id: userId },
           select: { rvType: true, rvYear: true, rvMake: true }
         });
@@ -304,12 +305,12 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.MAINTENANCE_LOGGED: {
-        const maintCount = await prisma.maintenanceLog.count({ where: { userId } });
+        const maintCount = await db.maintenanceLog.count({ where: { userId } });
         return maintCount >= triggerValue;
       }
 
       case BadgeTrigger.FOUNDING_MEMBER: {
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
           where: { id: userId },
           select: { createdAt: true }
         });
@@ -319,30 +320,30 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
       }
 
       case BadgeTrigger.UPVOTES_RECEIVED: {
-        const upvoteCount = await prisma.vote.count({
+        const upvoteCount = await db.vote.count({
           where: { post: { userId }, value: 1 }
         });
         return upvoteCount >= triggerValue;
       }
 
       case BadgeTrigger.POPULAR_RECIPES: {
-        const popularRecipes = await prisma.recipe.findMany({
+        const popularRecipes = await db.recipe.findMany({
           where: { userId, privacy: 'PUBLIC' },
           include: { _count: { select: { likes: true } } }
         });
-        const qualifyingCount = popularRecipes.filter(r => r._count.likes >= 10).length;
+        const qualifyingCount = popularRecipes.filter((r: any) => r._count.likes >= 10).length;
         return qualifyingCount >= triggerValue;
       }
 
       case BadgeTrigger.LOCATION_BASED: {
-        const badgeCampgrounds = await prisma.badgeCampground.findMany({
+        const badgeCampgrounds = await db.badgeCampground.findMany({
           where: { badgeId: badge.id },
           select: { campgroundId: true }
         });
-        const campgroundIds = badgeCampgrounds.map(bc => bc.campgroundId);
+        const campgroundIds = badgeCampgrounds.map((bc: any) => bc.campgroundId);
         if (campgroundIds.length === 0) return false;
 
-        const staysAtQualifying = await prisma.stay.findMany({
+        const staysAtQualifying = await db.stay.findMany({
           where: {
             userId,
             campgroundId: { in: campgroundIds }
@@ -356,20 +357,20 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
         if (!badge.regionStates) return false;
         const requiredStates = badge.regionStates.split(',').map((s: string) => s.trim());
 
-        const userStays = await prisma.stay.findMany({
+        const userStays = await db.stay.findMany({
           where: { userId },
           include: { campground: { select: { state: true } } }
         });
 
         const stayedStates = new Set(
-          userStays.map(s => s.campground?.state).filter(Boolean)
+          userStays.map((s: any) => s.campground?.state).filter(Boolean)
         );
 
-        const stateVisits = await prisma.stateVisit.findMany({
+        const stateVisits = await db.stateVisit.findMany({
           where: { userId },
           select: { state: true }
         });
-        stateVisits.forEach(sv => stayedStates.add(sv.state));
+        stateVisits.forEach((sv: any) => stayedStates.add(sv.state));
 
         const coveredStates = requiredStates.filter((state: string) => stayedStates.has(state));
         return coveredStates.length >= triggerValue;
@@ -379,7 +380,7 @@ async function checkBadgeRequirement(userId: string, badge: any): Promise<boolea
         console.log(`Unknown trigger type: ${badge.triggerType}`);
         return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error checking badge requirement for ${badge.triggerType}:`, error);
     return false;
   }
@@ -396,7 +397,7 @@ function includesWeekend(startDate: Date, endDate: Date): boolean {
 }
 
 export async function getBadgesForCampground(campgroundId: string) {
-  const locationBadges = await prisma.badgeCampground.findMany({
+  const locationBadges = await db.badgeCampground.findMany({
     where: { campgroundId },
     include: {
       badge: {
@@ -405,13 +406,13 @@ export async function getBadgesForCampground(campgroundId: string) {
     }
   });
 
-  const campground = await prisma.campground.findUnique({
+  const campground = await db.campground.findUnique({
     where: { id: campgroundId },
     select: { state: true }
   });
 
   const regionBadges = campground?.state
-    ? await prisma.badge.findMany({
+    ? await db.badge.findMany({
         where: {
           triggerType: 'REGION_BASED',
           isActive: true,
@@ -422,14 +423,14 @@ export async function getBadgesForCampground(campgroundId: string) {
     : [];
 
   return {
-    locationBadges: locationBadges.map(lb => lb.badge),
+    locationBadges: locationBadges.map((lb: any) => lb.badge),
     regionBadges,
     totalBadges: locationBadges.length + regionBadges.length
   };
 }
 
 export async function getLocationBadgeProgress(userId: string, badgeSlug: string) {
-  const badge = await prisma.badge.findUnique({
+  const badge = await db.badge.findUnique({
     where: { slug: badgeSlug },
     include: {
       campgrounds: {
@@ -443,43 +444,43 @@ export async function getLocationBadgeProgress(userId: string, badgeSlug: string
   if (!badge) return null;
 
   if (badge.triggerType === 'LOCATION_BASED') {
-    const campgrounds = badge.campgrounds.map(bc => bc.campground);
-    const campgroundIds = campgrounds.map(c => c.id);
+    const campgrounds = badge.campgrounds.map((bc: any) => bc.campground);
+    const campgroundIds = campgrounds.map((c: any) => c.id);
 
-    const userStays = await prisma.stay.findMany({
+    const userStays = await db.stay.findMany({
       where: { userId, campgroundId: { in: campgroundIds } },
       distinct: ['campgroundId'],
       select: { campgroundId: true }
     });
 
-    const visitedIds = new Set(userStays.map(s => s.campgroundId));
+    const visitedIds = new Set(userStays.map((s: any) => s.campgroundId));
 
     return {
       badge: { slug: badge.slug, name: badge.name, imageUrl: badge.imageUrl },
       required: badge.triggerValue || 1,
       current: visitedIds.size,
       percentage: Math.min(100, Math.round((visitedIds.size / (badge.triggerValue || 1)) * 100)),
-      campgrounds: campgrounds.map(c => ({ ...c, visited: visitedIds.has(c.id) }))
+      campgrounds: campgrounds.map((c: any) => ({ ...c, visited: visitedIds.has(c.id) }))
     };
   }
 
   if (badge.triggerType === 'REGION_BASED' && badge.regionStates) {
     const requiredStates = badge.regionStates.split(',').map((s: string) => s.trim());
 
-    const userStays = await prisma.stay.findMany({
+    const userStays = await db.stay.findMany({
       where: { userId },
       include: { campground: { select: { state: true } } }
     });
 
     const stayedStates = new Set(
-      userStays.map(s => s.campground?.state).filter(Boolean)
+      userStays.map((s: any) => s.campground?.state).filter(Boolean)
     );
 
-    const stateVisits = await prisma.stateVisit.findMany({
+    const stateVisits = await db.stateVisit.findMany({
       where: { userId },
       select: { state: true }
     });
-    stateVisits.forEach(sv => stayedStates.add(sv.state));
+    stateVisits.forEach((sv: any) => stayedStates.add(sv.state));
 
     return {
       badge: { slug: badge.slug, name: badge.name, imageUrl: badge.imageUrl },
@@ -496,7 +497,7 @@ export async function getLocationBadgeProgress(userId: string, badgeSlug: string
 }
 
 export async function getBadgeProgress(userId: string, badgeSlug: string): Promise<{ current: number; required: number; percentage: number }> {
-  const badge = await prisma.badge.findUnique({ where: { slug: badgeSlug } });
+  const badge = await db.badge.findUnique({ where: { slug: badgeSlug } });
   if (!badge) return { current: 0, required: 0, percentage: 0 };
 
   if (badge.triggerType === 'LOCATION_BASED' || badge.triggerType === 'REGION_BASED') {
@@ -511,9 +512,9 @@ export async function getBadgeProgress(userId: string, badgeSlug: string): Promi
   try {
     switch (badge.triggerType) {
       case BadgeTrigger.STAYS_COUNT:
-        current = await prisma.stay.count({ where: { userId } }); break;
+        current = await db.stay.count({ where: { userId } }); break;
       case BadgeTrigger.DAYS_CAMPED: {
-        const stays = await prisma.stay.findMany({ where: { userId }, select: { startDate: true, endDate: true } });
+        const stays = await db.stay.findMany({ where: { userId }, select: { startDate: true, endDate: true } });
         for (const stay of stays) {
           const start = new Date(stay.startDate);
           const end = new Date(stay.endDate);
@@ -522,52 +523,52 @@ export async function getBadgeProgress(userId: string, badgeSlug: string): Promi
         break;
       }
       case BadgeTrigger.WEEKEND_STAYS: {
-        const allStays = await prisma.stay.findMany({ where: { userId }, select: { startDate: true, endDate: true } });
+        const allStays = await db.stay.findMany({ where: { userId }, select: { startDate: true, endDate: true } });
         for (const stay of allStays) {
           if (includesWeekend(new Date(stay.startDate), new Date(stay.endDate))) current++;
         }
         break;
       }
       case BadgeTrigger.FRIENDS_COUNT:
-        current = await prisma.friendship.count({
+        current = await db.friendship.count({
           where: { OR: [{ initiatorId: userId, status: 'ACCEPTED' }, { receiverId: userId, status: 'ACCEPTED' }] }
         }); break;
       case BadgeTrigger.STATES_VISITED: {
-        const states = await prisma.stateVisit.groupBy({ by: ['state'], where: { userId } });
+        const states = await db.stateVisit.groupBy({ by: ['state'], where: { userId } });
         current = states.length; break;
       }
       case BadgeTrigger.POSTS_CREATED:
-        current = await prisma.post.count({ where: { userId } }); break;
+        current = await db.post.count({ where: { userId } }); break;
       case BadgeTrigger.RECIPES_SHARED:
-        current = await prisma.recipe.count({ where: { userId, privacy: 'PUBLIC' } }); break;
+        current = await db.recipe.count({ where: { userId, privacy: 'PUBLIC' } }); break;
       case BadgeTrigger.REVIEWS_WRITTEN:
-        current = await prisma.campgroundReview.count({ where: { userId } }); break;
+        current = await db.campgroundReview.count({ where: { userId } }); break;
       case BadgeTrigger.TRIPS_CREATED:
-        current = await prisma.event.count({ where: { organizerId: userId } }); break;
+        current = await db.event.count({ where: { organizerId: userId } }); break;
       case BadgeTrigger.PHOTOS_UPLOADED:
-        current = await prisma.photo.count({ where: { userId } }); break;
+        current = await db.photo.count({ where: { userId } }); break;
       case BadgeTrigger.ALBUMS_CREATED:
-        current = await prisma.album.count({ where: { userId } }); break;
+        current = await db.album.count({ where: { userId } }); break;
       case BadgeTrigger.TOP8_ADDED:
-        current = await prisma.topFriend.count({ where: { friendId: userId } }); break;
+        current = await db.topFriend.count({ where: { friendId: userId } }); break;
       case BadgeTrigger.MAINTENANCE_LOGGED:
-        current = await prisma.maintenanceLog.count({ where: { userId } }); break;
+        current = await db.maintenanceLog.count({ where: { userId } }); break;
       case BadgeTrigger.UPVOTES_RECEIVED:
-        current = await prisma.vote.count({ where: { post: { userId }, value: 1 } }); break;
+        current = await db.vote.count({ where: { post: { userId }, value: 1 } }); break;
       case BadgeTrigger.POPULAR_RECIPES: {
-        const popRecipes = await prisma.recipe.findMany({
+        const popRecipes = await db.recipe.findMany({
           where: { userId, privacy: 'PUBLIC' },
           include: { _count: { select: { likes: true } } }
         });
-        current = popRecipes.filter(r => r._count.likes >= 10).length;
+        current = popRecipes.filter((r: any) => r._count.likes >= 10).length;
         break;
       }
       case BadgeTrigger.GROUP_JOINED:
-        current = await prisma.groupMember.count({ where: { userId, status: 'ACTIVE' } }); break;
+        current = await db.groupMember.count({ where: { userId, status: 'ACTIVE' } }); break;
       case BadgeTrigger.GEAR_ITEMS:
-        current = await prisma.gearItem.count({ where: { userId } }); break;
+        current = await db.gearItem.count({ where: { userId } }); break;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error getting progress for ${badge.triggerType}:`, error);
   }
 
@@ -576,21 +577,21 @@ export async function getBadgeProgress(userId: string, badgeSlug: string): Promi
 }
 
 export async function getUserBadges(userId: string) {
-  const allBadges = await prisma.badge.findMany({
+  const allBadges = await db.badge.findMany({
     where: { isActive: true },
     orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }]
   });
 
-  const earnedBadges = await prisma.userBadge.findMany({
+  const earnedBadges = await db.userBadge.findMany({
     where: { userId },
     include: { badge: true }
   });
 
-  const earnedBadgeIds = new Set(earnedBadges.map(ub => ub.badgeId));
+  const earnedBadgeIds = new Set(earnedBadges.map((ub: any) => ub.badgeId));
 
   return {
-    earned: earnedBadges.map(ub => ({ ...ub.badge, earnedAt: ub.earnedAt })),
-    available: allBadges.filter(b => !earnedBadgeIds.has(b.id)),
+    earned: earnedBadges.map((ub: any) => ({ ...ub.badge, earnedAt: ub.earnedAt })),
+    available: allBadges.filter((b: any) => !earnedBadgeIds.has(b.id)),
     total: allBadges.length,
     earnedCount: earnedBadges.length
   };

@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 // Common RV storage locations
 const COMMON_STORAGE_LOCATIONS = [
@@ -37,10 +38,10 @@ router.get('/locations', (req, res) => {
 router.get('/event/:eventId', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
     // Get the event
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
@@ -61,7 +62,7 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
     const isOrganizer = event.organizerId === userId;
 
     // Get event attendees for assignment dropdown
-    const attendees = await prisma.eventAttendee.findMany({
+    const attendees = await db.eventAttendee.findMany({
       where: {
         eventId,
         status: 'going'
@@ -80,7 +81,7 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
     });
 
     // Get pack items - organizer sees all, others see their own
-    const packItems = await prisma.tripPackItem.findMany({
+    const packItems = await db.tripPackItem.findMany({
       where: {
         eventId,
         ...(isOrganizer ? {} : {
@@ -109,10 +110,10 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
 
     // Get user's gear items that were linked
     const gearItemIds = packItems
-      .filter(item => item.gearItemId)
-      .map(item => item.gearItemId);
+      .filter((item: any) => item.gearItemId)
+      .map((item: any) => item.gearItemId);
 
-    const gearItems = await prisma.gearItem.findMany({
+    const gearItems = await db.gearItem.findMany({
       where: { id: { in: gearItemIds as string[] } },
       select: {
         id: true,
@@ -123,34 +124,34 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
     });
 
     // Create a map of gear items for easy lookup
-    const gearMap = new Map(gearItems.map(g => [g.id, g]));
+    const gearMap = new Map(gearItems.map((g: any) => [g.id, g]));
 
     // Get packUpAssignedTo users
     const packUpAssignedIds = packItems
-      .filter(item => item.packUpAssignedToId)
-      .map(item => item.packUpAssignedToId);
+      .filter((item: any) => item.packUpAssignedToId)
+      .map((item: any) => item.packUpAssignedToId);
 
-    const packUpAssignees = await prisma.user.findMany({
+    const packUpAssignees = await db.user.findMany({
       where: { id: { in: packUpAssignedIds as string[] } },
       select: { id: true, firstName: true, lastName: true, profilePicture: true }
     });
 
-    const assigneeMap = new Map(packUpAssignees.map(u => [u.id, u]));
+    const assigneeMap = new Map(packUpAssignees.map((u: any) => [u.id, u]));
 
     // Enhance pack items with gear info and assignee
-    const enhancedItems = packItems.map(item => ({
+    const enhancedItems = packItems.map((item: any) => ({
       ...item,
       gearItem: item.gearItemId ? gearMap.get(item.gearItemId) : null,
-      defaultLocation: item.gearItemId ? gearMap.get(item.gearItemId)?.storageLocation : null,
+      defaultLocation: item.gearItemId ? (gearMap.get(item.gearItemId) as any)?.storageLocation : null,
       packUpAssignedTo: item.packUpAssignedToId ? assigneeMap.get(item.packUpAssignedToId) : null
     }));
 
     // Calculate stats
     const stats = {
       total: packItems.length,
-      packed: packItems.filter(i => i.packUpStatus === 'PACKED').length,
-      leftBehind: packItems.filter(i => i.leftBehind).length,
-      notStarted: packItems.filter(i => i.packUpStatus === 'NOT_STARTED' || !i.packUpStatus).length
+      packed: packItems.filter((i: any) => i.packUpStatus === 'PACKED').length,
+      leftBehind: packItems.filter((i: any) => i.leftBehind).length,
+      notStarted: packItems.filter((i: any) => i.packUpStatus === 'NOT_STARTED' || !i.packUpStatus).length
     };
 
     res.json({
@@ -158,10 +159,10 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
       items: enhancedItems,
       stats,
       storageLocations: COMMON_STORAGE_LOCATIONS,
-      attendees: attendees.map(a => a.user),
+      attendees: attendees.map((a: any) => a.user),
       isOrganizer
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pack-up list error:', error);
     res.status(500).json({ error: 'Failed to get pack-up list' });
   }
@@ -171,10 +172,10 @@ router.get('/event/:eventId', authenticateToken, async (req, res) => {
 router.get('/trip/:tripId', authenticateToken, async (req, res) => {
   try {
     const { tripId } = req.params;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
     // Get the trip
-    const trip = await prisma.tripPlan.findUnique({
+    const trip = await db.tripPlan.findUnique({
       where: { id: tripId },
       select: {
         id: true,
@@ -194,7 +195,7 @@ router.get('/trip/:tripId', authenticateToken, async (req, res) => {
     }
 
     // Get pack items for this trip
-    const packItems = await prisma.tripPackItem.findMany({
+    const packItems = await db.tripPackItem.findMany({
       where: { tripId },
       include: {
         inventoryItem: true
@@ -208,10 +209,10 @@ router.get('/trip/:tripId', authenticateToken, async (req, res) => {
 
     // Get linked gear items
     const gearItemIds = packItems
-      .filter(item => item.gearItemId)
-      .map(item => item.gearItemId);
+      .filter((item: any) => item.gearItemId)
+      .map((item: any) => item.gearItemId);
 
-    const gearItems = await prisma.gearItem.findMany({
+    const gearItems = await db.gearItem.findMany({
       where: { id: { in: gearItemIds as string[] } },
       select: {
         id: true,
@@ -221,19 +222,19 @@ router.get('/trip/:tripId', authenticateToken, async (req, res) => {
       }
     });
 
-    const gearMap = new Map(gearItems.map(g => [g.id, g]));
+    const gearMap = new Map(gearItems.map((g: any) => [g.id, g]));
 
-    const enhancedItems = packItems.map(item => ({
+    const enhancedItems = packItems.map((item: any) => ({
       ...item,
       gearItem: item.gearItemId ? gearMap.get(item.gearItemId) : null,
-      defaultLocation: item.gearItemId ? gearMap.get(item.gearItemId)?.storageLocation : null
+      defaultLocation: item.gearItemId ? (gearMap.get(item.gearItemId) as any)?.storageLocation : null
     }));
 
     const stats = {
       total: packItems.length,
-      packed: packItems.filter(i => i.packUpStatus === 'PACKED').length,
-      leftBehind: packItems.filter(i => i.leftBehind).length,
-      notStarted: packItems.filter(i => i.packUpStatus === 'NOT_STARTED' || !i.packUpStatus).length
+      packed: packItems.filter((i: any) => i.packUpStatus === 'PACKED').length,
+      leftBehind: packItems.filter((i: any) => i.leftBehind).length,
+      notStarted: packItems.filter((i: any) => i.packUpStatus === 'NOT_STARTED' || !i.packUpStatus).length
     };
 
     res.json({
@@ -242,7 +243,7 @@ router.get('/trip/:tripId', authenticateToken, async (req, res) => {
       stats,
       storageLocations: COMMON_STORAGE_LOCATIONS
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get pack-up list error:', error);
     res.status(500).json({ error: 'Failed to get pack-up list' });
   }
@@ -253,9 +254,9 @@ router.put('/item/:itemId', authenticateToken, async (req, res) => {
   try {
     const { itemId } = req.params;
     const { packUpStatus, packedToLocation, packUpNote, leftBehind, saveAsDefault } = req.body;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
-    const item = await prisma.tripPackItem.findUnique({
+    const item = await db.tripPackItem.findUnique({
       where: { id: itemId },
       include: {
         event: { select: { organizerId: true } },
@@ -278,7 +279,7 @@ router.put('/item/:itemId', authenticateToken, async (req, res) => {
     }
 
     // Update the pack item
-    const updated = await prisma.tripPackItem.update({
+    const updated = await db.tripPackItem.update({
       where: { id: itemId },
       data: {
         packUpStatus: packUpStatus || item.packUpStatus,
@@ -292,7 +293,7 @@ router.put('/item/:itemId', authenticateToken, async (req, res) => {
 
     // If saving as default and item is linked to gear, update the gear item
     if (saveAsDefault && item.gearItemId && packedToLocation) {
-      await prisma.gearItem.update({
+      await db.gearItem.update({
         where: { id: item.gearItemId },
         data: {
           storageLocation: packedToLocation,
@@ -305,7 +306,7 @@ router.put('/item/:itemId', authenticateToken, async (req, res) => {
 
     // If marking as packed and linked to gear, update lastUsedAt
     if (packUpStatus === 'PACKED' && item.gearItemId) {
-      await prisma.gearItem.update({
+      await db.gearItem.update({
         where: { id: item.gearItemId },
         data: {
           lastUsedAt: new Date(),
@@ -316,7 +317,7 @@ router.put('/item/:itemId', authenticateToken, async (req, res) => {
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update pack-up item error:', error);
     res.status(500).json({ error: 'Failed to update item' });
   }
@@ -327,9 +328,9 @@ router.post('/item/:itemId/location', authenticateToken, async (req, res) => {
   try {
     const { itemId } = req.params;
     const { location, saveAsDefault } = req.body;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
-    const item = await prisma.tripPackItem.findUnique({
+    const item = await db.tripPackItem.findUnique({
       where: { id: itemId }
     });
 
@@ -338,21 +339,21 @@ router.post('/item/:itemId/location', authenticateToken, async (req, res) => {
     }
 
     // Update location
-    await prisma.tripPackItem.update({
+    await db.tripPackItem.update({
       where: { id: itemId },
       data: { packedToLocation: location }
     });
 
     // Save as default if requested
     if (saveAsDefault && item.gearItemId) {
-      await prisma.gearItem.update({
+      await db.gearItem.update({
         where: { id: item.gearItemId },
         data: { storageLocation: location }
       });
     }
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update location error:', error);
     res.status(500).json({ error: 'Failed to update location' });
   }
@@ -362,10 +363,10 @@ router.post('/item/:itemId/location', authenticateToken, async (req, res) => {
 router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
     // Get the event
-    const event = await prisma.event.findUnique({
+    const event = await db.event.findUnique({
       where: { id: eventId },
       select: { organizerId: true }
     });
@@ -375,7 +376,7 @@ router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
     }
 
     // Get all pack items
-    const packItems = await prisma.tripPackItem.findMany({
+    const packItems = await db.tripPackItem.findMany({
       where: {
         eventId,
         OR: [
@@ -386,10 +387,10 @@ router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
     });
 
     // Update all items that haven't been packed to PACKED status
-    const notPacked = packItems.filter(i => i.packUpStatus !== 'PACKED' && !i.leftBehind);
+    const notPacked = packItems.filter((i: any) => i.packUpStatus !== 'PACKED' && !i.leftBehind);
 
     for (const item of notPacked) {
-      await prisma.tripPackItem.update({
+      await db.tripPackItem.update({
         where: { id: item.id },
         data: {
           packUpStatus: 'PACKED',
@@ -400,7 +401,7 @@ router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
 
       // Update gear item lastUsedAt
       if (item.gearItemId) {
-        await prisma.gearItem.update({
+        await db.gearItem.update({
           where: { id: item.gearItemId },
           data: {
             lastUsedAt: new Date(),
@@ -411,15 +412,15 @@ router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
     }
 
     // Get items left behind for the response
-    const leftBehindItems = packItems.filter(i => i.leftBehind);
+    const leftBehindItems = packItems.filter((i: any) => i.leftBehind);
 
     res.json({
       success: true,
       packedCount: packItems.length - leftBehindItems.length,
       leftBehindCount: leftBehindItems.length,
-      leftBehindItems: leftBehindItems.map(i => i.customName || i.inventoryItem?.name)
+      leftBehindItems: leftBehindItems.map((i: any) => i.customName || i.inventoryItem?.name)
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Complete pack-up error:', error);
     res.status(500).json({ error: 'Failed to complete pack-up' });
   }
@@ -429,9 +430,9 @@ router.post('/event/:eventId/complete', authenticateToken, async (req, res) => {
 router.post('/event/:eventId/reset', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
-    await prisma.tripPackItem.updateMany({
+    await db.tripPackItem.updateMany({
       where: {
         eventId,
         OR: [
@@ -451,7 +452,7 @@ router.post('/event/:eventId/reset', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Reset pack-up error:', error);
     res.status(500).json({ error: 'Failed to reset pack-up' });
   }
@@ -462,9 +463,9 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
   try {
     const { itemId } = req.params;
     const { userId: assignToUserId } = req.body;
-    const currentUserId = req.user!.id;
+    const currentUserId = (req as any).user!.id;
 
-    const item = await prisma.tripPackItem.findUnique({
+    const item = await db.tripPackItem.findUnique({
       where: { id: itemId },
       include: {
         event: { select: { organizerId: true, id: true, title: true } }
@@ -481,7 +482,7 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
     }
 
     // Update assignment
-    const updated = await prisma.tripPackItem.update({
+    const updated = await db.tripPackItem.update({
       where: { id: itemId },
       data: { packUpAssignedToId: assignToUserId || null }
     });
@@ -491,7 +492,7 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
       const activityId = require('crypto').randomBytes(12).toString('hex');
       
       // Create BasecampActivity
-      await prisma.basecampActivity.create({
+      await db.basecampActivity.create({
         data: {
           id: activityId,
           userId: assignToUserId,
@@ -511,7 +512,7 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
       });
 
       // Also create a notification
-      await prisma.notification.create({
+      await db.notification.create({
         data: {
           id: require('crypto').randomBytes(12).toString('hex'),
           userId: assignToUserId,
@@ -529,7 +530,7 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Assign pack-up error:', error);
     res.status(500).json({ error: 'Failed to assign pack-up task' });
   }
@@ -539,9 +540,9 @@ router.put('/item/:itemId/assign', authenticateToken, async (req, res) => {
 router.get('/gear/:gearId/history', authenticateToken, async (req, res) => {
   try {
     const { gearId } = req.params;
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
 
-    const gearItem = await prisma.gearItem.findUnique({
+    const gearItem = await db.gearItem.findUnique({
       where: { id: gearId }
     });
 
@@ -550,7 +551,7 @@ router.get('/gear/:gearId/history', authenticateToken, async (req, res) => {
     }
 
     // Get past pack-up records with locations
-    const packHistory = await prisma.tripPackItem.findMany({
+    const packHistory = await db.tripPackItem.findMany({
       where: {
         gearItemId: gearId,
         packedToLocation: { not: null }
@@ -579,7 +580,7 @@ router.get('/gear/:gearId/history', authenticateToken, async (req, res) => {
       },
       history: packHistory
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gear history error:', error);
     res.status(500).json({ error: 'Failed to get history' });
   }
@@ -590,11 +591,11 @@ export default router;
 // GET /api/packup/my-tasks - Get user's pending pack-up tasks for basecamp widget
 router.get('/my-tasks', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const now = new Date();
 
     // Get pack items assigned to user that aren't packed yet
-    const tasks = await prisma.tripPackItem.findMany({
+    const tasks = await db.tripPackItem.findMany({
       where: {
         OR: [
           { packUpAssignedToId: userId },
@@ -625,7 +626,7 @@ router.get('/my-tasks', authenticateToken, async (req, res) => {
     });
 
     // Group by event
-    const byEvent = tasks.reduce((acc, task) => {
+    const byEvent = tasks.reduce((acc: any, task: any) => {
       const eventId = task.eventId || 'unknown';
       if (!acc[eventId]) {
         acc[eventId] = {
@@ -646,7 +647,7 @@ router.get('/my-tasks', authenticateToken, async (req, res) => {
       tasks: Object.values(byEvent),
       totalItems: tasks.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my tasks error:', error);
     res.status(500).json({ error: 'Failed to get tasks' });
   }

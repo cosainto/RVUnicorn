@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 export type ActivityType = 
   | 'POST_CREATED'
@@ -97,7 +97,7 @@ export async function createActivity(params: CreateActivityParams) {
       },
     });
     return activity;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create activity:', error);
     return null;
   }
@@ -158,7 +158,7 @@ async function generateCheckinBlurb(activityId: string, campgroundId: string, ca
     if (blurb) {
       await prisma.activity.update({ where: { id: activityId }, data: { content: blurb } });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('AI blurb generation failed:', err);
   }
 }
@@ -180,11 +180,11 @@ export const logPhotoUploaded = (
     photoId,
     title: albumTitle || 'a photo',
     ...(campground ? {
-      metadata: JSON.stringify({
+      metadata: {
         campgroundId: campground.id,
         campgroundName: campground.name,
         campgroundSlug: campground.slug || null,
-      }),
+      },
     } : {}),
   });
 

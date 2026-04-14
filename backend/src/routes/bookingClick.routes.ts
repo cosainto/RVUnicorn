@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = express.Router();
@@ -9,7 +9,7 @@ const router = express.Router();
 // Track a booking click
 router.post('/track', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { campgroundId } = req.body;
 
     if (!campgroundId) {
@@ -34,7 +34,7 @@ router.post('/track', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ message: 'Click tracked', clickId: click.id });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error tracking booking click:', error);
     res.status(500).json({ error: 'Failed to track click' });
   }
@@ -43,7 +43,7 @@ router.post('/track', authenticateToken, async (req: any, res) => {
 // Get pending follow-ups (clicks from 1+ hour ago)
 router.get('/pending-followups', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
     const pendingFollowUps = await prisma.bookingClick.findMany({
@@ -68,7 +68,7 @@ router.get('/pending-followups', authenticateToken, async (req: any, res) => {
     });
 
     res.json(pendingFollowUps);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching pending follow-ups:', error);
     res.status(500).json({ error: 'Failed to fetch follow-ups' });
   }
@@ -77,7 +77,7 @@ router.get('/pending-followups', authenticateToken, async (req: any, res) => {
 // Respond to a follow-up
 router.post('/:clickId/respond', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { clickId } = req.params;
     const { didBook } = req.body;
 
@@ -104,7 +104,7 @@ router.post('/:clickId/respond', authenticateToken, async (req: any, res) => {
     });
 
     res.json(updatedClick);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error responding to follow-up:', error);
     res.status(500).json({ error: 'Failed to respond' });
   }
@@ -113,7 +113,7 @@ router.post('/:clickId/respond', authenticateToken, async (req: any, res) => {
 // Link event to booking click
 router.post('/:clickId/link-event', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { clickId } = req.params;
     const { eventId } = req.body;
 
@@ -131,7 +131,7 @@ router.post('/:clickId/link-event', authenticateToken, async (req: any, res) => 
     });
 
     res.json(updatedClick);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error linking event:', error);
     res.status(500).json({ error: 'Failed to link event' });
   }

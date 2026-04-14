@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic();
 
 const REGIONS: Record<string, string[]> = {

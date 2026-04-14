@@ -3,6 +3,7 @@ import { prisma } from '../index';
 import { renderCampgroundPage, renderCommunityBoardPage } from '../utils/campgroundSSR';
 
 const router = Router();
+const db = prisma as any;
 
 const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
 
@@ -19,8 +20,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Fetch some stats to make the page rich
     const [campgroundCount, userCount, boardCount] = await Promise.all([
-      prisma.campground.count(),
-      prisma.user.count(),
+      db.campground.count(),
+      db.user.count(),
       (prisma as any).board.count({ where: { isActive: true } }),
     ]);
 
@@ -120,7 +121,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     res.set('Content-Type', 'text/html');
     res.send(html);
-  } catch (e) {
+  } catch (e: any) {
     console.error('[SSR] Landing page error:', e);
     next();
   }
@@ -136,7 +137,7 @@ router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextF
     const { slug } = req.params;
 
     // Look up by customSlug first, then by id
-    const campground = await prisma.campground.findFirst({
+    const campground = await db.campground.findFirst({
       where: {
         OR: [
           { customSlug: slug },
@@ -179,7 +180,7 @@ router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextF
       return res.status(404).send('Campground not found');
     }
 
-    const reviews = await prisma.campgroundReview.findMany({
+    const reviews = await db.campgroundReview.findMany({
       where: { campgroundId: campground.id },
       select: {
         rating: true,
@@ -194,7 +195,7 @@ router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextF
       take: 5,
     });
 
-    const events = await prisma.campgroundEvent.findMany({
+    const events = await db.campgroundEvent.findMany({
       where: {
         campgroundId: campground.id,
         startDate: { gte: new Date() },
@@ -218,7 +219,7 @@ router.get('/campgrounds/:slug', async (req: Request, res: Response, next: NextF
     const html = renderCampgroundPage(campground, stats, reviews, events);
     res.set('Content-Type', 'text/html');
     res.send(html);
-  } catch (error) {
+  } catch (error: any) {
     console.error('SSR campground error:', error);
     res.status(500).send('Server error');
   }
@@ -229,7 +230,7 @@ router.get('/trips/:slug/view', async (req: Request, res: Response, next: NextFu
   if (!shouldSSR(req)) return next();
   try {
     const { slug } = req.params;
-    const trip = await prisma.event.findFirst({
+    const trip = await db.event.findFirst({
       where: { OR: [{ tripSlug: slug }, { id: slug }] },
       include: { organizer: { select: { firstName: true, lastName: true } }, campground: { select: { name: true, state: true, imageUrl: true } } },
     });
@@ -324,7 +325,7 @@ router.get('/community/:boardSlug', async (req: Request, res: Response, next: Ne
     );
     res.set('Content-Type', 'text/html');
     res.send(html);
-  } catch (error) {
+  } catch (error: any) {
     console.error('SSR community board error:', error);
     res.status(500).send('Server error');
   }
@@ -339,12 +340,12 @@ const COMMUNITY_BOARDS = [
 router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try {
     const [campgrounds, users] = await Promise.all([
-      prisma.campground.findMany({
+      db.campground.findMany({
         select: { id: true, customSlug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 50000,
       }),
-      prisma.user.findMany({
+      db.user.findMany({
         select: { username: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 50000,
@@ -393,7 +394,7 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
     res.set('Content-Type', 'application/xml');
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(xml);
-  } catch (e) {
+  } catch (e: any) {
     console.error('Sitemap error:', e);
     res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
   }

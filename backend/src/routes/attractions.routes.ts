@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/attractions
 router.get('/', authenticateToken, async (req: any, res) => {
@@ -14,7 +14,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
       orderBy: [{ state: 'asc' }, { createdAt: 'desc' }],
     });
     res.json(attractions);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get attractions error:', error);
     res.status(500).json({ error: 'Failed to get attractions' });
   }
@@ -32,7 +32,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
       data: { userId, name, type: type || 'other', state, city, address, imageUrl, description, website, isVisited: false },
     });
     res.status(201).json(attraction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create attraction error:', error);
     res.status(500).json({ error: 'Failed to create attraction' });
   }
@@ -64,7 +64,7 @@ router.put('/:id', authenticateToken, async (req: any, res) => {
       },
     });
     res.json(attraction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update attraction error:', error);
     res.status(500).json({ error: 'Failed to update attraction' });
   }
@@ -81,7 +81,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
     }
     await prisma.attraction.delete({ where: { id } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete attraction error:', error);
     res.status(500).json({ error: 'Failed to delete attraction' });
   }

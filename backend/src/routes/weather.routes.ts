@@ -39,7 +39,7 @@ router.get('/forecast', async (req, res) => {
       return res.status(404).json({ error: 'Weather not available for this location' });
     }
     
-    const pointsData = await pointsRes.json();
+    const pointsData: any = await pointsRes.json();
     const forecastUrl = pointsData.properties?.forecast;
     const forecastHourlyUrl = pointsData.properties?.forecastHourly;
     
@@ -56,7 +56,7 @@ router.get('/forecast', async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch forecast' });
     }
     
-    const forecastData = await forecastRes.json();
+    const forecastData: any = await forecastRes.json();
     const periods = forecastData.properties?.periods || [];
     
     // Format response
@@ -92,7 +92,7 @@ router.get('/forecast', async (req, res) => {
     cache[cacheKey] = { data: result, timestamp: Date.now() };
     
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Weather fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch weather' });
   }
@@ -113,18 +113,18 @@ router.get('/activities', async (req, res) => {
     try {
       const pr = await fetch(`https://api.weather.gov/points/${lat},${lon}`, { headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' } });
       if (pr.ok) {
-        const pd = await pr.json();
+        const pd: any = await pr.json();
         const fu = pd.properties?.forecast;
         if (fu) {
           const fr = await fetch(fu, { headers: { 'User-Agent': 'RVUnicorn (contact@rvunicorn.com)' } });
           if (fr.ok) {
-            const fd = await fr.json();
+            const fd: any = await fr.json();
             const p0 = fd.properties?.periods?.[0];
             if (p0) weatherSummary = `${p0.name}: ${p0.temperature}F, ${p0.shortForecast}, winds ${p0.windSpeed}`;
           }
         }
       }
-    } catch(e) {}
+    } catch (e: any) {}
     const Anthropic = require('@anthropic-ai/sdk');
     const anthropic = new Anthropic.default();
     const now = new Date();
@@ -134,12 +134,12 @@ router.get('/activities', async (req, res) => {
       messages: [{ role: 'user', content: `You are a camping activity advisor at ${campgroundName}. Weather: ${weatherSummary}. Time: ${tod}. Suggest exactly 4 activities. Respond ONLY with JSON array: [{"emoji":"🎣","title":"Go Fishing","reason":"brief reason under 12 words","duration":"2-3 hours"}]` }],
     });
     let activities = [];
-    try { activities = JSON.parse(response.content[0].type === 'text' ? response.content[0].text.trim() : '[]'); } catch(e) {
+    try { activities = JSON.parse(response.content[0].type === 'text' ? response.content[0].text.trim() : '[]'); } catch (e: any) {
       activities = [{ emoji: '🚶', title: 'Take a Walk', reason: 'Great time to explore', duration: '30-60 min' }, { emoji: '🔥', title: 'Campfire Time', reason: 'Perfect for gathering around the fire', duration: '1-2 hours' }, { emoji: '📸', title: 'Photography', reason: 'Capture the scenery', duration: '1 hour' }, { emoji: '⭐', title: 'Stargazing', reason: 'Clear skies tonight', duration: 'After dark' }];
     }
     const result = { activities, weatherSummary, generatedAt: new Date().toISOString() };
     activitiesCache[cacheKey] = { data: result, timestamp: Date.now() };
     res.json(result);
-  } catch(error) { console.error('Activities error:', error); res.status(500).json({ error: 'Failed' }); }
+  } catch (error: any) { console.error('Activities error:', error); res.status(500).json({ error: 'Failed' }); }
 });
 export default router;

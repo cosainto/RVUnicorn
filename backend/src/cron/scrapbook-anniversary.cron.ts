@@ -54,7 +54,7 @@ export function registerScrapbookAnniversaryCron() {
           create: { eventId: event.id, userId: event.organizerId, tripYear, notifiedAt: new Date() },
         });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[AnniversaryCron] Error:', e);
     }
   }, { timezone: 'America/Chicago' });

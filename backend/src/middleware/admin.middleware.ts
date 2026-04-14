@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../index';
+const db = prisma as any;
 
 // Admin emails that can edit/delete campgrounds
 const ADMIN_EMAILS = ['wroberts82@yahoo.com', 'deanna@rvunicorn.com'];
@@ -12,7 +13,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       select: { email: true }
     });
@@ -22,7 +23,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     }
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin check error:', error);
     res.status(500).json({ error: 'Failed to verify admin status' });
   }

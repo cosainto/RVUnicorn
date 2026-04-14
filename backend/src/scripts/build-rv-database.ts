@@ -9,7 +9,7 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // ═══════════════════════════════════════════════════════════════
 // CURATED RV DATA — Top manufacturers with types and specs
@@ -238,13 +238,13 @@ async function fetchNHTSAMakes(): Promise<string[]> {
     console.log('🔍 Fetching RV makes from NHTSA...');
     const url = 'https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/Multipurpose%20Passenger%20Vehicle%20(MPV)?format=json';
     const res = await fetch(url);
-    const data = await res.json();
+    const data: any = await res.json();
     const makes = (data.Results || [])
       .map((r: any) => r.MakeName)
       .filter((n: string) => n && n.length > 1);
     console.log(`  Found ${makes.length} makes from NHTSA`);
     return makes;
-  } catch (e) {
+  } catch (e: any) {
     console.log('  ⚠️ NHTSA fetch failed, using curated data only');
     return [];
   }

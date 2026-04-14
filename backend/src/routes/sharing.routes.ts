@@ -5,7 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { sendWebPush } from '../utils/webPush';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const anthropic = new Anthropic();
 
 // ══ POST /api/sharing/generate-tagline ══
@@ -28,7 +28,7 @@ router.get('/visited-states/:userId', optionalAuth, async (req, res: Response) =
       where: { userId: req.params.userId },
       select: { campground: { select: { state: true } } },
     });
-    const states = [...new Set(checkins.map(c => c.campground?.state).filter(Boolean))];
+    const states = [...new Set(checkins.map((c: any) => c.campground?.state).filter(Boolean))];
     res.json({ states, count: states.length });
   } catch { res.json({ states: [], count: 0 }); }
 });
@@ -51,7 +51,7 @@ router.get('/public-profile/:username', async (req, res: Response) => {
       where: { userId: user.id },
       select: { campground: { select: { state: true } } },
     });
-    const visitedStates = [...new Set(checkins.map(c => c.campground?.state).filter(Boolean))];
+    const visitedStates = [...new Set(checkins.map((c: any) => c.campground?.state).filter(Boolean))];
 
     // Current status (only if opted in)
     let currentCampground = null;
@@ -94,7 +94,7 @@ export async function checkSharedFire(userId: string, campgroundId: string) {
       where: { status: 'ACCEPTED', OR: [{ initiatorId: userId }, { receiverId: userId }] },
       select: { initiatorId: true, receiverId: true },
     });
-    const crewIds = friendships.map(f => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+    const crewIds = friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
     if (crewIds.length === 0) return;
 
     // Get crew members who are currently checked in
@@ -157,5 +157,5 @@ export async function checkSharedFire(userId: string, campgroundId: string) {
         console.log(`[SharedFire] 🔥 ${name} → ${checkin.user.firstName} (${miles}mi at ${campground.name})`);
       }
     }
-  } catch (e) { console.error('[SharedFire] Error:', e); }
+  } catch (e: any) { console.error('[SharedFire] Error:', e); }
 }

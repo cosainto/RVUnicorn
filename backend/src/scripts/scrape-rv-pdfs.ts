@@ -223,7 +223,7 @@ async function scrapeJayco(page: Page): Promise<PdfResult[]> {
           pdfUrl: pdf.href,
         });
       }
-    } catch (e) {}
+    } catch (e: any) {}
   }
 
   return results.filter(r => r.model.length > 2);
@@ -277,7 +277,7 @@ async function scrapeKeystone(page: Page): Promise<PdfResult[]> {
       for (const pdf of pdfs) {
         results.push({ model: cleanModelName(pdf.text), year: extractYear(pdf.text), pdfUrl: pdf.href });
       }
-    } catch (e) {}
+    } catch (e: any) {}
   }
   return results.filter(r => r.model.length > 2);
 }
@@ -306,7 +306,7 @@ async function scrapeTiffin(page: Page): Promise<PdfResult[]> {
       for (const pdf of pdfs) {
         results.push({ model: cleanModelName(pdf.text), year: extractYear(pdf.text), pdfUrl: pdf.href });
       }
-    } catch (e) {}
+    } catch (e: any) {}
   }
   return results.filter(r => r.model.length > 2);
 }
@@ -355,7 +355,7 @@ async function scrapeNewmar(page: Page): Promise<PdfResult[]> {
       for (const pdf of pdfs) {
         results.push({ model: cleanModelName(pdf.text), year: extractYear(pdf.text), pdfUrl: pdf.href });
       }
-    } catch (e) {}
+    } catch (e: any) {}
   }
   return results.filter(r => r.model.length > 2);
 }
@@ -372,7 +372,7 @@ async function scrapeCoachmen(page: Page): Promise<PdfResult[]> {
   });
 
   await page.goto('https://www.coachmenrv.com/resources/owners-manuals/', { waitUntil: 'networkidle2', timeout: 30000 });
-  await page.waitForTimeout(3000);
+  await new Promise(r => setTimeout(r, 3000));
 
   // Also look for any PDF links after JS renders
   const pdfs = await page.evaluate(() => {
@@ -439,7 +439,7 @@ async function main() {
       }
       console.log(`   Saved ${saved} PDF URLs`);
       totalSaved += saved;
-    } catch (err) {
+    } catch (err: any) {
       console.error(`   ❌ Error:`, (err as Error).message);
     } finally {
       await page.close();

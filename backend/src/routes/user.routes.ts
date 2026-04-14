@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // GET /api/users/search - Search for users
 router.get('/search', async (req: Request, res: Response) => {
@@ -35,7 +35,7 @@ router.get('/search', async (req: Request, res: Response) => {
     });
 
     res.json(users);
-  } catch (error) {
+  } catch (error: any) {
     console.error('User search error:', error);
     res.status(500).json({ error: 'Failed to search users' });
   }
@@ -73,7 +73,7 @@ router.get('/:username', async (req: Request, res: Response) => {
     }
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
@@ -113,7 +113,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     });
 
     res.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update user error:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
@@ -170,7 +170,7 @@ router.get('/same-destination', authenticateToken, async (req: any, res: Respons
     });
     if (visits.length === 0) return res.json({ users: [] });
     const users = await prisma.user.findMany({
-      where: { id: { in: visits.map(v => v.userId) } },
+      where: { id: { in: visits.map((v: any) => v.userId) } },
       select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, homeState: true, rvType: true },
     });
     res.json({ users });

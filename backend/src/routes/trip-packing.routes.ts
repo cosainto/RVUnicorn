@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // Helper to create basecamp activity
 async function createBasecampActivity(
@@ -15,7 +15,7 @@ async function createBasecampActivity(
     await prisma.basecampActivity.create({
       data: { userId, actorId, type, entityType, entityId, entityName, metadata: metadata || {} }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create basecamp activity:', error);
   }
 }
@@ -33,7 +33,7 @@ async function notifyEventAttendees(
     select: { organizerId: true }
   });
 
-  const userIds = new Set([...attendees.map(a => a.userId), event?.organizerId].filter(Boolean) as string[]);
+  const userIds = new Set([...attendees.map((a: any) => a.userId), event?.organizerId].filter(Boolean) as string[]);
   userIds.delete(actorId);
 
   for (const userId of userIds) {
@@ -86,7 +86,7 @@ async function notifyAttendeesWithItem(eventId: string, itemName: string, itemCa
         });
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to notify attendees:', error);
   }
 }
@@ -94,7 +94,7 @@ async function notifyAttendeesWithItem(eventId: string, itemName: string, itemCa
 // GET /api/trip-pack/event/:eventId - Get packing list for event
 router.get('/event/:eventId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { eventId } = req.params;
 
     const event = await prisma.event.findFirst({
@@ -126,12 +126,12 @@ router.get('/event/:eventId', authenticateToken, async (req: any, res) => {
     });
 
     const total = items.length;
-    const packed = items.filter(i => i.isPacked).length;
+    const packed = items.filter((i: any) => i.isPacked).length;
 
     res.json({
       event,
-      attendees: event.attendees.map(a => a.user),
-      items: items.map(item => ({
+      attendees: event.attendees.map((a: any) => a.user),
+      items: items.map((item: any) => ({
         ...item,
         name: item.inventoryItem?.name || item.customName,
         category: item.inventoryItem?.category || item.customCategory || 'General'
@@ -140,7 +140,7 @@ router.get('/event/:eventId', authenticateToken, async (req: any, res) => {
       isComplete: total > 0 && packed === total,
       isOrganizer: event.organizerId === userId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get event pack list error:', error);
     res.status(500).json({ error: 'Failed to fetch packing list' });
   }
@@ -149,7 +149,7 @@ router.get('/event/:eventId', authenticateToken, async (req: any, res) => {
 // GET /api/trip-pack/trip/:tripId - Get packing list for trip
 router.get('/trip/:tripId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { tripId } = req.params;
 
     const trip = await prisma.tripPlan.findFirst({
@@ -170,11 +170,11 @@ router.get('/trip/:tripId', authenticateToken, async (req: any, res) => {
     });
 
     const total = items.length;
-    const packed = items.filter(i => i.isPacked).length;
+    const packed = items.filter((i: any) => i.isPacked).length;
 
     res.json({
       trip,
-      items: items.map(item => ({
+      items: items.map((item: any) => ({
         ...item,
         name: item.inventoryItem?.name || item.customName,
         category: item.inventoryItem?.category || item.customCategory || 'General'
@@ -182,7 +182,7 @@ router.get('/trip/:tripId', authenticateToken, async (req: any, res) => {
       stats: { total, packed, unpacked: total - packed, progress: total > 0 ? Math.round((packed / total) * 100) : 0 },
       isComplete: total > 0 && packed === total
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get trip pack list error:', error);
     res.status(500).json({ error: 'Failed to fetch packing list' });
   }
@@ -191,7 +191,7 @@ router.get('/trip/:tripId', authenticateToken, async (req: any, res) => {
 // POST /api/trip-pack - Add item to packing list
 router.post('/', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { tripId, eventId, inventoryItemId, customName, customCategory, quantity, assignedToId } = req.body;
 
     if (!tripId && !eventId) return res.status(400).json({ error: 'Either tripId or eventId is required' });
@@ -256,7 +256,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
     }
     
     res.status(201).json(responseItem);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add pack item error:', error);
     res.status(500).json({ error: 'Failed to add item' });
   }
@@ -265,7 +265,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
 // PUT /api/trip-pack/:id/toggle - Toggle packed status
 router.put('/:id/toggle', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { id } = req.params;
 
     const item = await prisma.tripPackItem.findFirst({
@@ -289,14 +289,14 @@ router.put('/:id/toggle', authenticateToken, async (req: any, res) => {
       await notifyEventAttendees(item.eventId, userId, newStatus ? 'PACK_ITEM_PACKED' : 'PACK_ITEM_UNPACKED', item.event!.title, { itemName });
 
       const allItems = await prisma.tripPackItem.findMany({ where: { eventId: item.eventId } });
-      const allPacked = allItems.every(i => i.id === id ? newStatus : i.isPacked);
+      const allPacked = allItems.every((i: any) => i.id === id ? newStatus : i.isPacked);
       if (allPacked && allItems.length > 0) {
         await notifyEventAttendees(item.eventId, userId, 'PACK_LIST_COMPLETE', item.event!.title, { totalItems: allItems.length });
       }
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle pack item error:', error);
     res.status(500).json({ error: 'Failed to toggle item' });
   }
@@ -305,7 +305,7 @@ router.put('/:id/toggle', authenticateToken, async (req: any, res) => {
 // PUT /api/trip-pack/:id/assign - Assign item to user
 router.put('/:id/assign', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { id } = req.params;
     const { assignedToId } = req.body;
 
@@ -354,7 +354,7 @@ router.put('/:id/assign', authenticateToken, async (req: any, res) => {
     }
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Assign pack item error:', error);
     res.status(500).json({ error: 'Failed to assign item' });
   }
@@ -363,7 +363,7 @@ router.put('/:id/assign', authenticateToken, async (req: any, res) => {
 // PUT /api/trip-pack/:id/respond - Accept or decline assignment
 router.put('/:id/respond', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { id } = req.params;
     const { accept, reason } = req.body;
 
@@ -404,7 +404,7 @@ router.put('/:id/respond', authenticateToken, async (req: any, res) => {
           }
         });
         console.log('Created PACKING_FOR_TRIP activity for user:', userId);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to create profile activity:', e);
       }
       
@@ -419,7 +419,7 @@ router.put('/:id/respond', authenticateToken, async (req: any, res) => {
       }
       res.json(updated);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Respond to assignment error:', error);
     res.status(500).json({ error: 'Failed to respond' });
   }
@@ -428,7 +428,7 @@ router.put('/:id/respond', authenticateToken, async (req: any, res) => {
 // DELETE /api/trip-pack/:id
 router.delete('/:id', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { id } = req.params;
 
     const item = await prisma.tripPackItem.findFirst({
@@ -443,7 +443,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
 
     await prisma.tripPackItem.delete({ where: { id } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete pack item error:', error);
     res.status(500).json({ error: 'Failed to delete item' });
   }
@@ -452,7 +452,7 @@ router.delete('/:id', authenticateToken, async (req: any, res) => {
 // POST /api/trip-pack/unpack-all
 router.post('/unpack-all', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { tripId, eventId } = req.body;
 
     if (!tripId && !eventId) return res.status(400).json({ error: 'Either tripId or eventId required' });
@@ -463,7 +463,7 @@ router.post('/unpack-all', authenticateToken, async (req: any, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unpack all error:', error);
     res.status(500).json({ error: 'Failed to unpack all' });
   }
@@ -472,7 +472,7 @@ router.post('/unpack-all', authenticateToken, async (req: any, res) => {
 // GET /api/trip-pack/my-assignments
 router.get('/my-assignments', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const items = await prisma.tripPackItem.findMany({
       where: {
@@ -486,15 +486,15 @@ router.get('/my-assignments', authenticateToken, async (req: any, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const pending = items.filter(i => i.assignmentStatus === 'PENDING');
-    const accepted = items.filter(i => i.assignmentStatus === 'ACCEPTED');
+    const pending = items.filter((i: any) => i.assignmentStatus === 'PENDING');
+    const accepted = items.filter((i: any) => i.assignmentStatus === 'ACCEPTED');
 
     res.json({
-      pending: pending.map(item => ({ ...item, name: item.inventoryItem?.name || item.customName, eventTitle: item.event?.title })),
-      accepted: accepted.map(item => ({ ...item, name: item.inventoryItem?.name || item.customName, eventTitle: item.event?.title })),
-      stats: { pending: pending.length, accepted: accepted.length, packed: accepted.filter(i => i.isPacked).length }
+      pending: pending.map((item: any) => ({ ...item, name: item.inventoryItem?.name || item.customName, eventTitle: item.event?.title })),
+      accepted: accepted.map((item: any) => ({ ...item, name: item.inventoryItem?.name || item.customName, eventTitle: item.event?.title })),
+      stats: { pending: pending.length, accepted: accepted.length, packed: accepted.filter((i: any) => i.isPacked).length }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my assignments error:', error);
     res.status(500).json({ error: 'Failed to fetch assignments' });
   }
@@ -504,7 +504,7 @@ router.get('/my-assignments', authenticateToken, async (req: any, res) => {
 // Copies user's personal pack items into the event packing list (skips dupes)
 router.post('/import-personal/:eventId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { eventId } = req.params;
 
     // Verify user has access to event
@@ -531,7 +531,7 @@ router.post('/import-personal/:eventId', authenticateToken, async (req: any, res
       where: { eventId, createdById: userId },
       select: { customName: true },
     });
-    const existingNames = new Set(existing.map(i => i.customName?.toLowerCase().trim()));
+    const existingNames = new Set(existing.map((i: any) => i.customName?.toLowerCase().trim()));
 
     // Import items that don't already exist
     let imported = 0;

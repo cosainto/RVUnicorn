@@ -3,12 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // POST /api/household/invite — send household invite to another user
 router.post('/invite', authenticateToken, async (req: any, res) => {
   try {
-    const senderId = req.user.id;
+    const senderId = (req as any).user.id;
     const { username } = req.body;
     if (!username) return res.status(400).json({ error: 'Username required' });
 
@@ -59,7 +59,7 @@ router.post('/invite', authenticateToken, async (req: any, res) => {
 // POST /api/household/accept/:inviteId — accept invite, creates household
 router.post('/accept/:inviteId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const invite = await prisma.householdInvite.findUnique({
       where: { id: req.params.inviteId },
       include: {
@@ -93,7 +93,7 @@ router.post('/accept/:inviteId', authenticateToken, async (req: any, res) => {
 // POST /api/household/decline/:inviteId
 router.post('/decline/:inviteId', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const invite = await prisma.householdInvite.findUnique({ where: { id: req.params.inviteId } });
     if (!invite || invite.receiverId !== userId) return res.status(403).json({ error: 'Not your invite' });
     await prisma.householdInvite.update({ where: { id: invite.id }, data: { status: 'DECLINED' } });
@@ -106,7 +106,7 @@ router.post('/decline/:inviteId', authenticateToken, async (req: any, res) => {
 // GET /api/household/my — get current user's household info
 router.get('/my', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -142,7 +142,7 @@ router.get('/my', authenticateToken, async (req: any, res) => {
 // DELETE /api/household/leave — leave household
 router.delete('/leave', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { householdId: true } });
     if (!user?.householdId) return res.status(400).json({ error: 'Not in a household' });
     await prisma.user.update({ where: { id: userId }, data: { householdId: null } });
@@ -158,7 +158,7 @@ router.delete('/leave', authenticateToken, async (req: any, res) => {
 // POST /api/household/sync-rv — sync agreed RV data to all household members
 router.post('/sync-rv', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const { rvYear, rvModel, rvType, rvMpg, rvFuelType, rvMake } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { householdId: true } });

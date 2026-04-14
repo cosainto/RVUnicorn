@@ -9,7 +9,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const boards = await (prisma as any).board.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } });
     res.json({ boards });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch boards' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch boards' }); }
 });
 
 router.get('/posts/all', async (req: Request, res: Response) => {
@@ -32,7 +32,7 @@ router.get('/posts/all', async (req: Request, res: Response) => {
       },
     });
     res.json({ posts, nextCursor: posts.length === take ? posts[posts.length - 1].id : null });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch posts' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch posts' }); }
 });
 
 router.get('/post/:postId', async (req: Request, res: Response) => {
@@ -54,7 +54,7 @@ router.get('/post/:postId', async (req: Request, res: Response) => {
     });
     if (!post) return res.status(404).json({ error: 'Post not found' });
     res.json({ post });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch post' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch post' }); }
 });
 
 router.delete('/post/:postId', authenticateToken, async (req: any, res: Response) => {
@@ -65,7 +65,7 @@ router.delete('/post/:postId', authenticateToken, async (req: any, res: Response
     await (prisma as any).boardPost.delete({ where: { id: req.params.postId } });
     await (prisma as any).board.update({ where: { id: post.boardId }, data: { postCount: { decrement: 1 } } });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: 'Failed to delete post' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to delete post' }); }
 });
 
 router.post('/post/:postId/vote', authenticateToken, async (req: any, res: Response) => {
@@ -81,7 +81,7 @@ router.post('/post/:postId/vote', authenticateToken, async (req: any, res: Respo
     } else { await (prisma as any).boardVote.create({ data: { userId, postId: req.params.postId, value } }); delta = value; }
     const updated = await (prisma as any).boardPost.update({ where: { id: req.params.postId }, data: { voteScore: { increment: delta } } });
     res.json({ voteScore: updated.voteScore });
-  } catch (e) { res.status(500).json({ error: 'Failed to vote' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to vote' }); }
 });
 
 router.post('/post/:postId/comments', authenticateToken, async (req: any, res: Response) => {
@@ -94,7 +94,7 @@ router.post('/post/:postId/comments', authenticateToken, async (req: any, res: R
     });
     await (prisma as any).boardPost.update({ where: { id: req.params.postId }, data: { commentCount: { increment: 1 } } });
     res.json({ comment });
-  } catch (e) { res.status(500).json({ error: 'Failed to create comment' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to create comment' }); }
 });
 
 router.post('/comment/:commentId/vote', authenticateToken, async (req: any, res: Response) => {
@@ -110,7 +110,7 @@ router.post('/comment/:commentId/vote', authenticateToken, async (req: any, res:
     } else { await (prisma as any).boardVote.create({ data: { userId, commentId: req.params.commentId, value } }); delta = value; }
     const updated = await (prisma as any).boardComment.update({ where: { id: req.params.commentId }, data: { voteScore: { increment: delta } } });
     res.json({ voteScore: updated.voteScore });
-  } catch (e) { res.status(500).json({ error: 'Failed to vote on comment' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to vote on comment' }); }
 });
 
 router.get('/:slug', async (req: Request, res: Response) => {
@@ -118,7 +118,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     const board = await (prisma as any).board.findUnique({ where: { slug: req.params.slug } });
     if (!board) return res.status(404).json({ error: 'Board not found' });
     res.json({ board });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch board' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch board' }); }
 });
 
 router.get('/:slug/posts', async (req: Request, res: Response) => {
@@ -144,7 +144,7 @@ router.get('/:slug/posts', async (req: Request, res: Response) => {
       },
     });
     res.json({ posts, nextCursor: posts.length === take ? posts[posts.length - 1].id : null });
-  } catch (e) { res.status(500).json({ error: 'Failed to fetch posts' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to fetch posts' }); }
 });
 
 router.post('/:slug/posts', authenticateToken, async (req: any, res: Response) => {
@@ -162,7 +162,7 @@ router.post('/:slug/posts', authenticateToken, async (req: any, res: Response) =
     });
     await (prisma as any).board.update({ where: { id: board.id }, data: { postCount: { increment: 1 } } });
     res.json({ post });
-  } catch (e) { res.status(500).json({ error: 'Failed to create post' }); }
+  } catch (e: any) { res.status(500).json({ error: 'Failed to create post' }); }
 });
 
 export default router;

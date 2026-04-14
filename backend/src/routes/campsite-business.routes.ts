@@ -8,19 +8,20 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
 // Middleware to check if user is campsite admin
-const isCampsiteAdmin = async (req, res: any, next: any) => {
+const isCampsiteAdmin = async (req: any, res: any, next: any) => {
   try {
     const { campgroundId } = req.params;
 
-    const admin = await prisma.campsiteAdmin.findUnique({
+    const admin = await db.campsiteAdmin.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -30,7 +31,7 @@ const isCampsiteAdmin = async (req, res: any, next: any) => {
     }
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin check error:', error);
     res.status(500).json({ error: 'Authorization check failed' });
   }
@@ -41,7 +42,7 @@ router.get('/:campgroundId/stats', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const campground = await prisma.campground.findUnique({
+    const campground = await db.campground.findUnique({
       where: { id: campgroundId },
       include: {
         _count: {
@@ -55,24 +56,24 @@ router.get('/:campgroundId/stats', async (req, res) => {
           }
         }
       }
-    });
+    }) as any;
 
     if (!campground) {
       return res.status(404).json({ error: 'Campground not found' });
     }
 
     // Get average rating
-    const ratings = await prisma.campsiteRating.findMany({
+    const ratings = await db.campsiteRating.findMany({
       where: { campgroundId }
-    });
+    }) as any[];
 
     const avgRating = ratings.length > 0
-      ? ratings.reduce((sum, r) => sum + r.smores, 0) / ratings.length
+      ? ratings.reduce((sum: any, r: any) => sum + r.smores, 0) / ratings.length
       : 0;
 
     // Get currently checked-in users count
     const now = new Date();
-    const checkedInCount = await prisma.campgroundCheckIn.count({
+    const checkedInCount = await db.campgroundCheckIn.count({
       where: {
         campgroundId,
         checkInDate: { lte: now },
@@ -85,7 +86,7 @@ router.get('/:campgroundId/stats', async (req, res) => {
       averageRating: avgRating,
       checkedInToday: checkedInCount,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get campsite stats error:', error);
     res.status(500).json({ error: 'Failed to get stats' });
   }
@@ -96,11 +97,11 @@ router.post('/:campgroundId/follow', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const existing = await prisma.campsiteFollow.findUnique({
+    const existing = await db.campsiteFollow.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -109,15 +110,15 @@ router.post('/:campgroundId/follow', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Already following' });
     }
 
-    const follow = await prisma.campsiteFollow.create({
+    const follow = await db.campsiteFollow.create({
       data: {
         campgroundId,
-        userId: req.user!.id,
+        userId: (req as any).user!.id,
       }
     });
 
     res.json(follow);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Follow campsite error:', error);
     res.status(500).json({ error: 'Failed to follow' });
   }
@@ -128,17 +129,17 @@ router.delete('/:campgroundId/follow', authenticateToken, async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    await prisma.campsiteFollow.delete({
+    await db.campsiteFollow.delete({
       where: {
         campgroundId_userId: {
           campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
 
     res.json({ message: 'Unfollowed' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unfollow campsite error:', error);
     res.status(500).json({ error: 'Failed to unfollow' });
   }
@@ -152,7 +153,7 @@ router.post(
     body('smores').isInt({ min: 1, max: 5 }),
     body('review').optional().trim(),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const { campgroundId } = req.params;
       const { smores, review } = req.body;
@@ -162,16 +163,16 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const rating = await prisma.campsiteRating.upsert({
+      const rating = await db.campsiteRating.upsert({
         where: {
           campgroundId_userId: {
             campgroundId,
-            userId: req.user!.id
+            userId: (req as any).user!.id
           }
         },
         create: {
           campgroundId,
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           smores,
           review,
         },
@@ -182,7 +183,7 @@ router.post(
       });
 
       res.json(rating);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Rate campsite error:', error);
       res.status(500).json({ error: 'Failed to rate' });
     }
@@ -194,7 +195,7 @@ router.get('/:campgroundId/ratings', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const ratings = await prisma.campsiteRating.findMany({
+    const ratings = await db.campsiteRating.findMany({
       where: { campgroundId },
       include: {
         user: {
@@ -211,7 +212,7 @@ router.get('/:campgroundId/ratings', async (req, res) => {
     });
 
     res.json(ratings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get ratings error:', error);
     res.status(500).json({ error: 'Failed to get ratings' });
   }
@@ -228,7 +229,7 @@ router.post(
       const { campgroundId } = req.params;
       const { title, content, target } = req.body;
 
-      const announcement = await prisma.campsiteAnnouncement.create({
+      const announcement = await db.campsiteAnnouncement.create({
         data: {
           campgroundId,
           title,
@@ -242,14 +243,14 @@ router.post(
       let userIds: string[] = [];
 
       if (target === 'ALL_FOLLOWERS') {
-        const followers = await prisma.campsiteFollow.findMany({
+        const followers = await db.campsiteFollow.findMany({
           where: { campgroundId },
           select: { userId: true }
         });
-        userIds = followers.map(f => f.userId);
+        userIds = followers.map((f: any) => f.userId);
       } else if (target === 'CHECKED_IN_USERS') {
         const now = new Date();
-        const checkIns = await prisma.campgroundCheckIn.findMany({
+        const checkIns = await db.campgroundCheckIn.findMany({
           where: {
             campgroundId,
             checkInDate: { lte: now },
@@ -257,18 +258,18 @@ router.post(
           },
           select: { userId: true }
         });
-        userIds = checkIns.map(c => c.userId);
+        userIds = checkIns.map((c: any) => c.userId);
       }
 
       // Create notifications
-      const campground = await prisma.campground.findUnique({
+      const campground = await db.campground.findUnique({
         where: { id: campgroundId }
-      });
+      }) as any;
 
       if (userIds.length > 0) {
         await Promise.all(
           userIds.map(userId =>
-            prisma.notification.create({
+            db.notification.create({
               data: {
                 userId,
                 type: 'CAMPSITE_ANNOUNCEMENT',
@@ -280,7 +281,7 @@ router.post(
       }
 
       res.json(announcement);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create announcement error:', error);
       res.status(500).json({ error: 'Failed to create announcement' });
     }
@@ -292,13 +293,13 @@ router.get('/:campgroundId/announcements', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const announcements = await prisma.campsiteAnnouncement.findMany({
+    const announcements = await db.campsiteAnnouncement.findMany({
       where: { campgroundId },
       orderBy: { createdAt: 'desc' }
     });
 
     res.json(announcements);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get announcements error:', error);
     res.status(500).json({ error: 'Failed to get announcements' });
   }
@@ -315,7 +316,7 @@ router.post(
       const { campgroundId } = req.params;
       const { title, description, startDate, endDate } = req.body;
 
-      const event = await prisma.campsiteEvent.create({
+      const event = await db.campsiteEvent.create({
         data: {
           campgroundId,
           title,
@@ -327,7 +328,7 @@ router.post(
       });
 
       res.json(event);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create event error:', error);
       res.status(500).json({ error: 'Failed to create event' });
     }
@@ -346,13 +347,13 @@ router.get('/:campgroundId/events', async (req, res) => {
       whereClause.startDate = { gte: new Date() };
     }
 
-    const events = await prisma.campsiteEvent.findMany({
+    const events = await db.campsiteEvent.findMany({
       where: whereClause,
       orderBy: { startDate: 'asc' }
     });
 
     res.json(events);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get events error:', error);
     res.status(500).json({ error: 'Failed to get events' });
   }
@@ -369,7 +370,7 @@ router.post(
       const { campgroundId } = req.params;
       const { name, description, pricePerDay, pricePerHour, available } = req.body;
 
-      const rental = await prisma.campsiteRental.create({
+      const rental = await db.campsiteRental.create({
         data: {
           campgroundId,
           name,
@@ -382,7 +383,7 @@ router.post(
       });
 
       res.json(rental);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create rental error:', error);
       res.status(500).json({ error: 'Failed to create rental' });
     }
@@ -394,13 +395,13 @@ router.get('/:campgroundId/rentals', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const rentals = await prisma.campsiteRental.findMany({
+    const rentals = await db.campsiteRental.findMany({
       where: { campgroundId },
       orderBy: { name: 'asc' }
     });
 
     res.json(rentals);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get rentals error:', error);
     res.status(500).json({ error: 'Failed to get rentals' });
   }
@@ -414,25 +415,25 @@ router.post(
     body('startDate').isISO8601(),
     body('endDate').isISO8601(),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const { rentalId } = req.params;
       const { startDate, endDate, message } = req.body;
 
-      const rental = await prisma.campsiteRental.findUnique({
+      const rental = await db.campsiteRental.findUnique({
         where: { id: rentalId },
         include: { campground: true }
-      });
+      }) as any;
 
       if (!rental) {
         return res.status(404).json({ error: 'Rental not found' });
       }
 
-      const request = await prisma.rentalRequest.create({
+      const request = await db.rentalRequest.create({
         data: {
           rentalId,
           campgroundId: rental.campgroundId,
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           message,
@@ -450,25 +451,25 @@ router.post(
       });
 
       // Notify campsite admins
-      const admins = await prisma.campsiteAdmin.findMany({
+      const admins = await db.campsiteAdmin.findMany({
         where: { campgroundId: rental.campgroundId },
         select: { userId: true }
       });
 
       await Promise.all(
-        admins.map(admin =>
-          prisma.notification.create({
+        admins.map((admin: any) =>
+          db.notification.create({
             data: {
               userId: admin.userId,
               type: 'RENTAL_REQUEST',
-              content: `${req.user!.firstName} requested to rent ${rental.name}`,
+              content: `${(req as any).user!.firstName} requested to rent ${rental.name}`,
             }
           })
         )
       );
 
       res.json(request);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Request rental error:', error);
       res.status(500).json({ error: 'Failed to request rental' });
     }
@@ -480,7 +481,7 @@ router.get('/:campgroundId/rental-requests', authenticateToken, isCampsiteAdmin,
   try {
     const { campgroundId } = req.params;
 
-    const requests = await prisma.rentalRequest.findMany({
+    const requests = await db.rentalRequest.findMany({
       where: { campgroundId },
       include: {
         user: {
@@ -498,7 +499,7 @@ router.get('/:campgroundId/rental-requests', authenticateToken, isCampsiteAdmin,
     });
 
     res.json(requests);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get rental requests error:', error);
     res.status(500).json({ error: 'Failed to get requests' });
   }
@@ -510,21 +511,21 @@ router.put('/rental-requests/:requestId', authenticateToken, async (req, res) =>
     const { requestId } = req.params;
     const { status } = req.body;
 
-    const request = await prisma.rentalRequest.findUnique({
+    const request = await db.rentalRequest.findUnique({
       where: { id: requestId },
       include: { campground: true, rental: true }
-    });
+    }) as any;
 
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
     }
 
     // Check admin
-    const admin = await prisma.campsiteAdmin.findUnique({
+    const admin = await db.campsiteAdmin.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId: request.campgroundId,
-          userId: req.user!.id
+          userId: (req as any).user!.id
         }
       }
     });
@@ -533,13 +534,13 @@ router.put('/rental-requests/:requestId', authenticateToken, async (req, res) =>
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.rentalRequest.update({
+    const updated = await db.rentalRequest.update({
       where: { id: requestId },
       data: { status }
     });
 
     // Notify user
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: request.userId,
         type: 'RENTAL_REQUEST_UPDATE',
@@ -548,7 +549,7 @@ router.put('/rental-requests/:requestId', authenticateToken, async (req, res) =>
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update rental request error:', error);
     res.status(500).json({ error: 'Failed to update request' });
   }
@@ -565,7 +566,7 @@ router.post(
       const { campgroundId } = req.params;
       const { name, description, price, inStock } = req.body;
 
-      const item = await prisma.campsiteStoreItem.create({
+      const item = await db.campsiteStoreItem.create({
         data: {
           campgroundId,
           name,
@@ -577,7 +578,7 @@ router.post(
       });
 
       res.json(item);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create store item error:', error);
       res.status(500).json({ error: 'Failed to create item' });
     }
@@ -589,13 +590,13 @@ router.get('/:campgroundId/store', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const items = await prisma.campsiteStoreItem.findMany({
+    const items = await db.campsiteStoreItem.findMany({
       where: { campgroundId },
       orderBy: { name: 'asc' }
     });
 
     res.json(items);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get store items error:', error);
     res.status(500).json({ error: 'Failed to get items' });
   }
@@ -616,19 +617,21 @@ router.post(
       }
 
       // Check if user is admin
-      const admin = await prisma.campsiteAdmin.findUnique({
+      const admin = await db.campsiteAdmin.findUnique({
         where: {
           campgroundId_userId: {
             campgroundId,
-            userId: req.user!.id
+            userId: (req as any).user!.id
           }
         }
       });
 
-      const photo = await prisma.campsiteGalleryPhoto.create({
+      const cloudinaryUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campsites');
+
+      const photo = await db.campsiteGalleryPhoto.create({
         data: {
           campgroundId,
-          userId: admin ? null : req.user!.id, // null if admin upload
+          userId: admin ? null : (req as any).user!.id, // null if admin upload
           imageUrl: cloudinaryUrl,
           caption,
           approved: admin ? true : false, // Auto-approve admin uploads
@@ -636,7 +639,7 @@ router.post(
       });
 
       res.json(photo);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add gallery photo error:', error);
       res.status(500).json({ error: 'Failed to add photo' });
     }
@@ -648,7 +651,7 @@ router.get('/:campgroundId/gallery', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const photos = await prisma.campsiteGalleryPhoto.findMany({
+    const photos = await db.campsiteGalleryPhoto.findMany({
       where: {
         campgroundId,
         approved: true,
@@ -667,7 +670,7 @@ router.get('/:campgroundId/gallery', async (req, res) => {
     });
 
     res.json(photos);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get gallery error:', error);
     res.status(500).json({ error: 'Failed to get gallery' });
   }
@@ -689,7 +692,7 @@ router.put('/:campgroundId', authenticateToken, isCampsiteAdmin, async (req, res
       restaurantMenu,
     } = req.body;
 
-    const campground = await prisma.campground.update({
+    const campground = await db.campground.update({
       where: { id: campgroundId },
       data: {
         fullDescription,
@@ -705,7 +708,7 @@ router.put('/:campgroundId', authenticateToken, isCampsiteAdmin, async (req, res
     });
 
     res.json(campground);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update campground error:', error);
     res.status(500).json({ error: 'Failed to update campground' });
   }

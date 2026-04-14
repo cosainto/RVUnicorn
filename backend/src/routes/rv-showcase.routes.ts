@@ -72,7 +72,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     }
 
     res.json({ ...showcase, coPilots });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get RV showcase error:', error);
     res.status(500).json({ error: 'Failed to get RV showcase' });
   }
@@ -113,7 +113,7 @@ router.get('/user/:userId', optionalAuth, async (req, res) => {
     }
 
     res.json(showcase);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get RV showcase error:', error);
     res.status(500).json({ error: 'Failed to get RV showcase' });
   }
@@ -212,7 +212,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     res.json(showcase);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save RV showcase error:', error);
     res.status(500).json({ error: 'Failed to save RV showcase' });
   }
@@ -236,7 +236,7 @@ router.delete('/', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete RV showcase error:', error);
     res.status(500).json({ error: 'Failed to delete RV showcase' });
   }
@@ -277,7 +277,7 @@ router.put('/:id/set-main', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Set main photo error:', error);
     res.status(500).json({ error: 'Failed to set main photo' });
   }
@@ -316,7 +316,7 @@ router.delete('/:id/photo/:photoIndex', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Failed to delete photo' });
   }

@@ -3,13 +3,14 @@ import { prisma } from '../index';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
+const db = prisma as any;
 
 // Get all threads for a campground
 router.get('/campgrounds/:campgroundId/threads', async (req, res) => {
   try {
     const { campgroundId } = req.params;
 
-    const threads = await prisma.communityThread.findMany({
+    const threads = await db.communityThread.findMany({
       where: { campgroundId },
       include: {
         author: {
@@ -31,7 +32,7 @@ router.get('/campgrounds/:campgroundId/threads', async (req, res) => {
     });
 
     res.json({ threads });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching threads:', error);
     res.status(500).json({ error: 'Failed to fetch threads' });
   }
@@ -42,7 +43,7 @@ router.get('/threads/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
 
-    const thread = await prisma.communityThread.findUnique({
+    const thread = await db.communityThread.findUnique({
       where: { id: threadId },
       include: {
         author: {
@@ -74,7 +75,7 @@ router.get('/threads/:threadId', async (req, res) => {
     }
 
     res.json(thread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching thread:', error);
     res.status(500).json({ error: 'Failed to fetch thread' });
   }
@@ -91,7 +92,7 @@ router.post('/campgrounds/:campgroundId/threads', authenticateToken, async (req,
       return res.status(400).json({ error: 'Title and content are required' });
     }
 
-    const thread = await prisma.communityThread.create({
+    const thread = await db.communityThread.create({
       data: {
         campgroundId,
         authorId: userId,
@@ -111,7 +112,7 @@ router.post('/campgrounds/:campgroundId/threads', authenticateToken, async (req,
     });
 
     res.status(201).json(thread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating thread:', error);
     res.status(500).json({ error: 'Failed to create thread' });
   }
@@ -128,7 +129,7 @@ router.post('/threads/:threadId/replies', authenticateToken, async (req, res) =>
       return res.status(400).json({ error: 'Content is required' });
     }
 
-    const thread = await prisma.communityThread.findUnique({
+    const thread = await db.communityThread.findUnique({
       where: { id: threadId },
     });
 
@@ -140,7 +141,7 @@ router.post('/threads/:threadId/replies', authenticateToken, async (req, res) =>
       return res.status(403).json({ error: 'This thread is locked' });
     }
 
-    const reply = await prisma.communityReply.create({
+    const reply = await db.communityReply.create({
       data: {
         threadId,
         authorId: userId,
@@ -159,7 +160,7 @@ router.post('/threads/:threadId/replies', authenticateToken, async (req, res) =>
     });
 
     res.status(201).json(reply);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating reply:', error);
     res.status(500).json({ error: 'Failed to create reply' });
   }

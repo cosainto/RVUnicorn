@@ -2,12 +2,11 @@ import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
-import path from 'path';
-import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../index';
 
 const router = Router();
+const db = prisma as any;
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 
@@ -23,7 +22,7 @@ router.post(
     body('jobType').isIn(['FULL_TIME', 'PART_TIME', 'SEASONAL', 'VOLUNTEER', 'WORKAMPING']),
     body('contactEmail').isEmail(),
   ],
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -33,7 +32,7 @@ router.post(
       const { campgroundId } = req.body;
 
       // Verify user is campground admin
-      const campground = await prisma.campground.findUnique({
+      const campground = await db.campground.findUnique({
         where: { id: campgroundId },
         include: { admins: true },
       });
@@ -42,7 +41,7 @@ router.post(
         return res.status(404).json({ error: 'Campground not found' });
       }
 
-      const isAdmin = campground.admins.some(admin => admin.userId === req.user!.id);
+      const isAdmin = campground.admins.some((admin: any) => admin.userId === (req as any).user!.id);
       if (!isAdmin) {
         return res.status(403).json({ error: 'Not authorized to post jobs for this campground' });
       }
@@ -71,7 +70,7 @@ router.post(
         expiresAt,
       } = req.body;
 
-      const jobPosting = await prisma.jobPosting.create({
+      const jobPosting = await (db.jobPosting as any).create({
         data: {
           campgroundId,
           title,
@@ -110,7 +109,7 @@ router.post(
       });
 
       res.json(jobPosting);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create job posting error:', error);
       res.status(500).json({ error: 'Failed to create job posting' });
     }
@@ -150,7 +149,7 @@ router.get('/postings', async (req, res) => {
       whereClause.rvSiteProvided = true;
     }
 
-    const jobPostings = await prisma.jobPosting.findMany({
+    const jobPostings = await (db.jobPosting as any).findMany({
       where: whereClause,
       include: {
         campground: {
@@ -172,7 +171,7 @@ router.get('/postings', async (req, res) => {
     });
 
     res.json(jobPostings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get job postings error:', error);
     res.status(500).json({ error: 'Failed to get job postings' });
   }
@@ -183,7 +182,7 @@ router.get('/postings/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const jobPosting = await prisma.jobPosting.findUnique({
+    const jobPosting = await db.jobPosting.findUnique({
       where: { id },
       include: {
         campground: {
@@ -210,7 +209,7 @@ router.get('/postings/:id', async (req, res) => {
     }
 
     res.json(jobPosting);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get job posting error:', error);
     res.status(500).json({ error: 'Failed to get job posting' });
   }
@@ -221,7 +220,7 @@ router.put('/postings/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const jobPosting = await prisma.jobPosting.findUnique({
+    const jobPosting = await db.jobPosting.findUnique({
       where: { id },
       include: {
         campground: {
@@ -234,12 +233,12 @@ router.put('/postings/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Job posting not found' });
     }
 
-    const isAdmin = jobPosting.campground.admins.some(admin => admin.userId === req.user!.id);
+    const isAdmin = jobPosting.campground.admins.some((admin: any) => admin.userId === (req as any).user!.id);
     if (!isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.jobPosting.update({
+    const updated = await db.jobPosting.update({
       where: { id },
       data: {
         ...req.body,
@@ -253,7 +252,7 @@ router.put('/postings/:id', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update job posting error:', error);
     res.status(500).json({ error: 'Failed to update job posting' });
   }
@@ -264,7 +263,7 @@ router.delete('/postings/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const jobPosting = await prisma.jobPosting.findUnique({
+    const jobPosting = await db.jobPosting.findUnique({
       where: { id },
       include: {
         campground: {
@@ -277,17 +276,17 @@ router.delete('/postings/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Job posting not found' });
     }
 
-    const isAdmin = jobPosting.campground.admins.some(admin => admin.userId === req.user!.id);
+    const isAdmin = jobPosting.campground.admins.some((admin: any) => admin.userId === (req as any).user!.id);
     if (!isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    await prisma.jobPosting.delete({
+    await db.jobPosting.delete({
       where: { id },
     });
 
     res.json({ message: 'Job posting deleted' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete job posting error:', error);
     res.status(500).json({ error: 'Failed to delete job posting' });
   }
@@ -303,11 +302,11 @@ router.post(
       const { jobId, coverLetter, yearsExperience, availability } = req.body;
 
       // Check if already applied
-      const existing = await prisma.jobApplication.findUnique({
+      const existing = await db.jobApplication.findUnique({
         where: {
           jobId_userId: {
             jobId,
-            userId: req.user!.id,
+            userId: (req as any).user!.id,
           },
         },
       });
@@ -318,7 +317,7 @@ router.post(
 
       const data: any = {
         jobId,
-        userId: req.user!.id,
+        userId: (req as any).user!.id,
         coverLetter: coverLetter || undefined,
         yearsExperience: yearsExperience ? parseInt(yearsExperience) : undefined,
         availability: availability || undefined,
@@ -333,7 +332,7 @@ router.post(
         data.references = JSON.parse(req.body.references);
       }
 
-      const application = await prisma.jobApplication.create({
+      const application = await db.jobApplication.create({
         data,
         include: {
           job: {
@@ -354,7 +353,7 @@ router.post(
       });
 
       res.json(application);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Apply for job error:', error);
       res.status(500).json({ error: 'Failed to apply for job' });
     }
@@ -364,8 +363,8 @@ router.post(
 // GET /api/jobs/applications/my - Get user's applications
 router.get('/applications/my', authenticateToken, async (req, res) => {
   try {
-    const applications = await prisma.jobApplication.findMany({
-      where: { userId: req.user!.id },
+    const applications = await db.jobApplication.findMany({
+      where: { userId: (req as any).user!.id },
       include: {
         job: {
           include: {
@@ -385,7 +384,7 @@ router.get('/applications/my', authenticateToken, async (req, res) => {
     });
 
     res.json(applications);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my applications error:', error);
     res.status(500).json({ error: 'Failed to get applications' });
   }
@@ -396,7 +395,7 @@ router.get('/postings/:jobId/applications', authenticateToken, async (req, res) 
   try {
     const { jobId } = req.params;
 
-    const jobPosting = await prisma.jobPosting.findUnique({
+    const jobPosting = await db.jobPosting.findUnique({
       where: { id: jobId },
       include: {
         campground: {
@@ -409,12 +408,12 @@ router.get('/postings/:jobId/applications', authenticateToken, async (req, res) 
       return res.status(404).json({ error: 'Job posting not found' });
     }
 
-    const isAdmin = jobPosting.campground.admins.some(admin => admin.userId === req.user!.id);
+    const isAdmin = jobPosting.campground.admins.some((admin: any) => admin.userId === (req as any).user!.id);
     if (!isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const applications = await prisma.jobApplication.findMany({
+    const applications = await db.jobApplication.findMany({
       where: { jobId },
       include: {
         user: {
@@ -433,7 +432,7 @@ router.get('/postings/:jobId/applications', authenticateToken, async (req, res) 
     });
 
     res.json(applications);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get job applications error:', error);
     res.status(500).json({ error: 'Failed to get applications' });
   }
@@ -445,7 +444,7 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    const application = await prisma.jobApplication.findUnique({
+    const application = await db.jobApplication.findUnique({
       where: { id },
       include: {
         job: {
@@ -462,12 +461,12 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    const isAdmin = application.job.campground.admins.some(admin => admin.userId === req.user!.id);
+    const isAdmin = application.job.campground.admins.some((admin: any) => admin.userId === (req as any).user!.id);
     if (!isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const updated = await prisma.jobApplication.update({
+    const updated = await db.jobApplication.update({
       where: { id },
       data: {
         status,
@@ -481,7 +480,7 @@ router.put('/applications/:id/status', authenticateToken, async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update application status error:', error);
     res.status(500).json({ error: 'Failed to update application status' });
   }
@@ -528,17 +527,17 @@ router.post(
         data.resumeFileUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/resumes');
       }
 
-      const resume = await prisma.userResume.upsert({
-        where: { userId: req.user!.id },
+      const resume = await db.userResume.upsert({
+        where: { userId: (req as any).user!.id },
         update: data,
         create: {
-          userId: req.user!.id,
+          userId: (req as any).user!.id,
           ...data,
         },
       });
 
       res.json(resume);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save resume error:', error);
       res.status(500).json({ error: 'Failed to save resume' });
     }
@@ -548,12 +547,12 @@ router.post(
 // GET /api/jobs/resume/my - Get user's resume
 router.get('/resume/my', authenticateToken, async (req, res) => {
   try {
-    const resume = await prisma.userResume.findUnique({
-      where: { userId: req.user!.id },
+    const resume = await db.userResume.findUnique({
+      where: { userId: (req as any).user!.id },
     });
 
     res.json(resume);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get resume error:', error);
     res.status(500).json({ error: 'Failed to get resume' });
   }

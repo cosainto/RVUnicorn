@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const JWT_SECRET = process.env.JWT_SECRET || 'rvunicorn-secret';
 const VALID_EMOJIS = ['❤️', '🔥', '😂', '😮', '🏕️'];
 const PROFANITY_LIST = ['fuck', 'shit', 'ass', 'damn', 'bitch', 'dick', 'cunt', 'cock'];
@@ -51,7 +51,7 @@ router.post('/public/:token/react', async (req, res) => {
 
     const count = await (prisma as any).scrapbookReaction.count({ where: { tripId: event.id, photoId: photoId || null, emoji } });
     res.json({ reacted: true, count });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookReaction] Error:', e);
     res.status(500).json({ error: 'Failed to react' });
   }
@@ -76,7 +76,7 @@ router.get('/public/:token/reactions', async (req, res) => {
     }
 
     res.json({ overall, perPhoto });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to load reactions' });
   }
 });
@@ -122,7 +122,7 @@ router.post('/public/:token/comments', async (req, res) => {
     } catch {}
 
     res.json(comment);
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookComment] Error:', e);
     res.status(500).json({ error: 'Failed to post comment' });
   }
@@ -145,7 +145,7 @@ router.get('/public/:token/comments', async (req, res) => {
     });
 
     res.json({ comments });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to load comments' });
   }
 });
@@ -156,7 +156,7 @@ router.delete('/:tripId/comments/:commentId', authenticateToken, async (req: any
     if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await (prisma as any).scrapbookComment.update({ where: { id: req.params.commentId }, data: { approved: false } });
     res.json({ hidden: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to hide comment' });
   }
 });
@@ -184,7 +184,7 @@ router.patch('/:tripId/reorder', authenticateToken, async (req: any, res: Respon
     );
 
     res.json({ updated: pins.length });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookReorder] Error:', e);
     res.status(500).json({ error: 'Failed to reorder' });
   }
@@ -203,7 +203,7 @@ router.post('/:tripId/password', authenticateToken, async (req: any, res: Respon
     const hash = await bcrypt.hash(password, 10);
     await prisma.event.update({ where: { id: req.params.tripId }, data: { scrapbookPassword: hash, scrapbookPasswordHint: hint || null } });
     res.json({ protected: true, hint: hint || null });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to set password' });
   }
 });
@@ -214,7 +214,7 @@ router.delete('/:tripId/password', authenticateToken, async (req: any, res: Resp
     if (!event || event.organizerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await prisma.event.update({ where: { id: req.params.tripId }, data: { scrapbookPassword: null, scrapbookPasswordHint: null } });
     res.json({ protected: false });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to remove password' });
   }
 });
@@ -230,7 +230,7 @@ router.post('/public/:token/unlock', async (req, res) => {
 
     const sessionToken = jwt.sign({ token: req.params.token }, JWT_SECRET, { expiresIn: '4h' });
     res.json({ unlocked: true, sessionToken });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to unlock' });
   }
 });
@@ -260,7 +260,7 @@ router.post('/:tripId/discovery/opt-in', authenticateToken, async (req: any, res
     });
 
     res.json({ discovery: disc });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookDiscovery] Opt-in error:', e);
     res.status(500).json({ error: 'Failed to opt in' });
   }
@@ -270,7 +270,7 @@ router.delete('/:tripId/discovery/opt-out', authenticateToken, async (req: any, 
   try {
     await (prisma as any).scrapbookDiscovery.updateMany({ where: { tripId: req.params.tripId, userId: req.userId }, data: { optedIn: false } });
     res.json({ optedOut: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to opt out' });
   }
 });
@@ -304,7 +304,7 @@ router.get('/discover', async (req, res) => {
     }));
 
     res.json({ scrapbooks: enriched, nextCursor: discoveries.length === take ? discoveries[discoveries.length - 1].id : null });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookDiscover] Error:', e);
     res.status(500).json({ error: 'Failed to load discovery' });
   }
@@ -329,7 +329,7 @@ router.get('/discover/featured', async (_req, res) => {
     }));
 
     res.json({ featured: enriched });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to load featured' });
   }
 });
@@ -339,7 +339,7 @@ router.post('/admin/:tripId/feature', authenticateToken, requireAdmin, async (re
   try {
     await (prisma as any).scrapbookDiscovery.update({ where: { tripId: req.params.tripId }, data: { featuredAt: new Date() } });
     res.json({ featured: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to feature' });
   }
 });
@@ -390,7 +390,7 @@ router.get('/:tripId/analytics', authenticateToken, async (req: any, res: Respon
     const peakDay = daily.length > 0 ? daily.reduce((max: any, d: any) => d.views > (max?.views || 0) ? d : max, daily[0]) : null;
 
     res.json({ summary, daily, reactionBreakdown, topReferrers, peakDay: peakDay ? { date: peakDay.date, views: peakDay.views } : null });
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScrapbookAnalytics] Error:', e);
     res.status(500).json({ error: 'Failed to load analytics' });
   }
@@ -400,7 +400,7 @@ router.post('/:tripId/analytics/share-click', async (req, res) => {
   try {
     await trackAnalytics(req.params.tripId, 'shareClicks');
     res.json({ tracked: true });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to track' });
   }
 });
@@ -435,7 +435,7 @@ router.post('/:tripId/export', authenticateToken, async (req: any, res: Response
     }, 5000);
 
     res.json({ exportId: exp.id, status: 'PROCESSING', message: 'PDF generation is not yet available — coming soon!' });
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to create export' });
   }
 });
@@ -445,7 +445,7 @@ router.get('/:tripId/export/:exportId', authenticateToken, async (req: any, res:
     const exp = await (prisma as any).scrapbookExport.findUnique({ where: { id: req.params.exportId } });
     if (!exp) return res.status(404).json({ error: 'Export not found' });
     res.json(exp);
-  } catch (e) {
+  } catch (e: any) {
     res.status(500).json({ error: 'Failed to load export' });
   }
 });

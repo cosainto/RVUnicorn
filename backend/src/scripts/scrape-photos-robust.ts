@@ -16,7 +16,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const PROGRESS_FILE = path.join(__dirname, 'photo-scraper-progress.json');
 const MAX_PHOTOS = 8;
 
@@ -200,7 +200,7 @@ async function scrapeSite(browser: any, websiteUrl: string): Promise<string[]> {
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, MAX_PHOTOS).map(s => s.url);
 
-  } catch (e) {
+  } catch (e: any) {
     if (page) try { await page.close(); } catch {}
     return [];
   }
@@ -234,7 +234,7 @@ async function main() {
     by: ['campgroundId'],
     _count: { id: true },
   });
-  const photoMap = new Map(photoCounts.map(p => [p.campgroundId, p._count.id]));
+  const photoMap = new Map(photoCounts.map((p: any) => [p.campgroundId, p._count.id]));
 
   // Get campgrounds needing photos
   const where: any = { websiteUrl: { not: null } };
@@ -249,7 +249,7 @@ async function main() {
   });
 
   // Filter to those with < MAX_PHOTOS
-  const needsPhotos = campgrounds.filter(c => (photoMap.get(c.id) || 0) < MAX_PHOTOS);
+  const needsPhotos = campgrounds.filter((c: any) => ((photoMap.get(c.id) as number) || 0) < MAX_PHOTOS);
 
   console.log(`  Total with website: ${campgrounds.length}`);
   console.log(`  Need photos (< ${MAX_PHOTOS}): ${needsPhotos.length}`);
@@ -283,7 +283,7 @@ async function main() {
 
     try {
       const imageUrls = await scrapeSite(browser, camp.websiteUrl!);
-      const toUpload = imageUrls.slice(0, MAX_PHOTOS - existingCount);
+      const toUpload = imageUrls.slice(0, MAX_PHOTOS - (existingCount as number));
 
       let added = 0;
       for (const imgUrl of toUpload) {

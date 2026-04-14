@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { prisma } from '../index';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { Request, Response } from 'express';
 
 const router = Router();
+const db = prisma as any;
 
 // Middleware to check if user is a moderator for a campground
 async function isModerator(userId: string, campgroundId: string): Promise<boolean> {
-  const moderator = await prisma.campgroundModerator.findFirst({
+  const moderator = await db.campgroundModerator.findFirst({
     where: {
       userId,
       campgroundId,
@@ -18,7 +18,7 @@ async function isModerator(userId: string, campgroundId: string): Promise<boolea
 }
 
 // Assign a moderator to a campground (campground admin only)
-router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (req: Request, res: Response) => {
+router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const { userId: moderatorUserId } = req.body;
@@ -29,7 +29,7 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
     }
 
     // Check if requester is campground admin
-    const admin = await prisma.campsiteAdmin.findFirst({
+    const admin = await db.campsiteAdmin.findFirst({
       where: {
         campgroundId,
         userId: adminUserId,
@@ -41,7 +41,7 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
     }
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: moderatorUserId },
     });
 
@@ -50,7 +50,7 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
     }
 
     // Check if already a moderator
-    const existing = await prisma.campgroundModerator.findUnique({
+    const existing = await db.campgroundModerator.findUnique({
       where: {
         campgroundId_userId: {
           campgroundId,
@@ -64,7 +64,7 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
         return res.status(400).json({ error: 'User is already a moderator' });
       }
       // Reactivate
-      const reactivated = await prisma.campgroundModerator.update({
+      const reactivated = await db.campgroundModerator.update({
         where: { id: existing.id },
         data: { isActive: true },
         include: {
@@ -82,7 +82,7 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
     }
 
     // Create new moderator
-    const moderator = await prisma.campgroundModerator.create({
+    const moderator = await db.campgroundModerator.create({
       data: {
         campgroundId,
         userId: moderatorUserId,
@@ -101,20 +101,20 @@ router.post('/campgrounds/:campgroundId/moderators', authenticateToken, async (r
     });
 
     res.status(201).json(moderator);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error assigning moderator:', error);
     res.status(500).json({ error: 'Failed to assign moderator' });
   }
 });
 
 // Remove a moderator (campground admin only)
-router.delete('/campgrounds/:campgroundId/moderators/:moderatorId', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/campgrounds/:campgroundId/moderators/:moderatorId', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId, moderatorId } = req.params;
     const adminUserId = (req as any).userId;
 
     // Check if requester is campground admin
-    const admin = await prisma.campsiteAdmin.findFirst({
+    const admin = await db.campsiteAdmin.findFirst({
       where: {
         campgroundId,
         userId: adminUserId,
@@ -126,24 +126,24 @@ router.delete('/campgrounds/:campgroundId/moderators/:moderatorId', authenticate
     }
 
     // Deactivate moderator
-    await prisma.campgroundModerator.update({
+    await db.campgroundModerator.update({
       where: { id: moderatorId },
       data: { isActive: false },
     });
 
     res.json({ message: 'Moderator removed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing moderator:', error);
     res.status(500).json({ error: 'Failed to remove moderator' });
   }
 });
 
 // Get moderators for a campground
-router.get('/campgrounds/:campgroundId/moderators', async (req: Request, res: Response) => {
+router.get('/campgrounds/:campgroundId/moderators', async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
 
-    const moderators = await prisma.campgroundModerator.findMany({
+    const moderators = await db.campgroundModerator.findMany({
       where: {
         campgroundId,
         isActive: true,
@@ -162,14 +162,14 @@ router.get('/campgrounds/:campgroundId/moderators', async (req: Request, res: Re
     });
 
     res.json(moderators);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching moderators:', error);
     res.status(500).json({ error: 'Failed to fetch moderators' });
   }
 });
 
 // Pin/Unpin thread (moderator only)
-router.patch('/threads/:threadId/pin', authenticateToken, async (req: Request, res: Response) => {
+router.patch('/threads/:threadId/pin', authenticateToken, async (req: any, res: any) => {
   try {
     const { threadId } = req.params;
     const { isPinned } = req.body;
@@ -179,7 +179,7 @@ router.patch('/threads/:threadId/pin', authenticateToken, async (req: Request, r
       return res.status(400).json({ error: 'isPinned must be a boolean' });
     }
 
-    const thread = await prisma.communityThread.findUnique({
+    const thread = await db.communityThread.findUnique({
       where: { id: threadId },
     });
 
@@ -193,13 +193,13 @@ router.patch('/threads/:threadId/pin', authenticateToken, async (req: Request, r
       return res.status(403).json({ error: 'Only moderators can pin threads' });
     }
 
-    const updatedThread = await prisma.communityThread.update({
+    const updatedThread = await db.communityThread.update({
       where: { id: threadId },
       data: { isPinned },
     });
 
     // Log moderation action
-    await prisma.moderationAction.create({
+    await db.moderationAction.create({
       data: {
         threadId,
         action: isPinned ? 'PIN_THREAD' : 'UNPIN_THREAD',
@@ -208,14 +208,14 @@ router.patch('/threads/:threadId/pin', authenticateToken, async (req: Request, r
     });
 
     res.json(updatedThread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error pinning thread:', error);
     res.status(500).json({ error: 'Failed to pin thread' });
   }
 });
 
 // Lock/Unlock thread (moderator only)
-router.patch('/threads/:threadId/lock', authenticateToken, async (req: Request, res: Response) => {
+router.patch('/threads/:threadId/lock', authenticateToken, async (req: any, res: any) => {
   try {
     const { threadId } = req.params;
     const { isLocked, reason } = req.body;
@@ -225,7 +225,7 @@ router.patch('/threads/:threadId/lock', authenticateToken, async (req: Request, 
       return res.status(400).json({ error: 'isLocked must be a boolean' });
     }
 
-    const thread = await prisma.communityThread.findUnique({
+    const thread = await db.communityThread.findUnique({
       where: { id: threadId },
     });
 
@@ -239,13 +239,13 @@ router.patch('/threads/:threadId/lock', authenticateToken, async (req: Request, 
       return res.status(403).json({ error: 'Only moderators can lock threads' });
     }
 
-    const updatedThread = await prisma.communityThread.update({
+    const updatedThread = await db.communityThread.update({
       where: { id: threadId },
       data: { isLocked },
     });
 
     // Log moderation action
-    await prisma.moderationAction.create({
+    await db.moderationAction.create({
       data: {
         threadId,
         action: isLocked ? 'LOCK_THREAD' : 'UNLOCK_THREAD',
@@ -255,20 +255,20 @@ router.patch('/threads/:threadId/lock', authenticateToken, async (req: Request, 
     });
 
     res.json(updatedThread);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error locking thread:', error);
     res.status(500).json({ error: 'Failed to lock thread' });
   }
 });
 
 // Delete thread (moderator only)
-router.delete('/threads/:threadId', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/threads/:threadId', authenticateToken, async (req: any, res: any) => {
   try {
     const { threadId } = req.params;
     const { reason } = req.body;
     const userId = (req as any).userId;
 
-    const thread = await prisma.communityThread.findUnique({
+    const thread = await db.communityThread.findUnique({
       where: { id: threadId },
     });
 
@@ -283,7 +283,7 @@ router.delete('/threads/:threadId', authenticateToken, async (req: Request, res:
     }
 
     // Log moderation action before deletion
-    await prisma.moderationAction.create({
+    await db.moderationAction.create({
       data: {
         threadId,
         action: 'DELETE_THREAD',
@@ -292,25 +292,25 @@ router.delete('/threads/:threadId', authenticateToken, async (req: Request, res:
       },
     });
 
-    await prisma.communityThread.delete({
+    await db.communityThread.delete({
       where: { id: threadId },
     });
 
     res.json({ message: 'Thread deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting thread:', error);
     res.status(500).json({ error: 'Failed to delete thread' });
   }
 });
 
 // Delete reply (moderator only)
-router.delete('/replies/:replyId', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/replies/:replyId', authenticateToken, async (req: any, res: any) => {
   try {
     const { replyId } = req.params;
     const { reason } = req.body;
     const userId = (req as any).userId;
 
-    const reply = await prisma.communityReply.findUnique({
+    const reply = await db.communityReply.findUnique({
       where: { id: replyId },
       include: {
         thread: true,
@@ -328,7 +328,7 @@ router.delete('/replies/:replyId', authenticateToken, async (req: Request, res: 
     }
 
     // Log moderation action before deletion
-    await prisma.moderationAction.create({
+    await db.moderationAction.create({
       data: {
         replyId,
         action: 'DELETE_REPLY',
@@ -337,19 +337,19 @@ router.delete('/replies/:replyId', authenticateToken, async (req: Request, res: 
       },
     });
 
-    await prisma.communityReply.delete({
+    await db.communityReply.delete({
       where: { id: replyId },
     });
 
     res.json({ message: 'Reply deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting reply:', error);
     res.status(500).json({ error: 'Failed to delete reply' });
   }
 });
 
 // Get moderation logs for a campground (moderators only)
-router.get('/campgrounds/:campgroundId/logs', authenticateToken, async (req: Request, res: Response) => {
+router.get('/campgrounds/:campgroundId/logs', authenticateToken, async (req: any, res: any) => {
   try {
     const { campgroundId } = req.params;
     const { page = '1', limit = '50' } = req.query;
@@ -366,15 +366,15 @@ router.get('/campgrounds/:campgroundId/logs', authenticateToken, async (req: Req
     const skip = (pageNum - 1) * limitNum;
 
     // Get thread IDs for this campground
-    const threads = await prisma.communityThread.findMany({
+    const threads = await db.communityThread.findMany({
       where: { campgroundId },
       select: { id: true },
     });
 
-    const threadIds = threads.map(t => t.id);
+    const threadIds = threads.map((t: any) => t.id);
 
     const [logs, total] = await Promise.all([
-      prisma.moderationAction.findMany({
+      db.moderationAction.findMany({
         where: {
           OR: [
             { threadId: { in: threadIds } },
@@ -385,7 +385,7 @@ router.get('/campgrounds/:campgroundId/logs', authenticateToken, async (req: Req
         skip,
         take: limitNum,
       }),
-      prisma.moderationAction.count({
+      db.moderationAction.count({
         where: {
           OR: [
             { threadId: { in: threadIds } },
@@ -401,7 +401,7 @@ router.get('/campgrounds/:campgroundId/logs', authenticateToken, async (req: Req
       page: pageNum,
       totalPages: Math.ceil(total / limitNum),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching moderation logs:', error);
     res.status(500).json({ error: 'Failed to fetch moderation logs' });
   }

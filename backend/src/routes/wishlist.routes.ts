@@ -4,14 +4,15 @@ import { prisma } from '../index';
 import crypto from 'crypto';
 
 const router = Router();
+const db = prisma as any;
 
 // GET /api/wishlist - Get user's campground wishlist
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     console.log('Getting wishlist for user:', userId);
 
-    const wishlist = await prisma.campgroundWishlist.findMany({
+    const wishlist = await db.campgroundWishlist.findMany({
       where: { userId }
     });
     
@@ -19,14 +20,14 @@ router.get('/', authenticateToken, async (req, res) => {
     // Get campground details separately
     const results = [];
     for (const item of wishlist) {
-      const campground = await prisma.campground.findUnique({
+      const campground = await db.campground.findUnique({
         where: { id: item.campgroundId }
       });
       results.push({ ...item, campground });
     }
 
     res.json(results);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get wishlist error:', error);
     res.status(500).json({ error: 'Failed to get wishlist' });
   }
@@ -35,17 +36,17 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/wishlist/check/:campgroundId - Check if campground is in wishlist
 router.get('/check/:campgroundId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
-    const item = await prisma.campgroundWishlist.findUnique({
+    const item = await db.campgroundWishlist.findUnique({
       where: {
         userId_campgroundId: { userId, campgroundId }
       }
     });
 
     res.json({ inWishlist: !!item, item });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check wishlist error:', error);
     res.status(500).json({ error: 'Failed to check wishlist' });
   }
@@ -54,12 +55,12 @@ router.get('/check/:campgroundId', authenticateToken, async (req, res) => {
 // POST /api/wishlist/:campgroundId - Add campground to wishlist
 router.post('/:campgroundId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
     const { notes, priority } = req.body;
 
     // Check if campground exists
-    const campground = await prisma.campground.findUnique({
+    const campground = await db.campground.findUnique({
       where: { id: campgroundId }
     });
 
@@ -68,7 +69,7 @@ router.post('/:campgroundId', authenticateToken, async (req, res) => {
     }
 
     // Check if already in wishlist
-    const existing = await prisma.campgroundWishlist.findUnique({
+    const existing = await db.campgroundWishlist.findUnique({
       where: {
         userId_campgroundId: { userId, campgroundId }
       }
@@ -78,7 +79,7 @@ router.post('/:campgroundId', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Already in wishlist' });
     }
 
-    const item = await prisma.campgroundWishlist.create({
+    const item = await db.campgroundWishlist.create({
       data: {
         id: crypto.randomBytes(12).toString('hex'),
         userId,
@@ -99,7 +100,7 @@ router.post('/:campgroundId', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add to wishlist error:', error);
     res.status(500).json({ error: 'Failed to add to wishlist' });
   }
@@ -108,11 +109,11 @@ router.post('/:campgroundId', authenticateToken, async (req, res) => {
 // PUT /api/wishlist/:campgroundId - Update wishlist item (notes, priority)
 router.put('/:campgroundId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
     const { notes, priority } = req.body;
 
-    const item = await prisma.campgroundWishlist.update({
+    const item = await db.campgroundWishlist.update({
       where: {
         userId_campgroundId: { userId, campgroundId }
       },
@@ -123,7 +124,7 @@ router.put('/:campgroundId', authenticateToken, async (req, res) => {
     });
 
     res.json(item);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update wishlist error:', error);
     res.status(500).json({ error: 'Failed to update wishlist item' });
   }
@@ -132,17 +133,17 @@ router.put('/:campgroundId', authenticateToken, async (req, res) => {
 // DELETE /api/wishlist/:campgroundId - Remove from wishlist
 router.delete('/:campgroundId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
-    await prisma.campgroundWishlist.delete({
+    await db.campgroundWishlist.delete({
       where: {
         userId_campgroundId: { userId, campgroundId }
       }
     });
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Remove from wishlist error:', error);
     res.status(500).json({ error: 'Failed to remove from wishlist' });
   }
@@ -151,10 +152,10 @@ router.delete('/:campgroundId', authenticateToken, async (req, res) => {
 // POST /api/wishlist/:campgroundId/toggle - Toggle wishlist status
 router.post('/:campgroundId/toggle', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).user!.id;
     const { campgroundId } = req.params;
 
-    const existing = await prisma.campgroundWishlist.findUnique({
+    const existing = await db.campgroundWishlist.findUnique({
       where: {
         userId_campgroundId: { userId, campgroundId }
       }
@@ -162,13 +163,13 @@ router.post('/:campgroundId/toggle', authenticateToken, async (req, res) => {
 
     if (existing) {
       // Remove from wishlist
-      await prisma.campgroundWishlist.delete({
+      await db.campgroundWishlist.delete({
         where: { id: existing.id }
       });
       res.json({ inWishlist: false });
     } else {
       // Add to wishlist
-      await prisma.campgroundWishlist.create({
+      await db.campgroundWishlist.create({
         data: {
           id: crypto.randomBytes(12).toString('hex'),
           userId,
@@ -177,7 +178,7 @@ router.post('/:campgroundId/toggle', authenticateToken, async (req, res) => {
       });
       res.json({ inWishlist: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toggle wishlist error:', error);
     res.status(500).json({ error: 'Failed to toggle wishlist' });
   }

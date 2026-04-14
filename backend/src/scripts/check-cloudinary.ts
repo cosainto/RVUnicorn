@@ -14,7 +14,7 @@ async function run() {
     const folders = await cloudinary.api.sub_folders('campgrounds');
     console.log('Subfolders in campgrounds/:', folders.folders.length);
     console.log('First 5:', folders.folders.slice(0, 5).map((f: any) => f.name));
-  } catch(e) {
+  } catch (e: any) {
     console.log('No subfolders');
   }
 

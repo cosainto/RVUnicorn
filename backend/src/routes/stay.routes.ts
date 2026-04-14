@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // POST /api/stays - Create a new stay
 router.post(
@@ -17,7 +17,7 @@ router.post(
     body('siteNumber').optional().trim(),
     body('siteType').optional().trim(),
   ],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -50,7 +50,7 @@ router.post(
       // Create stay
       const stay = await prisma.stay.create({
         data: {
-          userId: req.user.id,
+          userId: (req as any).user.id,
           campgroundId,
           checkIn: checkInDate,
           checkOut: checkOutDate,
@@ -71,7 +71,7 @@ router.post(
       });
 
       res.status(201).json(stay);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create stay error:', error);
       res.status(500).json({ error: 'Failed to create stay' });
     }
@@ -86,7 +86,7 @@ router.put(
     body('rating').isInt({ min: 1, max: 5 }),
     body('review').optional().trim(),
   ],
-  async (req: any, res) => {
+  async (req: any, res: any) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -106,7 +106,7 @@ router.put(
         return res.status(404).json({ error: 'Stay not found' });
       }
 
-      if (stay.userId !== req.user.id) {
+      if (stay.userId !== (req as any).user.id) {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
@@ -135,7 +135,7 @@ router.put(
 
       if (campgroundReviews.length > 0) {
         const avgRating =
-          campgroundReviews.reduce((sum, s) => sum + (s.rating || 0), 0) /
+          campgroundReviews.reduce((sum: any, s: any) => sum + (s.rating || 0), 0) /
           campgroundReviews.length;
 
         await prisma.campground.update({
@@ -148,7 +148,7 @@ router.put(
       }
 
       res.json(updatedStay);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update review error:', error);
       res.status(500).json({ error: 'Failed to update review' });
     }
@@ -156,7 +156,7 @@ router.put(
 );
 
 // PUT /api/stays/:stayId/verify - Verify a stay (admin only for MVP)
-router.put('/:stayId/verify', authenticateToken, async (req: any, res) => {
+router.put('/:stayId/verify', authenticateToken, async (req: any, res: any) => {
   try {
     const { stayId } = req.params;
 
@@ -170,7 +170,7 @@ router.put('/:stayId/verify', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'Stay not found' });
     }
 
-    if (stay.userId !== req.user.id && req.user.role !== 'SUPER_ADMIN') {
+    if (stay.userId !== (req as any).user.id && (req as any).user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -179,7 +179,7 @@ router.put('/:stayId/verify', authenticateToken, async (req: any, res) => {
       data: {
         status: 'VERIFIED',
         verifiedAt: new Date(),
-        verifiedBy: req.user.id,
+        verifiedBy: (req as any).user.id,
       },
     });
 
@@ -196,7 +196,7 @@ router.put('/:stayId/verify', authenticateToken, async (req: any, res) => {
       },
     });
 
-    const statesVisited = [...new Set(userStays.map((s) => s.campground.state))];
+    const statesVisited = [...new Set(userStays.map((s: any) => s.campground.state))];
 
     await prisma.user.update({
       where: { id: stay.userId },
@@ -222,17 +222,17 @@ router.put('/:stayId/verify', authenticateToken, async (req: any, res) => {
     });
 
     res.json(updatedStay);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Verify stay error:', error);
     res.status(500).json({ error: 'Failed to verify stay' });
   }
 });
 
 // GET /api/stays/my - Get current user's stays
-router.get('/my', authenticateToken, async (req: any, res) => {
+router.get('/my', authenticateToken, async (req: any, res: any) => {
   try {
     const stays = await prisma.stay.findMany({
-      where: { userId: req.user.id },
+      where: { userId: (req as any).user.id },
       include: {
         campground: {
           select: {
@@ -251,7 +251,7 @@ router.get('/my', authenticateToken, async (req: any, res) => {
     });
 
     res.json(stays);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get my stays error:', error);
     res.status(500).json({ error: 'Failed to fetch stays' });
   }

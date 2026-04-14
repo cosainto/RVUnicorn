@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { pushNotification } from '../routes/notification.routes';
 import { sendWebPush } from './webPush';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 interface NotifyOptions {
   userId: string;
@@ -39,7 +39,7 @@ export async function createNotification(opts: NotifyOptions) {
       url: opts.link || '/basecamp',
     }).catch(() => {});
     return notification;
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to create notification:', e);
     return null;
   }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const CONTENT_CATEGORIES = [
   { id: 'GEAR_REVIEWS', label: 'Gear Reviews', emoji: '\u{1F527}' },
@@ -22,7 +22,7 @@ const CONTENT_CATEGORIES = [
 // GET /api/creators/discovery - Get discovery feed (randomized + personalized)
 router.get('/discovery', async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const { limit = '20', interests } = req.query;
     const take = parseInt(limit as string);
 
@@ -45,7 +45,7 @@ router.get('/discovery', async (req: any, res) => {
         where: { followerId: userId },
         select: { creatorId: true },
       });
-      followedIds = follows.map(f => f.creatorId);
+      followedIds = follows.map((f: any) => f.creatorId);
     }
 
     let creators;
@@ -64,7 +64,7 @@ router.get('/discovery', async (req: any, res) => {
         distinct: ['creatorId'],
       });
 
-      const creatorIds = relevantContent.map(c => c.creatorId);
+      const creatorIds = relevantContent.map((c: any) => c.creatorId);
 
       creators = await prisma.user.findMany({
         where: {
@@ -149,7 +149,7 @@ router.get('/discovery', async (req: any, res) => {
 
     // Shuffle with bias toward newer/less-followed creators (discovery = finding hidden gems)
     const shuffled = creators
-      .map(c => {
+      .map((c: any) => {
         const followerCount = c.creatorStats?.followerCount || 0;
         const contentCount = c._count?.creatorContent || 0;
         // Higher score for low-follower creators who actually have content
@@ -158,14 +158,14 @@ router.get('/discovery', async (req: any, res) => {
           : Math.random() * 0.1;
         return { ...c, discoveryScore };
       })
-      .sort((a, b) => b.discoveryScore - a.discoveryScore)
+      .sort((a: any, b: any) => b.discoveryScore - a.discoveryScore)
       .slice(0, take);
 
     // Enrich with heat level / inactive status
     const now = new Date();
     const fiftyDaysAgo = new Date(now.getTime() - 50 * 24 * 60 * 60 * 1000);
 
-    const enriched = shuffled.map(creator => {
+    const enriched = shuffled.map((creator: any) => {
       const lastPost = creator.creatorContent[0]?.publishedAt;
       const isInactive = !lastPost || new Date(lastPost) < fiftyDaysAgo;
 
@@ -193,7 +193,7 @@ router.get('/discovery', async (req: any, res) => {
     });
 
     res.json(enriched);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching discovery:', error);
     res.status(500).json({ error: 'Failed to fetch discovery creators' });
   }
@@ -202,7 +202,7 @@ router.get('/discovery', async (req: any, res) => {
 // GET /api/creators/discovery/content - Get discovery content feed
 router.get('/discovery/content', async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     const { limit = '10', interests } = req.query;
     const take = parseInt(limit as string);
 
@@ -224,7 +224,7 @@ router.get('/discovery/content', async (req: any, res) => {
         where: { followerId: userId },
         select: { creatorId: true },
       });
-      followedIds = follows.map(f => f.creatorId);
+      followedIds = follows.map((f: any) => f.creatorId);
     }
 
     const excludeIds = [...followedIds, ...(userId ? [userId] : [])];
@@ -271,16 +271,16 @@ router.get('/discovery/content', async (req: any, res) => {
 
     // Shuffle with bias toward less-viewed content (surface hidden gems)
     const shuffled = content
-      .map(c => ({
+      .map((c: any) => ({
         ...c,
         discoveryScore: Math.random() * (1 + 1 / Math.max(c.viewCount, 1) * 50),
       }))
-      .sort((a, b) => b.discoveryScore - a.discoveryScore)
+      .sort((a: any, b: any) => b.discoveryScore - a.discoveryScore)
       .slice(0, take);
 
     // Check likes/saves for current user
     if (userId && shuffled.length > 0) {
-      const contentIds = shuffled.map(c => c.id);
+      const contentIds = shuffled.map((c: any) => c.id);
       const [likes, saves] = await Promise.all([
         prisma.creatorContentLike.findMany({
           where: { userId, contentId: { in: contentIds } },
@@ -292,10 +292,10 @@ router.get('/discovery/content', async (req: any, res) => {
         }),
       ]);
 
-      const likedSet = new Set(likes.map(l => l.contentId));
-      const savedSet = new Set(saves.map(s => s.contentId));
+      const likedSet = new Set(likes.map((l: any) => l.contentId));
+      const savedSet = new Set(saves.map((s: any) => s.contentId));
 
-      const enriched = shuffled.map(c => ({
+      const enriched = shuffled.map((c: any) => ({
         ...c,
         isLiked: likedSet.has(c.id),
         isSaved: savedSet.has(c.id),
@@ -305,8 +305,8 @@ router.get('/discovery/content', async (req: any, res) => {
       return res.json(enriched);
     }
 
-    res.json(shuffled.map(c => ({ ...c, isDiscovery: true })));
-  } catch (error) {
+    res.json(shuffled.map((c: any) => ({ ...c, isDiscovery: true })));
+  } catch (error: any) {
     console.error('Error fetching discovery content:', error);
     res.status(500).json({ error: 'Failed to fetch discovery content' });
   }
@@ -315,7 +315,7 @@ router.get('/discovery/content', async (req: any, res) => {
 // PUT /api/creators/discovery/interests - Save user's content interests
 router.put('/discovery/interests', async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const { interests } = req.body;
@@ -327,7 +327,7 @@ router.put('/discovery/interests', async (req: any, res) => {
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving interests:', error);
     res.status(500).json({ error: 'Failed to save interests' });
   }
@@ -336,7 +336,7 @@ router.put('/discovery/interests', async (req: any, res) => {
 // GET /api/creators/discovery/interests - Get user's content interests
 router.get('/discovery/interests', async (req: any, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await prisma.user.findUnique({
@@ -345,7 +345,7 @@ router.get('/discovery/interests', async (req: any, res) => {
     });
 
     res.json({ interests: user?.contentInterests || [] });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching interests:', error);
     res.status(500).json({ error: 'Failed to fetch interests' });
   }

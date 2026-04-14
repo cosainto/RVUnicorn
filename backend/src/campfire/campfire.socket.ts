@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { prisma } from '../prisma';
 import { ensureTriviaWeek } from '../cron/trivia-cron';
+import { updateTriviaTitle } from '../services/trivia-titles.service';
 import { emitOrganizerActivity } from './organizer.socket';
 
 const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
@@ -85,7 +86,7 @@ export function registerCampfireSockets(io: Server) {
                 system: 'You are Hitch, the friendly unicorn AI co-pilot for RVUnicorn, a social platform for RV enthusiasts. Help RVers with: campground tips, route planning, driving safety, RV maintenance, campfire recipes, outdoor activities, weather, road conditions, and community questions. Personality: warm, encouraging, occasionally playful. Rules: keep responses to 1-3 sentences. Always be appropriate and family-friendly. If asked about anything unrelated to RV life, travel, outdoors, or community, gently redirect. Never discuss politics, violence, adult content, or anything harmful. Remember conversation context for follow-up questions.',
                 messages: history.slice(-10) }),
             });
-            const aiData = await res.json() as any;
+            const aiData: any = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               history.push({ role: 'assistant', content: reply });
@@ -100,7 +101,7 @@ export function registerCampfireSockets(io: Server) {
                 isSystem: false, isHitch: true, user: hitchMsg.user,
               });
             }
-          } catch (e) { console.error('[Campfire @Hitch] error:', e); }
+          } catch (e: any) { console.error('[Campfire @Hitch] error:', e); }
         }, 1000);
       }
 
@@ -118,7 +119,7 @@ export function registerCampfireSockets(io: Server) {
                 system: `You are Walter 🎭, a gruff veteran RV stargazing guide at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. You're sarcastic and curmudgeonly but secretly love sharing knowledge about the night sky, constellations, and campground life. Keep responses to 1-3 sentences. Be funny and dry. Family-friendly.`,
                 messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
             });
-            const aiData = await res.json() as any;
+            const aiData: any = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const walterMsg = await prisma.campfireMessage.create({
@@ -129,7 +130,7 @@ export function registerCampfireSockets(io: Server) {
                 isSystem: true, isHitch: false,
               });
             }
-          } catch (e) { console.error('[Campfire @Walter] error:', e); }
+          } catch (e: any) { console.error('[Campfire @Walter] error:', e); }
         }, 1500);
       }
 
@@ -147,7 +148,7 @@ export function registerCampfireSockets(io: Server) {
                 system: `You are Scout 🏔️, an adventure trailblazer at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. High energy, loves trails, hidden gems, and outdoor adventures. Keep responses to 1-3 sentences. Enthusiastic and helpful. Family-friendly.`,
                 messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
             });
-            const aiData = await res.json() as any;
+            const aiData: any = await res.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const scoutMsg = await prisma.campfireMessage.create({
@@ -158,7 +159,7 @@ export function registerCampfireSockets(io: Server) {
                 isSystem: true, isHitch: false,
               });
             }
-          } catch (e) { console.error('[Campfire @Scout] error:', e); }
+          } catch (e: any) { console.error('[Campfire @Scout] error:', e); }
         }, 1500);
       }
 
@@ -217,7 +218,7 @@ Stay in character.`;
                 messages: [{ role: 'user', content: `${user.firstName} asks: ${question}` }],
               }),
             });
-            const aiData = await aiRes.json() as any;
+            const aiData: any = await aiRes.json() as any;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const autoMsg = await prisma.campfireMessage.create({
@@ -229,7 +230,7 @@ Stay in character.`;
                 isSystem: false, isHitch: true, user: autoMsg.user,
               });
             }
-          } catch (e) { console.error('[Campfire FAQ AutoResponse] error:', e); }
+          } catch (e: any) { console.error('[Campfire FAQ AutoResponse] error:', e); }
         }, 2000);
       }
     });
@@ -280,7 +281,7 @@ Stay in character.`;
         if (newTitle) {
           socket.emit('trivia:title:updated', { title: newTitle });
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('[Campfire] Answer error:', e);
       }
     });

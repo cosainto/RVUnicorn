@@ -8,7 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // ══ Find or Create OAuth User ══
@@ -60,7 +60,7 @@ async function findOrCreateOAuthUser(provider: string, profile: any): Promise<{ 
 
   // Award badges
   try {
-    await prisma.badge.findFirst({ where: { slug: 'rvunicorn-member' } }).then(async (badge) => {
+    await prisma.badge.findFirst({ where: { slug: 'rvunicorn-member' } }).then(async (badge: any) => {
       if (badge) await prisma.userBadge.create({ data: { userId: user.id, badgeId: badge.id } }).catch(() => {});
     });
     // Founding Member — limited to first 5,000
@@ -90,14 +90,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     try {
       const result = await findOrCreateOAuthUser('google', profile);
       done(null, result);
-    } catch (err) { done(err as Error); }
+    } catch (err: any) { done(err as Error); }
   }));
 
   router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 
   router.get('/auth/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google` }),
     (req: Request, res: Response) => {
-      const { user, isNew } = req.user as any;
+      const { user, isNew } = (req as any).user as any;
       const token = generateToken(user);
       res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&isNew=${isNew}`);
     }
@@ -115,14 +115,14 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
     try {
       const result = await findOrCreateOAuthUser('facebook', profile);
       done(null, result);
-    } catch (err) { done(err as Error); }
+    } catch (err: any) { done(err as Error); }
   }));
 
   router.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email', 'public_profile'], session: false }));
 
   router.get('/auth/facebook/callback', passport.authenticate('facebook', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=facebook` }),
     (req: Request, res: Response) => {
-      const { user, isNew } = req.user as any;
+      const { user, isNew } = (req as any).user as any;
       const token = generateToken(user);
       res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&isNew=${isNew}`);
     }

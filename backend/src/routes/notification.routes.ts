@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 // SSE: Real-time notification stream
 const clients = new Map<string, Set<any>>();
@@ -70,7 +70,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     ]);
 
     res.json({ notifications, total });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get notifications error:', error);
     res.status(500).json({ error: 'Failed to get notifications' });
   }
@@ -88,7 +88,7 @@ router.get('/unread', authenticateToken, async (req: any, res) => {
       prisma.notification.count({ where: { userId: req.userId, read: false, category: 'EVENT' } }),
     ]);
     res.json({ count: total, messages, friends, campground, system, events });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to get unread count' });
   }
 });
@@ -102,7 +102,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
     });
     pushNotification(req.userId, notification);
     res.status(201).json(notification);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to create notification' });
   }
 });
@@ -116,7 +116,7 @@ router.put('/:notificationId/read', authenticateToken, async (req: any, res) => 
     if (notification.userId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     const updated = await prisma.notification.update({ where: { id: notificationId }, data: { read: true } });
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to mark as read' });
   }
 });
@@ -129,7 +129,7 @@ router.put('/read-all', authenticateToken, async (req: any, res) => {
     if (category && category !== 'all') where.category = category;
     await prisma.notification.updateMany({ where, data: { read: true } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to mark all as read' });
   }
 });
@@ -143,7 +143,7 @@ router.delete('/:notificationId', authenticateToken, async (req: any, res) => {
     if (notification.userId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     await prisma.notification.delete({ where: { id: notificationId } });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete' });
   }
 });
@@ -155,7 +155,7 @@ router.post('/bulk-delete', authenticateToken, async (req: any, res) => {
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'ids array required' });
     await prisma.notification.deleteMany({ where: { id: { in: ids }, userId: req.userId } });
     res.json({ success: true, deleted: ids.length });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to bulk delete' });
   }
 });
@@ -190,7 +190,7 @@ router.post('/quick-reply', authenticateToken, async (req: any, res) => {
     pushNotification(recipientId, newNotif);
 
     res.json({ success: true, message });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Failed to send reply' });
   }
 });

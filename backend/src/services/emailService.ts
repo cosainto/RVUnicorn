@@ -202,7 +202,7 @@ export async function sendTypedEmail({
 
     console.log(`[EmailService] Sent ${type} to ${user.email}: ${subject}`);
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[EmailService] Failed to send ${type} to user ${userId}:`, err);
     return false;
   }

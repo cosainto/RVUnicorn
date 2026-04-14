@@ -4,7 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 const WILL_ID = 'cmlpeyk82005s3qause3sws7y';
-const isAdmin = (req: any) => req.user?.id === WILL_ID;
+const isAdmin = (req: any) => (req as any).user?.id === WILL_ID;
 
 // ── Campaign CRUD ─────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
         selectionWeight: selectionWeight ? parseInt(selectionWeight) : 1,
         exclusivityType: exclusivityType || null,
         internalNotes: internalNotes || null,
-        createdById: req.user.id,
+        createdById: (req as any).user.id,
       },
     });
     res.json({ campaign });
@@ -56,7 +56,7 @@ router.put('/:id', authenticateToken, async (req: any, res) => {
     fields.forEach(f => { if (req.body[f] !== undefined) data[f] = req.body[f]; });
     if (req.body.startDate !== undefined) data.startDate = req.body.startDate ? new Date(req.body.startDate) : null;
     if (req.body.endDate !== undefined) data.endDate = req.body.endDate ? new Date(req.body.endDate) : null;
-    if (req.body.status === 'approved') data.approvedById = req.user.id;
+    if (req.body.status === 'approved') data.approvedById = (req as any).user.id;
     const campaign = await prisma.sponsorCampaign.update({ where: { id: req.params.id }, data });
     res.json({ campaign });
   } catch (e: any) { res.status(500).json({ error: 'Failed' }); }
@@ -274,7 +274,7 @@ router.get('/runtime/next', async (req, res) => {
 router.post('/runtime/answer', authenticateToken, async (req: any, res) => {
   try {
     const { campaignId, sponsoredQuestionId, selectedAnswer, answeredAt, responseTimeMs } = req.body;
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const question = await prisma.sponsoredQuestion.findUnique({ where: { id: sponsoredQuestionId } });
     if (!question) return res.status(404).json({ error: 'Not found' });
@@ -337,7 +337,7 @@ router.post('/runtime/impression', authenticateToken, async (req: any, res) => {
   try {
     const { campaignId, sponsoredQuestionId, campgroundId } = req.body;
     await prisma.sponsoredQuestionImpression.create({
-      data: { campaignId, sponsoredQuestionId, campgroundId: campgroundId || null, playerId: req.user.id },
+      data: { campaignId, sponsoredQuestionId, campgroundId: campgroundId || null, playerId: (req as any).user.id },
     });
     res.json({ success: true });
   } catch (e: any) {

@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const DEFAULT_QUICK_LINKS = [
   { id: 'profile', label: 'Profile', icon: 'User', path: '/profile/{username}', color: 'green' },
@@ -36,7 +36,7 @@ router.get('/', authenticateToken, async (req, res) => {
       quickLinks: prefs.quickLinks ? JSON.parse(prefs.quickLinks) : DEFAULT_QUICK_LINKS,
       basecampLayout: prefs.basecampLayout ? JSON.parse(prefs.basecampLayout) : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get preferences error:', error);
     res.status(500).json({ error: 'Failed to get preferences' });
   }
@@ -62,7 +62,7 @@ router.put('/quick-links', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true, quickLinks });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update quick links error:', error);
     res.status(500).json({ error: 'Failed to update quick links' });
   }
@@ -83,7 +83,7 @@ router.post('/reset-quick-links', authenticateToken, async (req, res) => {
     });
 
     res.json({ success: true, quickLinks: DEFAULT_QUICK_LINKS });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Reset quick links error:', error);
     res.status(500).json({ error: 'Failed to reset quick links' });
   }
