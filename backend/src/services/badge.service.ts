@@ -1,5 +1,5 @@
 // badge.service.ts
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 
 export enum BadgeTrigger {
