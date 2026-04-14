@@ -2,7 +2,7 @@ import express from 'express';
 // @ts-ignore
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { awardBadge } from '../services/badge.service';
 import { sendEmail, welcomeEmail } from '../services/email-sms.service';

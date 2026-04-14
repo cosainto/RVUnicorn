@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 const db = prisma as any;

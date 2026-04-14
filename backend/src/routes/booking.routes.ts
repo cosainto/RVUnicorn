@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 const db = prisma as any;

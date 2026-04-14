@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logPhotoUploaded } from '../services/activity.service';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 
 const router = Router({ mergeParams: true });

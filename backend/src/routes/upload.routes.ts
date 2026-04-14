@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 const db = prisma as any;

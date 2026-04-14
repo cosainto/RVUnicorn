@@ -1,7 +1,7 @@
 // privacy.routes.ts - Updated with email notifications
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { sendUserBlockedEmail, sendPrivacyChangedEmail } from '../services/security-emails';
 
 const router = Router();

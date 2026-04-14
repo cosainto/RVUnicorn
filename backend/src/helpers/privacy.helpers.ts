@@ -1,7 +1,7 @@
 // privacy.helpers.ts
 // Add this file to: ~/Downloads/kindletribe-mvp/backend/src/helpers/privacy.helpers.ts
 
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 
 /**

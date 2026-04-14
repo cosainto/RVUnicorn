@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import {
   submitPriceReport,
   getPriceStats,

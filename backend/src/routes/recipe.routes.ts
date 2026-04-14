@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { logRecipeCreated, logRecipeLiked, logRecipeCommented } from '../services/activity.service';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 const db = prisma as any;

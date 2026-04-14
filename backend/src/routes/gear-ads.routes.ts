@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import crypto from 'crypto';
 
 const db = prisma as any;

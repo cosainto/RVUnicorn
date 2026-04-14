@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 const db = prisma as any;

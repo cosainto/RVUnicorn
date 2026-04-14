@@ -1,7 +1,7 @@
 // badge.routes.ts
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { 
   getUserBadges, 
   checkAllBadgesForUser, 

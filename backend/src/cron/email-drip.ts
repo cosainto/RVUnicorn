@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 import { Resend } from 'resend';
 

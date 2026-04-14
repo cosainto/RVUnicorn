@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();

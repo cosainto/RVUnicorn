@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 
 // Admin emails that can edit/delete campgrounds

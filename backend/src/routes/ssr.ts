@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { renderCampgroundPage, renderCommunityBoardPage } from '../utils/campgroundSSR';
 
 const router = Router();

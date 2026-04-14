@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import {
   sendPasswordChangedEmail,
   sendDeletionRequestedEmail,

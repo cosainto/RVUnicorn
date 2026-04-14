@@ -4,7 +4,7 @@ import { logEventCreated, logEventJoined } from '../services/activity.service';
 import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logRsvpUpdated } from '../services/activity.service';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
 import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
