@@ -9,6 +9,9 @@ interface PreTripIntelligenceCardProps {
   tripTitle: string;
   departureDate: string;
   destination?: string;
+  startLat?: number | null;
+  startLon?: number | null;
+  startLabel?: string;
 }
 
 const STATUS_COLORS = {
@@ -31,7 +34,7 @@ const SEVERITY_BADGES: Record<string, { bg: string; text: string; label: string 
   low: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'LOW' },
 };
 
-export default function PreTripIntelligenceCard({ eventId, tripTitle, departureDate, destination }: PreTripIntelligenceCardProps) {
+export default function PreTripIntelligenceCard({ eventId, tripTitle, departureDate, destination, startLat, startLon, startLabel }: PreTripIntelligenceCardProps) {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +44,7 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
 
   useEffect(() => {
     loadReport();
-  }, [eventId]);
+  }, [eventId, startLat, startLon]);
 
   // Auto-expand when close to departure or NO_GO
   useEffect(() => {
@@ -52,10 +55,21 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
     }
   }, [report, daysOut]);
 
+  function buildStartParams() {
+    const params = new URLSearchParams();
+    if (startLat != null && startLon != null) {
+      params.set('startLat', String(startLat));
+      params.set('startLon', String(startLon));
+      if (startLabel) params.set('startLabel', startLabel);
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : '';
+  }
+
   async function loadReport() {
     setLoading(true);
     try {
-      const { data } = await api.get(`/trip-confidence/${eventId}`);
+      const { data } = await api.get(`/trip-confidence/${eventId}${buildStartParams()}`);
       setReport(data);
     } catch (e) {
       console.error('Failed to load trip confidence:', e);
@@ -67,7 +81,13 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const { data } = await api.post(`/trip-confidence/${eventId}/refresh`);
+      const body: any = {};
+      if (startLat != null && startLon != null) {
+        body.startLat = startLat;
+        body.startLon = startLon;
+        if (startLabel) body.startLabel = startLabel;
+      }
+      const { data } = await api.post(`/trip-confidence/${eventId}/refresh`, body);
       setReport(data);
     } catch {} finally {
       setRefreshing(false);
@@ -277,7 +297,7 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
               {/* Depart */}
               <div className="flex items-center gap-3 relative">
                 <div className="absolute left-[-13px] w-3 h-3 rounded-full bg-green-500 border-2 border-[#0F1C35] z-10" />
-                <p className="text-xs text-white/50">Depart from home</p>
+                <p className="text-xs text-white/50">Depart{startLabel ? ` from ${startLabel}` : ' from home'}</p>
               </div>
 
               {report.breakPlan.map((stop: any, i: number) => (

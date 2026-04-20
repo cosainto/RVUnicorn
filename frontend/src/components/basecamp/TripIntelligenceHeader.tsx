@@ -69,6 +69,11 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const [startQuery, setStartQuery] = useState('');
   const [startIcon, setStartIcon] = useState<'home' | 'checkin'>('home');
 
+  // Start search
+  const [startResults, setStartResults] = useState<DestResult[]>([]);
+  const [startFocused, setStartFocused] = useState(false);
+  const startSearchTimer = useRef<any>(null);
+
   // Destination
   const [destLabel, setDestLabel] = useState('');
   const [destLat, setDestLat] = useState<number | null>(null);
@@ -158,6 +163,19 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [destQuery]);
 
+  // ── Start location search ─────────────────────────────────
+  useEffect(() => {
+    if (!editingStart || startQuery.length < 2) { setStartResults([]); return; }
+    if (startSearchTimer.current) clearTimeout(startSearchTimer.current);
+    startSearchTimer.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get(`/trip-intelligence/destination-search?q=${encodeURIComponent(startQuery)}`);
+        setStartResults(data.results || []);
+      } catch { setStartResults([]); }
+    }, 300);
+    return () => { if (startSearchTimer.current) clearTimeout(startSearchTimer.current); };
+  }, [startQuery, editingStart]);
+
   // ── Session persistence (debounced) ────────────────────────
   const persistSession = useCallback((overrides?: any) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -207,6 +225,23 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
       quickDestLat: result.lat,
       quickDestLon: result.lon,
       quickDestCampgroundId: result.type === 'CAMPGROUND' ? result.id : null,
+    });
+  }
+
+  function selectStartLocation(result: DestResult) {
+    const label = result.name + (result.state ? `, ${result.state}` : '');
+    setStartLabel(label);
+    setStartLat(result.lat);
+    setStartLon(result.lon);
+    setStartIcon('checkin');
+    setStartQuery('');
+    setStartResults([]);
+    setEditingStart(false);
+    setStartFocused(false);
+    persistSession({
+      quickStartLabel: label,
+      quickStartLat: result.lat,
+      quickStartLon: result.lon,
     });
   }
 
@@ -279,16 +314,49 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
           <span className="text-[10px] font-bold w-10 text-right" style={{ color: 'rgba(245,240,232,0.4)' }}>FROM</span>
           {editingStart ? (
             <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: startFocused ? '#E8A838' : 'rgba(245,240,232,0.4)' }} />
               <input
                 type="text"
                 autoFocus
                 value={startQuery}
                 onChange={(e) => setStartQuery(e.target.value)}
-                onBlur={() => setTimeout(() => setEditingStart(false), 200)}
-                placeholder="Enter starting location..."
-                className="w-full text-sm rounded-full px-4 py-2 outline-none"
-                style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.3)', color: '#F5F0E8' }}
+                onFocus={() => setStartFocused(true)}
+                onBlur={() => setTimeout(() => { setStartFocused(false); setEditingStart(false); }, 250)}
+                placeholder="Search city, campground, or address..."
+                className="w-full text-sm rounded-full pl-10 pr-4 py-2 outline-none transition-all"
+                style={{
+                  background: startFocused ? '#1e3455' : '#1a2d4a',
+                  border: startFocused ? '2px solid #E8A838' : '1px solid rgba(232,168,56,0.3)',
+                  color: '#F5F0E8',
+                  boxShadow: startFocused ? '0 0 16px rgba(232,168,56,0.2)' : 'none',
+                }}
               />
+              {/* Start location dropdown results */}
+              {startResults.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 max-h-64 overflow-y-auto"
+                  style={{ background: '#0d1a30', border: '2px solid rgba(232,168,56,0.4)', boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 20px rgba(232,168,56,0.1)' }}>
+                  <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(232,168,56,0.15)', background: 'rgba(232,168,56,0.05)' }}>
+                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Starting From</span>
+                  </div>
+                  {startResults.map((r) => (
+                    <button key={r.id} onMouseDown={() => selectStartLocation(r)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1a2d4a'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.12)' : 'rgba(59,130,246,0.12)', border: `1px solid ${r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.25)' : 'rgba(59,130,246,0.25)'}` }}>
+                        {r.type === 'CAMPGROUND' ? <Tent className="w-4 h-4 text-amber-400" /> : <MapPin className="w-4 h-4 text-blue-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate" style={{ color: '#F5F0E8' }}>{r.name}</p>
+                        <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>{[r.city, r.state].filter(Boolean).join(', ')}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <button onClick={() => { setEditingStart(true); setStartQuery(startLabel); }}
@@ -435,6 +503,9 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
             tripTitle={activeTrip.title}
             departureDate={activeTrip.departureDate}
             destination={activeTrip.primaryCampground?.name || activeTrip.title}
+            startLat={startLat}
+            startLon={startLon}
+            startLabel={startLabel}
           />
           {onStartDrive && (
             <button onClick={onStartDrive}

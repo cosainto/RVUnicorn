@@ -12,15 +12,22 @@ router.get('/:eventId', authenticateToken, async (req: any, res: Response) => {
   try {
     const { eventId } = req.params;
 
-    // Check for fresh cached snapshot (< 6 hours old)
-    const cached = await (prisma as any).tripConfidenceSnapshot.findFirst({
+    // Support custom start location override via query params
+    const startLat = parseFloat(req.query.startLat as string);
+    const startLon = parseFloat(req.query.startLon as string);
+    const startOverride = !isNaN(startLat) && !isNaN(startLon)
+      ? { lat: startLat, lon: startLon, label: req.query.startLabel as string }
+      : undefined;
+
+    // Check for fresh cached snapshot (< 6 hours old), skip if custom start
+    const cached = !startOverride ? await (prisma as any).tripConfidenceSnapshot.findFirst({
       where: {
         eventId,
         userId: req.userId,
         expiresAt: { gt: new Date() },
       },
       orderBy: { generatedAt: 'desc' },
-    });
+    }) : null;
 
     if (cached) {
       return res.json({
@@ -39,7 +46,7 @@ router.get('/:eventId', authenticateToken, async (req: any, res: Response) => {
     }
 
     // Generate fresh report
-    const report = await generateConfidenceReport(eventId, req.userId);
+    const report = await generateConfidenceReport(eventId, req.userId, startOverride);
 
     // Save snapshot
     await saveConfidenceSnapshot(eventId, req.userId, report);
@@ -64,7 +71,12 @@ router.get('/:eventId', authenticateToken, async (req: any, res: Response) => {
 router.post('/:eventId/refresh', authenticateToken, async (req: any, res: Response) => {
   try {
     const { eventId } = req.params;
-    const report = await generateConfidenceReport(eventId, req.userId);
+    const startLat = parseFloat(req.body.startLat);
+    const startLon = parseFloat(req.body.startLon);
+    const startOverride = !isNaN(startLat) && !isNaN(startLon)
+      ? { lat: startLat, lon: startLon, label: req.body.startLabel }
+      : undefined;
+    const report = await generateConfidenceReport(eventId, req.userId, startOverride);
     await saveConfidenceSnapshot(eventId, req.userId, report);
 
     const event = await (prisma as any).event.findUnique({

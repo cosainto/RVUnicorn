@@ -56,7 +56,11 @@ export interface ConfidenceReport {
 const DIESEL_FALLBACK_PRICE = 3.95;
 const GAS_FALLBACK_PRICE = 3.45;
 
-export async function generateConfidenceReport(eventId: string, userId: string): Promise<ConfidenceReport> {
+export async function generateConfidenceReport(
+  eventId: string,
+  userId: string,
+  startOverride?: { lat: number; lon: number; label?: string },
+): Promise<ConfidenceReport> {
   const flags: RiskFlag[] = [];
   const passedChecks: string[] = [];
   let score = 100;
@@ -108,17 +112,21 @@ export async function generateConfidenceReport(eventId: string, userId: string):
     select: { distanceMiles: true, durationMinutes: true },
   });
 
-  if (tripPlan?.distanceMiles) {
+  // Use custom start override if provided, otherwise fall back to home location
+  const originLat = startOverride?.lat ?? user.homeLatitude;
+  const originLon = startOverride?.lon ?? user.homeLongitude;
+
+  if (!startOverride && tripPlan?.distanceMiles) {
     driveMiles = tripPlan.distanceMiles;
     driveHours = tripPlan.durationMinutes ? tripPlan.durationMinutes / 60 : driveMiles! / 50;
-  } else if (user.homeLatitude && user.homeLongitude && campground?.latitude && campground?.longitude) {
+  } else if (originLat && originLon && campground?.latitude && campground?.longitude) {
     // Haversine fallback
     const R = 3958.8;
     const toRad = (d: number) => (d * Math.PI) / 180;
-    const dLat = toRad(campground.latitude - user.homeLatitude);
-    const dLon = toRad(campground.longitude - user.homeLongitude);
+    const dLat = toRad(campground.latitude - originLat);
+    const dLon = toRad(campground.longitude - originLon);
     const a = Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(user.homeLatitude)) * Math.cos(toRad(campground.latitude)) * Math.sin(dLon / 2) ** 2;
+      Math.cos(toRad(originLat)) * Math.cos(toRad(campground.latitude)) * Math.sin(dLon / 2) ** 2;
     const crowMiles = 2 * R * Math.asin(Math.sqrt(a));
     driveMiles = Math.round(crowMiles * 1.3);
     driveHours = driveMiles / 50;
@@ -300,13 +308,13 @@ export async function generateConfidenceReport(eventId: string, userId: string):
   }
 
   // ── MISSING DATA CHECKS ──────────────────────────────────
-  if (!user.homeLatitude || !user.homeLongitude) {
+  if (!originLat || !originLon) {
     flags.push({
       id: 'no_home',
       type: 'info',
       severity: 'low',
-      label: 'Add your home address for a personalized break plan',
-      detail: 'Distance, fuel, and departure time require your home location',
+      label: 'Add your home address or set a starting location for a personalized break plan',
+      detail: 'Distance, fuel, and departure time require a starting location',
       action: 'Set home location',
       actionUrl: '/my-rv',
       deduction: 8,
