@@ -100,7 +100,15 @@ export default function EventDetailPageV2() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Helmet><title>{event.title} — RVUnicorn Events</title></Helmet>
+      <Helmet>
+        <title>{event.title} — RVUnicorn Events</title>
+        <meta property="og:title" content={`${event.title} — RVUnicorn`} />
+        <meta property="og:description" content={event.description?.slice(0, 160) || `An RV event on RVUnicorn — the social campground community.`} />
+        {(event.bannerImage || event.campground?.imageUrl) && <meta property="og:image" content={event.bannerImage || event.campground?.imageUrl} />}
+        <meta property="og:url" content={`https://www.rvunicorn.com/events-v2/${event.id}`} />
+        <meta property="og:site_name" content="RVUnicorn" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
 
       {/* Banner */}
       <div className="h-40 bg-gradient-to-br from-[#1B2B4B] to-[#2d4a7a] relative overflow-hidden">

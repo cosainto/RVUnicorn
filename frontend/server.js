@@ -46,6 +46,24 @@ app.use('/community/:boardSlug', (req, res, next) => {
   }
   next();
 });
+app.use('/events/:id', (req, res, next) => {
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
+    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
+  }
+  next();
+});
+app.use('/trips/:slug/view', (req, res, next) => {
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
+    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
+  }
+  next();
+});
+app.use('/s/:token', (req, res, next) => {
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
+    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
+  }
+  next();
+});
 
 // Serve /assets/ files explicitly with correct MIME types (BEFORE catch-all)
 app.use('/assets', express.static(path.join(__dirname, 'dist', 'assets'), {

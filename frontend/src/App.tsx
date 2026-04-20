@@ -179,7 +179,9 @@ function GlobalCameraButton() {
 // Redirect component to properly handle /events/:id -> /trips/:id
 function EventToTripRedirect() {
   const { id } = useParams();
-  return <Navigate to={`/trips/${id}`} replace />;
+  const { user } = useAuth();
+  // If logged in, go to full trip page; otherwise show public event view
+  return user ? <Navigate to={`/trips/${id}`} replace /> : <Navigate to={`/events-v2/${id}`} replace />;
 }
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {

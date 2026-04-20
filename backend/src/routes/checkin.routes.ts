@@ -511,5 +511,59 @@ router.get('/nearby-friends', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/checkins/community-map — all active check-ins for the community map
+router.get('/community-map', async (req: any, res) => {
+  try {
+    const checkIns = await prisma.checkIn.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            latitude: true,
+            longitude: true,
+            state: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            username: true,
+            profilePicture: true,
+          },
+        },
+        checkInDate: true,
+      },
+      orderBy: { checkInDate: 'desc' },
+      take: 200,
+    });
+
+    // Group by campground to avoid duplicate pins
+    const campgroundMap = new Map<string, { campground: any; campers: any[] }>();
+    for (const ci of checkIns) {
+      if (!ci.campground?.latitude || !ci.campground?.longitude) continue;
+      const key = ci.campground.id;
+      if (!campgroundMap.has(key)) {
+        campgroundMap.set(key, { campground: ci.campground, campers: [] });
+      }
+      campgroundMap.get(key)!.campers.push({
+        id: ci.user.id,
+        firstName: ci.user.firstName,
+        username: ci.user.username,
+        profilePicture: ci.user.profilePicture,
+        checkInDate: ci.checkInDate,
+      });
+    }
+
+    res.json({ pins: Array.from(campgroundMap.values()) });
+  } catch (e: any) {
+    console.error('[Checkins] Community map error:', e);
+    res.status(500).json({ error: 'Failed to load community map' });
+  }
+});
+
 export default router;
 

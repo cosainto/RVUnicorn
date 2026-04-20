@@ -89,6 +89,7 @@ function SupplyListCompact({ eventId }: { eventId: string }) {
   return <SupplyList eventId={eventId} compact />;
 }
 import InviteFriends from '../components/InviteFriends';
+import CommunityMapCard from '../components/CommunityMapCard';
 import PreTripIntelligenceCard from '../components/basecamp/PreTripIntelligenceCard';
 import TripIntelligenceHeader from '../components/basecamp/TripIntelligenceHeader';
 import HitchThreadSuggestions from '../components/basecamp/HitchThreadSuggestions';
@@ -3262,6 +3263,9 @@ export default function BasecampPage({ user }: BasecampProps) {
               </div>
             </div>
 
+
+            {/* ── Community Map ────────────────────────────────────── */}
+            <CommunityMapCard />
 
             {/* ── 3. Upcoming Trips ─────────────────────────────────── */}
             {/* Upcoming Trips - Compact */}

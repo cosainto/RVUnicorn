@@ -270,6 +270,93 @@ ${trip.description ? `<p>${trip.description}</p>` : ''}
   } catch { next(); }
 });
 
+// SSR for public event pages
+router.get('/events/:id', async (req: Request, res: Response, next: NextFunction) => {
+  if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) return next();
+  try {
+    const { id } = req.params;
+    const event = await db.event.findUnique({
+      where: { id },
+      include: {
+        organizer: { select: { firstName: true, lastName: true } },
+        campground: { select: { name: true, state: true, city: true, imageUrl: true } },
+        _count: { select: { attendees: true } },
+      },
+    });
+    if (!event || event.privacy === 'PRIVATE') return next();
+
+    const ownerName = `${event.organizer.firstName} ${event.organizer.lastName}`;
+    const photo = event.campground?.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const location = [event.campground?.name, event.campground?.city, event.campground?.state].filter(Boolean).join(', ');
+    const desc = event.description
+      ? event.description.slice(0, 160).replace(/"/g, '&quot;')
+      : `${ownerName}'s RV event${location ? ` at ${location}` : ''} on RVUnicorn.`;
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${event.title} — RV Event on RVUnicorn</title>
+<meta name="description" content="${desc}">
+<meta property="og:title" content="${event.title} — RVUnicorn">
+<meta property="og:description" content="${desc}">
+<meta property="og:image" content="${photo}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://www.rvunicorn.com/events/${id}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="RVUnicorn">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${event.title} — RVUnicorn">
+<meta name="twitter:description" content="${desc}">
+<meta name="twitter:image" content="${photo}">
+<link rel="canonical" href="https://www.rvunicorn.com/events/${id}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="root"></div>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
+// SSR for public scrapbook pages
+router.get('/s/:token', async (req: Request, res: Response, next: NextFunction) => {
+  if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) return next();
+  try {
+    const { token } = req.params;
+    const event = await db.event.findFirst({
+      where: { scrapbookShareToken: token, scrapbookPublic: true },
+      include: {
+        organizer: { select: { firstName: true, lastName: true } },
+        campground: { select: { name: true, state: true, imageUrl: true } },
+      },
+    });
+    if (!event) return next();
+
+    const ownerName = `${event.organizer.firstName} ${event.organizer.lastName}`;
+    const photo = event.campground?.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const desc = `${ownerName}'s trip photo album on RVUnicorn — the social campground community for RV travelers.`;
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${event.title} — Trip Album on RVUnicorn</title>
+<meta name="description" content="${desc}">
+<meta property="og:title" content="${event.title} — Trip Album on RVUnicorn">
+<meta property="og:description" content="${desc}">
+<meta property="og:image" content="${photo}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://www.rvunicorn.com/s/${token}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="RVUnicorn">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${event.title} — Trip Album on RVUnicorn">
+<meta name="twitter:image" content="${photo}">
+<link rel="canonical" href="https://www.rvunicorn.com/s/${token}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="root"></div>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
 // SSR for community board pages
 router.get('/community/:boardSlug', async (req: Request, res: Response, next: NextFunction) => {
   if (!shouldSSR(req)) {
