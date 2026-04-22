@@ -84,7 +84,7 @@ export const sendSMS = async (options: SMSOptions): Promise<void> => {
   try {
     await twilioClient.messages.create({
       body: options.message,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_PHONE_NUMBER,
       to: options.to,
     });
     console.log(`SMS sent to ${options.to}`);
