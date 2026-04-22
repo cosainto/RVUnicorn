@@ -78,6 +78,12 @@ interface DrivingSessionContextValue {
   passengerSuggestStop: (note?: string) => void;
   passengerFlagFatigue: () => void;
   passengerSoftOverride: () => void;
+
+  // ── Live Co-Pilot V2 ──
+  liveCoPilotSessionId: string | null;
+  setLiveCoPilotSessionId: (id: string | null) => void;
+  liveCoPilotCorridorId: string | null;
+  setLiveCoPilotCorridorId: (id: string | null) => void;
 }
 
 const DrivingSessionContext = createContext<DrivingSessionContextValue | undefined>(undefined);
@@ -129,6 +135,8 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
   const [gps, setGps] = useState<GpsSample | null>(null);
   const [fatigueScore, setFatigueScore] = useState<number>(0);
   const [driverNoResponse, setDriverNoResponse] = useState<boolean>(false);
+  const [liveCoPilotSessionId, setLiveCoPilotSessionId] = useState<string | null>(null);
+  const [liveCoPilotCorridorId, setLiveCoPilotCorridorId] = useState<string | null>(null);
 
   const watchIdRef = useRef<number | null>(null);
 
@@ -333,6 +341,10 @@ export function DrivingSessionProvider({ children }: { children: ReactNode }) {
     passengerSuggestStop,
     passengerFlagFatigue,
     passengerSoftOverride,
+    liveCoPilotSessionId,
+    setLiveCoPilotSessionId,
+    liveCoPilotCorridorId,
+    setLiveCoPilotCorridorId,
   };
 
   return <DrivingSessionContext.Provider value={value}>{children}</DrivingSessionContext.Provider>;

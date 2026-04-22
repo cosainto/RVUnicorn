@@ -150,4 +150,59 @@ router.get('/:eventId/break-plan', authenticateToken, async (req: any, res: Resp
   }
 });
 
+// GET /api/trip-confidence/:eventId/v2  — V2 corridor-based report
+router.get('/:eventId/v2', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const startLat = parseFloat(req.query.startLat as string);
+    const startLon = parseFloat(req.query.startLon as string);
+    const startOverride = !isNaN(startLat) && !isNaN(startLon)
+      ? { lat: startLat, lon: startLon, label: req.query.startLabel as string }
+      : undefined;
+
+    const report = await generateConfidenceReport(eventId, req.userId, startOverride, true);
+    await saveConfidenceSnapshot(eventId, req.userId, report);
+
+    const event = await (prisma as any).event.findUnique({
+      where: { id: eventId },
+      select: { campgroundId: true },
+    });
+    if (event?.campgroundId) {
+      await emitConfidenceEvents(report, eventId, event.campgroundId, req.userId).catch(() => {});
+    }
+
+    res.json(report);
+  } catch (e: any) {
+    console.error('[TripConfidence] V2 error:', e);
+    res.status(500).json({ error: e.message || 'Failed to generate V2 report' });
+  }
+});
+
+// GET /api/trip-confidence/:eventId/corridor — corridor segment data for map
+router.get('/:eventId/corridor', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const corridor = await (prisma as any).routeCorridorAnalysis.findFirst({
+      where: { eventId, userId: req.userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!corridor) return res.status(404).json({ error: 'No corridor analysis found. Generate a V2 report first.' });
+    res.json({
+      segments: corridor.segments,
+      totalMiles: corridor.totalMiles,
+      totalHours: corridor.totalHours,
+      overallScore: corridor.overallScore,
+      safetyScore: corridor.safetyScore,
+      comfortScore: corridor.comfortScore,
+      convenienceScore: corridor.convenienceScore,
+      flexibilityScore: corridor.flexibilityScore,
+      status: corridor.status,
+      routePolyline: corridor.routePolyline,
+    });
+  } catch (e: any) {
+    console.error('[TripConfidence] Corridor error:', e);
+    res.status(500).json({ error: 'Failed to load corridor' });
+  }
+});
+
 export default router;

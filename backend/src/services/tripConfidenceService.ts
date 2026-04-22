@@ -1,4 +1,6 @@
 import { prisma } from '../prisma';
+import { buildCorridorAnalysis } from './routeCorridorService';
+import { computeEnhancedScores, SubScores } from './enhancedScoringService';
 
 export interface RiskFlag {
   id: string;
@@ -51,6 +53,12 @@ export interface ConfidenceReport {
     avatarUrl: string | null;
     hasReviewed: boolean;
   }[];
+  // V2 fields (populated when useV2 is true)
+  subScores?: SubScores;
+  corridorId?: string;
+  corridorSegments?: any[];
+  riskZones?: any[];
+  fuelGaps?: any[];
 }
 
 const DIESEL_FALLBACK_PRICE = 3.95;
@@ -60,6 +68,7 @@ export async function generateConfidenceReport(
   eventId: string,
   userId: string,
   startOverride?: { lat: number; lon: number; label?: string },
+  useV2?: boolean,
 ): Promise<ConfidenceReport> {
   const flags: RiskFlag[] = [];
   const passedChecks: string[] = [];
@@ -458,7 +467,7 @@ export async function generateConfidenceReport(
     // Already added above
   }
 
-  return {
+  const baseReport: ConfidenceReport = {
     score,
     status,
     headline,
@@ -485,6 +494,59 @@ export async function generateConfidenceReport(
     breakPlan,
     householdStatus,
   };
+
+  // ── V2 CORRIDOR OVERLAY ─────────────────────────────────────
+  if (useV2 && originLat && originLon && campground?.latitude && campground?.longitude) {
+    try {
+      const corridor = await buildCorridorAnalysis(originLat, originLon, campground.latitude, campground.longitude);
+
+      const rigFit = campground.maxRvLength && user.rvLength
+        ? { fits: user.rvLength <= campground.maxRvLength, maxLength: campground.maxRvLength, userLength: user.rvLength }
+        : null;
+
+      const v2Scoring = computeEnhancedScores(corridor, {
+        rigFit,
+        batteryLimitHours: batteryLimit,
+        userMpg: user.rvMpg,
+        userRvLength: user.rvLength,
+        userRvFuelType: user.rvFuelType,
+      });
+
+      // Import the save function
+      const { saveCorridorAnalysis } = await import('./routeCorridorService');
+      const saved = await saveCorridorAnalysis(
+        userId, corridor,
+        { overall: v2Scoring.overall, safety: v2Scoring.subScores.safety, comfort: v2Scoring.subScores.comfort, convenience: v2Scoring.subScores.convenience, flexibility: v2Scoring.subScores.flexibility },
+        v2Scoring.status,
+        { eventId, headline: v2Scoring.headline, flags: v2Scoring.flags, passedChecks: v2Scoring.passedChecks },
+      );
+
+      baseReport.subScores = v2Scoring.subScores;
+      baseReport.corridorId = saved.id;
+      baseReport.corridorSegments = corridor.segments.map(s => ({
+        index: s.index, startMile: s.startMile, endMile: s.endMile,
+        riskLevel: s.riskLevel, weather: s.weather,
+        fuelStopCount: s.fuelStops.length, restStopCount: s.restStops.length,
+      }));
+      baseReport.riskZones = corridor.riskZones;
+      baseReport.fuelGaps = corridor.fuelGaps;
+
+      // Use V2 scores as primary if available
+      baseReport.score = v2Scoring.overall;
+      baseReport.status = v2Scoring.status;
+      baseReport.headline = v2Scoring.headline;
+      baseReport.subheadline = v2Scoring.subheadline;
+      // Merge V2 flags (deduplicated)
+      const existingIds = new Set(baseReport.flags.map(f => f.id));
+      for (const f of v2Scoring.flags) {
+        if (!existingIds.has(f.id)) baseReport.flags.push(f);
+      }
+    } catch (e: any) {
+      console.error('[TripConfidence] V2 corridor overlay failed, using V1:', e.message);
+    }
+  }
+
+  return baseReport;
 }
 
 export async function saveConfidenceSnapshot(
@@ -517,6 +579,11 @@ export async function saveConfidenceSnapshot(
       breakPlan: report.breakPlan,
       metrics: report.metrics,
       householdStatus: report.householdStatus,
+      safetyScore: report.subScores?.safety ?? null,
+      comfortScore: report.subScores?.comfort ?? null,
+      convenienceScore: report.subScores?.convenience ?? null,
+      flexibilityScore: report.subScores?.flexibility ?? null,
+      corridorSegments: report.corridorSegments ?? null,
       generatedAt: new Date(),
       expiresAt,
     },

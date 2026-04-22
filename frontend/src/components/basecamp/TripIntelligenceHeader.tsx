@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent, Navigation } from 'lucide-react';
+import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent, Navigation, LocateFixed, Route } from 'lucide-react';
 import api from '../../services/api';
 import PreTripIntelligenceCard from './PreTripIntelligenceCard';
+import RouteCoPilotV2Card from './RouteCoPilotV2Card';
 import { formatDistanceToNow } from 'date-fns';
 
 interface DestResult {
@@ -67,7 +68,8 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const [startLon, setStartLon] = useState<number | null>(null);
   const [editingStart, setEditingStart] = useState(false);
   const [startQuery, setStartQuery] = useState('');
-  const [startIcon, setStartIcon] = useState<'home' | 'checkin'>('home');
+  const [startIcon, setStartIcon] = useState<'home' | 'checkin' | 'gps'>('home');
+  const [locating, setLocating] = useState(false);
 
   // Start search
   const [startResults, setStartResults] = useState<DestResult[]>([]);
@@ -86,6 +88,10 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   // Quick check results
   const [quickReport, setQuickReport] = useState<QuickReport | null>(null);
   const [checking, setChecking] = useState(false);
+
+  // V2 corridor analysis
+  const [v2Report, setV2Report] = useState<any>(null);
+  const [v2Loading, setV2Loading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -211,7 +217,23 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
     setChecking(false);
   }
 
-  // ── Handlers ────────────────────��──────────────────────────
+  // ── V2 Corridor Analysis ──────────────────────────────────
+  async function runCorridorAnalysis() {
+    if (!startLat || !startLon || !destLat || !destLon) return;
+    setV2Loading(true);
+    try {
+      const { data } = await api.post('/route-copilot/corridor-analysis', {
+        startLat, startLon, destLat, destLon,
+        campgroundId: destCampgroundId,
+      });
+      setV2Report(data);
+    } catch (e) {
+      console.error('V2 corridor analysis failed:', e);
+    }
+    setV2Loading(false);
+  }
+
+  // ── Handlers ──────────────────────────────────────────────
   function selectDestination(result: DestResult) {
     setDestLabel(result.name + (result.state ? `, ${result.state}` : ''));
     setDestLat(result.lat);
@@ -226,6 +248,37 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
       quickDestLon: result.lon,
       quickDestCampgroundId: result.type === 'CAMPGROUND' ? result.id : null,
     });
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        // Reverse geocode via HERE to get a readable label
+        let label = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+        try {
+          const { data } = await api.get(`/trip-intelligence/destination-search?q=${latitude},${longitude}`);
+          if (data.results?.[0]?.name) {
+            const r = data.results[0];
+            label = r.name + (r.state ? `, ${r.state}` : '');
+          }
+        } catch {}
+        setStartLabel(label);
+        setStartLat(latitude);
+        setStartLon(longitude);
+        setStartIcon('gps');
+        setEditingStart(false);
+        setStartFocused(false);
+        setStartQuery('');
+        setStartResults([]);
+        setLocating(false);
+        persistSession({ quickStartLabel: label, quickStartLat: latitude, quickStartLon: longitude });
+      },
+      () => { setLocating(false); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   }
 
   function selectStartLocation(result: DestResult) {
@@ -331,40 +384,57 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                   boxShadow: startFocused ? '0 0 16px rgba(232,168,56,0.2)' : 'none',
                 }}
               />
-              {/* Start location dropdown results */}
-              {startResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 max-h-64 overflow-y-auto"
+              {/* Use Current Location + search results dropdown */}
+              {(startFocused || startResults.length > 0) && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 max-h-72 overflow-y-auto"
                   style={{ background: '#0d1a30', border: '2px solid rgba(232,168,56,0.4)', boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 20px rgba(232,168,56,0.1)' }}>
-                  <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(232,168,56,0.15)', background: 'rgba(232,168,56,0.05)' }}>
-                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Starting From</span>
-                  </div>
-                  {startResults.map((r) => (
-                    <button key={r.id} onMouseDown={() => selectStartLocation(r)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1a2d4a'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.12)' : 'rgba(59,130,246,0.12)', border: `1px solid ${r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.25)' : 'rgba(59,130,246,0.25)'}` }}>
-                        {r.type === 'CAMPGROUND' ? <Tent className="w-4 h-4 text-amber-400" /> : <MapPin className="w-4 h-4 text-blue-400" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate" style={{ color: '#F5F0E8' }}>{r.name}</p>
-                        <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>{[r.city, r.state].filter(Boolean).join(', ')}</p>
-                      </div>
-                    </button>
-                  ))}
+                  {/* Current Location button — always shown at top */}
+                  <button onMouseDown={useCurrentLocation}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(59,130,246,0.06)' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.15)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
+                      <LocateFixed className={`w-4 h-4 text-blue-400 ${locating ? 'animate-pulse' : ''}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold" style={{ color: '#60a5fa' }}>{locating ? 'Getting location...' : 'Use Current Location'}</p>
+                      <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Use your GPS position</p>
+                    </div>
+                  </button>
+                  {startResults.length > 0 && (<>
+                    <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(232,168,56,0.15)', background: 'rgba(232,168,56,0.05)' }}>
+                      <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Starting From</span>
+                    </div>
+                    {startResults.map((r) => (
+                      <button key={r.id} onMouseDown={() => selectStartLocation(r)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1a2d4a'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.12)' : 'rgba(59,130,246,0.12)', border: `1px solid ${r.type === 'CAMPGROUND' ? 'rgba(232,168,56,0.25)' : 'rgba(59,130,246,0.25)'}` }}>
+                          {r.type === 'CAMPGROUND' ? <Tent className="w-4 h-4 text-amber-400" /> : <MapPin className="w-4 h-4 text-blue-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate" style={{ color: '#F5F0E8' }}>{r.name}</p>
+                          <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>{[r.city, r.state].filter(Boolean).join(', ')}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </>)}
                 </div>
               )}
             </div>
           ) : (
-            <button onClick={() => { setEditingStart(true); setStartQuery(startLabel); }}
+            <button onClick={() => { setEditingStart(true); setStartQuery(''); }}
               className="flex-1 flex items-center gap-2 rounded-full px-3 py-2 transition hover:brightness-110"
               style={{ background: '#1a2d4a' }}>
-              {startIcon === 'checkin' ? <MapPin className="w-3.5 h-3.5 text-green-400 flex-shrink-0" /> : <Home className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
+              {startIcon === 'gps' ? <LocateFixed className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" /> : startIcon === 'checkin' ? <MapPin className="w-3.5 h-3.5 text-green-400 flex-shrink-0" /> : <Home className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
               <span className="text-sm truncate" style={{ color: startLabel ? '#F5F0E8' : 'rgba(245,240,232,0.4)' }}>
-                {startLabel || 'Set your home location →'}
+                {locating ? 'Getting location...' : startLabel || 'Set your home location →'}
               </span>
               <Pencil className="w-3 h-3 ml-auto flex-shrink-0" style={{ color: 'rgba(245,240,232,0.3)' }} />
             </button>
@@ -635,13 +705,42 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                 </div>
               )}
 
+              {/* V2 Corridor Analysis Card */}
+              {v2Report && (
+                <div className="mb-3">
+                  <RouteCoPilotV2Card
+                    corridorId={v2Report.corridorId}
+                    score={v2Report.score}
+                    status={v2Report.status}
+                    headline={v2Report.headline}
+                    subheadline={v2Report.subheadline}
+                    subScores={v2Report.subScores}
+                    flags={v2Report.flags}
+                    passedChecks={v2Report.passedChecks}
+                    metrics={v2Report.metrics}
+                    segments={v2Report.corridor?.segments || []}
+                    riskZones={v2Report.corridor?.riskZones || []}
+                    fuelGaps={v2Report.corridor?.fuelGaps || []}
+                    onStartLive={onStartDrive}
+                  />
+                </div>
+              )}
+
               {/* Actions */}
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-2 mb-3">
                 <Link to={`/road-trips/new?destLabel=${encodeURIComponent(destLabel)}&destLat=${destLat}&destLon=${destLon}${destCampgroundId ? `&destCampgroundId=${destCampgroundId}` : ''}&startLabel=${encodeURIComponent(startLabel)}&startLat=${startLat}&startLon=${startLon}`}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
                   style={{ background: '#E8A838', color: '#0F1C35' }}>
                   Save as Trip <ArrowRight className="w-4 h-4" />
                 </Link>
+                {!v2Report && (
+                  <button onClick={runCorridorAnalysis} disabled={v2Loading}
+                    className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50"
+                    style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                    <Route className={`w-3 h-3 ${v2Loading ? 'animate-spin' : ''}`} />
+                    {v2Loading ? 'Analyzing...' : 'Route Analysis'}
+                  </button>
+                )}
                 <button onClick={runQuickCheck} disabled={checking}
                   className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50"
                   style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(245,240,232,0.6)' }}>

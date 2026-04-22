@@ -407,6 +407,8 @@ model User {
   emailPreference                                  EmailPreference?
   emailLogs                                        EmailLog[]
   emailUnsubscribeTokens                           EmailUnsubscribeToken[]
+  routeCorridorAnalyses                            RouteCorridorAnalysis[]
+  liveCoPilotSessions                              LiveCoPilotSession[]
 
   @@index([email])
   @@index([username])
@@ -5512,6 +5514,11 @@ model TripConfidenceSnapshot {
   breakPlan         Json?     // array of BreakStop objects
   metrics           Json?     // full metrics object
   householdStatus   Json?     // array of household review status
+  safetyScore       Int?      // V2 sub-score 0-100
+  comfortScore      Int?      // V2 sub-score 0-100
+  convenienceScore  Int?      // V2 sub-score 0-100
+  flexibilityScore  Int?      // V2 sub-score 0-100
+  corridorSegments  Json?     // V2 per-segment summary
   generatedAt       DateTime  @default(now())
   expiresAt         DateTime
 
@@ -5551,6 +5558,9 @@ model TripIntelligenceSession {
   quickDestCampgroundId String?
   mode                  String   @default("QUICK") // QUICK | FORMAL
   activeTripId          String?
+  liveCoPilotSessionId  String?
+  liveRefreshInterval   Int      @default(180) // seconds (1-5 min)
+  saveMeActive          Boolean  @default(false)
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
 }
@@ -6057,4 +6067,78 @@ model EmailUnsubscribeToken {
   usedAt    DateTime?
 
   @@index([userId])
+}
+
+// ── Smart Route Co-Pilot V2 ──────────────────────────────────────
+
+model RouteCorridorAnalysis {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId          String?
+  sessionId        String?
+  originLat        Float
+  originLon        Float
+  destLat          Float
+  destLon          Float
+  totalMiles       Float
+  totalHours       Float
+  segments         Json     // array of RouteSegment objects
+  overallScore     Int      // composite 0-100
+  safetyScore      Int      // 0-100
+  comfortScore     Int      // 0-100
+  convenienceScore Int      // 0-100
+  flexibilityScore Int      // 0-100
+  status           String   // GO | CAUTION | NO_GO
+  headline         String?
+  flags            Json?    // array of RiskFlag objects
+  passedChecks     Json?    // array of strings
+  routePolyline    String?  // HERE flexible polyline
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model LiveCoPilotSession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId         String?
+  corridorId      String?
+  originLat       Float
+  originLon       Float
+  destLat         Float
+  destLon         Float
+  currentLat      Float?
+  currentLon      Float?
+  currentSegment  Int       @default(0)
+  status          String    @default("ACTIVE") // ACTIVE | PAUSED | COMPLETED | SAVE_ME
+  milesDriven     Float     @default(0)
+  startedAt       DateTime  @default(now())
+  lastPingAt      DateTime  @default(now())
+  endedAt         DateTime?
+  alerts          CoPilotAlert[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CoPilotAlert {
+  id            String   @id @default(cuid())
+  sessionId     String
+  session       LiveCoPilotSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type          String   // WIND | FATIGUE | FUEL_LOW | OVERNIGHT | WEATHER | SAVE_ME
+  urgency       String   // INFO | WARNING | CRITICAL
+  title         String
+  body          String
+  actionLabel   String?
+  actionPayload Json?
+  dismissed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([type])
 }

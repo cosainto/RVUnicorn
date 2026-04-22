@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronUp, RefreshCw, Shield, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Users, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw, Shield, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Users, MapPin, Route } from 'lucide-react';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import RouteCoPilotV2Card from './RouteCoPilotV2Card';
 
 interface PreTripIntelligenceCardProps {
   eventId: string;
@@ -39,6 +40,8 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [v2Report, setV2Report] = useState<any>(null);
+  const [v2Loading, setV2Loading] = useState(false);
 
   const daysOut = Math.max(0, Math.ceil((new Date(departureDate).getTime() - Date.now()) / 86400000));
 
@@ -92,6 +95,19 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
     } catch {} finally {
       setRefreshing(false);
     }
+  }
+
+  async function loadV2Report() {
+    setV2Loading(true);
+    try {
+      const { data } = await api.get(`/trip-confidence/${eventId}/v2${buildStartParams()}`);
+      if (data.subScores && data.corridorSegments) {
+        setV2Report(data);
+      }
+    } catch (e) {
+      console.error('V2 report failed:', e);
+    }
+    setV2Loading(false);
   }
 
   async function handleHouseholdReview() {
@@ -358,6 +374,42 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* V2 Route Analysis */}
+      {v2Report ? (
+        <div className="px-4 pb-3">
+          <RouteCoPilotV2Card
+            corridorId={v2Report.corridorId || ''}
+            score={v2Report.score}
+            status={v2Report.status}
+            headline={v2Report.headline}
+            subheadline={v2Report.subheadline}
+            subScores={v2Report.subScores}
+            flags={v2Report.flags || []}
+            passedChecks={v2Report.passedChecks || []}
+            metrics={{
+              driveMiles: v2Report.metrics?.driveMiles,
+              driveHours: v2Report.metrics?.driveHours,
+              fuelEstimate: v2Report.metrics?.fuelEstimate,
+              weatherTemp: v2Report.metrics?.weatherTemp,
+              weatherCondition: v2Report.metrics?.weatherCondition,
+              windSpeed: v2Report.metrics?.windSpeed,
+            }}
+            segments={v2Report.corridorSegments || []}
+            riskZones={v2Report.riskZones || []}
+            fuelGaps={v2Report.fuelGaps || []}
+          />
+        </div>
+      ) : (
+        <div className="px-4 pb-3">
+          <button onClick={loadV2Report} disabled={v2Loading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition disabled:opacity-50"
+            style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+            <Route className={`w-3.5 h-3.5 ${v2Loading ? 'animate-spin' : ''}`} />
+            {v2Loading ? 'Analyzing full route corridor...' : 'Run Route Corridor Analysis'}
+          </button>
         </div>
       )}
 

@@ -5,6 +5,7 @@ import api from '../services/api';
 import RoadChat from './RoadChat';
 import { useAuth } from '../contexts/AuthContext';
 import { useDrivingSession } from '../contexts/DrivingSessionContext';
+import LiveCoPilotOverlay from './LiveCoPilotOverlay';
 
 // ── Fatigue images (Cloudinary) ───────────────────────────────────────────────
 const FATIGUE_IMAGES = {
@@ -124,6 +125,7 @@ export default function DrivingMode({ nextEvent, onExit, onMinimize }: DrivingMo
   // Role is owned by DrivingSessionContext so the floating DriveCompanionWidget
   // and BasecampPage's early-return all react to a role flip in real time.
   const drivingSession = useDrivingSession();
+  const { liveCoPilotSessionId, setLiveCoPilotSessionId, liveCoPilotCorridorId, setLiveCoPilotCorridorId, gps } = drivingSession;
   const role = drivingSession.role;
   const setRole = (next: 'driver' | 'passenger' | ((prev: 'driver' | 'passenger') => 'driver' | 'passenger')) => {
     const value = typeof next === 'function' ? next(drivingSession.role) : next;
@@ -762,6 +764,17 @@ export default function DrivingMode({ nextEvent, onExit, onMinimize }: DrivingMo
               </div>
             );
           })()}
+
+          {/* ── Live Co-Pilot V2 Overlay ──────────────────────────────── */}
+          {liveCoPilotSessionId && (
+            <LiveCoPilotOverlay
+              sessionId={liveCoPilotSessionId}
+              corridorId={liveCoPilotCorridorId || undefined}
+              onEnd={() => { setLiveCoPilotSessionId(null); setLiveCoPilotCorridorId(null); }}
+              fatigueScore={fatigueScore}
+              gps={gps ? { lat: gps.lat, lon: gps.lng, speedMph: gps.speedMph || 0, heading: gps.heading || 0 } : null}
+            />
+          )}
 
           {/* ── Passenger suggestion card ────────────────────────────────── */}
           {passengerSuggestion && (
