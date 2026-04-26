@@ -279,22 +279,22 @@ export default function LandingPage() {
                   EARLY ACCESS BETA — THE SOCIAL PLATFORM FOR RV TRAVEL
                 </p>
                 <h1 className="font-playfair text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6" style={{ animation: 'fadeUp 0.6s ease 0.1s both' }}>
-                  Find Your Herd.<br />
+                  Plan RV Trips.<br />
+                  Find Campgrounds.<br />
                   <span style={{ color: 'var(--cream)' }}>Travel Together.</span>
                 </h1>
-                <p className="text-lg mb-8 max-w-lg leading-relaxed" style={{ color: 'var(--muted)', animation: 'fadeUp 0.6s ease 0.2s both' }}>
-                  Plan RV trips, meet people along the way, and turn every stop into something shared.
+                <p className="text-lg mb-4 max-w-lg leading-relaxed" style={{ color: 'var(--muted)', animation: 'fadeUp 0.6s ease 0.2s both' }}>
+                  The all-in-one platform where RV travelers discover campgrounds, plan trips with smart routing for their rig, and connect with fellow campers along the way.
+                </p>
+                <p className="text-sm mb-8 max-w-lg" style={{ color: 'rgba(255,255,255,0.5)', animation: 'fadeUp 0.6s ease 0.25s both' }}>
+                  Free forever. 16,000+ campgrounds. AI-powered trip planning.
                 </p>
 
                 <div className="flex flex-wrap gap-4 mb-8" style={{ animation: 'fadeUp 0.6s ease 0.3s both' }}>
-                  <Link to="/register" className="px-8 py-3.5 text-base font-semibold rounded-full transition-all hover:brightness-110 hover:scale-105"
-                    style={{ background: 'var(--campfire)', color: 'white' }}>
-                    {'\u{1F984}'} Join Free
+                  <Link to="/register" className="px-10 py-4 text-lg font-semibold rounded-full transition-all hover:brightness-110 hover:scale-105 shadow-lg"
+                    style={{ background: 'var(--campfire)', color: 'white', boxShadow: '0 4px 24px rgba(249,115,22,0.4)' }}>
+                    {'\u{1F984}'} Join Free — It Takes 30 Seconds
                   </Link>
-                  <button onClick={scrollToHow} className="px-8 py-3.5 text-base font-medium rounded-full border transition-all hover:bg-white/5"
-                    style={{ color: 'white', borderColor: 'rgba(255,255,255,0.25)' }}>
-                    See How It Works
-                  </button>
                 </div>
 
                 {/* Social proof */}
@@ -369,9 +369,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ═══ LIVE ACTIVITY STRIP ═══ */}
-        <ActivityStrip />
-
         {/* ═══ SECTION 3: OUTCOME CARDS ═══ */}
         <section ref={sec3.ref} className="py-24 px-6" style={{ background: '#F7F9FC' }}>
           <div className="max-w-6xl mx-auto">
@@ -398,6 +395,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* ═══ LIVE ACTIVITY STRIP ═══ */}
+        <ActivityStrip />
 
         {/* ═══ SECTION 4: HOW IT WORKS ═══ */}
         <section ref={(el) => { (howItWorksRef as any).current = el; (sec4.ref as any).current = el; }} className="py-24 px-6" style={{ background: '#FFFFFF' }}>

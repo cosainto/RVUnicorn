@@ -5,6 +5,7 @@ import FuelStopPrice from './FuelStopPrice';
 import MultiStopTripPlanner from './MultiStopTripPlanner';
 import HitchTripCostEstimator from './HitchTripCostEstimator';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from './ToastProvider';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface PitStop { id: string; name: string; stopType: string; location?: string; estimatedDuration?: number; notes?: string; }
@@ -56,6 +57,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
   tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string; rvMpg?: number; rvFuelGal?: number; rvLength?: number; rvType?: string;
 }) {
+  const { addLocalToast } = useToast();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(true);
   // tripEventId is used to filter itinerary to this specific event
@@ -115,7 +117,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
   // ── GPS Live Mode ────────────────────────────────────────────────────────
   const startLiveMode = () => {
-    if (!navigator.geolocation) { alert('GPS not available on this device'); return; }
+    if (!navigator.geolocation) { addLocalToast('GPS not available on this device', 'error'); return; }
     setLiveMode(true);
     const id = navigator.geolocation.watchPosition(
       (pos) => {
@@ -237,7 +239,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       setRecommendations(null);
     } catch(e: any) {
       console.error('[TripPlanner] replaceStop failed:', e.response?.data || e.message);
-      alert('Failed to save stop — please try again.');
+      addLocalToast('Failed to save stop — please try again.', 'error');
     }
   };
 
@@ -315,7 +317,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       setShowRvForm(false);
       if (refreshUser) refreshUser();
       setTimeout(() => setRvSaved(false), 3000);
-    } catch { alert('Failed to save RV specs'); }
+    } catch { addLocalToast('Failed to save RV specs', 'error'); }
     setRvSaving(false);
   };
 
@@ -337,7 +339,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       });
       setTrip(t => t ? { ...t, days: t.days.map(d => d.id === dayId ? { ...d, stops: d.stops.map(s => s.id === stop.id ? data : s) } : d) } : t);
       setEditingBooking(null);
-    } catch { alert('Failed to save booking info'); }
+    } catch { addLocalToast('Failed to save booking info', 'error'); }
     setBookingSaving(false);
   };
 
@@ -425,7 +427,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       });
       setTrip(t => t ? {...t, days:t.days.map(d=>d.id===dayId?{...d,stops:d.stops.map(s=>s.id===stop.id?data:s)}:d)} : t);
       setEditingStop(null);
-    } catch(e) { alert('Failed to save'); }
+    } catch(e) { addLocalToast('Failed to save', 'error'); }
   };
 
   const toggleConfirmed = async (dayId: string, stop: TripStop) => {

@@ -1,8 +1,9 @@
 const stripHtml = (html: string | null) => html?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") || "";
 import React, { useEffect, useState, useCallback } from 'react';
+import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Star, Plus, Phone, Globe, Navigation, SlidersHorizontal, X } from 'lucide-react';
+import { Search, MapPin, Star, Plus, Phone, Globe, Navigation, SlidersHorizontal, X, Grid3X3, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SuggestCampground from '../components/SuggestCampground';
 import HarvestHostsTab from '../components/HarvestHostsTab';
@@ -57,6 +58,7 @@ export default function CampgroundsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems' | 'for-you'>('campgrounds');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   useEffect(() => {
     if (!user) return;
@@ -101,9 +103,19 @@ export default function CampgroundsPage() {
   const toggleAmenity = (k: string) => { setAmenityFilters(f => ({ ...f, [k]: !f[k] })); setCurrentPage(1); };
 
   if (loading && campgrounds.length === 0) return (
-    <div className="max-w-7xl mx-auto px-4 py-8 text-center">
-      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
-      <p className="mt-4 text-gray-600">Loading campgrounds...</p>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-xl overflow-hidden" style={{ background: 'rgba(15,28,53,0.95)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="h-40 bg-gray-700 animate-pulse" />
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-gray-700 rounded animate-pulse w-3/4" />
+              <div className="h-3 bg-gray-700 rounded animate-pulse w-1/2" />
+              <div className="h-3 bg-gray-700 rounded animate-pulse w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -285,12 +297,78 @@ export default function CampgroundsPage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-400 mt-3">
-          {loading ? 'Searching...' : `${total.toLocaleString()} campground${total !== 1 ? 's' : ''} found`}{totalPages > 1 && ` · Page ${currentPage} of ${totalPages}`}
-        </p>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-xs text-gray-400">
+            {loading ? 'Searching...' : `${total.toLocaleString()} campground${total !== 1 ? 's' : ''} found`}{totalPages > 1 && ` · Page ${currentPage} of ${totalPages}`}
+          </p>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <button
+              onClick={() => setViewMode('grid')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+              style={{ background: viewMode === 'grid' ? 'rgba(232,168,56,0.15)' : 'transparent', color: viewMode === 'grid' ? '#E8A838' : 'rgba(245,240,232,0.5)' }}
+            >
+              <Grid3X3 className="w-3.5 h-3.5 inline mr-1" />Grid
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+              style={{ background: viewMode === 'map' ? 'rgba(232,168,56,0.15)' : 'transparent', color: viewMode === 'map' ? '#E8A838' : 'rgba(245,240,232,0.5)' }}
+            >
+              <MapIcon className="w-3.5 h-3.5 inline mr-1" />Map
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Map View */}
+      {viewMode === 'map' && (
+        <div className="rounded-xl overflow-hidden mb-6" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
+          <ComposableMap
+            projection="geoAlbersUsa"
+            projectionConfig={{ scale: 900 }}
+            width={800}
+            height={500}
+            style={{ width: '100%', height: 'auto' }}
+          >
+            <Geographies geography="https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json">
+              {({ geographies }) =>
+                geographies.map((geo) => (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    style={{
+                      default: { fill: 'rgba(245,240,232,0.08)', stroke: 'rgba(245,240,232,0.15)', strokeWidth: 0.5, outline: 'none' },
+                      hover: { fill: 'rgba(245,240,232,0.12)', stroke: 'rgba(245,240,232,0.2)', strokeWidth: 0.5, outline: 'none' },
+                      pressed: { fill: 'rgba(245,240,232,0.08)', stroke: 'rgba(245,240,232,0.15)', strokeWidth: 0.5, outline: 'none' },
+                    }}
+                  />
+                ))
+              }
+            </Geographies>
+            {campgrounds.filter(c => c.latitude && c.longitude).map(c => (
+              <Marker key={c.id} coordinates={[c.longitude!, c.latitude!]}>
+                <circle r={4} fill="#E8A838" stroke="#0F1C35" strokeWidth={1.5} />
+                <title>{c.name}</title>
+              </Marker>
+            ))}
+          </ComposableMap>
+          {/* Mini cards below map for campgrounds with coordinates */}
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+            {campgrounds.filter(c => c.latitude && c.longitude).map(c => (
+              <Link key={c.id} to={`/campgrounds/${c.id}`} className="flex items-center gap-3 p-2 rounded-lg transition hover:brightness-110" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                {c.imageUrl && <img src={c.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate" style={{ color: '#F5F0E8' }}>{c.name}</p>
+                  <p className="text-[10px] truncate" style={{ color: 'rgba(245,240,232,0.5)' }}>{c.location}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Grid View */}
+      {viewMode === 'grid' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {campgrounds.map(c => (
           <Link key={c.id} to={`/campgrounds/${c.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden block">
             <div className="relative h-48 bg-gradient-to-br from-primary-100 to-secondary-100">
@@ -315,7 +393,7 @@ export default function CampgroundsPage() {
             </div>
           </Link>
         ))}
-      </div>
+      </div>}
 
       {campgrounds.length === 0 && !loading && (
         <div className="text-center py-16 text-gray-500">

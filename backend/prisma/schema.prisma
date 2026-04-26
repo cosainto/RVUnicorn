@@ -409,6 +409,8 @@ model User {
   emailUnsubscribeTokens                           EmailUnsubscribeToken[]
   routeCorridorAnalyses                            RouteCorridorAnalysis[]
   liveCoPilotSessions                              LiveCoPilotSession[]
+  dailyDropMessage                                 String?
+  dailyDropDate                                    DateTime?
 
   @@index([email])
   @@index([username])

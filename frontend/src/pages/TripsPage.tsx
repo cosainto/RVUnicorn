@@ -67,7 +67,22 @@ function RoadTripsEmbed() {
     });
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" /></div>;
+  if (loading) return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl overflow-hidden" style={{ background: 'rgba(15,28,53,0.95)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="h-40 bg-gray-700 animate-pulse" />
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-gray-700 rounded animate-pulse w-3/4" />
+              <div className="h-3 bg-gray-700 rounded animate-pulse w-1/2" />
+              <div className="h-3 bg-gray-700 rounded animate-pulse w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div>

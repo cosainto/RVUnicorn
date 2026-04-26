@@ -21,11 +21,19 @@ interface Toast {
   removing?: boolean;
 }
 
+interface LocalToast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'warning';
+  removing?: boolean;
+}
+
 interface ToastContextType {
   soundEnabled: boolean;
   toggleSound: () => void;
   addToast: (notification: any) => void;
   dismissToast: (id: string) => void;
+  addLocalToast: (message: string, type: 'success' | 'error' | 'warning') => void;
 }
 
 const ToastContext = createContext<ToastContextType>({
@@ -33,6 +41,7 @@ const ToastContext = createContext<ToastContextType>({
   toggleSound: () => {},
   addToast: () => {},
   dismissToast: () => {},
+  addLocalToast: () => {},
 });
 
 export const useToast = () => useContext(ToastContext);
@@ -205,9 +214,41 @@ function ToastItem({ toast, onDismiss, onQuickReply }: { toast: Toast; onDismiss
 // ═══════════════════════════════════════════════════════════════
 // Provider Component
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// Local Toast Component — for success/error/warning feedback
+// ═══════════════════════════════════════════════════════════════
+const LOCAL_TOAST_STYLES = {
+  success: { bg: '#ecfdf5', border: '#86efac', accent: '#22c55e', icon: '\u2705', text: '#166534' },
+  error:   { bg: '#fef2f2', border: '#fca5a5', accent: '#ef4444', icon: '\u274c', text: '#991b1b' },
+  warning: { bg: '#fffbeb', border: '#fde68a', accent: '#f59e0b', icon: '\u26a0\ufe0f', text: '#92400e' },
+};
+
+function LocalToastItem({ toast, onDismiss }: { toast: LocalToast; onDismiss: (id: string) => void }) {
+  const s = LOCAL_TOAST_STYLES[toast.type];
+  return (
+    <div
+      className={`relative w-80 rounded-xl shadow-lg overflow-hidden transition-all duration-300 ${toast.removing ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}`}
+      style={{ background: s.bg, border: `1px solid ${s.border}`, animation: toast.removing ? undefined : 'toastSlideIn 0.3s ease-out' }}
+    >
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: s.accent }} />
+      <div className="flex items-center gap-3 p-3 pl-4">
+        <span className="text-lg flex-shrink-0">{s.icon}</span>
+        <p className="text-sm font-medium flex-1" style={{ color: s.text }}>{toast.message}</p>
+        <button onClick={() => onDismiss(toast.id)} className="flex-shrink-0 p-0.5 transition" style={{ color: s.text, opacity: 0.5 }}>
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="h-0.5" style={{ background: s.border }}>
+        <div className="h-full opacity-60" style={{ background: s.accent, animation: 'progressShrink 4s linear forwards' }} />
+      </div>
+    </div>
+  );
+}
+
 export default function ToastProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [localToasts, setLocalToasts] = useState<LocalToast[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     try { return localStorage.getItem('notif-sound') !== 'off'; } catch { return true; }
   });
@@ -251,6 +292,17 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     // Auto-dismiss after 6s
     setTimeout(() => dismissToast(toast.id), 6000);
   }, [soundEnabled, dismissToast]);
+
+  const dismissLocalToast = useCallback((id: string) => {
+    setLocalToasts(prev => prev.map(t => t.id === id ? { ...t, removing: true } : t));
+    setTimeout(() => setLocalToasts(prev => prev.filter(t => t.id !== id)), 300);
+  }, []);
+
+  const addLocalToast = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
+    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setLocalToasts(prev => [{ id, message, type }, ...prev].slice(0, 5));
+    setTimeout(() => dismissLocalToast(id), 4000);
+  }, [dismissLocalToast]);
 
   // Keep ref in sync so SSE handler always uses latest without reconnecting
   addToastRef.current = addToast;
@@ -322,12 +374,15 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
   };
 
   return (
-    <ToastContext.Provider value={{ soundEnabled, toggleSound, addToast, dismissToast }}>
+    <ToastContext.Provider value={{ soundEnabled, toggleSound, addToast, dismissToast, addLocalToast }}>
       {children}
 
       {/* Toast Container — bottom right */}
-      {toasts.length > 0 && (
+      {(toasts.length > 0 || localToasts.length > 0) && (
         <div className="fixed bottom-4 right-4 z-[9999] flex flex-col-reverse gap-2">
+          {localToasts.map(lt => (
+            <LocalToastItem key={lt.id} toast={lt} onDismiss={dismissLocalToast} />
+          ))}
           {toasts.map(toast => (
             <ToastItem
               key={toast.id}
@@ -338,13 +393,15 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
           ))}
 
           {/* Sound toggle */}
-          <button
-            onClick={toggleSound}
-            className="self-end p-1.5 bg-white/80 backdrop-blur rounded-lg shadow-sm border border-gray-200 text-gray-400 hover:text-gray-600 transition"
-            title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
-          >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-          </button>
+          {toasts.length > 0 && (
+            <button
+              onClick={toggleSound}
+              className="self-end p-1.5 bg-white/80 backdrop-blur rounded-lg shadow-sm border border-gray-200 text-gray-400 hover:text-gray-600 transition"
+              title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+          )}
         </div>
       )}
 

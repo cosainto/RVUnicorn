@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle, XCircle, AlertCircle, MapPin, User } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from './ToastProvider';
 
 interface BorrowRequest {
   id: string;
@@ -46,6 +47,7 @@ interface BorrowRequestsProps {
 }
 
 export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
+  const { addLocalToast } = useToast();
   const { user } = useAuth();
   const [requests, setRequests] = useState<BorrowRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,10 +89,10 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
       setResponseMessage('');
       setProposedTimes({ startAt: '', endAt: '' });
       await loadRequests();
-      alert(withProposal ? 'Proposed new times!' : 'Request approved! ✅');
+      addLocalToast(withProposal ? 'Proposed new times!' : 'Request approved! ✅', 'success');
     } catch (error) {
       console.error('Approve request error:', error);
-      alert('Failed to approve request');
+      addLocalToast('Failed to approve request', 'error');
     }
   };
 
@@ -104,10 +106,10 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
       });
 
       await loadRequests();
-      alert('Request declined');
+      addLocalToast('Request declined', 'success');
     } catch (error) {
       console.error('Decline request error:', error);
-      alert('Failed to decline request');
+      addLocalToast('Failed to decline request', 'error');
     }
   };
 
@@ -115,10 +117,10 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
     try {
       await api.post(`/borrow/${requestId}/accept-proposal`);
       await loadRequests();
-      alert('Proposal accepted! ✅');
+      addLocalToast('Proposal accepted! ✅', 'success');
     } catch (error) {
       console.error('Accept proposal error:', error);
-      alert('Failed to accept proposal');
+      addLocalToast('Failed to accept proposal', 'error');
     }
   };
 
@@ -128,10 +130,10 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
     try {
       await api.post(`/borrow/${requestId}/cancel`);
       await loadRequests();
-      alert('Request canceled');
+      addLocalToast('Request canceled', 'success');
     } catch (error) {
       console.error('Cancel request error:', error);
-      alert('Failed to cancel request');
+      addLocalToast('Failed to cancel request', 'error');
     }
   };
 
@@ -139,10 +141,10 @@ export default function BorrowRequests({ campgroundId }: BorrowRequestsProps) {
     try {
       await api.post(`/borrow/${requestId}/complete`);
       await loadRequests();
-      alert('Marked as returned! ✅');
+      addLocalToast('Marked as returned! ✅', 'success');
     } catch (error) {
       console.error('Complete request error:', error);
-      alert('Failed to mark as complete');
+      addLocalToast('Failed to mark as complete', 'error');
     }
   };
 

@@ -346,4 +346,75 @@ router.get('/status/:targetUserId', authenticateToken, async (req: Request, res:
   }
 });
 
+// GET /api/friends/on-the-road — Lifestyle Mode friends currently checked in
+router.get('/on-the-road', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Get all accepted friendships for current user
+    const friendships = await db.friendship.findMany({
+      where: {
+        OR: [
+          { initiatorId: userId, status: 'ACCEPTED' },
+          { receiverId: userId, status: 'ACCEPTED' },
+        ],
+      },
+      select: { initiatorId: true, receiverId: true },
+    });
+
+    const friendIds = friendships.map((f: any) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    if (friendIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Find friends with active check-ins
+    const activeCheckIns = await db.checkIn.findMany({
+      where: {
+        userId: { in: friendIds },
+        isActive: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profilePicture: true,
+          },
+        },
+        campground: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Deduplicate by user (take first / most recent)
+    const seen = new Set<string>();
+    const results = activeCheckIns
+      .filter((ci: any) => {
+        if (seen.has(ci.userId)) return false;
+        seen.add(ci.userId);
+        return true;
+      })
+      .map((ci: any) => ({
+        userId: ci.user.id,
+        displayName: [ci.user.firstName, ci.user.lastName].filter(Boolean).join(' '),
+        avatarUrl: ci.user.profilePicture,
+        campgroundName: ci.campground?.name || null,
+        campgroundId: ci.campground?.id || null,
+      }));
+
+    res.json(results);
+  } catch (error: any) {
+    console.error('On the road error:', error);
+    res.status(500).json({ error: 'Failed to get friends on the road' });
+  }
+});
+
 export default router;

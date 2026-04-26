@@ -199,11 +199,9 @@ export default function Navbar() {
   const primaryLinks = [
     { to: '/basecamp', icon: Home, label: 'Basecamp' },
     { to: '/events', icon: Calendar, label: 'Trips' },
-    { to: '/road-trips', icon: Route, label: 'Journeys' },
+    { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
     { to: '/community', icon: Flame, label: 'Community' },
     { to: '/hitch', icon: Sparkles, label: 'Hitch', isHitch: true },
-    { to: '/campgrounds', icon: Tent, label: 'Campgrounds' },
-    { to: '/travel', icon: Map, label: 'Travel' },
   ];
 
   return (
@@ -366,23 +364,22 @@ export default function Navbar() {
                     className="absolute top-full left-0 mt-2 w-[320px] rounded-2xl overflow-hidden z-50"
                     style={{ background: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06)', animation: 'dropIn 0.15s ease-out' }}
                   >
-                    <DropSection label="Create & Share">
+                    <DropSection label="Essentials">
+                      <DropItem to="/road-trips" onClick={() => setMoreOpen(false)} icon={<Route className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Journeys" desc="Multi-stop adventures" />
+                      <DropItem to="/travel" onClick={() => setMoreOpen(false)} icon={<Map className="w-4 h-4" />} iconBg="#ecfdf5" iconColor="#10b981" label="Travel Map" desc="See where everyone is" />
+                      <DropItem to="/friends" onClick={() => setMoreOpen(false)} icon={<Users className="w-4 h-4" />} iconBg="#eef2ff" iconColor="#6366f1" label="Friends" desc="Camping buddies" />
                       <DropItem to="/albums" onClick={() => setMoreOpen(false)} icon={<Camera className="w-4 h-4" />} iconBg="#fdf2f8" iconColor="#ec4899" label="Albums" desc="Photos & memories" />
+                    </DropSection>
+                    <DropSection label="Explore" last>
                       <DropItem to="/recipes" onClick={() => setMoreOpen(false)} icon={<UtensilsCrossed className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Recipes" desc="Camp cooking" />
                       <DropItem to="/creators" onClick={() => setMoreOpen(false)} icon={<Play className="w-4 h-4" />} iconBg="#f5f3ff" iconColor="#8b5cf6" label="Creator Pages" desc="Videos & content" />
-                    </DropSection>
-                    <DropSection label="Tools">
-                      <DropItem to="/road-trips" onClick={() => setMoreOpen(false)} icon={<Map className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Journeys" desc="Multi-stop adventures" />
                       <DropItem to="/gear" onClick={() => setMoreOpen(false)} icon={<Package className="w-4 h-4" />} iconBg="#f0fdf4" iconColor="#22c55e" label="Gear" desc="Marketplace" />
                       <DropItem to="/packing" onClick={() => setMoreOpen(false)} icon={<Backpack className="w-4 h-4" />} iconBg="#eff6ff" iconColor="#3b82f6" label="Packing Lists" desc="Trip checklists" />
                       <DropItem to="/rv-log" onClick={() => setMoreOpen(false)} icon={<Wrench className="w-4 h-4" />} iconBg="#fffbeb" iconColor="#f59e0b" label="RV Log" desc="Maintenance tracker" />
-                    </DropSection>
-                    <DropSection label="Community" last>
-                      <DropItem to="/friends" onClick={() => setMoreOpen(false)} icon={<Users className="w-4 h-4" />} iconBg="#eef2ff" iconColor="#6366f1" label="Friends" desc="Camping buddies" />
                       <DropItem to="/groups" onClick={() => setMoreOpen(false)} icon={<UsersRound className="w-4 h-4" />} iconBg="#f0fdfa" iconColor="#14b8a6" label="Groups" desc="Community groups" />
                       <DropItem to="/jobs" onClick={() => setMoreOpen(false)} icon={<Briefcase className="w-4 h-4" />} iconBg="#f8fafc" iconColor="#64748b" label="Jobs" desc="RV & camping careers" />
-                      <DropItem to="/find-my-campground" onClick={() => setMoreOpen(false)} icon={<span className="text-sm">🎯</span>} iconBg="#fffbeb" iconColor="#f59e0b" label="Find My Campground" desc="AI quiz — no account needed" />
-                      <DropItem to="/deals" onClick={() => setMoreOpen(false)} icon={<span className="text-sm">🔥</span>} iconBg="#fef2f2" iconColor="#ef4444" label="Deals" desc="Last-minute campground specials" />
+                      <DropItem to="/find-my-campground" onClick={() => setMoreOpen(false)} icon={<span className="text-sm">🎯</span>} iconBg="#fffbeb" iconColor="#f59e0b" label="Find My Campground" desc="AI quiz" />
+                      <DropItem to="/deals" onClick={() => setMoreOpen(false)} icon={<span className="text-sm">🔥</span>} iconBg="#fef2f2" iconColor="#ef4444" label="Deals" desc="Last-minute specials" />
                     </DropSection>
                   </div>
                 )}
@@ -570,31 +567,44 @@ export default function Navbar() {
               </form>
             </div>
 
-            {/* Nav Sections */}
+            {/* Core Navigation */}
             <MobileSection label="Navigate">
               <MobileLink to="/basecamp" icon={<Home className="w-5 h-5" />} label="Basecamp" active={isActive('/basecamp')} />
+              <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips" active={isActive('/events')} />
               <MobileLink to="/campgrounds" icon={<Tent className="w-5 h-5" />} label="Campgrounds" active={isActive('/campgrounds')} />
               <MobileLink to="/community" icon={<Flame className="w-5 h-5" />} label="Community" active={isActive('/community')} />
-              <MobileLink to="/events" icon={<Calendar className="w-5 h-5" />} label="Trips & Events" active={isActive('/events')} />
-              <MobileLink to="/road-trips" icon={<Route className="w-5 h-5" />} label="Journeys" active={isActive('/road-trips')} />
               <MobileLink to="/hitch" icon={<img src="/hitch.png" className="w-5 h-5 rounded-full object-cover" alt="Hitch" />} label="Hitch" active={isActive('/hitch')} />
-              <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel & Routes" active={isActive('/travel')} />
             </MobileSection>
 
-            <MobileSection label="Create & Share">
+            {/* Quick Actions */}
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Quick Actions</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Link to="/events-v2/create" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-3 rounded-xl text-center hover:bg-gray-50 transition" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <span className="text-lg">🗺️</span>
+                  <span className="text-[10px] font-semibold text-gray-700">Create Trip</span>
+                </Link>
+                <Link to="/campgrounds" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-3 rounded-xl text-center hover:bg-gray-50 transition" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                  <span className="text-lg">🏕️</span>
+                  <span className="text-[10px] font-semibold text-gray-700">Find Camp</span>
+                </Link>
+                <Link to="/friends" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-3 rounded-xl text-center hover:bg-gray-50 transition" style={{ background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+                  <span className="text-lg">👋</span>
+                  <span className="text-[10px] font-semibold text-gray-700">Friends</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Everything Else — collapsible */}
+            <MobileSection label="More Features">
+              <MobileLink to="/road-trips" icon={<Route className="w-5 h-5" />} label="Journeys" active={isActive('/road-trips')} />
+              <MobileLink to="/travel" icon={<Map className="w-5 h-5" />} label="Travel Map" active={isActive('/travel')} />
               <MobileLink to="/albums" icon={<Camera className="w-5 h-5" />} label="Albums" active={isActive('/albums')} />
               <MobileLink to="/recipes" icon={<UtensilsCrossed className="w-5 h-5" />} label="Recipes" active={isActive('/recipes')} />
               <MobileLink to="/creators" icon={<Play className="w-5 h-5" />} label="Creator Pages" active={isActive('/creators')} />
-            </MobileSection>
-
-            <MobileSection label="Tools">
               <MobileLink to="/gear" icon={<Package className="w-5 h-5" />} label="Gear" active={isActive('/gear')} />
               <MobileLink to="/packing" icon={<Backpack className="w-5 h-5" />} label="Packing Lists" active={isActive('/packing')} />
               <MobileLink to="/rv-log" icon={<Wrench className="w-5 h-5" />} label="RV Log" active={isActive('/rv-log')} />
-            </MobileSection>
-
-            <MobileSection label="Community">
-              <MobileLink to="/friends" icon={<Users className="w-5 h-5" />} label="Friends" active={isActive('/friends')} />
               <MobileLink to="/groups" icon={<UsersRound className="w-5 h-5" />} label="Groups" active={isActive('/groups')} />
               <MobileLink to="/messages" icon={<MessageCircle className="w-5 h-5" />} label="Messages" active={isActive('/messages')} badge={unreadMessages} />
               <MobileLink to="/jobs" icon={<Briefcase className="w-5 h-5" />} label="Jobs" active={isActive('/jobs')} />

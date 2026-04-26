@@ -432,6 +432,190 @@ router.delete('/:id', authenticateToken, isAdmin, async (req: Request, res: Resp
   }
 });
 
+// GET /api/campgrounds/weekend-near-me — Lifestyle Mode nearby weekend campgrounds
+router.get('/weekend-near-me', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    const radiusKm = parseFloat(req.query.radius as string) || 320;
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: 'lat and lng query params are required' });
+    }
+
+    // Haversine distance via raw SQL — returns campgrounds within radius sorted by distance
+    const campgrounds: any[] = await db.$queryRawUnsafe(`
+      SELECT id, name, state, latitude, longitude, "imageUrl",
+        "hasFullHookups", "hasWifi", "isPetFriendly", "isWaterfront", "hasPool", "hasShowers", "hasPullThrough",
+        ( 6371 * acos(
+            LEAST(1.0, cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2))
+            + sin(radians($1)) * sin(radians(latitude)))
+        )) AS distance_km
+      FROM "Campground"
+      WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+      HAVING ( 6371 * acos(
+            LEAST(1.0, cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2))
+            + sin(radians($1)) * sin(radians(latitude)))
+      )) <= $3
+      ORDER BY distance_km ASC
+      LIMIT 3
+    `, lat, lng, radiusKm).catch(async () => {
+      // Fallback: some Postgres versions don't support HAVING without GROUP BY on non-aggregated queries.
+      // Use a subquery approach instead.
+      return db.$queryRawUnsafe(`
+        SELECT * FROM (
+          SELECT id, name, state, latitude, longitude, "imageUrl",
+            "hasFullHookups", "hasWifi", "isPetFriendly", "isWaterfront", "hasPool", "hasShowers", "hasPullThrough",
+            ( 6371 * acos(
+                LEAST(1.0, cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2))
+                + sin(radians($1)) * sin(radians(latitude)))
+            )) AS distance_km
+          FROM "Campground"
+          WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+        ) sub
+        WHERE distance_km <= $3
+        ORDER BY distance_km ASC
+        LIMIT 3
+      `, lat, lng, radiusKm);
+    });
+
+    const results = campgrounds.map((c: any) => {
+      const distKm = parseFloat(c.distance_km);
+      const driveTimeMinutes = Math.round(distKm / 80 * 60);
+
+      const amenities: string[] = [];
+      if (c.hasFullHookups) amenities.push('Full Hookups');
+      if (c.hasWifi) amenities.push('WiFi');
+      if (c.isPetFriendly) amenities.push('Pet-Friendly');
+      if (c.isWaterfront) amenities.push('Waterfront');
+      if (c.hasPool) amenities.push('Pool');
+      if (c.hasShowers) amenities.push('Showers');
+      if (c.hasPullThrough) amenities.push('Pull-Through');
+
+      return {
+        id: c.id,
+        name: c.name,
+        state: c.state,
+        latitude: c.latitude,
+        longitude: c.longitude,
+        driveTimeMinutes,
+        amenitiesSummary: amenities.join(', ') || 'No amenities listed',
+        matchScore: null,
+        photos: c.imageUrl,
+      };
+    });
+
+    res.json({ campgrounds: results });
+  } catch (error: any) {
+    console.error('Weekend near me error:', error);
+    res.status(500).json({ error: 'Failed to find nearby campgrounds' });
+  }
+});
+
+// GET /api/campgrounds/trending-visited — Lifestyle Mode trending places user has been
+router.get('/trending-visited', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Get all campground IDs the user has checked into
+    const userCheckIns = await db.checkIn.findMany({
+      where: { userId, campgroundId: { not: null } },
+      select: { campgroundId: true, checkInDate: true },
+      orderBy: { checkInDate: 'desc' },
+    });
+
+    if (userCheckIns.length === 0) {
+      return res.json([]);
+    }
+
+    const campgroundIds = [...new Set(userCheckIns.map((c: any) => c.campgroundId))];
+
+    // Build a map of user's last visit date per campground
+    const lastVisitMap = new Map<string, Date>();
+    for (const ci of userCheckIns) {
+      if (!lastVisitMap.has(ci.campgroundId)) {
+        lastVisitMap.set(ci.campgroundId, ci.checkInDate);
+      }
+    }
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Count recent check-ins at those campgrounds
+    const recentCheckIns = await db.checkIn.groupBy({
+      by: ['campgroundId'],
+      where: {
+        campgroundId: { in: campgroundIds },
+        createdAt: { gte: sevenDaysAgo },
+      },
+      _count: { id: true },
+    });
+
+    // Count recent photos at those campgrounds
+    const recentPhotos = await db.campgroundPhoto.groupBy({
+      by: ['campgroundId'],
+      where: {
+        campgroundId: { in: campgroundIds },
+        createdAt: { gte: sevenDaysAgo },
+      },
+      _count: { id: true },
+    }).catch(() => []);
+
+    // Merge activity counts
+    const activityMap = new Map<string, number>();
+    for (const ci of recentCheckIns) {
+      activityMap.set(ci.campgroundId, (activityMap.get(ci.campgroundId) || 0) + ci._count.id);
+    }
+    for (const p of recentPhotos) {
+      activityMap.set(p.campgroundId, (activityMap.get(p.campgroundId) || 0) + p._count.id);
+    }
+
+    // Sort by activity count, take top 3
+    const sorted = [...activityMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    if (sorted.length === 0) {
+      return res.json([]);
+    }
+
+    const topIds = sorted.map(([id]) => id);
+    const campgrounds = await db.campground.findMany({
+      where: { id: { in: topIds } },
+      select: { id: true, name: true, state: true },
+    });
+
+    // Get one recent photo per campground
+    const recentPhotoUrls = new Map<string, string>();
+    for (const cId of topIds) {
+      const photo = await db.campgroundPhoto.findFirst({
+        where: { campgroundId: cId, createdAt: { gte: sevenDaysAgo } },
+        orderBy: { createdAt: 'desc' },
+        select: { imageUrl: true },
+      }).catch(() => null);
+      if (photo?.imageUrl) recentPhotoUrls.set(cId, photo.imageUrl);
+    }
+
+    const campMap = new Map<string, any>(campgrounds.map((c: any) => [c.id, c]));
+
+    const results = sorted.map(([campgroundId, count]) => {
+      const camp: any = campMap.get(campgroundId);
+      return {
+        campgroundId,
+        name: camp?.name || 'Unknown',
+        state: camp?.state || null,
+        recentActivityCount: count,
+        lastVisitedAt: lastVisitMap.get(campgroundId) || null,
+        recentPhotoUrl: recentPhotoUrls.get(campgroundId) || null,
+      };
+    });
+
+    res.json(results);
+  } catch (error: any) {
+    console.error('Trending visited error:', error);
+    res.status(500).json({ error: 'Failed to get trending visited campgrounds' });
+  }
+});
+
 // Get campground by ID (MUST come last among GET routes)
 
 // Get campground by ID (MUST come last among GET routes)

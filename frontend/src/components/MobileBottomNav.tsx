@@ -1,8 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png';
-
 export default function MobileBottomNav() {
   const location = useLocation();
   const { user } = useAuth() as any;
@@ -14,7 +12,8 @@ export default function MobileBottomNav() {
   const tabs = [
     { href: '/basecamp', label: 'Home', icon: '\u{1F3E0}', active: path === '/basecamp' },
     { href: '/campgrounds', label: 'Explore', icon: '\u{1F3D5}', active: path.startsWith('/campgrounds') },
-    { href: '/trips', label: 'Trips', icon: '\u{1F5FA}', active: path.startsWith('/trips') },
+    { href: '/events-v2/create', label: '', icon: '+', isCreate: true, active: false },
+    { href: '/community', label: 'Community', icon: '\u{1F525}', active: path.startsWith('/community') },
     { href: `/profile/${user?.username}`, label: 'Profile', icon: '\u{1F464}', active: path.startsWith('/profile') },
   ];
 
@@ -27,10 +26,19 @@ export default function MobileBottomNav() {
     }}>
       <div className="flex items-center justify-around px-2 py-1.5">
         {tabs.map(tab => (
-          <Link key={tab.href} to={tab.href} className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition"
-            style={{ background: tab.active ? 'rgba(232,168,56,0.1)' : 'transparent' }}>
-            <span className="text-lg">{tab.icon}</span>
-            <span className="text-[9px] font-semibold" style={{ color: tab.active ? '#E8A838' : 'rgba(245,240,232,0.35)' }}>{tab.label}</span>
+          <Link key={tab.href} to={tab.href} className={`flex flex-col items-center gap-0.5 rounded-lg transition ${(tab as any).isCreate ? '' : 'px-3 py-1'}`}
+            style={(tab as any).isCreate ? {} : { background: tab.active ? 'rgba(232,168,56,0.1)' : 'transparent' }}>
+            {(tab as any).isCreate ? (
+              <span className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full text-2xl font-bold shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #E8A838, #F97316)', color: '#0F1C35', boxShadow: '0 4px 16px rgba(232,168,56,0.4)' }}>
+                +
+              </span>
+            ) : (
+              <>
+                <span className="text-lg">{tab.icon}</span>
+                <span className="text-[9px] font-semibold" style={{ color: tab.active ? '#E8A838' : 'rgba(245,240,232,0.35)' }}>{tab.label}</span>
+              </>
+            )}
           </Link>
         ))}
       </div>

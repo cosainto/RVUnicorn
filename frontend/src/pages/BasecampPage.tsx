@@ -83,6 +83,7 @@ import WelcomeKit from '../components/WelcomeKit';
 import NatureInsightCards from '../components/NatureInsightCards';
 import DoThisNowSection from '../components/activity/DoThisNowSection';
 import BasecampTriviaCard from '../components/BasecampTriviaCard';
+import { useToast } from '../components/ToastProvider';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -93,6 +94,8 @@ import CommunityMapCard from '../components/CommunityMapCard';
 import PreTripIntelligenceCard from '../components/basecamp/PreTripIntelligenceCard';
 import TripIntelligenceHeader from '../components/basecamp/TripIntelligenceHeader';
 import HitchThreadSuggestions from '../components/basecamp/HitchThreadSuggestions';
+import { useTripState } from '../hooks/useTripState';
+import LifestyleModeBasecamp from '../components/LifestyleModeBasecamp';
 
 // Upcoming Events sidebar card
 function UpcomingEventsCard() {
@@ -415,6 +418,7 @@ const STATUS_EMOJIS = [
 ];
 
 function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBarProps) {
+  const { addLocalToast } = useToast();
   const [statusText, setStatusText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(profile?.statusEmoji || '🏕️');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -613,7 +617,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       if (onPost) onPost();
     } catch (error) {
       console.error('Post error:', error);
-      alert('Failed to post update');
+      addLocalToast('Failed to post update', 'error');
     } finally {
       setPosting(false);
     }
@@ -1099,6 +1103,7 @@ function CampfirePhotoStrip({ eventId, eventTitle }: { eventId: string; eventTit
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function BasecampPage({ user }: BasecampProps) {
+  const { addLocalToast } = useToast();
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const [showTour, setShowTour] = useState(false);
@@ -1356,8 +1361,17 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   // Derived mode flags (computed after nextEvent is declared)
   const hasFutureTrip = !isCamping && !!nextEvent;
-
   const isDefaultMode = !isCamping && !nextEvent;
+
+  // Pulse state for trip-aware module visibility
+  const pulse = useTripState({
+    startDate: nextEvent?.startDate,
+    endDate: nextEvent?.endDate,
+    campgroundLat: nextEvent?.campground?.latitude,
+    campgroundLng: nextEvent?.campground?.longitude,
+    isCheckedIn: isCamping,
+  });
+  const pulseState = pulse.tripState;
 
   // New user detection
   const isNewUser = user && user.createdAt && (Date.now() - new Date(user.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000);
@@ -2297,7 +2311,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                         apiService.delete('/checkins/active').then(() => {
                           setActiveCheckIn(null);
                           window.location.reload();
-                        }).catch(() => alert('Failed to check out'));
+                        }).catch(() => addLocalToast('Failed to check out', 'error'));
                       });
                     }
                   }}
@@ -2436,8 +2450,47 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Inspirational Quote (Planning Mode, no upcoming trip) */}
-      {isPlanning && !nextEvent && (
+      {/* ═══ STATE C: LIFESTYLE MODE ═══ */}
+      {/* When user has no active check-in and no upcoming trip, render the full Lifestyle Mode feed */}
+      {isDefaultMode && (
+        <LifestyleModeBasecamp user={user} />
+      )}
+
+      {/* Legacy: New User Welcome Checklist — hidden when Lifestyle Mode is active */}
+      {!isDefaultMode && isPlanning && !nextEvent && plannedTrips.length === 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Welcome to RVUnicorn!</h3>
+            <p className="text-sm text-gray-500 mb-5">Here are 3 things to get you started:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link to="/campgrounds" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition group">
+                <span className="text-2xl">🏕️</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700">Find a Campground</p>
+                  <p className="text-xs text-gray-500">Browse 16,000+ campgrounds</p>
+                </div>
+              </Link>
+              <Link to="/events-v2/create" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition group">
+                <span className="text-2xl">🗺️</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-700">Plan Your First Trip</p>
+                  <p className="text-xs text-gray-500">Create a trip in minutes</p>
+                </div>
+              </Link>
+              <Link to="/community" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition group">
+                <span className="text-2xl">🔥</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-purple-700">Connect with RVers</p>
+                  <p className="text-xs text-gray-500">Join the community</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inspirational Quote — hidden when Lifestyle Mode is active */}
+      {!isDefaultMode && isPlanning && !nextEvent && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -2473,6 +2526,63 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
+      {/* ── STATE B: DEPARTURE COUNTDOWN BANNER ─────────────────── */}
+      {hasFutureTrip && nextEvent && pulse.daysUntilTrip <= 7 && pulse.daysUntilTrip >= 1 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="rounded-2xl p-5 mb-4" style={{ background: '#162236', border: '1px solid #243552' }}>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="text-center sm:text-left flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: '#8B9BB4' }}>Departure Countdown</p>
+                <p className="text-sm" style={{ color: '#F5F0E8' }}>
+                  Your trip to <span className="font-semibold">{nextEvent.campground?.name || nextEvent.title}</span> is in
+                </p>
+              </div>
+              <div className="text-center">
+                <span
+                  className="text-5xl font-bold"
+                  style={{ fontFamily: "'Playfair Display', serif", color: '#E8A838', animation: 'gold-pulse 2s ease-in-out infinite' }}
+                >
+                  {pulse.daysUntilTrip}
+                </span>
+                <p className="text-xs mt-1" style={{ color: '#8B9BB4' }}>day{pulse.daysUntilTrip !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Link to={`/trips/${nextEvent.id}#phase-plan`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:brightness-110" style={{ background: 'rgba(232,168,56,0.12)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.2)' }}>
+                View Itinerary
+              </Link>
+              <Link to={`/trips/${nextEvent.id}#phase-prepare`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:brightness-110" style={{ background: 'rgba(232,168,56,0.12)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.2)' }}>
+                Packing List
+              </Link>
+              <Link to="/hitch" className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:brightness-110" style={{ background: 'rgba(232,168,56,0.12)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.2)' }}>
+                Hitch Briefing
+              </Link>
+            </div>
+          </div>
+
+          {/* Pre-Trip Hitch Nudge — 3 days or less */}
+          {pulse.daysUntilTrip <= 3 && !localStorage.getItem(`rvu_pretripbriefing_${nextEvent.id}`) && (
+            <div className="rounded-2xl p-4 mb-4 flex items-center gap-3" style={{ background: '#1A2A45', border: '1px solid #243552', borderLeft: '3px solid #E8A838' }}>
+              <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm" style={{ color: '#F5F0E8' }}>
+                  Ready to talk through <span className="font-semibold">{nextEvent.campground?.name || 'your trip'}</span>? I've been watching the weather and I have a few things to flag before you leave.
+                </p>
+              </div>
+              <Link
+                to="/hitch"
+                onClick={() => localStorage.setItem(`rvu_pretripbriefing_${nextEvent.id}`, '1')}
+                className="flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+                style={{ background: '#E8A838', color: '#0F1C35' }}
+              >
+                Open Briefing
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+      <style>{`@keyframes gold-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }`}</style>
+
       {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
       {hasFutureTrip && nextEvent && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -2481,9 +2591,9 @@ export default function BasecampPage({ user }: BasecampProps) {
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🗺️</span>
+                <span className="text-2xl">{pulse.stateEmoji}</span>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">Planning Mode</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">{pulse.stateLabel}</p>
                   <Link to={`/trips/${nextEvent.id}`} className="font-bold text-gray-900 text-lg leading-tight hover:text-primary-700 transition">
                     {nextEvent.title || nextEvent.name}
                   </Link>
@@ -2520,8 +2630,8 @@ export default function BasecampPage({ user }: BasecampProps) {
               </Link>
             </div>
 
-            {/* Packing progress */}
-            {planningData && planningData.packingTotal > 0 && (
+            {/* Packing progress — show in load-out and later, not during blueprint */}
+            {pulseState !== 'blueprint' && planningData && planningData.packingTotal > 0 && (
               <div className="bg-white rounded-xl p-3 border border-primary-100 mb-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold text-gray-700">🎒 Packing Progress</span>
@@ -2620,8 +2730,8 @@ export default function BasecampPage({ user }: BasecampProps) {
               </div>
             )}
 
-            {/* Supply List compact */}
-            <SupplyListCompact eventId={nextEvent.id} />
+            {/* Supply List compact — show in load-out and later */}
+            {pulseState !== 'blueprint' && <SupplyListCompact eventId={nextEvent.id} />}
 
             {/* Quick action links */}
             <div className="flex flex-wrap gap-2">
@@ -2645,7 +2755,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
       
-      {isPlanning && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {isPlanning && !isDefaultMode && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User Status - Collapsed Composer */}
         {userProfile && (
           <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
@@ -2784,8 +2894,8 @@ export default function BasecampPage({ user }: BasecampProps) {
           </div>
         )}
 
-        {/* Smart Action Cards — prioritized, mutually exclusive */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {/* Smart Action Cards — hidden during load-out to keep focus on trip prep */}
+        {pulseState !== 'load-out' && <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 
           {/* Slot 1: Weather alert overrides everything → Trip → RV Health urgency → Ask Hitch */}
           {weatherAlert ? (
@@ -2883,11 +2993,37 @@ export default function BasecampPage({ user }: BasecampProps) {
             <p className="font-semibold text-gray-900 text-sm">Find campgrounds</p>
             <p className="text-xs text-green-500 mt-0.5 group-hover:underline">Browse 31,000+ →</p>
           </Link>
-        </div>
+        </div>}
+        {/* LoadOut prep focus — replaces action cards during trip prep */}
+        {pulseState === 'load-out' && nextEvent && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🎒</span>
+              <div>
+                <p className="text-sm font-bold text-gray-900">Trip prep time!</p>
+                <p className="text-xs text-gray-500">{nextEvent.title} starts in {pulse.daysUntilTrip} day{pulse.daysUntilTrip !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Link to={`/trips/${nextEvent.id}#phase-prepare`} className="flex flex-col items-center gap-1 p-3 bg-white rounded-xl border border-amber-100 hover:border-amber-300 transition text-center">
+                <span className="text-lg">🎒</span>
+                <span className="text-[11px] font-semibold text-gray-700">Packing</span>
+              </Link>
+              <Link to={`/trips/${nextEvent.id}#phase-prepare`} className="flex flex-col items-center gap-1 p-3 bg-white rounded-xl border border-amber-100 hover:border-amber-300 transition text-center">
+                <span className="text-lg">🍳</span>
+                <span className="text-[11px] font-semibold text-gray-700">Meals</span>
+              </Link>
+              <Link to={`/trips/${nextEvent.id}#phase-travel`} className="flex flex-col items-center gap-1 p-3 bg-white rounded-xl border border-amber-100 hover:border-amber-300 transition text-center">
+                <span className="text-lg">🚐</span>
+                <span className="text-[11px] font-semibold text-gray-700">Route</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
-        {/* Creator Mode Section */}
-        {/* ── Creator Milestone Nudge — contextual, not a marketing card ── */}
-        {!nudgeDismissed && (
+        {/* ── Suggestions Section (collapsed by default when trip is active) ── */}
+        {/* Creator Milestone Nudge — only in default mode or echo state */}
+        {(isDefaultMode || pulseState === 'echo') && !nudgeDismissed && (
           <div className="mb-6">
             {postTripNudge ? (
               // Post-trip nudge — highest conversion moment
@@ -2955,10 +3091,10 @@ export default function BasecampPage({ user }: BasecampProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left 2 Columns */}
           <div className="lg:col-span-2 space-y-6">
-            {/* What's New — Activity Feeds (moved above map) */}
-            <CreatorFeed limit={6} showHeader={true} />
-            {/* Hitch ambient nudge — iMessage-suggestion energy, no trip planned */}
-            {isDefaultMode && (
+            {/* What's New — Activity Feeds (hidden during load-out to reduce noise) */}
+            {pulseState !== 'load-out' && <CreatorFeed limit={6} showHeader={true} />}
+            {/* Hitch ambient nudge — only when no trip planned */}
+            {isDefaultMode && !hasFutureTrip && (
               <Link
                 to="/hitch"
                 className="group flex items-center gap-3 bg-white border border-gray-100 hover:border-indigo-200 rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
@@ -2972,8 +3108,8 @@ export default function BasecampPage({ user }: BasecampProps) {
               </Link>
             )}
 
-            {/* Rig Profile Setup Nudge — show when no RV type set */}
-            {!(user as any)?.rvType && !localStorage.getItem('rvu_rig_nudge_dismissed') && (
+            {/* Rig Profile Setup Nudge — only in default mode, not during active trip planning */}
+            {isDefaultMode && !(user as any)?.rvType && !localStorage.getItem('rvu_rig_nudge_dismissed') && (
               <div className="bg-white border-2 border-dashed border-orange-300 rounded-2xl p-5">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center flex-shrink-0 text-2xl">🚐</div>

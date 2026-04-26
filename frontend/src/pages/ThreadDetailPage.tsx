@@ -6,6 +6,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Star, Eye, EyeOff, Clock, Send, Heart, Reply, Trash2, Lock, Pin, Tent, Tag, MoreVertical, X , ChevronUp, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ToastProvider';
 
 interface ThreadPost {
   imageUrl?: string;
@@ -248,6 +249,7 @@ const RecursiveReply = ({
 };
 
 export default function ThreadDetailPage() {
+  const { addLocalToast } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -319,7 +321,7 @@ export default function ThreadDetailPage() {
         } catch {} finally { setHitchLoading(false); }
       }
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to post');
+      addLocalToast(error.response?.data?.error || 'Failed to post', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -338,7 +340,7 @@ export default function ThreadDetailPage() {
       setReplyingTo(null);
       loadThread();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to reply');
+      addLocalToast(error.response?.data?.error || 'Failed to reply', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -346,7 +348,7 @@ export default function ThreadDetailPage() {
 
   const handleLikePost = async (postId: string) => {
     if (!user) {
-      alert('Please log in to like posts');
+      addLocalToast('Please log in to like posts', 'warning');
       return;
     }
 
@@ -426,7 +428,7 @@ export default function ThreadDetailPage() {
       await api.delete(`/threads/posts/${postId}`);
       loadThread();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete');
+      addLocalToast(error.response?.data?.error || 'Failed to delete', 'error');
     }
   };
 
@@ -437,7 +439,7 @@ export default function ThreadDetailPage() {
       await api.delete(`/threads/${id}`);
       navigate('/feed');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete');
+      addLocalToast(error.response?.data?.error || 'Failed to delete', 'error');
     }
   };
 

@@ -1,38 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import api from '../services/api';
-
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
-
-const ONBOARDING_STATE_NAME_TO_CODE: Record<string, string> = {
-  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
-  'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
-  'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
-  'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
-  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
-  'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
-  'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
-  'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
-  'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
-  'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
-};
-
-const VISITED_STATES = ['OR', 'MT', 'WY', 'SD', 'WI', 'MI', 'NY', 'MA', 'PA', 'IN', 'KY', 'TX', 'NM', 'AZ', 'UT', 'GA', 'FL'];
-
-const CAMPING_FRIENDS = [
-  { name: 'Mike R.', initials: 'MR', spot: 'Zion NP, UT', color: '#E8622A', lng: -113.0, lat: 37.3 },
-  { name: 'Sarah J.', initials: 'SJ', spot: 'Glacier NP, MT', color: '#3B82F6', lng: -113.8, lat: 48.7 },
-  { name: 'The Robinsons', initials: 'TR', spot: 'Joshua Tree, CA', color: '#10B981', lng: -116.0, lat: 34.0 },
-  { name: 'Jenny L.', initials: 'JL', spot: 'Yellowstone, WY', color: '#8B5CF6', lng: -110.6, lat: 44.6 },
-  { name: 'Dave & Kim', initials: 'DK', spot: 'Acadia NP, ME', color: '#EC4899', lng: -68.3, lat: 44.3 },
-  { name: 'Carlos M.', initials: 'CM', spot: 'Big Bend, TX', color: '#F59E0B', lng: -103.3, lat: 29.3 },
-  { name: 'The Nguyens', initials: 'TN', spot: 'Smoky Mts, TN', color: '#06B6D4', lng: -83.5, lat: 35.6 },
-  { name: 'Pam W.', initials: 'PW', spot: 'Olympic NP, WA', color: '#EF4444', lng: -123.5, lat: 47.8 },
-];
-
-const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png';
 
 const CAMPER_TYPES = [
   { emoji: '\u{1F5D3}', label: 'Weekend Warrior', value: 'weekend_warrior' },
@@ -58,38 +26,17 @@ const RIG_TYPES = [
   { emoji: '\u{1F690}', label: 'Van / Other', value: 'VAN' },
 ];
 
-const HITCH_RESPONSES: Record<string, string> = {
-  west: "Chatfield State Park is 20 min south — full hookups, Rockies views, sites available tonight. Want me to add it to your trip? \u{1F3D4}",
-  mountain: "Chatfield State Park is 20 min south — full hookups, Rockies views, sites available tonight. Want me to add it to your trip? \u{1F3D4}",
-  midwest: "Starved Rock is calling — stunning canyon trails, full hookups, and one of Illinois' best kept secrets. Want me to map it out? \u{1F332}",
-  south: "Percy Priest Lake has sites open tonight — waterfront spots, easy Nashville access, perfect for a stopover. Add it? \u{1F30A}",
-  northeast: "Acadia's Blackwoods campground has a spot — coastal Maine, incredible stargazing, worth every mile. Want details? \u{1F31F}",
-};
-
-const LOCATION_REF: Record<string, string> = { west: 'near Denver', mountain: 'near Denver', midwest: 'near Chicago', south: 'near Nashville', northeast: 'near Boston' };
-
 interface Props { onComplete: () => void; displayName: string; }
 
-export default function OnboardingModalV2({ onComplete, displayName }: Props) {
+export default function OnboardingModalV2({ onComplete }: Props) {
   const [slide, setSlide] = useState(0);
   const [state, setState] = useState({ camperType: null as string | null, regions: [] as string[], rigType: null as string | null, startedAt: Date.now() });
   const [photos, setPhotos] = useState<Record<string, string[]>>({ all: [], west: [], south: [], midwest: [], northeast: [] });
-  const [hitchStep, setHitchStep] = useState(0);
   const [exiting, setExiting] = useState(false);
-  const navigate = useNavigate();
   const touchStart = useRef(0);
-  const totalSlides = 8;
+  const totalSlides = 4;
 
   useEffect(() => { api.get('/onboarding/photos').then(r => setPhotos(r.data)).catch(() => {}); }, []);
-
-  // Slide 6 Hitch animation
-  useEffect(() => {
-    if (slide !== 5) { setHitchStep(0); return; }
-    const t1 = setTimeout(() => setHitchStep(1), 500);
-    const t2 = setTimeout(() => setHitchStep(2), 1500);
-    const t3 = setTimeout(() => setHitchStep(3), 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [slide]);
 
   const saveProgress = useCallback(async (data: any) => {
     setState(s => ({ ...s, ...data }));
@@ -114,8 +61,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
 
   const canAdvance = () => {
     if (slide === 1) return !!state.camperType;
-    if (slide === 2) return state.regions.length > 0;
-    if (slide === 6) return !!state.rigType;
+    if (slide === 2) return !!state.rigType;
     return true;
   };
 
@@ -140,7 +86,6 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [slide, state]);
 
-  const heroImg = (idx: number) => photos.all[idx] || '';
   const regionImg = () => {
     const r = state.regions[0] || '';
     return photos[r === 'mountain' ? 'west' : r]?.[0] || photos.all[3] || '';
@@ -188,17 +133,9 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
     { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Welcome to RVUnicorn', body: 'The campfire community built for the road. Pull up a chair \u2014 you found your people.' },
     // 1: Camper Type
     { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #1a3a2a)', icon: '\u{1F3D5}', headline: 'What kind of camper are you?', body: 'We\'ll make RVUnicorn feel like it was built just for you.' },
-    // 2: Region
-    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #0a2a2a)', icon: '\u{1F4CD}', headline: 'Where do you love to roam?', body: 'We\'ll show you campgrounds and communities closest to your heart.' },
-    // 3: Basecamp (mock UI built inline)
-    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #1B2E50)', icon: '\u{1F3D5}', headline: 'Your Basecamp', body: 'Everything happens here \u2014 campfire chat, weather, recipes, and your crew.' },
-    // 4: Check In
-    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #0a1a2e)', icon: '\u{1F5FA}', headline: 'Check In. Light Up the Map.', body: 'Every check-in fills in your travel map. See where friends are camping right now.' },
-    // 5: Hitch AI
-    { img: '/images/family_campfire.png', icon: '\u{1F984}', headline: 'Meet Your RVUnicorn Family', body: 'These characters are here to help you on every trip.' },
-    // 6: Rig Type
-    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #2a2000)', icon: '\u{1F690}', headline: 'What\'s your rig?', body: 'Every adventure starts with your home on wheels. Tell us what you\'re rolling in.' },
-    // 7: Let's Go
+    // 2: Your Rig + Region (combined)
+    { img: '', gradient: 'linear-gradient(135deg, #0F1C35, #2a2000)', icon: '\u{1F690}', headline: 'Your rig & favorite regions', body: 'Tell us what you\'re rolling in and where you love to roam.' },
+    // 3: Let's Go
     { img: regionImg(), icon: '\u{1F305}', headline: headlines[state.camperType || ''] || 'The road is waiting.', body: rigBodies[state.rigType || ''] || 'Join thousands of RVers already exploring, connecting, and making memories.' },
   ];
 
@@ -239,197 +176,31 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
             </div>
           )}
 
-          {/* Slide 2: Region Pills */}
+          {/* Slide 2: Rig Type + Region (combined) */}
           {slide === 2 && (
-            <div>
-              <div className="flex flex-wrap gap-2">
-                {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.regions.includes(r.value)} onClick={() => {
-                  const newRegions = state.regions.includes(r.value) ? state.regions.filter(v => v !== r.value) : [...state.regions, r.value];
-                  setState(s => ({ ...s, regions: newRegions }));
-                  saveProgress({ region: newRegions.join(',') });
-                }} />)}
+            <div className="space-y-5">
+              <div>
+                <p className="text-[12px] font-bold mb-2" style={{ color: '#E8A838' }}>Your rig</p>
+                <div className="flex flex-wrap gap-2">
+                  {RIG_TYPES.map(r => <Pill key={r.value} {...r} selected={state.rigType === r.value} onClick={() => saveProgress({ rigType: r.value })} />)}
+                </div>
               </div>
-              <p className="text-[11px] text-center mt-2" style={{ color: 'rgba(245,240,232,0.3)' }}>Select as many as you like</p>
+              <div>
+                <p className="text-[12px] font-bold mb-2" style={{ color: '#E8A838' }}>Favorite regions</p>
+                <div className="flex flex-wrap gap-2">
+                  {REGIONS.map(r => <Pill key={r.value} {...r} selected={state.regions.includes(r.value)} onClick={() => {
+                    const newRegions = state.regions.includes(r.value) ? state.regions.filter(v => v !== r.value) : [...state.regions, r.value];
+                    setState(s => ({ ...s, regions: newRegions }));
+                    saveProgress({ region: newRegions.join(',') });
+                  }} />)}
+                </div>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(245,240,232,0.3)' }}>Select as many as you like</p>
+              </div>
             </div>
           )}
 
-          {/* Slide 4: Travel Map Mock */}
-          {slide === 4 && (
-            <div className="space-y-2">
-              {/* Real US Map with highlighted states + friend avatars */}
-              <div className="rounded-xl p-3 relative" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <p className="text-[12px] font-bold" style={{ color: '#F5F0E8' }}>Deanna's Travel Map</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>17 states visited</p>
-                  </div>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>Live</span>
-                </div>
-                <div style={{ margin: '0 -8px' }}>
-                  <ComposableMap
-                    projection="geoAlbersUsa"
-                    projectionConfig={{ scale: 700 }}
-                    width={600}
-                    height={360}
-                    style={{ width: '100%', height: 'auto' }}
-                  >
-                    <Geographies geography={GEO_URL}>
-                      {({ geographies }) =>
-                        geographies.map((geo) => {
-                          const code = ONBOARDING_STATE_NAME_TO_CODE[geo.properties.name];
-                          const isVisited = code && VISITED_STATES.includes(code);
-                          return (
-                            <Geography
-                              key={geo.rsmKey}
-                              geography={geo}
-                              style={{
-                                default: {
-                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
-                                  stroke: 'rgba(245,240,232,0.15)',
-                                  strokeWidth: 0.5,
-                                  outline: 'none',
-                                },
-                                hover: {
-                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
-                                  stroke: 'rgba(245,240,232,0.15)',
-                                  strokeWidth: 0.5,
-                                  outline: 'none',
-                                },
-                                pressed: {
-                                  fill: isVisited ? '#E8A838' : 'rgba(245,240,232,0.08)',
-                                  stroke: 'rgba(245,240,232,0.15)',
-                                  strokeWidth: 0.5,
-                                  outline: 'none',
-                                },
-                              }}
-                            />
-                          );
-                        })
-                      }
-                    </Geographies>
-                    {/* Friend avatar markers */}
-                    {CAMPING_FRIENDS.map((f) => (
-                      <Marker key={f.name} coordinates={[f.lng, f.lat]}>
-                        <circle cx={0} cy={0} r={11} fill={f.color} stroke="#fff" strokeWidth={2} />
-                        <text
-                          x={0}
-                          y={1}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fontSize={7}
-                          fontWeight="bold"
-                          fill="#fff"
-                          style={{ pointerEvents: 'none' }}
-                        >
-                          {f.initials}
-                        </text>
-                        {/* Live pulse ring */}
-                        <circle cx={0} cy={0} r={11} fill="none" stroke={f.color} strokeWidth={2} opacity={0.5}>
-                          <animate attributeName="r" from="11" to="18" dur="2s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
-                        </circle>
-                      </Marker>
-                    ))}
-                  </ComposableMap>
-                </div>
-              </div>
-
-              {/* Friends legend - compact 2-column grid */}
-              <div className="rounded-xl p-3" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.12)' }}>
-                <p className="text-[11px] font-bold mb-2" style={{ color: '#E8A838' }}>{'\u{1F4CD}'} 8 Friends Camping Now</p>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                  {CAMPING_FRIENDS.map(f => (
-                    <div key={f.name} className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold flex-shrink-0" style={{ background: f.color, color: 'white' }}>{f.initials}</div>
-                      <div className="flex-1 min-w-0 truncate">
-                        <span className="text-[10px] font-medium" style={{ color: '#F5F0E8' }}>{f.name}</span>
-                        <span className="text-[9px] ml-1" style={{ color: 'rgba(245,240,232,0.35)' }}>{f.spot}</span>
-                      </div>
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <p className="text-[12px] text-center" style={{ color: 'rgba(232,168,56,0.4)' }}>16,000+ campgrounds across North America</p>
-            </div>
-          )}
-
-          {/* Slide 3: Basecamp Mock UI */}
+          {/* Slide 3: Let's Go */}
           {slide === 3 && (
-            <div className="rounded-xl overflow-hidden" style={{ background: '#1B2E50', border: '1px solid rgba(232,168,56,0.15)' }}>
-              {/* Campfire header */}
-              <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(232,98,42,0.1)', borderBottom: '1px solid rgba(232,98,42,0.15)' }}>
-                <span className="text-sm">{'\u{1F525}'}</span>
-                <span className="text-[11px] font-semibold" style={{ color: '#F5F0E8' }}>Campfire · Zion NP</span>
-                <span className="w-1.5 h-1.5 rounded-full ml-auto animate-pulse" style={{ background: '#10B981' }} />
-                <span className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>8 here</span>
-              </div>
-              {/* Mock messages */}
-              <div className="p-3 space-y-2">
-                <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: '#3B82F6' }} />
-                  <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F0E8' }}>Anyone know if Loop B has shade? It's brutal today {'\u{1F525}'}</div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <img src="/images/char_hitch_walter.png" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-                  <div>
-                    <span className="text-[9px] font-bold block" style={{ color: '#E8A838' }}>Hitch</span>
-                    <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(232,168,56,0.08)', color: '#F5F0E8', borderLeft: '2px solid #E8A838' }}>Sites 34-41 have the best tree cover! Bring your awning too {'\u{2600}'}</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: '#10B981' }} />
-                  <div className="rounded-lg px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F0E8' }}>We're on site 37 — come say hi! Making tacos tonight {'\u{1F32E}'}</div>
-                </div>
-              </div>
-              {/* Stats strip */}
-              <div className="flex items-center justify-around px-3 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#E8A838' }}>72°</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Tonight</span></div>
-                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#F5F0E8' }}>12</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>States</span></div>
-                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#10B981' }}>✓</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Checked In</span></div>
-                <div className="text-center"><span className="text-[13px] font-bold block" style={{ color: '#D4621A' }}>{'\u{1F3AF}'}</span><span className="text-[8px]" style={{ color: 'rgba(245,240,232,0.3)' }}>Trivia 8pm</span></div>
-              </div>
-            </div>
-          )}
-
-          {/* Slide 5: Meet Your RVUnicorn Family */}
-          {slide === 5 && (
-            <div className="space-y-2 mt-1">
-              {[
-                { img: '/images/char_hitch_walter.png', name: 'Hitch', role: 'Your Trail Guide', desc: 'AI camp host who knows every road', color: '#E8A838' },
-                { img: '/images/char_diesel.png', name: 'Diesel Dave', role: 'Big Rig Expert', desc: 'Makes sure your rig fits everywhere', color: '#8BC34A' },
-                { img: '/images/char_luna.png', name: 'Luna', role: 'Family & Pets', desc: 'Kid-friendly spots and pet policies', color: '#F48FB1' },
-                { img: '/images/char_scout.png', name: 'Scout', role: 'Adventure Guide', desc: 'Trails, hidden gems, and boondocking', color: '#FF7043' },
-                { img: '/images/char_rose.png', name: 'Rosé', role: 'Glamping Guru', desc: 'Wineries, scenic views, the finer side', color: '#9C27B0' },
-                { img: '/images/char_walter.png', name: 'Walter', role: 'Nature & Stars', desc: 'Stargazing and honest campground takes', color: '#5C6BC0' },
-              ].map((char, i) => (
-                <div key={char.name} className="flex items-center gap-3 p-2.5 rounded-xl" style={{ background: '#1B2E50', animation: `fadeIn 300ms ease ${i * 100}ms both` }}>
-                  <img src={char.img} alt={char.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0 border" style={{ borderColor: char.color }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-bold" style={{ color: char.color }}>{char.name}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,232,0.5)' }}>{char.role}</span>
-                    </div>
-                    <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.45)' }}>{char.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Slide 6: Rig Type Pills */}
-          {slide === 6 && (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {RIG_TYPES.map(r => <Pill key={r.value} {...r} selected={state.rigType === r.value} onClick={() => saveProgress({ rigType: r.value })} />)}
-              </div>
-              <p className="text-[12px] text-center mt-3" style={{ color: 'rgba(245,240,232,0.3)' }}>You can add full rig details once you're in.</p>
-            </>
-          )}
-
-          {/* Slide 7: Memory hook */}
-          {slide === 7 && (
             <>
               <p className="text-[13px] italic text-center mt-2" style={{ color: 'rgba(232,168,56,0.5)' }}>This could be your next stop.</p>
               <button onClick={handleComplete} className="w-full mt-5 py-4 rounded-xl text-[16px] font-bold transition hover:brightness-110" style={{ background: '#D4621A', color: '#F5F0E8' }}>
@@ -439,13 +210,13 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
           )}
 
           {/* Skip link for interactive slides */}
-          {[1, 2, 6].includes(slide) && !canAdvance() && (
+          {[1, 2].includes(slide) && !canAdvance() && (
             <button onClick={next} className="text-[12px] mt-3 block mx-auto" style={{ color: 'rgba(245,240,232,0.3)' }}>Skip this →</button>
           )}
         </div>
 
         {/* Navigation */}
-        {slide < 7 && (
+        {slide < 3 && (
           <div className="px-6 pb-5 flex items-center justify-between">
             {slide > 0 ? (
               <button onClick={back} className="px-5 py-2.5 rounded-xl text-[14px] font-medium" style={{ border: '1px solid #E8A838', color: '#E8A838', minHeight: '44px' }}>
@@ -467,7 +238,7 @@ export default function OnboardingModalV2({ onComplete, displayName }: Props) {
         )}
 
         {/* Dots only on last slide */}
-        {slide === 7 && (
+        {slide === 3 && (
           <div className="flex justify-center gap-1.5 pb-4">
             {Array.from({ length: totalSlides }, (_, i) => (
               <div key={i} className="rounded-full" style={{ width: i === slide ? 10 : 8, height: i === slide ? 10 : 8, background: i === slide ? '#E8A838' : '#1B2E50' }} />

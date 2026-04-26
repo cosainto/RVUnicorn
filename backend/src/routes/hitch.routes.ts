@@ -340,4 +340,87 @@ router.post('/drive-debrief', authenticateToken, async (req: Request, res: Respo
 });
 
 
+// GET /api/hitch/daily-drop — Lifestyle Mode daily greeting from Hitch
+router.get('/daily-drop', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        firstName: true, homeCity: true, homeState: true,
+        rvYear: true, rvMake: true, rvModel: true,
+        dailyDropMessage: true, dailyDropDate: true,
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Return cached if already generated today
+    if (user.dailyDropMessage && user.dailyDropDate) {
+      const cachedDate = new Date(user.dailyDropDate);
+      cachedDate.setHours(0, 0, 0, 0);
+      if (cachedDate.getTime() === today.getTime()) {
+        return res.json({ message: user.dailyDropMessage, generatedAt: user.dailyDropDate });
+      }
+    }
+
+    // Gather last trip info
+    const lastTrip = await prisma.trip.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { name: true, destination: true, createdAt: true },
+    }).catch(() => null);
+
+    const daysSinceLastTrip = lastTrip
+      ? Math.floor((Date.now() - new Date(lastTrip.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    const month = new Date().getMonth();
+    const season = month <= 1 || month === 11 ? 'winter' : month <= 4 ? 'spring' : month <= 7 ? 'summer' : 'fall';
+
+    const rvInfo = [user.rvYear, user.rvMake, user.rvModel].filter(Boolean).join(' ');
+    const locationInfo = [user.homeCity, user.homeState].filter(Boolean).join(', ');
+
+    const userPrompt = [
+      `First name: ${user.firstName || 'Camper'}.`,
+      locationInfo ? `Home: ${locationInfo}.` : '',
+      rvInfo ? `RV: ${rvInfo}.` : '',
+      lastTrip ? `Last trip: "${lastTrip.name || lastTrip.destination || 'a trip'}" — ${daysSinceLastTrip} days ago.` : 'No trips yet.',
+      `Current season: ${season}.`,
+    ].filter(Boolean).join(' ');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        system: 'You are Hitch, the friendly AI co-pilot for RVUnicorn. Write 1-2 sentences. Reference their RV or location when possible. Be friendly, witty, and warm. Never sound corporate.',
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+
+    const data: any = await response.json() as any;
+    const message = data?.content?.[0]?.text || `Hey ${user.firstName || 'there'}! Hope the road is calling you today.`;
+
+    const now = new Date();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { dailyDropMessage: message, dailyDropDate: now },
+    });
+
+    res.json({ message, generatedAt: now });
+  } catch (error: any) {
+    console.error('Daily drop error:', error);
+    res.status(500).json({ error: 'Failed to generate daily drop' });
+  }
+});
+
 export default router;

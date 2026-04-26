@@ -30,6 +30,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import RecipeTakeoverBanner from '../components/RecipeTakeoverBanner';
 import AddRecipeToEventModal from '../components/AddRecipeToEventModal';
+import { useToast } from '../components/ToastProvider';
 
 interface Recipe {
   id: string;
@@ -160,6 +161,7 @@ function LinkedVideoCard({ recipeId }: { recipeId: string }) {
 export default function RecipeDetailPage() {
   const { recipeId } = useParams<{ recipeId: string }>();
   const { user } = useAuth();
+  const { addLocalToast } = useToast();
   const navigate = useNavigate();
   
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -195,10 +197,10 @@ export default function RecipeDetailPage() {
       setShowShareModal(false);
       setShareMessage('');
       setShareMentions([]);
-      alert('Recipe shared to your feed!');
+      addLocalToast('Recipe shared to your feed!', 'success');
     } catch (error) {
       console.error('Share error:', error);
-      alert('Failed to share recipe');
+      addLocalToast('Failed to share recipe', 'error');
     }
   };
 
@@ -309,7 +311,7 @@ export default function RecipeDetailPage() {
       });
     } catch (error) {
       console.error('Load recipe error:', error);
-      alert('Failed to load recipe');
+      addLocalToast('Failed to load recipe', 'error');
       navigate('/recipes');
     } finally {
       setLoading(false);
@@ -537,7 +539,7 @@ export default function RecipeDetailPage() {
       setRecipe({ ...recipe, imageUrl: uploadData.url });
     } catch (error) {
       console.error('Quick image upload error:', error);
-      alert('Failed to upload image');
+      addLocalToast('Failed to upload image', 'error');
     } finally {
       setUploadingQuickImage(false);
       if (quickImageInputRef.current) {
@@ -590,7 +592,7 @@ export default function RecipeDetailPage() {
   // Save recipe edits
   const handleSaveEdits = async () => {
     if (!editFormData.title.trim()) {
-      alert('Please enter a recipe title');
+      addLocalToast('Please enter a recipe title', 'warning');
       return;
     }
 
@@ -626,10 +628,10 @@ export default function RecipeDetailPage() {
       setIsEditing(false);
       removeImage();
       await loadRecipe();
-      alert('Recipe updated successfully!');
+      addLocalToast('Recipe updated successfully!', 'success');
     } catch (error) {
       console.error('Save recipe error:', error);
-      alert('Failed to save recipe');
+      addLocalToast('Failed to save recipe', 'error');
     } finally {
       setSaving(false);
     }
@@ -637,7 +639,7 @@ export default function RecipeDetailPage() {
 
   const handleSaveToggle = async () => {
     if (!user) {
-      alert('Please login to save recipes');
+      addLocalToast('Please login to save recipes', 'warning');
       return;
     }
 
@@ -650,13 +652,13 @@ export default function RecipeDetailPage() {
       await loadRecipe();
     } catch (error) {
       console.error('Save toggle error:', error);
-      alert('Failed to save recipe');
+      addLocalToast('Failed to save recipe', 'error');
     }
   };
 
   const handleFavoriteToggle = async () => {
     if (!user) {
-      alert('Please login to favorite recipes');
+      addLocalToast('Please login to favorite recipes', 'warning');
       return;
     }
 
@@ -666,13 +668,13 @@ export default function RecipeDetailPage() {
       await loadRecipe();
     } catch (error) {
       console.error('Favorite toggle error:', error);
-      alert('Failed to toggle favorite');
+      addLocalToast('Failed to toggle favorite', 'error');
     }
   };
 
   const handleRate = async (newRating: number) => {
     if (!user) {
-      alert('Please login to rate recipes');
+      addLocalToast('Please login to rate recipes', 'warning');
       return;
     }
 
@@ -682,7 +684,7 @@ export default function RecipeDetailPage() {
       await loadRecipe();
     } catch (error) {
       console.error('Rate recipe error:', error);
-      alert('Failed to rate recipe');
+      addLocalToast('Failed to rate recipe', 'error');
     }
   };
 
@@ -706,12 +708,12 @@ export default function RecipeDetailPage() {
 
   const handleAddComment = async () => {
     if (!user) {
-      alert('Please login to comment');
+      addLocalToast('Please login to comment', 'warning');
       return;
     }
 
     if (!newComment.trim()) {
-      alert('Please enter a comment');
+      addLocalToast('Please enter a comment', 'warning');
       return;
     }
 
@@ -752,7 +754,7 @@ export default function RecipeDetailPage() {
       await loadRecipe();
     } catch (error) {
       console.error('Add comment error:', error);
-      alert('Failed to add comment. Please try again.');
+      addLocalToast('Failed to add comment. Please try again.', 'error');
     } finally {
       setSubmittingComment(false);
     }
@@ -760,7 +762,7 @@ export default function RecipeDetailPage() {
 
   const handleCopyRecipe = async () => {
     if (!user) {
-      alert('Please login to copy recipes');
+      addLocalToast('Please login to copy recipes', 'warning');
       return;
     }
 
@@ -775,7 +777,7 @@ export default function RecipeDetailPage() {
       );
 
       if (duplicateTitle) {
-        alert(`You already have a recipe called "${duplicateTitle.title}" in your Recipe Box. Please choose a different name.`);
+        addLocalToast(`You already have a recipe called "${duplicateTitle.title}". Please choose a different name.`, 'warning');
         return;
       }
 
@@ -802,11 +804,11 @@ export default function RecipeDetailPage() {
         await api.put(`/recipes/${newRecipeId}/favorite`);
       }
 
-      alert('Recipe copied to your Recipe Box! Redirecting...');
+      addLocalToast('Recipe copied to your Recipe Box! Redirecting...', 'success');
       navigate(`/recipes/${newRecipeId}`);
     } catch (error) {
       console.error('Copy recipe error:', error);
-      alert('Failed to copy recipe');
+      addLocalToast('Failed to copy recipe', 'error');
     }
   };
 
@@ -815,11 +817,11 @@ export default function RecipeDetailPage() {
 
     try {
       await api.delete(`/recipes/${recipeId}`);
-      alert('Recipe deleted!');
+      addLocalToast('Recipe deleted!', 'success');
       navigate('/recipes');
     } catch (error) {
       console.error('Delete recipe error:', error);
-      alert('Failed to delete recipe');
+      addLocalToast('Failed to delete recipe', 'error');
     }
   };
 

@@ -1,3 +1,4 @@
+import { useToast } from '../components/ToastProvider';
 import ShareButton from '../components/ShareButton';
 import NavigationButtons from '../components/NavigationButtons';
 import OdometerProjection from '../components/OdometerProjection';
@@ -97,6 +98,7 @@ const STOP_TYPES = [
 ];
 
 export default function EventDetailPage() {
+  const { addLocalToast } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -115,7 +117,7 @@ export default function EventDetailPage() {
         setIsCheckedIn(true);
       }
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed');
+      addLocalToast(e?.response?.data?.error || 'Failed', 'error');
     } finally {
       setCheckInLoading(false);
     }
@@ -306,9 +308,9 @@ export default function EventDetailPage() {
       const { data } = await api.post(`/trip-planner/event/${id}/plan`, payload);
       setTripPlan(data);
       setShowTripModal(false);
-      alert('✅ Trip plan saved!');
+      addLocalToast('✅ Trip plan saved!', 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create trip plan');
+      addLocalToast(error.response?.data?.error || 'Failed to create trip plan', 'error');
     } finally {
       setTripLoading(false);
     }
@@ -368,7 +370,7 @@ export default function EventDetailPage() {
       setTripPlan(data);
       setEditingFrom(false);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to update start location');
+      addLocalToast(error.response?.data?.error || 'Failed to update start location', 'error');
     } finally {
       setTripLoading(false);
     }
@@ -376,7 +378,7 @@ export default function EventDetailPage() {
 
   const handleDiscoverStops = async () => {
     if (!tripPlan?.startLatitude || !tripPlan?.endLatitude) {
-      alert('Trip must have start and end locations with coordinates');
+      addLocalToast('Trip must have start and end locations with coordinates', 'warning');
       return;
     }
     setDiscoverLoading(true);
@@ -421,9 +423,9 @@ export default function EventDetailPage() {
       setShowPitStopModal(false);
       setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
       loadTripPlan();
-      alert('✅ Pit stop added!');
+      addLocalToast('✅ Pit stop added!', 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to add pit stop');
+      addLocalToast(error.response?.data?.error || 'Failed to add pit stop', 'error');
     }
   };
 
@@ -433,7 +435,7 @@ export default function EventDetailPage() {
       await api.delete(`/trip-planner/pit-stop/${pitStopId}`);
       loadTripPlan();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete pit stop');
+      addLocalToast(error.response?.data?.error || 'Failed to delete pit stop', 'error');
     }
   };
 
@@ -461,12 +463,12 @@ export default function EventDetailPage() {
     setTransferring(true);
     try {
       await api.put(`/events/${id}/transfer-organizer`, { newOrganizerId: transferToUser.id });
-      alert(`Ownership transferred to ${transferToUser.firstName}!`);
+      addLocalToast(`Ownership transferred to ${transferToUser.firstName}!`, 'success');
       setShowTransferModal(false);
       setTransferToUser(null);
       window.location.reload();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to transfer ownership');
+      addLocalToast(err.response?.data?.error || 'Failed to transfer ownership', 'error');
     } finally {
       setTransferring(false);
     }
@@ -476,10 +478,10 @@ export default function EventDetailPage() {
     if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
     try {
       await api.delete(`/events/${id}`);
-      alert('Event deleted successfully');
+      addLocalToast('Event deleted successfully', 'success');
       navigate('/trips');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to delete event');
+      addLocalToast(error.response?.data?.error || 'Failed to delete event', 'error');
     }
   };
 
@@ -493,9 +495,9 @@ export default function EventDetailPage() {
         actualMiles: actualMiles ? parseFloat(actualMiles) : null
       });
       loadTripPlan();
-      alert('✅ Trip completed! Miles have been logged.');
+      addLocalToast('✅ Trip completed! Miles have been logged.', 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to complete trip');
+      addLocalToast(error.response?.data?.error || 'Failed to complete trip', 'error');
     }
   };
 
@@ -576,7 +578,7 @@ export default function EventDetailPage() {
       setShowAlbumModal(false);
       setNewAlbumTitle('');
       setNewAlbumDesc('');
-    } catch { alert('Failed to create album'); }
+    } catch { addLocalToast('Failed to create album', 'error'); }
   };
 
   const handleLinkAlbum = async () => {
@@ -586,7 +588,7 @@ export default function EventDetailPage() {
       setTripAlbums(prev => [data, ...prev]);
       setShowAlbumModal(false);
       setSelectedAlbumId('');
-    } catch { alert('Failed to link album'); }
+    } catch { addLocalToast('Failed to link album', 'error'); }
   };
 
   const handleUnlinkAlbum = async (albumId: string) => {
@@ -594,7 +596,7 @@ export default function EventDetailPage() {
     try {
       await api.delete(`/events/${event.id}/albums/${albumId}/unlink`);
       setTripAlbums(prev => prev.filter(a => a.id !== albumId));
-    } catch { alert('Failed to unlink album'); }
+    } catch { addLocalToast('Failed to unlink album', 'error'); }
   };
 
   const handleInvite = async () => {
@@ -603,10 +605,10 @@ export default function EventDetailPage() {
       setShowInviteModal(false);
       setSelectedFriends([]);
       await loadEvent();
-      alert('Invitations sent! 🎉');
+      addLocalToast('Invitations sent! 🎉', 'success');
     } catch (error) {
       console.error('Invite error:', error);
-      alert('Failed to send invitations');
+      addLocalToast('Failed to send invitations', 'error');
     }
   };
 
@@ -632,19 +634,19 @@ export default function EventDetailPage() {
         campsiteId: event.campground.id,
         notes: `${event.title} at ${event.campground.name}`,
       });
-      alert('✅ Added to your Travel Map!');
+      addLocalToast('✅ Added to your Travel Map!', 'success');
     } catch (error: any) {
       if (error.response?.status === 400) {
-        alert('This trip is already on your Travel Map!');
+        addLocalToast('This trip is already on your Travel Map!', 'warning');
       } else {
-        alert('Failed to add to travel map');
+        addLocalToast('Failed to add to travel map', 'error');
       }
     }
   };
 
   const handleCopyEvent = async () => {
     if (!copyForm.isWishlist && !copyForm.startDate) {
-      alert('Please set a start date or mark as wishlist');
+      addLocalToast('Please set a start date or mark as wishlist', 'warning');
       return;
     }
     setCopying(true);
@@ -656,10 +658,10 @@ export default function EventDetailPage() {
         copyMealPlan: copyForm.copyMealPlan,
       });
       setShowCopyModal(false);
-      alert('🎉 Event copied to your events!');
+      addLocalToast('🎉 Event copied to your events!', 'success');
       navigate(`/events/${data.id}`);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to copy event');
+      addLocalToast(error.response?.data?.error || 'Failed to copy event', 'error');
     } finally {
       setCopying(false);
     }
@@ -720,6 +722,14 @@ export default function EventDetailPage() {
   const statePhaseMap: Record<string, string> = {
     'blueprint': 'plan', 'load-out': 'prepare', 'in-motion': 'travel', 'on-site': 'camp', 'echo': 'remember',
   };
+  const VISIBLE_PHASES: Record<string, string[]> = {
+    'blueprint': ['plan'],
+    'load-out': ['plan', 'prepare'],
+    'in-motion': ['plan', 'prepare', 'travel'],
+    'on-site': ['plan', 'prepare', 'travel', 'camp'],
+    'echo': ['plan', 'prepare', 'travel', 'camp', 'remember'],
+  };
+  const [showAllPhases, setShowAllPhases] = useState(false);
   const userToggledPhases = useRef(false);
 
   useEffect(() => {
@@ -767,7 +777,7 @@ export default function EventDetailPage() {
       setShowDuplicateModal(false);
       navigate(`/trips/${data.event.id}`);
     } catch (e: any) {
-      alert(e.response?.data?.error || 'Failed to duplicate trip');
+      addLocalToast(e.response?.data?.error || 'Failed to duplicate trip', 'error');
     } finally {
       setDuplicating(false);
     }
@@ -801,7 +811,7 @@ export default function EventDetailPage() {
       setEvent({ ...event, bannerImage });
     } catch (error) {
       console.error('Failed to upload banner:', error);
-      alert('Failed to upload banner image');
+      addLocalToast('Failed to upload banner image', 'error');
     } finally {
       setUploadingBanner(false);
     }
@@ -1192,7 +1202,7 @@ export default function EventDetailPage() {
           { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: '#E6F1FB', color: '#185FA5' },
           { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
           { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
-        ].map(phase => (
+        ].filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id)).map(phase => (
           <div key={phase.id} id={`phase-${phase.id}`} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition scroll-mt-32 ${
             statePhaseMap[pulse.tripState] === phase.id ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-gray-200'
           }`}>
@@ -1244,7 +1254,7 @@ export default function EventDetailPage() {
                           });
                           await api.post('/road-trips/' + rt.id + '/stops', { eventId: event.id });
                           window.location.href = '/road-trips/' + rt.id;
-                        } catch (e) { alert('Failed to create road trip'); }
+                        } catch (e) { addLocalToast('Failed to create road trip', 'error'); }
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-bold rounded-xl hover:opacity-90 transition shadow-lg whitespace-nowrap"
                     >
@@ -1801,6 +1811,24 @@ export default function EventDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* Show all phases toggle */}
+      {!showAllPhases && pulse.tripState !== 'echo' && (
+        <button
+          onClick={() => setShowAllPhases(true)}
+          className="w-full text-center py-3 text-sm text-gray-400 hover:text-gray-600 transition mb-4"
+        >
+          Show all trip phases ({5 - (VISIBLE_PHASES[pulse.tripState] || []).length} more)
+        </button>
+      )}
+      {showAllPhases && pulse.tripState !== 'echo' && (
+        <button
+          onClick={() => setShowAllPhases(false)}
+          className="w-full text-center py-3 text-sm text-gray-400 hover:text-gray-600 transition mb-4"
+        >
+          Show only current phases
+        </button>
+      )}
 
       {/* Things to Do Nearby — sits below the phase list so Travel,
           Prepare, Camp, and Remember all appear above it */}
