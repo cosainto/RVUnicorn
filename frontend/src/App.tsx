@@ -58,6 +58,10 @@ const TripStoryPage = lazy(() => import('./pages/TripStoryPage'));
 const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage'));
 const HitchOnboarding = lazy(() => import('./components/HitchOnboarding'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const PublicTripPage = lazy(() => import('./pages/public/PublicTripPage'));
+const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage'));
+const PublicPostPage = lazy(() => import('./pages/public/PublicPostPage'));
+const PublicBoardThread = lazy(() => import('./pages/public/PublicBoardThread'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -225,6 +229,10 @@ function AppContent() {
           <Route path="/scrapbooks" element={<ScrapbookDiscoverPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/trips/:slug/view" element={<PublicTripViewPage />} />
+          <Route path="/t/:tripId" element={<PublicTripPage />} />
+          <Route path="/u/:username" element={<PublicProfilePage />} />
+          <Route path="/posts/public/:postId" element={<PublicPostPage />} />
+          <Route path="/boards/public/:threadId" element={<PublicBoardThread />} />
           <Route path="/join" element={<JoinCrewPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

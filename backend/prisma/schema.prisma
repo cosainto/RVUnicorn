@@ -4460,6 +4460,7 @@ model BoardPost {
   bestAnswerId    String?
   characterAuthor String?        // HITCH | WALLET | WALTER | SCOUT — set for AI character posts
   isCharacterPost Boolean        @default(false)
+  isPublic        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)

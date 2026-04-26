@@ -270,6 +270,85 @@ ${trip.description ? `<p>${trip.description}</p>` : ''}
   } catch { next(); }
 });
 
+// SSR for /t/:tripId (new public trip route)
+router.get('/t/:tripId', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) return next();
+  try {
+    const { tripId } = req.params;
+    const trip = await db.event.findFirst({
+      where: { OR: [{ id: tripId }, { tripSlug: tripId }], isPublic: true },
+      include: { organizer: { select: { firstName: true, lastName: true, rvMake: true, rvModel: true, rvYear: true } }, campground: { select: { name: true, state: true, imageUrl: true } } },
+    });
+    if (!trip) return next();
+
+    const ownerName = `${trip.organizer.firstName} ${trip.organizer.lastName}`;
+    const photo = trip.coverImage || trip.campground?.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const days = trip.endDate ? Math.ceil((trip.endDate.getTime() - trip.startDate.getTime()) / 86400000) : null;
+    const rig = [trip.organizer.rvYear, trip.organizer.rvMake, trip.organizer.rvModel].filter(Boolean).join(' ');
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${ownerName}'s Trip to ${trip.campground?.name || trip.title} · RVUnicorn</title>
+<meta name="description" content="${ownerName} took their ${rig || 'RV'} to ${trip.campground?.name || trip.title}${days ? ` for ${days} days` : ''}. See the campgrounds, route, and photos on RVUnicorn.">
+<meta property="og:title" content="${ownerName}'s RV Trip to ${trip.campground?.name || trip.title}">
+<meta property="og:description" content="${days ? `${days}-day trip` : 'RV trip'}${trip.campground ? ` · ${trip.campground.name}` : ''}${rig ? ` · ${rig}` : ''}">
+<meta property="og:image" content="${photo}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://www.rvunicorn.com/t/${tripId}">
+<meta property="og:type" content="article"><meta property="og:site_name" content="RVUnicorn">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${ownerName}'s RV Trip">
+<meta name="twitter:image" content="${photo}">
+<link rel="canonical" href="https://www.rvunicorn.com/t/${tripId}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px">
+<h1>${trip.title}</h1><p>A trip by ${ownerName}</p>
+${trip.campground ? `<p>📍 ${trip.campground.name}${trip.campground.state ? `, ${trip.campground.state}` : ''}</p>` : ''}
+${days ? `<p>${trip.startDate.toLocaleDateString()} — ${trip.endDate!.toLocaleDateString()} · ${days} days</p>` : ''}
+<p><a href="https://www.rvunicorn.com/register" style="color:#E8A838">Join RVUnicorn free →</a></p>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
+// SSR for /u/:username (public profile)
+router.get('/u/:username', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) return next();
+  try {
+    const { username } = req.params;
+    const user = await db.user.findUnique({
+      where: { username },
+      select: { firstName: true, lastName: true, profilePicture: true, rvMake: true, rvModel: true, rvYear: true, createdAt: true },
+    });
+    if (!user) return next();
+
+    const name = `${user.firstName} ${user.lastName}`;
+    const rig = [user.rvYear, user.rvMake, user.rvModel].filter(Boolean).join(' ');
+    const photo = user.profilePicture || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${name} · RVUnicorn Member</title>
+<meta name="description" content="${name} is an RV traveler on RVUnicorn${rig ? `, traveling in a ${rig}` : ''}. See their adventures.">
+<meta property="og:title" content="${name} · RVUnicorn"><meta property="og:image" content="${photo}">
+<meta property="og:url" content="https://www.rvunicorn.com/u/${username}">
+<link rel="canonical" href="https://www.rvunicorn.com/u/${username}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px;text-align:center">
+<h1>${name}</h1>${rig ? `<p>🚐 ${rig}</p>` : ''}
+<p><a href="https://www.rvunicorn.com/register" style="color:#E8A838">Join RVUnicorn free →</a></p>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
 // SSR for public event pages
 router.get('/events/:id', async (req: Request, res: Response, next: NextFunction) => {
   if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) return next();
@@ -426,7 +505,7 @@ const COMMUNITY_BOARDS = [
 
 router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try {
-    const [campgrounds, users] = await Promise.all([
+    const [campgrounds, users, publicTrips] = await Promise.all([
       db.campground.findMany({
         select: { id: true, customSlug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
@@ -436,6 +515,12 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
         select: { username: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 50000,
+      }),
+      db.event.findMany({
+        where: { isPublic: true },
+        select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 10000,
       }),
     ]);
 
@@ -473,7 +558,13 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
     // User profile pages
     for (const u of users) {
       const lastmod = u.updatedAt ? u.updatedAt.toISOString().split('T')[0] : today;
-      xml += `  <url>\n    <loc>https://www.rvunicorn.com/profile/${u.username}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/u/${u.username}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+    }
+
+    // Public trip pages
+    for (const t of publicTrips) {
+      const lastmod = t.updatedAt ? t.updatedAt.toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/t/${t.id}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
     }
 
     xml += '</urlset>';

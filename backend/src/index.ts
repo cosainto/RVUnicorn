@@ -166,6 +166,7 @@ import onboardingV2Routes from './routes/onboarding-v2.routes';
 import tripPublicRoutes from './routes/trip-public.routes';
 import jobIntegrationRoutes from './routes/job-integrations.routes';
 import sharingRoutes, { checkSharedFire } from './routes/sharing.routes';
+import publicRoutes from './routes/public.routes';
 import stripeRoutes from './routes/stripe.routes';
 import express_raw from 'express';
 import oauthRoutes from './routes/oauth.routes';
@@ -228,6 +229,7 @@ app.use('/api/onboarding', onboardingV2Routes);
 app.use('/api/trips', tripPublicRoutes);
 app.use('/api/jobs', jobIntegrationRoutes);
 app.use('/api/sharing', sharingRoutes);
+app.use('/api/public', publicRoutes);
 // Stripe webhook needs raw body — mount before json parser doesn't work since json is global
 // Instead, the stripe route handles raw body internally via express.raw
 app.use('/api/stripe', stripeRoutes);
