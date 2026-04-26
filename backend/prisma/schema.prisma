@@ -411,6 +411,11 @@ model User {
   liveCoPilotSessions                              LiveCoPilotSession[]
   dailyDropMessage                                 String?
   dailyDropDate                                    DateTime?
+  campfireChroniclesBio                            String?
+  campfireBioGeneratedAt                           DateTime?
+  campfireBioActivityHash                          String?
+  bioRegenerateCount                               Int                           @default(0)
+  bioRegenerateWindowStart                         DateTime?
 
   @@index([email])
   @@index([username])

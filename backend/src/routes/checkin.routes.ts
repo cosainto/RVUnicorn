@@ -5,6 +5,7 @@ import { logCheckIn } from '../services/activity.service';
 import { sendWebPush } from '../utils/webPush';
 import { checkSharedFire } from './sharing.routes';
 import { emitOrganizerActivity } from '../campfire/organizer.socket';
+import { checkAndRefreshBio } from '../services/campfireBioService';
 // Lazy import to avoid circular dependency with index.ts
 function getIO() { return require('../index').io; }
 
@@ -158,6 +159,9 @@ router.post('/', authenticateToken, async (req: any, res) => {
     }
 
     res.json(checkIn);
+
+    // Refresh Campfire Chronicles bio in background
+    setImmediate(() => checkAndRefreshBio(userId));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -235,6 +239,9 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
     }
 
     res.json({ success: true });
+
+    // Refresh Campfire Chronicles bio in background
+    setImmediate(() => checkAndRefreshBio(userId));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

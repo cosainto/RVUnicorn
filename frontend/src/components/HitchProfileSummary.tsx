@@ -1,177 +1,170 @@
-import { useState, useEffect } from "react";
-import { RefreshCw, Edit, X, Check, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { RefreshCw } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-
-const TONES = [
-  { id: "campfire",  emoji: "🏕️", label: "Campfire Storyteller" },
-  { id: "comedian",  emoji: "😂", label: "Road Trip Comedian" },
-  { id: "adventure", emoji: "🧭", label: "Adventure Seeker" },
-  { id: "vineyard",  emoji: "🍷", label: "Vineyard Voyager" },
-  { id: "hophead",   emoji: "🍺", label: "Eternal Hoptimist" },
-  { id: "nature",    emoji: "🌲", label: "Nature Whisperer" },
-];
-
-const TONE_TITLES: Record<string, string> = {
-  campfire:  "🔥 Campfire Chronicles",
-  comedian:  "😂 Tales from the Road",
-  adventure: "🧭 Trail Dispatch",
-  vineyard:  "🍷 Vineyard Voyager",
-  hophead:   "🍺 Hoptimist Files",
-  nature:    "🌲 Field Notes",
-};
+import { useToast } from "./ToastProvider";
 
 export default function HitchProfileSummary({ username }: { username: string }) {
   const { user } = useAuth();
+  const { addLocalToast } = useToast();
   const isOwn = (user as any)?.username === username;
 
-  const [summary, setSummary] = useState("");
+  const [bio, setBio] = useState<string | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState("");
-  const [aiDisabled, setAiDisabled] = useState(false);
-  const [showTones, setShowTones] = useState(false);
-  const [selectedTone, setSelectedTone] = useState("campfire");
+  const [regenerating, setRegenerating] = useState(false);
+  const [typewriterText, setTypewriterText] = useState("");
+  const [showTypewriter, setShowTypewriter] = useState(false);
+  const pollCount = useRef(0);
 
-  const fetchSummary = async (tone?: string) => {
-    setLoading(true);
+  // Fetch bio from server (cached, no Claude call if hash matches)
+  const fetchBio = async () => {
     try {
-      const t = tone || selectedTone;
-      const { data } = await api.get(`/hitch/profile-summary/${username}?tone=${t}`);
-      setSummary(data.summary || "");
-      setEditText(data.summary || "");
+      const { data } = await api.get(`/hitch/profile-summary/${username}`);
+      if (data.summary) {
+        setBio(data.summary);
+        setGeneratedAt(data.generatedAt || null);
+        setLoading(false);
+        return true;
+      }
+      return false;
     } catch {
-      setSummary("");
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
   useEffect(() => {
-    const disabled = localStorage.getItem(`ai_bio_disabled_${username}`);
-    const saved = localStorage.getItem(`ai_bio_${username}`);
-    if (disabled) { setAiDisabled(true); setLoading(false); return; }
-    if (saved) { setSummary(saved); setEditText(saved); setLoading(false); return; }
-    fetchSummary();
+    pollCount.current = 0;
+    setLoading(true);
+    setBio(null);
+
+    fetchBio().then(found => {
+      if (!found) {
+        // Bio doesn't exist yet — poll up to 5 times (background generation may be running)
+        const interval = setInterval(async () => {
+          pollCount.current++;
+          const got = await fetchBio();
+          if (got || pollCount.current >= 5) {
+            clearInterval(interval);
+            setLoading(false);
+          }
+        }, 3000);
+        return () => clearInterval(interval);
+      }
+    });
   }, [username]);
 
-  const handleRegenerate = (tone?: string) => {
-    const t = tone || selectedTone;
-    setSelectedTone(t);
-    setShowTones(false);
-    localStorage.removeItem(`ai_bio_${username}`);
-    fetchSummary(t);
+  // Manual regenerate (owner only)
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      const { data } = await api.post(`/hitch/profile-summary/${username}/regenerate`);
+      if (data.summary) {
+        // Typewriter animation
+        setShowTypewriter(true);
+        setTypewriterText("");
+        const text = data.summary;
+        let i = 0;
+        const tw = setInterval(() => {
+          i++;
+          setTypewriterText(text.slice(0, i));
+          if (i >= text.length) {
+            clearInterval(tw);
+            setTimeout(() => {
+              setBio(text);
+              setGeneratedAt(data.generatedAt || new Date().toISOString());
+              setShowTypewriter(false);
+            }, 300);
+          }
+        }, 20);
+      }
+    } catch (e: any) {
+      if (e?.response?.status === 429) {
+        addLocalToast("You've regenerated 3 times today — come back tomorrow", 'warning');
+      } else if (e?.response?.status === 403) {
+        addLocalToast("You can only regenerate your own bio", 'error');
+      } else {
+        addLocalToast("Failed to regenerate bio", 'error');
+      }
+    } finally {
+      setRegenerating(false);
+    }
   };
 
-  const handleSaveEdit = () => {
-    setSummary(editText);
-    localStorage.setItem(`ai_bio_${username}`, editText);
-    setEditing(false);
+  // Relative time helper
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
   };
 
-  const handleDisableAI = () => {
-    localStorage.setItem(`ai_bio_disabled_${username}`, "1");
-    setAiDisabled(true);
-  };
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="mt-4 rounded-2xl p-5" style={{ background: '#F5F0E8', borderLeft: '3px solid #E8A838' }}>
+        <div className="h-4 w-40 rounded animate-pulse mb-3" style={{ background: '#E2D9C8' }} />
+        <div className="h-3 w-full rounded animate-pulse mb-2" style={{ background: '#E2D9C8' }} />
+        <div className="h-3 w-4/5 rounded animate-pulse mb-2" style={{ background: '#E2D9C8' }} />
+        <div className="h-3 w-3/5 rounded animate-pulse" style={{ background: '#E2D9C8' }} />
+      </div>
+    );
+  }
 
-  const handleEnableAI = () => {
-    localStorage.removeItem(`ai_bio_disabled_${username}`);
-    localStorage.removeItem(`ai_bio_${username}`);
-    setAiDisabled(false);
-    fetchSummary();
-  };
-
-  const preview = summary.length > 160 ? summary.substring(0, 160) + "..." : summary;
-  const title = TONE_TITLES[selectedTone] || "🔥 Campfire Chronicles";
-
-  if (aiDisabled && isOwn) return (
-    <div className="mt-3 text-xs text-gray-400 flex items-center gap-2">
-      <span>AI bio is off</span>
-      <button onClick={handleEnableAI} className="text-primary-500 hover:text-primary-700 font-semibold transition">Turn back on</button>
-    </div>
-  );
-
-  if (aiDisabled) return null;
+  // No bio yet after polling
+  if (!bio && !showTypewriter) {
+    return (
+      <div className="mt-4 rounded-2xl p-5" style={{ background: '#F5F0E8', borderLeft: '3px solid #E8A838' }}>
+        <p className="text-sm font-bold mb-1" style={{ color: '#C9A84C' }}>🔥 Campfire Chronicles</p>
+        <p className="text-sm italic" style={{ color: '#8B9BB4' }}>
+          This member's Campfire Chronicles is being written...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-4 bg-gradient-to-r from-primary-50 to-purple-50 rounded-2xl border border-primary-100 p-4">
+    <div className="mt-4 rounded-2xl p-5 relative" style={{ background: '#F5F0E8', borderLeft: '3px solid #E8A838' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-bold text-primary-700">{title}</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-bold" style={{ color: '#C9A84C' }}>🔥 Campfire Chronicles</span>
+
+        {/* Regenerate button — owner only */}
         {isOwn && (
-          <button onClick={() => setShowTones(s => !s)}
-            className="text-xs text-primary-400 hover:text-primary-600 transition">
-            Change style
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition hover:brightness-110"
+            style={{ border: '1px solid #C9A84C', color: '#C9A84C' }}
+            title="Regenerate your bio"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
           </button>
         )}
       </div>
 
-      {/* Tone picker */}
-      {showTones && isOwn && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {TONES.map(t => (
-            <button key={t.id} onClick={() => handleRegenerate(t.id)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition ${selectedTone === t.id ? "bg-primary-600 text-white border-primary-600" : "bg-white text-gray-600 border-gray-200 hover:border-primary-300"}`}>
-              {t.emoji} {t.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Bio text */}
+      <p
+        className="text-sm leading-relaxed"
+        style={{
+          color: '#1A2B45',
+          opacity: regenerating && !showTypewriter ? 0.5 : 1,
+          transition: 'opacity 300ms',
+        }}
+      >
+        {showTypewriter ? typewriterText : bio}
+        {showTypewriter && <span className="inline-block w-0.5 h-4 ml-0.5 animate-pulse" style={{ background: '#C9A84C' }} />}
+      </p>
 
-      {/* Content */}
-      {loading ? (
-        <div className="space-y-2">
-          <div className="h-3 bg-primary-100 rounded animate-pulse" />
-          <div className="h-3 bg-primary-100 rounded w-4/5 animate-pulse" />
-          <div className="h-3 bg-primary-100 rounded w-3/5 animate-pulse" />
-        </div>
-      ) : editing ? (
-        <div className="space-y-2">
-          <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={4}
-            className="w-full text-sm text-gray-700 bg-white border border-primary-200 rounded-xl p-2 resize-none focus:outline-none focus:border-primary-400" />
-          <div className="flex gap-2">
-            <button onClick={handleSaveEdit} className="flex items-center gap-1 text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 transition">
-              <Check className="w-3 h-3" /> Save
-            </button>
-            <button onClick={() => setEditing(false)} className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
-              <X className="w-3 h-3" /> Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {expanded ? summary : preview}
-          </p>
-          {summary.length > 160 && (
-            <button onClick={() => setExpanded(e => !e)} className="text-xs text-primary-600 font-semibold mt-1 hover:text-primary-800 transition">
-              {expanded ? "Show less" : "Read more"}
-            </button>
-          )}
-        </>
-      )}
-
-      {/* Controls - only for own profile */}
-      {isOwn && !loading && !editing && (
-        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-primary-100">
-          <button onClick={() => handleRegenerate()}
-            className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-800 font-medium transition">
-            <RefreshCw className="w-3 h-3" /> Regenerate
-          </button>
-          <button onClick={() => { setEditing(true); setEditText(summary); }}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium transition">
-            <Edit className="w-3 h-3" /> Edit
-          </button>
-          <button onClick={() => { setEditing(true); setEditText(""); }}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium transition">
-            <Sparkles className="w-3 h-3" /> Start fresh
-          </button>
-          <button onClick={handleDisableAI}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 font-medium transition ml-auto">
-            Turn off AI bio
-          </button>
-        </div>
+      {/* Last updated — owner only */}
+      {isOwn && generatedAt && !showTypewriter && (
+        <p className="text-[10px] mt-2" style={{ color: '#8B9BB4' }}>
+          Last updated {timeAgo(generatedAt)}
+        </p>
       )}
     </div>
   );

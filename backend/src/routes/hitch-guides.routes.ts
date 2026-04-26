@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { computeActivityHash, generateCampfireBio } from '../services/campfireBioService';
 
 const router = Router();
 const prisma = new PrismaClient() as any;
@@ -623,60 +624,104 @@ router.get('/report-leaderboard', async (req: any, res) => {
 router.get('/profile-summary/:username', async (req: any, res) => {
   try {
     const { username } = req.params;
-    const tone = (req.query.tone as string) || 'campfire';
-    const TONE_PROMPTS: Record<string, string> = {
-      campfire:  "Write like a seasoned campfire storyteller — warm, vivid, poetic. Make it sound like a story told under the stars.",
-      comedian:  "Write like a road trip comedian — funny, self-deprecating, full of wit. Think stand-up comedy meets camping.",
-      adventure: "Write like an adventure seeker — bold, energetic, inspiring. Make it sound like the opening of an epic journey.",
-      vineyard:  "Write like a sophisticated vineyard voyager — elegant but fun, mention good taste and the finer things on the road.",
-      hophead:   "Write like an eternal hoptimist — craft beer lover, laid-back, always finding the local brewery. Pun-friendly.",
-      nature:    "Write like a nature whisperer — contemplative, earthy, deeply connected to the outdoors and wildlife.",
-    };
-    const toneInstruction = TONE_PROMPTS[tone] || TONE_PROMPTS.campfire;
 
     const user = await prisma.user.findUnique({
       where: { username },
       select: {
-        firstName: true, homeState: true, campingInterests: true,
-        rvType: true, rvLength: true, rvMake: true,
-        createdAt: true,
-        _count: { select: { checkIns: true, events: true, campgroundReviews: true } }
-      }
+        id: true,
+        campfireChroniclesBio: true,
+        campfireBioGeneratedAt: true,
+        campfireBioActivityHash: true,
+      },
     });
 
     if (!user) return res.status(404).json({ error: 'Not found' });
 
-    const stateVisits = await prisma.stateVisit.findMany({
-      where: { userId: (await prisma.user.findUnique({ where: { username }, select: { id: true } }))?.id || '' },
-      select: { homeState: true },
-    }).catch(() => []);
+    // Case 1 & 2: Bio exists — check if fresh or stale
+    if (user.campfireChroniclesBio) {
+      const currentHash = await computeActivityHash(user.id);
+      const isFresh = user.campfireBioActivityHash === currentHash;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 250,
-      messages: [{
-        role: 'user',
-        content: `${toneInstruction}
-Write a 2-3 sentence bio for this RVUnicorn camper. Use ONLY their first name (not full name). Write in third person. Be specific and personal. Make it feel like a signature bio, not a summary.
+      if (!isFresh) {
+        // Stale — return cached but trigger background refresh
+        setImmediate(() => {
+          generateCampfireBio(user.id).catch((err: any) => {
+            console.error('Background bio refresh failed:', err?.message);
+          });
+        });
+      }
 
-Name: ${user.firstName}
-Home: ${user.homeState || 'unknown'}
-RV: ${user.rvType || 'unknown'} ${user.rvMake || ''} ${user.rvLength ? user.rvLength + 'ft' : ''}
-Check-ins: ${user._count.checkIns}
-Trips planned: ${user._count.events}
-Campground reports: ${user._count.campgroundReviews}
-States visited: ${stateVisits.map((s: any) => s.state).join(', ') || 'none yet'}
-Camping interests: ${(user.campingInterests as string[] || []).join(', ') || 'not set yet'}
-Member since: ${new Date(user.createdAt).getFullYear()}
+      return res.json({
+        summary: user.campfireChroniclesBio,
+        generatedAt: user.campfireBioGeneratedAt,
+        cached: true,
+        ...(isFresh ? {} : { isStale: true }),
+      });
+    }
 
-Write the summary now (2-3 sentences, warm and celebratory, mention specific numbers):`,
-      }],
+    // Case 3: No bio at all — generate synchronously
+    const bio = await generateCampfireBio(user.id);
+    res.json({ summary: bio, generatedAt: new Date(), cached: false });
+  } catch (e: any) {
+    console.error('Profile summary error:', e?.message);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+// POST /api/hitch/profile-summary/:username/regenerate
+router.post('/profile-summary/:username/regenerate', authenticateToken, async (req: any, res) => {
+  try {
+    const { username } = req.params;
+    const userId = (req as any).userId;
+
+    const profileUser = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        bioRegenerateCount: true,
+        bioRegenerateWindowStart: true,
+      },
     });
 
-    const summary = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
-    res.json({ summary });
+    if (!profileUser) return res.status(404).json({ error: 'Not found' });
+
+    // Only the profile owner can regenerate
+    if (profileUser.id !== userId) {
+      return res.status(403).json({ error: 'You can only regenerate your own bio' });
+    }
+
+    // Rate limit: 3 per 24-hour window
+    const now = new Date();
+    let windowStart = profileUser.bioRegenerateWindowStart;
+    let count = profileUser.bioRegenerateCount;
+
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    if (!windowStart || now.getTime() - new Date(windowStart).getTime() > twentyFourHoursMs) {
+      // Reset window
+      windowStart = now;
+      count = 0;
+    }
+
+    if (count >= 3) {
+      return res.status(429).json({
+        error: 'You can regenerate 3 times per day. Try again tomorrow.',
+      });
+    }
+
+    // Increment count
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        bioRegenerateCount: count + 1,
+        bioRegenerateWindowStart: windowStart,
+      },
+    });
+
+    const bio = await generateCampfireBio(userId);
+    res.json({ summary: bio, generatedAt: new Date() });
   } catch (e: any) {
-    res.status(500).json({ error: 'Failed' });
+    console.error('Regenerate bio error:', e?.message);
+    res.status(500).json({ error: 'Failed to regenerate bio' });
   }
 });
 

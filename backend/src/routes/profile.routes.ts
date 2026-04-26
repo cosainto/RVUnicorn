@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { getProfileVisitStats } from '../services/visit-stats.service';
+import { checkAndRefreshBio } from '../services/campfireBioService';
 
 
 // Helper: auto-join RV model group
@@ -388,6 +389,11 @@ router.put('/:username', authenticateToken, async (req, res) => {
     });
 
     res.json(updatedProfile);
+
+    // Refresh Campfire Chronicles bio when RV fields change
+    if (rvType !== undefined || rvYear !== undefined || rvMake !== undefined || rvModel !== undefined) {
+      setImmediate(() => checkAndRefreshBio(userId));
+    }
   } catch (error: any) {
     console.error('Update profile error:', error?.message || error);
     res.status(500).json({ error: 'Failed to update profile', details: error?.message });
@@ -712,6 +718,8 @@ router.get('/:username/friends', optionalAuth, async (req, res) => {
             firstName: true,
             lastName: true,
             profilePicture: true,
+            rvType: true,
+            rvModel: true,
           },
         },
         receiver: {
@@ -721,22 +729,183 @@ router.get('/:username/friends', optionalAuth, async (req, res) => {
             firstName: true,
             lastName: true,
             profilePicture: true,
+            rvType: true,
+            rvModel: true,
           },
         },
       },
     });
 
-    // Extract friend data
-    const friends = friendships.map((friendship: any) => {
+    // Extract friend data with enhanced fields
+    const friendUsers = friendships.map((friendship: any) => {
       return friendship.initiatorId === user.id
         ? friendship.receiver
         : friendship.initiator;
     });
 
+    // Enrich with stateCount for each friend
+    const friendIds = friendUsers.map((f: any) => f.id);
+    const stateCounts = await Promise.all(
+      friendIds.map(async (fid: string) => {
+        const count = await prisma.stateVisit.findMany({
+          where: { userId: fid },
+          select: { state: true },
+          distinct: ['state'],
+        });
+        return { id: fid, stateCount: count.length };
+      })
+    );
+    const stateCountMap = Object.fromEntries(stateCounts.map((s: any) => [s.id, s.stateCount]));
+
+    const friends = friendUsers.map((f: any) => ({
+      ...f,
+      stateCount: stateCountMap[f.id] || 0,
+    }));
+
     res.json({ friends });
   } catch (error: any) {
     console.error('Get friends error:', error);
     res.status(500).json({ error: 'Failed to get friends' });
+  }
+});
+
+// GET /api/profile/:username/trips - Get user's trips
+router.get('/:username/trips', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const currentUserId = (req as any).userId;
+
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isOwnProfile = currentUserId === user.id;
+
+    const events = await prisma.event.findMany({
+      where: {
+        organizerId: user.id,
+        ...(isOwnProfile ? {} : { isPublic: true }),
+      },
+      include: {
+        campground: {
+          select: { name: true, state: true, imageUrl: true },
+        },
+        _count: {
+          select: { attendees: true },
+        },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    const trips = events.map((event: any) => {
+      const nightsCount =
+        event.startDate && event.endDate
+          ? Math.max(
+              1,
+              Math.ceil(
+                (new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            )
+          : 1;
+
+      return {
+        id: event.id,
+        title: event.title,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        nightsCount,
+        coverImage: event.bannerImage || event.campground?.imageUrl || null,
+        campgroundName: event.campground?.name || null,
+        campgroundState: event.campground?.state || null,
+        campgroundCount: event.campground ? 1 : 0,
+        attendeeCount: event._count?.attendees || 0,
+      };
+    });
+
+    res.json(trips);
+  } catch (error: any) {
+    console.error('Get user trips error:', error);
+    res.status(500).json({ error: 'Failed to get user trips' });
+  }
+});
+
+// GET /api/profile/:username/campgrounds-visited - Get campgrounds visited
+router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get all check-ins grouped by campground
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: user.id, campgroundId: { not: null } },
+      include: {
+        campground: {
+          select: {
+            id: true,
+            name: true,
+            state: true,
+            imageUrl: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+      },
+      orderBy: { checkInDate: 'desc' },
+    });
+
+    // Group by campground, keep only the most recent check-in per campground
+    const campgroundMap = new Map<string, any>();
+    for (const ci of checkIns) {
+      if (!ci.campgroundId || !ci.campground) continue;
+      if (!campgroundMap.has(ci.campgroundId)) {
+        campgroundMap.set(ci.campgroundId, {
+          campgroundId: ci.campgroundId,
+          name: ci.campground.name,
+          state: ci.campground.state,
+          imageUrl: ci.campground.imageUrl,
+          latitude: ci.campground.latitude,
+          longitude: ci.campground.longitude,
+          visitedAt: ci.checkInDate,
+        });
+      }
+    }
+
+    // Look up user reviews for each campground
+    const campgroundIds = Array.from(campgroundMap.keys());
+    const reviews = campgroundIds.length > 0
+      ? await prisma.campgroundReview.findMany({
+          where: { userId: user.id, campgroundId: { in: campgroundIds } },
+          select: { campgroundId: true, rating: true },
+        })
+      : [];
+    const reviewMap = Object.fromEntries(
+      reviews.map((r: any) => [r.campgroundId, r.rating])
+    );
+
+    const campgrounds = Array.from(campgroundMap.values()).map((cg: any) => ({
+      ...cg,
+      userRating: reviewMap[cg.campgroundId] || null,
+    }));
+
+    // Already sorted by visitedAt desc (from the checkIn query order)
+    res.json(campgrounds);
+  } catch (error: any) {
+    console.error('Get campgrounds visited error:', error);
+    res.status(500).json({ error: 'Failed to get campgrounds visited' });
   }
 });
 

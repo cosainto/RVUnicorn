@@ -65,6 +65,9 @@ const PublicBoardThread = lazy(() => import('./pages/public/PublicBoardThread'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ProfileTripsPage = lazy(() => import('./pages/profile/ProfileTripsPage'));
+const ProfileCampgroundsPage = lazy(() => import('./pages/profile/ProfileCampgroundsPage'));
+const ProfileFriendsPage = lazy(() => import('./pages/profile/ProfileFriendsPage'));
 const UserRecipesPage = lazy(() => import('./pages/UserRecipesPage'));
 const UserGearPage = lazy(() => import('./pages/UserGearPage'));
 const RigMemoryPage = lazy(() => import('./pages/RigMemoryPage'));
@@ -265,6 +268,9 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+          <Route path="/profile/:username/trips" element={<ProfileTripsPage />} />
+          <Route path="/profile/:username/campgrounds" element={<ProfileCampgroundsPage />} />
+          <Route path="/profile/:username/friends" element={<ProfileFriendsPage />} />
           <Route path="/profile/:username/edit" element={<Navigate to="/my-rv" replace />} />
           <Route
             path="/profile/:username/gear"

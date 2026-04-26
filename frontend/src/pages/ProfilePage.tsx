@@ -61,7 +61,7 @@ function useInView(threshold = 0.1) {
   return { ref, inView };
 }
 
-function AnimatedStat({ value, label, icon }: { value: number; label: string; icon: string }) {
+function AnimatedStat({ value, label, icon, href }: { value: number; label: string; icon: string; href?: string }) {
   const [count, setCount] = useState(0);
   const { ref, inView } = useInView();
   useEffect(() => {
@@ -70,13 +70,26 @@ function AnimatedStat({ value, label, icon }: { value: number; label: string; ic
     const timer = setInterval(() => { current += increment; if (current >= value) { setCount(value); clearInterval(timer); } else setCount(Math.floor(current)); }, 50);
     return () => clearInterval(timer);
   }, [inView, value]);
-  return (
-    <div ref={ref} className="text-center p-3">
+
+  const content = (
+    <div ref={ref} className="text-center p-3 rounded-xl transition-all duration-200" style={{
+      background: 'rgba(232,168,56,0.12)',
+      border: '1px solid rgba(232,168,56,0.3)',
+      cursor: href ? 'pointer' : 'default',
+    }}
+    onMouseEnter={(e) => { if (href) { (e.currentTarget as HTMLElement).style.borderColor = '#E8A838'; (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; } }}
+    onMouseLeave={(e) => { if (href) { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(232,168,56,0.3)'; (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; } }}
+    >
       <span className="text-xl block mb-0.5">{icon}</span>
-      <span className="font-playfair text-3xl lg:text-[44px] font-bold block" style={{ color: 'white' }}>{count.toLocaleString()}</span>
-      <span className="text-[11px] font-semibold uppercase block mt-1" style={{ color: 'var(--gold)', letterSpacing: '0.08em' }}>{label}</span>
+      <span className="font-playfair text-3xl lg:text-[44px] font-bold block" style={{ color: '#E8A838' }}>{count.toLocaleString()}</span>
+      <span className="text-[11px] font-semibold uppercase block mt-1" style={{ color: '#8B9BB4', letterSpacing: '0.08em' }}>{label}</span>
     </div>
   );
+
+  if (href) {
+    return <Link to={href}>{content}</Link>;
+  }
+  return content;
 }
 
 const SI = ({ url, children }: { url: string; children: React.ReactNode }) => (
@@ -228,14 +241,15 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@400;500;600;700&display=swap');
-        :root{--navy:#1B2B4B;--navy-deep:#0F1A2E;--gold:#C9A84C;--gold-light:#E8C96A;--campfire:#E8622A;--campfire-glow:rgba(232,98,42,0.12);--glass-hero:rgba(15,26,46,0.82);--glass-secondary:rgba(15,26,46,0.95);--glass-border:rgba(201,168,76,0.18);--muted:rgba(255,255,255,0.55);--cream:#FDF6E9}
+        :root{--navy:#1B2B4B;--navy-deep:#0F1C35;--navy-body:#1E2D42;--gold:#E8A838;--gold-light:#E8C96A;--campfire:#E8622A;--campfire-glow:rgba(232,98,42,0.12);--glass-hero:rgba(15,26,46,0.82);--glass-secondary:rgba(15,26,46,0.95);--glass-border:rgba(201,168,76,0.18);--muted:rgba(255,255,255,0.55);--cream:#F5F0E8}
+        .profile-body-zone{background:var(--navy-body);border-top:1px solid transparent;background-image:linear-gradient(var(--navy-body),var(--navy-body))}
         .font-playfair{font-family:'Playfair Display',serif}.font-dm{font-family:'DM Sans',sans-serif}
         .hero-glass{background:var(--glass-hero);backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:20px}
         .support-glass{background:var(--glass-secondary);backdrop-filter:blur(6px);border:1px solid rgba(201,168,76,0.1);border-radius:16px}
         .flat-card{background:var(--navy-deep);border:1px solid rgba(255,255,255,0.06);border-radius:14px}
-        .tab-pill{padding:7px 18px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s}
-        .tab-pill.active{background:var(--gold);color:var(--navy-deep)}.tab-pill:not(.active){background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid rgba(255,255,255,0.06)}
-        .tab-pill:not(.active):hover{background:rgba(255,255,255,0.07);color:white}
+        .tab-pill{padding:7px 18px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;background:#162236;border:1px solid #243552}
+        .tab-pill.active{background:transparent;color:var(--gold);border-color:var(--gold);border-bottom:2px solid var(--gold)}.tab-pill:not(.active){color:#8B9BB4}
+        .tab-pill:not(.active):hover{background:rgba(255,255,255,0.04);color:#F5F0E8}
         @keyframes kenBurns{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
         @keyframes campfirePulse{0%,100%{opacity:0.5}50%{opacity:0.75}}
         @keyframes tabFade{from{opacity:0}to{opacity:1}}.tab-enter{animation:tabFade 150ms ease}
@@ -377,10 +391,10 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   {/* RIGHT 60%: Stats + Badges + Actions */}
                   <div className="lg:w-[60%]">
                     <div className="grid grid-cols-2 gap-2">
-                      <AnimatedStat icon={'\u{1F3D5}'} value={profileStats?.nightsCamped ?? 0} label="Nights Camped" />
-                      <AnimatedStat icon={'\u{1F6E3}'} value={profileStats?.totalTrips ?? userTrips.length} label="Trips" />
-                      <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" />
-                      <AnimatedStat icon={'\u{1F91D}'} value={profile._count?.friends || 0} label="Friends" />
+                      <AnimatedStat icon={'\u{1F3D5}'} value={profileStats?.nightsCamped ?? 0} label="Nights Camped" href={`/profile/${username}/trips`} />
+                      <AnimatedStat icon={'\u{1F6E3}'} value={profileStats?.totalTrips ?? userTrips.length} label="Trips" href={`/profile/${username}/trips`} />
+                      <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" href={`/profile/${username}/campgrounds`} />
+                      <AnimatedStat icon={'\u{1F91D}'} value={profile._count?.friends || 0} label="Friends" href={`/profile/${username}/friends`} />
                     </div>
 
                     {/* Badges */}
@@ -494,6 +508,14 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             )}
           </div>
 
+          {/* ═══ ZONE 2: PROFILE BODY (lighter background) ═══ */}
+          </div>
+          <div className="profile-body-zone px-4 sm:px-6 lg:px-8 pb-10">
+          <div className="max-w-5xl mx-auto space-y-5">
+
+          {/* Gold shimmer divider */}
+          <div className="h-px my-2" style={{ background: 'linear-gradient(90deg, transparent, rgba(232,168,56,0.2), transparent)' }} />
+
           {/* ══ 5. CALENDAR + CAMPGROUNDS CARD ══ */}
           {profile && (
             <CalendarCampgroundCard
@@ -578,6 +600,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             <details className="flat-card overflow-hidden"><summary className="px-5 py-3 cursor-pointer flex items-center gap-2 text-[12px]" style={{ background: 'rgba(232,98,42,0.05)' }}>Campground Claims <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-auto" style={{ background: 'rgba(232,98,42,0.15)', color: 'var(--campfire)' }}>Admin</span></summary><div className="p-4"><Suspense fallback={<div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--gold)', borderTopColor: 'transparent' }} /></div>}><CampgroundClaimsQueue /></Suspense></div></details>
           )}
         </div>
+
+        </div></div>{/* End Zone 2 body */}
 
         {/* ══ BADGES MODAL ══ */}
         {showBadgesModal && (

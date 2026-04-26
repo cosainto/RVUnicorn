@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { logFriendAdded } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { checkAndRefreshBio } from '../services/campfireBioService';
 
 const router = Router();
 const db = prisma as any;
@@ -279,6 +280,10 @@ router.put('/accept/:friendshipId', authenticateToken, async (req: Request, res:
     // BasecampActivity NEW_CAMPING_BUDDY rows for the same event, which
     // surfaced as 3 duplicate notifications in the basecamp feed.
     await logFriendAdded(updated.receiverId, updated.initiatorId, updated.initiator.firstName + ' ' + updated.initiator.lastName);
+
+    // Refresh Campfire Chronicles bio for both users
+    setImmediate(() => checkAndRefreshBio(updated.receiverId));
+    setImmediate(() => checkAndRefreshBio(updated.initiatorId));
 
     res.json(updated);
   } catch (error: any) {
