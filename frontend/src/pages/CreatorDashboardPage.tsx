@@ -268,8 +268,8 @@ export default function CreatorDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Creator Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Manage content, track analytics, and grow your audience</p>
+              <h1 className="text-2xl font-bold text-gray-900">Rig Content Dashboard</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Manage your rig's content, track analytics, and grow your audience</p>
             </div>
             <div className="flex items-center gap-2">
               <Link to={`/creators/${user?.username}`} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition text-sm font-medium">
@@ -410,7 +410,7 @@ function OverviewTab({ stats, allContent, user }: { stats: CreatorStats; allCont
         </Link>
         <Link to={`/creators/${user?.username}`} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-amber-200 transition group">
           <Globe className="w-8 h-8 mb-3 text-amber-500 group-hover:scale-110 transition-transform" />
-          <p className="font-bold text-lg text-gray-900">View Creator Page</p>
+          <p className="font-bold text-lg text-gray-900">View Rig Profile</p>
           <p className="text-gray-500 text-sm mt-1">See how your page looks to visitors</p>
         </Link>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -740,7 +740,7 @@ function CollaboratorsTab({ collaborators, showAdd, setShowAdd, userSearch, sear
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Page Collaborators</h2>
-          <p className="text-sm text-gray-500">Invite others to help manage your creator page</p>
+          <p className="text-sm text-gray-500">Invite others to help manage your rig profile</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition">
           <UserPlus className="w-4 h-4" /> Add Collaborator
@@ -794,7 +794,7 @@ function CollaboratorsTab({ collaborators, showAdd, setShowAdd, userSearch, sear
           <div className="p-12 text-center">
             <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No collaborators yet</p>
-            <p className="text-gray-400 text-sm mt-1">Add collaborators to help manage your creator page</p>
+            <p className="text-gray-400 text-sm mt-1">Add collaborators to help manage your rig profile</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -919,7 +919,7 @@ function SettingsTab() {
             className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm"
             placeholder="Your creator display name"
           />
-          <p className="mt-1 text-xs text-gray-400">Shown on your creator page instead of your real name.</p>
+          <p className="mt-1 text-xs text-gray-400">Shown on your rig profile instead of your real name.</p>
         </div>
 
         <div>
@@ -1125,7 +1125,7 @@ function ThemeSettings() {
   return (
 
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">Choose a color theme for your creator page</p>
+      <p className="text-sm text-gray-500">Choose a color theme for your rig profile</p>
       <div className="flex flex-wrap gap-3">
         {presets.map(p => (
           <button key={p.color} onClick={() => setThemeColor(p.color)}

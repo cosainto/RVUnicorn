@@ -155,10 +155,10 @@ export function CreatorToggleSection({ isCreator, username, onToggle }: CreatorT
             <Sparkles className="w-8 h-8 text-primary-600" />
           </div>
           <div className="flex-grow">
-            <h3 className="text-lg font-semibold text-gray-900">Become a Content Creator</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Share Your Rig's Story</h3>
             <p className="text-gray-600 mt-1">
               Share your RV adventures, gear reviews, and camping tips with the community.
-              Get your own creator page, analytics, and grow your following.
+              Get your own rig profile, analytics, and grow your following.
             </p>
 
             {/* Benefits */}

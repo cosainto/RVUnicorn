@@ -758,7 +758,7 @@ export default function CreatorPage() {
                   <Coffee className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 text-sm">Support this Creator</p>
+                  <p className="font-bold text-gray-900 text-sm">Support this RVer</p>
                   <p className="text-xs text-gray-500">{creator.creatorTipJarType === 'buymeacoffee' ? 'Buy Me a Coffee' : creator.creatorTipJarType === 'venmo' ? 'Venmo' : creator.creatorTipJarType === 'paypal' ? 'PayPal' : 'Send a tip'}</p>
                 </div>
               </a>
@@ -802,7 +802,7 @@ export default function CreatorPage() {
           {shoutouts.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4">
               <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5 mb-3">
-                <Megaphone className="w-4 h-4 text-blue-500" /> Creator Shoutouts
+                <Megaphone className="w-4 h-4 text-blue-500" /> Shoutouts
               </h3>
               <div className="space-y-2">
                 {shoutouts.slice(0, 4).map(s => {
@@ -880,7 +880,7 @@ export default function CreatorPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]" onClick={() => setShowShareModal(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Share Creator</h3>
+              <h3 className="text-lg font-bold text-gray-900">Share Rig Profile</h3>
               <button onClick={() => setShowShareModal(false)} className="p-1 hover:bg-gray-100 rounded-full transition">
                 <X className="w-5 h-5 text-gray-400" />
               </button>

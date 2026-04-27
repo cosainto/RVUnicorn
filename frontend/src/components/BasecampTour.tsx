@@ -90,7 +90,7 @@ const TOUR_STEPS: TourStep[] = [
     emoji: '📸',
     icon: <Camera className="w-8 h-8" />,
     title: 'Albums, Recipes & More',
-    description: 'Create photo albums from your trips, share camp recipes with the community, browse gear in the marketplace, build packing lists, and discover Creator Pages for RV content.',
+    description: 'Create photo albums from your trips, share camp recipes with the community, browse gear in the marketplace, build packing lists, and discover rig profiles for RV content.',
     tip: 'Albums can be shared publicly or kept private — you control who sees your memories.',
     color: '#500724',
     accentColor: '#f472b6',

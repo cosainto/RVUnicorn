@@ -580,8 +580,8 @@ export default function QuickCaptureModal({ isOpen, onClose, onUploadComplete }:
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-yellow-600" />
                   <div>
-                    <p className="font-medium text-gray-900">Post as Creator Content</p>
-                    <p className="text-xs text-gray-500">Share on your creator page</p>
+                    <p className="font-medium text-gray-900">Post to Rig Profile</p>
+                    <p className="text-xs text-gray-500">Share on your rig's page</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">

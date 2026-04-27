@@ -274,8 +274,8 @@ export default function CreatorLeaderboardPage() {
               </h1>
               <p className="text-white/70">
                 {sortBy === 'discovery'
-                  ? 'Find new creators and content tailored to your interests'
-                  : 'The most influential creators in our RV community'}
+                  ? 'Find rigs and road content tailored to your interests'
+                  : 'The most active rig profiles in our RV community'}
               </p>
             </div>
           </div>
@@ -370,7 +370,7 @@ export default function CreatorLeaderboardPage() {
                 </div>
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Select topics you're interested in to see personalized creator recommendations. These also personalize your Basecamp feed.
+                Select topics you're interested in to see personalized rig recommendations. These also personalize your Basecamp feed.
               </p>
               <div className="flex flex-wrap gap-2">
                 {DEFAULT_CATEGORIES.map((cat) => {
@@ -570,13 +570,13 @@ export default function CreatorLeaderboardPage() {
                 {sortBy === 'discovery' ? (
                   <>
                     <Compass className="w-16 h-16 text-gray-300 mx-auto" />
-                    <p className="mt-4 text-gray-500">No new creators to discover right now.</p>
+                    <p className="mt-4 text-gray-500">No new rig profiles to discover right now.</p>
                     <p className="text-sm text-gray-400 mt-1">Try selecting different interests above!</p>
                   </>
                 ) : (
                   <>
                     <Trophy className="w-16 h-16 text-gray-300 mx-auto" />
-                    <p className="mt-4 text-gray-500">No creators found yet. Be the first!</p>
+                    <p className="mt-4 text-gray-500">No rig profiles found yet. Be the first!</p>
                   </>
                 )}
               </div>
