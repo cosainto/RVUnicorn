@@ -270,7 +270,7 @@ export default function CreatorLeaderboardPage() {
             )}
             <div>
               <h1 className="text-3xl font-bold">
-                {sortBy === 'discovery' ? 'Discover Creators' : 'Top 50 Content Creators'}
+                {sortBy === 'discovery' ? 'Discover Rig Profiles' : 'Top 50 Rig Profiles'}
               </h1>
               <p className="text-white/70">
                 {sortBy === 'discovery'
@@ -451,7 +451,7 @@ export default function CreatorLeaderboardPage() {
             {/* Discovery Creators Header */}
             <div className="flex items-center gap-2">
               <Compass className="w-5 h-5 text-purple-500" />
-              <h2 className="font-semibold text-gray-900">Creators to Discover</h2>
+              <h2 className="font-semibold text-gray-900">Rig Profiles to Discover</h2>
             </div>
           </div>
         )}
@@ -461,7 +461,7 @@ export default function CreatorLeaderboardPage() {
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="mt-4 text-gray-500">
-              {sortBy === 'discovery' ? 'Finding creators for you...' : 'Loading leaderboard...'}
+              {sortBy === 'discovery' ? 'Finding rig profiles for you...' : 'Loading leaderboard...'}
             </p>
           </div>
         ) : (

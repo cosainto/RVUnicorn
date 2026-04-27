@@ -339,9 +339,10 @@ function AppContent() {
           <Route path="/settings/activity" element={<AccountActivityLogPage />} />
           <Route path="/settings/delete-account" element={<AccountDeletionPage />} />
           <Route path="/badges" element={<BadgesPage />} />
-          <Route path="/creators" element={<PrivateRoute><CreatorLeaderboardPage /></PrivateRoute>} />
-          <Route path="/creators/leaderboard" element={<PrivateRoute><CreatorLeaderboardPage /></PrivateRoute>} />
-          <Route path="/creators/:username" element={<PrivateRoute><CreatorPage /></PrivateRoute>} />
+          {/* Creator routes → redirect to Rig Profile system */}
+          <Route path="/creators" element={<CreatorLeaderboardPage />} />
+          <Route path="/creators/leaderboard" element={<CreatorLeaderboardPage />} />
+          <Route path="/creators/:username" element={<CreatorPage />} />
           <Route path="/creators/:creatorUsername/content/:contentId" element={<PrivateRoute><VideoPlayerPage /></PrivateRoute>} />
           <Route path="/creator/dashboard" element={<PrivateRoute><CreatorDashboardPage /></PrivateRoute>} />
           <Route path="/creator/new" element={<PrivateRoute><CreatorContentEditorPage /></PrivateRoute>} />

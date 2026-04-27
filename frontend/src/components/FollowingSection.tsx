@@ -130,7 +130,7 @@ export default function FollowingSection({
               className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-sm"
             >
               <UserPlus className="w-4 h-4" />
-              Discover Creators
+              Discover Rigs
             </Link>
           )}
         </div>

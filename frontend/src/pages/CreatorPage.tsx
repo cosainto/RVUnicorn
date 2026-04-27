@@ -412,10 +412,10 @@ export default function CreatorPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Mountain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900">Creator not found</h2>
-          <p className="text-gray-600 mt-2">This creator page doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-gray-900">Rig profile not found</h2>
+          <p className="text-gray-600 mt-2">This rig profile doesn't exist.</p>
           <Link to="/creators" className="inline-block mt-4 px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition">
-            Browse Creators
+            Browse Rig Profiles
           </Link>
         </div>
       </div>

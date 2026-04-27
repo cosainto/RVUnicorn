@@ -316,7 +316,7 @@ export default function CreatorFeed({
           <p className="text-gray-500 mb-2">No rig content yet</p>
           <p className="text-sm text-gray-400">Follow rigs to see trip recaps and road content here!</p>
           <Link
-            to="/creators"
+            to="/creators" /* → Rig Profiles */
             className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
           >
             <UserPlus className="w-4 h-4" />
@@ -338,7 +338,7 @@ export default function CreatorFeed({
             {source === 'following' ? 'From Rigs You Follow' : 'Trending from the Road'}
           </h3>
           <Link
-            to="/creators"
+            to="/creators" /* → Rig Profiles */
             className="text-purple-600 hover:text-purple-700 text-xs sm:text-sm font-medium flex items-center gap-1"
           >
             Explore Rigs

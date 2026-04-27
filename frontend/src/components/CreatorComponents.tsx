@@ -311,7 +311,7 @@ export function DiscoverCreators({ limit = 6, showTitle = true }: DiscoverCreato
     <div>
       {showTitle && (
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Discover Creators</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Discover Rig Profiles</h2>
           <a href="/creators" className="text-sm text-primary-600 hover:underline">
             View all →
           </a>
