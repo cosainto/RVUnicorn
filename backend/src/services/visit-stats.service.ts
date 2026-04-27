@@ -249,20 +249,48 @@ export async function getMergedVisitWindows(userId: string): Promise<Map<string,
  * Compute user-facing stats from the merged visit windows. Used by the
  * profile stats endpoint and any other surface that needs nights-camped /
  * trip count / unique campground count.
+ *
+ * totalTrips counts from three sources (deduplicated):
+ *   1. Events the user organized or attended (with a campground)
+ *   2. Trip table records (AI-generated itineraries)
+ *   3. Merged visit windows as fallback
+ *
+ * nightsCamped counts from merged visit windows, treating same-day
+ * check-ins as 1 night (you showed up and camped).
  */
 export async function getProfileVisitStats(userId: string): Promise<ProfileVisitStats> {
   const merged = await getMergedVisitWindows(userId);
 
   let nightsCamped = 0;
-  let totalTrips = 0;
   for (const list of merged.values()) {
     for (const span of list) {
       const ms = span.end.getTime() - span.start.getTime();
-      if (ms <= 0) continue;
-      nightsCamped += Math.floor(ms / 86400000);
-      totalTrips += 1;
+      // Same-day check-in still counts as 1 night (you were there)
+      const nights = ms <= 0 ? 1 : Math.ceil(ms / 86400000);
+      nightsCamped += nights;
     }
   }
+
+  // Count actual trips from Event + Trip tables (more meaningful than visit windows)
+  const [eventCount, tripCount] = await Promise.all([
+    prisma.event.count({
+      where: {
+        OR: [
+          { organizerId: userId },
+          { attendees: { some: { userId } } },
+        ],
+        isWishlist: false,
+      },
+    }),
+    prisma.trip.count({ where: { userId } }),
+  ]);
+
+  // Use the larger of: actual trip/event records OR merged window count
+  let windowTripCount = 0;
+  for (const list of merged.values()) {
+    windowTripCount += list.length;
+  }
+  const totalTrips = Math.max(eventCount + tripCount, windowTripCount);
 
   return {
     campgroundsVisited: merged.size,
