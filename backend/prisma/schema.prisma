@@ -416,6 +416,10 @@ model User {
   campfireBioActivityHash                          String?
   bioRegenerateCount                               Int                           @default(0)
   bioRegenerateWindowStart                         DateTime?
+  ownedRigs                                        Rig[]                         @relation("RigOwner")
+  rigPilotOf                                       RigPilot[]
+  rigFollows                                       RigFollow[]                   @relation("RigFollows")
+  rigPosts                                         RigPost[]                     @relation("RigPostAuthor")
 
   @@index([email])
   @@index([username])
@@ -6151,4 +6155,138 @@ model CoPilotAlert {
 
   @@index([sessionId])
   @@index([type])
+}
+
+model Rig {
+  id                String    @id @default(cuid())
+  slug              String    @unique
+  ownerId           String
+  rigName           String?
+  heroPhoto         String?
+  tagline           String?
+  isPublic          Boolean   @default(true)
+  year              Int?
+  make              String?
+  model             String?
+  trimLine          String?
+  rigClass          String?
+  lengthFeet        Float?
+  slideoutCount     Int?
+  towingCapacity    Int?
+  grossWeight       Int?
+  freshWaterGal     Int?
+  grayWaterGal      Int?
+  blackWaterGal     Int?
+  fuelType          String?
+  engineSize        String?
+  chassisMake       String?
+  tireSizeFront     String?
+  tireSizeRear      String?
+  tireInstallDate   DateTime?
+  roofType          String?
+  purchaseDate      DateTime?
+  purchasePrice     Float?
+  purchaseOdometer  Int?
+  currentOdometer   Int?
+  totalMilesDriven  Float?    @default(0)
+  totalNightsCamped Int?      @default(0)
+  totalTripCount    Int?      @default(0)
+  totalStatesCount  Int?      @default(0)
+  avgMPG            Float?
+  totalFuelCost     Float?
+  creatorBio        String?
+  creatorBioHash    String?
+  creatorBioAt      DateTime?
+  youtubeUrl        String?
+  instagramUrl      String?
+  tiktokUrl         String?
+  websiteUrl        String?
+  followerCount     Int       @default(0)
+  isCreatorEnabled  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  owner             User      @relation("RigOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  pilots            RigPilot[]
+  modLogs           ModLog[]
+  fuelLogs          FuelLog[]
+  documents         RigDocument[]
+  followers         RigFollow[]
+  posts             RigPost[]
+}
+
+model RigPilot {
+  id        String   @id @default(cuid())
+  rigId     String
+  userId    String
+  role      String   @default("co-pilot")
+  canEdit   Boolean  @default(false)
+  addedAt   DateTime @default(now())
+  rig       Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([rigId, userId])
+}
+
+model ModLog {
+  id            String    @id @default(cuid())
+  rigId         String
+  title         String
+  description   String?
+  cost          Float?
+  modDate       DateTime?
+  photos        String[]
+  category      String?
+  beforePhoto   String?
+  afterPhoto    String?
+  productLink   String?
+  isPublic      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  rig           Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+}
+
+model FuelLog {
+  id            String    @id @default(cuid())
+  rigId         String
+  gallons       Float
+  pricePerGal   Float
+  totalCost     Float
+  odometer      Int?
+  location      String?
+  loggedAt      DateTime  @default(now())
+  rig           Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+}
+
+model RigDocument {
+  id            String    @id @default(cuid())
+  rigId         String
+  name          String
+  fileUrl       String
+  expiresAt     DateTime?
+  isPrivate     Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  rig           Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+}
+
+model RigFollow {
+  id          String   @id @default(cuid())
+  rigId       String
+  userId      String
+  followedAt  DateTime @default(now())
+  rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user        User     @relation("RigFollows", fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([rigId, userId])
+}
+
+model RigPost {
+  id          String   @id @default(cuid())
+  rigId       String
+  userId      String
+  title       String?
+  body        String?
+  photos      String[]
+  postType    String   @default("road_report")
+  tripId      String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  author      User     @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
 }

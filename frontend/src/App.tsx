@@ -68,6 +68,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProfileTripsPage = lazy(() => import('./pages/profile/ProfileTripsPage'));
 const ProfileCampgroundsPage = lazy(() => import('./pages/profile/ProfileCampgroundsPage'));
 const ProfileFriendsPage = lazy(() => import('./pages/profile/ProfileFriendsPage'));
+const RigProfilePage = lazy(() => import('./pages/rig/RigProfilePage'));
+const RigEditPage = lazy(() => import('./pages/rig/edit/RigEditPage'));
 const UserRecipesPage = lazy(() => import('./pages/UserRecipesPage'));
 const UserGearPage = lazy(() => import('./pages/UserGearPage'));
 const RigMemoryPage = lazy(() => import('./pages/RigMemoryPage'));
@@ -236,6 +238,14 @@ function AppContent() {
           <Route path="/u/:username" element={<PublicProfilePage />} />
           <Route path="/posts/public/:postId" element={<PublicPostPage />} />
           <Route path="/boards/public/:threadId" element={<PublicBoardThread />} />
+          <Route path="/rig/:slug" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/trips" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/campgrounds" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/mods" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/posts" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/stats" element={<RigProfilePage />} />
+          <Route path="/rig/:slug/edit" element={<PrivateRoute><RigEditPage /></PrivateRoute>} />
+          <Route path="/rig/:slug/edit/*" element={<PrivateRoute><RigEditPage /></PrivateRoute>} />
           <Route path="/join" element={<JoinCrewPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

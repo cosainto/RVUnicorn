@@ -270,6 +270,44 @@ ${trip.description ? `<p>${trip.description}</p>` : ''}
   } catch { next(); }
 });
 
+// SSR for /rig/:slug (public rig profile)
+router.get('/rig/:slug', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) return next();
+  try {
+    const { slug } = req.params;
+    const rig = await db.rig.findUnique({
+      where: { slug },
+      include: { owner: { select: { firstName: true, lastName: true } } },
+    });
+    if (!rig || !rig.isPublic) return next();
+
+    const title = rig.rigName || `${rig.year || ''} ${rig.make || ''} ${rig.model || ''}`.trim();
+    const photo = rig.heroPhoto || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const ownerName = `${rig.owner.firstName} ${rig.owner.lastName}`;
+
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} · RVUnicorn</title>
+<meta name="description" content="${title} — ${rig.totalTripCount || 0} trips, ${rig.totalStatesCount || 0} states, ${Math.round(rig.totalMilesDriven || 0)} miles. Follow ${ownerName}'s RV on RVUnicorn.">
+<meta property="og:title" content="${title} on RVUnicorn">
+<meta property="og:description" content="${rig.year || ''} ${rig.make || ''} ${rig.model || ''} · ${rig.totalTripCount || 0} trips · ${rig.totalStatesCount || 0} states">
+<meta property="og:image" content="${photo}">
+<meta property="og:url" content="https://www.rvunicorn.com/rig/${slug}">
+<link rel="canonical" href="https://www.rvunicorn.com/rig/${slug}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px">
+<h1>${title}</h1><p>Piloted by ${ownerName}</p>
+<p>${rig.totalTripCount || 0} trips · ${rig.totalStatesCount || 0} states · ${Math.round(rig.totalMilesDriven || 0)} miles</p>
+<p><a href="https://www.rvunicorn.com/register" style="color:#E8A838">Join RVUnicorn free →</a></p>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
 // SSR for /t/:tripId (new public trip route)
 router.get('/t/:tripId', async (req: Request, res: Response, next: NextFunction) => {
   if (!shouldSSR(req)) return next();
@@ -505,7 +543,7 @@ const COMMUNITY_BOARDS = [
 
 router.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try {
-    const [campgrounds, users, publicTrips] = await Promise.all([
+    const [campgrounds, users, publicTrips, publicRigs] = await Promise.all([
       db.campground.findMany({
         select: { id: true, customSlug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
@@ -519,6 +557,12 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
       db.event.findMany({
         where: { isPublic: true },
         select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 10000,
+      }),
+      db.rig.findMany({
+        where: { isPublic: true },
+        select: { slug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 10000,
       }),
@@ -565,6 +609,12 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
     for (const t of publicTrips) {
       const lastmod = t.updatedAt ? t.updatedAt.toISOString().split('T')[0] : today;
       xml += `  <url>\n    <loc>https://www.rvunicorn.com/t/${t.id}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+    }
+
+    // Public rig pages
+    for (const r of publicRigs) {
+      const lastmod = r.updatedAt ? r.updatedAt.toISOString().split('T')[0] : today;
+      xml += `  <url>\n    <loc>https://www.rvunicorn.com/rig/${r.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     }
 
     xml += '</urlset>';

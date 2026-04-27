@@ -113,6 +113,7 @@ import itineraryAiRoutes from './routes/itinerary-ai.routes';
 import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import campMarketRoutes from './routes/camp-market.routes';
 import rigConnectionRoutes from './routes/rig-connection.routes';
+import rigRoutes from './routes/rig.routes';
 import campfireTipsRoutes from './routes/campfire-tips.routes';
 import feedControlsRoutes from './routes/feed-controls.routes';
 import lastMinuteRoutes from './routes/last-minute.routes';
@@ -236,6 +237,7 @@ app.use('/api/stripe', stripeRoutes);
 app.use(passport.initialize());
 app.use('/api', oauthRoutes);
 app.use('/api/quiz', quizRoutes);
+app.use('/api/rigs', rigRoutes);
 
 // Routes
 app.get('/api/version', (req, res) => res.json({ version: '2.0', timestamp: Date.now() }));
