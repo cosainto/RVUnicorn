@@ -2466,6 +2466,7 @@ model CreatorFollow {
   id         String   @id @default(cuid())
   creatorId  String
   followerId String
+  migrated   Boolean  @default(false)
   createdAt  DateTime @default(now())
   creator    User     @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
   follower   User     @relation("FollowingCreators", fields: [followerId], references: [id], onDelete: Cascade)
@@ -5672,6 +5673,7 @@ model CreatorEvent {
   id            String             @id @default(cuid())
   creatorId     String
   creator       User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  rigId         String?
   campgroundId  String?
   campground    Campground?        @relation(fields: [campgroundId], references: [id])
   title         String
@@ -5686,6 +5688,7 @@ model CreatorEvent {
   createdAt     DateTime           @default(now())
 
   @@index([creatorId])
+  @@index([rigId])
   @@index([campgroundId])
   @@index([startTime])
 }
@@ -6201,11 +6204,14 @@ model Rig {
   instagramUrl      String?
   tiktokUrl         String?
   websiteUrl        String?
-  followerCount     Int       @default(0)
-  isCreatorEnabled  Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  owner             User      @relation("RigOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  followerCount                Int       @default(0)
+  isCreatorEnabled             Boolean   @default(false)
+  contributionScore            Float?    @default(0)
+  contributionScoreUpdatedAt   DateTime?
+  scoreBreakdown               Json?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+  owner                        User      @relation("RigOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   pilots            RigPilot[]
   modLogs           ModLog[]
   fuelLogs          FuelLog[]
@@ -6267,12 +6273,16 @@ model RigDocument {
 }
 
 model RigFollow {
-  id          String   @id @default(cuid())
-  rigId       String
-  userId      String
-  followedAt  DateTime @default(now())
-  rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
-  user        User     @relation("RigFollows", fields: [userId], references: [id], onDelete: Cascade)
+  id                     String   @id @default(cuid())
+  rigId                  String
+  userId                 String
+  followedAt             DateTime @default(now())
+  sourceCreatorFollowId  String?
+  notifyOnRigPost        Boolean  @default(true)
+  notifyOnTrip           Boolean  @default(true)
+  notifyOnMod            Boolean  @default(false)
+  rig                    Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user                   User     @relation("RigFollows", fields: [userId], references: [id], onDelete: Cascade)
   @@unique([rigId, userId])
 }
 
@@ -6289,4 +6299,25 @@ model RigPost {
   createdAt   DateTime @default(now())
   rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
   author      User     @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RigMilestone {
+  id             String   @id @default(cuid())
+  rigId          String
+  milestoneType  String   // states, nights, trips, miles
+  value          Int
+  achievedAt     DateTime @default(now())
+  @@unique([rigId, milestoneType, value])
+  @@index([rigId])
+}
+
+model ModAffiliateClick {
+  id          String   @id @default(cuid())
+  userId      String?
+  modLogId    String
+  rigId       String
+  productUrl  String
+  clickedAt   DateTime @default(now())
+  @@index([modLogId])
+  @@index([rigId])
 }

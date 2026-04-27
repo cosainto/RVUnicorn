@@ -647,7 +647,8 @@ router.get('/feed', authenticateToken, async (req, res) => {
               'PACK_ITEM_PACKED', 'PACK_LIST_COMPLETE', 'CREATOR_VIDEO_UPLOAD', 'SHARED_CREATOR_VIDEO', 
               'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE',
               'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD',
-              'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG'
+              'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG',
+              'RIG_POST'
             ]
           }
         },
@@ -776,6 +777,15 @@ router.get('/feed', authenticateToken, async (req, res) => {
             activityLabel = (activity.actor?.firstName || 'Someone') + ' tagged you in a photo';
             activityIcon = '🏷️';
             break;
+          case 'RIG_POST':
+            const rigPostMeta = activity.metadata as any;
+            const rigName = rigPostMeta?.rigName || 'their rig';
+            const postTypeLabel = rigPostMeta?.postType === 'trip_recap' ? 'trip recap' :
+                                  rigPostMeta?.postType === 'mod_update' ? 'mod update' :
+                                  rigPostMeta?.postType === 'tip' ? 'road tip' : 'road report';
+            activityLabel = (activity.actor?.firstName || 'Someone') + ' posted a ' + postTypeLabel + ' on ' + rigName;
+            activityIcon = '🚐';
+            break;
         }
 
         let targetLink: string | undefined = undefined;
@@ -795,6 +805,9 @@ router.get('/feed', authenticateToken, async (req, res) => {
         } else if (activity.type === 'PHOTO_TAG') {
           const tagMeta = activity.metadata as any;
           targetLink = '/media-albums/' + (tagMeta?.albumId || activity.entityId);
+        } else if (activity.type === 'RIG_POST') {
+          const rigSlug = (activity.metadata as any)?.rigSlug;
+          targetLink = rigSlug ? '/rig/' + rigSlug + '/posts' : undefined;
         }
 
         allActivities.push({
@@ -811,7 +824,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
           activityLabel,
           imageUrl: meta.imageUrl || null,
           isPackingActivity: !['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG', 'RECIPE_SHARED'].includes(activity.type),
-          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG', 'RECIPE_SHARED'].includes(activity.type),
+          isBasecampActivity: ['FRIEND_REQUEST', 'NEW_CAMPING_BUDDY', 'MEAL_ASSIGNMENT_REQUEST', 'MEAL_ASSIGNMENT_RESPONSE', 'THREAD_REPLY', 'THREAD_COMMENT', 'THREAD_MENTION', 'NEW_CAMPGROUND_THREAD', 'RECIPE_MENTION', 'RECIPE_SHARE_TAG', 'RECIPE_SHARED', 'PHOTO_TAG', 'PHOTO_TAG', 'RECIPE_SHARED', 'RIG_POST'].includes(activity.type),
           reaction: activity.reaction,
           isFriendRequest: activity.type === 'FRIEND_REQUEST',
           isCampingBuddy: activity.type === 'NEW_CAMPING_BUDDY',

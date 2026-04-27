@@ -93,7 +93,7 @@ interface Category {
   emoji: string;
 }
 
-type SortBy = 'views' | 'likes' | 'followers' | 'content' | 'discovery';
+type SortBy = 'contributionScore' | 'views' | 'likes' | 'followers' | 'content' | 'discovery';
 
 const DEFAULT_CATEGORIES: Category[] = [
   { id: 'GEAR_REVIEWS', label: 'Gear Reviews', emoji: '\u{1F527}' },
@@ -117,11 +117,76 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
   PHOTO_GALLERY: <Image className="w-4 h-4" />,
 };
 
+const SCORE_COLORS: Record<string, { color: string; label: string }> = {
+  reviews: { color: '#4CAF50', label: 'Reviews' },
+  states: { color: '#2196F3', label: 'States' },
+  trips: { color: '#FF9800', label: 'Trips' },
+  mods: { color: '#9C27B0', label: 'Mods' },
+  engagement: { color: '#F44336', label: 'Engagement' },
+  trivia: { color: '#00BCD4', label: 'Trivia' },
+  checkins: { color: '#795548', label: 'Check-ins' },
+  followers: { color: '#607D8B', label: 'Followers' },
+  founding: { color: '#FFC107', label: 'Founding' },
+};
+
+function ScoreBreakdownBar({ breakdown, score }: { breakdown: Record<string, number>; score: number }) {
+  if (!breakdown || score === 0) return null;
+  const segments = Object.entries(breakdown).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="mt-2">
+      <div className="flex h-2 rounded-full overflow-hidden bg-gray-100" title={`Total: ${Math.round(score)}`}>
+        {segments.map(([key, value]) => {
+          const config = SCORE_COLORS[key] || { color: '#999', label: key };
+          const pct = (value / score) * 100;
+          return (
+            <div
+              key={key}
+              className="h-full transition-all"
+              style={{ width: `${pct}%`, backgroundColor: config.color }}
+              title={`${config.label}: ${value} pts`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HowScoresWork() {
+  const [expanded, setExpanded] = React.useState(false);
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 text-sm font-medium text-gray-700 w-full">
+        <Trophy className="w-4 h-4 text-amber-500" />
+        How Community Scores Work
+        <span className="ml-auto text-gray-400">{expanded ? '−' : '+'}</span>
+      </button>
+      {expanded && (
+        <div className="mt-3 text-sm text-gray-600 space-y-2">
+          <p>Community Score rewards platform contributions over raw audience size:</p>
+          <ul className="space-y-1 ml-4">
+            <li><span style={{ color: SCORE_COLORS.reviews.color }}>Reviews</span>: 15 pts/review with text, 5 pts star-only (max 150)</li>
+            <li><span style={{ color: SCORE_COLORS.states.color }}>States</span>: 8 pts/state visited (max 400)</li>
+            <li><span style={{ color: SCORE_COLORS.trips.color }}>Trips</span>: 20 pts/trip with photos, 8 without (max 300)</li>
+            <li><span style={{ color: SCORE_COLORS.mods.color }}>Mods</span>: 25 pts/mod with before/after, 10 without (max 200)</li>
+            <li><span style={{ color: SCORE_COLORS.engagement.color }}>Engagement</span>: 2 pts/reply, 1 pt/reaction last 90d (max 100)</li>
+            <li><span style={{ color: SCORE_COLORS.trivia.color }}>Trivia</span>: streak x 1.5 (max 75)</li>
+            <li><span style={{ color: SCORE_COLORS.checkins.color }}>Check-ins</span>: 10 pts with photo, 4 without last 12mo (max 120)</li>
+            <li><span style={{ color: SCORE_COLORS.followers.color }}>Followers</span>: log10(followers+1) x 10 (max 50)</li>
+            <li><span style={{ color: SCORE_COLORS.founding.color }}>Founding</span>: 50 pts flat for early members</li>
+          </ul>
+          <p className="text-xs text-gray-400 mt-2">Scores recalculate every Sunday at 2 AM CT.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CreatorLeaderboardPage() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [discoveryContent, setDiscoveryContent] = useState<DiscoveryContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortBy>('views');
+  const [sortBy, setSortBy] = useState<SortBy>('contributionScore');
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [interestsLoaded, setInterestsLoaded] = useState(false);
   const [interestsDirty, setInterestsDirty] = useState(false);
@@ -134,7 +199,7 @@ export default function CreatorLeaderboardPage() {
     if (sortBy === 'discovery') {
       fetchDiscovery();
     } else {
-      fetchLeaderboard();
+      fetchLeaderboard(sortBy);
     }
   }, [sortBy]);
 
@@ -161,10 +226,10 @@ export default function CreatorLeaderboardPage() {
     }
   };
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (sort?: string) => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/creators/leaderboard?sortBy=${sortBy}&limit=50`);
+      const { data } = await api.get(`/creators/leaderboard?sortBy=${sort || sortBy}&limit=50`);
       setCreators(data);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -288,6 +353,17 @@ export default function CreatorLeaderboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-gray-600 font-medium">Sort by:</span>
             <button
+              onClick={() => setSortBy('contributionScore')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                sortBy === 'contributionScore'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Trophy className="w-4 h-4 inline mr-2" />
+              Community Score
+            </button>
+            <button
               onClick={() => setSortBy('discovery')}
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 sortBy === 'discovery'
@@ -336,6 +412,9 @@ export default function CreatorLeaderboardPage() {
             </button>
           </div>
         </div>
+
+        {/* How Scores Work (shown for contribution score mode) */}
+        {sortBy === 'contributionScore' && <HowScoresWork />}
 
         {/* Discovery Section */}
         {sortBy === 'discovery' && (
@@ -526,40 +605,57 @@ export default function CreatorLeaderboardPage() {
                         ))}
                       </div>
                     )}
+                    {/* Score breakdown bar in contribution mode */}
+                    {sortBy === 'contributionScore' && (creator as any).rig?.scoreBreakdown && (
+                      <ScoreBreakdownBar breakdown={(creator as any).rig.scoreBreakdown} score={(creator as any).rig?.contributionScore || 0} />
+                    )}
                   </div>
 
                   {/* Stats */}
                   <div className="flex-shrink-0 hidden md:flex items-center gap-6 text-sm">
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-gray-900">
-                        {formatNumber(creator.creatorStats?.totalViews || 0)}
-                      </p>
-                      <p className="text-gray-500 flex items-center gap-1">
-                        <Eye className="w-4 h-4" /> Views
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-gray-900">
-                        {formatNumber(creator.creatorStats?.totalLikes || 0)}
-                      </p>
-                      <p className="text-gray-500 flex items-center gap-1">
-                        <Heart className="w-4 h-4" /> Likes
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-gray-900">
-                        {formatNumber(creator.creatorStats?.followerCount || 0)}
-                      </p>
-                      <p className="text-gray-500 flex items-center gap-1">
-                        <Users className="w-4 h-4" /> Followers
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-gray-900">
-                        {creator._count?.creatorContent || 0}
-                      </p>
-                      <p className="text-gray-500">Posts</p>
-                    </div>
+                    {sortBy === 'contributionScore' && (creator as any).rig?.contributionScore ? (
+                      <div className="text-center">
+                        <p className="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
+                          {Math.round((creator as any).rig.contributionScore)}
+                        </p>
+                        <p className="text-gray-500 flex items-center gap-1">
+                          <Trophy className="w-4 h-4" /> Score
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-gray-900">
+                            {formatNumber(creator.creatorStats?.totalViews || 0)}
+                          </p>
+                          <p className="text-gray-500 flex items-center gap-1">
+                            <Eye className="w-4 h-4" /> Views
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-gray-900">
+                            {formatNumber(creator.creatorStats?.totalLikes || 0)}
+                          </p>
+                          <p className="text-gray-500 flex items-center gap-1">
+                            <Heart className="w-4 h-4" /> Likes
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-gray-900">
+                            {formatNumber(creator.creatorStats?.followerCount || 0)}
+                          </p>
+                          <p className="text-gray-500 flex items-center gap-1">
+                            <Users className="w-4 h-4" /> Followers
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-bold text-gray-900">
+                            {creator._count?.creatorContent || 0}
+                          </p>
+                          <p className="text-gray-500">Posts</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </Link>

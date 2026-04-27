@@ -458,6 +458,20 @@ export default function BasecampActivityFeed({ maxItems = 10, showHeader = true 
                       ) : null;
                     })()}
 
+                    {/* Show rig post photos */}
+                    {item.type === 'RIG_POST' && item.metadata?.rigSlug && (
+                      <div className="mt-2">
+                        {item.metadata.photoCount > 0 && item.metadata.rigPhoto && (
+                          <Link to={`/rig/${item.metadata.rigSlug}/posts`}>
+                            <img src={item.metadata.rigPhoto} alt="" className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-200 hover:opacity-90" />
+                          </Link>
+                        )}
+                        <Link to={`/rig/${item.metadata.rigSlug}`} className="mt-1 inline-flex items-center gap-1 text-xs text-amber-600 hover:underline">
+                          🚐 View {item.metadata.rigName || 'Rig'}
+                        </Link>
+                      </div>
+                    )}
+
                     {/* Show photo/video for PHOTO_UPLOADED */}
                     {item.type === 'PHOTO_UPLOADED' && (item.imageUrl || item.videoUrl) && (
                       <div className="mt-2 rounded-lg overflow-hidden max-w-sm">

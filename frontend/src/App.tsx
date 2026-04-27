@@ -104,6 +104,7 @@ const CreateHostPage = lazy(() => import('./pages/CreateHostPage'));
 const HitchAIPage = lazy(() => import('./pages/HitchAIPage'));
 const CreatorPage = lazy(() => import('./pages/CreatorPage'));
 const CreatorLeaderboardPage = lazy(() => import('./pages/CreatorLeaderboardPage'));
+const ModMarketplacePage = lazy(() => import('./pages/ModMarketplacePage'));
 const CreatorDashboardPage = lazy(() => import('./pages/CreatorDashboardPage'));
 const CreatorContentEditorPage = lazy(() => import('./pages/CreatorContentEditorPage'));
 const BasecampPage = lazy(() => import('./pages/BasecampPage'));
@@ -340,6 +341,7 @@ function AppContent() {
           <Route path="/settings/delete-account" element={<AccountDeletionPage />} />
           <Route path="/badges" element={<BadgesPage />} />
           {/* Creator routes → redirect to Rig Profile system */}
+          <Route path="/mods" element={<ModMarketplacePage />} />
           <Route path="/creators" element={<CreatorLeaderboardPage />} />
           <Route path="/creators/leaderboard" element={<CreatorLeaderboardPage />} />
           <Route path="/creators/:username" element={<CreatorPage />} />

@@ -114,6 +114,7 @@ import overnightSpotsRoutes from './routes/overnight-spots.routes';
 import campMarketRoutes from './routes/camp-market.routes';
 import rigConnectionRoutes from './routes/rig-connection.routes';
 import rigRoutes from './routes/rig.routes';
+import modMarketplaceRoutes from './routes/mod-marketplace.routes';
 import campfireTipsRoutes from './routes/campfire-tips.routes';
 import feedControlsRoutes from './routes/feed-controls.routes';
 import lastMinuteRoutes from './routes/last-minute.routes';
@@ -149,6 +150,7 @@ import routeCoPilotRoutes from './routes/routeCoPilot.routes';
 import { registerCoPilotSockets } from './campfire/copilot.socket';
 import { registerConfidenceCron } from './cron/tripConfidence.cron';
 import { registerUtilityScoreCron } from './cron/utility-score.cron';
+import { registerContributionScoreCron } from './cron/contributionScore.cron';
 import { registerEmailCampaignCrons } from './cron/email-campaigns.cron';
 import doThisHereRoutes from './routes/doThisHere.routes';
 import emailRoutes from './routes/email.routes';
@@ -238,6 +240,7 @@ app.use(passport.initialize());
 app.use('/api', oauthRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/rigs', rigRoutes);
+app.use('/api/mods', modMarketplaceRoutes);
 
 // Routes
 app.get('/api/version', (req, res) => res.json({ version: '2.0', timestamp: Date.now() }));
@@ -405,6 +408,7 @@ registerConfidenceCron();
 registerCreatorNetworkCrons();
 registerScrapbookAnniversaryCron();
 registerUtilityScoreCron();
+registerContributionScoreCron();
 registerEmailCampaignCrons();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

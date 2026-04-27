@@ -373,6 +373,7 @@ export default function Navbar() {
                     <DropSection label="Explore" last>
                       <DropItem to="/recipes" onClick={() => setMoreOpen(false)} icon={<UtensilsCrossed className="w-4 h-4" />} iconBg="#fff7ed" iconColor="#f97316" label="Recipes" desc="Camp cooking" />
                       <DropItem to="/creators" onClick={() => setMoreOpen(false)} icon={<Play className="w-4 h-4" />} iconBg="#f5f3ff" iconColor="#8b5cf6" label="Rig Profiles" desc="Rigs & road content" />
+                      <DropItem to="/mods" onClick={() => setMoreOpen(false)} icon={<Wrench className="w-4 h-4" />} iconBg="#fef3c7" iconColor="#d97706" label="Mods" desc="What RVers are adding" />
                       <DropItem to="/gear" onClick={() => setMoreOpen(false)} icon={<Package className="w-4 h-4" />} iconBg="#f0fdf4" iconColor="#22c55e" label="Gear" desc="Marketplace" />
                       <DropItem to="/packing" onClick={() => setMoreOpen(false)} icon={<Backpack className="w-4 h-4" />} iconBg="#eff6ff" iconColor="#3b82f6" label="Packing Lists" desc="Trip checklists" />
                       <DropItem to="/rv-log" onClick={() => setMoreOpen(false)} icon={<Wrench className="w-4 h-4" />} iconBg="#fffbeb" iconColor="#f59e0b" label="RV Log" desc="Maintenance tracker" />
@@ -602,6 +603,7 @@ export default function Navbar() {
               <MobileLink to="/albums" icon={<Camera className="w-5 h-5" />} label="Albums" active={isActive('/albums')} />
               <MobileLink to="/recipes" icon={<UtensilsCrossed className="w-5 h-5" />} label="Recipes" active={isActive('/recipes')} />
               <MobileLink to="/creators" icon={<Play className="w-5 h-5" />} label="Rig Profiles" active={isActive('/creators')} />
+              <MobileLink to="/mods" icon={<Wrench className="w-5 h-5" />} label="Mods" active={isActive('/mods')} />
               <MobileLink to="/gear" icon={<Package className="w-5 h-5" />} label="Gear" active={isActive('/gear')} />
               <MobileLink to="/packing" icon={<Backpack className="w-5 h-5" />} label="Packing Lists" active={isActive('/packing')} />
               <MobileLink to="/rv-log" icon={<Wrench className="w-5 h-5" />} label="RV Log" active={isActive('/rv-log')} />

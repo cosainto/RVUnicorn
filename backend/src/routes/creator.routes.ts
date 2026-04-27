@@ -767,7 +767,7 @@ router.delete('/content/:contentId', authenticateToken, async (req, res) => {
 // ENGAGEMENT ROUTES
 // ===========================================
 
-// Follow/unfollow creator
+// Follow/unfollow creator (also syncs to RigFollow if creator has a rig)
 router.post('/follow/:creatorId', authenticateToken, async (req, res) => {
   try {
     const followerId = (req as any).user.id;
@@ -793,14 +793,36 @@ router.post('/follow/:creatorId', authenticateToken, async (req, res) => {
       },
     });
 
+    // Find creator's rig for sync
+    const creatorRig = await prisma.rig.findFirst({
+      where: { ownerId: creatorId },
+      select: { id: true },
+    });
+
     if (existing) {
       await prisma.creatorFollow.delete({ where: { id: existing.id } });
-      
+
       // Update follower count
       await prisma.creatorStats.update({
         where: { userId: creatorId },
         data: { followerCount: { decrement: 1 } },
       });
+
+      // Sync: also remove RigFollow if exists
+      if (creatorRig) {
+        try {
+          const rigFollow = await prisma.rigFollow.findUnique({
+            where: { rigId_userId: { rigId: creatorRig.id, userId: followerId } },
+          });
+          if (rigFollow) {
+            await prisma.rigFollow.delete({ where: { id: rigFollow.id } });
+            await prisma.rig.update({
+              where: { id: creatorRig.id },
+              data: { followerCount: { decrement: 1 } },
+            });
+          }
+        } catch (e: any) { console.error('[Creator] sync rig unfollow:', e.message); }
+      }
 
       return res.json({ isFollowing: false });
     }
@@ -815,6 +837,24 @@ router.post('/follow/:creatorId', authenticateToken, async (req, res) => {
       create: { userId: creatorId, followerCount: 1 },
       update: { followerCount: { increment: 1 } },
     });
+
+    // Sync: also create RigFollow if creator has a rig
+    if (creatorRig) {
+      try {
+        const rigFollowExists = await prisma.rigFollow.findUnique({
+          where: { rigId_userId: { rigId: creatorRig.id, userId: followerId } },
+        });
+        if (!rigFollowExists) {
+          await prisma.rigFollow.create({
+            data: { rigId: creatorRig.id, userId: followerId },
+          });
+          await prisma.rig.update({
+            where: { id: creatorRig.id },
+            data: { followerCount: { increment: 1 } },
+          });
+        }
+      } catch (e: any) { console.error('[Creator] sync rig follow:', e.message); }
+    }
 
     // Notify creator
     const follower = await prisma.user.findUnique({
@@ -1128,7 +1168,72 @@ router.post('/content/:contentId/comment', authenticateToken, async (req, res) =
 // Get creator leaderboard
 router.get('/leaderboard', async (req, res) => {
   try {
-    const { sortBy = 'views', limit = '50' } = req.query;
+    const { sortBy = 'contributionScore', limit = '50' } = req.query;
+
+    // If sorting by contributionScore, query rigs directly
+    if (sortBy === 'contributionScore') {
+      const rigs = await prisma.rig.findMany({
+        where: { isPublic: true, contributionScore: { not: null, gt: 0 } },
+        orderBy: { contributionScore: 'desc' },
+        take: parseInt(limit as string),
+        select: {
+          id: true,
+          slug: true,
+          rigName: true,
+          heroPhoto: true,
+          contributionScore: true,
+          scoreBreakdown: true,
+          followerCount: true,
+          totalTripCount: true,
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              profilePicture: true,
+              creatorBio: true,
+              creatorVerified: true,
+              creatorHandle: true,
+              creatorDisplayName: true,
+              creatorStats: {
+                select: {
+                  totalViews: true,
+                  totalLikes: true,
+                  followerCount: true,
+                  viewsThisWeek: true,
+                  followersThisWeek: true,
+                },
+              },
+              _count: {
+                select: {
+                  creatorContent: { where: { status: 'PUBLISHED' } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const enrichedRigs = rigs.map((rig: any) => ({
+        ...rig.owner,
+        rig: {
+          id: rig.id,
+          slug: rig.slug,
+          rigName: rig.rigName,
+          heroPhoto: rig.heroPhoto,
+          contributionScore: rig.contributionScore,
+          scoreBreakdown: rig.scoreBreakdown,
+          followerCount: rig.followerCount,
+          totalTripCount: rig.totalTripCount,
+        },
+        lastPostDate: null,
+        isInactive: false,
+        heatLevel: 0,
+      }));
+
+      return res.json(enrichedRigs);
+    }
 
     let orderBy: any = {};
     if (sortBy === 'views') orderBy = { creatorStats: { totalViews: 'desc' } };
@@ -1170,6 +1275,18 @@ router.get('/leaderboard', async (req, res) => {
           take: 1,
           select: { publishedAt: true },
         },
+        ownedRigs: {
+          where: { isPublic: true },
+          take: 1,
+          select: {
+            id: true,
+            slug: true,
+            rigName: true,
+            heroPhoto: true,
+            contributionScore: true,
+            scoreBreakdown: true,
+          },
+        },
       },
     });
 
@@ -1197,8 +1314,19 @@ router.get('/leaderboard', async (req, res) => {
       if (engagementRate > 100) heatLevel = 6;
       if (engagementRate > 150) heatLevel = 7;
       
+      const rig = creator.ownedRigs?.[0] || null;
+
       return {
         ...creator,
+        ownedRigs: undefined,
+        rig: rig ? {
+          id: rig.id,
+          slug: rig.slug,
+          rigName: rig.rigName,
+          heroPhoto: rig.heroPhoto,
+          contributionScore: rig.contributionScore,
+          scoreBreakdown: rig.scoreBreakdown,
+        } : null,
         lastPostDate: lastPost,
         isInactive,
         heatLevel,

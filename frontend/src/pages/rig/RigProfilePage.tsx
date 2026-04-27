@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useGate } from '../../hooks/useGate';
 import GateModal from '../../components/public/GateModal';
 import AlbumPhotoGrid from '../../components/AlbumPhotoGrid';
+import RigActivityFeed from '../../components/rig/RigActivityFeed';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -34,6 +35,7 @@ export default function RigProfilePage() {
   const [mods, setMods] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [showAllSpecs, setShowAllSpecs] = useState(false);
 
   useEffect(() => {
@@ -59,6 +61,9 @@ export default function RigProfilePage() {
     }
     if (activeTab === 'posts' && posts.length === 0) {
       api.get(`/rigs/${rig.id}/posts`).then(r => setPosts(r.data || [])).catch(() => {});
+    }
+    if (activeTab === 'overview' && events.length === 0) {
+      api.get(`/rigs/${rig.id}/events`).then(r => setEvents(r.data || [])).catch(() => {});
     }
   }, [activeTab, rig?.id]);
 
@@ -176,8 +181,19 @@ export default function RigProfilePage() {
               ))}
             </div>
 
-            {/* Follower count */}
-            <p className="text-xs mb-4" style={{ color: CN.muted }}>{rig.followerCount || 0} follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</p>
+            {/* Follower count + Community Score badge */}
+            <div className="flex items-center gap-3 mb-4">
+              <p className="text-xs" style={{ color: CN.muted }}>{rig.followerCount || 0} follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</p>
+              {rig.contributionScore > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold cursor-default"
+                  style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#FFF' }}
+                  title={rig.scoreBreakdown ? `Top components: ${Object.entries(rig.scoreBreakdown as Record<string, number>).sort(([,a],[,b]) => b - a).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(', ')}` : undefined}
+                >
+                  Community Score: {Math.round(rig.contributionScore)}
+                </span>
+              )}
+            </div>
 
             {/* Stat bar */}
             <div className="grid grid-cols-4 gap-2 mb-6">
@@ -290,6 +306,9 @@ export default function RigProfilePage() {
                   <Link to={`/rig/${slug}/stats`} className="text-xs mt-3 inline-block" style={{ color: CN.gold }}>See full stats →</Link>
                 </div>
 
+                {/* Module: Activity Feed */}
+                <RigActivityFeed rigId={rig.id} rigName={rig.rigName} isOwner={isOwner} cn={CN} />
+
                 {/* Module H: Pilots & Crew */}
                 <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
                   <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>The Crew</h3>
@@ -312,6 +331,61 @@ export default function RigProfilePage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Module: Upcoming Events */}
+                {events.filter((e: any) => new Date(e.startTime) > new Date()).length > 0 && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>Upcoming Events</h3>
+                    <div className="space-y-3">
+                      {events
+                        .filter((e: any) => new Date(e.startTime) > new Date())
+                        .slice(0, 3)
+                        .map((e: any) => (
+                          <div key={e.id} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: CN.cardAlt }}>
+                            <div className="text-center flex-shrink-0 w-10">
+                              <p className="text-xs font-bold" style={{ color: CN.gold }}>
+                                {new Date(e.startTime).toLocaleDateString('en-US', { month: 'short' })}
+                              </p>
+                              <p className="text-lg font-bold" style={{ color: CN.cream }}>
+                                {new Date(e.startTime).getDate()}
+                              </p>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold" style={{ color: CN.cream }}>{e.title}</p>
+                              <p className="text-[11px]" style={{ color: CN.muted }}>
+                                {e.type} {e.campground ? `· ${e.campground.name}` : ''}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px]" style={{ color: CN.muted }}>{e.rsvpCount} RSVP{e.rsvpCount !== 1 ? 's' : ''}</span>
+                                {user && !isOwner && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const { data } = await api.post(`/rigs/${rig.id}/events/${e.id}/rsvp`);
+                                        setEvents(evts => evts.map(ev => ev.id === e.id ? {
+                                          ...ev,
+                                          userHasRsvped: data.rsvped,
+                                          rsvpCount: ev.rsvpCount + (data.rsvped ? 1 : -1),
+                                        } : ev));
+                                      } catch {}
+                                    }}
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition"
+                                    style={{
+                                      background: e.userHasRsvped ? CN.gold : 'transparent',
+                                      color: e.userHasRsvped ? CN.bg : CN.gold,
+                                      border: `1px solid ${CN.gold}`,
+                                    }}
+                                  >
+                                    {e.userHasRsvped ? 'Going' : 'RSVP'}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Module I: Creator Links */}
                 {rig.isCreatorEnabled && (rig.youtubeUrl || rig.instagramUrl || rig.tiktokUrl || rig.websiteUrl) && (

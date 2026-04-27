@@ -15,6 +15,69 @@ const safeUserSelect = {
   profilePicture: true,
 };
 
+// ============== FOLLOW HELPERS ==============
+
+/**
+ * Get follower userIds for a user — prefers RigFollow, falls back to CreatorFollow.
+ * Used by notification code to avoid duplicate notifications.
+ */
+async function getFollowersForUser(userId: string): Promise<string[]> {
+  // Find user's rig
+  const rig = await prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true } });
+
+  if (rig) {
+    const rigFollows = await prisma.rigFollow.findMany({
+      where: { rigId: rig.id },
+      select: { userId: true },
+    });
+    return rigFollows.map((f: any) => f.userId);
+  }
+
+  // Fallback to CreatorFollow
+  const creatorFollows = await prisma.creatorFollow.findMany({
+    where: { creatorId: userId },
+    select: { followerId: true },
+  });
+  return creatorFollows.map((f: any) => f.followerId);
+}
+
+/**
+ * Sync a rig follow action to CreatorFollow so both tables stay consistent.
+ * Prevents duplicate notifications by keeping a single source of truth.
+ */
+async function syncCreatorFollow(rigOwnerId: string, followerId: string, action: 'follow' | 'unfollow') {
+  try {
+    if (action === 'follow') {
+      const exists = await prisma.creatorFollow.findUnique({
+        where: { creatorId_followerId: { creatorId: rigOwnerId, followerId } },
+      });
+      if (!exists) {
+        await prisma.creatorFollow.create({
+          data: { creatorId: rigOwnerId, followerId, migrated: true },
+        });
+        await prisma.creatorStats.upsert({
+          where: { userId: rigOwnerId },
+          create: { userId: rigOwnerId, followerCount: 1 },
+          update: { followerCount: { increment: 1 } },
+        });
+      }
+    } else {
+      const exists = await prisma.creatorFollow.findUnique({
+        where: { creatorId_followerId: { creatorId: rigOwnerId, followerId } },
+      });
+      if (exists) {
+        await prisma.creatorFollow.delete({ where: { id: exists.id } });
+        await prisma.creatorStats.updateMany({
+          where: { userId: rigOwnerId, followerCount: { gt: 0 } },
+          data: { followerCount: { decrement: 1 } },
+        });
+      }
+    }
+  } catch (err: any) {
+    console.error('[Rig] sync creator follow error:', err.message);
+  }
+}
+
 // ============== HELPERS ==============
 
 /** Check if the authenticated user is the rig owner or a pilot with canEdit */
@@ -396,6 +459,11 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
 
     const { title, body, photos, postType, tripId, isPublic } = req.body;
 
+    const rig = await prisma.rig.findUnique({
+      where: { id: rigId },
+      select: { ownerId: true, rigName: true, slug: true, heroPhoto: true },
+    });
+
     const post = await prisma.rigPost.create({
       data: {
         rigId,
@@ -409,6 +477,46 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
       },
       include: { author: { select: safeUserSelect } },
     });
+
+    // Create BasecampActivity for RigFollow followers + pilots
+    if (isPublic !== false && rig) {
+      try {
+        const [followers, pilots] = await Promise.all([
+          prisma.rigFollow.findMany({ where: { rigId }, select: { userId: true } }),
+          prisma.rigPilot.findMany({ where: { rigId }, select: { userId: true } }),
+        ]);
+        const recipientIds = [...new Set([
+          ...followers.map((f: any) => f.userId),
+          ...pilots.map((p: any) => p.userId),
+          rig.ownerId,
+        ])].filter((id: string) => id !== userId); // Don't notify the author
+
+        if (recipientIds.length > 0) {
+          await prisma.basecampActivity.createMany({
+            data: recipientIds.map((recipientId: string) => ({
+              userId: recipientId,
+              actorId: userId,
+              type: 'RIG_POST',
+              entityType: 'RigPost',
+              entityId: post.id,
+              entityName: title || 'Rig Post',
+              metadata: {
+                postType: postType || 'road_report',
+                title,
+                photoCount: (photos || []).length,
+                tripId,
+                rigName: rig.rigName,
+                rigSlug: rig.slug,
+                rigPhoto: rig.heroPhoto,
+                rigId,
+              },
+            })),
+          });
+        }
+      } catch (err: any) {
+        console.error('[Rig] create basecamp activity error:', err.message);
+      }
+    }
 
     res.status(201).json(post);
   } catch (error: any) {
@@ -502,6 +610,9 @@ router.post('/:rigId/fuel-logs', authenticateToken, async (req: Request, res: Re
         where: { id: rigId },
         data: { avgMPG, totalFuelCost, currentOdometer: last.odometer },
       });
+
+      // Check milestones after odometer update
+      checkMilestones(rigId);
     }
 
     res.status(201).json(fuelLog);
@@ -537,27 +648,46 @@ router.post('/:rigId/follow', authenticateToken, async (req: Request, res: Respo
     const { rigId } = req.params;
     const userId = (req as any).userId;
 
+    const rigData = await prisma.rig.findUnique({ where: { id: rigId }, select: { ownerId: true } });
+    if (!rigData) return res.status(404).json({ error: 'Rig not found' });
+
     const existing = await prisma.rigFollow.findUnique({
       where: { rigId_userId: { rigId, userId } },
     });
 
     if (existing) {
-      // Unfollow
+      // Unfollow — remove both RigFollow and CreatorFollow
       await prisma.rigFollow.delete({ where: { id: existing.id } });
       const rig = await prisma.rig.update({
         where: { id: rigId },
         data: { followerCount: { decrement: 1 } },
         select: { followerCount: true },
       });
+      await syncCreatorFollow(rigData.ownerId, userId, 'unfollow');
       return res.json({ following: false, followerCount: rig.followerCount });
     }
 
-    // Follow
+    // Follow — create both RigFollow and CreatorFollow
     await prisma.rigFollow.create({ data: { rigId, userId } });
     const rig = await prisma.rig.update({
       where: { id: rigId },
       data: { followerCount: { increment: 1 } },
       select: { followerCount: true },
+    });
+    await syncCreatorFollow(rigData.ownerId, userId, 'follow');
+
+    // Notify rig owner
+    const follower = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, firstName: true },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: rigData.ownerId,
+        type: 'NEW_FOLLOWER',
+        content: `${follower?.firstName || follower?.username} started following your rig`,
+        link: `/rig/${rigId}`,
+      },
     });
 
     res.json({ following: true, followerCount: rig.followerCount });
@@ -693,4 +823,368 @@ router.delete('/:rigId/documents/:docId', authenticateToken, async (req: Request
   }
 });
 
+// ============== ACTIVITY FEED ==============
+
+const MILESTONE_THRESHOLDS: Record<string, number[]> = {
+  states: [5, 10, 15, 20, 25, 30, 40, 50],
+  nights: [10, 25, 50, 100, 200, 365],
+  trips: [5, 10, 25, 50, 100],
+  miles: [1000, 5000, 10000, 25000, 50000],
+};
+
+async function checkMilestones(rigId: string) {
+  try {
+    const rig = await prisma.rig.findUnique({
+      where: { id: rigId },
+      select: { totalStatesCount: true, totalNightsCamped: true, totalTripCount: true, totalMilesDriven: true },
+    });
+    if (!rig) return;
+
+    const checks: { type: string; value: number }[] = [
+      { type: 'states', value: rig.totalStatesCount || 0 },
+      { type: 'nights', value: rig.totalNightsCamped || 0 },
+      { type: 'trips', value: rig.totalTripCount || 0 },
+      { type: 'miles', value: Math.round(rig.totalMilesDriven || 0) },
+    ];
+
+    for (const check of checks) {
+      const thresholds = MILESTONE_THRESHOLDS[check.type] || [];
+      for (const threshold of thresholds) {
+        if (check.value >= threshold) {
+          await prisma.rigMilestone.upsert({
+            where: { rigId_milestoneType_value: { rigId, milestoneType: check.type, value: threshold } },
+            create: { rigId, milestoneType: check.type, value: threshold },
+            update: {},
+          });
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('[Rig] milestone check error:', err.message);
+  }
+}
+
+router.get('/:rigId/activity', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { rigId } = req.params;
+    const rig = await prisma.rig.findUnique({
+      where: { id: rigId },
+      select: { ownerId: true, rigName: true },
+    });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const activities: any[] = [];
+
+    // Mods added to this rig
+    const recentMods = await prisma.modLog.findMany({
+      where: { rigId, isPublic: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: { id: true, title: true, category: true, createdAt: true },
+    });
+    for (const mod of recentMods) {
+      activities.push({
+        type: 'mod_added',
+        icon: '🔧',
+        description: `${mod.title} added`,
+        timestamp: mod.createdAt,
+      });
+    }
+
+    // Recent rig posts (trip completed, etc.)
+    const recentPosts = await prisma.rigPost.findMany({
+      where: { rigId, isPublic: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: { id: true, title: true, postType: true, createdAt: true },
+    });
+    for (const post of recentPosts) {
+      const typeLabel = post.postType === 'trip_recap' ? 'Trip completed' :
+                        post.postType === 'mod_update' ? 'Mod update posted' :
+                        post.postType === 'tip' ? 'Road tip shared' : 'Road report posted';
+      activities.push({
+        type: post.postType === 'trip_recap' ? 'trip_completed' : 'post',
+        icon: post.postType === 'trip_recap' ? '🗺' : '📝',
+        description: post.title || typeLabel,
+        timestamp: post.createdAt,
+      });
+    }
+
+    // Pilots joined
+    const pilots = await prisma.rigPilot.findMany({
+      where: { rigId },
+      orderBy: { addedAt: 'desc' },
+      take: 2,
+      include: { user: { select: { firstName: true } } },
+    });
+    for (const pilot of pilots) {
+      activities.push({
+        type: 'pilot_joined',
+        icon: '🤝',
+        description: `${pilot.user?.firstName || 'Someone'} joined as ${pilot.role}`,
+        timestamp: pilot.addedAt,
+      });
+    }
+
+    // Milestones
+    const milestones = await prisma.rigMilestone.findMany({
+      where: { rigId },
+      orderBy: { achievedAt: 'desc' },
+      take: 3,
+    });
+    for (const m of milestones) {
+      const label = m.milestoneType === 'states' ? `${m.value} states visited!` :
+                    m.milestoneType === 'nights' ? `${m.value} nights camped!` :
+                    m.milestoneType === 'trips' ? `${m.value} trips completed!` :
+                    `${m.value.toLocaleString()} miles driven!`;
+      activities.push({
+        type: 'milestone',
+        icon: '📍',
+        description: label,
+        timestamp: m.achievedAt,
+      });
+    }
+
+    // Campground ratings by owner
+    try {
+      const ratings = await prisma.campgroundReview.findMany({
+        where: { userId: rig.ownerId },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        include: { campground: { select: { name: true } } },
+      });
+      for (const r of ratings) {
+        activities.push({
+          type: 'campground_rated',
+          icon: '⭐',
+          description: `Rated ${r.campground?.name || 'a campground'}`,
+          timestamp: r.createdAt,
+        });
+      }
+    } catch {}
+
+    // Check-ins at rig's visited campgrounds by other users
+    try {
+      // Get rig owner's visited campground IDs
+      const ownerCheckins = await prisma.checkIn.findMany({
+        where: { userId: rig.ownerId },
+        select: { campgroundId: true },
+        distinct: ['campgroundId'],
+      });
+      const campIds = ownerCheckins.map((c: any) => c.campgroundId).filter(Boolean);
+
+      if (campIds.length > 0) {
+        const otherCheckins = await prisma.checkIn.findMany({
+          where: {
+            campgroundId: { in: campIds },
+            userId: { not: rig.ownerId },
+            isActive: true,
+          },
+          orderBy: { checkInDate: 'desc' },
+          take: 3,
+          include: {
+            user: { select: { firstName: true } },
+            campground: { select: { name: true } },
+          },
+        });
+        for (const ci of otherCheckins) {
+          activities.push({
+            type: 'campground_checkin',
+            icon: '🏕',
+            description: `${ci.user?.firstName || 'Someone'} checked in at ${ci.campground?.name || 'a campground'}`,
+            timestamp: ci.checkInDate,
+          });
+        }
+      }
+    } catch {}
+
+    // Sort by timestamp descending and return top 10
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    res.json(activities.slice(0, 10));
+  } catch (error: any) {
+    console.error('[Rig] activity feed error:', error.message);
+    res.status(500).json({ error: 'Failed to get activity feed' });
+  }
+});
+
+// ============== EVENTS (surfaced from CreatorEvent) ==============
+// TODO: Full event system merge deferred — CreatorEvent and Event are fundamentally
+// different (social meetups vs trip plans). For now, we link and surface.
+
+router.get('/:rigId/events', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { rigId } = req.params;
+    const rig = await prisma.rig.findUnique({ where: { id: rigId }, select: { ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const userId = (req as any).userId;
+
+    // Get events where rigId matches OR creator is the rig owner
+    const events = await prisma.creatorEvent.findMany({
+      where: {
+        OR: [
+          { rigId },
+          { creatorId: rig.ownerId },
+        ],
+        status: { not: 'CANCELLED' },
+      },
+      include: {
+        campground: { select: { id: true, name: true, state: true } },
+        rsvps: { select: { userId: true } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    const enriched = events.map((e: any) => ({
+      ...e,
+      rsvpCount: e.rsvps.length,
+      userHasRsvped: userId ? e.rsvps.some((r: any) => r.userId === userId) : false,
+      rsvps: undefined,
+    }));
+
+    res.json(enriched);
+  } catch (error: any) {
+    console.error('[Rig] get events error:', error.message);
+    res.status(500).json({ error: 'Failed to get events' });
+  }
+});
+
+router.post('/:rigId/events', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { rigId } = req.params;
+    const userId = (req as any).userId;
+    const owner = await isOwner(rigId, userId);
+    if (!owner) return res.status(403).json({ error: 'Only rig owner can create events' });
+
+    const { title, description, type, campgroundId, startTime, endTime, maxAttendees } = req.body;
+    if (!title?.trim() || !type || !startTime) {
+      return res.status(400).json({ error: 'Title, type, and startTime are required' });
+    }
+
+    const event = await prisma.creatorEvent.create({
+      data: {
+        creatorId: userId,
+        rigId,
+        title: title.trim(),
+        description: description?.trim() || null,
+        type,
+        campgroundId: campgroundId || null,
+        startTime: new Date(startTime),
+        endTime: endTime ? new Date(endTime) : null,
+        maxAttendees: maxAttendees || null,
+        status: 'UPCOMING',
+      },
+    });
+
+    res.status(201).json(event);
+  } catch (error: any) {
+    console.error('[Rig] create event error:', error.message);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+router.post('/:rigId/events/:eventId/rsvp', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const userId = (req as any).userId;
+
+    const existing = await prisma.creatorEventRsvp.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    });
+
+    if (existing) {
+      await prisma.creatorEventRsvp.delete({ where: { id: existing.id } });
+      return res.json({ rsvped: false });
+    }
+
+    // Check max attendees
+    const event = await prisma.creatorEvent.findUnique({
+      where: { id: eventId },
+      include: { _count: { select: { rsvps: true } } },
+    });
+    if (event?.maxAttendees && event._count.rsvps >= event.maxAttendees) {
+      return res.status(400).json({ error: 'Event is full' });
+    }
+
+    await prisma.creatorEventRsvp.create({
+      data: { eventId, userId },
+    });
+
+    res.json({ rsvped: true });
+  } catch (error: any) {
+    console.error('[Rig] event rsvp error:', error.message);
+    res.status(500).json({ error: 'Failed to toggle RSVP' });
+  }
+});
+
+// ============== MIGRATE CREATOR FOLLOWS TO RIG ==============
+
+router.post('/admin/migrate-follows', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    // Simple admin check — only allow the site owner
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email?.includes('kindletribe') && !user?.email?.includes('rvunicorn')) {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+
+    const creatorFollows = await prisma.creatorFollow.findMany({
+      where: { migrated: false },
+    });
+
+    let migrated = 0;
+    let skipped = 0;
+
+    for (const cf of creatorFollows) {
+      // Find the rig owned by the creator being followed
+      const rig = await prisma.rig.findFirst({
+        where: { ownerId: cf.creatorId },
+        select: { id: true },
+      });
+
+      if (!rig) {
+        skipped++;
+        continue;
+      }
+
+      // Check if RigFollow already exists
+      const existing = await prisma.rigFollow.findUnique({
+        where: { rigId_userId: { rigId: rig.id, userId: cf.followerId } },
+      });
+
+      if (!existing) {
+        await prisma.rigFollow.create({
+          data: {
+            rigId: rig.id,
+            userId: cf.followerId,
+            sourceCreatorFollowId: cf.id,
+            followedAt: cf.createdAt,
+          },
+        });
+        // Update rig follower count
+        await prisma.rig.update({
+          where: { id: rig.id },
+          data: { followerCount: { increment: 1 } },
+        });
+        migrated++;
+      } else {
+        skipped++;
+      }
+
+      // Mark as migrated
+      await prisma.creatorFollow.update({
+        where: { id: cf.id },
+        data: { migrated: true },
+      });
+    }
+
+    res.json({ migrated, skipped, total: creatorFollows.length });
+  } catch (error: any) {
+    console.error('[Rig] migrate follows error:', error.message);
+    res.status(500).json({ error: 'Failed to migrate follows' });
+  }
+});
+
+export { getFollowersForUser };
 export default router;
