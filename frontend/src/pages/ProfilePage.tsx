@@ -241,12 +241,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@400;500;600;700&display=swap');
-        :root{--navy:#1B2B4B;--navy-deep:#0F1C35;--navy-body:#1E2D42;--gold:#E8A838;--gold-light:#E8C96A;--campfire:#E8622A;--campfire-glow:rgba(232,98,42,0.12);--glass-hero:rgba(15,26,46,0.82);--glass-secondary:rgba(15,26,46,0.95);--glass-border:rgba(201,168,76,0.18);--muted:rgba(255,255,255,0.55);--cream:#F5F0E8}
-        .profile-body-zone{background:var(--navy-body);border-top:1px solid transparent;background-image:linear-gradient(var(--navy-body),var(--navy-body))}
+        :root{--navy:#1B2B4B;--navy-deep:#1A2B45;--navy-body:#22334D;--gold:#E8A838;--gold-light:#E8C96A;--campfire:#E8622A;--campfire-glow:rgba(232,98,42,0.12);--glass-hero:rgba(26,43,69,0.85);--glass-secondary:rgba(26,43,69,0.95);--glass-border:rgba(201,168,76,0.2);--muted:rgba(255,255,255,0.6);--cream:#F5F0E8}
         .font-playfair{font-family:'Playfair Display',serif}.font-dm{font-family:'DM Sans',sans-serif}
-        .hero-glass{background:var(--glass-hero);backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:20px}
-        .support-glass{background:var(--glass-secondary);backdrop-filter:blur(6px);border:1px solid rgba(201,168,76,0.1);border-radius:16px}
-        .flat-card{background:var(--navy-deep);border:1px solid rgba(255,255,255,0.06);border-radius:14px}
+        .hero-glass{background:rgba(22,34,54,0.9);backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:20px}
+        .support-glass{background:rgba(22,34,54,0.95);backdrop-filter:blur(6px);border:1px solid rgba(201,168,76,0.12);border-radius:16px}
+        .flat-card{background:#162236;border:1px solid rgba(255,255,255,0.08);border-radius:14px}
         .tab-pill{padding:7px 18px;border-radius:9999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;background:#162236;border:1px solid #243552}
         .tab-pill.active{background:transparent;color:var(--gold);border-color:var(--gold);border-bottom:2px solid var(--gold)}.tab-pill:not(.active){color:#8B9BB4}
         .tab-pill:not(.active):hover{background:rgba(255,255,255,0.04);color:#F5F0E8}
@@ -255,9 +254,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         @keyframes tabFade{from{opacity:0}to{opacity:1}}.tab-enter{animation:tabFade 150ms ease}
 
         /* Campfire Night theme for SocialFeed */
-        .dark-feed { background: #0F1C35 !important; }
-        .dark-feed .bg-white { background: #0F1C35 !important; color: rgba(245,240,232,0.75) !important; }
-        .dark-feed .bg-gray-50, .dark-feed .bg-gray-100 { background: #1B2E50 !important; }
+        .dark-feed { background: #1A2B45 !important; }
+        .dark-feed .bg-white { background: #1A2B45 !important; color: rgba(245,240,232,0.75) !important; }
+        .dark-feed .bg-gray-50, .dark-feed .bg-gray-100 { background: #22334D !important; }
         .dark-feed .bg-gray-200 { background: rgba(27,46,80,0.7) !important; }
         .dark-feed .bg-gray-300 { background: rgba(27,46,80,0.5) !important; color: rgba(245,240,232,0.6) !important; }
         .dark-feed .bg-green-50, .dark-feed .bg-blue-50, .dark-feed .bg-orange-50, .dark-feed .bg-indigo-50, .dark-feed .bg-amber-50, .dark-feed .bg-purple-50, .dark-feed .bg-red-50 { background: rgba(27,46,80,0.5) !important; }
