@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
+import { recalculateCampgroundRatings } from '../services/campgroundRatingService';
 
 const SITE_ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 
@@ -13,6 +14,35 @@ const prisma = new PrismaClient() as any;
 
 // File upload setup - memory storage for Cloudinary
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// ============== USER RATINGS (must be before /:campgroundId catch-all) ==============
+
+// Get all ratings by a specific user (public profile data)
+router.get('/user/:userId/ratings', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const ratings = await prisma.campgroundReview.findMany({
+      where: { userId },
+      select: {
+        campgroundId: true,
+        rating: true,
+        title: true,
+        review: true,
+        visitDate: true,
+        createdAt: true,
+        noise: true,
+        levelness: true,
+        cellService: true,
+        bigRigFriendly: true,
+        wouldReturn: true,
+      },
+    });
+    res.json(ratings);
+  } catch (error: any) {
+    console.error('Get user ratings error:', error);
+    res.status(500).json({ error: 'Failed to get user ratings' });
+  }
+});
 
 // ============== REVIEWS ==============
 
@@ -113,6 +143,7 @@ router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, re
           },
         },
       });
+      await recalculateCampgroundRatings(campgroundId);
       return res.json(updated);
     }
 
@@ -133,6 +164,7 @@ router.post('/:campgroundId/reviews', authenticateToken, async (req: Request, re
       },
     });
 
+    await recalculateCampgroundRatings(campgroundId);
     res.status(201).json(newReview);
   } catch (error: any) {
     console.error('Create review error:', error);
@@ -152,6 +184,7 @@ router.delete('/:campgroundId/reviews/:reviewId', authenticateToken, async (req:
     }
 
     await prisma.campgroundReview.delete({ where: { id: reviewId } });
+    await recalculateCampgroundRatings(req.params.campgroundId);
     res.json({ success: true });
   } catch (error: any) {
     console.error('Delete review error:', error);

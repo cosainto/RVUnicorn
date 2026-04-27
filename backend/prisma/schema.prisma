@@ -633,6 +633,8 @@ model Campground {
   googlePlaceId          String?
   googleRating           Float?
   googleReviewCount      Int?
+  averageRating          Float?   @default(0)
+  ratingCount            Int      @default(0)
   phone                  String?
   storeUrl               String?
   city                   String?

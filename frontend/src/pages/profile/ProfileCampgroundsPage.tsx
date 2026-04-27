@@ -2,27 +2,47 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, MapPin, Star } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import CampgroundRatingCard from '../../components/profile/CampgroundRatingCard';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', gold: '#E8A838', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
 export default function ProfileCampgroundsPage() {
   const { username } = useParams<{ username: string }>();
+  const { user: currentUser } = useAuth();
   const [campgrounds, setCampgrounds] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<Record<string, any>>({});
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const isOwner = currentUser?.username === username;
+
+  const loadData = () => {
     if (!username) return;
     Promise.all([
       api.get(`/profile/${username}/campgrounds-visited`).catch(() => ({ data: [] })),
       api.get(`/profile/${username}`).catch(() => ({ data: null })),
     ]).then(([cgRes, profileRes]) => {
-      setCampgrounds(Array.isArray(cgRes.data) ? cgRes.data : (cgRes.data?.campgrounds || []));
+      const cgs = Array.isArray(cgRes.data) ? cgRes.data : (cgRes.data?.campgrounds || []);
+      setCampgrounds(cgs);
       setProfile(profileRes.data);
       setLoading(false);
+
+      // Batch fetch user's ratings
+      if (profileRes.data?.id) {
+        api.get(`/campground-features/user/${profileRes.data.id}/ratings`)
+          .then(r => {
+            const map: Record<string, any> = {};
+            (r.data || []).forEach((rating: any) => { map[rating.campgroundId] = rating; });
+            setRatings(map);
+          })
+          .catch(() => {});
+      }
     });
-  }, [username]);
+  };
+
+  useEffect(() => { loadData(); }, [username]);
 
   const stateSet = new Set(campgrounds.map(c => c.state).filter(Boolean));
   const totalCheckins = campgrounds.reduce((s, c) => s + (c.visitCount || 1), 0);
@@ -84,38 +104,61 @@ export default function ProfileCampgroundsPage() {
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>
                     {state} ({cgs.length})
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {cgs.map((cg: any) => (
-                      <Link
-                        key={cg.campgroundId}
-                        to={`/campgrounds/${cg.campgroundId}`}
-                        className="rounded-xl overflow-hidden transition hover:brightness-110"
-                        style={{ background: CN.card, border: `1px solid ${CN.border}` }}
-                      >
-                        <div className="aspect-square relative">
-                          {(cg.userPhoto || cg.imageUrl) ? (
-                            <img src={cg.userPhoto || cg.imageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-3xl" style={{ background: CN.border }}>
-                              {cg.name?.[0] || '🏕️'}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" style={{ alignItems: 'start' }}>
+                    {cgs.map((cg: any) => {
+                      const userRating = ratings[cg.campgroundId] || null;
+                      return (
+                        <div
+                          key={cg.campgroundId}
+                          className="rounded-xl overflow-hidden"
+                          style={{ background: CN.card, border: `1px solid ${CN.border}` }}
+                        >
+                          {/* Photo thumbnail */}
+                          <Link to={`/campgrounds/${cg.campgroundId}`} className="block">
+                            <div className="aspect-square relative">
+                              {(cg.userPhoto || cg.imageUrl) ? (
+                                <img src={cg.userPhoto || cg.imageUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-3xl" style={{ background: CN.border }}>
+                                  {cg.name?.[0] || '🏕️'}
+                                </div>
+                              )}
+                              {/* Rating pill overlay */}
+                              {userRating && (
+                                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5"
+                                  style={{ background: 'rgba(15,28,53,0.85)', color: CN.gold }}>
+                                  <Star className="w-2.5 h-2.5 fill-current" /> {userRating.rating}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="p-2">
-                          <p className="text-xs font-semibold truncate" style={{ color: CN.cream }}>{cg.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          </Link>
+
+                          {/* Name + state */}
+                          <div className="p-2">
+                            <Link to={`/campgrounds/${cg.campgroundId}`}>
+                              <p className="text-xs font-semibold truncate hover:underline" style={{ color: CN.cream }}>{cg.name}</p>
+                            </Link>
                             <span className="text-[10px]" style={{ color: CN.muted }}>
                               <MapPin className="w-2.5 h-2.5 inline" /> {cg.state}
                             </span>
-                            {cg.userRating && (
-                              <span className="text-[10px]" style={{ color: CN.gold }}>
-                                <Star className="w-2.5 h-2.5 inline fill-current" /> {cg.userRating}
-                              </span>
+
+                            {/* Rating card */}
+                            {profile && (
+                              <CampgroundRatingCard
+                                campgroundId={cg.campgroundId}
+                                campgroundName={cg.name}
+                                profileUserId={profile.id}
+                                profileFirstName={profile.firstName}
+                                profileUsername={profile.username}
+                                existingRating={userRating}
+                                isOwner={isOwner}
+                                onRatingSaved={loadData}
+                              />
                             )}
                           </div>
                         </div>
-                      </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
