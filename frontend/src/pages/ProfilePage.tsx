@@ -6,7 +6,7 @@ import CommunityTrustBadge from '../components/CommunityTrustBadge';
 import HitchProfileSummary from '../components/HitchProfileSummary';
 import CampMarketProfile from '../components/CampMarketProfile';
 import RigCard from '../components/RigCard';
-import { CampfireContributorStats } from '../components/CampfireTips';
+import ProfileConnectionsGrid from '../components/ProfileConnectionsGrid';
 const CampgroundClaimsQueue = lazy(() => import('../components/admin/CampgroundClaimsQueue'));
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -442,7 +442,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     )}
                     {username && <HitchProfileSummary username={username} />}
                     {profile?.id && <CampMarketProfile userId={profile.id} />}
-                    {profile?.id && <CampfireContributorStats userId={profile.id} />}
+                    {profile?.id && <ProfileConnectionsGrid userId={profile.id} isOwnProfile={isOwnProfile} />}
                   </div>
                 )}
               </div>
