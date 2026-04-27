@@ -788,7 +788,11 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
 
     const events = await prisma.event.findMany({
       where: {
-        organizerId: user.id,
+        OR: [
+          { organizerId: user.id },
+          { attendees: { some: { userId: user.id } } },
+        ],
+        isWishlist: false,
         ...(isOwnProfile ? {} : { isPublic: true }),
       },
       include: {
@@ -828,7 +832,40 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
       };
     });
 
-    res.json(trips);
+    // Also include check-in visits as trip-like entries (for users without formal events)
+    const eventCampgroundIds = new Set(events.filter((e: any) => e.campgroundId).map((e: any) => e.campgroundId));
+    const checkinVisits = await prisma.checkIn.findMany({
+      where: {
+        userId: user.id,
+        campgroundId: { not: null, notIn: Array.from(eventCampgroundIds) },
+      },
+      distinct: ['campgroundId'],
+      orderBy: { checkInDate: 'desc' },
+      include: {
+        campground: { select: { id: true, name: true, state: true, imageUrl: true } },
+      },
+    });
+
+    const checkinTrips = checkinVisits.map((ci: any) => {
+      const nights = ci.checkOutDate
+        ? Math.max(1, Math.ceil((new Date(ci.checkOutDate).getTime() - new Date(ci.checkInDate).getTime()) / 86400000))
+        : 1;
+      return {
+        id: `checkin-${ci.campground?.id || ci.id}`,
+        title: ci.campground?.name || 'Campground Visit',
+        startDate: ci.checkInDate,
+        endDate: ci.checkOutDate || ci.checkInDate,
+        nightsCount: nights,
+        coverImage: ci.campground?.imageUrl || null,
+        campgroundName: ci.campground?.name || null,
+        campgroundState: ci.campground?.state || null,
+        campgroundCount: 1,
+        attendeeCount: 0,
+        isCheckinVisit: true,
+      };
+    });
+
+    res.json([...trips, ...checkinTrips]);
   } catch (error: any) {
     console.error('Get user trips error:', error);
     res.status(500).json({ error: 'Failed to get user trips' });

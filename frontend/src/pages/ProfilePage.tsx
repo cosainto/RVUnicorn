@@ -136,7 +136,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   // VIEWING user's trips, so visitors saw their own numbers attributed to
   // whoever they were viewing (root cause of "304 nights on a brand-new
   // account"). This state holds the right person's numbers.
-  const [profileStats, setProfileStats] = useState<{ nightsCamped: number; totalTrips: number } | null>(null);
+  const [profileStats, setProfileStats] = useState<{ nightsCamped: number; totalTrips: number; campgroundsVisited: number } | null>(null);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', bio: '', location: '', zipCode: '', website: '', profilePicture: '', coverPhoto: '', bannerPosition: '50% 50%', rvMpg: '' as string | number, rvFuelType: '' });
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState('');
@@ -162,7 +162,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     if (!username) return;
     try {
       const { data } = await api.get(`/profile/${username}/stats`);
-      setProfileStats({ nightsCamped: data.nightsCamped || 0, totalTrips: data.totalTrips || 0 });
+      setProfileStats({ nightsCamped: data.nightsCamped || 0, totalTrips: data.totalTrips || 0, campgroundsVisited: data.campgroundsVisited || 0 });
     } catch {}
   };
   const loadCreatorContent = async () => { if (!username) return; try { const { data: p } = await api.get(`/profile/${username}`); if (p.isCreator) { const { data: c } = await api.get(`/creators/content/${p.id}`); setCreatorContent(Array.isArray(c) ? c.slice(0, 4) : []); try { const { data: s } = await api.get(`/creators/profile/${username}`); setCreatorStats(s); } catch {} } } catch {} };
@@ -392,7 +392,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                     <div className="grid grid-cols-2 gap-2">
                       <AnimatedStat icon={'\u{1F3D5}'} value={profileStats?.nightsCamped ?? 0} label="Nights Camped" href={`/profile/${username}/trips`} />
                       <AnimatedStat icon={'\u{1F6E3}'} value={profileStats?.totalTrips ?? userTrips.length} label="Trips" href={`/profile/${username}/trips`} />
-                      <AnimatedStat icon={'\u{1F4CD}'} value={favoriteCampgrounds.length} label="Campgrounds" href={`/profile/${username}/campgrounds`} />
+                      <AnimatedStat icon={'\u{1F4CD}'} value={profileStats?.campgroundsVisited ?? 0} label="Campgrounds" href={`/profile/${username}/campgrounds`} />
                       <AnimatedStat icon={'\u{1F91D}'} value={profile._count?.friends || 0} label="Friends" href={`/profile/${username}/friends`} />
                     </div>
 

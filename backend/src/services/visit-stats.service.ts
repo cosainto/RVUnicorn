@@ -271,8 +271,9 @@ export async function getProfileVisitStats(userId: string): Promise<ProfileVisit
     }
   }
 
-  // Count actual trips from Event + Trip tables (more meaningful than visit windows)
-  const [eventCount, tripCount] = await Promise.all([
+  // Count trips from Events (actual trips) — exclude PLANNING-only Trip records
+  // Trip table records are AI-generated itineraries, not actual trips taken
+  const [eventCount, uniqueCheckInCampgrounds] = await Promise.all([
     prisma.event.count({
       where: {
         OR: [
@@ -282,18 +283,22 @@ export async function getProfileVisitStats(userId: string): Promise<ProfileVisit
         isWishlist: false,
       },
     }),
-    prisma.trip.count({ where: { userId } }),
+    // Also count unique campgrounds directly from check-ins (most reliable source)
+    prisma.checkIn.findMany({
+      where: { userId, campgroundId: { not: null } },
+      distinct: ['campgroundId'],
+      select: { campgroundId: true },
+    }),
   ]);
 
-  // Use the larger of: actual trip/event records OR merged window count
-  let windowTripCount = 0;
-  for (const list of merged.values()) {
-    windowTripCount += list.length;
-  }
-  const totalTrips = Math.max(eventCount + tripCount, windowTripCount);
+  // totalTrips = events the user participated in (not AI-generated itineraries)
+  const totalTrips = eventCount;
+
+  // campgroundsVisited = unique campgrounds from check-ins OR merged windows (whichever is larger)
+  const campgroundsFromCheckins = uniqueCheckInCampgrounds.length;
 
   return {
-    campgroundsVisited: merged.size,
+    campgroundsVisited: Math.max(merged.size, campgroundsFromCheckins),
     totalTrips,
     nightsCamped,
   };
