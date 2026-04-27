@@ -313,14 +313,14 @@ export default function CreatorFeed({
         )}
         <div className="text-center py-8">
           <Video className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-500 mb-2">No creator content yet</p>
-          <p className="text-sm text-gray-400">Follow some creators to see their videos here!</p>
+          <p className="text-gray-500 mb-2">No rig content yet</p>
+          <p className="text-sm text-gray-400">Follow rigs to see trip recaps and road content here!</p>
           <Link
             to="/creators"
             className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
           >
             <UserPlus className="w-4 h-4" />
-            Discover Creators
+            Discover Rigs
           </Link>
         </div>
       </div>
@@ -335,13 +335,13 @@ export default function CreatorFeed({
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
             <Video className="w-5 h-5 text-purple-500" />
-            {source === 'following' ? 'From Creators You Follow' : 'Trending Videos'}
+            {source === 'following' ? 'From Rigs You Follow' : 'Trending from the Road'}
           </h3>
           <Link
             to="/creators"
             className="text-purple-600 hover:text-purple-700 text-xs sm:text-sm font-medium flex items-center gap-1"
           >
-            See All
+            Explore Rigs
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
