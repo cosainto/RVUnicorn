@@ -806,7 +806,7 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
       orderBy: { startDate: 'desc' },
     });
 
-    const trips = events.map((event: any) => {
+    const trips = await Promise.all(events.map(async (event: any) => {
       const nightsCount =
         event.startDate && event.endDate
           ? Math.max(
@@ -818,6 +818,15 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
             )
           : 1;
 
+      // Fetch up to 5 photos for this event
+      const photos = await prisma.photo.findMany({
+        where: { eventId: event.id },
+        select: { imageUrl: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+      const totalPhotoCount = await prisma.photo.count({ where: { eventId: event.id } });
+
       return {
         id: event.id,
         title: event.title,
@@ -825,12 +834,15 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
         endDate: event.endDate,
         nightsCount,
         coverImage: event.bannerImage || event.campground?.imageUrl || null,
+        coverPhotos: photos.map((p: any) => p.imageUrl),
+        totalPhotoCount,
         campgroundName: event.campground?.name || null,
         campgroundState: event.campground?.state || null,
+        campgroundImageUrl: event.campground?.imageUrl || null,
         campgroundCount: event.campground ? 1 : 0,
         attendeeCount: event._count?.attendees || 0,
       };
-    });
+    }));
 
     // Also include check-in visits as trip-like entries (for users without formal events)
     const eventCampgroundIds = new Set(events.filter((e: any) => e.campgroundId).map((e: any) => e.campgroundId));

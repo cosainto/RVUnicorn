@@ -5,6 +5,7 @@ import { Heart, Share2, Edit, MapPin, Moon, Route, Map, Star, Wrench, Users, Tru
 import { useAuth } from '../../contexts/AuthContext';
 import { useGate } from '../../hooks/useGate';
 import GateModal from '../../components/public/GateModal';
+import AlbumPhotoGrid from '../../components/AlbumPhotoGrid';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -336,10 +337,14 @@ export default function RigProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {trips.map((t: any) => (
                       <Link key={t.id} to={`/trips/${t.id}`} className="rounded-2xl overflow-hidden transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                        <div className="h-40 relative">
-                          {t.coverImage ? <img src={t.coverImage} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${CN.card}, ${CN.body})` }} />}
-                          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0F1C35, transparent 50%)' }} />
-                          {t.nightsCount > 0 && <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `${CN.gold}30`, color: CN.gold }}>🌙 {t.nightsCount} nights</span>}
+                        <div className="relative">
+                          <AlbumPhotoGrid
+                            photos={t.coverPhotos || (t.coverImage ? [t.coverImage] : [])}
+                            totalPhotoCount={t.totalPhotoCount || (t.coverImage ? 1 : 0)}
+                            campgroundName={t.campgroundName}
+                            campgroundPhoto={t.campgroundImageUrl}
+                          />
+                          {t.nightsCount > 0 && <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold z-10" style={{ background: `${CN.gold}30`, color: CN.gold }}>🌙 {t.nightsCount} nights</span>}
                         </div>
                         <div className="p-4">
                           <p className="text-sm font-bold mb-1" style={{ color: CN.cream }}>{t.title || t.campgroundName || 'Trip'}</p>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Calendar, Moon, MapPin } from 'lucide-react';
+import AlbumPhotoGrid from '../../components/AlbumPhotoGrid';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', gold: '#E8A838', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
@@ -113,16 +114,16 @@ export default function ProfileTripsPage() {
                     className="rounded-2xl overflow-hidden transition hover:brightness-110 group"
                     style={{ background: CN.card, border: `1px solid ${CN.border}` }}
                   >
-                    {/* Cover */}
-                    <div className="relative h-48">
-                      {coverImg ? (
-                        <img src={coverImg} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${CN.card}, ${CN.body})` }} />
-                      )}
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0F1C35, transparent 60%)' }} />
+                    {/* Photo Grid */}
+                    <div className="relative">
+                      <AlbumPhotoGrid
+                        photos={trip.coverPhotos || (coverImg ? [coverImg] : [])}
+                        totalPhotoCount={trip.totalPhotoCount || (coverImg ? 1 : 0)}
+                        campgroundName={trip.campgroundName}
+                        campgroundPhoto={trip.campgroundImageUrl}
+                      />
                       {nights > 0 && (
-                        <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: `${CN.gold}20`, color: CN.gold }}>
+                        <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold z-10" style={{ background: `${CN.gold}20`, color: CN.gold }}>
                           <Moon className="w-3 h-3 inline mr-0.5" />{nights} nights
                         </span>
                       )}
