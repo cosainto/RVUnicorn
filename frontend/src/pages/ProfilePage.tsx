@@ -508,13 +508,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
             )}
           </div>
 
-          {/* ═══ ZONE 2: PROFILE BODY (lighter background) ═══ */}
-          </div>
-          <div className="profile-body-zone px-4 sm:px-6 lg:px-8 pb-10">
-          <div className="max-w-5xl mx-auto space-y-5">
-
-          {/* Gold shimmer divider */}
-          <div className="h-px my-2" style={{ background: 'linear-gradient(90deg, transparent, rgba(232,168,56,0.2), transparent)' }} />
+          {/* Gold shimmer divider between hero and body */}
+          <div className="h-px my-4" style={{ background: 'linear-gradient(90deg, transparent, rgba(232,168,56,0.2), transparent)' }} />
 
           {/* ══ 5. CALENDAR + CAMPGROUNDS CARD ══ */}
           {profile && (
@@ -601,8 +596,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           )}
         </div>
 
-        </div></div>{/* End Zone 2 body */}
-
         {/* ══ BADGES MODAL ══ */}
         {showBadgesModal && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowBadgesModal(false)}>
@@ -659,6 +652,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         {showRigCard && profile && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowRigCard(false)}><div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}><div className="flex justify-center"><RigCard rig={{ firstName: profile.firstName, username: profile.username, rvYear: profile.rvYear, rvMake: profile.rvMake, rvModel: profile.rvModel, rvType: profile.rvType, rvLength: profile.rvLength, rvSleeps: profile.rvSleeps, rvSlideouts: profile.rvSlideouts, homeCity: profile.homeCity, homeState: profile.homeState, profilePicture: profile.profilePicture }} onSkip={() => setShowRigCard(false)} onPostToFeed={async (blob) => { try { const fd = new FormData(); fd.append('image', blob, 'rig-card.png'); fd.append('content', `Check out my rig! ${profile.rvYear || ''} ${profile.rvMake || ''} ${profile.rvModel || ''}`); await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); setShowRigCard(false); } catch {} }} /></div></div></div>
         )}
+
       </div>
     </>
   );
