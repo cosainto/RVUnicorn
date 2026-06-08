@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
+import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle, X, CloudRain, Cloud, CloudSun, Snowflake, CloudLightning, Droplets, Thermometer } from 'lucide-react';
 import SunCalc from 'suncalc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -369,6 +369,140 @@ function AirQualityCard({ lat, lng }: { lat: number; lng: number }) {
   );
 }
 
+// ─── Weather Card ────────────────────────────────────────────────────────────
+
+interface WeatherData {
+  temp: number;
+  feelsLike: number;
+  humidity: number;
+  windSpeed: number;
+  windGusts: number;
+  code: number;
+  isDay: boolean;
+  precipitation: number;
+  high: number;
+  low: number;
+}
+
+function weatherLabel(code: number): string {
+  if (code === 0) return 'Clear sky';
+  if (code <= 3) return 'Partly cloudy';
+  if (code <= 48) return 'Foggy';
+  if (code <= 57) return 'Drizzle';
+  if (code <= 67) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Rain showers';
+  if (code <= 86) return 'Snow showers';
+  if (code <= 99) return 'Thunderstorm';
+  return 'Unknown';
+}
+
+function WeatherIcon({ code, className }: { code: number; className?: string }) {
+  const cls = className || 'w-5 h-5';
+  if (code === 0) return <Sun className={`${cls} text-yellow-500`} />;
+  if (code <= 3) return <CloudSun className={`${cls} text-blue-400`} />;
+  if (code <= 48) return <Cloud className={`${cls} text-gray-400`} />;
+  if (code <= 67) return <CloudRain className={`${cls} text-blue-500`} />;
+  if (code <= 77) return <Snowflake className={`${cls} text-blue-300`} />;
+  if (code <= 86) return <Snowflake className={`${cls} text-blue-300`} />;
+  if (code <= 99) return <CloudLightning className={`${cls} text-yellow-600`} />;
+  return <Cloud className={`${cls} text-gray-400`} />;
+}
+
+function WeatherCard({ lat, lng }: { lat: number; lng: number }) {
+  const [data, setData] = useState<WeatherData | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=1`,
+      { signal: controller.signal }
+    )
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.current) {
+          setData({
+            temp: Math.round(d.current.temperature_2m),
+            feelsLike: Math.round(d.current.apparent_temperature),
+            humidity: Math.round(d.current.relative_humidity_2m),
+            windSpeed: Math.round(d.current.wind_speed_10m),
+            windGusts: Math.round(d.current.wind_gusts_10m),
+            code: d.current.weather_code,
+            isDay: d.current.is_day === 1,
+            precipitation: d.current.precipitation,
+            high: Math.round(d.daily?.temperature_2m_max?.[0] ?? d.current.temperature_2m),
+            low: Math.round(d.daily?.temperature_2m_min?.[0] ?? d.current.temperature_2m),
+          });
+        }
+      })
+      .catch(() => setError(true));
+    return () => controller.abort();
+  }, [lat, lng]);
+
+  if (error || !data) return null;
+
+  const condition = weatherLabel(data.code);
+  const isBadWeather = data.code >= 61 || data.windGusts > 40;
+
+  return (
+    <InsightCard
+      icon={<WeatherIcon code={data.code} className="w-3.5 h-3.5" />}
+      title="Weather"
+      borderColor={isBadWeather ? 'border-orange-300' : 'border-blue-200'}
+      headerGradient={isBadWeather
+        ? 'bg-gradient-to-r from-orange-50 to-yellow-50'
+        : 'bg-gradient-to-r from-blue-50 to-cyan-50'}
+      titleColor={isBadWeather ? 'text-orange-900' : 'text-blue-900'}
+      avatar={<CharacterAvatar initial="H" color="#7c3aed" />}
+      badge={isBadWeather ? (
+        <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+          <AlertTriangle className="w-2.5 h-2.5" /> Advisory
+        </span>
+      ) : undefined}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <div className="text-center">
+          <WeatherIcon code={data.code} className="w-8 h-8 mx-auto mb-0.5" />
+          <p className="text-[10px] text-gray-500 font-medium">{condition}</p>
+        </div>
+        <div className="flex-1">
+          <p className="text-2xl font-bold text-gray-900">{data.temp}°F</p>
+          <p className="text-[10px] text-gray-500">Feels like {data.feelsLike}°F · H: {data.high}° L: {data.low}°</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5 mb-2">
+        <div className="bg-blue-50/60 rounded px-2 py-1 text-center">
+          <Droplets className="w-3 h-3 text-blue-400 mx-auto mb-0.5" />
+          <p className="text-[11px] font-bold text-blue-900">{data.humidity}%</p>
+          <p className="text-[9px] text-blue-500">Humidity</p>
+        </div>
+        <div className="bg-blue-50/60 rounded px-2 py-1 text-center">
+          <Wind className="w-3 h-3 text-blue-400 mx-auto mb-0.5" />
+          <p className="text-[11px] font-bold text-blue-900">{data.windSpeed} mph</p>
+          <p className="text-[9px] text-blue-500">Wind</p>
+        </div>
+        <div className="bg-blue-50/60 rounded px-2 py-1 text-center">
+          <CloudRain className="w-3 h-3 text-blue-400 mx-auto mb-0.5" />
+          <p className="text-[11px] font-bold text-blue-900">{data.precipitation}"</p>
+          <p className="text-[9px] text-blue-500">Precip</p>
+        </div>
+      </div>
+      {data.windGusts > 30 && (
+        <div className="bg-amber-50 rounded px-2 py-1.5 mb-1.5">
+          <p className="text-[10px] text-amber-800 font-medium">
+            <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
+            Wind gusts up to {data.windGusts} mph — secure awnings & outdoor gear.
+          </p>
+        </div>
+      )}
+      <p className="text-[10px] text-gray-400 italic">
+        {isBadWeather ? '"Bad weather makes the best stories." — Hitch 🦄' : '"Every day outside is a good day." — Hitch 🦄'}
+      </p>
+    </InsightCard>
+  );
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function NatureInsightCards({ lat, lng, weather }: NatureInsightCardsProps) {
@@ -392,6 +526,7 @@ export default function NatureInsightCards({ lat, lng, weather }: NatureInsightC
 
   return (
     <div className="grid grid-cols-2 gap-3">
+      <WeatherCard lat={coords.lat} lng={coords.lng} />
       <GoldenHourCard lat={coords.lat} lng={coords.lng} weather={weather} />
       <WildlifeActivityCard lat={coords.lat} lng={coords.lng} />
       <ForagingForecastCard lat={coords.lat} lng={coords.lng} />
