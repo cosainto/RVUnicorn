@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Edit2, Check, UserPlus, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Edit2, Check, UserPlus, MapPin, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -121,6 +121,16 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
   const tagFriend=async(eventId:string,fId:string)=>{
     try{await api.post(`/calendar/events/${eventId}/attendees`,{userId:fId});await fetchItems();setTagging(null);setTagSearch('');setTagResults([]);}
     catch(e){console.error(e);}
+  };
+
+  const deleteTrip=async(item:CalendarItem)=>{
+    if(!confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+    try{
+      await api.delete(`/events/${item.id}`);
+      setItems(prev=>prev.filter(i=>i.id!==item.id));
+      if(selected) setSelected(prev=>prev?prev.filter(i=>i.id!==item.id):null);
+      if(selected?.length===1) { setSelDay(null); setSelected(null); }
+    } catch(e){console.error(e);}
   };
 
   const ResCard=({item,attendee,isMe}:{item:CalendarItem;attendee:any;isMe:boolean})=>{
@@ -245,8 +255,37 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
           </div>
           {selected && selected.map(item=>(
             <div key={item.id} style={{marginBottom:'8px',borderRadius:'12px',padding:'12px',background:'#f9fafb',border:`1px solid ${item.color}44`}}>
-              <div style={{fontSize:'13px',fontWeight:700,color:'#111827',marginBottom:'4px'}}>{item.title}</div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}}>
+                <div style={{fontSize:'13px',fontWeight:700,color:'#111827'}}>{item.title}</div>
+                {item.isOrganizer && !item.id.startsWith('est-travel-') && (
+                  <div style={{display:'flex',gap:'4px'}}>
+                    <button onClick={()=>setTagging(tagging===item.id?null:item.id)}
+                      style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:700,padding:'3px 8px',borderRadius:'8px',border:'1px solid rgba(245,158,11,.3)',background:'rgba(245,158,11,.08)',color:'#d97706',cursor:'pointer'}}>
+                      <UserPlus size={10}/> Tag
+                    </button>
+                    <button onClick={()=>deleteTrip(item)}
+                      style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:700,padding:'3px 8px',borderRadius:'8px',border:'1px solid rgba(239,68,68,.2)',background:'rgba(239,68,68,.06)',color:'#dc2626',cursor:'pointer'}}>
+                      <Trash2 size={10}/> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
               {item.campground&&<div style={{fontSize:'11px',color:'#6b7280',marginBottom:'8px'}}>{item.campground.name}</div>}
+              {tagging===item.id&&(
+                <div style={{marginBottom:'8px',padding:'8px',borderRadius:'8px',background:'rgba(245,158,11,.05)',border:'1px solid rgba(245,158,11,.15)'}}>
+                  <input value={tagSearch} onChange={e=>{setTagSearch(e.target.value);searchFriends(e.target.value);}}
+                    style={{width:'100%',fontSize:'12px',borderRadius:'8px',padding:'6px 10px',border:'1px solid #e5e7eb',outline:'none'}}
+                    placeholder="Search friends to tag..."/>
+                  {tagResults.map(f=>(
+                    <button key={f.id} onClick={()=>tagFriend(item.id,f.id)}
+                      style={{display:'flex',alignItems:'center',gap:'8px',width:'100%',textAlign:'left',padding:'6px 8px',borderRadius:'8px',marginTop:'4px',border:'none',background:'transparent',cursor:'pointer'}}>
+                      {f.profilePicture?<img src={f.profilePicture} style={{width:'24px',height:'24px',borderRadius:'50%',objectFit:'cover'}} alt=""/>
+                        :<div style={{width:'24px',height:'24px',borderRadius:'50%',background:'#e5e7eb',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',fontWeight:700,color:'#6b7280'}}>{f.firstName?.[0]}</div>}
+                      <span style={{fontSize:'12px',fontWeight:600,color:'#374151'}}>{f.firstName} {f.lastName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {item.id.startsWith('est-travel-') ? (
                 <div style={{fontSize:'12px',color:'#3b82f6',background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'8px',padding:'8px'}}>
                   🔵🚗 Estimated travel day — <button onClick={()=>navigate(`/trips/${item.tripId}`)} style={{color:'#2563eb',fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:0}}>add a route to confirm dates →</button>
@@ -349,12 +388,19 @@ export default function TripCalendarWidget({ compact=false, userId }: Props) {
                       {new Date(item.startDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – {new Date(item.endDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
                     </div>
                   </div>
-                  {item.isOrganizer&&item.type==='EVENT'&&(
-                    <button onClick={()=>setTagging(tagging===item.id?null:item.id)}
-                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 ml-4"
-                      style={{background:'rgba(245,158,11,.12)',border:'1px solid rgba(245,158,11,.3)',color:'rgba(245,158,11,.9)'}}>
-                      <UserPlus size={12}/> Tag Friend
-                    </button>
+                  {item.isOrganizer&&(
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      <button onClick={()=>setTagging(tagging===item.id?null:item.id)}
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+                        style={{background:'rgba(245,158,11,.12)',border:'1px solid rgba(245,158,11,.3)',color:'rgba(245,158,11,.9)'}}>
+                        <UserPlus size={12}/> Tag
+                      </button>
+                      <button onClick={()=>deleteTrip(item)}
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+                        style={{background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',color:'rgba(239,68,68,.8)'}}>
+                        <Trash2 size={12}/> Delete
+                      </button>
+                    </div>
                   )}
                 </div>
                 {tagging===item.id&&(
