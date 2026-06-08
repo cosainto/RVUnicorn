@@ -1255,6 +1255,7 @@ export default function BasecampPage({ user }: BasecampProps) {
     }
   }, [isCamping, activeCheckIn?.campground?.id]);
   const [showCampfireModal, setShowCampfireModal] = useState(false);
+  const [showCampMap, setShowCampMap] = useState(false);
   const [showRversHere, setShowRversHere] = useState(false);
   const [rversHereList, setRversHereList] = useState<any[]>([]);
 
@@ -4093,6 +4094,48 @@ export default function BasecampPage({ user }: BasecampProps) {
             />
           )}
 
+          {/* Campsite Map (inline preview) */}
+          {activeCheckIn?.campground?.campgroundMapUrl && (
+            <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl overflow-hidden mb-4">
+              <button
+                onClick={() => setShowCampMap(true)}
+                className="w-full text-left group"
+              >
+                <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🗺️</span>
+                    <span className="text-sm font-bold text-white">Campsite Map</span>
+                  </div>
+                  <span className="text-[11px] text-orange-300 group-hover:text-orange-200 transition">Tap to enlarge</span>
+                </div>
+                <div className="px-3 pb-3">
+                  <img
+                    src={activeCheckIn.campground.campgroundMapUrl}
+                    alt={`${activeCheckIn.campground.name} map`}
+                    className="w-full max-h-48 object-contain rounded-lg bg-white/5"
+                  />
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Campsite Map Lightbox */}
+          {showCampMap && activeCheckIn?.campground?.campgroundMapUrl && (
+            <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setShowCampMap(false)}>
+              <div className="relative max-w-4xl w-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setShowCampMap(false)} className="absolute -top-10 right-0 text-white/70 hover:text-white text-sm font-medium flex items-center gap-1">
+                  Close &times;
+                </button>
+                <img
+                  src={activeCheckIn.campground.campgroundMapUrl}
+                  alt={`${activeCheckIn.campground.name} map`}
+                  className="w-full max-h-[85vh] object-contain rounded-xl"
+                />
+                <p className="text-center text-white/40 text-xs mt-2">{activeCheckIn.campground.name} — Campsite Map</p>
+              </div>
+            </div>
+          )}
+
           {/* Tonight at Camp */}
           {activeCheckIn?.campground && (
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl p-4 mb-6">
@@ -4104,22 +4147,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                {activeCheckIn?.campground?.campgroundMapUrl ? (
-                  <button
-                    onClick={() => window.open(activeCheckIn.campground.campgroundMapUrl, '_blank')}
-                    className="bg-white/10 hover:bg-white/20 rounded-lg p-3 text-center transition w-full"
-                  >
-                    <div className="text-xl mb-1">🗺️</div>
-                    <div className="text-white/60 text-xs">Camp Map</div>
-                    <div className="font-medium text-xs mt-0.5 text-orange-300">Tap to view →</div>
-                  </button>
-                ) : (
-                  <div className="bg-white/10 rounded-lg p-3 text-center">
-                    <div className="text-xl mb-1">🎯</div>
-                    <div className="text-white/60 text-xs">Trivia</div>
-                    <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '7:30 AM · 12:25 PM · 5:30 PM CT'}</div>
-                  </div>
-                )}
+                <div className="bg-white/10 rounded-lg p-3 text-center">
+                  <div className="text-xl mb-1">🎯</div>
+                  <div className="text-white/60 text-xs">Trivia</div>
+                  <div className="font-medium text-xs mt-0.5">{tonightData?.triviaStatus || triviaCountdown || '7:30 AM · 12:25 PM · 5:30 PM CT'}</div>
+                </div>
                 {nextMeal ? (() => {
                   const userRsvp = nextMeal.rsvps?.find((r: any) => r.userId === user?.id);
                   const mealTime = nextMeal.scheduledTime
