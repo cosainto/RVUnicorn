@@ -371,8 +371,8 @@ export default function CampgroundsPage() {
       {viewMode === 'grid' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {campgrounds.map(c => (
           <Link key={c.id} to={`/campgrounds/${c.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden block">
-            <div className="relative h-48 bg-gradient-to-br from-primary-100 to-secondary-100">
-              {c.imageUrl ? <img src={c.imageUrl.startsWith("http") ? c.imageUrl : c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
+            <div className="relative aspect-[16/10] bg-gradient-to-br from-primary-100 to-secondary-100">
+              {c.imageUrl ? <img src={c.imageUrl.startsWith("http") ? c.imageUrl : c.imageUrl} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
                 : <div className="flex items-center justify-center h-full"><MapPin className="w-16 h-16 text-primary-300" /></div>}
               {c.state && <span className="absolute top-2 right-2 bg-white/90 px-2 py-0.5 rounded-full text-xs font-medium text-gray-700">{c.state}</span>}
             </div>
