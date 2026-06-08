@@ -215,9 +215,9 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
                           style={{ background: 'linear-gradient(135deg, rgba(232,168,56,0.15), rgba(168,85,247,0.1))' , border: '1px solid rgba(232,168,56,0.25)' }}
                         >
                           {pick.imageUrl ? (
-                            <img src={pick.imageUrl} alt={pick.title} className="w-full h-28 object-cover" />
+                            <img src={pick.imageUrl} alt={pick.title} className="w-full h-24 object-cover" />
                           ) : (
-                            <div className="w-full h-28 bg-gradient-to-br from-amber-500/20 to-purple-500/20 flex items-center justify-center">
+                            <div className="w-full h-24 bg-gradient-to-br from-amber-500/20 to-purple-500/20 flex items-center justify-center">
                               <span className="text-3xl">{TYPE_CONFIG[pick.type]?.icon || '📍'}</span>
                             </div>
                           )}
