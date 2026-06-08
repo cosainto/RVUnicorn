@@ -40,7 +40,7 @@ export default function ShareCard({ type, title, subtitle, stat, campgroundName,
           const campgroundUrl = campgroundId ? `https://rvunicorn.com/campgrounds/${campgroundId}` : undefined;
           await navigator.share({
             title: `${userName} on RVUnicorn`,
-            text: campgroundName ? `${title} — ${campgroundName}${campgroundUrl ? `\nCheck it out: ${campgroundUrl}` : ''}` : title,
+            text: campgroundName ? `${title} — ${campgroundName}` : title,
             files: [file],
             ...(campgroundUrl ? { url: campgroundUrl } : {}),
           });
