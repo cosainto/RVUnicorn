@@ -362,7 +362,7 @@ router.get('/active', authenticateToken, async (req: any, res) => {
         // Shared Fire — notify nearby friends (fire and forget)
         checkSharedFire(userId, checkIn.campground.id).catch(() => {});
 
-        // Notify friends that user checked in
+        // Notify friends that user checked in (deduplicated — skip if same notification sent in last 6 hours)
         const friendships = await prisma.friendship.findMany({
           where: {
             status: 'ACCEPTED',
@@ -382,18 +382,34 @@ router.get('/active', authenticateToken, async (req: any, res) => {
 
         if (friendIds.length > 0 && user) {
           const checkinMsg = `${user.firstName} ${user.lastName} checked in at ${checkIn.campground!.name} 🏕️`;
-          await prisma.notification.createMany({
-            data: friendIds.map((friendId: string) => ({
-              userId: friendId,
+          const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+
+          // Filter out friends who already got this exact notification recently
+          const recentDupes = await prisma.notification.findMany({
+            where: {
               type: 'FRIEND_CHECKIN',
               content: checkinMsg,
-              link: `/campgrounds/${checkIn.campground!.id}`,
-            })),
-            skipDuplicates: true,
+              createdAt: { gte: sixHoursAgo },
+              userId: { in: friendIds },
+            },
+            select: { userId: true },
           });
-          // Push notifications to friends
-          for (const friendId of friendIds.slice(0, 20)) {
-            sendWebPush(friendId, { title: 'Friend Checked In 🏕️', body: checkinMsg, icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/campgrounds/${checkIn.campground!.id}` }).catch(() => {});
+          const alreadyNotified = new Set(recentDupes.map((n: any) => n.userId));
+          const newFriendIds = friendIds.filter((id: string) => !alreadyNotified.has(id));
+
+          if (newFriendIds.length > 0) {
+            await prisma.notification.createMany({
+              data: newFriendIds.map((friendId: string) => ({
+                userId: friendId,
+                type: 'FRIEND_CHECKIN',
+                content: checkinMsg,
+                link: `/campgrounds/${checkIn.campground!.id}`,
+              })),
+            });
+            // Push notifications to friends
+            for (const friendId of newFriendIds.slice(0, 20)) {
+              sendWebPush(friendId, { title: 'Friend Checked In 🏕️', body: checkinMsg, icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png', url: `/campgrounds/${checkIn.campground!.id}` }).catch(() => {});
+            }
           }
         }
       } catch (activityErr) {
