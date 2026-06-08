@@ -70,6 +70,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const [startQuery, setStartQuery] = useState('');
   const [startIcon, setStartIcon] = useState<'home' | 'checkin' | 'gps'>('home');
   const [locating, setLocating] = useState(false);
+  const [homeLocation, setHomeLocation] = useState<{ lat: number; lon: number; label: string } | null>(null);
 
   // Start search
   const [startResults, setStartResults] = useState<DestResult[]>([]);
@@ -104,9 +105,10 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
     (async () => {
       try {
         const { data } = await api.get('/trip-intelligence/session');
-        const { session, upcomingTrips: trips, currentCheckIn, homeLocation } = data;
+        const { session, upcomingTrips: trips, currentCheckIn, homeLocation: homeLoc } = data;
 
         setUpcomingTrips(trips || []);
+        if (homeLoc?.lat) setHomeLocation(homeLoc);
 
         // Set default start point — when checked in, FROM = campsite, TO = hometown
         if (currentCheckIn?.lat) {
@@ -115,16 +117,16 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
           setStartLon(currentCheckIn.lon);
           setStartIcon('checkin');
           // Auto-set destination to hometown when checked in
-          if (homeLocation?.lat && !session?.quickDestLabel) {
-            setDestLabel(homeLocation.label);
-            setDestLat(homeLocation.lat);
-            setDestLon(homeLocation.lon);
+          if (homeLoc?.lat && !session?.quickDestLabel) {
+            setDestLabel(homeLoc.label);
+            setDestLat(homeLoc.lat);
+            setDestLon(homeLoc.lon);
             setDestCampgroundId(null);
           }
-        } else if (homeLocation?.lat) {
-          setStartLabel(homeLocation.label);
-          setStartLat(homeLocation.lat);
-          setStartLon(homeLocation.lon);
+        } else if (homeLoc?.lat) {
+          setStartLabel(homeLoc.label);
+          setStartLat(homeLoc.lat);
+          setStartLon(homeLoc.lon);
           setStartIcon('home');
         }
 
@@ -348,7 +350,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const hasTrips = upcomingTrips.length > 0;
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: '#0F1C35', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rounded-2xl" style={{ background: '#0F1C35', border: '1px solid rgba(255,255,255,0.08)' }}>
       {/* Header with mode toggle */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <button onClick={() => setMinimized(!minimized)} className="flex items-center gap-1.5 group">
@@ -492,7 +494,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                 onChange={(e) => setDestQuery(e.target.value)}
                 onFocus={() => setDestFocused(true)}
                 onBlur={() => setTimeout(() => setDestFocused(false), 250)}
-                placeholder="Search campgrounds or enter a city..."
+                placeholder="Search campgrounds, city, or zip code..."
                 className="w-full text-sm rounded-full pl-10 pr-4 py-2.5 outline-none transition-all"
                 style={{
                   background: destFocused ? '#1e3455' : '#1a2d4a',
@@ -502,10 +504,79 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                 }}
               />
               {/* Dropdown results */}
-              {destFocused && destResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 max-h-80 overflow-y-auto"
+              {destFocused && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl overflow-hidden z-[60] max-h-80 overflow-y-auto"
                   style={{ background: '#0d1a30', border: '2px solid rgba(232,168,56,0.4)', boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 20px rgba(232,168,56,0.1)' }}>
-                  {/* Header */}
+                  {/* Quick options — Home & GPS */}
+                  {homeLocation && (
+                    <button onMouseDown={() => {
+                      setDestLabel(homeLocation.label);
+                      setDestLat(homeLocation.lat);
+                      setDestLon(homeLocation.lon);
+                      setDestCampgroundId(null);
+                      setDestQuery('');
+                      setDestResults([]);
+                      setDestFocused(false);
+                      persistSession({ quickDestLabel: homeLocation.label, quickDestLat: homeLocation.lat, quickDestLon: homeLocation.lon, quickDestCampgroundId: null });
+                    }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(232,168,56,0.04)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(232,168,56,0.12)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(232,168,56,0.04)'; }}>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'rgba(232,168,56,0.15)', border: '1px solid rgba(232,168,56,0.3)' }}>
+                        <Home className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold" style={{ color: '#E8A838' }}>Home</p>
+                        <p className="text-[10px] truncate" style={{ color: 'rgba(245,240,232,0.4)' }}>{homeLocation.label}</p>
+                      </div>
+                    </button>
+                  )}
+                  <button onMouseDown={() => {
+                    if (!navigator.geolocation) return;
+                    setLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      async (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        let label = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+                        try {
+                          const { data } = await api.get(`/trip-intelligence/destination-search?q=${latitude},${longitude}`);
+                          if (data.results?.[0]?.name) {
+                            const r = data.results[0];
+                            label = r.name + (r.state ? `, ${r.state}` : '');
+                          }
+                        } catch {}
+                        setDestLabel(label);
+                        setDestLat(latitude);
+                        setDestLon(longitude);
+                        setDestCampgroundId(null);
+                        setDestQuery('');
+                        setDestResults([]);
+                        setDestFocused(false);
+                        setLocating(false);
+                        persistSession({ quickDestLabel: label, quickDestLat: latitude, quickDestLon: longitude, quickDestCampgroundId: null });
+                      },
+                      () => { setLocating(false); },
+                      { enableHighAccuracy: true, timeout: 10000 },
+                    );
+                  }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(59,130,246,0.04)' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.12)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.04)'; }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
+                      <LocateFixed className={`w-4 h-4 text-blue-400 ${locating ? 'animate-pulse' : ''}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold" style={{ color: '#60a5fa' }}>{locating ? 'Getting location...' : 'Use Current Location'}</p>
+                      <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Use your GPS position</p>
+                    </div>
+                  </button>
+
+                  {/* Search results */}
+                  {destResults.length > 0 && (<>
                   <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(232,168,56,0.15)', background: 'rgba(232,168,56,0.05)' }}>
                     <Tent className="w-3.5 h-3.5 text-amber-400" />
                     <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>
@@ -555,13 +626,14 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                       )}
                     </button>
                   ))}
-                </div>
-              )}
-              {/* Hint when focused but no results yet */}
-              {destFocused && destQuery.length > 0 && destQuery.length < 2 && destResults.length === 0 && (
-                <div className="absolute left-0 right-0 top-full mt-2 rounded-xl px-4 py-3 z-50"
-                  style={{ background: '#0d1a30', border: '1px solid rgba(232,168,56,0.2)' }}>
-                  <p className="text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>Keep typing to search 14,000+ campgrounds...</p>
+                  </>)}
+
+                  {/* Hint when no results yet */}
+                  {destQuery.length > 0 && destQuery.length < 2 && destResults.length === 0 && (
+                    <div className="px-4 py-3">
+                      <p className="text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>Keep typing to search 14,000+ campgrounds, cities, or zip codes...</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
