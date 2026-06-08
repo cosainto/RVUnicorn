@@ -70,6 +70,7 @@ import { useDrivingSession } from '../contexts/DrivingSessionContext';
 import CampfireChannel from '../components/CampfireChannel';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import ThingsToDoSection from '../components/ThingsToDoSection';
+import ExploreNearbyPanel from '../components/ExploreNearbyPanel';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import MealPlanner from '../components/MealPlanner';
 import EventAlbum from '../components/EventAlbum';
@@ -4229,6 +4230,23 @@ export default function BasecampPage({ user }: BasecampProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Explore Nearby — prominent activity discovery when checked in */}
+          {activeCheckIn?.campground?.id && (
+            <ExploreNearbyPanel
+              campgroundId={activeCheckIn.campground.id}
+              campgroundName={activeCheckIn.campground.name}
+              eventId={linkedEvent?.id}
+              onSeeAll={() => setCampingTab('camp')}
+              onActivityAdded={() => {
+                if (linkedEvent) {
+                  api.get(`/events/${linkedEvent.id}/activities`).then(({ data }: any) => {
+                    setLinkedEventActivityCount((data || []).length);
+                  }).catch(() => {});
+                }
+              }}
+            />
           )}
 
           {/* Three-Tab Navigation */}

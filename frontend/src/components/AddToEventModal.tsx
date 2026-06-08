@@ -15,10 +15,11 @@ interface AddToEventModalProps {
   thingToDoId: string;
   thingTitle: string;
   campgroundId: string;
+  preselectedEventId?: string;
   onActivityAdded?: () => void;
 }
 
-export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTitle, campgroundId, onActivityAdded }: AddToEventModalProps) {
+export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTitle, campgroundId, preselectedEventId, onActivityAdded }: AddToEventModalProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -61,6 +62,13 @@ export default function AddToEventModal({ isOpen, onClose, thingToDoId, thingTit
       setLoading(true);
       const { data } = await api.get(`/campgrounds/${campgroundId}/my-events`);
       setEvents(data);
+      // Auto-select event if preselectedEventId matches or only one event exists
+      const match = preselectedEventId
+        ? data.find((e: Event) => e.id === preselectedEventId)
+        : data.length === 1 ? data[0] : null;
+      if (match) {
+        handleSelectEvent(match);
+      }
     } catch (error) {
       console.error('Load events error:', error);
     } finally {
