@@ -94,6 +94,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const [v2Loading, setV2Loading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [minimized, setMinimized] = useState(false);
 
   const saveTimer = useRef<any>(null);
   const searchTimer = useRef<any>(null);
@@ -107,12 +108,19 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
 
         setUpcomingTrips(trips || []);
 
-        // Set default start point
+        // Set default start point — when checked in, FROM = campsite, TO = hometown
         if (currentCheckIn?.lat) {
           setStartLabel(`${currentCheckIn.campgroundName}${currentCheckIn.state ? ', ' + currentCheckIn.state : ''}`);
           setStartLat(currentCheckIn.lat);
           setStartLon(currentCheckIn.lon);
           setStartIcon('checkin');
+          // Auto-set destination to hometown when checked in
+          if (homeLocation?.lat && !session?.quickDestLabel) {
+            setDestLabel(homeLocation.label);
+            setDestLat(homeLocation.lat);
+            setDestLon(homeLocation.lon);
+            setDestCampgroundId(null);
+          }
         } else if (homeLocation?.lat) {
           setStartLabel(homeLocation.label);
           setStartLat(homeLocation.lat);
@@ -343,8 +351,11 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
     <div className="rounded-2xl overflow-hidden" style={{ background: '#0F1C35', border: '1px solid rgba(255,255,255,0.08)' }}>
       {/* Header with mode toggle */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Trip Intelligence</p>
-        {hasTrips && (
+        <button onClick={() => setMinimized(!minimized)} className="flex items-center gap-1.5 group">
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Trip Intelligence</p>
+          {minimized ? <ChevronDown className="w-3.5 h-3.5 text-amber-400 opacity-60 group-hover:opacity-100 transition" /> : <ChevronUp className="w-3.5 h-3.5 text-amber-400 opacity-60 group-hover:opacity-100 transition" />}
+        </button>
+        {hasTrips && !minimized && (
           <div className="flex rounded-full overflow-hidden" style={{ border: '1px solid rgba(232,168,56,0.3)' }}>
             <button onClick={() => switchMode('FORMAL')}
               className="px-3 py-1 text-[10px] font-bold transition"
@@ -360,6 +371,16 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
         )}
       </div>
 
+      {minimized && quickReport && (
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: colors?.dot }} />
+          <p className="text-[11px] font-semibold truncate" style={{ color: 'rgba(245,240,232,0.7)' }}>
+            {startLabel} → {destLabel} · {quickReport.score}/100
+          </p>
+        </div>
+      )}
+
+      {!minimized && <>
       {/* FROM / TO inputs */}
       <div className="px-4 pb-3 space-y-2">
         {/* FROM */}
@@ -766,6 +787,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
           )}
         </>
       )}
+      </>}
     </div>
   );
 }
