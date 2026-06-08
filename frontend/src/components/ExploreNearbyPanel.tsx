@@ -68,7 +68,7 @@ const CATEGORIES = [
 
 export default function ExploreNearbyPanel({ campgroundId, campgroundName, eventId, onSeeAll, onActivityAdded }: ExploreNearbyPanelProps) {
   const { user } = useAuth();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [category, setCategory] = useState('ALL');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [aiPicks, setAiPicks] = useState<AiPick[]>([]);
@@ -155,18 +155,27 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
         {/* Header */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition"
+          className="w-full px-4 py-3.5 flex items-center justify-between group transition"
         >
-          <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-amber-400" />
-            <h3 className="font-bold text-base">Explore Nearby</h3>
-            {!expanded && totalCount > 0 && (
-              <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">
-                {totalCount} activities
-              </span>
-            )}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+              <Compass className="w-4.5 h-4.5 text-amber-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-bold text-sm text-white">Explore Nearby</h3>
+              {!expanded && totalCount > 0 && (
+                <p className="text-[11px] text-white/40">{totalCount} activities & attractions nearby</p>
+              )}
+            </div>
           </div>
-          {expanded ? <ChevronUp className="w-4 h-4 text-white/50" /> : <ChevronDown className="w-4 h-4 text-white/50" />}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition ${
+            expanded
+              ? 'bg-white/10 text-white/60 group-hover:bg-white/15'
+              : 'bg-amber-500/20 text-amber-400 group-hover:bg-amber-500/30'
+          }`}>
+            {expanded ? 'Hide' : 'Explore'}
+            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </div>
         </button>
 
         {expanded && (
