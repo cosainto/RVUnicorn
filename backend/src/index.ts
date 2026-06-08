@@ -264,6 +264,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/campground-posts', campgroundPostsRoutes);
 app.use('/api/mute', muteRoutes);
 app.use("/api/campground-features", campgroundFeaturesRoutes);
+app.use("/api/campgrounds", campgroundFeaturesRoutes); // Also mount at /api/campgrounds for review/photo endpoints
 app.use('/api/campsites', campsiteRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/wishlist', wishlistRoutes);
