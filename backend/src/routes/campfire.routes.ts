@@ -326,11 +326,22 @@ router.get('/:campgroundId/room/messages', authenticateToken, async (req: any, r
         roomId: room.id,
         createdAt: { gte: cutoff },
       },
-      include: { user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } } },
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        replyTo: { select: { id: true, content: true, user: { select: { firstName: true } } } },
+      },
       orderBy: { createdAt: 'asc' },
       take: 50,
     });
-    res.json({ messages });
+    // Map replyTo data to flat fields for frontend
+    const mapped = messages.map((m: any) => ({
+      ...m,
+      replyToId: m.replyToId || null,
+      replyToContent: m.replyTo?.content?.slice(0, 80) || null,
+      replyToUser: m.replyTo?.user?.firstName || null,
+      replyTo: undefined,
+    }));
+    res.json({ messages: mapped });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch messages' });
   }

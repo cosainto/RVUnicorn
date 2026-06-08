@@ -4125,18 +4125,22 @@ model CampfireRoom {
 }
 
 model CampfireMessage {
-  id        String       @id @default(cuid())
+  id        String            @id @default(cuid())
   roomId    String
   userId    String?
-  isSystem  Boolean      @default(false)
-  isHitch   Boolean      @default(false)
+  isSystem  Boolean           @default(false)
+  isHitch   Boolean           @default(false)
   content   String
-  createdAt DateTime     @default(now())
-  room      CampfireRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyToId String?
+  createdAt DateTime          @default(now())
+  room      CampfireRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyTo   CampfireMessage?  @relation("CampfireReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   CampfireMessage[] @relation("CampfireReplies")
 
   @@index([roomId])
   @@index([createdAt])
+  @@index([replyToId])
 }
 
 model TriviaWeek {

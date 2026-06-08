@@ -22,6 +22,9 @@ interface ChatMessage {
   isHitch: boolean;
   isPulse?: boolean;
   user?: ChatUser;
+  replyToId?: string;
+  replyToContent?: string;
+  replyToUser?: string;
 }
 interface TriviaQuestion {
   questionId: string;
@@ -443,6 +446,11 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
                   <img src={character.image} alt={character.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5 shadow-md border border-[#C9A84C]/30" />
                   <div className="flex-1">
                     <div className="text-[10px] font-bold text-[#C9A84C] mb-0.5">{character.name}</div>
+                    {msg.replyToContent && (
+                      <div className="text-[10px] text-gray-400 mb-1 border-l-2 border-[#C9A84C]/30 pl-2 ml-0.5 line-clamp-1">
+                        Replying to <span className="font-semibold text-[#C9A84C]/70">{msg.replyToUser || 'a camper'}</span>: <span className="italic text-gray-500">{msg.replyToContent}</span>
+                      </div>
+                    )}
                     <div className="bg-[#1B2B4B] text-white rounded-xl rounded-tl-none px-3 py-2 text-sm leading-relaxed border-l-[3px] border-[#C9A84C]"
                       style={{ boxShadow: '0 2px 12px rgba(232, 98, 42, 0.15)' }}>
                       {msg.content}

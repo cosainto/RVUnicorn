@@ -7,6 +7,10 @@ import { emitOrganizerActivity } from './organizer.socket';
 const hitchConversations = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
 // Track recently auto-responded messages to avoid duplicate responses
 const recentAutoResponses = new Set<string>();
+// Track last proactive Hitch message per campground to avoid spam
+const lastProactiveHitch = new Map<string, number>();
+// Track active proactive timers per campground
+const proactiveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const PERSONALITY_PROMPTS: Record<string, string> = {
   TRAIL_GUIDE: 'Knowledgeable, practical, speaks like a veteran park ranger.',
@@ -28,6 +32,11 @@ export function registerCampfireSockets(io: Server) {
     const checkedIn = await getCheckedInUsers(campgroundId);
     campfire.to(campgroundId).emit('presence:update', checkedIn);
     await maybeActivateRoom(campgroundId, campfire, io);
+
+    // Trigger proactive Hitch when a new user connects and 2+ are checked in
+    if (checkedIn.length >= 2) {
+      scheduleProactiveHitch(campgroundId, campfire);
+    }
 
     // Ensure trivia week exists for this campground (no-op if already created)
     // Pass io so first question fires immediately if a new week is created
@@ -93,12 +102,13 @@ export function registerCampfireSockets(io: Server) {
               if (history.length > 20) history.splice(0, 2);
               hitchConversations.set(histKey, history);
               const hitchMsg = await prisma.campfireMessage.create({
-                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true },
+                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true, replyToId: msg.id },
                 include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },
               });
               campfire.to(campgroundId).emit('message:new', {
                 id: hitchMsg.id, content: hitchMsg.content, createdAt: hitchMsg.createdAt,
                 isSystem: false, isHitch: true, user: hitchMsg.user,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
               });
             }
           } catch (e: any) { console.error('[Campfire @Hitch] error:', e); }
@@ -123,11 +133,12 @@ export function registerCampfireSockets(io: Server) {
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const walterMsg = await prisma.campfireMessage.create({
-                data: { roomId: room.id, userId: null, content: `🎭 ${reply}`, isSystem: true, isHitch: false },
+                data: { roomId: room.id, userId: null, content: `🎭 ${reply}`, isSystem: true, isHitch: false, replyToId: msg.id },
               });
               campfire.to(campgroundId).emit('message:new', {
                 id: walterMsg.id, content: walterMsg.content, createdAt: walterMsg.createdAt,
                 isSystem: true, isHitch: false,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
               });
             }
           } catch (e: any) { console.error('[Campfire @Walter] error:', e); }
@@ -152,11 +163,12 @@ export function registerCampfireSockets(io: Server) {
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const scoutMsg = await prisma.campfireMessage.create({
-                data: { roomId: room.id, userId: null, content: `🏔️ ${reply}`, isSystem: true, isHitch: false },
+                data: { roomId: room.id, userId: null, content: `🏔️ ${reply}`, isSystem: true, isHitch: false, replyToId: msg.id },
               });
               campfire.to(campgroundId).emit('message:new', {
                 id: scoutMsg.id, content: scoutMsg.content, createdAt: scoutMsg.createdAt,
                 isSystem: true, isHitch: false,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
               });
             }
           } catch (e: any) { console.error('[Campfire @Scout] error:', e); }
@@ -222,12 +234,13 @@ Stay in character.`;
             const reply = aiData?.content?.[0]?.text?.trim();
             if (reply) {
               const autoMsg = await prisma.campfireMessage.create({
-                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true },
+                data: { roomId: room.id, userId: userId, content: `🦄 ${reply}`, isHitch: true, replyToId: msg.id },
                 include: { user: { select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true } } },
               });
               campfire.to(campgroundId).emit('message:new', {
                 id: autoMsg.id, content: autoMsg.content, createdAt: autoMsg.createdAt,
                 isSystem: false, isHitch: true, user: autoMsg.user,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
               });
             }
           } catch (e: any) { console.error('[Campfire FAQ AutoResponse] error:', e); }
@@ -324,5 +337,157 @@ async function maybeActivateRoom(campgroundId: string, namespace: any, io?: any)
     ensureTriviaWeek(campgroundId, io).catch(e =>
       console.error(`[Campfire] ensureTriviaWeek failed for ${campgroundId}:`, e)
     );
+  }
+
+  // Schedule proactive Hitch engagement when 2+ campers are checked in
+  if (count >= 2) {
+    scheduleProactiveHitch(campgroundId, namespace);
+  }
+}
+
+// ─── Proactive Hitch Engagement ──────────────────────────────────────────────
+// Hitch acts as campground host: calls out campers by name, sparks group conversations
+
+function scheduleProactiveHitch(campgroundId: string, namespace: any) {
+  // Don't schedule if one is already pending
+  if (proactiveTimers.has(campgroundId)) return;
+
+  // Check cooldown — no proactive message if one was sent in last 10 minutes
+  const lastSent = lastProactiveHitch.get(campgroundId) || 0;
+  const cooldownMs = 10 * 60 * 1000; // 10 minutes
+  const elapsed = Date.now() - lastSent;
+  const delay = elapsed < cooldownMs ? cooldownMs - elapsed + 30000 : 30000; // 30s after check-in, or after cooldown
+
+  const timer = setTimeout(async () => {
+    proactiveTimers.delete(campgroundId);
+    try {
+      await sendProactiveHitch(campgroundId, namespace);
+    } catch (e) {
+      console.error('[Campfire ProactiveHitch] error:', e);
+    }
+  }, delay);
+
+  proactiveTimers.set(campgroundId, timer);
+}
+
+async function sendProactiveHitch(campgroundId: string, namespace: any) {
+  // Verify conditions still hold
+  const room = await prisma.campfireRoom.findUnique({ where: { campgroundId } });
+  if (!room?.isActive) return;
+
+  const checkedInUsers = await prisma.checkIn.findMany({
+    where: { campgroundId, isActive: true },
+    include: {
+      user: {
+        select: {
+          id: true, firstName: true, lastName: true, username: true,
+          homeCity: true, homeState: true,
+        },
+      },
+    },
+    take: 20,
+  });
+
+  if (checkedInUsers.length < 2) return;
+
+  // Check if there's been a recent message (< 10 min) — don't interrupt active conversation
+  const recentMsg = await prisma.campfireMessage.findFirst({
+    where: { roomId: room.id, createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) } },
+    orderBy: { createdAt: 'desc' },
+  });
+  // If last message was from a human (not Hitch), the chat is active — skip
+  if (recentMsg && !recentMsg.isHitch && !recentMsg.isSystem) return;
+
+  // Get recent messages for context (avoid repeating topics)
+  const recentMessages = await prisma.campfireMessage.findMany({
+    where: { roomId: room.id },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    select: { content: true, isHitch: true },
+  });
+
+  const campground = await prisma.campground.findUnique({
+    where: { id: campgroundId },
+    select: { name: true, city: true, state: true },
+  });
+
+  // Get RV info for checked-in users
+  const userIds = checkedInUsers.map(c => c.user.id);
+  const rvProfiles = await prisma.rVProfile.findMany({
+    where: { userId: { in: userIds } },
+    select: { userId: true, year: true, make: true, model: true, type: true, nickname: true },
+  });
+  const rvMap = new Map(rvProfiles.map(r => [r.userId, r]));
+
+  const camperList = checkedInUsers.map(c => {
+    const rv = rvMap.get(c.user.id);
+    const rvDesc = rv ? `${rv.year || ''} ${rv.make || ''} ${rv.model || ''} (${rv.type || 'RV'})`.trim() : '';
+    const home = [c.user.homeCity, c.user.homeState].filter(Boolean).join(', ');
+    return `- ${c.user.firstName}${home ? ` from ${home}` : ''}${rvDesc ? `, drives a ${rvDesc}` : ''}`;
+  }).join('\n');
+
+  const recentContext = recentMessages.reverse().map(m =>
+    `${m.isHitch ? 'Hitch' : 'Camper'}: ${m.content.slice(0, 100)}`
+  ).join('\n');
+
+  const timeOfDay = (() => {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 12) return 'morning';
+    if (h >= 12 && h < 17) return 'afternoon';
+    if (h >= 17 && h < 21) return 'evening';
+    return 'night';
+  })();
+
+  const systemPrompt = `You are Hitch 🦄, the campfire host at ${campground?.name || 'this campground'}${campground?.state ? ' in ' + campground.state : ''}. It's ${timeOfDay}. You're facilitating conversation among campers currently checked in. Your job is to spark engaging group discussion.
+
+Currently checked in:
+${camperList}
+
+${recentContext ? `Recent campfire messages:\n${recentContext}` : 'The campfire has been quiet.'}
+
+Generate ONE message that does one of these (pick the most natural fit):
+- Call out a specific camper by first name and ask them a fun question about their rig, travels, or where they're heading next
+- Ask the whole group a fun "would you rather" or "what's your favorite..." camping question
+- Share a relevant tip for the area and ask if anyone's tried it
+- Welcome someone by name and ask where they're coming from or where they're heading
+- Connect two campers who might have something in common (same rig type, same home state, similar rigs, etc.)
+- Suggest a group activity appropriate for the time of day (morning hike, sunset viewing, evening s'mores, etc.)
+
+Rules:
+- 1-2 sentences max. Warm, conversational, like a friendly camp host.
+- USE camper first names — this is personal.
+- Family-friendly. No politics, no controversy.
+- Do NOT repeat a topic from the recent messages.
+- Do NOT start with "Hey campers" — vary your opener.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: 'Generate a campfire conversation starter.' }],
+      }),
+    });
+    const aiData: any = await res.json() as any;
+    const message = aiData?.content?.[0]?.text?.trim();
+    if (message) {
+      const hitchMsg = await prisma.campfireMessage.create({
+        data: { roomId: room.id, userId: null, content: `🦄 ${message}`, isHitch: true },
+      });
+      namespace.to(campgroundId).emit('message:new', {
+        id: hitchMsg.id, content: hitchMsg.content, createdAt: hitchMsg.createdAt,
+        isSystem: false, isHitch: true,
+      });
+      lastProactiveHitch.set(campgroundId, Date.now());
+    }
+  } catch (e) {
+    console.error('[Campfire ProactiveHitch] AI call failed:', e);
   }
 }
