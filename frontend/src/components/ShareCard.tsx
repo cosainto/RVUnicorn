@@ -7,13 +7,15 @@ interface ShareCardProps {
   subtitle?: string;
   stat?: string;
   campgroundName?: string;
+  campgroundId?: string;
+  campgroundImage?: string;
   location?: string;
   userName: string;
   userAvatar?: string;
   onClose: () => void;
 }
 
-export default function ShareCard({ type, title, subtitle, stat, campgroundName, location, userName, userAvatar, onClose }: ShareCardProps) {
+export default function ShareCard({ type, title, subtitle, stat, campgroundName, campgroundId, campgroundImage, location, userName, userAvatar, onClose }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = async () => {
@@ -35,7 +37,13 @@ export default function ShareCard({ type, title, subtitle, stat, campgroundName,
         if (!blob) return;
         if (navigator.share) {
           const file = new File([blob], `rvunicorn-${type}.png`, { type: 'image/png' });
-          await navigator.share({ title: `${userName} on RVUnicorn`, text: title, files: [file] });
+          const campgroundUrl = campgroundId ? `https://rvunicorn.com/campgrounds/${campgroundId}` : undefined;
+          await navigator.share({
+            title: `${userName} on RVUnicorn`,
+            text: campgroundName ? `${title} — ${campgroundName}${campgroundUrl ? `\nCheck it out: ${campgroundUrl}` : ''}` : title,
+            files: [file],
+            ...(campgroundUrl ? { url: campgroundUrl } : {}),
+          });
         } else {
           handleDownload();
         }
@@ -68,15 +76,24 @@ export default function ShareCard({ type, title, subtitle, stat, campgroundName,
             </div>
           </div>
 
+          {/* Campground image */}
+          {campgroundImage && (
+            <div className="px-4">
+              <img src={campgroundImage} alt={campgroundName || ''} className="w-full h-32 object-cover rounded-lg" style={{ border: '1px solid rgba(232,168,56,0.15)' }} />
+            </div>
+          )}
+
           {/* Content */}
           <div className="px-6 pb-6">
-            <h2 className="text-xl font-bold mb-1" style={{ color: '#F5F0E8', fontFamily: "'Playfair Display',serif" }}>{title}</h2>
+            <h2 className="text-xl font-bold mb-1 mt-3" style={{ color: '#F5F0E8', fontFamily: "'Playfair Display',serif" }}>{title}</h2>
             {campgroundName && <p className="text-[13px] mb-1" style={{ color: '#E8A838' }}>{'\u{1F3D5}'} {campgroundName}</p>}
             {location && <p className="text-[11px] mb-3" style={{ color: 'rgba(245,240,232,0.4)' }}>{'\u{1F4CD}'} {location}</p>}
             {stat && <p className="text-[15px] font-bold mt-3" style={{ color: '#E8A838' }}>{stat}</p>}
 
             <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid rgba(232,168,56,0.1)' }}>
-              <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.25)' }}>rvunicorn.com</p>
+              <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.25)' }}>
+                {campgroundId ? `rvunicorn.com/campgrounds/${campgroundId}` : 'rvunicorn.com'}
+              </p>
               <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.25)' }}>Your Kind of People</p>
             </div>
           </div>

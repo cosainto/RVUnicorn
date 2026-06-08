@@ -272,6 +272,7 @@ model User {
   household                                       Household?                    @relation("HouseholdMembers", fields: [householdId], references: [id])
   sentHouseholdInvites                            HouseholdInvite[]             @relation("HouseholdInviteSender")
   receivedHouseholdInvites                        HouseholdInvite[]             @relation("HouseholdInviteReceiver")
+  emergencyContacts                               EmergencyContact[]            @relation("EmergencyContacts")
   rvShowcase                                      RVShowcase?
   reactions                                       Reaction[]
   recipes                                         Recipe[]
@@ -4590,6 +4591,21 @@ model HouseholdInvite {
   @@unique([senderId, receiverId])
   @@index([receiverId])
   @@index([senderId])
+}
+
+model EmergencyContact {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  phoneNumber      String
+  relation         String?
+  notifyOnCheckIn  Boolean  @default(true)
+  notifyOnCheckOut Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation("EmergencyContacts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model ScrapbookPin {

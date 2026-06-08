@@ -2385,6 +2385,8 @@ export default function CampgroundDetailPage() {
         type="checkin"
         title={`Just checked in!`}
         campgroundName={campground.name}
+        campgroundId={campground.id}
+        campgroundImage={campground.imageUrl}
         location={`${campground.location}${campground.state ? `, ${campground.state}` : ''}`}
         userName={`${user.firstName} ${user.lastName}`}
         userAvatar={(user as any).profilePicture}

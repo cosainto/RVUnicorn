@@ -6,6 +6,7 @@ import { sendWebPush } from '../utils/webPush';
 import { checkSharedFire } from './sharing.routes';
 import { emitOrganizerActivity } from '../campfire/organizer.socket';
 import { checkAndRefreshBio } from '../services/campfireBioService';
+import { sendSMS } from '../services/email-sms.service';
 // Lazy import to avoid circular dependency with index.ts
 function getIO() { return require('../index').io; }
 
@@ -160,6 +161,32 @@ router.post('/', authenticateToken, async (req: any, res) => {
 
     res.json(checkIn);
 
+    // Notify emergency contacts via SMS (non-blocking)
+    setImmediate(async () => {
+      try {
+        const contacts = await prisma.emergencyContact.findMany({
+          where: { userId, notifyOnCheckIn: true },
+        });
+        if (contacts.length === 0) return;
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } });
+        const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+        const locationName = checkIn.campground?.name || 'a campground';
+        const city = (checkIn.campground as any)?.city;
+        const state = (checkIn.campground as any)?.state;
+        const locationLine = [city, state].filter(Boolean).join(', ');
+        const siteInfo = siteNumber ? `\nSite: ${siteNumber}` : '';
+        const viewLink = campgroundId ? `\nView: https://rvunicorn.com/campgrounds/${campgroundId}` : '';
+        for (const contact of contacts) {
+          sendSMS({
+            to: contact.phoneNumber,
+            message: `📍 RVUnicorn Travel Update\n${name} just checked in at ${locationName}${locationLine ? ` in ${locationLine}` : ''}.${siteInfo}${viewLink}\n— Sent via RVUnicorn 🦄`,
+          }).catch(e => console.error('[EmergencyContact SMS] error:', e));
+        }
+      } catch (e) {
+        console.error('[EmergencyContact SMS] error:', e);
+      }
+    });
+
     // Refresh Campfire Chronicles bio in background
     setImmediate(() => checkAndRefreshBio(userId));
   } catch (e: any) {
@@ -205,11 +232,11 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
 
-    // Find active check-in before deactivating (need campgroundId for market cleanup)
+    // Find active check-in before deactivating (need campgroundId for market cleanup + SMS)
     const activeCheckIn = await prisma.checkIn.findFirst({
       where: { userId, isActive: true },
-      select: { campgroundId: true },
-    });
+      include: { campground: { select: { id: true, name: true } } },
+    }) as any;
 
     await prisma.checkIn.updateMany({
       where: { userId, isActive: true },
@@ -239,6 +266,29 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
     }
 
     res.json({ success: true });
+
+    // Notify emergency contacts of checkout via SMS (non-blocking)
+    if (activeCheckIn?.campground) {
+      setImmediate(async () => {
+        try {
+          const contacts = await prisma.emergencyContact.findMany({
+            where: { userId, notifyOnCheckOut: true },
+          });
+          if (contacts.length === 0) return;
+          const user = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } });
+          const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+          const locationName = activeCheckIn.campground?.name || 'their campground';
+          for (const contact of contacts) {
+            sendSMS({
+              to: contact.phoneNumber,
+              message: `📍 RVUnicorn Travel Update\n${name} checked out of ${locationName}.\n— Sent via RVUnicorn 🦄`,
+            }).catch(e => console.error('[EmergencyContact SMS] checkout error:', e));
+          }
+        } catch (e) {
+          console.error('[EmergencyContact SMS] checkout error:', e);
+        }
+      });
+    }
 
     // Refresh Campfire Chronicles bio in background
     setImmediate(() => checkAndRefreshBio(userId));

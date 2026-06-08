@@ -8,6 +8,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import EmailPreferencesSection from '../components/EmailPreferencesSection';
+import EmergencyContactsManager from '../components/EmergencyContactsManager';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -454,6 +455,9 @@ export default function SettingsPage() {
 
       {/* ── Email Notifications ── */}
       <EmailPreferencesSection />
+
+      {/* ── Emergency Contacts ── */}
+      <EmergencyContactsManager />
 
       {/* ── Danger Zone ── */}
       <div className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
