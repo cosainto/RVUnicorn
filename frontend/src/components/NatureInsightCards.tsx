@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle, X, CloudRain, Cloud, CloudSun, Snowflake, CloudLightning, Droplets, Thermometer } from 'lucide-react';
+import { Sun, Wind, TreePine, Leaf, ChevronDown, ChevronUp, AlertTriangle, X, CloudRain, Cloud, CloudSun, Snowflake, CloudLightning, Droplets, Thermometer, Shield, Navigation } from 'lucide-react';
 import SunCalc from 'suncalc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -503,6 +503,215 @@ function WeatherCard({ lat, lng }: { lat: number; lng: number }) {
   );
 }
 
+// ─── Know Before You Go Card ─────────────────────────────────────────────────
+
+interface NWSAlert {
+  event: string;
+  severity: string;
+  headline: string;
+  description: string;
+  urgency: string;
+}
+
+interface TravelAdvisory {
+  type: 'warning' | 'caution' | 'info';
+  icon: string;
+  title: string;
+  detail: string;
+}
+
+function deriveRVAdvisories(lat: number, lng: number): TravelAdvisory[] {
+  const advisories: TravelAdvisory[] = [];
+  const month = new Date().getMonth() + 1;
+  const hour = new Date().getHours();
+  const region = getUSRegion(lat, lng);
+
+  // Time-based advisories
+  if (hour >= 16 && hour <= 19) {
+    advisories.push({ type: 'caution', icon: '🚗', title: 'Rush Hour Traffic', detail: 'Peak traffic hours — expect delays on major highways near metro areas.' });
+  }
+
+  // Seasonal RV-specific
+  if (month >= 6 && month <= 8 && region === 'southern') {
+    advisories.push({ type: 'caution', icon: '🌡️', title: 'Extreme Heat Zone', detail: 'Temps often exceed 100°F. Run generator for AC, check tire pressure (heat = blowouts), carry extra water.' });
+  }
+  if (month >= 11 || month <= 3) {
+    if (region === 'northern') {
+      advisories.push({ type: 'warning', icon: '🧊', title: 'Freeze Risk', detail: 'Overnight temps may drop below freezing. Winterize water lines, disconnect hoses, use heat tape.' });
+    }
+    if (region === 'western' && lat > 37) {
+      advisories.push({ type: 'caution', icon: '⛰️', title: 'Mountain Pass Conditions', detail: 'Chain requirements possible on mountain passes. Check road conditions before heading to elevation.' });
+    }
+  }
+  if (month >= 6 && month <= 9 && region === 'western') {
+    advisories.push({ type: 'caution', icon: '🔥', title: 'Wildfire Season', detail: 'Active fire season. Check InciWeb for closures. Have an evacuation plan and keep fuel above half tank.' });
+  }
+  if (month >= 6 && month <= 11 && region === 'southern' && lng > -90) {
+    advisories.push({ type: 'caution', icon: '🌀', title: 'Hurricane Season', detail: 'Atlantic hurricane season active. Monitor NHC advisories and know your evacuation route.' });
+  }
+
+  // General RV tips by time
+  if (hour >= 6 && hour <= 9) {
+    advisories.push({ type: 'info', icon: '🦌', title: 'Wildlife Crossing Hours', detail: 'Dawn is peak wildlife-on-road time. Watch for deer, elk, and moose — especially near forests.' });
+  }
+  if (hour >= 18 && hour <= 20) {
+    advisories.push({ type: 'info', icon: '🌅', title: 'Sun Glare Advisory', detail: 'Low sun angle during golden hour. Keep sunglasses handy and increase following distance.' });
+  }
+
+  return advisories;
+}
+
+function alertSeverityColor(severity: string): { border: string; bg: string; text: string } {
+  switch (severity) {
+    case 'Extreme': return { border: 'border-red-400', bg: 'bg-red-50', text: 'text-red-800' };
+    case 'Severe': return { border: 'border-red-300', bg: 'bg-red-50', text: 'text-red-700' };
+    case 'Moderate': return { border: 'border-orange-300', bg: 'bg-orange-50', text: 'text-orange-700' };
+    default: return { border: 'border-yellow-300', bg: 'bg-yellow-50', text: 'text-yellow-700' };
+  }
+}
+
+function KnowBeforeYouGoCard({ lat, lng }: { lat: number; lng: number }) {
+  const [nwsAlerts, setNwsAlerts] = useState<NWSAlert[]>([]);
+  const [uvIndex, setUvIndex] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    // Fetch NWS active alerts
+    fetch(`https://api.weather.gov/alerts/active?point=${lat},${lng}&limit=5`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'RVUnicorn/1.0 (contact@rvunicorn.com)' },
+    })
+      .then(r => r.json())
+      .then(d => {
+        const alerts = (d.features || []).map((f: any) => ({
+          event: f.properties?.event || '',
+          severity: f.properties?.severity || 'Minor',
+          headline: f.properties?.headline || '',
+          description: f.properties?.description?.slice(0, 200) || '',
+          urgency: f.properties?.urgency || '',
+        }));
+        setNwsAlerts(alerts);
+      })
+      .catch(() => {});
+
+    // Fetch UV index from Open-Meteo
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=uv_index_max&timezone=auto&forecast_days=1`,
+      { signal: controller.signal }
+    )
+      .then(r => r.json())
+      .then(d => {
+        if (d.daily?.uv_index_max?.[0] != null) {
+          setUvIndex(Math.round(d.daily.uv_index_max[0]));
+        }
+      })
+      .catch(() => {});
+
+    setLoading(false);
+
+    return () => controller.abort();
+  }, [lat, lng]);
+
+  const rvAdvisories = deriveRVAdvisories(lat, lng);
+
+  // Build UV advisory
+  const uvAdvisories: TravelAdvisory[] = [];
+  if (uvIndex !== null && uvIndex >= 6) {
+    uvAdvisories.push({
+      type: uvIndex >= 8 ? 'warning' : 'caution',
+      icon: '☀️',
+      title: `UV Index: ${uvIndex} (${uvIndex >= 11 ? 'Extreme' : uvIndex >= 8 ? 'Very High' : 'High'})`,
+      detail: 'Apply SPF 30+, wear hats. Awning shade recommended. Reapply sunscreen every 2 hours.',
+    });
+  }
+
+  const allAdvisories = [...uvAdvisories, ...rvAdvisories];
+  const hasAlerts = nwsAlerts.length > 0;
+  const hasAdvisories = allAdvisories.length > 0;
+  const isWarning = hasAlerts && nwsAlerts.some(a => a.severity === 'Extreme' || a.severity === 'Severe');
+
+  // Don't render if nothing to show
+  if (!loading && !hasAlerts && !hasAdvisories) return null;
+
+  return (
+    <InsightCard
+      icon={<Shield className="w-3.5 h-3.5 text-indigo-500" />}
+      title="Know Before You Go"
+      borderColor={isWarning ? 'border-red-300' : hasAlerts ? 'border-orange-200' : 'border-indigo-200'}
+      headerGradient={
+        isWarning
+          ? 'bg-gradient-to-r from-red-50 to-orange-50'
+          : hasAlerts
+            ? 'bg-gradient-to-r from-orange-50 to-amber-50'
+            : 'bg-gradient-to-r from-indigo-50 to-blue-50'
+      }
+      titleColor={isWarning ? 'text-red-900' : hasAlerts ? 'text-orange-900' : 'text-indigo-900'}
+      avatar={<CharacterAvatar initial="H" color="#7c3aed" />}
+      badge={hasAlerts ? (
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
+          isWarning ? 'bg-red-500 text-white animate-pulse' : 'bg-orange-500 text-white'
+        }`}>
+          <AlertTriangle className="w-2.5 h-2.5" />
+          {nwsAlerts.length} Alert{nwsAlerts.length > 1 ? 's' : ''}
+        </span>
+      ) : undefined}
+    >
+      {/* NWS Weather Alerts */}
+      {nwsAlerts.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {nwsAlerts.slice(0, 3).map((alert, i) => {
+            const colors = alertSeverityColor(alert.severity);
+            return (
+              <div key={i} className={`rounded-lg px-2 py-1.5 border-l-3 ${colors.bg} ${colors.text}`} style={{ borderLeftWidth: 3, borderLeftColor: alert.severity === 'Extreme' || alert.severity === 'Severe' ? '#ef4444' : '#f59e0b' }}>
+                <p className="text-[11px] font-bold flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  {alert.event}
+                </p>
+                <p className="text-[10px] mt-0.5 leading-tight opacity-80 line-clamp-2">{alert.headline}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* RV & Travel Advisories */}
+      {allAdvisories.length > 0 && (
+        <div className="space-y-1 mb-1.5">
+          {allAdvisories.slice(0, 3).map((adv, i) => (
+            <div key={i} className={`flex items-start gap-1.5 rounded px-2 py-1 ${
+              adv.type === 'warning' ? 'bg-red-50' : adv.type === 'caution' ? 'bg-amber-50' : 'bg-blue-50'
+            }`}>
+              <span className="text-xs flex-shrink-0 mt-0.5">{adv.icon}</span>
+              <div className="min-w-0">
+                <p className={`text-[10px] font-bold ${
+                  adv.type === 'warning' ? 'text-red-800' : adv.type === 'caution' ? 'text-amber-800' : 'text-blue-800'
+                }`}>{adv.title}</p>
+                <p className={`text-[10px] leading-tight ${
+                  adv.type === 'warning' ? 'text-red-600' : adv.type === 'caution' ? 'text-amber-600' : 'text-blue-600'
+                }`}>{adv.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* All clear state */}
+      {!hasAlerts && !hasAdvisories && !loading && (
+        <div className="flex items-center gap-2 py-1">
+          <span className="text-green-500 text-xs">✓</span>
+          <p className="text-[11px] text-green-700 font-medium">All clear — no active alerts or advisories for this area.</p>
+        </div>
+      )}
+
+      <p className="text-[10px] text-gray-400 italic mt-1">
+        {hasAlerts ? '"Check conditions, not just coordinates." — Hitch 🦄' : '"Smooth roads ahead — stay curious." — Hitch 🦄'}
+      </p>
+    </InsightCard>
+  );
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function NatureInsightCards({ lat, lng, weather }: NatureInsightCardsProps) {
@@ -527,6 +736,7 @@ export default function NatureInsightCards({ lat, lng, weather }: NatureInsightC
   return (
     <div className="grid grid-cols-2 gap-3">
       <WeatherCard lat={coords.lat} lng={coords.lng} />
+      <KnowBeforeYouGoCard lat={coords.lat} lng={coords.lng} />
       <GoldenHourCard lat={coords.lat} lng={coords.lng} weather={weather} />
       <WildlifeActivityCard lat={coords.lat} lng={coords.lng} />
       <ForagingForecastCard lat={coords.lat} lng={coords.lng} />
