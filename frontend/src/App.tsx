@@ -209,7 +209,7 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    if (user && !(user as any).rvType) {
+    if (user && !(user as any).onboardingCompleted) {
       const done = localStorage.getItem('hitch_onboarding_done');
       if (!done) setShowOnboarding(true);
     }
@@ -224,6 +224,10 @@ function AppContent() {
           <HitchOnboarding onComplete={() => {
             localStorage.setItem('hitch_onboarding_done', '1');
             setShowOnboarding(false);
+            // Mark onboarding complete server-side so it never shows again
+            import('./services/api').then(({ default: api }) => {
+              api.patch('/auth/profile', { onboardingCompleted: true, onboardingCompletedAt: new Date().toISOString() }).catch(() => {});
+            });
           }} />
         </Suspense>
       )}
