@@ -138,6 +138,76 @@ router.delete('/listing/:id', authenticateToken, async (req: any, res: Response)
   }
 });
 
+// PUT /api/camp-market/listing/:id — edit listing details
+router.put('/listing/:id', authenticateToken, upload.single('image'), async (req: any, res: Response) => {
+  try {
+    const userId = req.userId || (req as any).user?.id;
+    const listing = await prisma.campMarketListing.findUnique({ where: { id: req.params.id } });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+    if (listing.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { title, description, price, siteNumber, isFree } = req.body;
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description || null;
+    if (price !== undefined) updateData.price = price ? parseFloat(price) : null;
+    if (siteNumber !== undefined) updateData.siteNumber = siteNumber || null;
+    if (isFree !== undefined) updateData.isFree = isFree === 'true' || isFree === true;
+
+    // Handle new image upload
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      updateData.imageUrl = result.secure_url;
+    }
+
+    const updated = await prisma.campMarketListing.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+    res.json(updated);
+  } catch (e: any) {
+    console.error('Camp market edit error:', e);
+    res.status(500).json({ error: 'Failed to update listing' });
+  }
+});
+
+// POST /api/camp-market/listing/:id/renew — repost/renew an expired or inactive listing
+router.post('/listing/:id/renew', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId || (req as any).user?.id;
+    const listing = await prisma.campMarketListing.findUnique({ where: { id: req.params.id } });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+    if (listing.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    // Check user is currently checked in somewhere
+    const activeCheckIn = await prisma.checkIn.findFirst({
+      where: { userId, isActive: true },
+      select: { campgroundId: true, checkOutDate: true },
+    });
+    if (!activeCheckIn?.campgroundId) {
+      return res.status(400).json({ error: 'You must be checked in to renew a listing' });
+    }
+
+    // Renew: reactivate at current campground with new expiry
+    const expiresAt = activeCheckIn.checkOutDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const renewed = await prisma.campMarketListing.update({
+      where: { id: req.params.id },
+      data: {
+        isActive: true,
+        campgroundId: activeCheckIn.campgroundId,
+        expiresAt,
+        completedBuyerId: null, // reset sold status
+      },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+    res.json(renewed);
+  } catch (e: any) {
+    console.error('Camp market renew error:', e);
+    res.status(500).json({ error: 'Failed to renew listing' });
+  }
+});
+
 // POST /api/camp-market/listing/:id/interest — express interest + create record
 router.post('/listing/:id/interest', authenticateToken, async (req: any, res: Response) => {
   try {

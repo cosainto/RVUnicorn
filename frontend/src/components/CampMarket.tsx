@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send, CheckCircle, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Plus, X, Tag, MapPin, Clock, Send, CheckCircle, MessageCircle, Edit2, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -53,6 +53,9 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
   // Pending feedback banner
   const [pendingFeedback, setPendingFeedback] = useState<any[]>([]);
 
+  // Edit mode
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -83,6 +86,7 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
   };
 
   const handleSubmit = async () => {
+    if (editingId) { handleEdit(); return; }
     if (!title.trim()) return;
     setSubmitting(true);
     try {
@@ -140,6 +144,49 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
     } catch (e: any) {
       alert(e.response?.data?.error || 'Failed to complete sale');
     } finally { setCompletingWith(null); }
+  };
+
+  const startEdit = (listing: Listing) => {
+    setEditingId(listing.id);
+    setTitle(listing.title);
+    setDescription(listing.description || '');
+    setPrice(listing.price ? String(listing.price) : '');
+    setSiteNumber(listing.siteNumber || '');
+    setImagePreview(listing.imageUrl);
+    setImageFile(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = async () => {
+    if (!editingId || !title.trim()) return;
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
+      if (price) formData.append('price', price);
+      formData.append('siteNumber', siteNumber.trim());
+      if (imageFile) formData.append('image', imageFile);
+
+      const { data } = await api.put(`/camp-market/listing/${editingId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setListings(prev => prev.map(l => l.id === editingId ? { ...l, ...data } : l));
+      setShowForm(false); setEditingId(null);
+      setTitle(''); setDescription(''); setPrice(''); setSiteNumber('');
+      setImageFile(null); setImagePreview(null);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to update listing');
+    } finally { setSubmitting(false); }
+  };
+
+  const handleRenew = async (id: string) => {
+    try {
+      const { data } = await api.post(`/camp-market/listing/${id}/renew`);
+      setListings(prev => [data, ...prev.filter(l => l.id !== id)]);
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to renew listing');
+    }
   };
 
   if (loading) return <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />;
@@ -295,10 +342,16 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                       {user && user.id === listing.user.id && (
                         <div className="flex items-center gap-2">
                           <button
+                            onClick={() => startEdit(listing)}
+                            className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1 rounded-lg font-semibold transition"
+                          >
+                            <Edit2 className="w-3 h-3" /> Edit
+                          </button>
+                          <button
                             onClick={() => openMarkSold(listing.id)}
                             className="flex items-center gap-1 text-xs bg-green-50 text-green-600 hover:bg-green-100 px-2.5 py-1 rounded-lg font-semibold transition"
                           >
-                            <CheckCircle className="w-3 h-3" /> Mark as Sold
+                            <CheckCircle className="w-3 h-3" /> Sold
                           </button>
                           <button
                             onClick={() => handleDelete(listing.id)}
@@ -367,11 +420,11 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
 
       {/* Create Listing Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setShowForm(false); setEditingId(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-900">Post an Item</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <h2 className="font-bold text-gray-900">{editingId ? 'Edit Listing' : 'Post an Item'}</h2>
+              <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -429,7 +482,7 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
                 disabled={!title.trim() || submitting}
                 className="w-full bg-orange-500 text-white font-semibold py-2.5 rounded-xl hover:bg-orange-600 disabled:opacity-50 transition"
               >
-                {submitting ? 'Posting...' : 'Post Item'}
+                {submitting ? (editingId ? 'Saving...' : 'Posting...') : (editingId ? 'Save Changes' : 'Post Item')}
               </button>
             </div>
           </div>
