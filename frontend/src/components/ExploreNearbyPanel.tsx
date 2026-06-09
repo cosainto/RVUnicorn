@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, MapPin, Star, Sparkles, CalendarPlus, Loader2, Mountain, Utensils, Camera, Ticket, Compass, Clock, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import AddToEventModal from './AddToEventModal';
+import NearbyTile, { assignBadge } from './nearby/NearbyTile';
 
 interface Recommendation {
   placeId: string;
@@ -68,6 +70,7 @@ const CATEGORIES = [
 
 export default function ExploreNearbyPanel({ campgroundId, campgroundName, eventId, onSeeAll, onActivityAdded }: ExploreNearbyPanelProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(true);
   const [category, setCategory] = useState('ALL');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -135,6 +138,33 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
     }
   };
 
+  // Upsert a NearbyExperience by placeId then navigate to its detail page
+  const goToExperience = async (item: Recommendation | AiPick) => {
+    try {
+      const { data } = await api.post('/experiences', {
+        placeId: item.placeId,
+        name: item.title,
+        address: item.address,
+        category: item.type || 'OTHER',
+        latitude: item.lat,
+        longitude: item.lng,
+        photoUrls: item.imageUrl ? [item.imageUrl] : [],
+        website: item.sourceUrl,
+      });
+      navigate(`/experiences/${data.id}`);
+    } catch (err: any) {
+      // If duplicate placeId, fetch existing and navigate
+      try {
+        const { data: nearby } = await api.get(`/experiences/nearby?lat=${item.lat}&lng=${item.lng}&radius=1`);
+        const match = nearby.find((e: any) => e.placeId === item.placeId);
+        if (match) navigate(`/experiences/${match.id}`);
+        else window.open(item.sourceUrl, '_blank');
+      } catch {
+        window.open(item.sourceUrl, '_blank');
+      }
+    }
+  };
+
   const filteredRecs = category === 'ALL'
     ? recommendations
     : recommendations.filter(r => r.type === category);
@@ -180,9 +210,22 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
 
         {expanded && (
           <div className="px-4 pb-4">
-            {/* Category pills */}
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-white/40 uppercase tracking-wider">Explore Nearby</span>
+              <span className="text-[10px] text-amber-400/60 italic">Powered by Hitch</span>
+            </div>
+
+            {/* Category filter pills */}
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide">
-              {CATEGORIES.map(cat => (
+              {[
+                { key: 'ALL', label: 'All', icon: '✨' },
+                { key: 'TRAIL', label: 'Hiking', icon: '🥾' },
+                { key: 'FOOD', label: 'Food', icon: '🍔' },
+                { key: 'PLAYGROUND', label: 'Family', icon: '👨‍👩‍👧' },
+                { key: 'SCENIC_VIEW', label: 'Scenic', icon: '🏔️' },
+                { key: 'ATTRACTION', label: 'Attractions', icon: '📸' },
+              ].map(cat => (
                 <button
                   key={cat.key}
                   onClick={() => setCategory(cat.key)}
@@ -209,133 +252,72 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
               </div>
             ) : (
               <>
-                {/* AI Picks */}
-                {filteredAiPicks.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">AI Picks for You</span>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                      {filteredAiPicks.slice(0, 3).map(pick => (
-                        <div
-                          key={pick.placeId}
-                          className="flex-shrink-0 w-64 rounded-xl overflow-hidden"
-                          style={{ background: 'linear-gradient(135deg, rgba(232,168,56,0.15), rgba(168,85,247,0.1))' , border: '1px solid rgba(232,168,56,0.25)' }}
-                        >
-                          {pick.imageUrl ? (
-                            <img src={pick.imageUrl} alt={pick.title} className="w-full aspect-[16/10] object-cover" />
-                          ) : (
-                            <div className="w-full aspect-[16/10] bg-gradient-to-br from-amber-500/20 to-purple-500/20 flex items-center justify-center">
-                              <span className="text-3xl">{TYPE_CONFIG[pick.type]?.icon || '📍'}</span>
-                            </div>
-                          )}
-                          <div className="p-3">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <h4 className="font-bold text-sm text-white leading-tight line-clamp-1">{pick.title}</h4>
-                              <span className="flex items-center gap-0.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                <Sparkles className="w-2.5 h-2.5" /> AI
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-amber-200/70 italic line-clamp-2 mb-2">{pick.tip}</p>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-[10px] text-white/50">
-                                {pick.rating && (
-                                  <span className="flex items-center gap-0.5">
-                                    <Star className="w-2.5 h-2.5 text-amber-400 fill-current" />
-                                    {pick.rating.toFixed(1)}
-                                  </span>
-                                )}
-                                <span>{pick.distance.toFixed(1)} mi</span>
-                              </div>
-                              {eventId && (
-                                <button
-                                  onClick={() => handleAddToTrip(pick)}
-                                  disabled={addingId === pick.placeId}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500 text-gray-900 hover:bg-amber-400 transition disabled:opacity-50"
-                                >
-                                  {addingId === pick.placeId ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <CalendarPlus className="w-3 h-3" />
-                                  )}
-                                  Add to Trip
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Unified tile grid — AI picks merged with recommendations, AI picks ranked first */}
+                {(() => {
+                  const aiTiles = filteredAiPicks.map(p => ({
+                    key: `ai-${p.placeId}`, name: p.title, imageUrl: p.imageUrl, distance: p.distance,
+                    driveTime: Math.round(p.distance / 0.5), rating: p.rating, reviewCount: p.reviewCount,
+                    category: p.type || 'OTHER', isAiPick: true, item: p as Recommendation | AiPick,
+                  }));
+                  const recTiles = filteredRecs.map(r => ({
+                    key: `rec-${r.placeId}`, name: r.title, imageUrl: r.imageUrl, distance: r.distance,
+                    driveTime: Math.round(r.distance / 0.5), rating: r.rating, reviewCount: r.reviewCount,
+                    category: r.type || 'OTHER', isAiPick: false, item: r as Recommendation | AiPick,
+                  }));
+                  // Merge: AI picks first, then recs (dedup by name)
+                  const seen = new Set<string>();
+                  const merged = [...aiTiles, ...recTiles].filter(t => {
+                    if (seen.has(t.name)) return false;
+                    seen.add(t.name);
+                    return true;
+                  });
+                  const topPicks = merged.slice(0, 5);
+                  const gridItems = merged.slice(5);
 
-                {/* Recommendations grid */}
-                {filteredRecs.length > 0 && (
-                  <div>
-                    {filteredAiPicks.length > 0 && (
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <MapPin className="w-3.5 h-3.5 text-white/40" />
-                        <span className="text-xs font-bold text-white/40 uppercase tracking-wider">More Nearby</span>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                      {filteredRecs.slice(0, 6).map(rec => {
-                        const typeInfo = TYPE_CONFIG[rec.type] || TYPE_CONFIG.OTHER;
-                        return (
-                          <div
-                            key={rec.placeId}
-                            className="bg-white/[0.07] rounded-xl overflow-hidden hover:bg-white/[0.12] transition group"
-                          >
-                            {rec.imageUrl ? (
-                              <img src={rec.imageUrl} alt={rec.title} className="w-full aspect-[16/10] object-cover" />
-                            ) : (
-                              <div className="w-full aspect-[16/10] bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
-                                <span className="text-2xl">{typeInfo.icon}</span>
-                              </div>
-                            )}
-                            <div className="p-2.5">
-                              <h4 className="font-semibold text-xs text-white leading-tight line-clamp-1 mb-1">{rec.title}</h4>
-                              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${typeInfo.color}`}>
-                                  {typeInfo.label}
-                                </span>
-                                <span className="text-[10px] text-white/40">{rec.distance.toFixed(1)} mi</span>
-                                {rec.rating && (
-                                  <span className="flex items-center gap-0.5 text-[10px] text-white/50">
-                                    <Star className="w-2.5 h-2.5 text-amber-400 fill-current" />
-                                    {rec.rating.toFixed(1)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {rec.isOpen !== undefined && (
-                                  <span className={`text-[9px] font-medium ${rec.isOpen ? 'text-green-400' : 'text-red-400'}`}>
-                                    {rec.isOpen ? 'Open' : 'Closed'}
-                                  </span>
-                                )}
-                                {eventId && (
-                                  <button
-                                    onClick={() => handleAddToTrip(rec)}
-                                    disabled={addingId === rec.placeId}
-                                    className="ml-auto flex items-center gap-0.5 px-2 py-1 rounded-lg text-[9px] font-bold bg-white/10 text-white/80 hover:bg-amber-500 hover:text-gray-900 transition disabled:opacity-50"
-                                  >
-                                    {addingId === rec.placeId ? (
-                                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                    ) : (
-                                      <CalendarPlus className="w-2.5 h-2.5" />
-                                    )}
-                                    Add
-                                  </button>
-                                )}
-                              </div>
+                  return (
+                    <>
+                      {/* Featured horizontal scroll — top 5 */}
+                      {topPicks.length > 0 && (
+                        <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide -mx-1 px-1 mb-3">
+                          {topPicks.map(t => (
+                            <div key={t.key} className="flex-shrink-0 w-48">
+                              <NearbyTile
+                                name={t.name}
+                                imageUrl={t.imageUrl}
+                                distanceMiles={t.distance}
+                                driveTimeMinutes={t.driveTime}
+                                rating={t.rating}
+                                reviewCount={t.reviewCount}
+                                category={t.category}
+                                badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
+                                onPress={() => goToExperience(t.item)}
+                              />
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                          ))}
+                        </div>
+                      )}
+                      {/* Vertical grid — remaining */}
+                      {gridItems.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                          {gridItems.map(t => (
+                            <NearbyTile
+                              key={t.key}
+                              name={t.name}
+                              imageUrl={t.imageUrl}
+                              distanceMiles={t.distance}
+                              driveTimeMinutes={t.driveTime}
+                              rating={t.rating}
+                              reviewCount={t.reviewCount}
+                              category={t.category}
+                              badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
+                              onPress={() => goToExperience(t.item)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* See all link */}
                 {(recommendations.length > 6 || onSeeAll) && (

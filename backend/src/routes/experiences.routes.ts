@@ -175,12 +175,18 @@ router.get('/:id', async (req: any, res: Response) => {
   }
 });
 
-// ── POST /api/experiences — Submit a new place ──
+// ── POST /api/experiences — Submit a new place (upserts by placeId) ──
 router.post('/', authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.userId;
     const { name, address, category, description, website, latitude, longitude, photoUrls, placeId } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    // If placeId provided, return existing record if found
+    if (placeId) {
+      const existing = await prisma.nearbyExperience.findUnique({ where: { placeId } });
+      if (existing) return res.json(existing);
+    }
 
     const experience = await prisma.nearbyExperience.create({
       data: {
@@ -190,7 +196,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
         photoUrls: photoUrls || [],
         placeId: placeId || null,
         addedByUserId: userId,
-        isModerationPending: true,
+        isModerationPending: false, // Auto-approved when created from Google Places data
         isVerified: false,
       },
     });

@@ -289,6 +289,25 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
   const filteredSaved = typeFilter === 'all' ? savedThings : savedThings.filter(t => t.type === typeFilter);
   const filteredRecs = typeFilter === 'all' ? recommendations : recommendations.filter(r => r.type === typeFilter);
 
+  // Upsert a NearbyExperience by placeId then navigate to detail page
+  const goToExperience = async (item: Recommendation | AiPick) => {
+    try {
+      const { data } = await api.post('/experiences', {
+        placeId: item.placeId,
+        name: item.title,
+        address: item.address,
+        category: item.type || 'OTHER',
+        latitude: item.lat,
+        longitude: item.lng,
+        photoUrls: item.imageUrl ? [item.imageUrl] : [],
+        website: item.sourceUrl,
+      });
+      navigate(`/experiences/${data.id}`);
+    } catch {
+      window.open(item.sourceUrl, '_blank');
+    }
+  };
+
   const TypeIcon = ({ type }: { type: string }) => {
     const config = TYPE_CONFIG[type] || TYPE_CONFIG.OTHER;
     const Icon = config.icon;
@@ -488,8 +507,8 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                       interest.toLowerCase().includes(pick.type?.toLowerCase() || '')
                     );
                     return (
-                    <a key={pick.placeId} href={pick.sourceUrl} target="_blank" rel="noopener noreferrer"
-                      className={`group rounded-xl overflow-hidden hover:shadow-lg transition block relative ${matchesInterest ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-300 ring-1 ring-violet-200' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'}`}>
+                    <div key={pick.placeId} onClick={() => goToExperience(pick)}
+                      className={`group rounded-xl overflow-hidden hover:shadow-lg transition block relative cursor-pointer ${matchesInterest ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-300 ring-1 ring-violet-200' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'}`}>
                       {/* Badges */}
                       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-sm">
@@ -557,7 +576,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           </div>
                         )}
                       </div>
-                    </a>
+                    </div>
                     );
                   })}
                 </div>
@@ -567,7 +586,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
           )}
           <div className="flex flex-col gap-3">
             {filteredRecs.map(rec => (
-              <div key={rec.placeId} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex gap-3 p-3">
+              <div key={rec.placeId} onClick={() => goToExperience(rec)} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex gap-3 p-3 cursor-pointer"
                 {/* Thumbnail */}
                 {rec.imageUrl
                   ? <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100"><img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
