@@ -586,7 +586,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
           )}
           <div className="flex flex-col gap-3">
             {filteredRecs.map(rec => (
-              <div key={rec.placeId} onClick={() => goToExperience(rec)} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex gap-3 p-3 cursor-pointer"
+              <div key={rec.placeId} onClick={() => goToExperience(rec)} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex gap-3 p-3 cursor-pointer">
                 {/* Thumbnail */}
                 {rec.imageUrl
                   ? <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100"><img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
