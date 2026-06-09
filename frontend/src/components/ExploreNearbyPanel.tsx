@@ -68,7 +68,7 @@ const CATEGORIES = [
 
 export default function ExploreNearbyPanel({ campgroundId, campgroundName, eventId, onSeeAll, onActivityAdded }: ExploreNearbyPanelProps) {
   const { user } = useAuth();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [category, setCategory] = useState('ALL');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [aiPicks, setAiPicks] = useState<AiPick[]>([]);

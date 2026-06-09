@@ -95,7 +95,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   const [v2Loading, setV2Loading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(true);
 
   const saveTimer = useRef<any>(null);
   const searchTimer = useRef<any>(null);
