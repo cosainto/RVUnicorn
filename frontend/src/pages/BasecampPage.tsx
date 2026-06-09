@@ -85,6 +85,7 @@ import NatureInsightCards from '../components/NatureInsightCards';
 import DoThisNowSection from '../components/activity/DoThisNowSection';
 import BasecampTriviaCard from '../components/BasecampTriviaCard';
 import { useToast } from '../components/ToastProvider';
+import CheckInInviteBanner from '../components/CheckInInviteBanner';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -683,6 +684,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       <ProgressMicroBar />
       {/* Onboarding Nudge Card */}
       <NudgeCard />
+      {/* Pending check-in invites from friends */}
+      <CheckInInviteBanner />
       {/* Current Status Display */}
       {currentStatus && (
         <div className="flex items-center gap-2 text-sm">

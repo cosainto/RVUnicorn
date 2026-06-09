@@ -161,6 +161,83 @@ router.post('/', authenticateToken, async (req: any, res) => {
 
     res.json(checkIn);
 
+    // Create check-in invites for friends (non-blocking)
+    const { inviteeIds } = req.body;
+    if (Array.isArray(inviteeIds) && inviteeIds.length > 0) {
+      setImmediate(async () => {
+        try {
+          const expiresAt = new Date(Date.now() + 120 * 60 * 1000); // 120 minutes
+          const inviter = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstName: true, lastName: true, profilePicture: true },
+          });
+          const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim();
+
+          // Verify all invitees are accepted friends
+          const friendships = await prisma.friendship.findMany({
+            where: {
+              status: 'ACCEPTED',
+              OR: [
+                { initiatorId: userId, receiverId: { in: inviteeIds } },
+                { receiverId: userId, initiatorId: { in: inviteeIds } },
+              ],
+            },
+            select: { initiatorId: true, receiverId: true },
+          });
+          const friendIdSet = new Set(friendships.map((f: any) =>
+            f.initiatorId === userId ? f.receiverId : f.initiatorId
+          ));
+
+          const locationName = checkIn.campground?.name || 'a location';
+
+          for (const inviteeId of inviteeIds) {
+            if (!friendIdSet.has(inviteeId)) continue; // skip non-friends
+            try {
+              await prisma.checkInInvite.create({
+                data: {
+                  checkInId: checkIn.id,
+                  inviterId: userId,
+                  inviteeId,
+                  campgroundId: campgroundId || null,
+                  harvestHostId: harvestHostId || null,
+                  overnightSpotId: overnightSpotId || null,
+                  siteNumber: siteNumber || null,
+                  notes: notes || null,
+                  expiresAt,
+                },
+              });
+
+              // Send notification
+              await prisma.notification.create({
+                data: {
+                  userId: inviteeId,
+                  type: 'CHECKIN_INVITE',
+                  content: `${inviterName} wants to check you in at ${locationName}`,
+                  link: campgroundId ? `/campgrounds/${campgroundId}` : '/dashboard',
+                  actorId: userId,
+                  actorName: inviterName,
+                  actorAvatar: inviter?.profilePicture || null,
+                  metadata: { checkInId: checkIn.id },
+                },
+              });
+
+              // Web push
+              sendWebPush(inviteeId, {
+                title: 'Check-In Invite',
+                body: `${inviterName} wants to check you in at ${locationName}`,
+                icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png',
+                url: campgroundId ? `/campgrounds/${campgroundId}` : '/dashboard',
+              }).catch(() => {});
+            } catch (inviteErr: any) {
+              // Skip duplicates silently (unique constraint)
+            }
+          }
+        } catch (e) {
+          console.error('[CheckIn Invite] error:', e);
+        }
+      });
+    }
+
     // Notify emergency contacts via SMS (non-blocking)
     setImmediate(async () => {
       try {
@@ -635,6 +712,184 @@ router.get('/community-map', async (req: any, res) => {
   } catch (e: any) {
     console.error('[Checkins] Community map error:', e);
     res.status(500).json({ error: 'Failed to load community map' });
+  }
+});
+
+// GET /api/checkins/invites/pending — Get my pending check-in invites
+router.get('/invites/pending', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const invites = await prisma.checkInInvite.findMany({
+      where: { inviteeId: userId, status: 'PENDING' },
+      include: {
+        inviter: { select: { id: true, firstName: true, lastName: true, profilePicture: true } },
+        checkIn: {
+          include: {
+            campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(invites);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/checkins/invites/:id/respond — Accept or decline a check-in invite
+router.post('/invites/:id/respond', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const { action } = req.body; // 'accept' or 'decline'
+
+    if (!['accept', 'decline'].includes(action)) {
+      return res.status(400).json({ error: 'Action must be "accept" or "decline"' });
+    }
+
+    const invite = await prisma.checkInInvite.findUnique({ where: { id } });
+    if (!invite || invite.inviteeId !== userId) {
+      return res.status(404).json({ error: 'Invite not found' });
+    }
+    if (invite.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Invite already responded to' });
+    }
+
+    if (action === 'decline') {
+      await prisma.checkInInvite.update({
+        where: { id },
+        data: { status: 'DECLINED', respondedAt: new Date() },
+      });
+      return res.json({ success: true, status: 'DECLINED' });
+    }
+
+    // Accept: check out existing, create new check-in
+    await prisma.checkIn.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false, checkOutDate: new Date() },
+    });
+
+    const newCheckIn = await prisma.checkIn.create({
+      data: {
+        userId,
+        campgroundId: invite.campgroundId,
+        harvestHostId: invite.harvestHostId,
+        overnightSpotId: invite.overnightSpotId,
+        siteNumber: invite.siteNumber,
+        notes: invite.notes,
+        checkInDate: new Date(),
+        isActive: true,
+      },
+      include: {
+        campground: { select: { id: true, name: true } },
+      },
+    });
+
+    await prisma.checkInInvite.update({
+      where: { id },
+      data: { status: 'ACCEPTED', respondedAt: new Date() },
+    });
+
+    res.json({ success: true, status: 'ACCEPTED', checkIn: newCheckIn });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/checkins/invite-friends — Invite friends to your current active check-in
+router.post('/invite-friends', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { inviteeIds } = req.body;
+
+    if (!Array.isArray(inviteeIds) || inviteeIds.length === 0) {
+      return res.status(400).json({ error: 'Must provide at least one friend to invite' });
+    }
+
+    const activeCheckIn = await prisma.checkIn.findFirst({
+      where: { userId, isActive: true },
+      include: {
+        campground: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!activeCheckIn) {
+      return res.status(400).json({ error: 'You are not currently checked in' });
+    }
+
+    const expiresAt = new Date(Date.now() + 120 * 60 * 1000);
+    const inviter = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, profilePicture: true },
+    });
+    const inviterName = `${inviter?.firstName || ''} ${inviter?.lastName || ''}`.trim();
+
+    // Verify all invitees are accepted friends
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { initiatorId: userId, receiverId: { in: inviteeIds } },
+          { receiverId: userId, initiatorId: { in: inviteeIds } },
+        ],
+      },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIdSet = new Set(friendships.map((f: any) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    ));
+
+    const locationName = (activeCheckIn as any).campground?.name || 'a location';
+    const campgroundId = activeCheckIn.campgroundId;
+    let invited = 0;
+
+    for (const inviteeId of inviteeIds) {
+      if (!friendIdSet.has(inviteeId)) continue;
+      try {
+        await prisma.checkInInvite.create({
+          data: {
+            checkInId: activeCheckIn.id,
+            inviterId: userId,
+            inviteeId,
+            campgroundId: activeCheckIn.campgroundId,
+            harvestHostId: activeCheckIn.harvestHostId,
+            overnightSpotId: activeCheckIn.overnightSpotId,
+            siteNumber: activeCheckIn.siteNumber,
+            notes: activeCheckIn.notes,
+            expiresAt,
+          },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: inviteeId,
+            type: 'CHECKIN_INVITE',
+            content: `${inviterName} wants to check you in at ${locationName}`,
+            link: campgroundId ? `/campgrounds/${campgroundId}` : '/dashboard',
+            actorId: userId,
+            actorName: inviterName,
+            actorAvatar: inviter?.profilePicture || null,
+            metadata: { checkInId: activeCheckIn.id },
+          },
+        });
+
+        sendWebPush(inviteeId, {
+          title: 'Check-In Invite',
+          body: `${inviterName} wants to check you in at ${locationName}`,
+          icon: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png',
+          url: campgroundId ? `/campgrounds/${campgroundId}` : '/dashboard',
+        }).catch(() => {});
+
+        invited++;
+      } catch {
+        // Skip duplicates silently (unique constraint)
+      }
+    }
+
+    res.json({ success: true, invited });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

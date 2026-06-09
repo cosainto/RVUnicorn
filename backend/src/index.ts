@@ -137,6 +137,7 @@ import { registerEventSockets } from './campfire/events.socket';
 import { runAutopilotCycle, checkEventMemoryTransitions } from './services/autopilotService';
 import { runStaySurveyPromptCron } from './cron/stay-survey-prompt.cron';
 import { runPostCheckoutPhotoReminderCron } from './cron/post-checkout-photo-reminder.cron';
+import { runCheckInInviteExpireCron } from './cron/checkin-invite-expire.cron';
 import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
 import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
@@ -445,6 +446,7 @@ setInterval(() => checkEventMemoryTransitions().catch(e => console.error('[TripM
 // 24-96h ago, if they haven't already left a CampgroundReview.
 setInterval(() => runStaySurveyPromptCron().catch(e => console.error('[StaySurveyPrompt]', e)), 60 * 60 * 1000);
 setInterval(() => runPostCheckoutPhotoReminderCron().catch(e => console.error('[PostCheckoutPhotoReminder]', e)), 60 * 60 * 1000);
+setInterval(() => runCheckInInviteExpireCron().catch(e => console.error('[CheckInInviteExpire]', e)), 15 * 60 * 1000);
 // Community AI crons — check hourly, fire at specific times
 setInterval(() => {
   const now = new Date();

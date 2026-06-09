@@ -421,6 +421,8 @@ model User {
   rigPilotOf                                       RigPilot[]
   rigFollows                                       RigFollow[]                   @relation("RigFollows")
   rigPosts                                         RigPost[]                     @relation("RigPostAuthor")
+  checkInInvitesSent                               CheckInInvite[]               @relation("CheckInInviteSent")
+  checkInInvitesReceived                           CheckInInvite[]               @relation("CheckInInviteReceived")
 
   @@index([email])
   @@index([username])
@@ -1286,6 +1288,7 @@ model CheckIn {
   campground      Campground?  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
   harvestHost     HarvestHost? @relation("CheckInHarvestHost", fields: [harvestHostId], references: [id])
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invites         CheckInInvite[]
 
   @@index([userId])
   @@index([campgroundId])
@@ -6340,4 +6343,29 @@ model ModAffiliateClick {
   clickedAt   DateTime @default(now())
   @@index([modLogId])
   @@index([rigId])
+}
+
+model CheckInInvite {
+  id              String    @id @default(cuid())
+  checkInId       String
+  inviterId       String
+  inviteeId       String
+  status          String    @default("PENDING") // PENDING | ACCEPTED | DECLINED | AUTO_ACCEPTED
+  campgroundId    String?
+  harvestHostId   String?
+  overnightSpotId String?
+  siteNumber      String?
+  notes           String?
+  expiresAt       DateTime
+  respondedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  checkIn         CheckIn   @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  inviter         User      @relation("CheckInInviteSent", fields: [inviterId], references: [id])
+  invitee         User      @relation("CheckInInviteReceived", fields: [inviteeId], references: [id])
+
+  @@unique([checkInId, inviteeId])
+  @@index([inviteeId, status])
+  @@index([status, expiresAt])
 }
