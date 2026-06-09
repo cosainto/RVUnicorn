@@ -437,6 +437,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const [friends, setFriends] = useState<any[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
+  const campTabRef = useRef<HTMLDivElement>(null);
 
 
   // Load friends for mentions
@@ -4273,7 +4274,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               campgroundId={activeCheckIn.campground.id}
               campgroundName={activeCheckIn.campground.name}
               eventId={linkedEvent?.id}
-              onSeeAll={() => setCampingTab('camp')}
+              onSeeAll={() => { setCampingTab('camp'); setTimeout(() => campTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }}
               onActivityAdded={() => {
                 if (linkedEvent) {
                   api.get(`/events/${linkedEvent.id}/activities`).then(({ data }: any) => {
@@ -4285,7 +4286,7 @@ export default function BasecampPage({ user }: BasecampProps) {
           )}
 
           {/* Three-Tab Navigation */}
-          <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
+          <div ref={campTabRef} className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
             <button
               onClick={() => setCampingTab('campfire')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition ${campingTab === 'campfire' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}
