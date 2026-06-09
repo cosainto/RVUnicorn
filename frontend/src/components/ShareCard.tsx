@@ -99,7 +99,6 @@ export default function ShareCard({ type, title, subtitle, stat, campgroundName,
           await navigator.share({
             title: `${userName} on RVUnicorn`,
             text: shareText,
-            url: campgroundUrl,
             files: [file],
           });
         } else {
