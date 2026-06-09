@@ -440,7 +440,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
             <div className="grid gap-4 sm:grid-cols-2">
               {filteredSaved.map(thing => (
                 <div key={thing.id} className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
-                  {thing.imageUrl && <div className="relative aspect-[3/4] bg-gray-100"><img src={thing.imageUrl} alt={thing.title} className="w-full h-full object-cover" />{thing.pinned && <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded">Pinned</span>}</div>}
+                  {thing.imageUrl && <div className="relative h-[200px] bg-gray-100 overflow-hidden"><img src={thing.imageUrl} alt={thing.title} className="w-full h-full object-cover" />{thing.pinned && <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded">Pinned</span>}</div>}
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -521,7 +521,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                         )}
                       </div>
                       {pick.imageUrl
-                        ? <div className="aspect-[3/4] bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
+                        ? <div className="h-[200px] bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
                         : <div className={`h-16 ${matchesInterest ? 'bg-violet-100' : 'bg-amber-100'}`} />
                       }
                       <div className="p-3">

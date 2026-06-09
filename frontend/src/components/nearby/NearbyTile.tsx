@@ -60,8 +60,8 @@ export default function NearbyTile({ name, imageUrl, distanceMiles, driveTimeMin
 
   return (
     <div onClick={onPress} className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition cursor-pointer group flex flex-col">
-      {/* Image — 70% of card */}
-      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+      {/* Image — fixed 200px height */}
+      <div className="relative h-[200px] bg-gray-100 overflow-hidden">
         {imageUrl ? (
           <img src={imageUrl} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
