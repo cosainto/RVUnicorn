@@ -437,7 +437,6 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const [friends, setFriends] = useState<any[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
-  const campTabRef = useRef<HTMLDivElement>(null);
 
 
   // Load friends for mentions
@@ -1111,6 +1110,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   const { addLocalToast } = useToast();
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
+  const campTabRef = useRef<HTMLDivElement>(null);
   const [showTour, setShowTour] = useState(false);
   // Per-trip "How are you feeling?" — resets to fully charged on each page load.
   // startingCharge removed — now handled by PreTripIntelligenceCard
