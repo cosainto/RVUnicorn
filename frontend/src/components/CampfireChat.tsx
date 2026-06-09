@@ -434,8 +434,8 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           )}
 
           {allMessages.map((msg, idx) => {
-            // LAYER 1 — Ambient Pulse
-            if (msg.isPulse || msg.isSystem) return (
+            // LAYER 1 — Ambient Pulse (but NOT AI character replies which have replyToId)
+            if ((msg.isPulse || msg.isSystem) && !msg.replyToId) return (
               <div key={msg.id} className="flex justify-center py-0.5">
                 <span className="text-[11px] bg-[#1B2B4B]/8 text-gray-500 px-3 py-1 rounded-full">
                   {msg.content}
@@ -443,8 +443,8 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
               </div>
             );
 
-            // LAYER 2 — Character Messages (Hitch, Walter, Wallet, etc.)
-            if (msg.isHitch) {
+            // LAYER 2 — Character Messages (Hitch, Walter, Wallet, Scout, etc.)
+            if (msg.isHitch || (msg.isSystem && msg.replyToId)) {
               // Detect character from message content or default to Hitch
               const charNames = ['walter', 'wallet', 'rose', 'rosé', 'diesel', 'scout', 'luna', 'ranger rick', 'pebble'];
               const contentLower = msg.content.toLowerCase();
@@ -508,7 +508,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           {/* Companion messages — only show when no socket-delivered AI messages exist
               (socket echoes AI replies into the main feed, so rendering companionMsgs
               separately causes duplicate / out-of-order messages) */}
-          {!messages.some(m => m.isHitch) && companionMsgs.map((cm, i) => (
+          {!messages.some(m => m.isHitch || (m.isSystem && m.replyToId)) && companionMsgs.map((cm, i) => (
             <div key={`companion-${i}`} className={cm.role === 'user' ? 'flex justify-end' : 'flex items-start gap-2 max-w-[70%]'} style={{ animation: 'fadeIn 0.3s ease' }}>
               {cm.role === 'assistant' && cm.image && <img src={cm.image} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />}
               {cm.role === 'assistant' ? (
