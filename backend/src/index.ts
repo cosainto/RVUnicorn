@@ -99,6 +99,7 @@ import eventActivitiesRoutes from './routes/event-activities.routes';
 import profileMapRoutes from './routes/profile-map.routes';
 import searchRoutes from './routes/search.routes';
 import hitchRemindersRoutes from './routes/hitch-reminders.routes';
+import experiencesRoutes from './routes/experiences.routes';
 import hitchJobsRoutes from './routes/hitch-jobs.routes';
 import hitchChatRoutes from './routes/hitch-chat.routes';
 import hitchGuidesRoutes from './routes/hitch-guides.routes';
@@ -138,6 +139,7 @@ import { runAutopilotCycle, checkEventMemoryTransitions } from './services/autop
 import { runStaySurveyPromptCron } from './cron/stay-survey-prompt.cron';
 import { runPostCheckoutPhotoReminderCron } from './cron/post-checkout-photo-reminder.cron';
 import { runCheckInInviteExpireCron } from './cron/checkin-invite-expire.cron';
+import { runExperienceReviewNudgeCron } from './cron/experience-review-nudge.cron';
 import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
 import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
@@ -381,6 +383,7 @@ app.use("/api/trip-kits", tripKitRoutes);
 app.use("/api/creator-events", creatorEventsRoutes);
 app.use("/api/actionable", doThisHereRoutes);
 app.use("/api/email-preferences", emailRoutes);
+app.use("/api/experiences", experiencesRoutes);
 app.use("/api", emailRoutes);
 
 
@@ -447,6 +450,7 @@ setInterval(() => checkEventMemoryTransitions().catch(e => console.error('[TripM
 setInterval(() => runStaySurveyPromptCron().catch(e => console.error('[StaySurveyPrompt]', e)), 60 * 60 * 1000);
 setInterval(() => runPostCheckoutPhotoReminderCron().catch(e => console.error('[PostCheckoutPhotoReminder]', e)), 60 * 60 * 1000);
 setInterval(() => runCheckInInviteExpireCron().catch(e => console.error('[CheckInInviteExpire]', e)), 15 * 60 * 1000);
+setInterval(() => runExperienceReviewNudgeCron().catch(e => console.error('[ExperienceReviewNudge]', e)), 30 * 60 * 1000);
 // Community AI crons — check hourly, fire at specific times
 setInterval(() => {
   const now = new Date();

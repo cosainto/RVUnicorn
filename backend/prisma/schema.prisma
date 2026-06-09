@@ -423,6 +423,12 @@ model User {
   rigPosts                                         RigPost[]                     @relation("RigPostAuthor")
   checkInInvitesSent                               CheckInInvite[]               @relation("CheckInInviteSent")
   checkInInvitesReceived                           CheckInInvite[]               @relation("CheckInInviteReceived")
+  nearbyExperiencesAdded                           NearbyExperience[]            @relation("ExperienceAddedBy")
+  experienceReviews                                ExperienceReview[]
+  experienceReviewVotes                            ExperienceReviewVote[]
+  experienceVisits                                 ExperienceVisit[]
+  experienceQuestions                              ExperienceQuestion[]
+  experienceAnswers                                ExperienceAnswer[]
 
   @@index([email])
   @@index([username])
@@ -6368,4 +6374,117 @@ model CheckInInvite {
   @@unique([checkInId, inviteeId])
   @@index([inviteeId, status])
   @@index([status, expiresAt])
+}
+
+// ═══ Nearby Experiences & Community Reviews ═══
+
+model NearbyExperience {
+  id                  String               @id @default(cuid())
+  placeId             String?              @unique // Google Places ID or internal
+  name                String
+  address             String?
+  category            String               @default("OTHER") // TRAIL, RESTAURANT, ATTRACTION, MUSEUM, MARKET, SCENIC_VIEW, FISHING_SPOT, PLAYGROUND, OTHER
+  description         String?
+  website             String?
+  latitude            Float?
+  longitude           Float?
+  photoUrls           String[]
+  addedByUserId       String?
+  isVerified          Boolean              @default(false)
+  isModerationPending Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  addedBy             User?                @relation("ExperienceAddedBy", fields: [addedByUserId], references: [id])
+  reviews             ExperienceReview[]
+  questions           ExperienceQuestion[]
+  visits              ExperienceVisit[]
+
+  @@index([latitude, longitude])
+  @@index([category])
+  @@index([isModerationPending])
+}
+
+model ExperienceReview {
+  id                   String                @id @default(cuid())
+  experienceId         String
+  userId               String
+  starRating           Int                   // 1-5
+  recommendation       String                // LOVED_IT | WORTH_VISITING | JUST_OKAY | WOULD_SKIP
+  body                 String?
+  photoUrls            String[]
+  bestTimeToVisit      String?
+  familyFriendlyRating Int?                  // 1-5
+  petFriendlyRating    Int?                  // 1-5
+  accessibilityNotes   String?
+  helpfulCount         Int                   @default(0)
+  notHelpfulCount      Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  experience           NearbyExperience      @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes                ExperienceReviewVote[]
+
+  @@unique([experienceId, userId])
+  @@index([experienceId])
+  @@index([userId])
+}
+
+model ExperienceReviewVote {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  vote      String   // HELPFUL | NOT_HELPFUL
+  createdAt DateTime @default(now())
+
+  review    ExperienceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+}
+
+model ExperienceQuestion {
+  id           String             @id @default(cuid())
+  experienceId String
+  userId       String
+  question     String
+  createdAt    DateTime           @default(now())
+
+  experience   NearbyExperience   @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers      ExperienceAnswer[]
+
+  @@index([experienceId])
+}
+
+model ExperienceAnswer {
+  id            String             @id @default(cuid())
+  questionId    String
+  userId        String
+  answer        String
+  helpfulCount  Int                @default(0)
+  isHighlighted Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+
+  question      ExperienceQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model ExperienceVisit {
+  id           String           @id @default(cuid())
+  experienceId String
+  userId       String
+  visitedAt    DateTime         @default(now())
+  createdAt    DateTime         @default(now())
+
+  experience   NearbyExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([experienceId, userId])
+  @@index([experienceId])
+  @@index([userId])
 }

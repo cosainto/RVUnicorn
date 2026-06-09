@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar, Sparkles, Clock, Heart, HeartOff, CalendarPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, ExternalLink, Bookmark, BookmarkCheck, Star, Filter, Loader2, X, Mountain, Utensils, Camera, Ticket, Map, Calendar, Sparkles, Clock, Heart, HeartOff, CalendarPlus, Plus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import AddToEventModal from './AddToEventModal';
+import AddPlaceModal from './AddPlaceModal';
 
 interface Recommendation {
   placeId: string;
@@ -81,6 +83,8 @@ const COMMON_TAGS = ['kid-friendly', 'dog-friendly', 'free', 'rainy-day', 'sceni
 
 export default function ThingsToDoSection({ campgroundId, campgroundName, onActivityAdded, isAdmin = false, userInterests = [], eventId }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const [activeTab, setActiveTab] = useState<'saved' | 'discover'>('discover');
   const [savedThings, setSavedThings] = useState<SavedThing[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -293,9 +297,16 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900">Things to Do Nearby</h2>
-        <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
+      <div className="px-6 py-4 border-b border-gray-200 flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Things to Do Nearby</h2>
+          <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
+        </div>
+        {user && (
+          <button onClick={() => setShowAddPlace(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition flex-shrink-0">
+            <Plus className="w-3.5 h-3.5" />Add a Place
+          </button>
+        )}
       </div>
 
       {/* Featured Events & Activities Carousel */}
@@ -674,6 +685,7 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
           onActivityAdded={onActivityAdded}
         />
       )}
+      {showAddPlace && <AddPlaceModal onClose={() => setShowAddPlace(false)} onSubmit={() => setShowAddPlace(false)} />}
     </div>
   );
 }

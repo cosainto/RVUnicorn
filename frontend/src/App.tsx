@@ -80,6 +80,7 @@ const TripDetailPage = lazy(() => import('./pages/TripDetailPage'));
 const RoadTripsPage = lazy(() => import('./pages/RoadTripsPage'));
 const RoadTripDetailPage = lazy(() => import('./pages/RoadTripDetailPage'));
 const CampgroundsPage = lazy(() => import('./pages/CampgroundsPage'));
+const ExperiencePage = lazy(() => import('./pages/ExperiencePage'));
 const AlbumsPage = lazy(() => import('./pages/AlbumsPage'));
 const AlbumDetailPage = lazy(() => import('./pages/AlbumDetailPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
@@ -257,6 +258,7 @@ function AppContent() {
           <Route path="/business/:campgroundId/upgrade" element={<PrivateRoute><CampgroundUpgradePage /></PrivateRoute>} />
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/find-my-campground" element={<CampgroundQuizPage />} />
+          <Route path="/experiences/:id" element={<ExperiencePage />} />
           <Route path="/deals" element={<LastMinuteDealsPage />} />
           <Route path="/dealers" element={<DealersPage />} />
           <Route path="/dealers/:dealerId" element={<DealerProfilePage />} />
