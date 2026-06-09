@@ -505,8 +505,10 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
               </div>
             );
           })}
-          {/* Companion messages */}
-          {companionMsgs.map((cm, i) => (
+          {/* Companion messages — only show when no socket-delivered AI messages exist
+              (socket echoes AI replies into the main feed, so rendering companionMsgs
+              separately causes duplicate / out-of-order messages) */}
+          {!messages.some(m => m.isHitch) && companionMsgs.map((cm, i) => (
             <div key={`companion-${i}`} className={cm.role === 'user' ? 'flex justify-end' : 'flex items-start gap-2 max-w-[70%]'} style={{ animation: 'fadeIn 0.3s ease' }}>
               {cm.role === 'assistant' && cm.image && <img src={cm.image} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />}
               {cm.role === 'assistant' ? (
