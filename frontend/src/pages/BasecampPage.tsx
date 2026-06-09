@@ -86,6 +86,7 @@ import DoThisNowSection from '../components/activity/DoThisNowSection';
 import BasecampTriviaCard from '../components/BasecampTriviaCard';
 import { useToast } from '../components/ToastProvider';
 import CheckInInviteBanner from '../components/CheckInInviteBanner';
+import InviteFriendsCheckIn from '../components/InviteFriendsCheckIn';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
 function SupplyListCompact({ eventId }: { eventId: string }) {
@@ -1130,6 +1131,7 @@ export default function BasecampPage({ user }: BasecampProps) {
   };
   
   const [activeCheckIn, setActiveCheckIn] = useState<any>(null);
+  const [showInviteFriends, setShowInviteFriends] = useState(false);
 
   // ── Mode constants (Phase 2: Basecamp redesign) ──────────────────────────
   const isCamping  = !!activeCheckIn;
@@ -2311,6 +2313,12 @@ export default function BasecampPage({ user }: BasecampProps) {
                   Campground Page
                 </a>
                 <button
+                  onClick={() => setShowInviteFriends(true)}
+                  className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-3 py-2 rounded-lg text-sm font-medium transition"
+                >
+                  👥 Invite Friends
+                </button>
+                <button
                   onClick={() => {
                     if (window.confirm('Check out of ' + activeCheckIn.campground.name + '?')) {
                       import('../services/api').then(({ default: apiService }) => {
@@ -2331,6 +2339,14 @@ export default function BasecampPage({ user }: BasecampProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Invite Friends Modal */}
+      {showInviteFriends && activeCheckIn?.campground && (
+        <InviteFriendsCheckIn
+          locationName={activeCheckIn.campground.name}
+          onClose={() => setShowInviteFriends(false)}
+        />
       )}
 
       {/* ── Welcome Kit (shown when camping) ────────────────────────── */}
