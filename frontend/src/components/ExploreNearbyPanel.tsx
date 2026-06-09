@@ -79,6 +79,7 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
   const [loadingAi, setLoadingAi] = useState(true);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addToEventModal, setAddToEventModal] = useState<{ isOpen: boolean; thingId: string; thingTitle: string }>({ isOpen: false, thingId: '', thingTitle: '' });
+  const [showAllTiles, setShowAllTiles] = useState(false);
 
   useEffect(() => {
     loadRecommendations();
@@ -271,36 +272,41 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
                     seen.add(t.name);
                     return true;
                   });
+                  // Show 3 rows: 6 on mobile (2-col), 9 on md+ (3-col) — use 6 as default cap
+                  const INITIAL_COUNT = 6;
+                  const visible = showAllTiles ? merged : merged.slice(0, INITIAL_COUNT);
+                  const hasMore = merged.length > INITIAL_COUNT;
+
                   return (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-                      {merged.map(t => (
-                        <NearbyTile
-                          key={t.key}
-                          name={t.name}
-                          imageUrl={t.imageUrl}
-                          distanceMiles={t.distance}
-                          driveTimeMinutes={t.driveTime}
-                          rating={t.rating}
-                          reviewCount={t.reviewCount}
-                          category={t.category}
-                          badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
-                          onPress={() => goToExperience(t.item)}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                        {visible.map(t => (
+                          <NearbyTile
+                            key={t.key}
+                            name={t.name}
+                            imageUrl={t.imageUrl}
+                            distanceMiles={t.distance}
+                            driveTimeMinutes={t.driveTime}
+                            rating={t.rating}
+                            reviewCount={t.reviewCount}
+                            category={t.category}
+                            badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
+                            onPress={() => goToExperience(t.item)}
+                          />
+                        ))}
+                      </div>
+                      {hasMore && (
+                        <button
+                          onClick={() => setShowAllTiles(!showAllTiles)}
+                          className="w-full mt-3 py-2 text-center text-xs font-semibold text-amber-400 hover:text-amber-300 transition flex items-center justify-center gap-1"
+                        >
+                          {showAllTiles ? 'Show Less' : `Show More (${merged.length - INITIAL_COUNT} more)`}
+                          {showAllTiles ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </>
                   );
                 })()}
-
-                {/* See all link */}
-                {(recommendations.length > 6 || onSeeAll) && (
-                  <button
-                    onClick={onSeeAll}
-                    className="w-full mt-3 py-2 text-center text-xs font-semibold text-amber-400 hover:text-amber-300 transition flex items-center justify-center gap-1"
-                  >
-                    See all nearby activities
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                )}
               </>
             )}
           </div>
