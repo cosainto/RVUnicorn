@@ -271,51 +271,23 @@ export default function ExploreNearbyPanel({ campgroundId, campgroundName, event
                     seen.add(t.name);
                     return true;
                   });
-                  const topPicks = merged.slice(0, 5);
-                  const gridItems = merged.slice(5);
-
                   return (
-                    <>
-                      {/* Featured horizontal scroll — top 5 */}
-                      {topPicks.length > 0 && (
-                        <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide -mx-1 px-1 mb-3">
-                          {topPicks.map(t => (
-                            <div key={t.key} className="flex-shrink-0 w-48">
-                              <NearbyTile
-                                name={t.name}
-                                imageUrl={t.imageUrl}
-                                distanceMiles={t.distance}
-                                driveTimeMinutes={t.driveTime}
-                                rating={t.rating}
-                                reviewCount={t.reviewCount}
-                                category={t.category}
-                                badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
-                                onPress={() => goToExperience(t.item)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Vertical grid — remaining */}
-                      {gridItems.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {gridItems.map(t => (
-                            <NearbyTile
-                              key={t.key}
-                              name={t.name}
-                              imageUrl={t.imageUrl}
-                              distanceMiles={t.distance}
-                              driveTimeMinutes={t.driveTime}
-                              rating={t.rating}
-                              reviewCount={t.reviewCount}
-                              category={t.category}
-                              badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
-                              onPress={() => goToExperience(t.item)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                      {merged.map(t => (
+                        <NearbyTile
+                          key={t.key}
+                          name={t.name}
+                          imageUrl={t.imageUrl}
+                          distanceMiles={t.distance}
+                          driveTimeMinutes={t.driveTime}
+                          rating={t.rating}
+                          reviewCount={t.reviewCount}
+                          category={t.category}
+                          badge={assignBadge({ rating: t.rating, reviewCount: t.reviewCount, category: t.category, isAiPick: t.isAiPick })}
+                          onPress={() => goToExperience(t.item)}
+                        />
+                      ))}
+                    </div>
                   );
                 })()}
 
