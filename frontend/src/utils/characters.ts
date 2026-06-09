@@ -45,6 +45,16 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Ranger Rick',
     image: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261025/rvunicorn/characters/ranger_rick.jpg',
   },
+  holden: {
+    id: 'holden',
+    name: 'Holden',
+    image: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/holden.jpg',
+  },
+  hannah: {
+    id: 'hannah',
+    name: 'Hannah',
+    image: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/hannah.jpg',
+  },
 };
 
 // Aliases for matching various name formats
@@ -57,6 +67,12 @@ const ALIASES: Record<string, string> = {
   'diesel dave': 'diesel',
   'diesel': 'diesel',
   'pebble': 'wallet',
+  'holden': 'holden',
+  'hannah': 'hannah',
+  'holden & hannah': 'holden',
+  'holden_hannah': 'holden',
+  'junior ranger': 'holden',
+  'junior rangers': 'holden',
 };
 
 export function getCharacter(nameOrId: string): Character {

@@ -175,8 +175,68 @@ export function registerCampfireSockets(io: Server) {
         }, 1500);
       }
 
+      // @Holden mention — Junior Ranger kids adventure persona
+      if (/@holden/i.test(data.content)) {
+        setTimeout(async () => {
+          try {
+            const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
+            const question = data.content.replace(/@holden/gi, '').trim();
+            if (!question) return;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: `You are Holden 🏕️, one of RVUnicorn's Junior Rangers at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. You're an excited adventurous 10-year-old who loves outdoor activities, scavenger hunts, fishing, wildlife spotting, and playground fun. Keep responses to 1-3 sentences. Sound like an enthusiastic kid. Family-friendly only.`,
+                messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
+            });
+            const aiData: any = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const holdenMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: null, content: `🏕️ ${reply}`, isSystem: true, isHitch: false, replyToId: msg.id },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: holdenMsg.id, content: holdenMsg.content, createdAt: holdenMsg.createdAt,
+                isSystem: true, isHitch: false,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
+              });
+            }
+          } catch (e: any) { console.error('[Campfire @Holden] error:', e); }
+        }, 1500);
+      }
+
+      // @Hannah mention — Junior Ranger family planning persona
+      if (/@hannah/i.test(data.content)) {
+        setTimeout(async () => {
+          try {
+            const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true } });
+            const question = data.content.replace(/@hannah/gi, '').trim();
+            if (!question) return;
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+                system: `You are Hannah 📚, one of RVUnicorn's Junior Rangers at ${campground?.name || 'the campground'}${campground?.state ? ', ' + campground.state : ''}. You're a smart curious 10-year-old who loves family trip planning, educational activities, events, museums, dining spots, and nearby attractions. Keep responses to 1-3 sentences. Sound like a bright enthusiastic kid. Family-friendly only.`,
+                messages: [{ role: 'user', content: `${user.firstName} says: ${question}` }] }),
+            });
+            const aiData: any = await res.json() as any;
+            const reply = aiData?.content?.[0]?.text?.trim();
+            if (reply) {
+              const hannahMsg = await prisma.campfireMessage.create({
+                data: { roomId: room.id, userId: null, content: `📚 ${reply}`, isSystem: true, isHitch: false, replyToId: msg.id },
+              });
+              campfire.to(campgroundId).emit('message:new', {
+                id: hannahMsg.id, content: hannahMsg.content, createdAt: hannahMsg.createdAt,
+                isSystem: true, isHitch: false,
+                replyToId: msg.id, replyToContent: data.content.slice(0, 80), replyToUser: user.firstName,
+              });
+            }
+          } catch (e: any) { console.error('[Campfire @Hannah] error:', e); }
+        }, 1500);
+      }
+
       // FAQ auto-response — if message looks like a question and no character was mentioned
-      if (!/@(hitch|walter|scout)/i.test(data.content) && QUESTION_PATTERN.test(data.content.trim())) {
+      if (!/@(hitch|walter|scout|holden|hannah)/i.test(data.content) && QUESTION_PATTERN.test(data.content.trim())) {
         setTimeout(async () => {
           try {
             // Check if HitchCampgroundConfig exists with autoRespond enabled

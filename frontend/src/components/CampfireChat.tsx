@@ -446,7 +446,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
             // LAYER 2 — Character Messages (Hitch, Walter, Wallet, Scout, etc.)
             if (msg.isHitch || (msg.isSystem && msg.replyToId)) {
               // Detect character from message content or default to Hitch
-              const charNames = ['walter', 'wallet', 'rose', 'rosé', 'diesel', 'scout', 'luna', 'ranger rick', 'pebble'];
+              const charNames = ['walter', 'wallet', 'rose', 'rosé', 'diesel', 'scout', 'luna', 'ranger rick', 'pebble', 'holden', 'hannah'];
               const contentLower = msg.content.toLowerCase();
               let charKey = 'hitch';
               // Check if message starts with a character attribution like "— Walter" or is from a known character
@@ -555,7 +555,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
         {/* @mention hint chips */}
         {showMentionHint && (
           <div className="px-3 pb-1 flex gap-1.5 flex-wrap">
-            {['Hitch', 'Wallet', 'Walter', 'Ranger Rick'].map(name => (
+            {['Hitch', 'Wallet', 'Walter', 'Ranger Rick', 'Holden', 'Hannah'].map(name => (
               <button key={name} onClick={() => insertMention(name)}
                 className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium hover:bg-purple-200 transition">
                 @{name}
@@ -574,6 +574,8 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
                 { name: 'Wallet', desc: 'Deal Hunter', color: '#2ECC71', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218458/rvunicorn/guides/wallet_guide.png' },
                 { name: 'Walter', desc: 'Nature & Stars', color: '#7B68EE', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261024/rvunicorn/characters/walter.png' },
                 { name: 'Scout', desc: 'Adventure Guide', color: '#D4621A', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png' },
+                { name: 'Holden', desc: 'Junior Ranger — Kids', color: '#4CAF50', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/holden.jpg' },
+                { name: 'Hannah', desc: 'Junior Ranger — Family', color: '#F48FB1', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/hannah.jpg' },
               ].filter(c => !mentionQuery || c.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
               .map(c => (
                 <button key={c.name} onClick={() => { setInput(prev => prev.replace(/@\w*$/, `@${c.name} `)); setShowMentionDropdown(false); }}

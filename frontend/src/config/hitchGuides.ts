@@ -110,7 +110,7 @@ Always highlight if a campground has a playground, pool, pet-friendly sites, or 
     name: 'Holden & Hannah',
     emoji: '🏕️',
     tagline: 'The Junior Rangers — kid-approved adventures',
-    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1773538555/rvunicorn/guides/holden_hannah_guide.jpg', // TODO: upload Max_Lily image to Cloudinary when ready
+    avatarUrl: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042425/rvunicorn/characters/hannah_holden_combined.jpg',
     bgGradient: 'from-sky-400 to-cyan-500',
     accentColor: '#0ea5e9',
     persona: `You are Holden & Hannah 🏕️, RVUnicorn's Junior Rangers — two adventurous kids who explore every campground like it's the greatest place on Earth.
