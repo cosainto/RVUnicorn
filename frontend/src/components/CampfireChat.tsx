@@ -128,7 +128,17 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     fetch(`${API_URL}/api/campfire/${campgroundId}/room/status`, { headers })
       .then(r => r.json()).then(setStatus).catch(console.error);
     fetch(`${API_URL}/api/campfire/${campgroundId}/room/messages`, { headers })
-      .then(r => r.json()).then(d => setMessages(d.messages || [])).catch(console.error);
+      .then(r => r.json()).then(d => {
+        const fetched: ChatMessage[] = d.messages || [];
+        setMessages(prev => {
+          // Merge API messages with any socket messages already in state
+          const idSet = new Set(fetched.map(m => m.id));
+          const socketOnly = prev.filter(m => !idSet.has(m.id));
+          const merged = [...fetched, ...socketOnly];
+          merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          return merged;
+        });
+      }).catch(console.error);
   };
 
   // Load pulse feed
@@ -272,7 +282,13 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     socket.on('presence:update', (users: ChatUser[]) => {
       setStatus(prev => prev ? { ...prev, checkedInUsers: users, checkedInCount: users.length, needsMore: 0 } : null);
     });
-    socket.on('message:new', (msg: ChatMessage) => setMessages(prev => [...prev, msg]));
+    socket.on('message:new', (msg: ChatMessage) => setMessages(prev => {
+      // Deduplicate by id and insert in chronological order
+      if (prev.some(m => m.id === msg.id)) return prev;
+      const next = [...prev, msg];
+      next.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      return next;
+    }));
     socket.on('trivia:question', handleTriviaQuestion);
     socket.on('trivia:sponsored-question', handleTriviaQuestion);
     socket.on('room:activated', () => setStatus(prev => prev ? { ...prev, isActive: true } : null));
