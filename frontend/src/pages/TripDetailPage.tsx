@@ -1011,7 +1011,11 @@ export default function EventDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {event.title}
+                {event.campground?.id ? (
+                  <Link to={`/campgrounds/${event.campground.id}`} className="hover:text-primary-600 hover:underline transition">{event.title}</Link>
+                ) : (
+                  event.title
+                )}
                 {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
               </h1>
               <ShareButton
