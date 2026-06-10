@@ -152,6 +152,9 @@ export default function ExperiencePage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mt-1">{experience.name}</h2>
           {experience.address && <p className="text-sm text-gray-500 flex items-center gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{experience.address}</p>}
+          {experience.addedBy && (
+            <p className="text-xs text-gray-400 mt-1">Added by <Link to={`/profile/${experience.addedBy.username || experience.addedBy.id}`} className="font-medium text-primary-600 hover:underline">{experience.addedBy.firstName} {experience.addedBy.lastName}</Link></p>
+          )}
 
           {/* Rating display */}
           <div className="flex items-center gap-3 mt-3">

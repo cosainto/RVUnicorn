@@ -196,7 +196,7 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
         photoUrls: photoUrls || [],
         placeId: placeId || null,
         addedByUserId: userId,
-        isModerationPending: false, // Auto-approved when created from Google Places data
+        isModerationPending: !placeId, // Auto-approved from Google Places, pending for user submissions
         isVerified: false,
       },
     });
@@ -464,13 +464,62 @@ router.post('/:id/questions/:questionId/answers/:answerId/helpful', authenticate
   }
 });
 
+// ── Admin: list pending experiences ──
+router.get('/admin/pending', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const pending = await prisma.nearbyExperience.findMany({
+      where: { isModerationPending: true },
+      include: {
+        addedBy: { select: { id: true, firstName: true, lastName: true, username: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(pending);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Admin: approve pending experience ──
 router.post('/:id/approve', authenticateToken, async (req: any, res: Response) => {
   try {
-    await prisma.nearbyExperience.update({
+    const experience = await prisma.nearbyExperience.update({
       where: { id: req.params.id },
       data: { isModerationPending: false, isVerified: true },
     });
+
+    // Notify the submitter
+    if (experience.addedByUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: experience.addedByUserId,
+          type: 'EXPERIENCE_APPROVED',
+          content: `Your submission "${experience.name}" has been approved and is now live on RVUnicorn!`,
+          link: `/experiences/${experience.id}`,
+        },
+      }).catch(() => {});
+
+      // Award Hidden Gem Finder badge
+      const badge = await prisma.badge.findUnique({ where: { slug: 'hidden-gem-finder' } }).catch(() => null);
+      if (badge) {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId: experience.addedByUserId, badgeId: badge.id } },
+          create: { userId: experience.addedByUserId, badgeId: badge.id },
+          update: {},
+        }).catch(() => {});
+      }
+    }
+
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: reject pending experience ──
+router.post('/:id/reject', authenticateToken, async (req: any, res: Response) => {
+  try {
+    await prisma.nearbyExperience.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

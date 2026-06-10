@@ -316,16 +316,9 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Things to Do Nearby</h2>
-          <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
-        </div>
-        {user && (
-          <button onClick={() => setShowAddPlace(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition flex-shrink-0">
-            <Plus className="w-3.5 h-3.5" />Add a Place
-          </button>
-        )}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900">Things to Do Nearby</h2>
+        <p className="text-sm text-gray-600 mt-1">Discover attractions, trails, and restaurants near {campgroundName}</p>
       </div>
 
       {/* Featured Events & Activities Carousel */}
@@ -703,6 +696,15 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
           campgroundId={campgroundId}
           onActivityAdded={onActivityAdded}
         />
+      )}
+      {/* Add a Missing Place — subtle bottom CTA */}
+      {user && (
+        <div className="px-6 py-4 border-t border-gray-100">
+          <button onClick={() => setShowAddPlace(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-50 transition">
+            <Plus className="w-4 h-4" />Add a Missing Place
+          </button>
+        </div>
       )}
       {showAddPlace && <AddPlaceModal onClose={() => setShowAddPlace(false)} onSubmit={() => setShowAddPlace(false)} />}
     </div>
