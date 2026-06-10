@@ -33,6 +33,8 @@ export default function ExperiencePage() {
   const [experience, setExperience] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [hasVisited, setHasVisited] = useState(false);
+  const [visitLoading, setVisitLoading] = useState(false);
+  const [showUnvisitConfirm, setShowUnvisitConfirm] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [question, setQuestion] = useState('');
   const [answerInputs, setAnswerInputs] = useState<Record<string, string>>({});
@@ -45,25 +47,37 @@ export default function ExperiencePage() {
     try {
       const { data } = await api.get(`/experiences/${id}`);
       setExperience(data);
-      if (user) {
-        const visited = data.visits?.some?.((v: any) => v.userId === user.id) ||
-          (await api.get(`/experiences/${id}`).catch(() => null))?.data?.visits?.some?.((v: any) => v.userId === user.id);
-        // Check visit via visit list
-        try {
-          const visitCheck = data.visits;
-          if (Array.isArray(visitCheck)) setHasVisited(visitCheck.some((v: any) => v.userId === user.id));
-        } catch {}
+      if (user && Array.isArray(data.visits)) {
+        setHasVisited(data.visits.some((v: any) => v.userId === user.id));
       }
     } catch {}
     setLoading(false);
   };
 
-  const markVisited = async () => {
+  const toggleVisit = async () => {
+    if (visitLoading) return;
+    if (hasVisited) {
+      setShowUnvisitConfirm(true);
+      return;
+    }
+    setVisitLoading(true);
     try {
-      await api.post(`/experiences/${id}/visit`);
-      setHasVisited(true);
+      const { data } = await api.post(`/experiences/${id}/visit`);
+      setHasVisited(data.visited !== false);
       load();
     } catch {}
+    setVisitLoading(false);
+  };
+
+  const confirmUnvisit = async () => {
+    setShowUnvisitConfirm(false);
+    setVisitLoading(true);
+    try {
+      await api.post(`/experiences/${id}/visit`);
+      setHasVisited(false);
+      load();
+    } catch {}
+    setVisitLoading(false);
   };
 
   const voteReview = async (reviewId: string, vote: string) => {
@@ -163,16 +177,26 @@ export default function ExperiencePage() {
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-4">
-            {!hasVisited ? (
-              <button onClick={markVisited} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-xl hover:bg-primary-700 transition">
-                <Check className="w-4 h-4" />I've Been Here
+          <div className="flex gap-2 mt-4 flex-wrap items-start">
+            <div className="relative">
+              <button onClick={toggleVisit} disabled={visitLoading}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition disabled:opacity-50 ${
+                  hasVisited
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}>
+                <Check className="w-4 h-4" />{visitLoading ? '...' : hasVisited ? 'Visited' : 'Mark as Visited'}
               </button>
-            ) : (
-              <button disabled className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-xl">
-                <Check className="w-4 h-4" />Visited
-              </button>
-            )}
+              {showUnvisitConfirm && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-10 w-56">
+                  <p className="text-xs text-gray-600 mb-2">Remove visited status?</p>
+                  <div className="flex gap-2">
+                    <button onClick={confirmUnvisit} className="flex-1 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg">Remove</button>
+                    <button onClick={() => setShowUnvisitConfirm(false)} className="flex-1 py-1.5 border border-gray-200 text-gray-600 text-xs font-semibold rounded-lg">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
             {hasVisited && (
               <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition">
                 <Star className="w-4 h-4" />Write a Review

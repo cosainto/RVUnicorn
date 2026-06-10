@@ -206,27 +206,45 @@ router.post('/', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
-// ── POST /api/experiences/:id/visit — Mark 'I've Been Here' ──
+// ── POST /api/experiences/:id/visit — Toggle 'I've Been Here' ──
 router.post('/:id/visit', authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.userId;
-    const visit = await prisma.experienceVisit.upsert({
-      where: { experienceId_userId: { experienceId: req.params.id, userId } },
-      create: { experienceId: req.params.id, userId },
-      update: {},
-    });
-    res.json(visit);
+    const experienceId = req.params.id;
 
-    // Holden/Hannah follow-up nudge for kid/family places (non-blocking)
+    // Check if already visited
+    const existing = await prisma.experienceVisit.findUnique({
+      where: { experienceId_userId: { experienceId, userId } },
+    });
+
+    if (existing) {
+      // Toggle off — remove visit
+      await prisma.experienceVisit.delete({ where: { id: existing.id } });
+      return res.json({ visited: false });
+    }
+
+    // Toggle on — create visit
+    const visit = await prisma.experienceVisit.create({
+      data: { experienceId, userId },
+    });
+    res.json({ visited: true, ...visit });
+
+    // Holden/Hannah follow-up nudge for kid/family places (non-blocking, only on visit creation)
     setImmediate(async () => {
       try {
-        const exp = await prisma.nearbyExperience.findUnique({ where: { id: req.params.id }, select: { name: true, category: true } });
+        const exp = await prisma.nearbyExperience.findUnique({ where: { id: experienceId }, select: { name: true, category: true } });
         if (!exp) return;
         const kidCategories = ['PLAYGROUND', 'ATTRACTION', 'FISHING_SPOT'];
         const familyCategories = ['MUSEUM', 'RESTAURANT', 'ATTRACTION', 'MARKET'];
         const isKid = kidCategories.includes(exp.category);
         const isFamily = familyCategories.includes(exp.category);
         if (!isKid && !isFamily) return;
+
+        // Dedup: don't send if already sent for this experience+user
+        const alreadySent = await prisma.notification.findFirst({
+          where: { userId, type: 'CHARACTER_REVIEW_NUDGE', metadata: { path: ['experienceId'], equals: experienceId } },
+        });
+        if (alreadySent) return;
 
         const character = isKid ? 'Holden' : 'Hannah';
         const emoji = isKid ? '🏕️' : '📚';
@@ -239,12 +257,12 @@ router.post('/:id/visit', authenticateToken, async (req: any, res: Response) => 
             userId,
             type: 'CHARACTER_REVIEW_NUDGE',
             content: message,
-            link: `/experiences/${req.params.id}`,
+            link: `/experiences/${experienceId}`,
             actorName: character,
             actorAvatar: isKid
               ? 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/holden.jpg'
               : 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/hannah.jpg',
-            metadata: { experienceId: req.params.id, character },
+            metadata: { experienceId, character },
           },
         });
       } catch {}
