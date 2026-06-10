@@ -11,6 +11,7 @@ import RigJourneyTab from '../../components/rig/RigJourneyTab';
 import RigMomentsTab from '../../components/rig/RigMomentsTab';
 import RigCommunityTab from '../../components/rig/RigCommunityTab';
 import RigFeedV2 from '../../components/rig/RigFeedV2';
+import RigTripMode from '../../components/rig/RigTripMode';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -566,9 +567,9 @@ export default function RigProfilePage() {
               <RigMomentsTab slug={slug!} isOwner={isOwner} />
             )}
 
-            {/* ═══ FEED V2 TAB ═══ */}
+            {/* ═══ FEED / TRIP MODE TAB ═══ */}
             {activeTab === 'feed' && rig && (
-              <RigFeedV2 slug={slug!} isOwner={isOwner} />
+              <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
             )}
 
             {/* ═══ COMMUNITY TAB ═══ */}

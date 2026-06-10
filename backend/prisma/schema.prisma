@@ -439,6 +439,7 @@ model User {
   rigPollsCreated                                  RigPoll[]
   rigGuestMoments                                  RigGuestMoment[]
   rigFollowPreferences                             RigFollowPreference[]
+  rigTripMemberships                               RigTripMember[]
 
   @@index([email])
   @@index([username])
@@ -6280,6 +6281,9 @@ model Rig {
   momentBundles     RigMomentBundle[]
   activityItems     RigActivityItem[]
   insightCards      RigInsightCard[]
+  activeTripId      String?
+  rigTrips          RigTrip[]
+  rigTripMilestones RigTripMilestone[]
 }
 
 model RigPilot {
@@ -6822,4 +6826,118 @@ model RigInsightCard {
   rig               Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
 
   @@index([rigId])
+}
+
+// ═══ Rig Trip Mode v2 ═══
+
+model RigTrip {
+  id                    String            @id @default(cuid())
+  rigId                 String
+  name                  String
+  description           String?
+  status                String            @default("ACTIVE") // ACTIVE | COMPLETED | ARCHIVED
+  startDate             DateTime?
+  endDate               DateTime?
+  coverImageUrl         String?
+  totalMiles            Float             @default(0)
+  totalNights           Int               @default(0)
+  statesVisited         String[]
+  nationalParksVisited  String[]
+  campgroundCount       Int               @default(0)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  rig                   Rig               @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  stops                 RigTripStop[]
+  routes                RigTripRoute[]
+  milestones            RigTripMilestone[]
+  members               RigTripMember[]
+
+  @@index([rigId, status])
+}
+
+model RigTripStop {
+  id                    String    @id @default(cuid())
+  tripId                String
+  rigId                 String
+  campgroundId          String?
+  name                  String
+  city                  String?
+  state                 String?
+  country               String    @default("US")
+  lat                   Float?
+  lng                   Float?
+  arrivedAt             DateTime
+  departedAt            DateTime?
+  nightsStayed          Int       @default(0)
+  order                 Int       @default(0)
+  milesFromPreviousStop Float?
+  driveTimeMinutes      Int?
+  coverImageUrl         String?
+  featuredMomentId      String?
+  photoCount            Int       @default(0)
+  videoCount            Int       @default(0)
+  reviewCount           Int       @default(0)
+  memberCount           Int       @default(0)
+  summary               String?
+  isCurrentStop         Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  trip                  RigTrip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, order])
+  @@index([rigId])
+}
+
+model RigTripRoute {
+  id              String   @id @default(cuid())
+  tripId          String
+  fromStopId      String
+  toStopId        String
+  distanceMiles   Float
+  durationMinutes Int?
+  roadType        String   @default("MIXED") // HIGHWAY | SCENIC | OFFGRID | MIXED
+  polyline        String?
+  fuelStops       Int      @default(0)
+  highlight       String?
+  drivenAt        DateTime
+  createdAt       DateTime @default(now())
+
+  trip            RigTrip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model RigTripMilestone {
+  id            String   @id @default(cuid())
+  tripId        String
+  rigId         String
+  milestoneType String   // MILES_100 | MILES_500 | MILES_1000 | NEW_STATE | NEW_PARK | CAMPGROUND_10 | LONGEST_DRIVE | FAVORITE_RETURN | CUSTOM
+  title         String
+  description   String?
+  value         String?
+  occurredAt    DateTime
+  stopId        String?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+
+  trip          RigTrip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  rig           Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+model RigTripMember {
+  id       String   @id @default(cuid())
+  tripId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  role     String   @default("DRIVER") // DRIVER | COPILOT | CREW
+
+  trip     RigTrip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
 }
