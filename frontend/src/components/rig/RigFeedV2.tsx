@@ -24,8 +24,26 @@ function StopCard({ stop, expanded, onToggle }: { stop: any; expanded: boolean; 
           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/40">
             <span>Arrived {new Date(stop.arrivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             {stop.milesFromLastStop && <span>· {Math.round(stop.milesFromLastStop)} mi since last</span>}
-            {stop.contributorIds?.length > 0 && <span>· {stop.contributorIds.length} contributor{stop.contributorIds.length > 1 ? 's' : ''}</span>}
           </div>
+          {/* Contributor avatars */}
+          {stop.contributors?.length > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <div className="flex -space-x-1.5">
+                {stop.contributors.slice(0, 5).map((c: any) => (
+                  c.profilePicture ? (
+                    <img key={c.id} src={c.profilePicture} alt={c.firstName} title={c.firstName} className="w-5 h-5 rounded-full object-cover border border-[#1B2E50]" />
+                  ) : (
+                    <div key={c.id} title={c.firstName} className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[8px] font-bold text-amber-400 border border-[#1B2E50]">
+                      {c.firstName?.[0]}
+                    </div>
+                  )
+                ))}
+              </div>
+              <span className="text-[10px] text-white/30 ml-1">
+                {stop.contributors.map((c: any) => c.firstName).join(' · ')}
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-3 mt-1 text-[10px] text-white/30">
             {stop.photoUrls?.length > 0 && <span className="flex items-center gap-0.5"><Camera className="w-3 h-3" />{stop.photoUrls.length}</span>}
             {stop.videoUrls?.length > 0 && <span className="flex items-center gap-0.5"><Film className="w-3 h-3" />{stop.videoUrls.length}</span>}

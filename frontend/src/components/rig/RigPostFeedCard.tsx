@@ -111,9 +111,21 @@ export default function RigPostFeedCard({ post, rig, pilotLabel, compact }: RigP
       )}
 
       {/* Pilot line */}
-      {pilotLabel && (
-        <div className="px-4 pb-2 text-xs text-stone-500">
-          Posted by {post.author?.firstName || 'Unknown'} · {pilotLabel}
+      {post.author && (
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <Link to={`/profile/${post.author.username || post.author.id}`}>
+            {post.author.profilePicture ? (
+              <img src={post.author.profilePicture} alt={post.author.firstName} className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-600">
+                {post.author.firstName?.[0]}
+              </div>
+            )}
+          </Link>
+          <span className="text-xs text-stone-500">
+            <Link to={`/profile/${post.author.username || post.author.id}`} className="font-medium text-stone-700 hover:text-amber-600">{post.author.firstName} {post.author.lastName || ''}</Link>
+            {pilotLabel && <span> · {pilotLabel}</span>}
+          </span>
         </div>
       )}
 

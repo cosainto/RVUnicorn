@@ -1570,11 +1570,19 @@ router.get('/:slug/feed/v2', optionalAuth, async (req: any, res) => {
       prisma.rigMomentBundle.findMany({ where: { rigId: rig.id }, orderBy: { bundledAt: 'desc' }, take: 20 }),
     ]);
 
+    // Resolve contributor avatars for stops
+    const allContributorIds = [...new Set(stops.flatMap((s: any) => s.contributorIds || []))];
+    const contributorUsers = allContributorIds.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: allContributorIds } }, select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } })
+      : [];
+    const contributorMap = new Map(contributorUsers.map((u: any) => [u.id, u]));
+
     // Build interleaved feed items
     const feedItems: any[] = [];
     for (const stop of stops) {
       const stopBundles = bundles.filter(b => b.stopId === stop.id);
-      feedItems.push({ type: 'STOP', data: { ...stop, bundles: stopBundles }, occurredAt: stop.arrivedAt });
+      const contributors = ((stop as any).contributorIds || []).map((id: string) => contributorMap.get(id)).filter(Boolean);
+      feedItems.push({ type: 'STOP', data: { ...stop, bundles: stopBundles, contributors }, occurredAt: stop.arrivedAt });
     }
     for (const route of routes) {
       feedItems.push({ type: 'ROUTE', data: route, occurredAt: route.startedAt });
