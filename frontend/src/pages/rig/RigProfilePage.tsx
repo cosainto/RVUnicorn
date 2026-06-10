@@ -7,6 +7,9 @@ import { useGate } from '../../hooks/useGate';
 import GateModal from '../../components/public/GateModal';
 import AlbumPhotoGrid from '../../components/AlbumPhotoGrid';
 import RigActivityFeed from '../../components/rig/RigActivityFeed';
+import RigJourneyTab from '../../components/rig/RigJourneyTab';
+import RigMomentsTab from '../../components/rig/RigMomentsTab';
+import RigCommunityTab from '../../components/rig/RigCommunityTab';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -110,8 +113,10 @@ export default function RigProfilePage() {
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: 'journey', label: '🗺️ Journey' },
+    { id: 'moments', label: '⭐ Moments' },
+    { id: 'community', label: '👥 Community' },
     { id: 'trips', label: 'Trips' },
-    { id: 'campgrounds', label: 'Campgrounds' },
     { id: 'mods', label: 'Mods' },
     { id: 'posts', label: 'Posts' },
     { id: 'stats', label: 'Stats' },
@@ -194,6 +199,32 @@ export default function RigProfilePage() {
                 </span>
               )}
             </div>
+
+            {/* Live Now banner */}
+            {rig.isLiveNow && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" style={{ background: 'rgba(76,175,130,0.15)', border: '1px solid rgba(76,175,130,0.3)' }}>
+                <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+                <span className="text-sm font-semibold text-green-400">LIVE</span>
+                <span className="text-xs text-green-300/70">
+                  {rig.currentCampgroundId ? 'Currently at a campground' : rig.onTheRoadEta ? `On the road · ETA ${new Date(rig.onTheRoadEta).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'On the road'}
+                </span>
+                {rig.lastLocationUpdate && <span className="text-[10px] text-green-300/40 ml-auto">Updated {Math.round((Date.now() - new Date(rig.lastLocationUpdate).getTime()) / 60000)} min ago</span>}
+              </div>
+            )}
+
+            {/* Vibe tags */}
+            {rig.vibeTags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {rig.vibeTags.map((tag: string) => (
+                  <span key={tag} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.12)', color: CN.gold, border: '1px solid rgba(232,168,56,0.25)' }}>
+                    {tag.replace(/_/g, ' ')}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Rig emoji */}
+            {rig.rigEmoji && <span className="text-2xl mb-2 block">{rig.rigEmoji}</span>}
 
             {/* Stat bar */}
             <div className="grid grid-cols-4 gap-2 mb-6">
@@ -522,6 +553,21 @@ export default function RigProfilePage() {
                 <p style={{ color: CN.muted }}>Detailed stats coming soon</p>
                 <p className="text-xs mt-2" style={{ color: CN.muted }}>Miles over time, MPG trends, seasonal analysis</p>
               </div>
+            )}
+
+            {/* ═══ JOURNEY TAB ═══ */}
+            {activeTab === 'journey' && rig && (
+              <RigJourneyTab slug={slug!} rigId={rig.id} isOwner={isOwner} />
+            )}
+
+            {/* ═══ MOMENTS TAB ═══ */}
+            {activeTab === 'moments' && (
+              <RigMomentsTab slug={slug!} isOwner={isOwner} />
+            )}
+
+            {/* ═══ COMMUNITY TAB ═══ */}
+            {activeTab === 'community' && rig && (
+              <RigCommunityTab slug={slug!} rigId={rig.id} rigName={rigTitle} isOwner={isOwner} />
             )}
 
           </div>

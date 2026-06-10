@@ -1186,5 +1186,370 @@ router.post('/admin/migrate-follows', authenticateToken, async (req: Request, re
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// JOURNEY EPISODES
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/episodes', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const episodes = await prisma.journeyEpisode.findMany({
+      where: { rigId: rig.id },
+      include: { _count: { select: { posts: true, moments: true } } },
+      orderBy: { order: 'asc' },
+    });
+    res.json(episodes);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/episodes', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { title, subtitle, startDate, endDate, startLocation, endLocation, coverImageUrl, episodeType, order } = req.body;
+    const episode = await prisma.journeyEpisode.create({
+      data: { rigId: rig.id, title, subtitle, startDate: new Date(startDate), endDate: endDate ? new Date(endDate) : null, startLocation, endLocation, coverImageUrl, episodeType: episodeType || 'STAY', order: order || 0 },
+    });
+    res.status(201).json(episode);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/:slug/episodes/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { title, subtitle, startDate, endDate, startLocation, endLocation, coverImageUrl, episodeType, order } = req.body;
+    const episode = await prisma.journeyEpisode.update({
+      where: { id: req.params.id },
+      data: { ...(title && { title }), ...(subtitle !== undefined && { subtitle }), ...(startDate && { startDate: new Date(startDate) }), ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }), ...(startLocation !== undefined && { startLocation }), ...(endLocation !== undefined && { endLocation }), ...(coverImageUrl !== undefined && { coverImageUrl }), ...(episodeType && { episodeType }), ...(order !== undefined && { order }) },
+    });
+    res.json(episode);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:slug/episodes/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    await prisma.journeyEpisode.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/episodes/auto-generate', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, rigName: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const posts = await prisma.rigPost.findMany({ where: { rigId: rig.id, episodeId: null }, orderBy: { createdAt: 'asc' }, take: 50, select: { id: true, title: true, body: true, createdAt: true, postType: true } });
+    if (posts.length === 0) return res.json({ episodes: [] });
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default();
+    const postSummary = posts.map((p: any) => `${p.createdAt.toISOString().split('T')[0]} | ${p.postType} | ${p.title || p.body?.slice(0, 60) || 'no content'}`).join('\n');
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001', max_tokens: 500,
+      messages: [{ role: 'user', content: `Group these RV travel posts into journey episodes. Each episode should cover a logical travel segment (a stay, a travel day, a discovery). Return JSON array: [{title, startDate, endDate, episodeType: TRAVEL|STAY|INCIDENT|DISCOVERY|OTHER}]\n\nPosts:\n${postSummary}` }],
+    });
+    const text = (response.content[0] as any)?.text || '[]';
+    const match = text.match(/\[[\s\S]*\]/);
+    const episodes = match ? JSON.parse(match[0]) : [];
+    res.json({ episodes, postCount: posts.length });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOMENTS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/moments', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const where: any = { rigId: rig.id };
+    if (req.query.featured === 'true') where.isFeatured = true;
+    const moments = await prisma.rigMoment.findMany({
+      where, include: { user: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(moments);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/moments', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { momentType, title, body, photoUrls, lat, lng, campgroundId, episodeId } = req.body;
+    const moment = await prisma.rigMoment.create({
+      data: { rigId: rig.id, userId: req.userId, momentType: momentType || 'SCENIC', title, body, photoUrls: photoUrls || [], lat, lng, campgroundId, episodeId },
+    });
+    res.status(201).json(moment);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/moments/:id/feature', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const m = await prisma.rigMoment.findUnique({ where: { id: req.params.id }, select: { isFeatured: true } });
+    const updated = await prisma.rigMoment.update({ where: { id: req.params.id }, data: { isFeatured: !m?.isFeatured } });
+    res.json(updated);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// QUESTIONS & ANSWERS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/questions', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const questions = await prisma.rigQuestion.findMany({
+      where: { rigId: rig.id },
+      include: { asker: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } } },
+      orderBy: [{ answeredAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
+    });
+    res.json(questions);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/questions', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const q = await prisma.rigQuestion.create({
+      data: { rigId: rig.id, askerId: req.userId, question: req.body.question },
+      include: { asker: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+    });
+    res.status(201).json(q);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/questions/:id/answer', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const q = await prisma.rigQuestion.update({
+      where: { id: req.params.id }, data: { answer: req.body.answer, answeredAt: new Date() },
+    });
+    res.json(q);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// SUGGESTIONS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/suggestions', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const suggestions = await prisma.rigSuggestion.findMany({
+      where: { rigId: rig.id },
+      include: { suggester: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+      orderBy: { upvotes: 'desc' },
+    });
+    res.json(suggestions);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/suggestions', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const { type, content, campgroundId } = req.body;
+    const s = await prisma.rigSuggestion.create({
+      data: { rigId: rig.id, suggesterId: req.userId, type: type || 'NEXT_STOP', content, campgroundId },
+      include: { suggester: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+    });
+    res.status(201).json(s);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/suggestions/:id/upvote', authenticateToken, async (req: any, res) => {
+  try {
+    const s = await prisma.rigSuggestion.update({ where: { id: req.params.id }, data: { upvotes: { increment: 1 } } });
+    res.json(s);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// POLLS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/polls', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const polls = await prisma.rigPoll.findMany({
+      where: { rigId: rig.id },
+      include: { creator: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(polls);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/polls', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { question, options, expiresAt } = req.body;
+    const poll = await prisma.rigPoll.create({
+      data: { rigId: rig.id, creatorId: req.userId, question, options, expiresAt: expiresAt ? new Date(expiresAt) : null },
+    });
+    res.status(201).json(poll);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/polls/:id/vote', authenticateToken, async (req: any, res) => {
+  try {
+    const { optionIndex } = req.body;
+    const poll = await prisma.rigPoll.findUnique({ where: { id: req.params.id } });
+    if (!poll) return res.status(404).json({ error: 'Poll not found' });
+    if (poll.expiresAt && new Date(poll.expiresAt) < new Date()) return res.status(400).json({ error: 'Poll expired' });
+    const votes = (poll.votes as any) || {};
+    votes[req.userId] = optionIndex;
+    const updated = await prisma.rigPoll.update({ where: { id: req.params.id }, data: { votes } });
+    res.json(updated);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// GUEST MOMENTS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.get('/:slug/guest-moments', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const moments = await prisma.rigGuestMoment.findMany({
+      where: { rigId: rig.id },
+      include: { author: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(moments);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/guest-moments', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const { content, photoUrls, metAt, siteNumber } = req.body;
+    const gm = await prisma.rigGuestMoment.create({
+      data: { rigId: rig.id, authorId: req.userId, content, photoUrls: photoUrls || [], metAt, siteNumber },
+      include: { author: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+    });
+    res.status(201).json(gm);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// FOLLOW PREFERENCES
+// ═══════════════════════════════════════════════════════════════════════
+
+router.put('/:slug/follow-preference', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const pref = await prisma.rigFollowPreference.upsert({
+      where: { rigId_userId: { rigId: rig.id, userId: req.userId } },
+      create: { rigId: rig.id, userId: req.userId, mode: req.body.mode || 'FULL' },
+      update: { mode: req.body.mode || 'FULL' },
+    });
+    res.json(pref);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// LIVE STATUS
+// ═══════════════════════════════════════════════════════════════════════
+
+router.post('/:slug/live', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { currentCampgroundId, onTheRoadEta } = req.body;
+    const updated = await prisma.rig.update({
+      where: { id: rig.id },
+      data: { isLiveNow: true, currentCampgroundId, onTheRoadEta: onTheRoadEta ? new Date(onTheRoadEta) : null, lastLocationUpdate: new Date() },
+    });
+    res.json(updated);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:slug/live', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    await prisma.rig.update({ where: { id: rig.id }, data: { isLiveNow: false, currentCampgroundId: null, onTheRoadEta: null } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TRIP RECAP & STATS SYNC
+// ═══════════════════════════════════════════════════════════════════════
+
+router.post('/:slug/sync-stats', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const episodes = await prisma.journeyEpisode.findMany({ where: { rigId: rig.id }, select: { startDate: true, endDate: true, startLocation: true, endLocation: true } });
+    const moments = await prisma.rigMoment.findMany({ where: { rigId: rig.id }, select: { lat: true, lng: true } });
+    const statesSet = new Set<string>();
+    let totalNights = 0;
+    for (const ep of episodes) {
+      if (ep.endDate && ep.startDate) {
+        totalNights += Math.ceil((new Date(ep.endDate).getTime() - new Date(ep.startDate).getTime()) / 86400000);
+      }
+      if (ep.startLocation) statesSet.add(ep.startLocation.split(',').pop()?.trim() || '');
+      if (ep.endLocation) statesSet.add(ep.endLocation.split(',').pop()?.trim() || '');
+    }
+    statesSet.delete('');
+    await prisma.rig.update({
+      where: { id: rig.id },
+      data: { totalNights, statesVisited: Array.from(statesSet), totalMiles: rig.totalMilesDriven || 0 },
+    });
+    res.json({ totalNights, statesVisited: Array.from(statesSet) });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/recap', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, rigName: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { startDate, endDate } = req.body;
+    const start = startDate ? new Date(startDate) : new Date(Date.now() - 14 * 86400000);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const [episodes, moments, posts] = await Promise.all([
+      prisma.journeyEpisode.findMany({ where: { rigId: rig.id, startDate: { gte: start, lte: end } }, orderBy: { order: 'asc' } }),
+      prisma.rigMoment.findMany({ where: { rigId: rig.id, createdAt: { gte: start, lte: end } }, orderBy: { createdAt: 'asc' } }),
+      prisma.rigPost.findMany({ where: { rigId: rig.id, createdAt: { gte: start, lte: end } }, orderBy: { createdAt: 'asc' }, take: 30 }),
+    ]);
+
+    const days = Math.ceil((end.getTime() - start.getTime()) / 86400000);
+    const topMoments = moments.filter((m: any) => m.isFeatured).slice(0, 5);
+    const mapPoints = moments.filter((m: any) => m.lat && m.lng).map((m: any) => ({ lat: m.lat, lng: m.lng, title: m.title }));
+
+    // Generate narrative
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic.default();
+    const summary = episodes.map((e: any) => `${e.episodeType}: ${e.title} (${e.startLocation || '?'} → ${e.endLocation || '?'})`).join('\n');
+    const momentSummary = moments.slice(0, 10).map((m: any) => `${m.momentType}: ${m.title}`).join(', ');
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001', max_tokens: 300,
+      messages: [{ role: 'user', content: `Write a short, warm ${days}-day trip recap for an RV named "${rig.rigName || 'our rig'}". Episodes:\n${summary}\nHighlight moments: ${momentSummary}\n\nWrite 3-4 sentences, celebratory tone. Include fun stats if natural.` }],
+    });
+    const narrative = (response.content[0] as any)?.text || '';
+
+    res.json({ narrative, days, episodeCount: episodes.length, momentCount: moments.length, postCount: posts.length, topMoments, mapPoints, stats: { statesVisited: [...new Set(episodes.flatMap((e: any) => [e.startLocation, e.endLocation].filter(Boolean)))].length } });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export { getFollowersForUser };
 export default router;
