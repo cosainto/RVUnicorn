@@ -766,7 +766,14 @@ export default function EventDetailPage() {
   const handleOpenSurvey = () => setShowSurveyModal(true);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
-  if (!event) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-gray-600">Event not found</p></div>;
+  if (!event) return (
+    <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+      <span className="text-4xl block mb-3">🏕️</span>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">Trip not found</h2>
+      <p className="text-sm text-gray-500 mb-4">This trip may have been deleted or the link may be incorrect.</p>
+      <Link to="/trips" className="text-primary-600 font-semibold hover:underline">Browse your trips →</Link>
+    </div>
+  );
 
   const isOrganizer = user?.id === event.organizerId;
 

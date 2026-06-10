@@ -541,7 +541,7 @@ router.get('/:id', async (req, res) => {
     });
 
     if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
+      return res.status(404).json({ error: 'Trip not found' });
     }
 
     // Log activity for friend feed (only for non-private events)
