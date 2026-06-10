@@ -31,39 +31,30 @@ const seoProxy = createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true
 app.get('/sitemap.xml', seoProxy);
 app.get('/robots.txt', seoProxy);
 
-// Proxy SSR campground and community pages to the backend for crawlers only
-const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
+// Proxy SSR pages to the backend for crawlers AND link preview fetchers.
+// iMessage, Slack, Discord, etc. use standard browser UAs so we can't rely
+// on user-agent alone. Instead: any non-XHR request that accepts text/html
+// AND isn't requesting a JS/CSS asset gets proxied to the backend SSR handler.
+// The backend's shouldSSR() makes the final call on whether to render or next().
+const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|Slackbot|Discordbot|Applebot/i;
 
-app.use('/campgrounds/:slug', (req, res, next) => {
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
-  }
-  next();
-});
-app.use('/community/:boardSlug', (req, res, next) => {
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
-  }
-  next();
-});
-app.use('/events/:id', (req, res, next) => {
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
-  }
-  next();
-});
-app.use('/trips/:slug/view', (req, res, next) => {
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
-  }
-  next();
-});
-app.use('/s/:token', (req, res, next) => {
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    return createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true })(req, res, next);
-  }
-  next();
-});
+function shouldProxySSR(req) {
+  // Always proxy for known crawlers
+  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) return true;
+  // Proxy for direct browser/preview fetcher loads (accepts HTML, not an XHR)
+  const acceptsHtml = (req.headers.accept || '').includes('text/html');
+  const isXHR = !!req.headers['x-requested-with'];
+  return acceptsHtml && !isXHR;
+}
+
+const ssrProxy = createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true });
+
+for (const pattern of ['/campgrounds/:slug', '/community/:boardSlug', '/events/:id', '/trips/:slug/view', '/s/:token']) {
+  app.use(pattern, (req, res, next) => {
+    if (shouldProxySSR(req)) return ssrProxy(req, res, next);
+    next();
+  });
+}
 
 // Serve /assets/ files explicitly with correct MIME types (BEFORE catch-all)
 app.use('/assets', express.static(path.join(__dirname, 'dist', 'assets'), {
