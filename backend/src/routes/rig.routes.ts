@@ -1551,5 +1551,213 @@ router.post('/:slug/recap', authenticateToken, async (req: any, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// RIG FEED V2 — STOPS, ROUTES, BUNDLES, STRUCTURED FEED
+// ═══════════════════════════════════════════════════════════════════════
+
+import { bundleMoments, autoAssignToStops, generateInsightCards } from '../services/rigFeedNormalizer';
+
+// GET /rigs/:slug/feed/v2 — structured feed
+router.get('/:slug/feed/v2', optionalAuth, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, rigName: true, isLiveNow: true, currentCampgroundId: true, lastLocationUpdate: true, onTheRoadEta: true, totalMiles: true, totalNights: true, statesVisited: true, followerCount: true, totalMilesDriven: true, totalStatesCount: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const [stops, routes, insights, bundles] = await Promise.all([
+      prisma.rigStop.findMany({ where: { rigId: rig.id }, orderBy: { order: 'asc' } }),
+      prisma.rigRouteSegment.findMany({ where: { rigId: rig.id }, orderBy: { startedAt: 'asc' } }),
+      prisma.rigInsightCard.findMany({ where: { rigId: rig.id }, orderBy: { generatedAt: 'desc' } }),
+      prisma.rigMomentBundle.findMany({ where: { rigId: rig.id }, orderBy: { bundledAt: 'desc' }, take: 20 }),
+    ]);
+
+    // Build interleaved feed items
+    const feedItems: any[] = [];
+    for (const stop of stops) {
+      const stopBundles = bundles.filter(b => b.stopId === stop.id);
+      feedItems.push({ type: 'STOP', data: { ...stop, bundles: stopBundles }, occurredAt: stop.arrivedAt });
+    }
+    for (const route of routes) {
+      feedItems.push({ type: 'ROUTE', data: route, occurredAt: route.startedAt });
+    }
+    for (const insight of insights) {
+      feedItems.push({ type: 'INSIGHT', data: insight, occurredAt: insight.generatedAt });
+    }
+    feedItems.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+    // Insert insight cards after every 3rd stop
+    const currentStop = stops.find(s => !s.departedAt) || stops[stops.length - 1] || null;
+    const journeyStrip = stops.map(s => ({ id: s.id, name: s.name, status: !s.departedAt ? 'CURRENT' : 'VISITED', order: s.order }));
+
+    const totalMiles = routes.reduce((s, r: any) => s + (r.distanceMiles || 0), 0) + (rig.totalMilesDriven || rig.totalMiles || 0);
+    const daysOnRoad = stops.length > 0 ? Math.ceil((Date.now() - new Date(stops[0].arrivedAt).getTime()) / 86400000) : 0;
+
+    res.json({
+      currentStop,
+      journeyStrip,
+      feedItems,
+      stats: { totalMiles: Math.round(totalMiles), daysOnRoad, statesCount: rig.totalStatesCount || rig.statesVisited?.length || 0, followersCount: rig.followerCount },
+      liveStatus: { isLive: rig.isLiveNow, currentCampground: rig.currentCampgroundId, lastUpdated: rig.lastLocationUpdate, eta: rig.onTheRoadEta },
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Stops CRUD
+router.get('/:slug/stops', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const stops = await prisma.rigStop.findMany({ where: { rigId: rig.id }, orderBy: { order: 'asc' } });
+    res.json(stops);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/stops', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { name, lat, lng, campgroundId, tripId, arrivedAt, departedAt, milesFromLastStop, order } = req.body;
+    const stop = await prisma.rigStop.create({
+      data: { rigId: rig.id, name, lat, lng, campgroundId, tripId, arrivedAt: arrivedAt ? new Date(arrivedAt) : new Date(), departedAt: departedAt ? new Date(departedAt) : null, milesFromLastStop, order: order || 0, contributorIds: [req.userId] },
+    });
+    res.status(201).json(stop);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/:slug/stops/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const stop = await prisma.rigStop.update({ where: { id: req.params.id }, data: req.body });
+    res.json(stop);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/:slug/stops/:id', async (req: any, res) => {
+  try {
+    const stop = await prisma.rigStop.findUnique({ where: { id: req.params.id } });
+    if (!stop) return res.status(404).json({ error: 'Stop not found' });
+    const bundles = await prisma.rigMomentBundle.findMany({ where: { stopId: stop.id }, orderBy: { bundledAt: 'desc' } });
+    const posts = await prisma.rigPost.findMany({
+      where: { stopId: stop.id },
+      include: { author: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ ...stop, bundles, posts });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Route segments
+router.post('/:slug/routes', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { fromStopId, toStopId, fromLabel, toLabel, distanceMiles, durationMinutes, roadType, fuelStops, highlight, routePolyline, startedAt, endedAt, tripId } = req.body;
+    const route = await prisma.rigRouteSegment.create({
+      data: { rigId: rig.id, fromStopId, toStopId, fromLabel, toLabel, distanceMiles, durationMinutes, roadType: roadType || 'MIXED', fuelStops: fuelStops || 0, highlight, routePolyline, startedAt: startedAt ? new Date(startedAt) : new Date(), endedAt: endedAt ? new Date(endedAt) : null, tripId },
+    });
+    res.status(201).json(route);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/:slug/routes', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const routes = await prisma.rigRouteSegment.findMany({ where: { rigId: rig.id }, orderBy: { startedAt: 'asc' } });
+    res.json(routes);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Bundles
+router.get('/:slug/stops/:stopId/bundles', async (req: any, res) => {
+  try {
+    const bundles = await prisma.rigMomentBundle.findMany({ where: { stopId: req.params.stopId }, orderBy: { bundledAt: 'desc' } });
+    res.json(bundles);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Normalize trigger
+router.post('/:slug/normalize', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const [bundleResult, assignResult] = await Promise.all([
+      bundleMoments(rig.id),
+      autoAssignToStops(rig.id),
+    ]);
+    const insightResult = await generateInsightCards(rig.id);
+    res.json({ ...bundleResult, ...assignResult, ...insightResult });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Insight cards
+router.get('/:slug/insights', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const cards = await prisma.rigInsightCard.findMany({ where: { rigId: rig.id }, orderBy: { generatedAt: 'desc' } });
+    res.json(cards);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Smart upload
+router.post('/:slug/posts/smart', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { title, body, photos, postType, tripId, confirm } = req.body;
+
+    // Calculate mediaHash
+    const mediaHash = photos?.[0] ? require('crypto').createHash('md5').update(photos[0]).digest('hex') : null;
+
+    // Check for duplicate
+    if (mediaHash) {
+      const dup = await prisma.rigPost.findFirst({ where: { rigId: rig.id, mediaHash } });
+      if (dup && !confirm) {
+        return res.json({ duplicate: true, existingPostId: dup.id, message: 'Looks like you already posted this photo' });
+      }
+    }
+
+    // Find nearby stop
+    let suggestedStopId = null;
+    const recentStop = await prisma.rigStop.findFirst({ where: { rigId: rig.id, departedAt: null }, orderBy: { arrivedAt: 'desc' } });
+    if (recentStop) suggestedStopId = recentStop.id;
+
+    if (!confirm && suggestedStopId) {
+      const stop = await prisma.rigStop.findUnique({ where: { id: suggestedStopId }, select: { name: true } });
+      return res.json({ suggestedStopId, suggestedStopName: stop?.name, message: `This looks like it belongs to: ${stop?.name}` });
+    }
+
+    // Create post
+    const post = await prisma.rigPost.create({
+      data: { rigId: rig.id, userId: req.userId, title, body, photos: photos || [], postType: postType || 'road_report', tripId, mediaHash, stopId: suggestedStopId, activityType: 'PHOTO_MOMENT' },
+      include: { author: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } },
+    });
+
+    // Background: normalize
+    setImmediate(() => {
+      bundleMoments(rig.id).catch(() => {});
+      autoAssignToStops(rig.id).catch(() => {});
+    });
+
+    res.status(201).json(post);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: normalize all rigs (Phase 12 backfill)
+router.post('/admin/normalize-all', authenticateToken, async (req: any, res) => {
+  try {
+    const rigs = await prisma.rig.findMany({ select: { id: true } });
+    let processed = 0;
+    for (const rig of rigs) {
+      await bundleMoments(rig.id).catch(() => {});
+      await autoAssignToStops(rig.id).catch(() => {});
+      await generateInsightCards(rig.id).catch(() => {});
+      processed++;
+    }
+    res.json({ processed });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export { getFollowersForUser };
 export default router;

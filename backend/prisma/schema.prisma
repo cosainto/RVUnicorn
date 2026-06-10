@@ -6275,6 +6275,11 @@ model Rig {
   polls             RigPoll[]
   guestMoments      RigGuestMoment[]
   followPreferences RigFollowPreference[]
+  stops             RigStop[]
+  routeSegments     RigRouteSegment[]
+  momentBundles     RigMomentBundle[]
+  activityItems     RigActivityItem[]
+  insightCards      RigInsightCard[]
 }
 
 model RigPilot {
@@ -6344,22 +6349,29 @@ model RigFollow {
 }
 
 model RigPost {
-  id          String          @id @default(cuid())
-  rigId       String
-  userId      String
-  title       String?
-  body        String?
-  photos      String[]
-  postType    String          @default("road_report")
-  tripId      String?
-  episodeId   String?
-  isPublic    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  rig         Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
-  author      User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
-  episode     JourneyEpisode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  id            String          @id @default(cuid())
+  rigId         String
+  userId        String
+  title         String?
+  body          String?
+  photos        String[]
+  postType      String          @default("road_report")
+  tripId        String?
+  episodeId     String?
+  stopId        String?
+  bundleId      String?
+  mediaHash     String?
+  activityType  String?         // PHOTO_MOMENT | CHECKIN | STORY | etc
+  isPublic      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  rig           Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  author        User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  episode       JourneyEpisode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
 
   @@index([episodeId])
+  @@index([stopId])
+  @@index([bundleId])
+  @@index([rigId, createdAt])
 }
 
 model RigMilestone {
@@ -6703,4 +6715,111 @@ model RigFollowPreference {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([rigId, userId])
+}
+
+// ═══ Rig Feed v2 — Stops, Routes, Bundles ═══
+
+model RigStop {
+  id               String    @id @default(cuid())
+  rigId            String
+  tripId           String?
+  campgroundId     String?
+  name             String
+  lat              Float?
+  lng              Float?
+  arrivedAt        DateTime
+  departedAt       DateTime?
+  milesFromLastStop Float?
+  durationHours    Float?
+  contributorIds   String[]
+  photoUrls        String[]
+  videoUrls        String[]
+  noteCount        Int       @default(0)
+  featuredMomentId String?
+  order            Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  rig              Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId, order])
+  @@index([rigId, arrivedAt])
+}
+
+model RigRouteSegment {
+  id              String    @id @default(cuid())
+  rigId           String
+  tripId          String?
+  fromStopId      String?
+  toStopId        String?
+  fromLabel       String
+  toLabel         String
+  distanceMiles   Float
+  durationMinutes Int?
+  roadType        String    @default("MIXED") // HIGHWAY | SCENIC | OFFGRID | MIXED
+  fuelStops       Int       @default(0)
+  highlight       String?
+  routePolyline   String?
+  startedAt       DateTime
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
+
+  rig             Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId])
+}
+
+model RigMomentBundle {
+  id               String   @id @default(cuid())
+  rigId            String
+  stopId           String?
+  routeSegmentId   String?
+  title            String?
+  photoUrls        String[]
+  videoUrls        String[]
+  stories          String[]
+  featuredMediaUrl String?
+  momentTypes      String[]
+  contributorIds   String[]
+  location         String?
+  bundledAt        DateTime @default(now())
+  mediaHash        String?
+  createdAt        DateTime @default(now())
+
+  rig              Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId, stopId])
+}
+
+model RigActivityItem {
+  id             String   @id @default(cuid())
+  rigId          String
+  activityType   String   // PHOTO_MOMENT | CHECKIN | ROUTE_SEGMENT | MILEAGE_EVENT | MILESTONE | MAINTENANCE | STORY
+  refId          String
+  refType        String
+  stopId         String?
+  routeSegmentId String?
+  bundleId       String?
+  lat            Float?
+  lng            Float?
+  occurredAt     DateTime
+  createdAt      DateTime @default(now())
+
+  rig            Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId, occurredAt])
+}
+
+model RigInsightCard {
+  id                String   @id @default(cuid())
+  rigId             String
+  tripId            String?
+  cardType          String   // MILEAGE | STREAK | MILESTONE | STATE_CROSS | PARK_ENTRY | STATS
+  content           Json
+  displayAfterStopId String?
+  generatedAt       DateTime @default(now())
+
+  rig               Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId])
 }

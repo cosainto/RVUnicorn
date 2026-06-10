@@ -10,6 +10,7 @@ import RigActivityFeed from '../../components/rig/RigActivityFeed';
 import RigJourneyTab from '../../components/rig/RigJourneyTab';
 import RigMomentsTab from '../../components/rig/RigMomentsTab';
 import RigCommunityTab from '../../components/rig/RigCommunityTab';
+import RigFeedV2 from '../../components/rig/RigFeedV2';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -34,7 +35,7 @@ export default function RigProfilePage() {
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('feed');
   const [mods, setMods] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
@@ -112,13 +113,13 @@ export default function RigProfilePage() {
   const rigMeta = [rig.rigClass?.replace('_', ' '), rig.lengthFeet ? `${rig.lengthFeet}ft` : null, rig.fuelType].filter(Boolean).join(' · ');
 
   const TABS = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'journey', label: '🗺️ Journey' },
+    { id: 'feed', label: '🗺️ Feed' },
+    { id: 'journey', label: '📖 Journey' },
     { id: 'moments', label: '⭐ Moments' },
     { id: 'community', label: '👥 Community' },
+    { id: 'overview', label: 'About' },
     { id: 'trips', label: 'Trips' },
     { id: 'mods', label: 'Mods' },
-    { id: 'posts', label: 'Posts' },
     { id: 'stats', label: 'Stats' },
   ];
 
@@ -563,6 +564,11 @@ export default function RigProfilePage() {
             {/* ═══ MOMENTS TAB ═══ */}
             {activeTab === 'moments' && (
               <RigMomentsTab slug={slug!} isOwner={isOwner} />
+            )}
+
+            {/* ═══ FEED V2 TAB ═══ */}
+            {activeTab === 'feed' && rig && (
+              <RigFeedV2 slug={slug!} isOwner={isOwner} />
             )}
 
             {/* ═══ COMMUNITY TAB ═══ */}
