@@ -51,33 +51,41 @@ export default function EventWeatherStrip({ latitude, longitude, startDate, endD
     return p.isDaytime && p.name !== 'This Afternoon' && p.name !== 'Today';
   }).slice(0, 5);
 
+  // Build a uniform list: current weather as "Now" + forecast days
+  const allDays: { label: string; temp: string; icon: string; condition: string; bgClass: string }[] = [];
+
+  if (current) {
+    allDays.push({
+      label: 'Now',
+      temp: `${current.temperature}°${current.temperatureUnit || 'F'}`,
+      icon: getWeatherIcon(current.shortForecast, current.temperature),
+      condition: (current.shortForecast || '').split(' ').slice(0, 2).join(' '),
+      bgClass: 'bg-blue-50 border-blue-100',
+    });
+  }
+
+  for (const p of tripPeriods) {
+    const isBad = /thunder|heavy rain|storm|snow|blizzard/.test((p.shortForecast || '').toLowerCase());
+    const isCaution = !isBad && /rain|shower|wind|fog/.test((p.shortForecast || '').toLowerCase());
+    allDays.push({
+      label: (p.name || '').split(' ')[0],
+      temp: p.temperature ? `${p.temperature}°${p.temperatureUnit || 'F'}` : '',
+      icon: getWeatherIcon(p.shortForecast || p.detailedForecast || '', p.temperature),
+      condition: (p.shortForecast || '').split(' ').slice(0, 2).join(' '),
+      bgClass: isBad ? 'bg-red-50 border-red-200' : isCaution ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100',
+    });
+  }
+
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {current && (
-        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
-          <span className="text-2xl">{getWeatherIcon(current.shortForecast, current.temperature)}</span>
-          <div>
-            <p className="text-sm font-bold text-gray-900">{current.temperature}°{current.temperatureUnit}</p>
-            <p className="text-xs text-gray-500">{current.shortForecast}</p>
-          </div>
+    <div className="flex flex-row gap-3 overflow-x-auto scrollbar-hide">
+      {allDays.map((d, i) => (
+        <div key={i} className={`flex-1 min-w-[72px] flex flex-col items-center px-2.5 py-2 rounded-xl border text-center ${d.bgClass}`}>
+          <p className="text-xs text-gray-500 font-semibold">{d.label}</p>
+          <span className="text-xl my-1">{d.icon}</span>
+          <p className="text-sm font-bold text-gray-900">{d.temp}</p>
+          <p className="text-[10px] text-gray-400 leading-tight">{d.condition}</p>
         </div>
-      )}
-      {tripPeriods.map((p: any, i: number) => {
-        const icon = getWeatherIcon(p.shortForecast || p.detailedForecast || '', p.temperature);
-        const isBad = /thunder|heavy rain|storm|snow|blizzard/.test((p.shortForecast || '').toLowerCase());
-        const isCaution = !isBad && /rain|shower|wind|fog/.test((p.shortForecast || '').toLowerCase());
-        const bgClass = isBad ? 'bg-red-50 border-red-200' : isCaution ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100';
-        const shortDay = (p.name || '').split(' ')[0];
-        const shortDate = p.temperature ? p.temperature + '°' + (p.temperatureUnit || 'F') : '';
-        return (
-          <div key={i} className={"flex flex-col items-center px-2.5 py-1.5 rounded-xl border text-center " + bgClass} style={{ minWidth: '58px' }}>
-            <p className="text-xs text-gray-500 font-medium">{shortDay}</p>
-            <p className="text-xs text-gray-400" style={{ fontSize: '10px' }}>{shortDate}</p>
-            <span className="text-xl my-0.5">{icon}</span>
-            <p className="text-xs text-gray-400 leading-tight" style={{ fontSize: '10px' }}>{(p.shortForecast || '').split(' ').slice(0, 2).join(' ')}</p>
-          </div>
-        );
-      })}
+      ))}
     </div>
   );
 }
