@@ -27,10 +27,61 @@ export function registerCampfireSockets(io: Server) {
     const { campgroundId, userId } = socket.handshake.query as { campgroundId: string; userId: string };
     if (!campgroundId || !userId) { socket.disconnect(); return; }
 
-    socket.join(campgroundId);
+    // Join public campfire room
+    socket.join(`campground:${campgroundId}`);
+    socket.join(campgroundId); // keep legacy room for backwards compat
 
     const checkedIn = await getCheckedInUsers(campgroundId);
     campfire.to(campgroundId).emit('presence:update', checkedIn);
+
+    // Join all groups the user belongs to at this campground
+    try {
+      const memberships = await prisma.campfireGroupMember.findMany({
+        where: { userId, group: { campgroundId } },
+        select: { groupId: true },
+      });
+      for (const m of memberships) {
+        socket.join(`group:${m.groupId}`);
+      }
+    } catch {}
+
+    // Join a specific group room
+    socket.on('group:join', async (data: { groupId: string }) => {
+      try {
+        const member = await prisma.campfireGroupMember.findUnique({
+          where: { groupId_userId: { groupId: data.groupId, userId } },
+        });
+        if (member) socket.join(`group:${data.groupId}`);
+      } catch {}
+    });
+
+    // Send a group message via socket
+    socket.on('group:message', async (data: { groupId: string; content: string }) => {
+      if (!data.content?.trim() || !data.groupId) return;
+      try {
+        const member = await prisma.campfireGroupMember.findUnique({
+          where: { groupId_userId: { groupId: data.groupId, userId } },
+        });
+        if (!member) return;
+
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, username: true, profilePicture: true, firstName: true, lastName: true },
+        });
+        if (!user) return;
+
+        const msg = await prisma.campfireGroupMessage.create({
+          data: { groupId: data.groupId, userId, content: data.content.trim() },
+        });
+        await prisma.campfireGroup.update({ where: { id: data.groupId }, data: { updatedAt: new Date() } });
+
+        campfire.to(`group:${data.groupId}`).emit('group:message:new', {
+          id: msg.id, groupId: data.groupId, content: msg.content, createdAt: msg.createdAt, user,
+        });
+      } catch (e) {
+        console.error('[Campfire Group] message error:', e);
+      }
+    });
     await maybeActivateRoom(campgroundId, campfire, io);
 
     // Trigger proactive Hitch when a new user connects and 2+ are checked in

@@ -25,7 +25,7 @@ import PredictiveSiteSelector from '../components/PredictiveSiteSelector';
 import RVHerdHereNow from '../components/RVHerdHereNow';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import CampfireChannel from '../components/CampfireChannel';
-import CampfireChat from '../components/CampfireChat';
+import CampfireModeSwitcher from '../components/CampfireModeSwitcher';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
 import WildlifeSightings from '../components/WildlifeSightings';

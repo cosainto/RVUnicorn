@@ -801,4 +801,257 @@ Make it a real, delicious camp recipe. Keep it simple — one pot, foil packet, 
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// GROUP CHAT ROUTES
+// ═══════════════════════════════════════════════════════════════════════
+
+// POST /campfire/groups — create a new group
+router.post('/groups', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { campgroundId, name, memberIds } = req.body;
+    if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
+
+    const group = await prisma.campfireGroup.create({
+      data: {
+        campgroundId,
+        name: name || null,
+        createdByUserId: userId,
+        members: {
+          create: [
+            { userId },
+            ...(memberIds || []).filter((id: string) => id !== userId).map((id: string) => ({ userId: id })),
+          ],
+        },
+      },
+      include: {
+        members: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } } },
+      },
+    });
+    res.status(201).json(group);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /campfire/groups?campgroundId= — get user's groups at campground
+router.get('/groups', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { campgroundId } = req.query;
+    if (!campgroundId) return res.status(400).json({ error: 'campgroundId required' });
+
+    const groups = await prisma.campfireGroup.findMany({
+      where: {
+        campgroundId: campgroundId as string,
+        members: { some: { userId } },
+      },
+      include: {
+        members: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } } },
+        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+        _count: { select: { messages: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    res.json(groups);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /campfire/groups/:groupId/members — invite a user
+router.post('/groups/:groupId/members', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { groupId } = req.params;
+    const { userId: inviteeId, username } = req.body;
+
+    // Verify requester is a member
+    const isMember = await prisma.campfireGroupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!isMember) return res.status(403).json({ error: 'Not a member of this group' });
+
+    let targetId = inviteeId;
+    if (!targetId && username) {
+      const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      targetId = user.id;
+    }
+    if (!targetId) return res.status(400).json({ error: 'userId or username required' });
+
+    const member = await prisma.campfireGroupMember.create({
+      data: { groupId, userId: targetId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+    res.status(201).json(member);
+  } catch (e: any) {
+    if (e.code === 'P2002') return res.status(400).json({ error: 'Already a member' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /campfire/groups/:groupId/members/:userId — remove member
+router.delete('/groups/:groupId/members/:targetUserId', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { groupId, targetUserId } = req.params;
+
+    // Allow self-leave or creator-remove
+    if (targetUserId !== userId) {
+      const group = await prisma.campfireGroup.findUnique({ where: { id: groupId }, select: { createdByUserId: true } });
+      if (group?.createdByUserId !== userId) return res.status(403).json({ error: 'Only the group creator can remove members' });
+    }
+
+    await prisma.campfireGroupMember.delete({
+      where: { groupId_userId: { groupId, userId: targetUserId } },
+    });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /campfire/groups/:groupId/messages — fetch group message history
+router.get('/groups/:groupId/messages', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { groupId } = req.params;
+
+    const isMember = await prisma.campfireGroupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!isMember) return res.status(403).json({ error: 'Not a member' });
+
+    const messages = await prisma.campfireGroupMessage.findMany({
+      where: { groupId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 100,
+    });
+    res.json(messages);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /campfire/groups/:groupId/messages — send a group message
+router.post('/groups/:groupId/messages', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { groupId } = req.params;
+    const { content } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: 'Message content required' });
+
+    const isMember = await prisma.campfireGroupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!isMember) return res.status(403).json({ error: 'Not a member' });
+
+    const message = await prisma.campfireGroupMessage.create({
+      data: { groupId, userId, content: content.trim() },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+
+    // Update group's updatedAt
+    await prisma.campfireGroup.update({ where: { id: groupId }, data: { updatedAt: new Date() } });
+
+    res.status(201).json(message);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// AI CAMPFIRE ROUTES
+// ═══════════════════════════════════════════════════════════════════════
+
+const AI_RATE_LIMIT = new Map<string, { count: number; resetAt: number }>();
+
+// POST /campfire/ai — send a message to an AI character
+router.post('/ai', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    const { characterId, message, campgroundId, conversationHistory } = req.body;
+    if (!characterId || !message?.trim()) return res.status(400).json({ error: 'characterId and message required' });
+
+    // Rate limit: 30/hour
+    const now = Date.now();
+    const limit = AI_RATE_LIMIT.get(userId);
+    if (limit && limit.resetAt > now && limit.count >= 30) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Max 30 AI messages per hour.' });
+    }
+    if (!limit || limit.resetAt <= now) {
+      AI_RATE_LIMIT.set(userId, { count: 1, resetAt: now + 3600000 });
+    } else {
+      limit.count++;
+    }
+
+    // Get campground context
+    const campground = campgroundId
+      ? await prisma.campground.findUnique({ where: { id: campgroundId }, select: { name: true, state: true, location: true } })
+      : null;
+
+    const CHARACTER_PROMPTS: Record<string, string> = {
+      HITCH: `You are Hitch, a warm experienced RV traveler and mentor. Helpful, knowledgeable, encouraging.`,
+      WALLET: `You are Wallet, a funny deal-hunter who loves saving money on the road. Witty and practical.`,
+      WALTER: `You are Walter, a gentle astronomy and nature enthusiast. Quiet, observational, wonder-struck.`,
+      SCOUT: `You are Scout, an adventure-loving trailblazer. High energy, loves hidden gems and outdoor activities.`,
+      HOLDEN: `You are Holden, a Junior Ranger kid who loves outdoor adventures, scavenger hunts, fishing, wildlife, and playgrounds. Enthusiastic 10-year-old voice.`,
+      HANNAH: `You are Hannah, a Junior Ranger kid who loves family trip planning, educational activities, museums, dining, and attractions. Smart curious 10-year-old voice.`,
+    };
+
+    const charPrompt = CHARACTER_PROMPTS[characterId.toUpperCase()] || CHARACTER_PROMPTS.HITCH;
+    const contextLine = campground ? ` You are at ${campground.name}${campground.state ? ', ' + campground.state : ''}.` : '';
+    const systemPrompt = `${charPrompt}${contextLine} Keep responses to 2-4 sentences. Family-friendly. Be conversational and natural.`;
+
+    const messages = (conversationHistory || []).slice(-10).map((m: any) => ({ role: m.role, content: m.content }));
+    messages.push({ role: 'user', content: message.trim() });
+
+    const anthropic = new Anthropic();
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      system: systemPrompt,
+      messages,
+    });
+
+    const reply = (response.content[0] as any)?.text?.trim() || 'Sorry, I got distracted by the campfire!';
+
+    // Upsert session for context tracking
+    const sessionKey = `${userId}-${campgroundId || 'global'}-${characterId}`;
+    await prisma.aICampfireSession.upsert({
+      where: { id: sessionKey },
+      create: {
+        id: sessionKey,
+        userId,
+        campgroundId: campgroundId || '',
+        characterId: characterId.toUpperCase(),
+        messages: [...messages, { role: 'assistant', content: reply }].slice(-20),
+      },
+      update: {
+        messages: [...messages, { role: 'assistant', content: reply }].slice(-20),
+        updatedAt: new Date(),
+      },
+    }).catch(() => {}); // Non-critical
+
+    const CHARACTER_IMAGES: Record<string, string> = {
+      HITCH: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png',
+      WALLET: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218458/rvunicorn/guides/wallet_guide.png',
+      WALTER: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261024/rvunicorn/characters/walter.png',
+      SCOUT: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png',
+      HOLDEN: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/holden.jpg',
+      HANNAH: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1781042437/rvunicorn/characters/hannah.jpg',
+    };
+
+    res.json({
+      reply,
+      character: characterId.toUpperCase(),
+      image: CHARACTER_IMAGES[characterId.toUpperCase()] || CHARACTER_IMAGES.HITCH,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

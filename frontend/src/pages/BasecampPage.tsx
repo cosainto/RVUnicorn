@@ -74,7 +74,7 @@ import ExploreNearbyPanel from '../components/ExploreNearbyPanel';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import MealPlanner from '../components/MealPlanner';
 import EventAlbum from '../components/EventAlbum';
-import CampfireChat from '../components/CampfireChat';
+import CampfireModeSwitcher from '../components/CampfireModeSwitcher';
 import CampfireTriviaOverlay from '../components/CampfireTriviaOverlay';
 import WeatherActivities from '../components/WeatherActivities';
 import SupplyList from '../components/SupplyList';
@@ -4345,7 +4345,7 @@ export default function BasecampPage({ user }: BasecampProps) {
               )}
               {/* Campfire Pulse Feed */}
               {activeCheckIn?.campground && (
-                <CampfireChat
+                <CampfireModeSwitcher
                   campgroundId={activeCheckIn.campground.id}
                   campgroundName={activeCheckIn.campground.name}
                 />

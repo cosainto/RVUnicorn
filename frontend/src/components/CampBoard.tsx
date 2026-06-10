@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Users, MessageSquare, Calendar, Camera, ShoppingCart, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import CampfireChat from './CampfireChat';
+import CampfireModeSwitcher from './CampfireModeSwitcher';
 import CampMarket from './CampMarket';
 import { useEventPresence } from '../hooks/useEventPresence';
 
@@ -182,7 +182,7 @@ export default function CampBoard({ eventId, campgroundId, campgroundName, isChe
 
         {/* Huddle Chat */}
         {activeSection === 'chat' && (
-          <CampfireChat
+          <CampfireModeSwitcher
             campgroundId={campgroundId}
             campgroundName={campgroundName}
             isUserCheckedIn={isCheckedIn}

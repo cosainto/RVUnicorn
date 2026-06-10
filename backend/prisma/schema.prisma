@@ -429,6 +429,10 @@ model User {
   experienceVisits                                 ExperienceVisit[]
   experienceQuestions                              ExperienceQuestion[]
   experienceAnswers                                ExperienceAnswer[]
+  campfireGroupsCreated                            CampfireGroup[]               @relation("CampfireGroupCreator")
+  campfireGroupMemberships                         CampfireGroupMember[]
+  campfireGroupMessages                            CampfireGroupMessage[]
+  aiCampfireSessions                               AICampfireSession[]
 
   @@index([email])
   @@index([username])
@@ -4142,6 +4146,7 @@ model CampfireMessage {
   isHitch   Boolean           @default(false)
   content   String
   replyToId String?
+  mode      String            @default("PUBLIC") // PUBLIC | AI
   createdAt DateTime          @default(now())
   room      CampfireRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -6487,4 +6492,62 @@ model ExperienceVisit {
   @@unique([experienceId, userId])
   @@index([experienceId])
   @@index([userId])
+}
+
+// ═══ Campfire Chat Modes ═══
+
+model CampfireGroup {
+  id              String                @id @default(cuid())
+  campgroundId    String
+  name            String?
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  createdBy       User                  @relation("CampfireGroupCreator", fields: [createdByUserId], references: [id])
+  members         CampfireGroupMember[]
+  messages        CampfireGroupMessage[]
+
+  @@index([campgroundId])
+  @@index([createdByUserId])
+}
+
+model CampfireGroupMember {
+  id       String        @id @default(cuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime      @default(now())
+
+  group    CampfireGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model CampfireGroupMessage {
+  id        String        @id @default(cuid())
+  groupId   String
+  userId    String
+  content   String
+  createdAt DateTime      @default(now())
+
+  group     CampfireGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+}
+
+model AICampfireSession {
+  id           String   @id @default(cuid())
+  userId       String
+  campgroundId String
+  characterId  String
+  messages     Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, campgroundId])
 }
