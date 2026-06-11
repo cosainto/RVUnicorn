@@ -186,12 +186,12 @@ export default function RigProfilePage() {
             {/* Pilot chips */}
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] uppercase tracking-wider" style={{ color: CN.muted }}>Piloted by</span>
-              <Link to={`/profile/${owner.username}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              <Link to={`/profile/${owner.username || owner.id}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
                 {owner.profilePicture ? <img src={owner.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full" style={{ background: CN.gold }} />}
                 <span style={{ color: CN.cream }}>{owner.firstName}</span>
               </Link>
-              {rig.pilots?.map((p: any) => (
-                <Link key={p.userId} to={`/profile/${p.user?.username}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
+                <Link key={p.userId} to={`/profile/${p.user?.username || p.userId}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
                   {p.user?.profilePicture ? <img src={p.user.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full" style={{ background: CN.gold }} />}
                   <span style={{ color: CN.cream }}>{p.user?.firstName}</span>
                 </Link>
@@ -262,11 +262,11 @@ export default function RigProfilePage() {
         )}
 
         {/* ═══ CO-PILOTS SECTION ═══ */}
-        {rig.pilots?.length > 0 && (
+        {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).length > 0 && (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-4" style={{ background: CN.body }}>
             <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.muted }}>🚐 Who Travels in This Rig</h3>
             <div className="flex gap-3">
-              {rig.pilots.map((p: any) => (
+              {rig.pilots.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
                 <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1">
                   {p.user?.profilePicture ? (
                     <img src={p.user.profilePicture} alt={p.user.firstName} className="w-10 h-10 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
@@ -274,7 +274,7 @@ export default function RigProfilePage() {
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{p.user?.firstName?.[0] || '?'}</div>
                   )}
                   <span className="text-[10px] font-medium" style={{ color: CN.cream }}>{p.user?.firstName}</span>
-                  <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.15)', color: CN.gold }}>{p.role || 'Pilot'}</span>
+                  <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.15)', color: CN.gold }}>{p.role || 'Co-Pilot'}</span>
                 </Link>
               ))}
             </div>
@@ -396,8 +396,8 @@ export default function RigProfilePage() {
                         <p className="text-[11px]" style={{ color: CN.muted }}>Owner</p>
                       </div>
                     </Link>
-                    {rig.pilots?.map((p: any) => (
-                      <Link key={p.userId} to={`/profile/${p.user?.username}`} className="flex items-center gap-3 p-3 rounded-xl transition hover:brightness-110" style={{ background: CN.cardAlt }}>
+                    {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
+                      <Link key={p.userId} to={`/profile/${p.user?.username || p.userId}`} className="flex items-center gap-3 p-3 rounded-xl transition hover:brightness-110" style={{ background: CN.cardAlt }}>
                         {p.user?.profilePicture ? <img src={p.user.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold" style={{ background: CN.gold, color: CN.bg }}>{p.user?.firstName?.[0]}</div>}
                         <div>
                           <p className="text-sm font-semibold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName}</p>
