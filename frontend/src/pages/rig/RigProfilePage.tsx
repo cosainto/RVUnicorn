@@ -616,7 +616,7 @@ export default function RigProfilePage() {
             )}
 
             {/* ═══ TIMELINE TAB ═══ */}
-            {activeTab === 'timeline' && <RigTimelineTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'timeline' && <RigTimelineTab slug={slug!} isOwner={isOwner} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} />}
 
             {/* ═══ RECIPES TAB ═══ */}
             {activeTab === 'recipes' && <RigRecipesTab slug={slug!} isOwner={isOwner} />}
