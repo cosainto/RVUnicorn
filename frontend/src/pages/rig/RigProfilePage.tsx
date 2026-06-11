@@ -15,6 +15,7 @@ import RigTripMode from '../../components/rig/RigTripMode';
 import { PhotosTab, VideosTab, CampsitesTab, RecsTab, ModsTab, GearTab, MaintenanceTab, ResourcesTab, AchievementsTab, CommunityHubTab } from '../../components/rig/RigHubTabs';
 import RigTimelineTab from '../../components/rig/RigTimelineTab';
 import RigRecipesTab from '../../components/rig/RigRecipesTab';
+import RigShowcase from '../../components/rig/RigShowcase';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -247,6 +248,9 @@ export default function RigProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* ═══ RIG SHOWCASE ═══ */}
+        <RigShowcase slug={slug!} rigName={rigTitle} rigSubtitle={rigSubtitle} isOwner={isOwner} galleryPhotoUrls={rig.galleryPhotoUrls} />
 
         {/* ═══ OUR STORY SECTION ═══ */}
         {(rig.story || isOwner) && (

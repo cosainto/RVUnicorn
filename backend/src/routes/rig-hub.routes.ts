@@ -217,4 +217,44 @@ router.delete('/:slug/contributions/:id', authenticateToken, async (req: any, re
   try { const rig = await getRig(req.params.slug); if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' }); await prisma.rigCommunityContribution.delete({ where: { id: req.params.id } }); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══ RIG SHOWCASE ═══
+
+router.get('/:slug/showcase', async (req: any, res) => {
+  try {
+    const rig = await getRig(req.params.slug);
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const where: any = { rigId: rig.id, isRigPhoto: true };
+    if (req.query.category) where.photoCategory = req.query.category;
+    const photos = await prisma.rigPost.findMany({
+      where, orderBy: { createdAt: 'desc' },
+      select: { id: true, photos: true, photoCategory: true, title: true, createdAt: true },
+    });
+    res.json(photos);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:slug/photos/categorize', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await getRig(req.params.slug);
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { updates } = req.body; // [{ id, photoCategory }]
+    if (!Array.isArray(updates)) return res.status(400).json({ error: 'updates array required' });
+    const rigCategories = ['RIG_EXTERIOR', 'RIG_INTERIOR', 'RIG_FLOORPLAN', 'RIG_DETAIL', 'RIG_SETUP'];
+    let updated = 0;
+    for (const u of updates) {
+      const isRigPhoto = rigCategories.includes(u.photoCategory);
+      await prisma.rigPost.update({
+        where: { id: u.id },
+        data: { photoCategory: u.photoCategory, isRigPhoto },
+      });
+      // Remove from timeline if rig photo
+      if (isRigPhoto) {
+        await prisma.rigTimelineItem.deleteMany({ where: { rigId: rig.id, refId: u.id } }).catch(() => {});
+      }
+      updated++;
+    }
+    res.json({ updated });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

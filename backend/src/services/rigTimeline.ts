@@ -17,8 +17,8 @@ export async function syncTimelineItem(itemType: string, refId: string, rigId: s
  * Build the unified timeline by scanning all content types.
  */
 export async function buildTimeline(rigId: string) {
-  // Posts
-  const posts = await prisma.rigPost.findMany({ where: { rigId }, select: { id: true, title: true, body: true, photos: true, tripId: true, stopId: true, createdAt: true }, take: 200 });
+  // Posts (exclude rig showcase photos from timeline)
+  const posts = await prisma.rigPost.findMany({ where: { rigId, isRigPhoto: false }, select: { id: true, title: true, body: true, photos: true, tripId: true, stopId: true, createdAt: true }, take: 200 });
   for (const p of posts) {
     await syncTimelineItem('PHOTO_ALBUM', p.id, rigId, {
       title: p.title || 'Photos', previewImageUrl: p.photos?.[0], previewText: p.body?.slice(0, 100),

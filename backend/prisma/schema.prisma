@@ -6404,6 +6404,8 @@ model RigPost {
   bundleId      String?
   mediaHash     String?
   activityType  String?         // PHOTO_MOMENT | CHECKIN | STORY | etc
+  photoCategory String?         // RIG_EXTERIOR | RIG_INTERIOR | RIG_FLOORPLAN | RIG_DETAIL | RIG_SETUP | TRAVEL | CAMPSITE | NATURE | FOOD | PEOPLE | OTHER
+  isRigPhoto    Boolean         @default(false)
   isPublic      Boolean         @default(true)
   createdAt     DateTime        @default(now())
   rig           Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
@@ -6412,6 +6414,7 @@ model RigPost {
 
   @@index([episodeId])
   @@index([stopId])
+  @@index([rigId, isRigPhoto])
   @@index([bundleId])
   @@index([rigId, createdAt])
 }

@@ -21,14 +21,21 @@ function Stars({ rating }: { rating: number }) {
 // ═══ PHOTOS TAB ═══
 export function PhotosTab({ slug, isOwner }: { slug: string; isOwner: boolean }) {
   const [posts, setPosts] = useState<any[]>([]);
+  const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   useEffect(() => { api.get(`/rigs/${slug}/posts`).then(r => setPosts(r.data || [])).catch(() => {}).finally(() => setLoading(false)); }, [slug]);
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-400" /></div>;
-  const allPhotos = posts.flatMap((p: any) => p.photos || []);
-  if (allPhotos.length === 0) return <EmptyState icon={Camera} message="No photos yet" />;
+  const rigPhotos = posts.filter((p: any) => p.isRigPhoto).flatMap((p: any) => p.photos || []);
+  const travelPhotos = posts.filter((p: any) => !p.isRigPhoto).flatMap((p: any) => p.photos || []);
+  const allPhotos = filter === 'ALL' ? [...rigPhotos, ...travelPhotos] : filter === 'RIG' ? rigPhotos : travelPhotos;
+  if (rigPhotos.length === 0 && travelPhotos.length === 0) return <EmptyState icon={Camera} message="No photos yet" />;
   return (
     <div>
-      <p className="text-xs text-white/30 mb-3">{allPhotos.length} photos</p>
+      <div className="flex gap-1.5 mb-3">
+        {[{ key: 'ALL', label: `All (${rigPhotos.length + travelPhotos.length})` }, { key: 'RIG', label: `🚐 Rig (${rigPhotos.length})` }, { key: 'TRAVEL', label: `🗺️ Travel (${travelPhotos.length})` }].map(f => (
+          <button key={f.key} onClick={() => setFilter(f.key)} className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition ${filter === f.key ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-white/40'}`}>{f.label}</button>
+        ))}
+      </div>
       <div className="grid grid-cols-3 md:grid-cols-4 gap-1.5">
         {allPhotos.map((url: string, i: number) => (
           <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" />
