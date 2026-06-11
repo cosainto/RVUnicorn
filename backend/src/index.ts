@@ -100,6 +100,7 @@ import profileMapRoutes from './routes/profile-map.routes';
 import searchRoutes from './routes/search.routes';
 import hitchRemindersRoutes from './routes/hitch-reminders.routes';
 import experiencesRoutes from './routes/experiences.routes';
+import rigHubRoutes from './routes/rig-hub.routes';
 import hitchJobsRoutes from './routes/hitch-jobs.routes';
 import hitchChatRoutes from './routes/hitch-chat.routes';
 import hitchGuidesRoutes from './routes/hitch-guides.routes';
@@ -384,6 +385,7 @@ app.use("/api/creator-events", creatorEventsRoutes);
 app.use("/api/actionable", doThisHereRoutes);
 app.use("/api/email-preferences", emailRoutes);
 app.use("/api/experiences", experiencesRoutes);
+app.use("/api/rigs", rigHubRoutes);
 app.use("/api", emailRoutes);
 
 

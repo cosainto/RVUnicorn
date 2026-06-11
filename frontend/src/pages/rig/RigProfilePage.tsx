@@ -12,6 +12,7 @@ import RigMomentsTab from '../../components/rig/RigMomentsTab';
 import RigCommunityTab from '../../components/rig/RigCommunityTab';
 import RigFeedV2 from '../../components/rig/RigFeedV2';
 import RigTripMode from '../../components/rig/RigTripMode';
+import { PhotosTab, VideosTab, CampsitesTab, RecsTab, ModsTab, GearTab, MaintenanceTab, ResourcesTab, AchievementsTab, CommunityHubTab } from '../../components/rig/RigHubTabs';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -114,14 +115,18 @@ export default function RigProfilePage() {
   const rigMeta = [rig.rigClass?.replace('_', ' '), rig.lengthFeet ? `${rig.lengthFeet}ft` : null, rig.fuelType].filter(Boolean).join(' · ');
 
   const TABS = [
-    { id: 'feed', label: '🗺️ Feed' },
-    { id: 'journey', label: '📖 Journey' },
-    { id: 'moments', label: '⭐ Moments' },
-    { id: 'community', label: '👥 Community' },
-    { id: 'overview', label: 'About' },
-    { id: 'trips', label: 'Trips' },
-    { id: 'mods', label: 'Mods' },
-    { id: 'stats', label: 'Stats' },
+    { id: 'feed', label: '🗺️ Journey' },
+    { id: 'photos', label: '📸 Photos' },
+    { id: 'videos', label: '🎥 Videos' },
+    { id: 'campsites', label: '🏕 Campsites' },
+    { id: 'recs', label: '⭐ Recs' },
+    { id: 'mods-hub', label: '🧰 Mods' },
+    { id: 'gear', label: '📦 Gear' },
+    { id: 'maintenance', label: '🛠 Maintenance' },
+    { id: 'resources', label: '📄 Resources' },
+    { id: 'achievements', label: '🏆 Achievements' },
+    { id: 'community-hub', label: '👥 Community' },
+    { id: 'overview', label: 'ℹ️ About' },
   ];
 
   return (
@@ -572,10 +577,17 @@ export default function RigProfilePage() {
               <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
             )}
 
-            {/* ═══ COMMUNITY TAB ═══ */}
-            {activeTab === 'community' && rig && (
-              <RigCommunityTab slug={slug!} rigId={rig.id} rigName={rigTitle} isOwner={isOwner} />
-            )}
+            {/* ═══ TRAVEL HUB TABS ═══ */}
+            {activeTab === 'photos' && <PhotosTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'videos' && <VideosTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'campsites' && <CampsitesTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'recs' && <RecsTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'mods-hub' && <ModsTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'gear' && <GearTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'maintenance' && <MaintenanceTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'resources' && <ResourcesTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'achievements' && <AchievementsTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'community-hub' && rig && <CommunityHubTab slug={slug!} isOwner={isOwner} rigName={rigTitle} />}
 
           </div>
         </div>

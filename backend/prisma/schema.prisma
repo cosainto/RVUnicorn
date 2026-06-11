@@ -440,6 +440,14 @@ model User {
   rigGuestMoments                                  RigGuestMoment[]
   rigFollowPreferences                             RigFollowPreference[]
   rigTripMemberships                               RigTripMember[]
+  rigVideosCreated                                 RigVideo[]
+  rigCampsiteVisitsCreated                         RigCampsiteVisit[]
+  rigRecommendationsCreated                        RigRecommendation[]
+  rigModsCreated                                   RigMod[]
+  rigGearItemsCreated                              RigGearItem[]
+  rigMaintenanceLogsCreated                        RigMaintenanceLog[]
+  rigResourcesCreated                              RigResource[]
+  rigCommunityContributionsCreated                 RigCommunityContribution[]
 
   @@index([email])
   @@index([username])
@@ -6284,6 +6292,15 @@ model Rig {
   activeTripId      String?
   rigTrips          RigTrip[]
   rigTripMilestones RigTripMilestone[]
+  rigVideos         RigVideo[]
+  rigCampsiteVisits RigCampsiteVisit[]
+  rigRecommendations RigRecommendation[]
+  rigMods           RigMod[]
+  rigGearItems      RigGearItem[]
+  rigMaintenanceLogs RigMaintenanceLog[]
+  rigResources      RigResource[]
+  rigAchievements   RigAchievement[]
+  rigCommunityContributions RigCommunityContribution[]
 }
 
 model RigPilot {
@@ -6940,4 +6957,189 @@ model RigTripMember {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tripId, userId])
+}
+
+// ═══ Rig Travel Hub Content ═══
+
+model RigVideo {
+  id           String   @id @default(cuid())
+  rigId        String
+  tripId       String?
+  stopId       String?
+  userId       String
+  title        String
+  description  String?
+  videoUrl     String
+  thumbnailUrl String?
+  duration     Int?
+  videoType    String   @default("SHORT_CLIP")
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rig          Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, videoType])
+}
+
+model RigCampsiteVisit {
+  id           String   @id @default(cuid())
+  rigId        String
+  campgroundId String
+  userId       String
+  visitedAt    DateTime
+  siteNumber   String?
+  rating       Int?
+  review       String?
+  photoUrls    String[]
+  tips         String[]
+  isFavorite   Boolean  @default(false)
+  isPrivate    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rig          Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([rigId, campgroundId, visitedAt])
+  @@index([rigId])
+}
+
+model RigRecommendation {
+  id           String   @id @default(cuid())
+  rigId        String
+  userId       String
+  type         String   @default("CAMPGROUND")
+  name         String
+  description  String?
+  address      String?
+  lat          Float?
+  lng          Float?
+  campgroundId String?
+  experienceId String?
+  rating       Int?
+  photoUrls    String[]
+  tags         String[]
+  isPublic     Boolean  @default(true)
+  saves        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rig          Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, type])
+}
+
+model RigMod {
+  id               String   @id @default(cuid())
+  rigId            String
+  userId           String
+  title            String
+  category         String   @default("OTHER")
+  description      String
+  beforePhotoUrls  String[]
+  afterPhotoUrls   String[]
+  videoUrls        String[]
+  cost             Float?
+  installDate      DateTime?
+  difficulty       String   @default("MODERATE")
+  productsUsed     Json?
+  installationNotes String?
+  likes            Int      @default(0)
+  saves            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  rig              Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, category])
+}
+
+model RigGearItem {
+  id           String   @id @default(cuid())
+  rigId        String
+  userId       String
+  name         String
+  category     String   @default("OTHER")
+  description  String?
+  brand        String?
+  purchaseUrl  String?
+  affiliateUrl String?
+  photoUrls    String[]
+  rating       Int?
+  review       String?
+  isFavorite   Boolean  @default(false)
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rig          Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, category])
+}
+
+model RigMaintenanceLog {
+  id               String    @id @default(cuid())
+  rigId            String
+  userId           String
+  title            String
+  category         String    @default("OTHER")
+  description      String?
+  mileageAtService Float?
+  cost             Float?
+  serviceProvider  String?
+  nextServiceMiles Float?
+  nextServiceDate  DateTime?
+  photoUrls        String[]
+  documents        String[]
+  visibility       String    @default("PRIVATE")
+  serviceDate      DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  rig              Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, serviceDate])
+}
+
+model RigResource {
+  id          String   @id @default(cuid())
+  rigId       String
+  userId      String
+  title       String
+  type        String   @default("PDF")
+  description String?
+  fileUrl     String
+  fileSize    Int?
+  isPublic    Boolean  @default(true)
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId])
+}
+
+model RigAchievement {
+  id              String   @id @default(cuid())
+  rigId           String
+  achievementType String
+  title           String
+  description     String
+  earnedAt        DateTime
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  rig             Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  @@unique([rigId, achievementType])
+}
+
+model RigCommunityContribution {
+  id            String   @id @default(cuid())
+  rigId         String
+  contributorId String
+  type          String   @default("MEMORY")
+  content       String?
+  photoUrls     String[]
+  campgroundId  String?
+  stopId        String?
+  tripId        String?
+  isApproved    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  rig           Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  contributor   User     @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+  @@index([rigId, isApproved])
 }
