@@ -448,6 +448,12 @@ model User {
   rigMaintenanceLogsCreated                        RigMaintenanceLog[]
   rigResourcesCreated                              RigResource[]
   rigCommunityContributionsCreated                 RigCommunityContribution[]
+  rigStoriesCreated                                RigStory[]
+  rigRecipesCreated                                RigRecipe[]
+  rigMemoriesCreated                               RigMemory[]
+  rigJournalEntriesCreated                         RigJournalEntry[]
+  rigChecklistsCreated                             RigChecklist[]
+  rigCoPilotRoles                                  RigCoPilot[]
 
   @@index([email])
   @@index([username])
@@ -6301,6 +6307,21 @@ model Rig {
   rigResources      RigResource[]
   rigAchievements   RigAchievement[]
   rigCommunityContributions RigCommunityContribution[]
+  rigStories        RigStory[]
+  rigRecipes        RigRecipe[]
+  rigMemories       RigMemory[]
+  rigJournalEntries RigJournalEntry[]
+  rigChecklists     RigChecklist[]
+  rigCoPilots       RigCoPilot[]
+  rigTimelineItems  RigTimelineItem[]
+  story             String?
+  storyUpdatedAt    DateTime?
+  coverPhotoUrl     String?
+  galleryPhotoUrls  String[]
+  totalStatesVisited    String[]
+  totalMilesAllTime     Float     @default(0)
+  totalNightsAllTime    Int       @default(0)
+  totalCampgroundsAllTime Int     @default(0)
 }
 
 model RigPilot {
@@ -7142,4 +7163,142 @@ model RigCommunityContribution {
   rig           Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
   contributor   User     @relation(fields: [contributorId], references: [id], onDelete: Cascade)
   @@index([rigId, isApproved])
+}
+
+// ═══ Rig Scrapbook & Identity Hub ═══
+
+model RigStory {
+  id            String   @id @default(cuid())
+  rigId         String
+  userId        String
+  title         String
+  body          String
+  coverImageUrl String?
+  tags          String[]
+  campgroundId  String?
+  tripId        String?
+  stopId        String?
+  isPublished   Boolean  @default(true)
+  likes         Int      @default(0)
+  views         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  rig           Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId])
+}
+
+model RigRecipe {
+  id              String   @id @default(cuid())
+  rigId           String
+  userId          String
+  title           String
+  description     String?
+  ingredients     Json
+  steps           Json
+  photoUrls       String[]
+  cookingMethod   String   @default("CAMPFIRE")
+  servings        Int?
+  prepTimeMinutes Int?
+  cookTimeMinutes Int?
+  difficulty      String   @default("EASY")
+  campgroundId    String?
+  tripId          String?
+  tags            String[]
+  likes           Int      @default(0)
+  saves           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  rig             Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, cookingMethod])
+}
+
+model RigMemory {
+  id          String    @id @default(cuid())
+  rigId       String
+  userId      String
+  title       String
+  description String?
+  photoUrls   String[]
+  date        DateTime?
+  campgroundId String?
+  tripId      String?
+  stopId      String?
+  isPinned    Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  rig         Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId, isPinned])
+}
+
+model RigJournalEntry {
+  id            String   @id @default(cuid())
+  rigId         String
+  userId        String
+  title         String
+  body          String
+  coverImageUrl String?
+  mood          String?
+  weather       String?
+  campgroundId  String?
+  tripId        String?
+  stopId        String?
+  isPublic      Boolean  @default(true)
+  likes         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  rig           Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId])
+}
+
+model RigChecklist {
+  id          String   @id @default(cuid())
+  rigId       String
+  userId      String
+  title       String
+  description String?
+  items       Json
+  category    String   @default("PACKING")
+  isPublic    Boolean  @default(true)
+  saves       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  rig         Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([rigId])
+}
+
+model RigCoPilot {
+  id         String   @id @default(cuid())
+  rigId      String
+  userId     String
+  role       String   @default("COPILOT")
+  joinedAt   DateTime @default(now())
+  tripsCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  rig        Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([rigId, userId])
+}
+
+model RigTimelineItem {
+  id              String   @id @default(cuid())
+  rigId           String
+  itemType        String
+  refId           String
+  refType         String
+  title           String?
+  previewImageUrl String?
+  previewText     String?
+  tripId          String?
+  stopId          String?
+  occurredAt      DateTime
+  createdAt       DateTime @default(now())
+  rig             Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  @@index([rigId, occurredAt])
+  @@unique([rigId, refId, refType])
 }

@@ -13,6 +13,8 @@ import RigCommunityTab from '../../components/rig/RigCommunityTab';
 import RigFeedV2 from '../../components/rig/RigFeedV2';
 import RigTripMode from '../../components/rig/RigTripMode';
 import { PhotosTab, VideosTab, CampsitesTab, RecsTab, ModsTab, GearTab, MaintenanceTab, ResourcesTab, AchievementsTab, CommunityHubTab } from '../../components/rig/RigHubTabs';
+import RigTimelineTab from '../../components/rig/RigTimelineTab';
+import RigRecipesTab from '../../components/rig/RigRecipesTab';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -37,7 +39,7 @@ export default function RigProfilePage() {
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState('feed');
+  const [activeTab, setActiveTab] = useState('timeline');
   const [mods, setMods] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
@@ -115,15 +117,18 @@ export default function RigProfilePage() {
   const rigMeta = [rig.rigClass?.replace('_', ' '), rig.lengthFeet ? `${rig.lengthFeet}ft` : null, rig.fuelType].filter(Boolean).join(' · ');
 
   const TABS = [
-    { id: 'feed', label: '🗺️ Journey' },
+    { id: 'timeline', label: '📖 Timeline' },
+    { id: 'feed', label: '🗺️ Trips' },
     { id: 'photos', label: '📸 Photos' },
     { id: 'videos', label: '🎥 Videos' },
-    { id: 'campsites', label: '🏕 Campsites' },
-    { id: 'recs', label: '⭐ Recs' },
+    { id: 'recipes', label: '🍳 Recipes' },
     { id: 'mods-hub', label: '🧰 Mods' },
+    { id: 'campsites', label: '🏕 Campsites' },
+    { id: 'journal', label: '📖 Journal' },
+    { id: 'maps', label: '🗺️ Maps' },
+    { id: 'recs', label: '⭐ Recs' },
     { id: 'gear', label: '📦 Gear' },
     { id: 'maintenance', label: '🛠 Maintenance' },
-    { id: 'resources', label: '📄 Resources' },
     { id: 'achievements', label: '🏆 Achievements' },
     { id: 'community-hub', label: '👥 Community' },
     { id: 'overview', label: 'ℹ️ About' },
@@ -242,6 +247,39 @@ export default function RigProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* ═══ OUR STORY SECTION ═══ */}
+        {(rig.story || isOwner) && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4" style={{ background: CN.body }}>
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.gold }}>Our Story</h3>
+            {rig.story ? (
+              <p className="text-sm leading-relaxed line-clamp-3" style={{ color: CN.cream }}>{rig.story}</p>
+            ) : isOwner ? (
+              <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family, where has it taken you?</p>
+            ) : null}
+            {rig.purchaseDate && <p className="text-[10px] mt-1" style={{ color: CN.muted }}>Traveling since {new Date(rig.purchaseDate).getFullYear()}</p>}
+          </div>
+        )}
+
+        {/* ═══ CO-PILOTS SECTION ═══ */}
+        {rig.pilots?.length > 0 && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-4" style={{ background: CN.body }}>
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.muted }}>🚐 Who Travels in This Rig</h3>
+            <div className="flex gap-3">
+              {rig.pilots.map((p: any) => (
+                <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1">
+                  {p.user?.profilePicture ? (
+                    <img src={p.user.profilePicture} alt={p.user.firstName} className="w-10 h-10 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{p.user?.firstName?.[0] || '?'}</div>
+                  )}
+                  <span className="text-[10px] font-medium" style={{ color: CN.cream }}>{p.user?.firstName}</span>
+                  <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.15)', color: CN.gold }}>{p.role || 'Pilot'}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ═══ ZONE 2: BODY ═══ */}
         <div style={{ background: CN.body }}>
@@ -575,6 +613,29 @@ export default function RigProfilePage() {
             {/* ═══ FEED / TRIP MODE TAB ═══ */}
             {activeTab === 'feed' && rig && (
               <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
+            )}
+
+            {/* ═══ TIMELINE TAB ═══ */}
+            {activeTab === 'timeline' && <RigTimelineTab slug={slug!} isOwner={isOwner} />}
+
+            {/* ═══ RECIPES TAB ═══ */}
+            {activeTab === 'recipes' && <RigRecipesTab slug={slug!} isOwner={isOwner} />}
+
+            {/* ═══ JOURNAL TAB ═══ */}
+            {activeTab === 'journal' && rig && (
+              <div>
+                {/* Renders journal entries — reuses stories endpoint for now */}
+                <RigTimelineTab slug={slug!} isOwner={isOwner} />
+              </div>
+            )}
+
+            {/* ═══ MAPS TAB ═══ */}
+            {activeTab === 'maps' && (
+              <div className="text-center py-12">
+                <span className="text-4xl block mb-2">🗺️</span>
+                <p className="text-sm text-white/40">Interactive route map coming soon</p>
+                <p className="text-xs text-white/25 mt-1">Showing all states visited, campgrounds, and routes</p>
+              </div>
             )}
 
             {/* ═══ TRAVEL HUB TABS ═══ */}
