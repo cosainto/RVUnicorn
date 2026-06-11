@@ -123,43 +123,76 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
         const isCheckIn = item.itemType === 'CHECKIN';
         const title = smartTitle(item);
 
-        // ── MILESTONE CARD ──
+        // ── MILESTONE CARD (celebratory gold) ──
         if (isMilestone) {
+          const milestoneEmoji = title.includes('mile') || title.includes('Mile') ? '🚐' : title.includes('state') || title.includes('State') || title.includes('Entered') ? '🗺️' : title.includes('campground') || title.includes('Campground') ? '🏕️' : title.includes('park') || title.includes('Park') ? '🌲' : '🏆';
           return (
-            <div key={item.id} className="rounded-2xl p-5 text-center shadow-md" style={{ background: 'linear-gradient(135deg, rgba(232,168,56,0.2), rgba(212,98,26,0.15))', border: '1px solid rgba(232,168,56,0.3)' }}>
-              <span className="text-4xl block mb-2">🏆</span>
-              <h4 className="text-lg font-bold" style={{ color: '#E8A838' }}>{title}</h4>
-              {item.previewText && <p className="text-xs text-white/50 mt-1">{item.previewText}</p>}
-              <p className="text-[10px] text-white/25 mt-2">{timeAgo(item.occurredAt)}</p>
+            <div key={item.id} className="rounded-2xl text-center shadow-lg overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #C9A84C, #E8A020, #D4881A)', animation: 'shimmer 3s ease-in-out infinite' }}>
+              <style>{`@keyframes shimmer { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.08); } }`}</style>
+              <div className="py-8 px-6">
+                <span className="text-5xl block mb-3">{milestoneEmoji}</span>
+                <h4 className="text-xl font-bold text-white drop-shadow-md">{title}</h4>
+                {item.previewText && (() => { try { const d = JSON.parse(item.previewText); return d.hitchLine ? <p className="text-sm text-white/80 mt-2 italic">{d.hitchLine}</p> : <p className="text-sm text-white/70 mt-2">{item.previewText}</p>; } catch { return <p className="text-sm text-white/70 mt-2">{item.previewText}</p>; } })()}
+                <p className="text-[10px] text-white/50 mt-3">{timeAgo(item.occurredAt)}</p>
+              </div>
             </div>
           );
         }
 
-        // ── CHECK-IN CARD (compact, no big image) ──
+        // ── CHECK-IN CARD (celebratory arrival with hero photo) ──
         if (isCheckIn) {
+          let checkinData: any = {};
+          try { checkinData = JSON.parse(item.previewText || '{}'); } catch { checkinData = { state: item.previewText }; }
+          const campgroundName = (title || '').replace('Checked into ', '');
+          const location = checkinData.location || checkinData.city || checkinData.state || '';
+          const hitchLine = checkinData.hitchLine || 'Another adventure begins! 🔥';
+          const hasPhoto = !!item.previewImageUrl;
+
           return (
-            <div key={item.id} className="rounded-2xl shadow-md overflow-hidden" style={{ background: '#162236', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="p-4">
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-3">
-                  {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-9 h-9 rounded-full object-cover" /> : <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center text-sm" style={{ color: '#E8A838' }}>{ownerName?.[0] || '🚐'}</div>}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white">{rigName || 'Rig'} <span className="text-white/40 font-normal">checked in</span></p>
-                    <p className="text-[10px] text-white/30">{timeAgo(item.occurredAt)}</p>
+            <div key={item.id} className="rounded-2xl shadow-lg overflow-hidden" style={{ background: '#162236' }}>
+              {/* Hero image with overlay */}
+              <div className="relative" style={{ height: '220px' }}>
+                {hasPhoto ? (
+                  <img src={item.previewImageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a4a3a, #0F1C35, #1B2E50)' }} />
+                )}
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.15) 100%)' }} />
+
+                {/* Top row: avatar + rig name + timestamp */}
+                <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
+                  <div className="flex items-center gap-2">
+                    {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" /> : <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs text-white">{ownerName?.[0] || '🚐'}</div>}
+                    <span className="text-xs text-white/80 font-semibold">{rigName} <span className="text-white/50 font-normal">just arrived 🎉</span></span>
                   </div>
+                  <span className="text-[10px] text-white/40">{timeAgo(item.occurredAt)}</span>
                 </div>
-                {/* Check-in content */}
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(76,175,130,0.1)', border: '1px solid rgba(76,175,130,0.2)' }}>
-                  <MapPin className="w-5 h-5 text-green-400 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{title}</h4>
-                    {item.previewText && <p className="text-[11px] text-white/40">{item.previewText}</p>}
-                  </div>
+
+                {/* Center: campground name */}
+                <div className="absolute bottom-14 left-0 right-0 text-center px-6">
+                  <span className="text-3xl block mb-1">📍</span>
+                  <h4 className="text-xl font-bold text-white drop-shadow-lg leading-tight">{campgroundName}</h4>
+                  {location && <p className="text-sm text-white/60 mt-1">{location}</p>}
+                </div>
+
+                {/* Bottom: Hitch one-liner */}
+                <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_32,h_32,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-7 h-7 rounded-full flex-shrink-0" />
+                  <span className="text-[11px] text-white/70 italic bg-black/30 backdrop-blur-sm px-2.5 py-1 rounded-full">{hitchLine}</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-3 text-[11px] text-white/40 mb-2">
+                  <span>📅 {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  {checkinData.state && <span>🗺️ {checkinData.state}</span>}
                 </div>
                 {/* Actions */}
-                <div className="flex items-center gap-5 mt-3 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition"><Heart className="w-4 h-4" />Like</button>
-                  <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition"><MessageCircle className="w-4 h-4" />Comment</button>
+                <div className="flex items-center gap-5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-red-400 transition"><Heart className="w-4 h-4" />Like</button>
+                  <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-blue-400 transition"><MessageCircle className="w-4 h-4" />Comment</button>
                   <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition ml-auto"><Share2 className="w-4 h-4" /></button>
                 </div>
               </div>

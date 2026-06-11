@@ -6906,6 +6906,7 @@ model RigTripStop {
   city                  String?
   state                 String?
   country               String    @default("US")
+  hitchOneLiner         String?
   lat                   Float?
   lng                   Float?
   arrivedAt             DateTime

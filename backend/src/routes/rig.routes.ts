@@ -1899,6 +1899,20 @@ router.post('/:slug/trips/:tripId/stops', authenticateToken, async (req: any, re
       }).catch(() => {});
     }
 
+    // Generate Hitch one-liner (non-blocking)
+    setImmediate(async () => {
+      const FALLBACK_LINES = ['Another adventure begins! 🔥', 'The campfire is calling! 🏕️', 'New stop, new memories! 🗺️', 'Welcome to your next chapter! ✨', 'The open road delivered again! 🚐', 'Time to set up camp! ⛺', 'Home is wherever you park it! 🏠', 'Let the campfire stories begin! 🔥'];
+      let hitchLine = FALLBACK_LINES[Math.floor(Math.random() * FALLBACK_LINES.length)];
+      try {
+        const Anthropic = require('@anthropic-ai/sdk');
+        const anthropic = new Anthropic.default();
+        const resp = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 30,
+          messages: [{ role: 'user', content: `You are Hitch, a fun campfire guide. Generate ONE short punchy celebratory arrival message (max 8 words) for an RV arriving at ${name}${state ? ' in ' + state : ''}. Campfire-warm tone. No hashtags. Just the message.` }] });
+        hitchLine = (resp.content[0] as any)?.text?.trim() || hitchLine;
+      } catch {}
+      await prisma.rigTripStop.update({ where: { id: stop.id }, data: { hitchOneLiner: hitchLine } }).catch(() => {});
+    });
+
     res.status(201).json(stop);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
