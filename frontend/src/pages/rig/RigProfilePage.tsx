@@ -265,25 +265,39 @@ export default function RigProfilePage() {
           </div>
         )}
 
-        {/* ═══ CO-PILOTS SECTION ═══ */}
-        {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).length > 0 && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-4" style={{ background: CN.body }}>
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.muted }}>🚐 Who Travels in This Rig</h3>
-            <div className="flex gap-3">
-              {rig.pilots.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
-                <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1">
-                  {p.user?.profilePicture ? (
-                    <img src={p.user.profilePicture} alt={p.user.firstName} className="w-10 h-10 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{p.user?.firstName?.[0] || '?'}</div>
-                  )}
-                  <span className="text-[10px] font-medium" style={{ color: CN.cream }}>{p.user?.firstName}</span>
-                  <span className="text-[8px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.15)', color: CN.gold }}>{p.role || 'Co-Pilot'}</span>
-                </Link>
-              ))}
-            </div>
+        {/* ═══ THE CREW ═══ */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6" style={{ background: CN.body }}>
+          <h3 className="text-lg font-bold mb-4" style={{ color: CN.cream }}>🚐 The Crew</h3>
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
+            {/* Owner card */}
+            <Link to={`/profile/${owner.username || owner.id}`} className="flex flex-col items-center gap-2 p-4 rounded-2xl min-w-[120px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              {owner.profilePicture ? (
+                <img src={owner.profilePicture} alt={owner.firstName} className="w-16 h-16 rounded-full object-cover border-3" style={{ borderColor: CN.gold }} />
+              ) : (
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
+              )}
+              <div className="text-center">
+                <p className="text-sm font-bold" style={{ color: CN.cream }}>{owner.firstName} {owner.lastName?.[0] ? owner.lastName[0] + '.' : ''}</p>
+                <span className="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'linear-gradient(135deg, #C9A84C, #E8A838)', color: '#0F1C35' }}>Owner</span>
+              </div>
+            </Link>
+
+            {/* Co-pilots */}
+            {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
+              <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-2 p-4 rounded-2xl min-w-[120px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                {p.user?.profilePicture ? (
+                  <img src={p.user.profilePicture} alt={p.user.firstName} className="w-16 h-16 rounded-full object-cover border-3" style={{ borderColor: '#4CAF82' }} />
+                ) : (
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.user?.firstName?.[0] || '?'}</div>
+                )}
+                <div className="text-center">
+                  <p className="text-sm font-bold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName?.[0] ? p.user.lastName[0] + '.' : ''}</p>
+                  <span className="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.role === 'COPILOT' ? 'Co-Pilot' : p.role === 'CREW' ? 'Crew' : p.role || 'Co-Pilot'}</span>
+                </div>
+              </Link>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* ═══ ZONE 2: BODY ═══ */}
         <div style={{ background: CN.body }}>
