@@ -179,6 +179,70 @@ router.post('/migrate-from-user', authenticateToken, async (req: Request, res: R
   }
 });
 
+// ============== USER'S OWN RIGS ==============
+
+router.get('/user/:userId/owned', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const rigs = await prisma.rig.findMany({
+      where: { ownerId: req.params.userId, isPublic: true },
+      select: { id: true, slug: true, rigName: true, heroPhoto: true, year: true, make: true, model: true, rigClass: true, rigEmoji: true },
+      take: 5,
+    });
+    res.json(rigs);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to get user rigs' });
+  }
+});
+
+// ============== RIGS USER FOLLOWS ==============
+
+router.get('/user/:userId/following', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const [follows, total] = await Promise.all([
+      prisma.rigFollow.findMany({
+        where: { userId },
+        include: {
+          rig: {
+            select: {
+              id: true,
+              slug: true,
+              rigName: true,
+              heroPhoto: true,
+              year: true,
+              make: true,
+              model: true,
+              rigClass: true,
+              followerCount: true,
+              totalTripCount: true,
+              totalStatesCount: true,
+              owner: { select: safeUserSelect },
+            },
+          },
+        },
+        orderBy: { followedAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.rigFollow.count({ where: { userId } }),
+    ]);
+
+    res.json({
+      rigs: follows.map((f: any) => ({ ...f.rig, followedAt: f.followedAt })),
+      total,
+      page,
+      hasMore: skip + follows.length < total,
+    });
+  } catch (error: any) {
+    console.error('[Rig] get user following rigs error:', error.message);
+    res.status(500).json({ error: 'Failed to get following rigs' });
+  }
+});
+
 // ============== PUBLIC RIG PROFILE ==============
 
 router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
@@ -214,7 +278,16 @@ router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Rig not found' });
     }
 
-    res.json(rig);
+    // Check if the requesting user follows this rig
+    let isFollowing = false;
+    if (userId) {
+      const follow = await prisma.rigFollow.findUnique({
+        where: { rigId_userId: { rigId: rig.id, userId } },
+      });
+      isFollowing = !!follow;
+    }
+
+    res.json({ ...rig, isFollowing });
   } catch (error: any) {
     console.error('[Rig] get profile error:', error.message);
     res.status(500).json({ error: 'Failed to get rig profile' });
@@ -700,14 +773,22 @@ router.post('/:rigId/follow', authenticateToken, async (req: Request, res: Respo
 router.get('/:rigId/followers', async (req: Request, res: Response) => {
   try {
     const { rigId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
 
-    const followers = await prisma.rigFollow.findMany({
-      where: { rigId },
-      include: { user: { select: safeUserSelect } },
-      orderBy: { followedAt: 'desc' },
-    });
+    const [followers, total] = await Promise.all([
+      prisma.rigFollow.findMany({
+        where: { rigId },
+        include: { user: { select: safeUserSelect } },
+        orderBy: { followedAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.rigFollow.count({ where: { rigId } }),
+    ]);
 
-    res.json(followers);
+    res.json({ followers, total, page, hasMore: skip + followers.length < total });
   } catch (error: any) {
     console.error('[Rig] get followers error:', error.message);
     res.status(500).json({ error: 'Failed to get followers' });
