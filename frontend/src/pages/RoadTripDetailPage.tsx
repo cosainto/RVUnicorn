@@ -52,7 +52,8 @@ export default function RoadTripDetailPage() {
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [harvestHostResults, setHarvestHostResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const [stopTab, setStopTab] = useState<'events' | 'campgrounds' | 'wishlist' | 'harvest'>('events');
+  const [stopTab, setStopTab] = useState<'events' | 'campgrounds' | 'wishlist' | 'harvest' | 'overnight'>('events');
+  const [overnightResults, setOvernightResults] = useState<any[]>([]);
   const [driveInfos, setDriveInfos] = useState<Record<string, DriveInfo>>({});
   const [loadingDrive, setLoadingDrive] = useState(false); // kept for reorder flow only
   const [generatingPlans, setGeneratingPlans] = useState(false);
@@ -213,6 +214,36 @@ export default function RoadTripDetailPage() {
       setHarvestHostResults(data?.hosts || data || []);
     } catch { setHarvestHostResults([]); }
     setSearching(false);
+  };
+
+  const searchOvernightStops = async (q: string) => {
+    if (!q || q.length < 2) { setOvernightResults([]); return; }
+    setSearching(true);
+    try {
+      // Search by name — use the state of an existing stop for proximity if available
+      const firstStop = roadTrip?.stops?.[0];
+      const lat = firstStop?.campground?.latitude || firstStop?.latitude;
+      const lng = firstStop?.campground?.longitude || firstStop?.longitude;
+      const params = lat && lng ? `&lat=${lat}&lng=${lng}&radius=500` : '';
+      const { data } = await api.get(`/overnight-stops?search=${encodeURIComponent(q)}${params}`);
+      setOvernightResults(Array.isArray(data) ? data : []);
+    } catch { setOvernightResults([]); }
+    setSearching(false);
+  };
+
+  const addOvernightStop = async (stop: any) => {
+    try {
+      const { data: newEvent } = await api.post('/events', {
+        title: `${'\u{1F319}'} ${stop.name}`,
+        location: stop.city ? `${stop.city}, ${stop.state}` : (stop.state || stop.address || ''),
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        isWishlist: true,
+        description: `Overnight stop at ${stop.name}${stop.chain ? ' (' + stop.chain.replace(/_/g, ' ') + ')' : ''}`,
+      });
+      await addStop(newEvent.id);
+      showToast(`Added ${'\u{1F319}'} ${stop.name} to your trip`);
+    } catch { showToast('Failed to add overnight stop', 'error'); }
   };
 
   const addHarvestHostStop = async (host: any) => {
@@ -965,17 +996,18 @@ export default function RoadTripDetailPage() {
                   className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-4">
-                {(['events', 'campgrounds', 'harvest', 'wishlist'] as const).map(tab => (
+                {(['events', 'campgrounds', 'overnight', 'harvest', 'wishlist'] as const).map(tab => (
                   <button key={tab} onClick={() => {
                     setStopTab(tab);
                     setSearchQuery('');
                     setSearchResults([]);
                     setCampgroundResults([]);
                     setHarvestHostResults([]);
+                    setOvernightResults([]);
                     if (tab === 'wishlist') loadWishlist();
                   }}
                     className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${stopTab === tab ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {tab === 'events' ? '📅 Events' : tab === 'campgrounds' ? '🏕️ Camps' : tab === 'harvest' ? '🍇 Harvest' : '🧞 Wishlist'}
+                    {tab === 'events' ? '\u{1F4C5} Events' : tab === 'campgrounds' ? '\u{1F3D5}\uFE0F Camps' : tab === 'overnight' ? '\u{1F319} Night' : tab === 'harvest' ? '\u{1F347} Harvest' : '\u{1F9DE} Wishlist'}
                   </button>
                 ))}
               </div>
@@ -987,9 +1019,10 @@ export default function RoadTripDetailPage() {
                       setSearchQuery(e.target.value);
                       if (stopTab === 'events') searchEvents(e.target.value);
                       else if (stopTab === 'campgrounds') searchCampgrounds(e.target.value);
+                      else if (stopTab === 'overnight') searchOvernightStops(e.target.value);
                       else if (stopTab === 'harvest') searchHarvestHosts(e.target.value);
                     }}
-                    placeholder={stopTab === 'events' ? 'Search your events...' : stopTab === 'campgrounds' ? 'Search campgrounds...' : 'Search Harvest Hosts, wineries, farms...'}
+                    placeholder={stopTab === 'events' ? 'Search your events...' : stopTab === 'campgrounds' ? 'Search campgrounds...' : stopTab === 'overnight' ? 'Search Cracker Barrel, Walmart, Love\'s...' : 'Search Harvest Hosts, wineries, farms...'}
                     className="input w-full pl-9" autoFocus />
                 </div>
               )}
@@ -1041,6 +1074,29 @@ export default function RoadTripDetailPage() {
                   ))}
                   {!searchQuery && <p className="text-sm text-gray-400 text-center py-4">Search wineries, farms, breweries and more</p>}
                   {searchQuery && !searching && harvestHostResults.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No Harvest Hosts found</p>}
+                </div>
+              )}
+              {stopTab === 'overnight' && (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {overnightResults.map((stop: any) => (
+                    <button key={stop.id} onClick={() => addOvernightStop(stop)}
+                      className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '2px solid #E8A838' }}>
+                        <span className="text-white text-sm">{'\u{1F319}'}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{stop.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">{stop.city}, {stop.state}</p>
+                          {stop.chain && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{stop.chain.replace(/_/g, ' ')}</span>}
+                        </div>
+                        {stop.isRVFriendly === true && <p className="text-[10px] text-green-600 mt-0.5">{'\u2705'} RV-friendly</p>}
+                        {stop.visitCount > 0 && <p className="text-[10px] text-gray-400">{stop.visitCount} visits</p>}
+                      </div>
+                    </button>
+                  ))}
+                  {!searchQuery && <p className="text-sm text-gray-400 text-center py-4">Search Cracker Barrel, Walmart, Love's, Flying J and more</p>}
+                  {searchQuery && !searching && overnightResults.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No overnight stops found</p>}
                 </div>
               )}
               {stopTab === 'wishlist' && (

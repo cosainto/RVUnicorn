@@ -5,13 +5,41 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 const router = Router();
 const prisma = new PrismaClient() as any;
 
-// GET /api/overnight-stops?lat=&lng=&radius=&type=
+// GET /api/overnight-stops?lat=&lng=&radius=&type=&search=
 router.get('/', optionalAuth, async (req: any, res) => {
   try {
-    const { lat, lng, radius = 25, type, state } = req.query;
+    const { lat, lng, radius = 25, type, state, search } = req.query;
     let stops: any[] = [];
 
-    if (lat && lng) {
+    if (search && (search as string).length >= 2) {
+      // Text search by name or chain
+      const q = search as string;
+      const where: any = {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { chain: { contains: q.toUpperCase().replace(/['\s]/g, '_'), mode: 'insensitive' } },
+          { city: { contains: q, mode: 'insensitive' } },
+        ],
+        ...(type ? { stopType: type as string } : {}),
+      };
+      // If lat/lng provided with search, add proximity filter
+      if (lat && lng) {
+        const latN = parseFloat(lat as string);
+        const lngN = parseFloat(lng as string);
+        const r = parseFloat(radius as string) / 69;
+        where.latitude = { gte: latN - r, lte: latN + r };
+        where.longitude = { gte: lngN - r, lte: lngN + r };
+      }
+      stops = await prisma.overnightStop.findMany({
+        where,
+        include: {
+          reviews: { select: { rating: true, safetyRating: true } },
+          _count: { select: { reviews: true, visits: true } },
+        },
+        take: 20,
+        orderBy: { visitCount: 'desc' },
+      });
+    } else if (lat && lng) {
       const latN = parseFloat(lat as string);
       const lngN = parseFloat(lng as string);
       const r = parseFloat(radius as string) / 69; // degrees approx

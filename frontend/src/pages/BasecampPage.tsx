@@ -436,6 +436,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   const [campgroundSearch, setCampgroundSearch] = useState('');
   const [campgroundResults, setCampgroundResults] = useState<any[]>([]);
   const [searchingCampgrounds, setSearchingCampgrounds] = useState(false);
+  const [checkinLocationType, setCheckinLocationType] = useState<'campground' | 'overnight'>('campground');
+  const [overnightSearchResults, setOvernightSearchResults] = useState<any[]>([]);
   const [posting, setPosting] = useState(false);
   const [friends, setFriends] = useState<any[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -601,12 +603,14 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
         }
       }
 
-      // If checking into a campground, create a check-in
+      // If checking into a campground or overnight stop, create a check-in
       if (selectedCampground) {
         try {
-          await api.post('/checkin', {
-            campgroundId: selectedCampground.id,
-          });
+          if ((selectedCampground as any)._isOvernightStop) {
+            await api.post('/checkins', { overnightSpotId: selectedCampground.id });
+          } else {
+            await api.post('/checkins', { campgroundId: selectedCampground.id });
+          }
         } catch (e) {
           console.error('Check-in failed:', e);
         }
@@ -722,11 +726,14 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
             <div className="bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
               {/* Check-in Banner */}
               {selectedCampground && (
-                <div className="px-4 py-2 bg-green-50 border-b border-green-100 rounded-t-2xl">
+                <div className={`px-4 py-2 border-b rounded-t-2xl ${(selectedCampground as any)._isOvernightStop ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-green-700 font-medium">
-                      Checking in at {selectedCampground.name}
+                    {(selectedCampground as any)._isOvernightStop
+                      ? <span className="text-sm">{'\u{1F319}'}</span>
+                      : <MapPin className="w-4 h-4 text-green-600" />
+                    }
+                    <span className={`text-sm font-medium ${(selectedCampground as any)._isOvernightStop ? 'text-amber-700' : 'text-green-700'}`}>
+                      {(selectedCampground as any)._isOvernightStop ? 'Overnighting at' : 'Checking in at'} {selectedCampground.name}
                     </span>
                     <button
                       onClick={() => setSelectedCampground(null)}
@@ -892,16 +899,37 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
             {/* Check-in Search Panel */}
             {showCheckIn && !selectedCampground && (
               <div className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Tent className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-gray-800">Check in to a campground</span>
+                {/* Toggle: Campground / Overnight Stop */}
+                <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg mb-2">
+                  <button
+                    onClick={() => { setCheckinLocationType('campground'); setCampgroundSearch(''); setCampgroundResults([]); setOvernightSearchResults([]); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition ${checkinLocationType === 'campground' ? 'bg-white shadow text-green-700' : 'text-gray-500'}`}
+                  >
+                    <Tent className="w-3.5 h-3.5" /> Campground
+                  </button>
+                  <button
+                    onClick={() => { setCheckinLocationType('overnight'); setCampgroundSearch(''); setCampgroundResults([]); setOvernightSearchResults([]); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition ${checkinLocationType === 'overnight' ? 'bg-white shadow' : 'text-gray-500'}`}
+                    style={checkinLocationType === 'overnight' ? { color: '#1B2B4B' } : {}}
+                  >
+                    {'\u{1F319}'} Overnight Stop
+                  </button>
                 </div>
+
                 <div className="relative">
                   <input
                     type="text"
                     value={campgroundSearch}
-                    onChange={(e) => setCampgroundSearch(e.target.value)}
-                    placeholder="Search campgrounds..."
+                    onChange={(e) => {
+                      setCampgroundSearch(e.target.value);
+                      if (checkinLocationType === 'overnight' && e.target.value.length >= 2) {
+                        setSearchingCampgrounds(true);
+                        api.get(`/overnight-stops?search=${encodeURIComponent(e.target.value)}`).then(r => {
+                          setOvernightSearchResults(Array.isArray(r.data) ? r.data : []);
+                        }).catch(() => setOvernightSearchResults([])).finally(() => setSearchingCampgrounds(false));
+                      }
+                    }}
+                    placeholder={checkinLocationType === 'campground' ? 'Search campgrounds...' : "Search Cracker Barrel, Walmart, Love's..."}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                   {searchingCampgrounds && (
@@ -910,7 +938,9 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
                     </div>
                   )}
                 </div>
-                {campgroundResults.length > 0 && (
+
+                {/* Campground results */}
+                {checkinLocationType === 'campground' && campgroundResults.length > 0 && (
                   <div className="mt-2 max-h-48 overflow-y-auto">
                     {campgroundResults.map((cg) => (
                       <button
@@ -928,18 +958,47 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-800 truncate">{cg.name}</p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {cg.location || cg.state}
-                          </p>
+                          <p className="text-xs text-gray-500 truncate">{cg.location || cg.state}</p>
                         </div>
                         <MapPin className="w-4 h-4 text-gray-400" />
                       </button>
                     ))}
                   </div>
                 )}
-                {campgroundSearch && campgroundResults.length === 0 && !searchingCampgrounds && (
+
+                {/* Overnight stop results */}
+                {checkinLocationType === 'overnight' && overnightSearchResults.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto">
+                    {overnightSearchResults.map((stop: any) => (
+                      <button
+                        key={stop.id}
+                        onClick={() => {
+                          // Set as selected "campground" equivalent with overnight type marker
+                          setSelectedCampground({ ...stop, _isOvernightStop: true, name: stop.name, location: stop.city ? `${stop.city}, ${stop.state}` : stop.state });
+                          setShowCheckIn(false);
+                          setCampgroundSearch('');
+                          setOvernightSearchResults([]);
+                        }}
+                        className="w-full flex items-center gap-3 p-2 hover:bg-amber-50 rounded-lg text-left"
+                      >
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '2px solid #E8A838' }}>
+                          <span className="text-white text-sm">{'\u{1F319}'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 truncate">{stop.name}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {stop.city}, {stop.state}
+                            {stop.chain && <span className="ml-1 text-amber-600">{'\u00B7'} {stop.chain.replace(/_/g, ' ')}</span>}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {campgroundSearch && ((checkinLocationType === 'campground' && campgroundResults.length === 0) || (checkinLocationType === 'overnight' && overnightSearchResults.length === 0)) && !searchingCampgrounds && (
                   <p className="text-sm text-gray-500 text-center py-3">
-                    No campgrounds found
+                    No {checkinLocationType === 'campground' ? 'campgrounds' : 'overnight stops'} found
                   </p>
                 )}
               </div>
