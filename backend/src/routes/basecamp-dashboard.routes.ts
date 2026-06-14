@@ -111,9 +111,12 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
 
     if (ANTHROPIC_API_KEY) {
       try {
-        const coPilotRule = coPilotNames.length > 0
-          ? `IMPORTANT: ${coPilotNames.join(', ')} travel WITH ${firstName} on their rig — they are co-pilots/family, NOT friends. Never call them friends. If mentioning them, say "your co-pilot ${coPilotNames[0]}" or "you and ${coPilotNames[0]}". If they share the same last campground, frame it as "you and ${coPilotNames[0]} just wrapped up an adventure at [place] together", not as if they did something independently.`
-          : '';
+        console.log('[Briefing] Co-pilots found:', coPilotNames);
+        console.log('[Briefing] Context:', context);
+
+        const systemPrompt = coPilotNames.length > 0
+          ? `You are Hitch, a warm campfire guide for RVUnicorn. CRITICAL RULE: The following people are co-pilots who travel ON THE SAME RIG as ${firstName}. They are family or travel partners. NEVER refer to them as "friend" or "friends": ${coPilotNames.join(', ')}. Instead say "your co-pilot ${coPilotNames[0]}" or "you and ${coPilotNames[0]}". If they visited the same campground, it was a SHARED trip — say "you and ${coPilotNames[0]} just wrapped up at [place] together". The word "friend" must ONLY be used for people who are NOT co-pilots.`
+          : 'You are Hitch, a warm campfire guide for RVUnicorn.';
 
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -121,7 +124,8 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 150,
-            messages: [{ role: 'user', content: `You are Hitch, a warm campfire guide for RVUnicorn. Write a 2-3 sentence personalized morning briefing for ${firstName}. ${coPilotRule} Context: ${context}. Mention their upcoming trip if they have one, or one thing a friend is doing (NOT a co-pilot). Add one action item for their rig or trip prep. End with a question or suggestion. Keep it conversational, warm, under 60 words. No hashtags or emojis.` }],
+            system: systemPrompt,
+            messages: [{ role: 'user', content: `Write a 2-3 sentence personalized morning briefing for ${firstName}. Context: ${context}. Mention their upcoming trip if they have one, or one thing a real friend (NOT a co-pilot) is doing. Add one action item for their rig or trip prep. End with a question or suggestion. Keep it conversational, warm, under 60 words. No hashtags or emojis.` }],
           }),
         });
         const aiData: any = await aiRes.json();
