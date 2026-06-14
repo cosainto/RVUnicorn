@@ -231,7 +231,7 @@ export default function CampgroundsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {overnightStops.map((stop: any) => (
-                <Link key={stop.id} to={`/overnight/${stop.id}`} className="bg-white rounded-xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition overflow-hidden p-4">
+                <Link key={stop.id} to={`/overnight-spots/${stop.id}`} className="bg-white rounded-xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition overflow-hidden p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '2px solid #E8A838' }}>
                       <span className="text-white text-sm">{'\u{1F319}'}</span>

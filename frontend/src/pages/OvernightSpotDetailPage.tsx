@@ -25,9 +25,16 @@ export default function OvernightSpotDetailPage() {
     rating: 5, wouldReturn: true, notes: '', tags: [] as string[], visitDate: ''
   });
 
+  const [flagBreakdown, setFlagBreakdown] = useState<any>(null);
+  const [tips, setTips] = useState<any[]>([]);
+
   useEffect(() => {
-    api.get(`/overnight-spots/${id}`)
-      .then(r => setSpot(r.data))
+    api.get(`/overnight-stops/${id}`)
+      .then(r => {
+        setSpot(r.data);
+        if (r.data.flagBreakdown) setFlagBreakdown(r.data.flagBreakdown);
+        if (r.data.tips) setTips(r.data.tips);
+      })
       .catch(() => navigate('/campgrounds'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -74,6 +81,19 @@ export default function OvernightSpotDetailPage() {
               <MapPin className="w-4 h-4" />
               <span>{[spot.address, spot.city, spot.state].filter(Boolean).join(', ')}</span>
             </div>
+            {/* RV-Friendly trust score */}
+            {flagBreakdown?.rvFriendly ? (
+              <div className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-sm font-bold ${flagBreakdown.rvFriendly.pct >= 70 ? 'bg-green-100 text-green-700' : flagBreakdown.rvFriendly.pct >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                {flagBreakdown.rvFriendly.pct >= 70 ? '\u2705' : '\u26A0\uFE0F'} {flagBreakdown.rvFriendly.pct}% say RV-friendly
+              </div>
+            ) : spot.visitCount === 0 ? (
+              <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-500">
+                {'\u{1F319}'} Unknown — be the first to visit!
+              </div>
+            ) : null}
+            {spot.visitCount > 0 && (
+              <p className="text-xs text-gray-400 mt-1">{spot.visitCount} RVUnicorn member{spot.visitCount !== 1 ? 's have' : ' has'} overnighted here</p>
+            )}
             {spot.avgRating && (
               <div className="flex items-center gap-1.5 mt-2">
                 <div className="flex">
@@ -163,9 +183,61 @@ export default function OvernightSpotDetailPage() {
             </div>
           )}
 
+          {/* Community Flags */}
+          {flagBreakdown && Object.values(flagBreakdown).some((v: any) => v !== null) && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="font-bold text-gray-900 mb-3">{'\u{1F6A9}'} Community Reports</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'rvFriendly', label: 'RV-Friendly', emoji: '\u{1F690}' },
+                  { key: 'feltSafe', label: 'Felt Safe', emoji: '\u{1F512}' },
+                  { key: 'bigRigOK', label: 'Big Rig OK', emoji: '\u{1F69B}' },
+                  { key: 'quietNight', label: 'Quiet Night', emoji: '\u{1F319}' },
+                  { key: 'goodSignal', label: 'Good Signal', emoji: '\u{1F4F6}' },
+                  { key: 'wellLit', label: 'Well-Lit', emoji: '\u{1F4A1}' },
+                  { key: 'petFriendly', label: 'Pet-Friendly', emoji: '\u{1F436}' },
+                  { key: 'hasShowers', label: 'Showers', emoji: '\u{1F6BF}' },
+                  { key: 'hasElectric', label: 'Electric', emoji: '\u26A1' },
+                  { key: 'hasDump', label: 'Dump Station', emoji: '\u{1F5D1}\uFE0F' },
+                  { key: 'tightLot', label: 'Tight Lot', emoji: '\u26A0\uFE0F' },
+                  { key: 'policyUnclear', label: 'Policy Unclear', emoji: '\u2753' },
+                ].map(flag => {
+                  const data = (flagBreakdown as any)[flag.key];
+                  if (!data) return null;
+                  const isPositive = flag.key !== 'tightLot' && flag.key !== 'policyUnclear';
+                  const color = data.pct >= 70 ? (isPositive ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50') : data.pct <= 30 ? (isPositive ? 'text-gray-400 bg-gray-50' : 'text-green-600 bg-green-50') : 'text-gray-500 bg-gray-50';
+                  return (
+                    <div key={flag.key} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${color}`}>
+                      <span className="text-sm">{flag.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold">{flag.label}</p>
+                        <p className="text-[10px]">{data.yes} of {data.total} ({data.pct}%)</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tips */}
+          {tips.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="font-bold text-gray-900 mb-3">{'\u{1F4A1}'} Tips from RVers</h3>
+              <div className="space-y-3">
+                {tips.map((t: any, i: number) => (
+                  <div key={i} className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    <p className="text-sm text-gray-700">{t.tip}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{new Date(t.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reviews */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-bold text-gray-900 mb-4">💬 Community Reviews</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{'\u{1F4AC}'} Community Reviews</h3>
             {spot.reviews?.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-3xl mb-2">🌙</p>
