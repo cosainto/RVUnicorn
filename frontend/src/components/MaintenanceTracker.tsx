@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wrench, Plus, Calendar, DollarSign, AlertCircle, CheckCircle, Clock, Bell, Trash2, Edit, Save, X, Building } from 'lucide-react';
 import api from '../services/api';
+import ServiceItemsEditor from './rig/ServiceItemsEditor';
 import { useAuth } from '../contexts/AuthContext';
 
 interface MaintenanceRecord {
@@ -97,6 +98,15 @@ export default function MaintenanceTracker() {
   const [providerAddress, setProviderAddress] = useState('');
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [metadata, setMetadata] = useState<Record<string, string>>({});
+  // New fields
+  const [serviceItems, setServiceItems] = useState<any[]>([]);
+  const [laborCost, setLaborCost] = useState<number | null>(null);
+  const [serviceType, setServiceType] = useState<'mechanical' | 'bodywork' | 'self' | 'inspection'>('mechanical');
+  const [shopName, setShopName] = useState('');
+  const [technicianName, setTechnicianName] = useState('');
+  const [workOrderNumber, setWorkOrderNumber] = useState('');
+  const [isBodyWork, setIsBodyWork] = useState(false);
+  const [warrantyExpires, setWarrantyExpires] = useState('');
 
   const CATEGORY_DEFAULTS: Record<string, { frequency: string; miles?: string; months?: string }> = {
     TIRES: { frequency: 'SEMI_ANNUALLY', months: '6' },
@@ -237,6 +247,14 @@ export default function MaintenanceTracker() {
       if (Object.keys(metadata).length > 0) {
         formDataToSend.append('metadata', JSON.stringify(metadata));
       }
+      // New fields
+      if (serviceItems.length > 0) formDataToSend.append('serviceItems', JSON.stringify(serviceItems));
+      if (laborCost != null) formDataToSend.append('laborCost', String(laborCost));
+      if (shopName) formDataToSend.append('shopName', shopName);
+      if (technicianName) formDataToSend.append('technicianName', technicianName);
+      if (workOrderNumber) formDataToSend.append('workOrderNumber', workOrderNumber);
+      formDataToSend.append('isBodyWork', String(isBodyWork));
+      if (warrantyExpires) formDataToSend.append('warrantyExpires', warrantyExpires);
 
       await api.post('/maintenance/records', formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -261,9 +279,18 @@ export default function MaintenanceTracker() {
     setMileage(record.mileage?.toString() || '');
     setLocation(record.location || '');
     setServiceDate(record.serviceDate.split('T')[0]);
-    setNotes(record.notes || '');
+    setNotes((record as any).notes || '');
     setProviderName(record.providerName || '');
     setProviderAddress(record.providerAddress || '');
+    // New fields
+    setServiceItems((record as any).serviceItems || []);
+    setLaborCost((record as any).laborCost || null);
+    setShopName((record as any).shopName || record.providerName || '');
+    setTechnicianName((record as any).technicianName || '');
+    setWorkOrderNumber((record as any).workOrderNumber || '');
+    setIsBodyWork((record as any).isBodyWork || false);
+    setWarrantyExpires((record as any).warrantyExpires ? new Date((record as any).warrantyExpires).toISOString().split('T')[0] : '');
+    setServiceType((record as any).isBodyWork ? 'bodywork' : 'mechanical');
     setShowEditModal(true);
   };
 
@@ -760,20 +787,57 @@ export default function MaintenanceTracker() {
                 </div>
               </div>
 
+              {/* Shop / Provider Info */}
               <div className="border-t pt-4 mt-4">
                 <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Building className="w-4 h-4 text-blue-600" /> Service Provider (Optional)
+                  <Building className="w-4 h-4 text-blue-600" /> Shop / Provider Info
                 </h4>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Shop / Mechanic Name</label>
-                    <input type="text" value={providerName} onChange={(e) => setProviderName(e.target.value)} placeholder="e.g., Joe's RV Repair" className="input" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Shop Name</label>
+                    <input type="text" value={shopName || providerName} onChange={(e) => { setShopName(e.target.value); setProviderName(e.target.value); }} placeholder="Camping World — Amarillo TX" className="input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Shop Address</label>
-                    <input type="text" value={providerAddress} onChange={(e) => setProviderAddress(e.target.value)} placeholder="123 Main St, City, State 12345" className="input" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Technician Name</label>
+                    <input type="text" value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Ask for name for warranty" className="input" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Work Order #</label>
+                    <input type="text" value={workOrderNumber} onChange={(e) => setWorkOrderNumber(e.target.value)} placeholder="WO-12345" className="input" />
                   </div>
                 </div>
+              </div>
+
+              {/* Service Items Editor */}
+              <div className="border-t pt-4 mt-4">
+                <ServiceItemsEditor
+                  items={serviceItems}
+                  onChange={setServiceItems}
+                  laborCost={laborCost}
+                  onLaborCostChange={setLaborCost}
+                  serviceType={serviceType}
+                  onServiceTypeChange={(t) => {
+                    setServiceType(t);
+                    setIsBodyWork(t === 'bodywork');
+                    if (t === 'bodywork') setCategory('EXTERIOR');
+                  }}
+                  onTotalChange={(total) => setCost(total > 0 ? total.toFixed(2) : cost)}
+                />
+              </div>
+
+              {/* Warranty */}
+              {serviceItems.some(i => i.warranty) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Warranty Expires</label>
+                  <input type="date" value={warrantyExpires} onChange={(e) => setWarrantyExpires(e.target.value)} className="input" />
+                </div>
+              )}
+
+              {/* Receipt — now optional with skip option */}
+              <div className="border-t pt-4 mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{'\u{1F4C4}'} Receipt (Optional)</label>
+                <p className="text-xs text-gray-400 mb-2">Upload a receipt to auto-fill details, or skip and enter manually above</p>
+                <input type="file" accept="image/*,application/pdf" onChange={(e) => setReceiptImage(e.target.files?.[0] || null)} className="input" />
               </div>
 
               {CATEGORY_FIELDS[category] && (
@@ -886,20 +950,57 @@ export default function MaintenanceTracker() {
                 </div>
               </div>
 
+              {/* Shop / Provider Info */}
               <div className="border-t pt-4 mt-4">
                 <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Building className="w-4 h-4 text-blue-600" /> Service Provider (Optional)
+                  <Building className="w-4 h-4 text-blue-600" /> Shop / Provider Info
                 </h4>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Shop / Mechanic Name</label>
-                    <input type="text" value={providerName} onChange={(e) => setProviderName(e.target.value)} placeholder="e.g., Joe's RV Repair" className="input" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Shop Name</label>
+                    <input type="text" value={shopName || providerName} onChange={(e) => { setShopName(e.target.value); setProviderName(e.target.value); }} placeholder="Camping World — Amarillo TX" className="input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Shop Address</label>
-                    <input type="text" value={providerAddress} onChange={(e) => setProviderAddress(e.target.value)} placeholder="123 Main St, City, State 12345" className="input" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Technician Name</label>
+                    <input type="text" value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="Ask for name for warranty" className="input" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Work Order #</label>
+                    <input type="text" value={workOrderNumber} onChange={(e) => setWorkOrderNumber(e.target.value)} placeholder="WO-12345" className="input" />
                   </div>
                 </div>
+              </div>
+
+              {/* Service Items Editor */}
+              <div className="border-t pt-4 mt-4">
+                <ServiceItemsEditor
+                  items={serviceItems}
+                  onChange={setServiceItems}
+                  laborCost={laborCost}
+                  onLaborCostChange={setLaborCost}
+                  serviceType={serviceType}
+                  onServiceTypeChange={(t) => {
+                    setServiceType(t);
+                    setIsBodyWork(t === 'bodywork');
+                    if (t === 'bodywork') setCategory('EXTERIOR');
+                  }}
+                  onTotalChange={(total) => setCost(total > 0 ? total.toFixed(2) : cost)}
+                />
+              </div>
+
+              {/* Warranty */}
+              {serviceItems.some(i => i.warranty) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Warranty Expires</label>
+                  <input type="date" value={warrantyExpires} onChange={(e) => setWarrantyExpires(e.target.value)} className="input" />
+                </div>
+              )}
+
+              {/* Receipt — now optional with skip option */}
+              <div className="border-t pt-4 mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{'\u{1F4C4}'} Receipt (Optional)</label>
+                <p className="text-xs text-gray-400 mb-2">Upload a receipt to auto-fill details, or skip and enter manually above</p>
+                <input type="file" accept="image/*,application/pdf" onChange={(e) => setReceiptImage(e.target.files?.[0] || null)} className="input" />
               </div>
 
               {CATEGORY_FIELDS[category] && (

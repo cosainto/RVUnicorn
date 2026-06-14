@@ -1802,26 +1802,34 @@ model TopFriend {
 }
 
 model MaintenanceRecord {
-  id              String               @id @default(cuid())
-  userId          String
-  title           String
-  category        String
-  description     String?
-  cost            Float?
-  mileage         Int?
-  location        String?
-  tags            String[]             @default([])
-  serviceDate     DateTime
-  status          String               @default("COMPLETED")
-  notes           String?
-  receiptImage    String?
-  providerName    String?
-  providerAddress String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  metadata        Json?
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reminder        MaintenanceReminder?
+  id               String               @id @default(cuid())
+  userId           String
+  title            String
+  category         String
+  description      String?
+  cost             Float?
+  mileage          Int?
+  location         String?
+  tags             String[]             @default([])
+  serviceDate      DateTime
+  status           String               @default("COMPLETED")
+  notes            String?
+  receiptImage     String?
+  providerName     String?
+  providerAddress  String?
+  serviceItems     Json?
+  laborCost        Float?
+  partsCost        Float?
+  shopName         String?
+  technicianName   String?
+  workOrderNumber  String?
+  isBodyWork       Boolean              @default(false)
+  warrantyExpires  DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  metadata         Json?
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminder         MaintenanceReminder?
 
   @@index([userId])
 }
@@ -7150,6 +7158,15 @@ model RigMaintenanceLog {
   documents        String[]
   visibility       String    @default("PRIVATE")
   serviceDate      DateTime
+  serviceItems     Json?
+  laborCost        Float?
+  partsCost        Float?
+  shopName         String?
+  technicianName   String?
+  workOrderNumber  String?
+  isBodyWork       Boolean   @default(false)
+  warrantyExpires  DateTime?
+  notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   rig              Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)

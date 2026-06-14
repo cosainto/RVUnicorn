@@ -250,15 +250,29 @@ export function MaintenanceTab({ slug, isOwner }: { slug: string; isOwner: boole
               <Settings className={`w-4 h-4 ${isOverdue ? 'text-red-400' : 'text-green-400'}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-white">{l.title}</h4>
-              <div className="flex gap-2 mt-0.5 text-[10px] text-white/40">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-white">{l.title}</h4>
+                {l.isBodyWork && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">{'\u{1F3A8}'} Body Work</span>}
+              </div>
+              <div className="flex gap-2 mt-0.5 text-[10px] text-white/40 flex-wrap">
                 <span>{l.category}</span>
                 <span>{new Date(l.serviceDate).toLocaleDateString()}</span>
                 {l.mileageAtService && <span>{Math.round(l.mileageAtService).toLocaleString()} mi</span>}
                 {l.cost && <span className="text-green-400">${l.cost.toLocaleString()}</span>}
               </div>
-              {l.serviceProvider && <p className="text-[10px] text-white/30 mt-0.5">Provider: {l.serviceProvider}</p>}
-              {isOverdue && <p className="text-[10px] text-red-400 font-semibold mt-0.5">⚠️ Service overdue</p>}
+              {(l.shopName || l.serviceProvider) && <p className="text-[10px] text-white/30 mt-0.5">{'\u{1F3EA}'} {l.shopName || l.serviceProvider}</p>}
+              {l.serviceItems && Array.isArray(l.serviceItems) && l.serviceItems.length > 0 && (
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  {(l.serviceItems as any[]).slice(0, 2).map((item: any, i: number) => (
+                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>{item.description}</span>
+                  ))}
+                  {l.serviceItems.length > 2 && <span className="text-[9px] text-white/30">+{l.serviceItems.length - 2} more</span>}
+                </div>
+              )}
+              {l.warrantyExpires && new Date(l.warrantyExpires) > new Date() && (
+                <p className="text-[10px] text-amber-400 mt-0.5">{new Date(l.warrantyExpires) < new Date(Date.now() + 90 * 86400000) ? '\u26A0\uFE0F' : '\u{1F6E1}\uFE0F'} Warranty expires {new Date(l.warrantyExpires).toLocaleDateString()}</p>
+              )}
+              {isOverdue && <p className="text-[10px] text-red-400 font-semibold mt-0.5">{'\u26A0\uFE0F'} Service overdue</p>}
             </div>
           </div>
         );

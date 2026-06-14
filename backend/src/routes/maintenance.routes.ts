@@ -46,11 +46,18 @@ router.post(
          providerName,
          providerAddress,
          metadata,
-         } = req.body; 
+         serviceItems,
+         laborCost,
+         shopName,
+         technicianName,
+         workOrderNumber,
+         isBodyWork,
+         warrantyExpires,
+         } = req.body;
 
 
       const data: any = {
-        userId: (req as any).userId,       
+        userId: (req as any).userId,
         title,
         category,
         description: description || undefined,
@@ -60,9 +67,16 @@ router.post(
         serviceDate: new Date(serviceDate),
         status: 'COMPLETED',
         notes: notes || undefined,
-        providerName: providerName || undefined,
+        providerName: providerName || shopName || undefined,
         providerAddress: providerAddress || undefined,
         metadata: metadata ? (typeof metadata === "string" ? JSON.parse(metadata) : metadata) : undefined,
+        serviceItems: serviceItems ? (typeof serviceItems === 'string' ? JSON.parse(serviceItems) : serviceItems) : undefined,
+        laborCost: laborCost ? parseFloat(laborCost) : undefined,
+        shopName: shopName || providerName || undefined,
+        technicianName: technicianName || undefined,
+        workOrderNumber: workOrderNumber || undefined,
+        isBodyWork: isBodyWork === 'true' || isBodyWork === true,
+        warrantyExpires: warrantyExpires ? new Date(warrantyExpires) : undefined,
     };
 
       if (req.file) {
