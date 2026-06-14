@@ -6,7 +6,7 @@ interface MapMarker {
   name: string;
   latitude: number;
   longitude: number;
-  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home' | 'favorite' | 'upcomingTrip' | 'friendCheckin';
+  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home' | 'favorite' | 'upcomingTrip' | 'friendCheckin' | 'overnightStop' | 'freeOvernight';
   isCurrentlyCamping?: boolean;
   isVisited?: boolean;
   brand?: string;
@@ -103,6 +103,9 @@ const getMarkerColor = (marker: MapMarker) => {
   }
   if (marker.type === 'upcomingTrip') {
     return '#6366f1'; // indigo for upcoming trips
+  }
+  if (marker.type === 'overnightStop' || marker.type === 'freeOvernight') {
+    return '#1B2B4B'; // dark navy for overnight stops
   }
   if (marker.type === 'friendCheckin') {
     return '#10b981'; // emerald for friends' check-ins
@@ -346,6 +349,24 @@ export default function USMapSVG({
                     strokeWidth={1}
                   />
                 </>
+              ) : (marker.type === 'overnightStop' || marker.type === 'freeOvernight') ? (
+                <>
+                  {/* Moon pin — navy circle with white crescent */}
+                  <circle
+                    cx={0}
+                    cy={0}
+                    r={5}
+                    fill="#1B2B4B"
+                    stroke="#E8A838"
+                    strokeWidth={1.5}
+                  />
+                  {/* Crescent moon shape */}
+                  <path
+                    d="M0,-3 A3,3 0 1,0 0,3 A2,2 0 1,1 0,-3"
+                    fill="#fff"
+                    transform="translate(0.5, 0) scale(0.7)"
+                  />
+                </>
               ) : marker.type === 'home' ? (
                 <>
                   {/* Home marker - house shape */}
@@ -475,6 +496,12 @@ export default function USMapSVG({
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-sky-500"></div>
               <span>Rest Area</span>
+            </div>
+          )}
+          {markers.some(m => m.type === 'overnightStop' || m.type === 'freeOvernight') && (
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full" style={{ background: '#1B2B4B', border: '1.5px solid #E8A838' }}></div>
+              <span>{'\u{1F319}'} Overnight Stop</span>
             </div>
           )}
         </div>

@@ -57,7 +57,8 @@ export default function CampgroundsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems' | 'for-you'>('campgrounds');
+  const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems' | 'for-you' | 'overnight'>('campgrounds');
+  const [overnightStops, setOvernightStops] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   useEffect(() => {
@@ -176,6 +177,23 @@ export default function CampgroundsPage() {
         >
           <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1773413639/rv-host-networks-icon.png" alt="RV Host Networks" className="w-5 h-5 rounded-full object-cover" /> RV Host Networks
         </button>
+        <button
+          onClick={() => {
+            setPageTab('overnight');
+            if (overnightStops.length === 0) {
+              const lat = user?.homeLatitude || 39.8;
+              const lng = user?.homeLongitude || -98.5;
+              fetch(`/api/overnight-stops/search?lat=${lat}&lng=${lng}&radius=200`)
+                .then(r => r.json())
+                .then(data => setOvernightStops(Array.isArray(data) ? data : []))
+                .catch(() => {});
+            }
+          }}
+          className={"flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition " + (pageTab === 'overnight' ? 'text-white shadow' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300')}
+          style={pageTab === 'overnight' ? { background: '#1B2B4B' } : {}}
+        >
+          {'\u{1F319}'} Overnight Stops
+        </button>
       </div>
 
       {pageTab === 'for-you' && (
@@ -194,6 +212,48 @@ export default function CampgroundsPage() {
 
       {pageTab === 'rv-networks' && (
         <HarvestHostsTab />
+      )}
+
+      {pageTab === 'overnight' && (
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl">{'\u{1F319}'}</span>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Overnight Stops</h2>
+              <p className="text-sm text-gray-500">Cracker Barrel, Walmart, Love's, and more — places RVers sleep overnight</p>
+            </div>
+          </div>
+          {overnightStops.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="text-4xl mb-3 block">{'\u{1F319}'}</span>
+              <p className="text-gray-500">Loading overnight stops near you...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {overnightStops.map((stop: any) => (
+                <Link key={stop.id} to={`/overnight/${stop.id}`} className="bg-white rounded-xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition overflow-hidden p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '2px solid #E8A838' }}>
+                      <span className="text-white text-sm">{'\u{1F319}'}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">{stop.name}</h3>
+                      <p className="text-xs text-gray-500">{stop.city}, {stop.state}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {stop.chain && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{stop.chain.replace(/_/g, ' ')}</span>}
+                        {stop.stopType && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{stop.stopType === 'FUEL_CENTER' ? '\u26FD Fuel' : stop.stopType === 'RETAIL' ? '\u{1F3EA} Retail' : stop.stopType}</span>}
+                        {stop.visitCount > 0 && <span className="text-[10px] text-gray-400">{stop.visitCount} visits</span>}
+                        {stop.distanceMiles != null && <span className="text-[10px] text-gray-400">{stop.distanceMiles} mi</span>}
+                      </div>
+                      {stop.isRVFriendly === true && <p className="text-[10px] text-green-600 mt-1">{'\u2705'} RV-friendly confirmed</p>}
+                      {stop.isRVFriendly === false && <p className="text-[10px] text-red-500 mt-1">{'\u26A0\uFE0F'} Not RV-friendly</p>}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {pageTab === 'campgrounds' && <div>

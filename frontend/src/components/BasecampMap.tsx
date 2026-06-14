@@ -47,12 +47,13 @@ interface BasecampMapProps {
   userId: number;
 }
 
-type MarkerType = 'favorites' | 'trips' | 'checkins';
+type MarkerType = 'favorites' | 'trips' | 'checkins' | 'overnightStops';
 
-const MARKER_COLORS = {
-  favorites: '#ef4444',   // red
-  trips: '#3b82f6',       // blue
-  checkins: '#22c55e',    // green
+const MARKER_COLORS: Record<MarkerType, string> = {
+  favorites: '#ef4444',       // red
+  trips: '#3b82f6',           // blue
+  checkins: '#22c55e',        // green
+  overnightStops: '#1B2B4B',  // dark navy
 };
 
 const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
@@ -66,6 +67,7 @@ const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
   const [favorites, setFavorites] = useState<Campground[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [overnightStops, setOvernightStops] = useState<any[]>([]);
   const [activeFilters, setActiveFilters] = useState<MarkerType[]>(['favorites', 'trips', 'checkins']);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [mapStyle, setMapStyle] = useState<'roadmap' | 'satellite' | 'terrain'>('terrain');
@@ -170,7 +172,7 @@ const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
   // Create advanced marker with custom SVG
   const createAdvancedMarkerIcon = (type: MarkerType): string => {
     const color = MARKER_COLORS[type];
-    const icon = type === 'favorites' ? '♥' : type === 'trips' ? '▲' : '●';
+    const icon = type === 'favorites' ? '\u2665' : type === 'trips' ? '\u25B2' : type === 'overnightStops' ? '\u{1F319}' : '\u25CF';
     
     return `data:image/svg+xml,${encodeURIComponent(`
       <svg width="40" height="48" viewBox="0 0 40 48" xmlns="http://www.w3.org/2000/svg">
@@ -270,6 +272,39 @@ const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
         marker.addListener('click', () => {
           setSelectedItem({ type: 'checkin', data: checkIn });
           showInfoWindow(marker, checkIn, 'checkin');
+        });
+
+        markersRef.current.push(marker);
+        bounds.extend(marker.getPosition()!);
+        hasMarkers = true;
+      });
+    }
+
+    // Add overnight stop markers
+    if (activeFilters.includes('overnightStops')) {
+      overnightStops.forEach((stop: any) => {
+        if (!stop.latitude || !stop.longitude) return;
+
+        const moonSvg = `data:image/svg+xml,${encodeURIComponent(`
+          <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="14" cy="14" r="12" fill="#1B2B4B" stroke="#E8A838" stroke-width="2"/>
+            <path d="M14,7 A7,7 0 1,0 14,21 A5,5 0 1,1 14,7" fill="white"/>
+          </svg>
+        `)}`;
+
+        const marker = new google.maps.Marker({
+          position: { lat: stop.latitude, lng: stop.longitude },
+          map: googleMapRef.current,
+          icon: {
+            url: moonSvg,
+            scaledSize: new google.maps.Size(28, 28),
+            anchor: new google.maps.Point(14, 14),
+          },
+          title: stop.name,
+        });
+
+        marker.addListener('click', () => {
+          setSelectedItem({ type: 'overnightStop', data: stop });
         });
 
         markersRef.current.push(marker);
@@ -407,6 +442,25 @@ const BasecampMap: React.FC<BasecampMapProps> = ({ userId }) => {
           >
             <Users size={16} />
             <span>Check-ins ({checkIns.length})</span>
+          </button>
+          <button
+            className={`filter-btn ${activeFilters.includes('overnightStops') ? 'active' : ''}`}
+            onClick={() => {
+              toggleFilter('overnightStops');
+              if (overnightStops.length === 0 && googleMapRef.current) {
+                const center = googleMapRef.current.getCenter();
+                if (center) {
+                  fetch(`/api/overnight-stops/search?lat=${center.lat()}&lng=${center.lng()}&radius=100`)
+                    .then(r => r.json())
+                    .then(data => setOvernightStops(Array.isArray(data) ? data : []))
+                    .catch(() => {});
+                }
+              }
+            }}
+            style={{ '--btn-color': '#E8A838' } as React.CSSProperties}
+          >
+            <span>{'\u{1F319}'}</span>
+            <span>Overnight</span>
           </button>
         </div>
 
