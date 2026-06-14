@@ -64,121 +64,113 @@ export default function RigPulseCard({ user, cn }: Props) {
   const isOwner = rig?.ownerId === user?.id;
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: cn.card, border: `1px solid ${cn.border}`, borderLeft: `3px solid ${cn.orange}` }}>
-      <div className="flex flex-col sm:flex-row">
-        {/* Rig Photo */}
-        <div className="relative sm:w-32 sm:min-h-[160px] h-40 flex-shrink-0 overflow-hidden sm:rounded-l-2xl">
-          {rigPhoto ? (
-            <>
-              <img src={rigPhoto} alt="Rig" className="w-full h-full object-cover" style={{ objectPosition: 'center 60%' }} />
-              {/* Gradient fade into card on right edge (desktop) */}
-              <div className="hidden sm:block absolute inset-y-0 right-0 w-6" style={{ background: `linear-gradient(to right, transparent, ${cn.card})` }} />
-              {/* Gradient fade into card on bottom edge (mobile) */}
-              <div className="sm:hidden absolute inset-x-0 bottom-0 h-6" style={{ background: `linear-gradient(to bottom, transparent, ${cn.card})` }} />
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ background: '#1B2B4B' }}>
-              <span className="text-5xl">{'\u{1F690}'}</span>
-            </div>
+    <div className="rounded-2xl overflow-hidden" style={{ background: cn.card, border: `1px solid ${cn.border}` }}>
+      {/* Hero Photo — full width, stacked on top */}
+      <div className="relative h-[200px] overflow-hidden">
+        {rigPhoto ? (
+          <img src={rigPhoto} alt="Rig" className="w-full h-full object-cover" style={{ objectPosition: 'center 40%' }} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1B2B4B, #0F1C35)' }}>
+            <span className="text-6xl">{'\u{1F690}'}</span>
+          </div>
+        )}
+        {/* Dark gradient overlay on bottom 40% for text readability */}
+        <div className="absolute inset-x-0 bottom-0 h-[40%]" style={{ background: 'linear-gradient(to top, rgba(15,28,53,0.95), transparent)' }} />
+        {/* Orange accent bar at very top */}
+        <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: cn.orange }} />
+        {/* Rig name overlaid on bottom of photo */}
+        <div className="absolute bottom-3 left-4 right-4">
+          <p className="text-base font-bold text-white drop-shadow-lg">
+            {user?.rvYear ? `${user.rvYear} ` : ''}{user?.rvMake || ''} {user?.rvModel || ''}
+          </p>
+          {(user?.rvType || user?.rvMpg) && (
+            <p className="text-xs text-white/60">
+              {user.rvType?.replace('_', ' ')}{user.rvMpg ? ` \u00B7 ${user.rvMpg} MPG` : ''}
+            </p>
           )}
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 p-5">
-          {/* Header */}
-          <div className="flex items-start gap-3 mb-2">
-            <Truck className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: cn.gold }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate" style={{ color: cn.cream }}>
-                {user?.rvYear ? `${user.rvYear} ` : ''}{user?.rvMake || ''} {user?.rvModel || ''}
-              </p>
-              {(user?.rvType || user?.rvMpg) && (
-                <p className="text-xs" style={{ color: cn.muted }}>
-                  {user.rvType?.replace('_', ' ')}{user.rvMpg ? ` \u00B7 ${user.rvMpg} MPG` : ''}
-                </p>
-              )}
+      {/* Content below photo */}
+      <div className="p-4">
+        {/* Co-Pilots Row */}
+        {pilots.length > 0 ? (
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex -space-x-2">
+              {pilots.slice(0, 4).map((p: any) => (
+                p.user?.profilePicture ? (
+                  <img key={p.id} src={p.user.profilePicture} alt={p.user.firstName} title={`${p.user.firstName} ${p.user.lastName || ''}`} className="w-7 h-7 rounded-full object-cover border-2" style={{ borderColor: cn.card }} />
+                ) : (
+                  <div key={p.id} title={`${p.user?.firstName || ''} ${p.user?.lastName || ''}`} className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2" style={{ borderColor: cn.card, background: 'rgba(232,168,56,0.2)', color: cn.gold }}>
+                    {p.user?.firstName?.[0] || '?'}
+                  </div>
+                )
+              ))}
             </div>
+            <span className="text-[11px]" style={{ color: cn.muted }}>
+              {pilots.slice(0, 2).map((p: any) => p.user?.firstName).join(', ')}
+              {pilots.length > 2 ? ` + ${pilots.length - 2} more` : ''}
+              {' \u00B7 '}{pilots.length === 1 ? 'Co-Pilot' : 'Co-Pilots'}
+            </span>
           </div>
-
-          {/* Co-Pilots Row */}
-          {pilots.length > 0 ? (
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex -space-x-2">
-                {pilots.slice(0, 4).map((p: any) => (
-                  p.user?.profilePicture ? (
-                    <img key={p.id} src={p.user.profilePicture} alt={p.user.firstName} title={`${p.user.firstName} ${p.user.lastName || ''}`} className="w-7 h-7 rounded-full object-cover border-2" style={{ borderColor: cn.card }} />
-                  ) : (
-                    <div key={p.id} title={`${p.user?.firstName || ''} ${p.user?.lastName || ''}`} className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2" style={{ borderColor: cn.card, background: 'rgba(232,168,56,0.2)', color: cn.gold }}>
-                      {p.user?.firstName?.[0] || '?'}
-                    </div>
-                  )
-                ))}
-              </div>
-              <span className="text-[11px]" style={{ color: cn.muted }}>
-                {pilots.slice(0, 2).map((p: any) => p.user?.firstName).join(', ')}
-                {pilots.length > 2 ? ` + ${pilots.length - 2} more` : ''}
-                {' \u00B7 '}{pilots.length === 1 ? 'Co-Pilot' : 'Co-Pilots'}
-              </span>
-            </div>
-          ) : isOwner && rigSlug ? (
-            <Link to={`/rig/${rigSlug}/settings`} className="flex items-center gap-1.5 mb-3 text-[11px] transition hover:brightness-125" style={{ color: cn.muted }}>
-              <Plus className="w-3 h-3" /> Add co-pilot
-            </Link>
-          ) : null}
-
-          {/* Readiness Score */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold" style={{ color: cn.muted }}>Trip Readiness Score</span>
-              <span className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</span>
-            </div>
-            <div className="w-full h-2 rounded-full" style={{ background: cn.border }}>
-              <div
-                className="h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${score}%`, background: scoreColor, boxShadow: score < 60 ? `0 0 8px ${cn.orange}` : 'none' }}
-              />
-            </div>
-          </div>
-
-          {/* Two columns */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Next Maintenance</p>
-              {maintenance ? (
-                <p className="text-xs" style={{ color: cn.cream }}>
-                  {maintenance.title}
-                  {maintenance.nextDueDate && (
-                    <span className="block text-[10px]" style={{ color: new Date(maintenance.nextDueDate) < new Date() ? cn.orange : cn.muted }}>
-                      {new Date(maintenance.nextDueDate) < new Date() ? 'Overdue' : new Date(maintenance.nextDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  )}
-                </p>
-              ) : (
-                <p className="text-xs" style={{ color: cn.success }}>No upcoming maintenance {'\u2014'} you're good {'\u2713'}</p>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Last Adventure</p>
-              {lastTrip ? (
-                <p className="text-xs" style={{ color: cn.cream }}>
-                  {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
-                  {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
-                </p>
-              ) : (
-                <p className="text-xs" style={{ color: cn.gold }}>No trips yet {'\u2014'} let's change that</p>
-              )}
-            </div>
-          </div>
-
-          {/* CTA */}
-          <Link
-            to={rigSlug ? `/rig/${rigSlug}` : '/my-rv'}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition hover:brightness-110"
-            style={{ border: `1px solid ${cn.gold}`, color: cn.gold }}
-          >
-            Open Rig HQ {'\u2192'}
+        ) : isOwner && rigSlug ? (
+          <Link to={`/rig/${rigSlug}/settings`} className="flex items-center gap-1.5 mb-3 text-[11px] transition hover:brightness-125" style={{ color: cn.muted }}>
+            <Plus className="w-3 h-3" /> Add co-pilot
           </Link>
+        ) : null}
+
+        {/* Readiness Score */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-semibold" style={{ color: cn.muted }}>Trip Readiness Score</span>
+            <span className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full" style={{ background: cn.border }}>
+            <div
+              className="h-2 rounded-full transition-all duration-1000"
+              style={{ width: `${score}%`, background: scoreColor, boxShadow: score < 60 ? `0 0 8px ${cn.orange}` : 'none' }}
+            />
+          </div>
         </div>
+
+        {/* Two columns */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Next Maintenance</p>
+            {maintenance ? (
+              <p className="text-xs" style={{ color: cn.cream }}>
+                {maintenance.title}
+                {maintenance.nextDueDate && (
+                  <span className="block text-[10px]" style={{ color: new Date(maintenance.nextDueDate) < new Date() ? cn.orange : cn.muted }}>
+                    {new Date(maintenance.nextDueDate) < new Date() ? 'Overdue' : new Date(maintenance.nextDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs" style={{ color: cn.success }}>No upcoming maintenance {'\u2014'} you're good {'\u2713'}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Last Adventure</p>
+            {lastTrip ? (
+              <p className="text-xs" style={{ color: cn.cream }}>
+                {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
+                {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
+              </p>
+            ) : (
+              <p className="text-xs" style={{ color: cn.gold }}>No trips yet {'\u2014'} let's change that</p>
+            )}
+          </div>
+        </div>
+
+        {/* CTA — full width */}
+        <Link
+          to={rigSlug ? `/rig/${rigSlug}` : '/my-rv'}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold transition hover:brightness-110"
+          style={{ border: `1px solid ${cn.gold}`, color: cn.gold }}
+        >
+          Open Rig HQ {'\u2192'}
+        </Link>
       </div>
     </div>
   );
