@@ -299,6 +299,34 @@ export default function PreTripIntelligenceCard({ eventId, tripTitle, departureD
         </div>
       )}
 
+      {/* Overnight Stop Suggestions */}
+      {report.overnightSuggestions?.length > 0 && (
+        <div className="px-4 pb-3">
+          <p className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#E8A838' }}>
+            {'\u{1F319}'} OVERNIGHT OPTIONS
+          </p>
+          <div className="space-y-2">
+            {report.overnightSuggestions.map((stop: any) => (
+              <a key={stop.id} href={`/overnight-spots/${stop.id}`}
+                className="flex items-center gap-3 p-2 rounded-lg transition hover:bg-white/5" style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.1)' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '1.5px solid #E8A838' }}>
+                  <span className="text-xs">{'\u{1F319}'}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{stop.name}</p>
+                  <p className="text-[10px] text-white/40">
+                    {stop.city}, {stop.state}
+                    {stop.offRouteMiles != null && ` · ${stop.offRouteMiles} mi off route`}
+                    {stop.visitCount > 0 && ` · ${stop.visitCount} visits`}
+                  </p>
+                </div>
+                {stop.isRVFriendly === true && <span className="text-[10px] text-green-400">{'\u2705'}</span>}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Break Plan */}
       {report.breakPlan?.length > 0 && (
         <div className="px-4 pb-3">

@@ -261,6 +261,36 @@ router.post('/quick-check', authenticateToken, async (req: any, res: Response) =
     const status = flags.some((f: any) => f.type === 'blocker') ? 'NO_GO' : score >= 80 ? 'GO' : score >= 50 ? 'CAUTION' : 'NO_GO';
     const headline = status === 'GO' ? "You're good to go" : status === 'CAUTION' ? 'Check these first' : 'Issues to resolve';
 
+    // 6. Overnight stop suggestions — if drive > 5 hours, suggest stops near midpoint
+    let overnightSuggestions: any[] = [];
+    if (driveHours && driveHours > 5) {
+      try {
+        const midLat = (startLat + destLat) / 2;
+        const midLon = (startLon + destLon) / 2;
+        const stops = await prisma.overnightStop.findMany({
+          where: {
+            latitude: { gte: midLat - 1.5, lte: midLat + 1.5 },
+            longitude: { gte: midLon - 1.5, lte: midLon + 1.5 },
+            visitCount: { gte: 1 },
+          },
+          orderBy: { visitCount: 'desc' },
+          take: 3,
+          select: { id: true, name: true, city: true, state: true, chain: true, stopType: true, visitCount: true, isRVFriendly: true, latitude: true, longitude: true },
+        });
+
+        overnightSuggestions = stops.map((s: any) => {
+          const dLat = s.latitude - midLat;
+          const dLng = s.longitude - midLon;
+          const offRouteMiles = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 69 * 10) / 10;
+          return {
+            ...s,
+            offRouteMiles,
+            rvFriendlyPct: s.isRVFriendly === true ? 100 : s.isRVFriendly === false ? 0 : null,
+          };
+        });
+      } catch {}
+    }
+
     res.json({
       driveMiles,
       driveHours,
@@ -274,6 +304,7 @@ router.post('/quick-check', authenticateToken, async (req: any, res: Response) =
       flags,
       passedChecks,
       rigFit,
+      overnightSuggestions,
     });
   } catch (e: any) {
     console.error('[TripIntelligence] Quick check error:', e);
