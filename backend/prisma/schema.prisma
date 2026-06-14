@@ -7387,3 +7387,46 @@ model OvernightStopVisit {
   @@index([overnightStopId])
   @@index([userId])
 }
+
+// ─── Mission Control Dashboard ──────────────────────────────
+
+model UserDailyBriefing {
+  id                String   @id @default(cuid())
+  userId            String
+  briefingText      String
+  actionSuggestions Json?
+  generatedDate     DateTime
+  createdAt         DateTime @default(now())
+
+  @@unique([userId, generatedDate])
+  @@index([userId])
+}
+
+model UserStreak {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  currentStreak   Int      @default(1)
+  longestStreak   Int      @default(1)
+  lastActiveDate  DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DailyCampfireQuestion {
+  id        String   @id @default(cuid())
+  question  String
+  dayOfYear Int      @unique
+  answers   Json     @default("[]")
+  createdAt DateTime @default(now())
+}
+
+model TripPrepItem {
+  id         String   @id @default(cuid())
+  tripId     String
+  userId     String
+  label      String
+  isComplete Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tripId, userId])
+}
