@@ -72,19 +72,27 @@ export function VideosTab({ slug, isOwner }: { slug: string; isOwner: boolean })
   );
 }
 
-// ═══ CAMPSITES TAB ═══
+// ═══ PLACES STAYED TAB (formerly Campsites) ═══
 export function CampsitesTab({ slug, isOwner }: { slug: string; isOwner: boolean }) {
   const [visits, setVisits] = useState<any[]>([]);
+  const [overnightVisits, setOvernightVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { api.get(`/rigs/${slug}/campsites`).then(r => setVisits(r.data || [])).catch(() => {}).finally(() => setLoading(false)); }, [slug]);
+  useEffect(() => {
+    Promise.all([
+      api.get(`/rigs/${slug}/campsites`).then(r => setVisits(r.data || [])).catch(() => {}),
+      api.get(`/overnight-stops/me/visits`).then(r => setOvernightVisits(r.data || [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, [slug]);
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-400" /></div>;
   const favorites = visits.filter(v => v.isFavorite);
-  if (visits.length === 0) return <EmptyState icon={Tent} message="No campsite visits logged" sub={isOwner ? "Log your first campsite visit" : undefined} />;
+  if (visits.length === 0 && overnightVisits.length === 0) return <EmptyState icon={Tent} message="No places logged yet" sub={isOwner ? "Log your first campsite visit" : undefined} />;
   return (
     <div>
       <div className="flex gap-4 mb-4 text-[10px] text-white/40 font-semibold">
-        <span>📍 {visits.length} Total</span><span>❤️ {favorites.length} Favorites</span>
-        <span>🗺️ {new Set(visits.map(v => v.state)).size} States</span>
+        <span>{'\u{1F3D5}\uFE0F'} {visits.length} Campgrounds</span>
+        {overnightVisits.length > 0 && <span>{'\u{1F319}'} {overnightVisits.length} Overnight</span>}
+        <span>{'\u2764\uFE0F'} {favorites.length} Favorites</span>
+        <span>{'\u{1F5FA}\uFE0F'} {new Set([...visits.map(v => v.state), ...overnightVisits.map(v => v.overnightStop?.state)].filter(Boolean)).size} States</span>
       </div>
       <CardGrid>
         {visits.map(v => (
@@ -106,6 +114,30 @@ export function CampsitesTab({ slug, isOwner }: { slug: string; isOwner: boolean
           </div>
         ))}
       </CardGrid>
+
+      {/* Overnight Stops */}
+      {overnightVisits.length > 0 && (
+        <>
+          <h3 className="text-xs font-bold uppercase tracking-wider mt-6 mb-3" style={{ color: CN.gold }}>{'\u{1F319}'} Overnight Stops</h3>
+          <CardGrid>
+            {overnightVisits.map((v: any) => (
+              <Link key={v.id} to={`/overnight-spots/${v.overnightStopId}`} className="rounded-xl p-3 block" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '1.5px solid #E8A838' }}>
+                    <span className="text-xs">{'\u{1F319}'}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-white truncate">{v.overnightStop?.name || 'Overnight Stop'}</h4>
+                    <p className="text-[10px] text-white/40">{v.overnightStop?.city}, {v.overnightStop?.state} {'\u00B7'} {new Date(v.date).toLocaleDateString()}</p>
+                    {v.overnightStop?.chain && <span className="text-[9px] px-1.5 py-0.5 rounded-full mt-1 inline-block" style={{ background: 'rgba(232,168,56,0.1)', color: CN.gold }}>{v.overnightStop.chain.replace(/_/g, ' ')}</span>}
+                    {v.tip && <p className="text-xs text-white/40 mt-1 line-clamp-2">{v.tip}</p>}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </CardGrid>
+        </>
+      )}
     </div>
   );
 }

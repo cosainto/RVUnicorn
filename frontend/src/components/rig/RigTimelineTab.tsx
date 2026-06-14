@@ -140,14 +140,47 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
           );
         }
 
-        // ── CHECK-IN CARD (celebratory arrival with hero photo) ──
+        // ── CHECK-IN CARD ──
         if (isCheckIn) {
           let checkinData: any = {};
           try { checkinData = JSON.parse(item.previewText || '{}'); } catch { checkinData = { state: item.previewText }; }
           const campgroundName = (title || '').replace('Checked into ', '');
           const location = checkinData.location || checkinData.city || checkinData.state || '';
-          const hitchLine = checkinData.hitchLine || 'Another adventure begins! 🔥';
+          const hitchLine = checkinData.hitchLine || 'Another adventure begins! \u{1F525}';
           const hasPhoto = !!item.previewImageUrl;
+
+          // ── OVERNIGHT STOP CARD — dark navy, moon emoji ──
+          const isOvernightStop = campgroundName.startsWith('\u{1F319}') || (!checkinData.campgroundId && checkinData.overnightStopId);
+          if (isOvernightStop) {
+            const cleanName = campgroundName.replace('\u{1F319} ', '');
+            return (
+              <div key={item.id} className="rounded-2xl shadow-lg overflow-hidden" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.2)' }}>
+                <div className="p-5 text-center">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-7 h-7 rounded-full object-cover border border-white/20" /> : null}
+                      <span className="text-xs text-white/60">{rigName} <span className="text-white/40">overnighted</span></span>
+                    </div>
+                    <span className="text-[10px] text-white/30">{timeAgo(item.occurredAt)}</span>
+                  </div>
+                  <span className="text-5xl block mb-3">{'\u{1F319}'}</span>
+                  <h4 className="text-lg font-bold text-white mb-1">{cleanName}</h4>
+                  {location && <p className="text-sm text-white/50">{location}</p>}
+                  {checkinData.state && <span className="inline-block text-[10px] px-2 py-0.5 rounded-full mt-2" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>{checkinData.state}</span>}
+                </div>
+                <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-center gap-3 text-[11px] text-white/40 mb-2">
+                    <span>{'\u{1F4C5}'} {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
+                  <div className="flex items-center gap-5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-red-400 transition"><Heart className="w-4 h-4" />Like</button>
+                    <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-blue-400 transition"><MessageCircle className="w-4 h-4" />Comment</button>
+                    <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition ml-auto"><Share2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div key={item.id} className="rounded-2xl shadow-lg overflow-hidden" style={{ background: '#162236' }}>

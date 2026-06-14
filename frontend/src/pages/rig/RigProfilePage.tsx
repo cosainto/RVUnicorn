@@ -16,6 +16,7 @@ import { PhotosTab, VideosTab, CampsitesTab, RecsTab, ModsTab, GearTab, Maintena
 import RigTimelineTab from '../../components/rig/RigTimelineTab';
 import RigRecipesTab from '../../components/rig/RigRecipesTab';
 import RigShowcase from '../../components/rig/RigShowcase';
+import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -52,8 +53,7 @@ export default function RigProfilePage() {
     api.get(`/rigs/${slug}`)
       .then(r => {
         setRig(r.data);
-        // Check if current user follows this rig
-        if (r.data?.followers?.some((f: any) => f.userId === user?.id)) setFollowing(true);
+        setFollowing(!!r.data?.isFollowing);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -124,14 +124,15 @@ export default function RigProfilePage() {
     { id: 'videos', label: '🎥 Videos' },
     { id: 'recipes', label: '🍳 Recipes' },
     { id: 'mods-hub', label: '🧰 Mods' },
-    { id: 'campsites', label: '🏕 Campsites' },
+    { id: 'campsites', label: '\u{1F3D5}\uFE0F Places Stayed' },
     { id: 'journal', label: '📖 Journal' },
     { id: 'maps', label: '🗺️ Maps' },
     { id: 'recs', label: '⭐ Recs' },
     { id: 'gear', label: '📦 Gear' },
     { id: 'maintenance', label: '🛠 Maintenance' },
     { id: 'achievements', label: '🏆 Achievements' },
-    { id: 'community-hub', label: '👥 Community' },
+    { id: 'followers', label: `👥 Followers (${rig.followerCount || 0})` },
+    { id: 'community-hub', label: '🌐 Community' },
     { id: 'overview', label: 'ℹ️ About' },
   ];
 
@@ -199,9 +200,29 @@ export default function RigProfilePage() {
               ))}
             </div>
 
-            {/* Follower count + Community Score badge */}
-            <div className="flex items-center gap-3 mb-4">
-              <p className="text-xs" style={{ color: CN.muted }}>{rig.followerCount || 0} follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</p>
+            {/* Follower count + Follow button + Community Score badge */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={() => setActiveTab('followers')}
+                className="flex items-center gap-1.5 transition hover:brightness-125 cursor-pointer"
+                style={{ background: 'none', border: 'none', padding: 0 }}
+              >
+                <span className="text-sm font-bold" style={{ color: CN.cream }}>{rig.followerCount || 0}</span>
+                <span className="text-xs" style={{ color: CN.muted }}>Follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</span>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold" style={{ color: CN.cream }}>{(rig.pilots?.length || 0) + 1}</span>
+                <span className="text-xs" style={{ color: CN.muted }}>Contributor{(rig.pilots?.length || 0) !== 0 ? 's' : ''}</span>
+              </div>
+              {!isOwner && !isPilot && (
+                <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold transition hover:brightness-110" style={{
+                  background: following ? 'transparent' : CN.gold,
+                  color: following ? CN.gold : CN.bg,
+                  border: `1.5px solid ${CN.gold}`,
+                }}>
+                  {following ? 'Following' : 'Follow'}
+                </button>
+              )}
               {rig.contributionScore > 0 && (
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold cursor-default"
@@ -666,6 +687,7 @@ export default function RigProfilePage() {
             {activeTab === 'maintenance' && <MaintenanceTab slug={slug!} isOwner={isOwner} />}
             {activeTab === 'resources' && <ResourcesTab slug={slug!} isOwner={isOwner} />}
             {activeTab === 'achievements' && <AchievementsTab slug={slug!} isOwner={isOwner} />}
+            {activeTab === 'followers' && rig && <RigFollowersTab rigId={rig.id} rigName={rigTitle} />}
             {activeTab === 'community-hub' && rig && <CommunityHubTab slug={slug!} isOwner={isOwner} rigName={rigTitle} />}
 
           </div>
