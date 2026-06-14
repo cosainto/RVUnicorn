@@ -117,7 +117,14 @@ export const logFriendAdded = (userId: string, friendId: string, friendName: str
   createActivity({ userId, type: 'FRIEND_ADDED', targetUserId: friendId, title: friendName });
 
 export const logCheckIn = async (userId: string, campgroundId: string, campgroundName: string) => {
-  // Create the activity first
+  // Deduplicate: don't create another CHECK_IN activity for the same user+campground within 12 hours
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+  const existing = await prisma.activity.findFirst({
+    where: { userId, type: 'CHECK_IN', campgroundId, createdAt: { gte: twelveHoursAgo } },
+  });
+  if (existing) return existing;
+
+  // Create the activity
   const activity = await createActivity({ userId, type: 'CHECK_IN', campgroundId, title: campgroundName });
 
   // Generate AI blurb in the background (don't block the check-in response)

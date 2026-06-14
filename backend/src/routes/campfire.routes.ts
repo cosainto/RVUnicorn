@@ -291,11 +291,17 @@ router.get('/:campgroundId/room/status', authenticateToken, async (req: any, res
         take: 50,
       }),
     ]);
+    // Deduplicate by userId — in case of multiple active check-in records
+    const seen = new Set<string>();
+    const uniqueUsers = checkIns
+      .filter((c: any) => { if (seen.has(c.user.id)) return false; seen.add(c.user.id); return true; })
+      .map((c: any) => c.user);
+
     res.json({
       isActive: room?.isActive ?? false,
-      checkedInCount: checkIns.length,
-      checkedInUsers: checkIns.map((c: any) => c.user),
-      needsMore: Math.max(0, 3 - checkIns.length),
+      checkedInCount: uniqueUsers.length,
+      checkedInUsers: uniqueUsers,
+      needsMore: Math.max(0, 3 - uniqueUsers.length),
     });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to fetch room status' });

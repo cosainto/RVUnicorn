@@ -26,7 +26,31 @@ router.post('/', authenticateToken, async (req: any, res) => {
       return res.status(400).json({ error: 'Must provide a location to check in to' });
     }
 
-    // Check out of any active check-ins first
+    // Check if user already has an active check-in at this exact location
+    const locationField = campgroundId ? 'campgroundId' : harvestHostId ? 'harvestHostId' : 'overnightSpotId';
+    const locationValue = campgroundId || harvestHostId || overnightSpotId;
+    const existingAtSameLocation = await prisma.checkIn.findFirst({
+      where: { userId, [locationField]: locationValue, isActive: true },
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true, location: true, latitude: true, longitude: true } },
+      },
+    });
+
+    if (existingAtSameLocation) {
+      // Already checked in here — update instead of creating duplicate
+      const checkIn = await prisma.checkIn.update({
+        where: { id: existingAtSameLocation.id },
+        data: { updatedAt: new Date(), siteNumber: siteNumber || existingAtSameLocation.siteNumber, notes: notes || existingAtSameLocation.notes },
+        include: {
+          user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+          campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true, location: true, latitude: true, longitude: true } },
+        },
+      });
+      return res.json(checkIn);
+    }
+
+    // Check out of any active check-ins at OTHER locations first
     await prisma.checkIn.updateMany({
       where: { userId, isActive: true },
       data: { isActive: false, checkOutDate: new Date() }
@@ -88,6 +112,11 @@ router.post('/', authenticateToken, async (req: any, res) => {
           }).catch(() => null);
         }
       }
+    }
+
+    // Log check-in activity to feed (idempotent — won't create duplicates)
+    if (campgroundId && checkIn.campground) {
+      logCheckIn(userId, checkIn.campground.id, (checkIn.campground as any).name).catch(() => {});
     }
 
     // Auto-create an Event from this check-in
@@ -431,11 +460,9 @@ router.get('/active', authenticateToken, async (req: any, res) => {
       }
     }
 
-    // Log check-in activity to friend feed
+    // Side effects on active check-in retrieval (idempotent — no activity logging here)
     if (checkIn?.campground) {
       try {
-        await logCheckIn(userId, checkIn.campground.id, checkIn.campground.name);
-
         // Shared Fire — notify nearby friends (fire and forget)
         checkSharedFire(userId, checkIn.campground.id).catch(() => {});
 

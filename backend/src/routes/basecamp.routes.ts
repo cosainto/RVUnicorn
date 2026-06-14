@@ -1363,10 +1363,37 @@ router.get('/campground-feed', authenticateToken, async (req, res) => {
       }));
     }
 
-    // Merge and sort all activities
-    const allActivities = [...activities, ...publicEventActivities, ...publicRecipeActivities, ...activeCheckInActivities, ...overlappingTripActivities, ...publicAlbumActivities, ...publicVideoActivities, ...popularThreadActivities, ...reviewActivities].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ).slice(0, limit);
+    // Merge and sort all activities — deduplicate check-ins
+    const mergedActivities = [...activities, ...publicEventActivities, ...publicRecipeActivities, ...activeCheckInActivities, ...overlappingTripActivities, ...publicAlbumActivities, ...publicVideoActivities, ...popularThreadActivities, ...reviewActivities];
+
+    // Dedup: if a user appears in both CHECK_IN (Activity) and ACTIVE_CHECK_IN (CheckIn table),
+    // keep only the ACTIVE_CHECK_IN version to avoid double-showing
+    const activeCheckinKeys = new Set(
+      activeCheckInActivities.map((a: any) => `${a.userId}:${a.campgroundId}`)
+    );
+    const allActivities = mergedActivities
+      .filter((a: any) => {
+        if (a.type === 'CHECK_IN' && a.campgroundId && activeCheckinKeys.has(`${a.userId}:${a.campgroundId}`)) {
+          return false; // Skip — already shown as ACTIVE_CHECK_IN
+        }
+        return true;
+      })
+      // Also dedup by unique key: userId + type + campgroundId (keep most recent)
+      .reduce((acc: any[], item: any) => {
+        const key = `${item.userId}:${item.type}:${item.campgroundId || ''}`;
+        const existingIdx = acc.findIndex((a: any) => `${a.userId}:${a.type}:${a.campgroundId || ''}` === key);
+        if (existingIdx >= 0) {
+          // Keep the newer one
+          if (new Date(item.createdAt) > new Date(acc[existingIdx].createdAt)) {
+            acc[existingIdx] = item;
+          }
+        } else {
+          acc.push(item);
+        }
+        return acc;
+      }, [])
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
 
     const feedItems = allActivities.map((activity) => {
       const isFollowedCampground = followedCampgroundIds.includes(activity.campgroundId || '');
