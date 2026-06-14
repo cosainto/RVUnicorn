@@ -67,9 +67,15 @@ export default function RigPulseCard({ user, cn }: Props) {
     <div className="rounded-2xl overflow-hidden" style={{ background: cn.card, border: `1px solid ${cn.border}`, borderLeft: `3px solid ${cn.orange}` }}>
       <div className="flex flex-col sm:flex-row">
         {/* Rig Photo */}
-        <div className="sm:w-32 sm:h-auto h-40 flex-shrink-0">
+        <div className="relative sm:w-32 sm:min-h-[160px] h-40 flex-shrink-0 overflow-hidden sm:rounded-l-2xl">
           {rigPhoto ? (
-            <img src={rigPhoto} alt="Rig" className="w-full h-full object-cover sm:rounded-l-xl" />
+            <>
+              <img src={rigPhoto} alt="Rig" className="w-full h-full object-cover" style={{ objectPosition: 'center 60%' }} />
+              {/* Gradient fade into card on right edge (desktop) */}
+              <div className="hidden sm:block absolute inset-y-0 right-0 w-6" style={{ background: `linear-gradient(to right, transparent, ${cn.card})` }} />
+              {/* Gradient fade into card on bottom edge (mobile) */}
+              <div className="sm:hidden absolute inset-x-0 bottom-0 h-6" style={{ background: `linear-gradient(to bottom, transparent, ${cn.card})` }} />
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: '#1B2B4B' }}>
               <span className="text-5xl">{'\u{1F690}'}</span>

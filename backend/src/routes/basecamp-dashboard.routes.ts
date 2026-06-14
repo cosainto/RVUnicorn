@@ -28,9 +28,9 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
       return res.json({ briefingText: cached.briefingText, actionSuggestions: cached.actionSuggestions });
     }
 
-    // Gather context
-    const [user, nextTrip, lastCheckIn, friendActivity, maintenanceItems, streak] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, rvType: true, rvMake: true, rvModel: true, homeState: true } }),
+    // Gather context — separate co-pilots from friends
+    const [user, nextTrip, lastCheckIn, maintenanceItems, streak] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, rvType: true, rvMake: true, rvModel: true, homeState: true } }),
       prisma.event.findFirst({
         where: { OR: [{ organizerId: userId }, { attendees: { some: { userId, status: { in: ['going', 'GOING'] } } } }], startDate: { gte: new Date() }, isWishlist: false },
         orderBy: { startDate: 'asc' },
@@ -41,15 +41,43 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
         orderBy: { checkInDate: 'desc' },
         select: { campground: { select: { name: true } } },
       }),
-      prisma.activity.findMany({
-        where: { userId: { not: userId }, type: 'CHECK_IN', isPublic: true, createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-        select: { user: { select: { firstName: true } }, title: true },
-      }),
       prisma.maintenanceReminder?.findMany({ where: { userId, nextDueDate: { lte: new Date() } }, take: 2, select: { title: true } }).catch(() => []),
       prisma.userStreak.findUnique({ where: { userId } }),
     ]);
+
+    // Fetch co-pilots (travel partners on the same rig — NOT friends)
+    let coPilotNames: string[] = [];
+    try {
+      const userRigs = await prisma.rig.findMany({ where: { ownerId: userId }, select: { id: true } });
+      if (userRigs.length > 0) {
+        const pilots = await prisma.rigPilot.findMany({
+          where: { rigId: { in: userRigs.map((r: any) => r.id) }, userId: { not: userId } },
+          include: { user: { select: { firstName: true, id: true } } },
+        });
+        coPilotNames = pilots.map((p: any) => p.user.firstName).filter(Boolean);
+      }
+    } catch {}
+
+    // Fetch friend activity (EXCLUDING co-pilots)
+    const coPilotUserIds = new Set<string>();
+    try {
+      const userRigs = await prisma.rig.findMany({ where: { ownerId: userId }, select: { id: true } });
+      if (userRigs.length > 0) {
+        const pilots = await prisma.rigPilot.findMany({
+          where: { rigId: { in: userRigs.map((r: any) => r.id) } },
+          select: { userId: true },
+        });
+        pilots.forEach((p: any) => coPilotUserIds.add(p.userId));
+      }
+    } catch {}
+    coPilotUserIds.add(userId); // exclude self too
+
+    const friendActivity = await prisma.activity.findMany({
+      where: { userId: { notIn: Array.from(coPilotUserIds) }, type: 'CHECK_IN', isPublic: true, createdAt: { gte: new Date(Date.now() - 7 * 86400000) } },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      select: { user: { select: { firstName: true } }, title: true },
+    });
 
     const firstName = user?.firstName || 'friend';
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -57,18 +85,21 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
     const dayOfWeek = dayNames[now.getDay()];
     const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    // Build context string
+    // Build context string — clearly separate co-pilots from friends
     let context = `User: ${firstName}.`;
+    if (coPilotNames.length > 0) {
+      context += ` Co-pilots (travel WITH ${firstName} on their rig, NOT friends): ${coPilotNames.join(', ')}.`;
+    }
     if (nextTrip) {
       const daysAway = Math.ceil((new Date(nextTrip.startDate).getTime() - Date.now()) / 86400000);
       context += ` Next trip: "${nextTrip.title}" ${daysAway} days away${nextTrip.campground?.name ? ` at ${nextTrip.campground.name}` : ''}.`;
     } else {
       context += ' No upcoming trips planned.';
     }
-    if (lastCheckIn?.campground?.name) context += ` Last stayed at ${lastCheckIn.campground.name}.`;
+    if (lastCheckIn?.campground?.name) context += ` Last stayed at ${lastCheckIn.campground.name} (shared experience with co-pilots if any).`;
     if (friendActivity.length > 0) {
       const friendNames = friendActivity.map((a: any) => `${a.user?.firstName} checked into ${a.title}`).join('; ');
-      context += ` Friend activity: ${friendNames}.`;
+      context += ` Friend activity (separate people, NOT co-pilots): ${friendNames}.`;
     }
     if (maintenanceItems?.length > 0) context += ` Overdue maintenance: ${maintenanceItems.map((m: any) => m.title).join(', ')}.`;
     if (streak) context += ` Login streak: ${streak.currentStreak} days.`;
@@ -80,13 +111,17 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
 
     if (ANTHROPIC_API_KEY) {
       try {
+        const coPilotRule = coPilotNames.length > 0
+          ? `IMPORTANT: ${coPilotNames.join(', ')} travel WITH ${firstName} on their rig — they are co-pilots/family, NOT friends. Never call them friends. If mentioning them, say "your co-pilot ${coPilotNames[0]}" or "you and ${coPilotNames[0]}". If they share the same last campground, frame it as "you and ${coPilotNames[0]} just wrapped up an adventure at [place] together", not as if they did something independently.`
+          : '';
+
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 150,
-            messages: [{ role: 'user', content: `You are Hitch, a warm and fun campfire guide for RVUnicorn. Write a 2-3 sentence personalized morning briefing for ${firstName}. Context: ${context}. Mention their upcoming trip if they have one, one thing a friend is doing, and one action item for their rig or trip prep. End with a question or suggestion. Keep it conversational, warm, under 60 words. No hashtags or emojis in the text itself.` }],
+            messages: [{ role: 'user', content: `You are Hitch, a warm campfire guide for RVUnicorn. Write a 2-3 sentence personalized morning briefing for ${firstName}. ${coPilotRule} Context: ${context}. Mention their upcoming trip if they have one, or one thing a friend is doing (NOT a co-pilot). Add one action item for their rig or trip prep. End with a question or suggestion. Keep it conversational, warm, under 60 words. No hashtags or emojis.` }],
           }),
         });
         const aiData: any = await aiRes.json();
