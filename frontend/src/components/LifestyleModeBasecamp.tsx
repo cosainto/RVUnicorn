@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import RigPulseCard from './lifestyle/RigPulseCard';
 import WeekendNearYou from './lifestyle/WeekendNearYou';
 import HitchDailyDrop from './lifestyle/HitchDailyDrop';
@@ -7,6 +8,9 @@ import FriendsOnRoad from './lifestyle/FriendsOnRoad';
 import TrendingVisited from './lifestyle/TrendingVisited';
 import SeasonalChecklist from './lifestyle/SeasonalChecklist';
 import NextTripCTA from './lifestyle/NextTripCTA';
+import SocialFeed from './SocialFeed';
+import CampgroundUpdatesFeed from './CampgroundUpdatesFeed';
+import api from '../services/api';
 
 // ── Campfire Night Design Tokens ──────────────────────────────────────────
 const CN = {
@@ -35,7 +39,14 @@ interface Props {
 
 export default function LifestyleModeBasecamp({ user }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [feedTab, setFeedTab] = useState<'friends' | 'community' | 'campgrounds'>('friends');
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    api.get('/basecamp/community-posts?limit=10').then(r => setCommunityPosts(r.data?.posts || [])).catch(() => {});
+  }, []);
 
   return (
     <>
@@ -113,30 +124,109 @@ export default function LifestyleModeBasecamp({ user }: Props) {
             <RigPulseCard user={user} cn={CN} />
           </div>
 
+          {/* ── SOCIAL FEED ────────────────────────────────────── */}
           <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '100ms' }}>
-            <WeekendNearYou user={user} cn={CN} />
+            <div className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              {/* Feed Tab Headers */}
+              <div className="flex" style={{ borderBottom: `1px solid ${CN.border}` }}>
+                {(['friends', 'community', 'campgrounds'] as const).map(tab => {
+                  const labels: Record<string, string> = {
+                    friends: '\u{1F465} Friends',
+                    community: '\u{1F3D5}\uFE0F Community',
+                    campgrounds: '\u{1F4CD} Campgrounds',
+                  };
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setFeedTab(tab)}
+                      className="flex-1 px-4 py-3 text-xs font-semibold transition"
+                      style={{
+                        color: feedTab === tab ? CN.gold : CN.muted,
+                        borderBottom: feedTab === tab ? `2px solid ${CN.gold}` : '2px solid transparent',
+                        background: feedTab === tab ? 'rgba(232,168,56,0.05)' : 'transparent',
+                      }}
+                    >
+                      {labels[tab]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Feed Content */}
+              <div className="p-4">
+                {feedTab === 'friends' && (
+                  <SocialFeed username={user?.username || ''} isOwnProfile={true} includePacking={true} />
+                )}
+
+                {feedTab === 'community' && (
+                  <div>
+                    {communityPosts.length === 0 ? (
+                      <div className="text-center py-8">
+                        <span className="text-3xl mb-2 block">{'\u{1F3D5}\uFE0F'}</span>
+                        <p className="text-sm mb-2" style={{ color: CN.muted }}>No community posts yet</p>
+                        <Link to="/community" className="text-sm font-semibold" style={{ color: CN.gold }}>Start a discussion {'\u2192'}</Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {communityPosts.map((post: any) => (
+                          <Link key={post.id} to="/community" className="flex gap-3 p-3 rounded-xl transition" style={{ background: CN.cardAlt }}>
+                            <div className="flex-shrink-0 w-8 text-center pt-0.5">
+                              <span className="text-sm font-bold" style={{ color: CN.gold }}>{post.voteScore}</span>
+                              <div className="text-[10px]" style={{ color: CN.muted }}>pts</div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {post.board && (
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <span className="text-xs">{post.board.icon}</span>
+                                  <span className="text-xs" style={{ color: CN.muted }}>{post.board.name}</span>
+                                </div>
+                              )}
+                              <p className="text-sm font-semibold line-clamp-2 leading-snug" style={{ color: CN.cream }}>{post.title}</p>
+                              <span className="text-[10px]" style={{ color: CN.muted }}>
+                                {post.author?.firstName} {post.author?.lastName}
+                              </span>
+                            </div>
+                          </Link>
+                        ))}
+                        <Link to="/community" className="block text-center text-xs font-semibold py-2" style={{ color: CN.gold }}>
+                          View all community posts {'\u2192'}
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {feedTab === 'campgrounds' && (
+                  <CampgroundUpdatesFeed />
+                )}
+              </div>
+            </div>
           </div>
 
           <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '200ms' }}>
+            <WeekendNearYou user={user} cn={CN} />
+          </div>
+
+          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '300ms' }}>
             <HitchDailyDrop user={user} cn={CN} />
           </div>
 
           {/* Mid-feed: Trivia + Friends side by side on desktop */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '300ms' }}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '400ms' }}>
             <TriviaStreak user={user} cn={CN} />
             <FriendsOnRoad user={user} cn={CN} />
           </div>
 
           {/* Lower feed */}
-          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '400ms' }}>
+          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '500ms' }}>
             <TrendingVisited user={user} cn={CN} />
           </div>
 
-          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '500ms' }}>
+          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '600ms' }}>
             <SeasonalChecklist cn={CN} />
           </div>
 
-          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '600ms' }}>
+          <div className={`lifestyle-module ${mounted ? 'mounted' : ''}`} style={{ animationDelay: '700ms' }}>
             <NextTripCTA cn={CN} />
           </div>
         </div>
