@@ -408,6 +408,7 @@ model User {
   emailPreference                                  EmailPreference?
   emailLogs                                        EmailLog[]
   emailUnsubscribeTokens                           EmailUnsubscribeToken[]
+  emailDigestQueue                                 EmailDigestQueue[]
   routeCorridorAnalyses                            RouteCorridorAnalysis[]
   liveCoPilotSessions                              LiveCoPilotSession[]
   dailyDropMessage                                 String?
@@ -6115,18 +6116,34 @@ model EmailPreference {
 }
 
 model EmailLog {
-  id       String    @id @default(cuid())
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type     String
-  resendId String?
-  subject  String
-  sentAt   DateTime  @default(now())
-  opened   Boolean   @default(false)
-  openedAt DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  priority  String    @default("MEDIUM")  // CRITICAL, HIGH, MEDIUM, LOW
+  resendId  String?
+  subject   String
+  sentAt    DateTime  @default(now())
+  opened    Boolean   @default(false)
+  openedAt  DateTime?
+  wasDigest Boolean   @default(false)
 
   @@index([userId, sentAt])
   @@index([type])
+}
+
+model EmailDigestQueue {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  digestType        String    // DAILY, WEEKLY
+  contentType       String    // e.g. NEW_FOLLOWER, BADGE_EARNED, etc.
+  contentData       Json
+  createdAt         DateTime  @default(now())
+  includedInDigestAt DateTime?
+
+  @@index([userId, digestType])
+  @@index([includedInDigestAt])
 }
 
 model EmailUnsubscribeToken {

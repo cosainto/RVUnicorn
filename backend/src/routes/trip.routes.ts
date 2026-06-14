@@ -97,7 +97,7 @@ router.get('/my', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
 
-    // Get events where user is organizer OR attendee
+    // Get events where user is organizer OR actively attending
     const events = await db.event.findMany({
       where: {
         OR: [
@@ -106,6 +106,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             attendees: {
               some: {
                 userId: userId,
+                status: { in: ['going', 'GOING', 'maybe', 'MAYBE'] },
               },
             },
           },

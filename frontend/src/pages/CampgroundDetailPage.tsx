@@ -46,6 +46,7 @@ import CampMarket from '../components/CampMarket';
 import CampfireTips from '../components/CampfireTips';
 import HarvestHostsTab from '../components/HarvestHostsTab';
 import NearbyBusinesses from '../components/NearbyBusinesses';
+import CampgroundSocialProof from '../components/CampgroundSocialProof';
 
 const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
   const base = "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -1806,6 +1807,9 @@ export default function CampgroundDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* ── SOCIAL PROOF — Who Loves This Place + Rigs ── */}
+              <CampgroundSocialProof campgroundId={campground.id} />
 
               {campground.checkIns && campground.checkIns.length > 0 && (
                 <div>

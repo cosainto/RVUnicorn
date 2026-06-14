@@ -71,6 +71,8 @@ import CampfireChannel from '../components/CampfireChannel';
 import CampgroundCommunity from '../components/CampgroundCommunity';
 import ThingsToDoSection from '../components/ThingsToDoSection';
 import ExploreNearbyPanel from '../components/ExploreNearbyPanel';
+import CampgroundSocialProof from '../components/CampgroundSocialProof';
+import CampgroundFavoriteButton from '../components/CampgroundFavoriteButton';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import MealPlanner from '../components/MealPlanner';
 import EventAlbum from '../components/EventAlbum';
@@ -2262,8 +2264,9 @@ export default function BasecampPage({ user }: BasecampProps) {
                     <h2 className="text-lg font-bold leading-tight">
                       <Link to={`/campgrounds/${activeCheckIn.campground.id}`} className="hover:underline">{activeCheckIn.campground.name}</Link>
                     </h2>
+                    <CampgroundFavoriteButton campgroundId={activeCheckIn.campground.id} size="md" showCount className="text-white" />
                     <span className="text-xs bg-green-500/50 border border-green-400/40 px-2 py-0.5 rounded-full font-medium">
-                      ✅ Checked In
+                      {'\u2705'} Checked In
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-green-100 text-sm mt-0.5">
@@ -4282,6 +4285,11 @@ export default function BasecampPage({ user }: BasecampProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Fellow Fans — social proof for current campground */}
+          {activeCheckIn?.campground?.id && (
+            <CampgroundSocialProof campgroundId={activeCheckIn.campground.id} />
           )}
 
           {/* Explore Nearby — prominent activity discovery when checked in */}

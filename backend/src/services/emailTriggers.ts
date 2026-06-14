@@ -115,7 +115,10 @@ export async function sendTripCreatedEmail(userId: string, tripData: {
   });
   if (!user) return;
   const tpl = trips.tripCreated({ firstName: user.firstName, ...tripData });
-  await sendTypedEmail({ userId, type: 'TRIP_CREATED', ...tpl });
+  await sendTypedEmail({
+    userId, type: 'TRIP_CREATED', ...tpl,
+    digestContent: { tripTitle: tripData.tripTitle, campgroundName: tripData.campgroundName },
+  });
 }
 
 export async function sendPreTrip7Day() {
@@ -196,12 +199,16 @@ export async function sendNewFollowerEmail(userId: string, followerId: string) {
   });
   if (!follower || !user) return;
 
+  const followerName = `${follower.firstName} ${follower.lastName || ''}`.trim();
   const tpl = social.newFollower({
     firstName: user.firstName,
-    followerName: `${follower.firstName} ${follower.lastName || ''}`.trim(),
+    followerName,
     followerUsername: follower.username,
   });
-  await sendTypedEmail({ userId, type: 'NEW_FOLLOWER', ...tpl });
+  await sendTypedEmail({
+    userId, type: 'NEW_FOLLOWER', ...tpl,
+    digestContent: { followerName, followerUsername: follower.username },
+  });
 }
 
 export async function sendWeeklyCommunityDigest() {
@@ -249,17 +256,13 @@ export async function sendScrapbookCommentEmail(
   });
   if (!owner) return;
 
-  // Rate limit: max 3 per hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const recentCount = await prisma.emailLog.count({
-    where: { userId: scrapbookOwnerId, type: 'SCRAPBOOK_COMMENT', sentAt: { gte: oneHourAgo } },
-  });
-  if (recentCount >= 3) return;
-
   const tpl = social.scrapbookComment({
     firstName: owner.firstName, commenterName, tripTitle, comment, scrapbookToken,
   });
-  await sendTypedEmail({ userId: scrapbookOwnerId, type: 'SCRAPBOOK_COMMENT', ...tpl });
+  await sendTypedEmail({
+    userId: scrapbookOwnerId, type: 'SCRAPBOOK_COMMENT', ...tpl,
+    digestContent: { commenterName, tripTitle, comment: comment.slice(0, 200) },
+  });
 }
 
 // ─── Badges ─────────────────────────────────────────────────
@@ -275,7 +278,10 @@ export async function sendBadgeEarnedEmail(userId: string, badgeData: {
   });
   if (!user) return;
   const tpl = badges.badgeEarned({ firstName: user.firstName, ...badgeData });
-  await sendTypedEmail({ userId, type: 'BADGE_EARNED', ...tpl });
+  await sendTypedEmail({
+    userId, type: 'BADGE_EARNED', ...tpl,
+    digestContent: { badgeName: badgeData.badgeName, badgeEmoji: badgeData.badgeEmoji },
+  });
 }
 
 // ─── Owner ──────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, MapPin, Star, User, ChefHat, Calendar, Users, Sparkles, Tent, DollarSign, Wifi, Zap, PawPrint, Waves, Loader2 } from 'lucide-react';
 import api from '../services/api';
+import CampgroundFavoriteButton from '../components/CampgroundFavoriteButton';
 
 type TabType = 'all' | 'campgrounds' | 'users' | 'recipes' | 'events';
 
@@ -72,7 +73,7 @@ export default function SearchPage() {
               <div className="space-y-3">{results.campgrounds.items.map((c: any) => (
                 <Link key={c.id} to={`/campgrounds/${c.id}`} className="block bg-white rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-md transition overflow-hidden">
                   <div className="flex">
-                    <div className="w-32 h-28 flex-shrink-0 bg-gradient-to-br from-green-100 to-emerald-100">{c.imageUrl ? <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tent className="w-8 h-8 text-green-300" /></div>}</div>
+                    <div className="w-32 h-28 flex-shrink-0 bg-gradient-to-br from-green-100 to-emerald-100 relative">{c.imageUrl ? <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Tent className="w-8 h-8 text-green-300" /></div>}<div className="absolute top-1.5 right-1.5 bg-white/90 rounded-full p-1 shadow-sm"><CampgroundFavoriteButton campgroundId={c.id} size="sm" /></div></div>
                     <div className="flex-1 p-3 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{c.name}</h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" />{c.location}{c.state ? `, ${c.state}` : ''}</p>

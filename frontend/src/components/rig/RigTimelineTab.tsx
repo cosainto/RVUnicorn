@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MapPin, Play, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import CampsiteSocialProofInline from './CampsiteSocialProofInline';
 
 const ACTION_LABELS: Record<string, string> = {
   PHOTO_ALBUM: 'shared photos',
@@ -186,11 +187,13 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               {/* Footer */}
               <div className="px-4 py-3">
                 <div className="flex items-center gap-3 text-[11px] text-white/40 mb-2">
-                  <span>📅 {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  {checkinData.state && <span>🗺️ {checkinData.state}</span>}
+                  <span>{'\u{1F4C5}'} {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  {checkinData.state && <span>{'\u{1F5FA}\uFE0F'} {checkinData.state}</span>}
                 </div>
+                {/* Social proof for this campground */}
+                {checkinData.campgroundId && <CampsiteSocialProofInline campgroundId={checkinData.campgroundId} compact />}
                 {/* Actions */}
-                <div className="flex items-center gap-5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center gap-5 pt-2 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                   <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-red-400 transition"><Heart className="w-4 h-4" />Like</button>
                   <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-blue-400 transition"><MessageCircle className="w-4 h-4" />Comment</button>
                   <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition ml-auto"><Share2 className="w-4 h-4" /></button>

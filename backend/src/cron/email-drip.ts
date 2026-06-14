@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 const db = prisma as any;
 import { Resend } from 'resend';
+import { canSendEmail, queueForDigest } from '../services/emailThrottle';
 
 const SITE = 'https://www.rvunicorn.com';
 const HITCH_IMG = 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1774218289/rvunicorn/guides/hitch_guide.png';
@@ -153,13 +154,29 @@ export async function runEmailDripCron() {
           const email = await drip.buildEmail(user);
           if (!email) continue;
 
-          await resend.emails.send({
-            from: 'Hitch from RVUnicorn <hitch@updates.rvunicorn.com>',
-            to: user.email,
-            subject: email.subject,
-            html: email.html,
-          });
+          // Map drip emailType to throttle type
+          const throttleType = `DRIP_${drip.emailType.toUpperCase()}`;
+          const throttle = await canSendEmail(user.id, throttleType);
 
+          if (throttle.canSend) {
+            await resend.emails.send({
+              from: 'Hitch from RVUnicorn <hitch@updates.rvunicorn.com>',
+              to: user.email,
+              subject: email.subject,
+              html: email.html,
+            });
+
+            await db.emailLog.create({
+              data: { userId: user.id, type: throttleType, priority: throttle.priority, subject: email.subject },
+            });
+          } else if (throttle.queueForDigest && throttle.digestType) {
+            await queueForDigest(user.id, throttle.digestType, throttleType, {
+              subject: email.subject,
+              previewText: email.subject,
+            });
+          }
+
+          // Always mark drip as sent so we don't retry
           await db.emailDripLog.create({
             data: { userId: user.id, emailType: drip.emailType },
           });

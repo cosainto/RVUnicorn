@@ -2,6 +2,12 @@ import { Resend } from 'resend';
 import { nanoid } from 'nanoid';
 import { prisma } from '../prisma';
 import { baseTemplate } from '../emails/baseTemplate';
+import {
+  canSendEmail as throttleCheck,
+  queueForDigest,
+  EMAIL_PRIORITY,
+  type EmailPriority,
+} from './emailThrottle';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Hitch at RVUnicorn <hitch@updates.rvunicorn.com>';
@@ -73,7 +79,7 @@ async function getOrCreateUnsubToken(userId: string): Promise<string> {
 
 // ─── Preference check ───────────────────────────────────────
 
-async function canSendEmail(userId: string, type: string): Promise<boolean> {
+async function checkEmailPreference(userId: string, type: string): Promise<boolean> {
   const prefField = TYPE_TO_PREF[type];
   // Transactional emails (null mapping) always send
   if (prefField === null) return true;
@@ -96,26 +102,6 @@ async function canSendEmail(userId: string, type: string): Promise<boolean> {
   return true;
 }
 
-// ─── Rate limit check ───────────────────────────────────────
-
-async function isRateLimited(userId: string): Promise<boolean> {
-  let prefs = await prisma.emailPreference.findUnique({
-    where: { userId },
-    select: { maxEmailsPerDay: true },
-  });
-  const maxPerDay = prefs?.maxEmailsPerDay ?? 2;
-  if (maxPerDay <= 0) return false; // unlimited
-
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
-  const sentToday = await prisma.emailLog.count({
-    where: { userId, sentAt: { gte: todayStart } },
-  });
-
-  return sentToday >= maxPerDay;
-}
-
 // ─── Core send function ─────────────────────────────────────
 
 interface SendEmailOptions {
@@ -124,7 +110,9 @@ interface SendEmailOptions {
   subject: string;
   bodyHtml: string;
   previewText?: string;
-  force?: boolean; // true = transactional, skip preference & rate checks
+  force?: boolean; // true = transactional (CRITICAL), skip preference & throttle checks
+  /** Content data to store if this email gets queued for digest */
+  digestContent?: Record<string, any>;
 }
 
 export async function sendTypedEmail({
@@ -134,6 +122,7 @@ export async function sendTypedEmail({
   bodyHtml,
   previewText,
   force = false,
+  digestContent,
 }: SendEmailOptions): Promise<boolean> {
   try {
     // Get user email
@@ -148,18 +137,29 @@ export async function sendTypedEmail({
 
     // Preference check (skip for transactional)
     if (!force) {
-      const allowed = await canSendEmail(userId, type);
+      const allowed = await checkEmailPreference(userId, type);
       if (!allowed) {
         console.log(`[EmailService] User ${userId} opted out of ${type}`);
         return false;
       }
+    }
 
-      // Rate limit check
-      const limited = await isRateLimited(userId);
-      if (limited) {
-        console.log(`[EmailService] Rate limited for user ${userId}`);
-        return false;
+    // Throttle check — replaces old rate limiting
+    const throttle = await throttleCheck(userId, type);
+
+    if (!throttle.canSend) {
+      if (throttle.queueForDigest && throttle.digestType) {
+        // Queue for digest instead of sending
+        await queueForDigest(userId, throttle.digestType, type, digestContent || {
+          subject,
+          previewText: previewText || subject,
+          bodyHtml: bodyHtml.slice(0, 500), // Store truncated preview
+        });
+        console.log(`[EmailService] Throttled ${type} for user ${userId}: ${throttle.reason}`);
+      } else {
+        console.log(`[EmailService] Blocked ${type} for user ${userId}: ${throttle.reason}`);
       }
+      return false;
     }
 
     // Get unsubscribe token
@@ -190,17 +190,18 @@ export async function sendTypedEmail({
       return false;
     }
 
-    // Log
+    // Log with priority
     await prisma.emailLog.create({
       data: {
         userId,
         type,
+        priority: throttle.priority,
         resendId,
         subject,
       },
     });
 
-    console.log(`[EmailService] Sent ${type} to ${user.email}: ${subject}`);
+    console.log(`[EmailService] Sent ${type} (${throttle.priority}) to ${user.email}: ${subject}`);
     return true;
   } catch (err: any) {
     console.error(`[EmailService] Failed to send ${type} to user ${userId}:`, err);
@@ -210,4 +211,4 @@ export async function sendTypedEmail({
 
 // ─── Convenience exports ────────────────────────────────────
 
-export { getOrCreateUnsubToken, canSendEmail, TYPE_TO_PREF };
+export { getOrCreateUnsubToken, checkEmailPreference, TYPE_TO_PREF };

@@ -3,6 +3,8 @@ import { Camera, Film, Tent, Star, Wrench, Package, Settings, FileText, Trophy, 
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import CampsiteSocialProofInline from './CampsiteSocialProofInline';
+import CampgroundFavoriteButton from '../CampgroundFavoriteButton';
 
 const CN = { gold: '#E8A838', cream: '#F5F0E8', muted: '#8B9BB4', card: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)' };
 
@@ -92,11 +94,15 @@ export function CampsitesTab({ slug, isOwner }: { slug: string; isOwner: boolean
                 <h4 className="text-sm font-semibold text-white">{v.campgroundName || 'Campsite'}</h4>
                 <p className="text-[10px] text-white/40">{new Date(v.visitedAt).toLocaleDateString()}{v.siteNumber ? ` · Site ${v.siteNumber}` : ''}</p>
               </div>
-              {v.isFavorite && <Heart className="w-4 h-4 text-red-400 fill-red-400" />}
+              <div className="flex items-center gap-1.5">
+                {v.campgroundId && <CampgroundFavoriteButton campgroundId={v.campgroundId} size="sm" />}
+                {v.isFavorite && <Heart className="w-4 h-4 text-red-400 fill-red-400" />}
+              </div>
             </div>
             {v.rating && <div className="mt-1"><Stars rating={v.rating} /></div>}
             {v.review && <p className="text-xs text-white/50 mt-1 line-clamp-2">{v.review}</p>}
             {v.photoUrls?.length > 0 && <div className="flex gap-1 mt-2">{v.photoUrls.slice(0, 3).map((url: string, i: number) => <img key={i} src={url} className="w-12 h-12 rounded-lg object-cover" />)}</div>}
+            {v.campgroundId && <CampsiteSocialProofInline campgroundId={v.campgroundId} />}
           </div>
         ))}
       </CardGrid>

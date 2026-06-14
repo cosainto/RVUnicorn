@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail, notificationEmail, friendRequestEmail, mentionEmail } from './email-sms.service';
+import { canSendEmail, queueForDigest, EMAIL_PRIORITY } from './emailThrottle';
 
 const prisma = new PrismaClient() as any;
 
@@ -36,27 +37,48 @@ export const notificationService = {
         },
       });
 
-      // Send email notification if user has it enabled
+      // Send email notification if user has it enabled — throttled
       try {
         const user = await prisma.user.findUnique({
           where: { id: data.userId },
           select: { email: true, firstName: true, emailOnNotification: true }
         });
         if (user && user.emailOnNotification) {
-          const typeEmojiMap: Record<string, string> = {
-            EVENT_INVITE: '📅', EVENT_UPDATE: '📝', RSVP_CHANGE: '✅',
-            COMMENT_ADDED: '💬', NOTE_ADDED: '📌', CHECKLIST_ASSIGNED: '✅',
-            CHECKLIST_COMPLETED: '🎉', CAMPGROUND_ADDED: '🏕️',
-            FRIEND_REQUEST: '🤝', MENTION: '📣', LIKE: '❤️',
-          };
-          const emailContent = notificationEmail({
-            recipientName: user.firstName || 'there',
-            title: data.title,
-            content: data.content,
-            link: data.link,
-            emoji: typeEmojiMap[data.type] || '🔔',
-          });
-          await sendEmail({ to: user.email, ...emailContent });
+          const throttle = await canSendEmail(data.userId, data.type);
+
+          if (throttle.canSend) {
+            const typeEmojiMap: Record<string, string> = {
+              EVENT_INVITE: '\u{1F4C5}', EVENT_UPDATE: '\u{1F4DD}', RSVP_CHANGE: '\u2705',
+              COMMENT_ADDED: '\u{1F4AC}', NOTE_ADDED: '\u{1F4CC}', CHECKLIST_ASSIGNED: '\u2705',
+              CHECKLIST_COMPLETED: '\u{1F389}', CAMPGROUND_ADDED: '\u{1F3D5}\uFE0F',
+              FRIEND_REQUEST: '\u{1F91D}', MENTION: '\u{1F4E3}', LIKE: '\u2764\uFE0F',
+            };
+            const emailContent = notificationEmail({
+              recipientName: user.firstName || 'there',
+              title: data.title,
+              content: data.content,
+              link: data.link,
+              emoji: typeEmojiMap[data.type] || '\u{1F514}',
+            });
+            await sendEmail({ to: user.email, ...emailContent });
+
+            // Log the email send
+            await prisma.emailLog.create({
+              data: {
+                userId: data.userId,
+                type: data.type,
+                priority: throttle.priority,
+                subject: emailContent.subject,
+              },
+            });
+          } else if (throttle.queueForDigest && throttle.digestType) {
+            await queueForDigest(data.userId, throttle.digestType, data.type, {
+              title: data.title,
+              content: data.content,
+              link: data.link,
+              actorName: data.actorName,
+            });
+          }
         }
       } catch (emailErr) {
         console.error('Email notification error (non-fatal):', emailErr);

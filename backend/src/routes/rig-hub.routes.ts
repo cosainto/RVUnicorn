@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
+import { queueForDigest } from '../services/emailThrottle';
 
 const router = Router();
 const prisma = new PrismaClient() as any;
@@ -56,6 +57,34 @@ router.post('/:slug/campsites', authenticateToken, async (req: any, res) => {
     const rig = await getRig(req.params.slug);
     if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     const visit = await prisma.rigCampsiteVisit.create({ data: { rigId: rig.id, userId: req.userId, ...req.body, visitedAt: req.body.visitedAt ? new Date(req.body.visitedAt) : new Date() } });
+
+    // If visit has photos and a campgroundId, notify users who favorited the campground
+    if (req.body.campgroundId && req.body.photoUrls?.length > 0) {
+      try {
+        const [rigData, campground] = await Promise.all([
+          prisma.rig.findUnique({ where: { id: rig.id }, select: { rigName: true } }),
+          prisma.campground.findUnique({ where: { id: req.body.campgroundId }, select: { name: true } }),
+        ]);
+        if (rigData && campground) {
+          const followers = await prisma.campgroundFollow.findMany({
+            where: { campgroundId: req.body.campgroundId, userId: { not: req.userId } },
+            select: { userId: true },
+            take: 100,
+          });
+          for (const f of followers) {
+            queueForDigest(f.userId, 'DAILY', 'RIG_PHOTOS_AT_FAVORITE', {
+              rigName: rigData.rigName || 'A rig',
+              campgroundName: campground.name,
+              campgroundId: req.body.campgroundId,
+              photoCount: req.body.photoUrls.length,
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error('[SocialProof] Rig photo digest error (non-fatal):', e);
+      }
+    }
+
     res.status(201).json(visit);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

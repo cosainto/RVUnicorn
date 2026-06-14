@@ -99,6 +99,21 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
   const [weather, setWeather] = useState<{ temp?: number; condition?: string; sunset?: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
 
+  // Social proof: who else loves this campground
+  const [favoritesProof, setFavoritesProof] = useState<{ totalFavorites: number; avatars: { userId: string; username: string; avatarUrl: string | null; firstName: string | null }[] } | null>(null);
+
+  useEffect(() => {
+    api.get(`/campgrounds/${campgroundId}/social-proof`).then(r => {
+      const d = r.data;
+      if (d.totalFavorites > 0) {
+        setFavoritesProof({
+          totalFavorites: d.totalFavorites,
+          avatars: d.favoritedBy.slice(0, 3).map((f: any) => ({ userId: f.userId, username: f.username, avatarUrl: f.avatarUrl, firstName: f.firstName })),
+        });
+      }
+    }).catch(() => {});
+  }, [campgroundId]);
+
   useEffect(() => {
     api.get(`/weather/${campgroundId}`).then(r => {
       const w = r.data;
@@ -420,6 +435,31 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
                 <span>{u.firstName || u.username}</span>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Social proof — who else loves this campground */}
+        {favoritesProof && favoritesProof.totalFavorites > 0 && (
+          <div className="px-4 py-1.5 border-b border-orange-100 bg-orange-50/50 flex items-center gap-2">
+            <span className="text-[11px]" style={{ color: '#ef4444' }}>{'\u2764\uFE0F'}</span>
+            <div className="flex -space-x-1.5">
+              {favoritesProof.avatars.map(a => (
+                <Link key={a.userId} to={`/profile/${a.username}`}>
+                  {a.avatarUrl ? (
+                    <img src={a.avatarUrl} alt={a.username} className="w-5 h-5 rounded-full object-cover border border-white" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-orange-200 flex items-center justify-center text-[8px] font-bold text-orange-700 border border-white">
+                      {a.firstName?.[0] || '?'}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+            <span className="text-[11px] text-gray-500">
+              {favoritesProof.totalFavorites > 3
+                ? `and ${favoritesProof.totalFavorites - 3} others favorited this place`
+                : `${favoritesProof.totalFavorites} ${favoritesProof.totalFavorites === 1 ? 'camper has' : 'campers have'} favorited this place`}
+            </span>
           </div>
         )}
 

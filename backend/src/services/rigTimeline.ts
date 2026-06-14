@@ -71,10 +71,11 @@ export async function buildTimeline(rigId: string) {
   }
 
   // Trip stops (check-ins)
-  const stops = await prisma.rigTripStop.findMany({ where: { rigId }, select: { id: true, name: true, coverImageUrl: true, state: true, tripId: true, arrivedAt: true }, take: 200 }).catch(() => []);
+  const stops = await prisma.rigTripStop.findMany({ where: { rigId }, select: { id: true, name: true, coverImageUrl: true, state: true, city: true, hitchOneLiner: true, campgroundId: true, tripId: true, arrivedAt: true }, take: 200 }).catch(() => []);
   for (const s of stops) {
     await syncTimelineItem('CHECKIN', s.id, rigId, {
-      title: `Checked into ${s.name}`, previewImageUrl: s.coverImageUrl, previewText: s.state,
+      title: `Checked into ${s.name}`, previewImageUrl: s.coverImageUrl,
+      previewText: JSON.stringify({ state: s.state, city: s.city, location: s.city ? `${s.city}, ${s.state}` : s.state, hitchLine: s.hitchOneLiner, campgroundId: s.campgroundId }),
       tripId: s.tripId, stopId: s.id, occurredAt: s.arrivedAt,
     });
   }

@@ -6,6 +6,7 @@ import {
   getPriceStats,
   shouldPromptForPriceReport,
 } from '../services/campground-pricing.service';
+import { queueForDigest } from '../services/emailThrottle';
 
 const router = Router();
 const db = prisma as any;
@@ -243,6 +244,30 @@ router.post('/:id/favorite', authenticateToken, async (req: Request, res: Respon
         campgroundId: id,
       },
     });
+
+    // Queue LOW digest items for other users who also favorited this campground
+    try {
+      const [newUser, campground] = await Promise.all([
+        db.user.findUnique({ where: { id: userId }, select: { username: true, firstName: true } }),
+        db.campground.findUnique({ where: { id }, select: { name: true } }),
+      ]);
+      if (newUser && campground) {
+        const otherFollowers = await db.campgroundFollow.findMany({
+          where: { campgroundId: id, userId: { not: userId } },
+          select: { userId: true },
+          take: 50,
+        });
+        for (const f of otherFollowers) {
+          queueForDigest(f.userId, 'WEEKLY', 'CAMPGROUND_ALSO_FAVORITED', {
+            username: newUser.username || newUser.firstName,
+            campgroundName: campground.name,
+            campgroundId: id,
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.error('[SocialProof] Digest queue error (non-fatal):', e);
+    }
 
     res.json(follow);
   } catch (error: any) {
@@ -907,6 +932,145 @@ router.get('/:id/regulars', async (req: Request, res: Response) => {
     const total = await db.checkIn.groupBy({ by: ['userId'], where: { campgroundId: id }, _count: { userId: true } });
     res.json({ regulars: users, total: total.length });
   } catch { res.json({ regulars: [], total: 0 }); }
+});
+
+// ─── Social Proof ──────────────────────────────────────────
+// Returns favorites, rig visitors, and friend data for a campground
+
+router.get('/:id/social-proof', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { id: campgroundId } = req.params;
+    const currentUserId = (req as any).userId || null;
+
+    // 1) Get total favorites count
+    const totalFavorites = await db.campgroundFollow.count({
+      where: { campgroundId },
+    });
+
+    // 2) Get current user's friend IDs (for prioritization)
+    let friendIds: string[] = [];
+    if (currentUserId) {
+      const friendships = await db.friendship.findMany({
+        where: {
+          status: 'ACCEPTED',
+          OR: [
+            { initiatorId: currentUserId },
+            { receiverId: currentUserId },
+          ],
+        },
+        select: { initiatorId: true, receiverId: true },
+      });
+      friendIds = friendships.map((f: any) =>
+        f.initiatorId === currentUserId ? f.receiverId : f.initiatorId
+      );
+    }
+    const friendIdSet = new Set(friendIds);
+
+    // 3) Get users who favorited this campground (max 12)
+    const follows = await db.campgroundFollow.findMany({
+      where: { campgroundId },
+      take: 50, // Fetch extra so we can prioritize friends
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilePicture: true,
+            firstName: true,
+            lastName: true,
+            rigs: {
+              where: { isPublic: true },
+              take: 1,
+              select: { rigName: true, slug: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Sort: friends first, then recent
+    const sortedFollows = follows.sort((a: any, b: any) => {
+      const aIsFriend = friendIdSet.has(a.user.id) ? 0 : 1;
+      const bIsFriend = friendIdSet.has(b.user.id) ? 0 : 1;
+      if (aIsFriend !== bIsFriend) return aIsFriend - bIsFriend;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const favoritedBy = sortedFollows.slice(0, 12).map((f: any) => ({
+      userId: f.user.id,
+      username: f.user.username,
+      avatarUrl: f.user.profilePicture,
+      firstName: f.user.firstName,
+      rigName: f.user.rigs[0]?.rigName || null,
+      rigSlug: f.user.rigs[0]?.slug || null,
+      isFriend: friendIdSet.has(f.user.id),
+    }));
+
+    // 4) Friends who favorited (shown prominently)
+    const friendsWhoFavorited = favoritedBy
+      .filter((f: any) => f.isFriend)
+      .map((f: any) => ({
+        userId: f.userId,
+        username: f.username,
+        avatarUrl: f.avatarUrl,
+        firstName: f.firstName,
+      }));
+
+    // 5) Rig visitors — rigs that have visited this campground
+    const rigVisits = await db.rigCampsiteVisit.findMany({
+      where: { campgroundId },
+      orderBy: { visitedAt: 'desc' },
+      take: 8,
+      include: {
+        rig: {
+          select: {
+            id: true,
+            slug: true,
+            rigName: true,
+            rigEmoji: true,
+            heroPhoto: true,
+            ownerId: true,
+            owner: {
+              select: {
+                username: true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const totalRigVisitors = await db.rigCampsiteVisit.groupBy({
+      by: ['rigId'],
+      where: { campgroundId },
+    });
+
+    const rigVisitors = rigVisits.map((v: any) => ({
+      rigId: v.rig.id,
+      rigSlug: v.rig.slug,
+      rigName: v.rig.rigName,
+      rigEmoji: v.rig.rigEmoji,
+      coverPhotoUrl: v.rig.heroPhoto,
+      ownerUsername: v.rig.owner.username,
+      ownerAvatarUrl: v.rig.owner.profilePicture,
+      visitedAt: v.visitedAt,
+      photoCount: (v.photoUrls || []).length,
+      stopPhotoUrls: (v.photoUrls || []).slice(0, 3),
+    }));
+
+    res.json({
+      favoritedBy,
+      rigVisitors,
+      totalFavorites,
+      totalRigVisitors: totalRigVisitors.length,
+      friendsWhoFavorited,
+    });
+  } catch (error: any) {
+    console.error('Social proof error:', error);
+    res.status(500).json({ error: 'Failed to get social proof data' });
+  }
 });
 
 export default router;
