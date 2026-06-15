@@ -1573,14 +1573,44 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                 <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />)}</div>
               ) : (stateDetail?.visits || getStateVisits(selectedState)).length > 0 ? (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{isOwnProfile ? 'Your visits' : 'Trips'}</h3>
-                  {(stateDetail?.visits || getStateVisits(selectedState)).map((visit: any) => (
+                  {(() => {
+                    const visits = stateDetail?.visits || getStateVisits(selectedState);
+                    const campingCount = visits.filter((v: any) => !v.notes?.startsWith('\u{1F319} Overnight')).length;
+                    const overnightCount = visits.filter((v: any) => v.notes?.startsWith('\u{1F319} Overnight')).length;
+                    return (
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{isOwnProfile ? 'Your visits' : 'Trips'}</h3>
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          {campingCount > 0 && `${campingCount} camping trip${campingCount !== 1 ? 's' : ''}`}
+                          {campingCount > 0 && overnightCount > 0 && ' \u00B7 '}
+                          {overnightCount > 0 && `${overnightCount} overnight stop${overnightCount !== 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  {(stateDetail?.visits || getStateVisits(selectedState)).map((visit: any) => {
+                    const isOvernight = visit.notes?.startsWith('\u{1F319} Overnight');
+                    return (
                     <div key={visit.id} className="rounded-xl p-4" style={{ background: isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
                       <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" style={{ color: isPlannedVisit(visit.startDate) ? '#4A90D9' : '#C9A84C' }} />
-                          <span className="text-sm font-semibold">{formatDateRange(visit.startDate, visit.endDate)}</span>
-                          {isPlannedVisit(visit.startDate) && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(74,144,217,0.2)', color: '#4A90D9' }}>Planned</span>}
+                        <div className="flex flex-col gap-1.5">
+                          {/* Type badge */}
+                          {isOvernight ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit" style={{ background: 'rgba(27,43,75,0.8)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.3)' }}>{'\u{1F319}'} Overnight Stop</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit" style={{ background: 'rgba(232,168,56,0.1)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.2)' }}>{'\u{1F3D5}\uFE0F'} Camping Trip</span>
+                          )}
+                          {/* Date */}
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" style={{ color: isPlannedVisit(visit.startDate) ? '#4A90D9' : '#C9A84C' }} />
+                            <span className="text-sm font-semibold">
+                              {isOvernight
+                                ? `Night of ${new Date(visit.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} \u00B7 1 night`
+                                : formatDateRange(visit.startDate, visit.endDate)
+                              }
+                            </span>
+                            {isPlannedVisit(visit.startDate) && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(74,144,217,0.2)', color: '#4A90D9' }}>Planned</span>}
+                          </div>
                         </div>
                         <div className="flex gap-1 items-center">
                           {(visit.event?.id || visit.eventId) && (
@@ -1658,14 +1688,23 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         </div>
                       )}
 
-                      {/* Campsite */}
-                      {visit.campsite && (
+                      {/* Location name */}
+                      {visit.campsite && !isOvernight && (
                         <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="flex items-center gap-1.5 mb-2 text-[12px] hover:opacity-80 transition" style={{ color: '#C9A84C' }}>
                           <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
                         </Link>
                       )}
+                      {isOvernight && visit.notes && (
+                        <p className="flex items-center gap-1.5 mb-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <MapPin className="w-3.5 h-3.5" style={{ color: '#E8A838' }} />
+                          {visit.notes.replace('\u{1F319} Overnight at ', '').split(' \u2014 ')[0]}
+                        </p>
+                      )}
 
-                      {visit.notes && <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>}
+                      {visit.notes && !isOvernight && <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>}
+                      {isOvernight && visit.notes?.includes(' \u2014 ') && (
+                        <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes.split(' \u2014 ').slice(1).join(' \u2014 ')}</p>
+                      )}
 
                       {/* Event Photo Albums (from event's linked albums) */}
                       {visit.event?.photoAlbums?.length > 0 && (
@@ -1722,7 +1761,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8"><MapPin className="w-10 h-10 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.15)' }} /><p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>No visits recorded</p></div>
