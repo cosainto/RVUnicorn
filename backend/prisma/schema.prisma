@@ -7447,3 +7447,167 @@ model TripPrepItem {
 
   @@index([tripId, userId])
 }
+
+// ─── Community Feed System ──────────────────────────────────
+
+model FeedPost {
+  id            String    @id @default(cuid())
+  authorId      String
+  rigId         String?
+  content       String
+  postType      String    @default("GENERAL") // GENERAL | QUESTION | POLL | TIP | REVIEW | STORY | PHOTO | MOD | RECIPE
+  photoUrls     String[]
+  campgroundId  String?
+  tripId        String?
+  stopId        String?
+  tags          String[]
+  likeCount     Int       @default(0)
+  commentCount  Int       @default(0)
+  shareCount    Int       @default(0)
+  isPublic      Boolean   @default(true)
+  isHidden      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  likes         FeedPostLike[]
+  comments      FeedPostComment[]
+  poll          FeedPoll?
+  beenTheres    BeenThere[]
+  subscriptions ThreadSubscription[]
+
+  @@index([authorId])
+  @@index([campgroundId])
+  @@index([postType])
+  @@index([createdAt])
+  @@index([likeCount])
+}
+
+model FeedPostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model FeedPostComment {
+  id              String   @id @default(cuid())
+  postId          String
+  userId          String
+  parentCommentId String?
+  content         String
+  likeCount       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  post            FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  likes           FeedPostCommentLike[]
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentCommentId])
+}
+
+model FeedPostCommentLike {
+  id        String          @id @default(cuid())
+  commentId String
+  userId    String
+  comment   FeedPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+
+  @@unique([commentId, userId])
+}
+
+model FeedPoll {
+  id        String         @id @default(cuid())
+  postId    String         @unique
+  options   Json           // [{ text: string }]
+  votes     Json           @default("{}")  // { optionIndex: count }
+  expiresAt DateTime?
+  post      FeedPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userVotes FeedPollVote[]
+  createdAt DateTime       @default(now())
+}
+
+model FeedPollVote {
+  id          String   @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  poll        FeedPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+}
+
+model ThreadSubscription {
+  id           String    @id @default(cuid())
+  postId       String
+  userId       String
+  lastReadAt   DateTime?
+  post         FeedPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  subscribedAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model FeedActivity {
+  id           String   @id @default(cuid())
+  actorId      String
+  targetUserId String?
+  postId       String?
+  commentId    String?
+  activityType String   // LIKE | COMMENT | FOLLOW | MENTION | POLL_VOTE | BEEN_THERE | THREAD_REPLY
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId, isRead])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model BeenThere {
+  id           String   @id @default(cuid())
+  postId       String
+  userId       String
+  campgroundId String?
+  post         FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+}
+
+model UserSuggestion {
+  id              String   @id @default(cuid())
+  userId          String
+  suggestedUserId String
+  reason          String
+  score           Float
+  dismissed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, suggestedUserId])
+  @@index([userId, dismissed])
+}
+
+model FeedRecommendation {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  signal    String   // FOLLOWING | FRIEND_ACTIVITY | RELEVANCE | TRENDING
+  reason    String
+  score     Float
+  shown     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, shown])
+  @@index([postId])
+}
