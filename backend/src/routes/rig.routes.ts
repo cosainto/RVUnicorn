@@ -179,6 +179,31 @@ router.post('/migrate-from-user', authenticateToken, async (req: Request, res: R
   }
 });
 
+// ============== TRIP PHOTO COUNT ==============
+
+router.get('/trip/:tripId/photo-count', optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    // Count posts with photos linked to this trip
+    const posts = await prisma.rigPost.findMany({
+      where: { tripId, photos: { isEmpty: false } },
+      select: { photos: true },
+    }).catch(() => []);
+    const postPhotoCount = posts.reduce((sum: number, p: any) => sum + (p.photos?.length || 0), 0);
+
+    // Count trip stop photos
+    const stops = await prisma.rigTripStop.findMany({
+      where: { tripId, coverImageUrl: { not: null } },
+      select: { id: true },
+    }).catch(() => []);
+
+    const count = postPhotoCount + stops.length;
+    res.json({ count, hasPhotos: count > 0 });
+  } catch (error: any) {
+    res.json({ count: 0, hasPhotos: false });
+  }
+});
+
 // ============== USER'S OWN RIGS ==============
 
 router.get('/user/:userId/owned', optionalAuth, async (req: Request, res: Response) => {

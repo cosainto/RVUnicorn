@@ -8,6 +8,7 @@ interface Props { user: any; cn: Record<string, string>; }
 export default function RigPulseCard({ user, cn }: Props) {
   const [maintenance, setMaintenance] = useState<any>(null);
   const [lastTrip, setLastTrip] = useState<any>(null);
+  const [lastTripPhotos, setLastTripPhotos] = useState<{ hasPhotos: boolean; photoCount: number } | null>(null);
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,8 +20,15 @@ export default function RigPulseCard({ user, cn }: Props) {
       const reminders = Array.isArray(maint.data) ? maint.data : [];
       setMaintenance(reminders[0] || null);
       const tripList = Array.isArray(trips.data) ? trips.data : (trips.data?.events || []);
-      setLastTrip(tripList[0] || null);
+      const lt = tripList[0] || null;
+      setLastTrip(lt);
       setLoading(false);
+      // Check if last trip has photos
+      if (lt?.id) {
+        api.get(`/rigs/trip/${lt.id}/photo-count`).then(r => {
+          setLastTripPhotos({ hasPhotos: r.data.count > 0, photoCount: r.data.count });
+        }).catch(() => setLastTripPhotos({ hasPhotos: false, photoCount: 0 }));
+      }
     });
     // Fetch user's rig (with co-pilots)
     if (user?.id) {
@@ -153,10 +161,33 @@ export default function RigPulseCard({ user, cn }: Props) {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Last Adventure</p>
             {lastTrip ? (
-              <p className="text-xs" style={{ color: cn.cream }}>
-                {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
-                {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
-              </p>
+              <div>
+                <p className="text-xs" style={{ color: cn.cream }}>
+                  {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
+                  {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
+                </p>
+                {/* Photo prompt */}
+                {lastTripPhotos && lastTripPhotos.hasPhotos ? (
+                  <Link to={`/trips/${lastTrip.id}`} className="flex items-center gap-1 mt-1.5 text-[10px] font-medium" style={{ color: cn.success }}>
+                    {'\u{1F4F8}'} {lastTripPhotos.photoCount} photo{lastTripPhotos.photoCount !== 1 ? 's' : ''}
+                  </Link>
+                ) : lastTripPhotos && !lastTripPhotos.hasPhotos && daysSinceTrip != null && daysSinceTrip <= 30 ? (
+                  <div className="mt-1.5">
+                    <p className="text-[10px] italic" style={{ color: cn.muted }}>{'\u{1F4F8}'} No photos from this trip yet</p>
+                    <Link to={rigSlug ? `/rig/${rigSlug}?tab=timeline&addPhotos=${lastTrip.id}` : `/trips/${lastTrip.id}`}
+                      className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-full text-[10px] font-semibold transition hover:brightness-125"
+                      style={{ background: 'rgba(232,168,56,0.15)', color: cn.gold, border: '1px solid rgba(232,168,56,0.3)' }}>
+                      {'\u{1F4F8}'} Add photos from {lastTrip.campground?.name?.split(' ').slice(0, 2).join(' ') || 'your trip'} {'\u2192'}
+                    </Link>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_40,h_40,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="" className="w-4 h-4 rounded-full" />
+                      <span className="text-[9px] italic" style={{ color: cn.muted }}>Memories fade {'\u2014'} photos last forever!</span>
+                    </div>
+                  </div>
+                ) : lastTripPhotos && !lastTripPhotos.hasPhotos && daysSinceTrip != null && daysSinceTrip > 30 ? (
+                  <p className="text-[10px] mt-1" style={{ color: cn.muted }}>{'\u{1F4F8}'} No photos logged from this trip</p>
+                ) : null}
+              </div>
             ) : (
               <p className="text-xs" style={{ color: cn.gold }}>No trips yet {'\u2014'} let's change that</p>
             )}
