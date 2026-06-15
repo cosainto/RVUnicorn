@@ -1116,22 +1116,26 @@ model Photo {
 }
 
 model StateVisit {
-  id         String               @id @default(cuid())
-  userId     String
-  state      String
-  createdAt  DateTime             @default(now())
-  notes      String?
-  updatedAt  DateTime             @updatedAt
-  campsiteId String?
-  endDate    DateTime?
-  eventId    String?
-  startDate  DateTime
-  visibility String               @default("PUBLIC")
-  campsite   Campground?          @relation(fields: [campsiteId], references: [id])
-  event      Event?               @relation(fields: [eventId], references: [id])
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  albums     StateVisitAlbum[]
-  attendees  StateVisitAttendee[]
+  id            String               @id @default(cuid())
+  userId        String
+  state         String
+  createdAt     DateTime             @default(now())
+  notes         String?
+  updatedAt     DateTime             @updatedAt
+  campsiteId    String?
+  endDate       DateTime?
+  eventId       String?
+  startDate     DateTime
+  visibility    String               @default("PUBLIC")
+  photoUrls     String[]
+  linkUrl       String?
+  latitude      Float?
+  longitude     Float?
+  campsite      Campground?          @relation(fields: [campsiteId], references: [id])
+  event         Event?               @relation(fields: [eventId], references: [id])
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  albums        StateVisitAlbum[]
+  attendees     StateVisitAttendee[]
 
   @@index([userId])
   @@index([state])

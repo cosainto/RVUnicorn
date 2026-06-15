@@ -289,6 +289,11 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [overnightResults, setOvernightResults] = useState<any[]>([]);
   const [selectedOvernight, setSelectedOvernight] = useState<any>(null);
   const [overnightFlags, setOvernightFlags] = useState<Record<string, boolean>>({});
+  const [visitPhotos, setVisitPhotos] = useState<File[]>([]);
+  const [visitPhotoPreview, setVisitPhotoPreview] = useState<string[]>([]);
+  const [visitLinkUrl, setVisitLinkUrl] = useState('');
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     loadTravelMap();
@@ -710,9 +715,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           endDate: visitForm.startDate, // single night
         });
       } else if (editingVisit) {
-        await api.put(`/travel-map/visits/${editingVisit.id}`, visitForm);
+        await api.put(`/travel-map/visits/${editingVisit.id}`, { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
       } else {
-        await api.post('/travel-map/visits', visitForm);
+        const { data: newVisit } = await api.post('/travel-map/visits', { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
+        // Upload photos if any
+        if (visitPhotos.length > 0 && newVisit?.id) {
+          const formData = new FormData();
+          visitPhotos.forEach(f => formData.append('photos', f));
+          await api.post(`/travel-map/visits/${newVisit.id}/photos`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).catch(() => {});
+        }
       }
       setShowAddVisitModal(false);
       setEditingVisit(null);
@@ -720,6 +731,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       setSelectedOvernight(null);
       setOvernightSearch('');
       setOvernightFlags({});
+      setVisitPhotos([]);
+      setVisitPhotoPreview([]);
+      setVisitLinkUrl('');
+      setGeoCoords(null);
       setVisitForm({ state: '', startDate: '', endDate: '', notes: '', campsiteId: '', eventId: '', attendeeIds: [], albumIds: [], visibility: 'PUBLIC' });
       await loadTravelMap();
     } catch (error) {
@@ -1850,6 +1865,74 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea value={visitForm.notes} onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })} rows={3} className="input"
                   placeholder={stayType === 'overnight' ? 'Any tips for other RVers stopping here?' : 'Share details about your trip...'} />
+              </div>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{'\u{1F4F8}'} Photos</label>
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {visitPhotoPreview.map((url, i) => (
+                    <div key={i} className="relative w-16 h-16">
+                      <img src={url} alt="" className="w-full h-full object-cover rounded-lg" />
+                      <button type="button" onClick={() => { setVisitPhotos(p => p.filter((_, idx) => idx !== i)); setVisitPhotoPreview(p => p.filter((_, idx) => idx !== i)); }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs">{'\u00D7'}</button>
+                    </div>
+                  ))}
+                  {visitPhotos.length < 5 && (
+                    <label className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-amber-400 transition">
+                      <span className="text-gray-400 text-xl">+</span>
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                        const files = Array.from(e.target.files || []).slice(0, 5 - visitPhotos.length);
+                        setVisitPhotos(prev => [...prev, ...files]);
+                        files.forEach(f => {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => setVisitPhotoPreview(prev => [...prev, ev.target?.result as string]);
+                          reader.readAsDataURL(f);
+                        });
+                        e.target.value = '';
+                      }} />
+                    </label>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-400">Up to 5 photos</p>
+              </div>
+
+              {/* URL Link */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{'\u{1F517}'} Link (optional)</label>
+                <input type="url" value={visitLinkUrl} onChange={(e) => setVisitLinkUrl(e.target.value)}
+                  placeholder="https://campground-website.com or blog post URL"
+                  className="input" />
+              </div>
+
+              {/* Geolocation */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{'\u{1F4CD}'} Location</label>
+                {geoCoords ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-green-600 text-sm">{'\u2705'}</span>
+                    <span className="text-xs text-green-700">Location set: {geoCoords.lat.toFixed(4)}, {geoCoords.lng.toFixed(4)}</span>
+                    <button type="button" onClick={() => setGeoCoords(null)} className="ml-auto text-xs text-gray-400 hover:text-gray-600">Clear</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => {
+                    if (!navigator.geolocation) { alert('Geolocation not supported by your browser'); return; }
+                    setGeoLoading(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => { setGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoLoading(false); },
+                      (err) => { alert('Could not get location: ' + err.message); setGeoLoading(false); },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }}
+                    disabled={geoLoading}
+                    className="w-full py-2 px-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                    {geoLoading ? (
+                      <><span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> Getting location...</>
+                    ) : (
+                      <>{'\u{1F4CD}'} Use my current location</>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Buttons */}

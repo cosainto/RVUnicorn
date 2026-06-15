@@ -1,9 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import multer from 'multer';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const db = prisma as any;
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Helper to check if users are friends
 async function areFriends(userId1: string, userId2: string): Promise<boolean> {
@@ -359,7 +362,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
 router.post('/visits', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility } = req.body;
+    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude } = req.body;
 
     if (!state || !startDate) {
       return res.status(400).json({ error: 'State and start date are required' });
@@ -400,6 +403,10 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
         campsiteId: campsiteId || null,
         eventId: eventId || null,
         visibility: visibility || 'PUBLIC',
+        photoUrls: photoUrls || [],
+        linkUrl: linkUrl || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
       },
     });
 
@@ -425,6 +432,35 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Add state visit error:', error);
     res.status(500).json({ error: 'Failed to add state visit' });
+  }
+});
+
+// Upload photos to a visit
+router.post('/visits/:visitId/photos', authenticateToken, upload.array('photos', 5), async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { visitId } = req.params;
+    const visit = await db.stateVisit.findUnique({ where: { id: visitId } });
+    if (!visit || visit.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) return res.status(400).json({ error: 'No files' });
+
+    const urls: string[] = [];
+    for (const file of files) {
+      const url = await uploadBufferToCloudinary(file.buffer, 'rvunicorn/visits');
+      urls.push(url);
+    }
+
+    const updated = await db.stateVisit.update({
+      where: { id: visitId },
+      data: { photoUrls: [...(visit.photoUrls || []), ...urls] },
+    });
+
+    res.json({ photoUrls: updated.photoUrls });
+  } catch (error: any) {
+    console.error('Upload visit photos error:', error);
+    res.status(500).json({ error: 'Failed to upload photos' });
   }
 });
 
