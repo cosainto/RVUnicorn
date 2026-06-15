@@ -319,4 +319,238 @@ router.get('/traveler-feed', authenticateToken, async (req: any, res: Response) 
   }
 });
 
+// ─── DIRECTION DETECTION (Phase 9) ──────────────────────────
+
+router.post('/session/check-direction', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const session = await prisma.passengerSession.findFirst({ where: { userId: req.userId, endedAt: null } });
+    if (!session || !session.currentLat || !session.currentLng) return res.json({ direction: session?.direction || 'OUTBOUND' });
+
+    // Get user's home location
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { homeLatitude: true, homeLongitude: true } });
+    if (!user?.homeLatitude) return res.json({ direction: session.direction });
+
+    // Get trip destination
+    let destLat: number | null = null, destLng: number | null = null;
+    if (session.tripId) {
+      const trip = await prisma.event.findUnique({ where: { id: session.tripId }, include: { campground: { select: { latitude: true, longitude: true } } } });
+      destLat = trip?.campground?.latitude || null;
+      destLng = trip?.campground?.longitude || null;
+    }
+
+    const distToHome = Math.sqrt((session.currentLat - user.homeLatitude) ** 2 + (session.currentLng - (user.homeLongitude || 0)) ** 2) * 69;
+    const distToDest = destLat && destLng ? Math.sqrt((session.currentLat - destLat) ** 2 + (session.currentLng - destLng) ** 2) * 69 : 9999;
+
+    const newDirection = distToHome < distToDest ? 'INBOUND' : 'OUTBOUND';
+    if (newDirection !== session.direction) {
+      await prisma.passengerSession.update({ where: { id: session.id }, data: { direction: newDirection } });
+    }
+
+    res.json({ direction: newDirection, distToHome: Math.round(distToHome), distToDest: Math.round(distToDest), changed: newDirection !== session.direction });
+  } catch (e: any) {
+    res.json({ direction: 'OUTBOUND' });
+  }
+});
+
+// ─── TRIP RECAP (Phase 12) ──────────────────────────────────
+
+router.post('/trip-recap/:tripId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { tripId } = req.params;
+
+    // Gather all road stops for this trip
+    const stops = await prisma.roadStop.findMany({
+      where: { tripId },
+      orderBy: { loggedAt: 'asc' },
+    });
+
+    // Build day-by-day story
+    const dayMap = new Map<string, any[]>();
+    stops.forEach((s: any) => {
+      const day = new Date(s.loggedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const arr = dayMap.get(day) || [];
+      arr.push(s);
+      dayMap.set(day, arr);
+    });
+
+    const STOP_EMOJI: Record<string, string> = { FUEL: '\u26FD', FOOD: '\u{1F354}', SCENIC: '\u{1F4F8}', REST_AREA: '\u{1F6BB}', OVERNIGHT: '\u{1F319}', BORDER_CROSS: '\u{1F5FA}\uFE0F', OTHER: '\u{1F690}' };
+
+    const story: any[] = [];
+    let dayNum = 0;
+    Array.from(dayMap.entries()).forEach(([day, dayStops]) => {
+      dayNum++;
+      const entries = dayStops.map((s: any) => ({
+        emoji: STOP_EMOJI[s.stopType] || '\u{1F4CD}',
+        name: s.name || s.stopType,
+        time: new Date(s.loggedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        details: s.fuelPrice ? `$${s.fuelPrice}/gal` : s.restaurantRating === 1 ? '\u{1F44D} Worth it' : s.restaurantRating === -1 ? '\u{1F44E} Skip' : null,
+      }));
+      story.push({ dayNum, date: day, entries });
+    });
+
+    // Calculate totals
+    const totalFuelCost = stops.filter((s: any) => s.fuelPrice && s.fuelGallons).reduce((sum: number, s: any) => sum + (s.fuelPrice * s.fuelGallons), 0);
+    const fuelStops = stops.filter((s: any) => s.stopType === 'FUEL').length;
+
+    // Generate narrative with Haiku
+    let narrative = '';
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+    if (ANTHROPIC_API_KEY && stops.length > 0) {
+      try {
+        const trip = await prisma.event.findUnique({ where: { id: tripId }, select: { title: true, campground: { select: { name: true } } } });
+        const rig = await prisma.rig.findFirst({ where: { ownerId: req.userId }, select: { rigName: true } });
+        const statesCrossed = [...new Set(stops.filter((s: any) => s.stopType === 'BORDER_CROSS').map((s: any) => s.name))];
+        const context = `Rig: ${rig?.rigName || 'their rig'}. Trip: ${trip?.title || 'road trip'} to ${trip?.campground?.name || 'destination'}. ${stops.length} stops logged. ${fuelStops} fuel stops. ${statesCrossed.length > 0 ? 'States crossed: ' + statesCrossed.join(', ') + '.' : ''} Total fuel: $${totalFuelCost.toFixed(0)}.`;
+
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 100,
+            messages: [{ role: 'user', content: `Write a fun 2-sentence trip recap summary for an RV road trip. Context: ${context}. Keep it warm, celebratory, under 40 words. No hashtags or emojis.` }],
+          }),
+        });
+        const aiData: any = await aiRes.json();
+        if (aiData.content?.[0]?.text) narrative = aiData.content[0].text;
+      } catch {}
+    }
+
+    // Save recap
+    await prisma.rigTrip.updateMany({
+      where: { id: tripId },
+      data: { tripRecapGenerated: true, totalFuelCost: totalFuelCost || undefined },
+    }).catch(() => {});
+
+    res.json({ story, narrative, totalFuelCost: Math.round(totalFuelCost * 100) / 100, fuelStops, totalStops: stops.length });
+  } catch (e: any) {
+    console.error('[TripRecap] Error:', e);
+    res.status(500).json({ error: 'Failed to generate recap' });
+  }
+});
+
+// ─── MILESTONES (Phase 13) ──────────────────────────────────
+
+router.get('/milestones', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const session = await prisma.passengerSession.findFirst({ where: { userId: req.userId, endedAt: null } });
+    if (!session) return res.json([]);
+
+    const stops = await prisma.roadStop.findMany({ where: { sessionId: session.id }, orderBy: { loggedAt: 'asc' } });
+    const milestones: any[] = [];
+
+    // Count border crossings as state milestones
+    const borderStops = stops.filter((s: any) => s.stopType === 'BORDER_CROSS');
+    borderStops.forEach((s: any) => {
+      milestones.push({ type: 'STATE_CROSS', message: `Just crossed into ${s.name}! \u{1F5FA}\uFE0F`, time: s.loggedAt });
+    });
+
+    // Points milestones
+    const points = await prisma.coPilotPoints.findUnique({ where: { userId: req.userId } });
+    const pts = points?.points || 0;
+    if (pts >= 100 && pts < 200) milestones.push({ type: 'POINTS', message: `100 CoPilot points earned! \u{1F3C6}` });
+    if (pts >= 250) milestones.push({ type: 'POINTS', message: `250 CoPilot points — Road Warrior status! \u{1F525}` });
+
+    // Stop count milestones
+    if (stops.length >= 5) milestones.push({ type: 'STOPS', message: `${stops.length} stops logged on this trip \u{1F4CB}` });
+    if (stops.length >= 10) milestones.push({ type: 'STOPS', message: `10 stops! You're documenting everything \u{1F4F8}` });
+
+    res.json(milestones.slice(-5)); // Last 5 milestones
+  } catch (e: any) {
+    res.json([]);
+  }
+});
+
+// ─── BADGE CHECK (Phase 11) ─────────────────────────────────
+
+router.post('/check-badges', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const awarded: string[] = [];
+
+    const [sessionCount, fuelStopCount, missionCount, debriefCount, pointsRec, photoStopCount] = await Promise.all([
+      prisma.passengerSession.count({ where: { userId, endedAt: { not: null } } }),
+      prisma.roadStop.count({ where: { userId, stopType: 'FUEL' } }),
+      prisma.roadMission.count({ where: { userId, completedAt: { not: null } } }),
+      prisma.tripDebrief.count({ where: { userId, status: 'COMPLETED' } }),
+      prisma.coPilotPoints.findUnique({ where: { userId } }),
+      prisma.roadStop.count({ where: { userId, stopType: 'SCENIC' } }),
+    ]);
+
+    const checks: Array<{ type: string; condition: boolean }> = [
+      { type: 'ROUTE_MASTER', condition: sessionCount >= 10 },
+      { type: 'FUEL_SAVER', condition: fuelStopCount >= 5 },
+      { type: 'MISSION_MASTER', condition: missionCount >= 25 },
+      { type: 'MEMORY_KEEPER', condition: debriefCount >= 3 },
+      { type: 'ROAD_WARRIOR', condition: (pointsRec?.points || 0) >= 1000 },
+      { type: 'TRIP_HISTORIAN', condition: photoStopCount >= 20 },
+    ];
+
+    for (const { type, condition } of checks) {
+      if (condition) {
+        const existing = await prisma.coPilotBadge.findUnique({ where: { userId_badgeType: { userId, badgeType: type } } });
+        if (!existing) {
+          await prisma.coPilotBadge.create({ data: { userId, badgeType: type } });
+          awarded.push(type);
+        }
+      }
+    }
+
+    res.json({ awarded, total: await prisma.coPilotBadge.count({ where: { userId } }) });
+  } catch (e: any) {
+    res.json({ awarded: [], total: 0 });
+  }
+});
+
+// ─── LIVE JOURNEY (Phase 14) ────────────────────────────────
+
+router.get('/live/:userId', async (req: any, res: Response) => {
+  try {
+    const session = await prisma.passengerSession.findFirst({
+      where: { userId: req.params.userId, endedAt: null },
+    });
+    if (!session) return res.json(null);
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.userId },
+      select: { firstName: true, username: true, profilePicture: true },
+    });
+
+    const rig = session.rigId ? await prisma.rig.findUnique({
+      where: { id: session.rigId },
+      select: { rigName: true, slug: true, rigEmoji: true, heroPhoto: true },
+    }) : null;
+
+    const lastStop = await prisma.roadStop.findFirst({
+      where: { sessionId: session.id },
+      orderBy: { loggedAt: 'desc' },
+    });
+
+    // Get trip destination
+    let destination = null;
+    if (session.tripId) {
+      const trip = await prisma.event.findUnique({
+        where: { id: session.tripId },
+        select: { title: true, campground: { select: { name: true } } },
+      });
+      destination = trip?.campground?.name || trip?.title;
+    }
+
+    res.json({
+      isLive: true,
+      direction: session.direction,
+      role: session.role,
+      currentLat: session.currentLat,
+      currentLng: session.currentLng,
+      lastLocationUpdate: session.lastLocationUpdate,
+      activatedAt: session.activatedAt,
+      destination,
+      user,
+      rig,
+      lastStop: lastStop ? { type: lastStop.stopType, name: lastStop.name, loggedAt: lastStop.loggedAt } : null,
+    });
+  } catch (e: any) {
+    res.json(null);
+  }
+});
+
 export default router;
