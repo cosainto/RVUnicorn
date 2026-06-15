@@ -179,6 +179,63 @@ router.post('/migrate-from-user', authenticateToken, async (req: Request, res: R
   }
 });
 
+// ============== TRIPS WITHOUT PHOTOS ==============
+
+router.get('/trips-without-photos', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    // Get last 10 trips (events) for this user, most recent first
+    const trips = await prisma.event.findMany({
+      where: {
+        OR: [{ organizerId: userId }, { attendees: { some: { userId, status: { in: ['going', 'GOING'] } } } }],
+        isWishlist: false,
+      },
+      orderBy: { startDate: 'desc' },
+      take: 10,
+      select: {
+        id: true, title: true, startDate: true, endDate: true,
+        campground: { select: { name: true } },
+      },
+    });
+
+    const results: any[] = [];
+    for (const trip of trips) {
+      // Count photos for this trip
+      const postPhotos = await prisma.rigPost.count({
+        where: { tripId: trip.id, photos: { isEmpty: false } },
+      }).catch(() => 0);
+      const stopPhotos = await prisma.rigTripStop.count({
+        where: { tripId: trip.id, coverImageUrl: { not: null } },
+      }).catch(() => 0);
+
+      if (postPhotos === 0 && stopPhotos === 0) {
+        const endDate = trip.endDate || trip.startDate;
+        const daysAgo = Math.floor((Date.now() - new Date(endDate).getTime()) / 86400000);
+        const stopCount = await prisma.rigTripStop.count({ where: { tripId: trip.id } }).catch(() => 0);
+
+        results.push({
+          tripId: trip.id,
+          tripName: trip.title,
+          campgroundName: trip.campground?.name || null,
+          startDate: trip.startDate,
+          endDate: trip.endDate,
+          daysAgo: Math.max(0, daysAgo),
+          stopCount,
+          isWithin30Days: daysAgo <= 30,
+          hasPhotos: false,
+        });
+      }
+      if (results.length >= 7) break;
+    }
+
+    res.json(results);
+  } catch (error: any) {
+    console.error('[TripsWithoutPhotos] Error:', error);
+    res.json([]);
+  }
+});
+
 // ============== TRIP PHOTO COUNT ==============
 
 router.get('/trip/:tripId/photo-count', optionalAuth, async (req: Request, res: Response) => {

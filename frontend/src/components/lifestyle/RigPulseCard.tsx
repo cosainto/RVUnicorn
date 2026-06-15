@@ -5,10 +5,21 @@ import api from '../../services/api';
 
 interface Props { user: any; cn: Record<string, string>; }
 
+interface TripWithoutPhotos {
+  tripId: string;
+  tripName: string;
+  campgroundName: string | null;
+  startDate: string;
+  endDate: string;
+  daysAgo: number;
+  stopCount: number;
+  isWithin30Days: boolean;
+}
+
 export default function RigPulseCard({ user, cn }: Props) {
   const [maintenance, setMaintenance] = useState<any>(null);
   const [lastTrip, setLastTrip] = useState<any>(null);
-  const [lastTripPhotos, setLastTripPhotos] = useState<{ hasPhotos: boolean; photoCount: number } | null>(null);
+  const [tripsWithoutPhotos, setTripsWithoutPhotos] = useState<TripWithoutPhotos[]>([]);
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,33 +27,25 @@ export default function RigPulseCard({ user, cn }: Props) {
     Promise.all([
       api.get('/maintenance/reminders/upcoming').catch(() => ({ data: [] })),
       api.get('/events/my-events?limit=1&status=completed').catch(() => ({ data: [] })),
-    ]).then(([maint, trips]) => {
+      api.get('/rigs/trips-without-photos').catch(() => ({ data: [] })),
+    ]).then(([maint, trips, noPhotos]) => {
       const reminders = Array.isArray(maint.data) ? maint.data : [];
       setMaintenance(reminders[0] || null);
       const tripList = Array.isArray(trips.data) ? trips.data : (trips.data?.events || []);
-      const lt = tripList[0] || null;
-      setLastTrip(lt);
+      setLastTrip(tripList[0] || null);
+      setTripsWithoutPhotos(Array.isArray(noPhotos.data) ? noPhotos.data : []);
       setLoading(false);
-      // Check if last trip has photos
-      if (lt?.id) {
-        api.get(`/rigs/trip/${lt.id}/photo-count`).then(r => {
-          setLastTripPhotos({ hasPhotos: r.data.count > 0, photoCount: r.data.count });
-        }).catch(() => setLastTripPhotos({ hasPhotos: false, photoCount: 0 }));
-      }
     });
-    // Fetch user's rig (with co-pilots)
     if (user?.id) {
       api.get(`/rigs/user/${user.id}/owned`).then(r => {
         const rigs = Array.isArray(r.data) ? r.data : [];
         if (rigs.length > 0) {
-          // Fetch full rig detail with pilots
           api.get(`/rigs/${rigs[0].slug}`).then(r2 => setRig(r2.data)).catch(() => setRig(rigs[0]));
         }
       }).catch(() => {});
     }
   }, []);
 
-  // Trip Readiness Score
   let score = 100;
   if (maintenance?.nextDueDate && new Date(maintenance.nextDueDate) < new Date()) score -= 15;
   else if (maintenance?.nextDueDate && new Date(maintenance.nextDueDate) < new Date(Date.now() + 14 * 86400000)) score -= 10;
@@ -71,9 +74,16 @@ export default function RigPulseCard({ user, cn }: Props) {
   const rigSlug = rig?.slug;
   const isOwner = rig?.ownerId === user?.id;
 
+  const formatDaysAgo = (days: number) => {
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days <= 7) return `${days} days ago`;
+    return new Date(Date.now() - days * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: cn.card, border: `1px solid ${cn.border}` }}>
-      {/* Hero Photo — full width, stacked on top */}
+      {/* Hero Photo */}
       <div className="relative h-[200px] overflow-hidden">
         {rigPhoto ? (
           <img src={rigPhoto} alt="Rig" className="w-full h-full object-cover" style={{ objectPosition: 'center 40%' }} />
@@ -82,26 +92,30 @@ export default function RigPulseCard({ user, cn }: Props) {
             <span className="text-6xl">{'\u{1F690}'}</span>
           </div>
         )}
-        {/* Dark gradient overlay on bottom 40% for text readability */}
         <div className="absolute inset-x-0 bottom-0 h-[40%]" style={{ background: 'linear-gradient(to top, rgba(15,28,53,0.95), transparent)' }} />
-        {/* Orange accent bar at very top */}
         <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: cn.orange }} />
-        {/* Rig name overlaid on bottom of photo */}
-        <div className="absolute bottom-3 left-4 right-4">
-          <p className="text-base font-bold text-white drop-shadow-lg">
-            {user?.rvYear ? `${user.rvYear} ` : ''}{user?.rvMake || ''} {user?.rvModel || ''}
-          </p>
-          {(user?.rvType || user?.rvMpg) && (
-            <p className="text-xs text-white/60">
-              {user.rvType?.replace('_', ' ')}{user.rvMpg ? ` \u00B7 ${user.rvMpg} MPG` : ''}
+        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+          <div>
+            <p className="text-base font-bold text-white drop-shadow-lg">
+              {user?.rvYear ? `${user.rvYear} ` : ''}{user?.rvMake || ''} {user?.rvModel || ''}
             </p>
+            {(user?.rvType || user?.rvMpg) && (
+              <p className="text-xs text-white/60">
+                {user.rvType?.replace('_', ' ')}{user.rvMpg ? ` \u00B7 ${user.rvMpg} MPG` : ''}
+              </p>
+            )}
+          </div>
+          {/* Photo badge on hero */}
+          {tripsWithoutPhotos.length >= 3 && (
+            <span className="px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: 'rgba(232,168,56,0.9)', color: '#0F1C35' }}>
+              {'\u{1F4F8}'} {tripsWithoutPhotos.length} trips need photos
+            </span>
           )}
         </div>
       </div>
 
-      {/* Content below photo */}
       <div className="p-4">
-        {/* Co-Pilots Row */}
+        {/* Co-Pilots */}
         {pilots.length > 0 ? (
           <div className="flex items-center gap-2 mb-3">
             <div className="flex -space-x-2">
@@ -134,16 +148,15 @@ export default function RigPulseCard({ user, cn }: Props) {
             <span className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</span>
           </div>
           <div className="w-full h-2 rounded-full" style={{ background: cn.border }}>
-            <div
-              className="h-2 rounded-full transition-all duration-1000"
-              style={{ width: `${score}%`, background: scoreColor, boxShadow: score < 60 ? `0 0 8px ${cn.orange}` : 'none' }}
-            />
+            <div className="h-2 rounded-full transition-all duration-1000"
+              style={{ width: `${score}%`, background: scoreColor, boxShadow: score < 60 ? `0 0 8px ${cn.orange}` : 'none' }} />
           </div>
         </div>
 
-        {/* Two columns */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
+        {/* Maintenance + Last Adventure / Trips Without Photos */}
+        <div className="mb-4">
+          {/* Maintenance — always shows */}
+          <div className="mb-3">
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Next Maintenance</p>
             {maintenance ? (
               <p className="text-xs" style={{ color: cn.cream }}>
@@ -158,43 +171,62 @@ export default function RigPulseCard({ user, cn }: Props) {
               <p className="text-xs" style={{ color: cn.success }}>No upcoming maintenance {'\u2014'} you're good {'\u2713'}</p>
             )}
           </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Last Adventure</p>
-            {lastTrip ? (
-              <div>
-                <p className="text-xs" style={{ color: cn.cream }}>
-                  {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
-                  {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
-                </p>
-                {/* Photo prompt */}
-                {lastTripPhotos && lastTripPhotos.hasPhotos ? (
-                  <Link to={`/trips/${lastTrip.id}`} className="flex items-center gap-1 mt-1.5 text-[10px] font-medium" style={{ color: cn.success }}>
-                    {'\u{1F4F8}'} {lastTripPhotos.photoCount} photo{lastTripPhotos.photoCount !== 1 ? 's' : ''}
-                  </Link>
-                ) : lastTripPhotos && !lastTripPhotos.hasPhotos && daysSinceTrip != null && daysSinceTrip <= 30 ? (
-                  <div className="mt-1.5">
-                    <p className="text-[10px] italic" style={{ color: cn.muted }}>{'\u{1F4F8}'} No photos from this trip yet</p>
-                    <Link to={rigSlug ? `/rig/${rigSlug}?tab=timeline&addPhotos=${lastTrip.id}` : `/trips/${lastTrip.id}`}
-                      className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-full text-[10px] font-semibold transition hover:brightness-125"
-                      style={{ background: 'rgba(232,168,56,0.15)', color: cn.gold, border: '1px solid rgba(232,168,56,0.3)' }}>
-                      {'\u{1F4F8}'} Add photos from {lastTrip.campground?.name?.split(' ').slice(0, 2).join(' ') || 'your trip'} {'\u2192'}
-                    </Link>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_40,h_40,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="" className="w-4 h-4 rounded-full" />
-                      <span className="text-[9px] italic" style={{ color: cn.muted }}>Memories fade {'\u2014'} photos last forever!</span>
-                    </div>
-                  </div>
-                ) : lastTripPhotos && !lastTripPhotos.hasPhotos && daysSinceTrip != null && daysSinceTrip > 30 ? (
-                  <p className="text-[10px] mt-1" style={{ color: cn.muted }}>{'\u{1F4F8}'} No photos logged from this trip</p>
-                ) : null}
+
+          {/* Trips Without Photos list */}
+          {tripsWithoutPhotos.length > 0 ? (
+            <div className="pt-3" style={{ borderTop: `1px solid ${cn.border}` }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: cn.gold }}>{'\u{1F4F8}'} Trips without photos</p>
+                <span className="text-[10px]" style={{ color: cn.muted }}>{tripsWithoutPhotos.length} adventure{tripsWithoutPhotos.length !== 1 ? 's' : ''}</span>
               </div>
-            ) : (
-              <p className="text-xs" style={{ color: cn.gold }}>No trips yet {'\u2014'} let's change that</p>
-            )}
-          </div>
+              <div className="space-y-0 max-h-[140px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                {tripsWithoutPhotos.map((trip) => (
+                  <div key={trip.tripId} className="flex items-center gap-2 py-2" style={{ borderBottom: `1px solid ${cn.border}` }}>
+                    {/* Urgency dot */}
+                    {trip.daysAgo <= 7 && <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: trip.daysAgo > 30 ? cn.muted : cn.cream }}>
+                        {(trip.campgroundName || trip.tripName || 'Trip').slice(0, 30)}
+                      </p>
+                      <p className="text-[10px]" style={{ color: cn.muted }}>
+                        {formatDaysAgo(trip.daysAgo)}{trip.stopCount > 0 ? ` \u00B7 ${trip.stopCount} stop${trip.stopCount !== 1 ? 's' : ''}` : ''}
+                      </p>
+                    </div>
+                    <Link
+                      to={rigSlug ? `/rig/${rigSlug}?tab=photos&createAlbum=true&tripId=${trip.tripId}` : `/trips/${trip.tripId}`}
+                      className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-semibold transition hover:brightness-125"
+                      style={trip.daysAgo > 30
+                        ? { color: cn.muted, border: `1px solid ${cn.border}` }
+                        : { background: 'rgba(232,168,56,0.15)', color: cn.gold, border: '1px solid rgba(232,168,56,0.3)' }
+                      }
+                    >
+                      + {trip.daysAgo > 30 ? 'Add anyway' : 'Add Photos'}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+              {/* Hitch nudge */}
+              {tripsWithoutPhotos.length >= 2 && (
+                <div className="flex items-center gap-1.5 mt-2 pt-2" style={{ borderTop: `1px solid ${cn.border}` }}>
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_40,h_40,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="" className="w-5 h-5 rounded-full flex-shrink-0" />
+                  <span className="text-[9px] italic" style={{ color: cn.muted }}>The best time to add photos is right after a trip. The second best time is now! {'\u{1F920}'}</span>
+                </div>
+              )}
+            </div>
+          ) : lastTrip ? (
+            /* Fallback: show Last Adventure if all trips have photos */
+            <div className="pt-3" style={{ borderTop: `1px solid ${cn.border}` }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: cn.muted }}>Last Adventure</p>
+              <p className="text-xs" style={{ color: cn.cream }}>
+                {daysSinceTrip} day{daysSinceTrip !== 1 ? 's' : ''} ago
+                {lastTrip.campground?.name && <span className="block text-[10px]" style={{ color: cn.muted }}>{lastTrip.campground.name}</span>}
+              </p>
+              <p className="text-[10px] mt-1" style={{ color: cn.success }}>{'\u2705'} All recent trips have photos {'\u2014'} nice work!</p>
+            </div>
+          ) : null}
         </div>
 
-        {/* CTA — full width */}
+        {/* CTA */}
         <Link
           to={rigSlug ? `/rig/${rigSlug}` : '/my-rv'}
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-semibold transition hover:brightness-110"
