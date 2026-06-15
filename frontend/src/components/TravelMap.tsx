@@ -703,16 +703,18 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const handleSubmitVisit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (stayType === 'overnight' && selectedOvernight) {
-        // Create overnight stop visit
-        await api.post(`/overnight-stops/${selectedOvernight.id}/visits`, {
-          date: visitForm.startDate,
-          nights: 1,
-          note: visitForm.notes || null,
-          tip: visitForm.notes || null,
-          ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
-        });
-        // Also create state visit so it shows on the map — only pass overnight-relevant fields
+      if (stayType === 'overnight') {
+        // Create overnight stop visit record if a stop was selected
+        if (selectedOvernight) {
+          await api.post(`/overnight-stops/${selectedOvernight.id}/visits`, {
+            date: visitForm.startDate,
+            nights: 1,
+            note: visitForm.notes || null,
+            tip: visitForm.notes || null,
+            ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
+          });
+        }
+        // Always create state visit with OVERNIGHT type — even without a linked overnight stop
         await api.post('/travel-map/visits', {
           state: visitForm.state,
           startDate: visitForm.startDate,
@@ -720,13 +722,13 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           visitType: 'OVERNIGHT',
           notes: visitForm.notes || null,
           visibility: visitForm.visibility,
-          latitude: selectedOvernight.latitude || geoCoords?.lat,
-          longitude: selectedOvernight.longitude || geoCoords?.lng,
+          latitude: selectedOvernight?.latitude || geoCoords?.lat,
+          longitude: selectedOvernight?.longitude || geoCoords?.lng,
         });
       } else if (editingVisit) {
         await api.put(`/travel-map/visits/${editingVisit.id}`, { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
       } else {
-        const { data: newVisit } = await api.post('/travel-map/visits', { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
+        const { data: newVisit } = await api.post('/travel-map/visits', { ...visitForm, visitType: 'CAMPING', linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
         // Upload photos if any
         if (visitPhotos.length > 0 && newVisit?.id) {
           const formData = new FormData();

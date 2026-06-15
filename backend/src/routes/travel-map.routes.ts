@@ -366,7 +366,10 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
 router.post('/visits', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude, visitType } = req.body;
+    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude } = req.body;
+    // Determine visitType with safety net: if notes has moon prefix or explicit type, force OVERNIGHT
+    let visitType = req.body.visitType || 'CAMPING';
+    if (notes && typeof notes === 'string' && notes.startsWith('\u{1F319}')) visitType = 'OVERNIGHT';
 
     if (!state || !startDate) {
       return res.status(400).json({ error: 'State and start date are required' });
