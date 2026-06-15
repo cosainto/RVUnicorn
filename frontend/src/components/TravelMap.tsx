@@ -1693,13 +1693,18 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         </div>
                       )}
 
-                      {/* Location name */}
+                      {/* Location name — clickable to location detail */}
                       {visit.campsite && !isOvernight && (
-                        <Link to={`/campgrounds/${visit.campsite.slug || visit.campsite.id}`} className="flex items-center gap-1.5 mb-2 text-[12px] hover:opacity-80 transition" style={{ color: '#C9A84C' }}>
+                        <Link to={`/locations/campground/${visit.campsite.slug || visit.campsite.id}`} className="flex items-center gap-1.5 mb-2 text-[12px] hover:underline transition" style={{ color: '#C9A84C' }}>
                           <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
                         </Link>
                       )}
-                      {visit.notes && (
+                      {isOvernight && visit.notes && (
+                        <p className="flex items-center gap-1.5 mb-2 text-[12px]" style={{ color: '#E8A838' }}>
+                          <span>{'\u{1F319}'}</span> {visit.notes}
+                        </p>
+                      )}
+                      {!isOvernight && visit.notes && (
                         <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>
                       )}
 

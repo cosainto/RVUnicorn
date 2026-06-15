@@ -101,6 +101,7 @@ const GroupInvitesPage = lazy(() => import('./pages/GroupInvitesPage'));
 const CampgroundDetailPage = lazy(() => import('./pages/CampgroundDetailPage'));
 const HostDetailPage = lazy(() => import('./pages/HostDetailPage'));
 const OvernightSpotDetailPage = lazy(() => import('./pages/OvernightSpotDetailPage'));
+const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'));
 const CreateHostPage = lazy(() => import('./pages/CreateHostPage'));
 const HitchAIPage = lazy(() => import('./pages/HitchAIPage'));
 const CreatorPage = lazy(() => import('./pages/CreatorPage'));
@@ -327,6 +328,7 @@ function AppContent() {
             <Route path="/hitch" element={<PrivateRoute><HitchAIPage /></PrivateRoute>} />
             <Route path="/hosts/:id" element={<HostDetailPage />} />
             <Route path="/overnight-spots/:id" element={<OvernightSpotDetailPage />} />
+            <Route path="/locations/:type/:id" element={<LocationDetailPage />} />
 
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/media-albums" element={<PrivateRoute><MediaAlbumsPage /></PrivateRoute>} />
