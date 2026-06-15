@@ -712,11 +712,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           tip: visitForm.notes || null,
           ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
         });
-        // Also create state visit so it shows on the map
+        // Also create state visit so it shows on the map — only pass overnight-relevant fields
         await api.post('/travel-map/visits', {
-          ...visitForm,
-          notes: `${'\u{1F319}'} Overnight at ${selectedOvernight.name}${visitForm.notes ? ' — ' + visitForm.notes : ''}`,
-          endDate: visitForm.startDate, // single night
+          state: visitForm.state,
+          startDate: visitForm.startDate,
+          endDate: visitForm.startDate, // single night — same as start
+          notes: `${'\u{1F319}'} Overnight at ${selectedOvernight.name}${visitForm.notes ? ' \u2014 ' + visitForm.notes : ''}`,
+          visibility: visitForm.visibility,
+          latitude: selectedOvernight.latitude || geoCoords?.lat,
+          longitude: selectedOvernight.longitude || geoCoords?.lng,
         });
       } else if (editingVisit) {
         await api.put(`/travel-map/visits/${editingVisit.id}`, { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
@@ -1793,7 +1797,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition ${stayType === 'camping' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
                     {'\u{1F3D5}\uFE0F'} Camping Trip
                   </button>
-                  <button type="button" onClick={() => setStayType('overnight')}
+                  <button type="button" onClick={() => { setStayType('overnight'); setVisitForm(f => ({ ...f, endDate: '', campsiteId: '' })); }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition`}
                     style={stayType === 'overnight' ? { background: '#1B2B4B', color: '#E8A838', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' } : { color: '#6b7280' }}>
                     {'\u{1F319}'} Overnight Stop
