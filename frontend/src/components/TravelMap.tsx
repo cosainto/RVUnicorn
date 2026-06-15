@@ -284,6 +284,11 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
     albumIds: [] as string[],
     visibility: 'PUBLIC',
   });
+  const [stayType, setStayType] = useState<'camping' | 'overnight'>('camping');
+  const [overnightSearch, setOvernightSearch] = useState('');
+  const [overnightResults, setOvernightResults] = useState<any[]>([]);
+  const [selectedOvernight, setSelectedOvernight] = useState<any>(null);
+  const [overnightFlags, setOvernightFlags] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadTravelMap();
@@ -689,13 +694,32 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const handleSubmitVisit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (editingVisit) {
+      if (stayType === 'overnight' && selectedOvernight) {
+        // Create overnight stop visit
+        await api.post(`/overnight-stops/${selectedOvernight.id}/visits`, {
+          date: visitForm.startDate,
+          nights: 1,
+          note: visitForm.notes || null,
+          tip: visitForm.notes || null,
+          ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
+        });
+        // Also create state visit so it shows on the map
+        await api.post('/travel-map/visits', {
+          ...visitForm,
+          notes: `${'\u{1F319}'} Overnight at ${selectedOvernight.name}${visitForm.notes ? ' — ' + visitForm.notes : ''}`,
+          endDate: visitForm.startDate, // single night
+        });
+      } else if (editingVisit) {
         await api.put(`/travel-map/visits/${editingVisit.id}`, visitForm);
       } else {
         await api.post('/travel-map/visits', visitForm);
       }
       setShowAddVisitModal(false);
       setEditingVisit(null);
+      setStayType('camping');
+      setSelectedOvernight(null);
+      setOvernightSearch('');
+      setOvernightFlags({});
       setVisitForm({ state: '', startDate: '', endDate: '', notes: '', campsiteId: '', eventId: '', attendeeIds: [], albumIds: [], visibility: 'PUBLIC' });
       await loadTravelMap();
     } catch (error) {
@@ -1685,78 +1709,156 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       {/* Add Visit Modal */}
       {showAddVisitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 rounded-t-lg sticky top-0">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="text-white p-5 rounded-t-2xl sticky top-0 z-10" style={{ background: '#1B2B4B' }}>
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">{editingVisit ? 'Edit Visit' : 'Add Visit'}</h2>
-                <button onClick={() => { setShowAddVisitModal(false); setEditingVisit(null); }} className="text-white hover:text-gray-200">
+                <h2 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>{editingVisit ? 'Edit Visit' : 'Add Visit'}</h2>
+                <button onClick={() => { setShowAddVisitModal(false); setEditingVisit(null); setStayType('camping'); setSelectedOvernight(null); }} className="text-white/60 hover:text-white">
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
             <form onSubmit={handleSubmitVisit} className="p-6 space-y-4">
+              {/* Stay Type Toggle */}
+              {!editingVisit && (
+                <div className="flex gap-2 p-1 rounded-xl" style={{ background: '#f3f4f6' }}>
+                  <button type="button" onClick={() => { setStayType('camping'); setSelectedOvernight(null); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition ${stayType === 'camping' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
+                    {'\u{1F3D5}\uFE0F'} Camping Trip
+                  </button>
+                  <button type="button" onClick={() => setStayType('overnight')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition`}
+                    style={stayType === 'overnight' ? { background: '#1B2B4B', color: '#E8A838', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' } : { color: '#6b7280' }}>
+                    {'\u{1F319}'} Overnight Stop
+                  </button>
+                </div>
+              )}
+
+              {/* State */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                 <input type="text" value={STATE_NAMES[visitForm.state]} disabled className="input bg-gray-100" />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-                <input
-                  type="date"
-                  value={visitForm.startDate}
-                  onChange={(e) => setVisitForm({ ...visitForm, startDate: e.target.value })}
-                  className="input"
-                  required
-                />
-              </div>
+              {/* Date fields — conditional on type */}
+              {stayType === 'camping' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                    <input type="date" value={visitForm.startDate} onChange={(e) => setVisitForm({ ...visitForm, startDate: e.target.value })} className="input" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="date" value={visitForm.endDate} onChange={(e) => setVisitForm({ ...visitForm, endDate: e.target.value })} className="input" min={visitForm.startDate} />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Night of *</label>
+                  <input type="date" value={visitForm.startDate} onChange={(e) => setVisitForm({ ...visitForm, startDate: e.target.value })} className="input" required />
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={visitForm.endDate}
-                  onChange={(e) => setVisitForm({ ...visitForm, endDate: e.target.value })}
-                  className="input"
-                  min={visitForm.startDate}
-                />
-              </div>
+              {/* Location — conditional on type */}
+              {stayType === 'camping' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Campground</label>
+                  {loadingCampgrounds ? (
+                    <div className="input bg-gray-50 flex items-center justify-center">Loading...</div>
+                  ) : (
+                    <select value={visitForm.campsiteId} onChange={(e) => setVisitForm({ ...visitForm, campsiteId: e.target.value })} className="input">
+                      <option value="">Select a campground...</option>
+                      {campgrounds.map(cg => (<option key={cg.id} value={cg.id}>{cg.name}</option>))}
+                    </select>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Where did you park?</label>
+                  {selectedOvernight ? (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 bg-gray-50">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B', border: '1.5px solid #E8A838' }}>
+                        <span className="text-xs">{'\u{1F319}'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{selectedOvernight.name}</p>
+                        <p className="text-xs text-gray-500">{selectedOvernight.city}, {selectedOvernight.state}</p>
+                      </div>
+                      <button type="button" onClick={() => { setSelectedOvernight(null); setOvernightSearch(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <input type="text" value={overnightSearch}
+                        onChange={(e) => {
+                          setOvernightSearch(e.target.value);
+                          if (e.target.value.length >= 2) {
+                            api.get(`/overnight-stops?search=${encodeURIComponent(e.target.value)}&state=${visitForm.state}`).then(r => {
+                              setOvernightResults(Array.isArray(r.data) ? r.data : []);
+                            }).catch(() => setOvernightResults([]));
+                          } else {
+                            setOvernightResults([]);
+                          }
+                        }}
+                        placeholder="Search Cracker Barrel, Walmart, Love's, rest areas..."
+                        className="input" />
+                      {overnightResults.length > 0 && (
+                        <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                          {overnightResults.map((stop: any) => (
+                            <button key={stop.id} type="button" onClick={() => { setSelectedOvernight(stop); setOvernightResults([]); setOvernightSearch(''); }}
+                              className="w-full flex items-center gap-2 p-2 hover:bg-amber-50 text-left border-b border-gray-100 last:border-0">
+                              <span className="text-sm">{stop.stopType === 'FUEL_CENTER' ? '\u26FD' : stop.stopType === 'REST_AREA' ? '\u{1F6D1}' : '\u{1F3EA}'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">{stop.name}</p>
+                                <p className="text-[10px] text-gray-500">{stop.city}, {stop.state}{stop.chain ? ` \u00B7 ${stop.chain.replace(/_/g, ' ')}` : ''}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Campground</label>
-                {loadingCampgrounds ? (
-                  <div className="input bg-gray-50 flex items-center justify-center">Loading...</div>
-                ) : (
-                  <select
-                    value={visitForm.campsiteId}
-                    onChange={(e) => setVisitForm({ ...visitForm, campsiteId: e.target.value })}
-                    className="input"
-                  >
-                    <option value="">Select a campground...</option>
-                    {campgrounds.map(cg => (
-                      <option key={cg.id} value={cg.id}>{cg.name}</option>
+              {/* Quick feedback flags (overnight only) */}
+              {stayType === 'overnight' && selectedOvernight && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quick feedback (tap all that apply)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'flagRVFriendly', label: 'RV-friendly', emoji: '\u2705' },
+                      { key: 'flagFeltSafe', label: 'Felt safe', emoji: '\u2705' },
+                      { key: 'flagBigRigOK', label: 'Big rig OK', emoji: '\u2705' },
+                      { key: 'flagTightLot', label: 'Tight lot', emoji: '\u26A0\uFE0F' },
+                      { key: 'flagHasShowers', label: 'Showers', emoji: '\u{1F6BF}' },
+                      { key: 'flagHasElectric', label: 'Electric', emoji: '\u{1F50C}' },
+                      { key: 'flagWellLit', label: 'Well-lit', emoji: '\u{1F4A1}' },
+                    ].map(flag => (
+                      <button key={flag.key} type="button"
+                        onClick={() => setOvernightFlags(prev => ({ ...prev, [flag.key]: !prev[flag.key] }))}
+                        className={`px-2.5 py-1.5 rounded-full text-xs font-medium border transition ${overnightFlags[flag.key] ? 'border-amber-400 bg-amber-50 text-amber-800' : 'border-gray-200 text-gray-600'}`}>
+                        {flag.emoji} {flag.label}
+                      </button>
                     ))}
-                  </select>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
 
+              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                <textarea
-                  value={visitForm.notes}
-                  onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })}
-                  rows={3}
-                  className="input"
-                  placeholder="Share details about your trip..."
-                />
+                <textarea value={visitForm.notes} onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })} rows={3} className="input"
+                  placeholder={stayType === 'overnight' ? 'Any tips for other RVers stopping here?' : 'Share details about your trip...'} />
               </div>
 
+              {/* Buttons */}
               <div className="flex gap-3 pt-4 border-t">
-                <button type="submit" className="btn btn-primary flex-1">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl text-white font-semibold transition hover:brightness-110" style={{ background: '#E8622A' }}>
                   {editingVisit ? 'Save Changes' : 'Add Visit'}
                 </button>
-                <button type="button" onClick={() => { setShowAddVisitModal(false); setEditingVisit(null); }} className="btn btn-secondary">
+                <button type="button" onClick={() => { setShowAddVisitModal(false); setEditingVisit(null); setStayType('camping'); setSelectedOvernight(null); }}
+                  className="px-4 py-2.5 rounded-xl font-semibold transition" style={{ border: '1px solid #1B2B4B', color: '#1B2B4B' }}>
                   Cancel
                 </button>
               </div>
