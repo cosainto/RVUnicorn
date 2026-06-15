@@ -1582,6 +1582,12 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                     const visits = stateDetail?.visits || getStateVisits(selectedState);
                     const campingCount = visits.filter((v: any) => v.visitType !== 'OVERNIGHT' && !v.notes?.startsWith('\u{1F319} Overnight')).length;
                     const overnightCount = visits.filter((v: any) => v.visitType === 'OVERNIGHT' || v.notes?.startsWith('\u{1F319} Overnight')).length;
+                    const totalPhotos = visits.reduce((sum: number, v: any) => {
+                      let count = (v.photoUrls || []).length;
+                      (v.albums || []).forEach((a: any) => { count += a.photoCount || a._count?.photos || 0; });
+                      (v.event?.photoAlbums || []).forEach((a: any) => { count += a._count?.photos || 0; });
+                      return sum + count;
+                    }, 0);
                     return (
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{isOwnProfile ? 'Your visits' : 'Trips'}</h3>
@@ -1589,6 +1595,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           {campingCount > 0 && `${campingCount} camping trip${campingCount !== 1 ? 's' : ''}`}
                           {campingCount > 0 && overnightCount > 0 && ' \u00B7 '}
                           {overnightCount > 0 && `${overnightCount} overnight stop${overnightCount !== 1 ? 's' : ''}`}
+                          {totalPhotos > 0 && ` \u00B7 ${totalPhotos} photos`}
                         </span>
                       </div>
                     );
@@ -1708,53 +1715,60 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>
                       )}
 
-                      {/* Event Photo Albums (from event's linked albums) */}
-                      {visit.event?.photoAlbums?.length > 0 && (
-                        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                          <p className="text-[12px] font-semibold mb-2 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                            <Image className="w-3.5 h-3.5" /> Trip Albums ({visit.event.photoAlbums.length})
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {visit.event.photoAlbums.map((album: any) => (
-                              <Link key={album.id} to={`/trips/${visit.event.id}?tab=remember`} className="group relative rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-amber-500/50 transition" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                                {(album.coverPhotoUrl || album.photos?.[0]?.imageUrl) ? (
-                                  <img src={album.coverPhotoUrl || album.photos[0].imageUrl} className="w-full h-full object-cover" alt="" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Image className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.15)' }} /></div>
-                                )}
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                                  <p className="text-white text-[10px] font-medium truncate">{album.title}</p>
-                                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{album._count?.photos || 0} photos</p>
-                                </div>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {/* ── PHOTO ALBUM ROW ── */}
+                      {(() => {
+                        // Collect all photo sources
+                        const allPhotos: string[] = [...(visit.photoUrls || [])];
+                        const allAlbums = [...(visit.albums || []), ...(visit.event?.photoAlbums || [])];
+                        let totalPhotoCount = allPhotos.length;
+                        const previewUrls: string[] = [...allPhotos.slice(0, 3)];
+                        allAlbums.forEach((a: any) => {
+                          totalPhotoCount += a.photoCount || a._count?.photos || 0;
+                          const cover = a.coverPhoto || a.coverPhotoUrl || a.photos?.[0]?.imageUrl;
+                          if (cover && previewUrls.length < 3) previewUrls.push(cover);
+                        });
+                        const linkTo = visit.eventId ? `/trips/${visit.eventId}?tab=remember` : visit.campsiteId ? `/campgrounds/${visit.campsiteId}` : null;
+                        const daysOld = Math.floor((Date.now() - new Date(visit.startDate).getTime()) / 86400000);
 
-                      {/* Photos / Albums */}
-                      {visit.albums && visit.albums.length > 0 && (
-                        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                          <p className="text-[12px] font-semibold mb-2 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                            <Image className="w-3.5 h-3.5" /> Albums ({visit.albums.length})
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {visit.albums.map((album: any) => (
-                              <Link key={album.id} to={`/media-albums/${album.id}`} className="group relative rounded-lg overflow-hidden aspect-square hover:ring-2 hover:ring-amber-500/50 transition" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                                {(album.coverPhoto || album.photos?.[0]?.imageUrl) ? (
-                                  <img src={album.coverPhoto || album.photos[0].imageUrl} className="w-full h-full object-cover" alt="" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Image className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.15)' }} /></div>
-                                )}
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
-                                  <p className="text-white text-[10px] font-medium truncate">{album.title}</p>
-                                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{album.photoCount || album._count?.photos || 0} photos</p>
-                                </div>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        if (totalPhotoCount > 0) {
+                          return (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-[11px]">{'\u{1F4F8}'}</span>
+                              <div className="flex gap-1">
+                                {previewUrls.slice(0, 3).map((url: string, i: number) => (
+                                  linkTo ? (
+                                    <Link key={i} to={linkTo}><img src={url} className="w-9 h-9 rounded-lg object-cover hover:ring-2 hover:ring-amber-500/50 transition" alt="" /></Link>
+                                  ) : (
+                                    <img key={i} src={url} className="w-9 h-9 rounded-lg object-cover" alt="" />
+                                  )
+                                ))}
+                              </div>
+                              {totalPhotoCount > 3 && linkTo && (
+                                <Link to={linkTo} className="text-[11px] font-semibold hover:underline" style={{ color: '#C9A84C' }}>+{totalPhotoCount - 3} more {'\u2192'}</Link>
+                              )}
+                              {totalPhotoCount > 3 && !linkTo && (
+                                <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>+{totalPhotoCount - 3} more</span>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // No photos — show add prompt if within 90 days and own profile
+                        if (isOwnProfile && daysOld <= 90) {
+                          return (
+                            <div className="mt-2 flex items-center gap-1.5">
+                              <span className="text-[11px]">{'\u{1F4F8}'}</span>
+                              <span className="text-[11px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>No photos yet</span>
+                              {visit.eventId && (
+                                <Link to={`/trips/${visit.eventId}?tab=remember`} className="text-[11px] font-semibold hover:underline" style={{ color: '#C9A84C' }}>
+                                  Add photos {'\u2192'}
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       {/* Copy trip */}
                       {!isOwnProfile && (

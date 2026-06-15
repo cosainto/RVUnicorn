@@ -264,6 +264,10 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
         endDate: visit.endDate,
         notes: visit.notes,
         visibility: visit.visibility,
+        visitType: visit.visitType || 'CAMPING',
+        photoUrls: visit.photoUrls || [],
+        campsiteId: visit.campsiteId,
+        eventId: visit.eventId,
         campsite: visit.campsite,
         event: visit.event ? {
           id: visit.event.id,
