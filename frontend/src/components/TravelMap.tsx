@@ -720,6 +720,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           startDate: visitForm.startDate,
           endDate: visitForm.startDate, // single night — same as start
           visitType: 'OVERNIGHT',
+          overnightStopId: selectedOvernight?.id || null,
+          overnightStopName: selectedOvernight?.name || null,
           notes: visitForm.notes || null,
           visibility: visitForm.visibility,
           latitude: selectedOvernight?.latitude || geoCoords?.lat,
@@ -1708,10 +1710,17 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
                         </Link>
                       )}
-                      {isOvernight && visit.notes && (
-                        <p className="flex items-center gap-1.5 mb-2 text-[12px]" style={{ color: '#E8A838' }}>
-                          <span>{'\u{1F319}'}</span> {visit.notes}
-                        </p>
+                      {isOvernight && (visit.overnightStopId || visit.overnightStopName || visit.notes) && (
+                        <div className="flex items-center gap-1.5 mb-2 text-[12px]">
+                          <span>{'\u{1F319}'}</span>
+                          {visit.overnightStopId ? (
+                            <Link to={`/overnight-spots/${visit.overnightStopId}`} className="hover:underline font-semibold" style={{ color: '#E8A838' }}>
+                              {visit.overnightStopName || visit.notes || 'Overnight Stop'}
+                            </Link>
+                          ) : (
+                            <span style={{ color: '#E8A838' }}>{visit.overnightStopName || visit.notes || 'Overnight Stop'}</span>
+                          )}
+                        </div>
                       )}
                       {!isOvernight && visit.notes && (
                         <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>

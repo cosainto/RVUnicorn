@@ -265,6 +265,8 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
         notes: visit.notes,
         visibility: visit.visibility,
         visitType: visit.visitType || 'CAMPING',
+        overnightStopId: visit.overnightStopId || null,
+        overnightStopName: visit.overnightStopName || null,
         photoUrls: visit.photoUrls || [],
         campsiteId: visit.campsiteId,
         eventId: visit.eventId,
@@ -366,7 +368,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
 router.post('/visits', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude } = req.body;
+    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude, overnightStopId, overnightStopName } = req.body;
     // Determine visitType with safety net: if notes has moon prefix or explicit type, force OVERNIGHT
     let visitType = req.body.visitType || 'CAMPING';
     if (notes && typeof notes === 'string' && notes.startsWith('\u{1F319}')) visitType = 'OVERNIGHT';
@@ -411,6 +413,8 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
         eventId: eventId || null,
         visibility: visibility || 'PUBLIC',
         visitType: visitType || 'CAMPING',
+        overnightStopId: overnightStopId || null,
+        overnightStopName: overnightStopName || null,
         // Enforce single-day for overnight stops
         ...(visitType === 'OVERNIGHT' ? { endDate: start } : {}),
         photoUrls: photoUrls || [],

@@ -1128,22 +1128,24 @@ model Photo {
 }
 
 model StateVisit {
-  id            String               @id @default(cuid())
-  userId        String
-  state         String
-  createdAt     DateTime             @default(now())
-  notes         String?
-  updatedAt     DateTime             @updatedAt
-  campsiteId    String?
-  endDate       DateTime?
-  eventId       String?
-  startDate     DateTime
-  visibility    String               @default("PUBLIC")
-  visitType     String               @default("CAMPING") // CAMPING | OVERNIGHT
-  photoUrls     String[]
-  linkUrl       String?
-  latitude      Float?
-  longitude     Float?
+  id               String               @id @default(cuid())
+  userId           String
+  state            String
+  createdAt        DateTime             @default(now())
+  notes            String?
+  updatedAt        DateTime             @updatedAt
+  campsiteId       String?
+  overnightStopId  String?
+  endDate          DateTime?
+  eventId          String?
+  startDate        DateTime
+  visibility       String               @default("PUBLIC")
+  visitType        String               @default("CAMPING") // CAMPING | OVERNIGHT
+  photoUrls        String[]
+  linkUrl          String?
+  latitude         Float?
+  longitude        Float?
+  overnightStopName String?
   campsite      Campground?          @relation(fields: [campsiteId], references: [id])
   event         Event?               @relation(fields: [eventId], references: [id])
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
