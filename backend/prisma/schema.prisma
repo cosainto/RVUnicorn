@@ -734,6 +734,18 @@ model Campground {
   contentTripTags        ContentTripTag[]
   actionableContent      ActionableContent[]
   activityInstances      ActivityInstance[]
+  // Location Intelligence fields
+  cellSignalStrength     Int?
+  starlinkScore          Int?
+  distanceToGasMiles     Float?
+  distanceToGroceryMiles Float?
+  distanceToPropanemiles Float?
+  distanceToRVRepairMiles Float?
+  distanceToHospitalMiles Float?
+  distanceToHighwayMiles Float?
+  safetyScore            Int?
+  totalNightsLogged      Int      @default(0)
+  uniqueVisitorCount     Int      @default(0)
 
   @@index([state])
   @@index([name])
@@ -7615,4 +7627,86 @@ model FeedRecommendation {
 
   @@index([userId, shown])
   @@index([postId])
+}
+
+// ─── Location Detail System ─────────────────────────────────
+
+model LocationReview {
+  id                String    @id @default(cuid())
+  locationId        String
+  locationType      String    // CAMPGROUND | OVERNIGHT_STOP | BOONDOCKING | STATE_PARK | RV_PARK | REST_AREA | HARVEST_HOST
+  userId            String
+  overallRating     Int
+  cleanlinessRating Int?
+  safetyRating      Int?
+  noiseRating       Int?
+  internetRating    Int?
+  familyRating      Int?
+  petRating         Int?
+  accessRating      Int?
+  scenicRating      Int?
+  body              String?
+  photoUrls         String[]
+  videoUrls         String[]
+  tips              String[]
+  wouldStayAgain    Boolean?
+  helpfulCount      Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  helpfulVotes      LocationReviewHelpful[]
+
+  @@index([locationId, locationType])
+  @@index([userId])
+  @@index([overallRating])
+}
+
+model LocationReviewHelpful {
+  id        String         @id @default(cuid())
+  reviewId  String
+  userId    String
+  review    LocationReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([reviewId, userId])
+}
+
+model LocationTip {
+  id           String   @id @default(cuid())
+  locationId   String
+  locationType String
+  userId       String
+  content      String
+  category     String   @default("GENERAL") // ARRIVAL | SITE | SIGNAL | HOOKUPS | SAFETY | GENERAL
+  helpfulCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([locationId, locationType])
+  @@index([category])
+}
+
+model LocationActivityItem {
+  id           String   @id @default(cuid())
+  locationId   String
+  locationType String
+  userId       String
+  activityType String   // CHECKIN | PHOTO_UPLOAD | REVIEW | PLANNED_STAY | CHECKOUT
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([locationId, locationType])
+  @@index([createdAt])
+}
+
+model LocationSaveToTrip {
+  id           String    @id @default(cuid())
+  locationId   String
+  locationType String
+  userId       String
+  tripId       String?
+  plannedDate  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([locationId, userId])
+  @@index([locationId])
 }
