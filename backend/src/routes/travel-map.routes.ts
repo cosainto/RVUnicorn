@@ -518,7 +518,7 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
   try {
     const userId = (req as any).userId;
     const { visitId } = req.params;
-    const { startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility } = req.body;
+    const { startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, visitType: reqVisitType, overnightStopId: reqOvernightStopId, overnightStopName: reqOvernightStopName, latitude: reqLat, longitude: reqLng } = req.body;
 
     const visit = await db.stateVisit.findUnique({
       where: { id: visitId },
@@ -556,11 +556,16 @@ router.put('/visits/:visitId', authenticateToken, async (req: Request, res: Resp
       where: { id: visitId },
       data: {
         startDate: start,
-        endDate: end,
+        endDate: reqVisitType === 'OVERNIGHT' ? start : end,
         notes,
         campsiteId: campsiteId || null,
         eventId: eventId || null,
         visibility: visibility || visit.visibility,
+        ...(reqVisitType ? { visitType: reqVisitType } : {}),
+        ...(reqOvernightStopId !== undefined ? { overnightStopId: reqOvernightStopId } : {}),
+        ...(reqOvernightStopName !== undefined ? { overnightStopName: reqOvernightStopName } : {}),
+        ...(reqLat ? { latitude: parseFloat(reqLat) } : {}),
+        ...(reqLng ? { longitude: parseFloat(reqLng) } : {}),
       },
     });
 

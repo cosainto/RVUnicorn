@@ -703,22 +703,35 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const handleSubmitVisit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (stayType === 'overnight') {
-        // Create overnight stop visit record if a stop was selected
+      if (stayType === 'overnight' && editingVisit) {
+        // Update existing overnight visit — link to a location retroactively
+        await api.put(`/travel-map/visits/${editingVisit.id}`, {
+          ...visitForm,
+          visitType: 'OVERNIGHT',
+          overnightStopId: selectedOvernight?.id || null,
+          overnightStopName: selectedOvernight?.name || null,
+          endDate: visitForm.startDate,
+          latitude: selectedOvernight?.latitude || geoCoords?.lat,
+          longitude: selectedOvernight?.longitude || geoCoords?.lng,
+        });
         if (selectedOvernight) {
           await api.post(`/overnight-stops/${selectedOvernight.id}/visits`, {
-            date: visitForm.startDate,
-            nights: 1,
-            note: visitForm.notes || null,
-            tip: visitForm.notes || null,
+            date: visitForm.startDate, nights: 1, note: visitForm.notes || null, tip: visitForm.notes || null,
+            ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
+          }).catch(() => {});
+        }
+      } else if (stayType === 'overnight') {
+        // Create new overnight visit
+        if (selectedOvernight) {
+          await api.post(`/overnight-stops/${selectedOvernight.id}/visits`, {
+            date: visitForm.startDate, nights: 1, note: visitForm.notes || null, tip: visitForm.notes || null,
             ...Object.fromEntries(Object.entries(overnightFlags).map(([k, v]) => [k, v])),
           });
         }
-        // Always create state visit with OVERNIGHT type — even without a linked overnight stop
         await api.post('/travel-map/visits', {
           state: visitForm.state,
           startDate: visitForm.startDate,
-          endDate: visitForm.startDate, // single night — same as start
+          endDate: visitForm.startDate,
           visitType: 'OVERNIGHT',
           overnightStopId: selectedOvernight?.id || null,
           overnightStopName: selectedOvernight?.name || null,
@@ -728,7 +741,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           longitude: selectedOvernight?.longitude || geoCoords?.lng,
         });
       } else if (editingVisit) {
-        await api.put(`/travel-map/visits/${editingVisit.id}`, { ...visitForm, linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
+        await api.put(`/travel-map/visits/${editingVisit.id}`, { ...visitForm, visitType: 'CAMPING', linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
       } else {
         const { data: newVisit } = await api.post('/travel-map/visits', { ...visitForm, visitType: 'CAMPING', linkUrl: visitLinkUrl || undefined, latitude: geoCoords?.lat, longitude: geoCoords?.lng });
         // Upload photos if any
@@ -1710,15 +1723,28 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
                         </Link>
                       )}
-                      {isOvernight && (visit.overnightStopId || visit.overnightStopName || visit.notes) && (
-                        <div className="flex items-center gap-1.5 mb-2 text-[12px]">
+                      {isOvernight && (
+                        <div className="flex items-center gap-1.5 mb-2 text-[12px] flex-wrap">
                           <span>{'\u{1F319}'}</span>
                           {visit.overnightStopId ? (
                             <Link to={`/overnight-spots/${visit.overnightStopId}`} className="hover:underline font-semibold" style={{ color: '#E8A838' }}>
-                              {visit.overnightStopName || visit.notes || 'Overnight Stop'}
+                              {visit.overnightStopName || 'Overnight Stop'}
                             </Link>
                           ) : (
-                            <span style={{ color: '#E8A838' }}>{visit.overnightStopName || visit.notes || 'Overnight Stop'}</span>
+                            <>
+                              <span style={{ color: '#E8A838' }}>{visit.overnightStopName || 'Overnight Stop'}</span>
+                              {isOwnProfile && (
+                                <button onClick={() => {
+                                  setStayType('overnight');
+                                  setEditingVisit(visit);
+                                  setVisitForm({ state: visit.state, startDate: visit.startDate.split('T')[0], endDate: '', notes: visit.notes || '', campsiteId: '', eventId: '', attendeeIds: [], albumIds: [], visibility: visit.visibility || 'PUBLIC' });
+                                  setSelectedState(null);
+                                  setShowAddVisitModal(true);
+                                }} className="text-[10px] hover:underline" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                  {'\u00B7'} Link to a location {'\u2192'}
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
