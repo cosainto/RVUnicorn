@@ -362,7 +362,7 @@ router.post('/visits/:visitId/copy', authenticateToken, async (req: Request, res
 router.post('/visits', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude } = req.body;
+    const { state, startDate, endDate, notes, campsiteId, eventId, attendeeIds, albumIds, visibility, photoUrls, linkUrl, latitude, longitude, visitType } = req.body;
 
     if (!state || !startDate) {
       return res.status(400).json({ error: 'State and start date are required' });
@@ -403,6 +403,9 @@ router.post('/visits', authenticateToken, async (req: Request, res: Response) =>
         campsiteId: campsiteId || null,
         eventId: eventId || null,
         visibility: visibility || 'PUBLIC',
+        visitType: visitType || 'CAMPING',
+        // Enforce single-day for overnight stops
+        ...(visitType === 'OVERNIGHT' ? { endDate: start } : {}),
         photoUrls: photoUrls || [],
         linkUrl: linkUrl || null,
         latitude: latitude ? parseFloat(latitude) : null,

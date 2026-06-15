@@ -717,7 +717,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           state: visitForm.state,
           startDate: visitForm.startDate,
           endDate: visitForm.startDate, // single night — same as start
-          notes: `${'\u{1F319}'} Overnight at ${selectedOvernight.name}${visitForm.notes ? ' \u2014 ' + visitForm.notes : ''}`,
+          visitType: 'OVERNIGHT',
+          notes: visitForm.notes || null,
           visibility: visitForm.visibility,
           latitude: selectedOvernight.latitude || geoCoords?.lat,
           longitude: selectedOvernight.longitude || geoCoords?.lng,
@@ -1579,8 +1580,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                 <div className="space-y-4">
                   {(() => {
                     const visits = stateDetail?.visits || getStateVisits(selectedState);
-                    const campingCount = visits.filter((v: any) => !v.notes?.startsWith('\u{1F319} Overnight')).length;
-                    const overnightCount = visits.filter((v: any) => v.notes?.startsWith('\u{1F319} Overnight')).length;
+                    const campingCount = visits.filter((v: any) => v.visitType !== 'OVERNIGHT' && !v.notes?.startsWith('\u{1F319} Overnight')).length;
+                    const overnightCount = visits.filter((v: any) => v.visitType === 'OVERNIGHT' || v.notes?.startsWith('\u{1F319} Overnight')).length;
                     return (
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{isOwnProfile ? 'Your visits' : 'Trips'}</h3>
@@ -1593,7 +1594,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                     );
                   })()}
                   {(stateDetail?.visits || getStateVisits(selectedState)).map((visit: any) => {
-                    const isOvernight = visit.notes?.startsWith('\u{1F319} Overnight');
+                    const isOvernight = visit.visitType === 'OVERNIGHT' || visit.notes?.startsWith('\u{1F319} Overnight');
                     return (
                     <div key={visit.id} className="rounded-xl p-4" style={{ background: isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isPlannedVisit(visit.startDate) ? 'rgba(74,144,217,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
                       <div className="flex items-start justify-between mb-2">
@@ -1698,16 +1699,8 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           <MapPin className="w-3.5 h-3.5" /> {visit.campsite.name}
                         </Link>
                       )}
-                      {isOvernight && visit.notes && (
-                        <p className="flex items-center gap-1.5 mb-2 text-[12px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          <MapPin className="w-3.5 h-3.5" style={{ color: '#E8A838' }} />
-                          {visit.notes.replace('\u{1F319} Overnight at ', '').split(' \u2014 ')[0]}
-                        </p>
-                      )}
-
-                      {visit.notes && !isOvernight && <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>}
-                      {isOvernight && visit.notes?.includes(' \u2014 ') && (
-                        <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes.split(' \u2014 ').slice(1).join(' \u2014 ')}</p>
+                      {visit.notes && (
+                        <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>
                       )}
 
                       {/* Event Photo Albums (from event's linked albums) */}
