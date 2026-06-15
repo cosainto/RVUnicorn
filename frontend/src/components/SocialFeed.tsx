@@ -229,11 +229,19 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
         }
       }
       
-      // Deduplicate by id
+      // Deduplicate by id + check-in campground dedup (one per campground per day)
       const seenIds = new Set<string>();
+      const seenCheckIns = new Set<string>();
       const uniqueItems = allItems.filter(item => {
         if (seenIds.has(item.id)) return false;
         seenIds.add(item.id);
+        // Extra dedup for CHECK_IN: same campground + same day = skip
+        if ((item.type === 'CHECK_IN' || item.activityType === 'CHECK_IN' || item.feedType === 'CHECKIN') && item.campgroundId) {
+          const day = new Date(item.createdAt).toISOString().slice(0, 10);
+          const key = `${item.campgroundId}:${day}`;
+          if (seenCheckIns.has(key)) return false;
+          seenCheckIns.add(key);
+        }
         return true;
       });
 

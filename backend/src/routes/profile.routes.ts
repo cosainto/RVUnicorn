@@ -1378,21 +1378,28 @@ router.get('/:username/activity-feed', optionalAuth, async (req, res) => {
       console.log('Activity model not available yet');
     }
 
-    // Dedup FRIEND_ADDED rows by friendship pair so users like Will don't
-    // see two entries for one friendship. Historically the accept-friend
-    // route created two Activity rows (one userId=initiator, one userId=
-    // receiver) and the activity feed query at line 1127 returns BOTH
-    // because the user is the targetUserId of one and the userId of the
-    // other. The write-side dedup landed in commit 08e99647, but rows
-    // created before that fix still produce duplicates on read.
+    // Dedup FRIEND_ADDED rows by friendship pair
     const seenFriendPairs = new Set<string>();
+    // Dedup CHECK_IN rows: only one per campground per day per user
+    const seenCheckIns = new Set<string>();
     activities = activities.filter((a: any) => {
-      if (a.type !== 'FRIEND_ADDED') return true;
-      const ids = [a.userId, a.targetUserId].filter(Boolean).sort();
-      if (ids.length < 2) return true;
-      const key = ids.join('|');
-      if (seenFriendPairs.has(key)) return false;
-      seenFriendPairs.add(key);
+      // Friend dedup
+      if (a.type === 'FRIEND_ADDED') {
+        const ids = [a.userId, a.targetUserId].filter(Boolean).sort();
+        if (ids.length < 2) return true;
+        const key = ids.join('|');
+        if (seenFriendPairs.has(key)) return false;
+        seenFriendPairs.add(key);
+        return true;
+      }
+      // Check-in dedup: one per campground per day
+      if (a.type === 'CHECK_IN' && a.campgroundId) {
+        const day = new Date(a.createdAt).toISOString().slice(0, 10);
+        const key = `${a.userId}:${a.campgroundId}:${day}`;
+        if (seenCheckIns.has(key)) return false;
+        seenCheckIns.add(key);
+        return true;
+      }
       return true;
     });
 
