@@ -4,6 +4,7 @@ import { ChevronRight, Wrench, Camera, MapPin } from 'lucide-react';
 import RigPulseCard from './lifestyle/RigPulseCard';
 import SocialFeed from './SocialFeed';
 import CampgroundUpdatesFeed from './CampgroundUpdatesFeed';
+import CommunityFeed from './CommunityFeed';
 import api from '../services/api';
 
 const CN = {
@@ -35,7 +36,7 @@ export default function LifestyleModeBasecamp({ user }: Props) {
   const [progress, setProgress] = useState<any>(null);
   const [nextTrip, setNextTrip] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [feedTab, setFeedTab] = useState<'friends' | 'community' | 'campgrounds'>('friends');
+  const [feedTab, setFeedTab] = useState<'friends' | 'community' | 'campgrounds' | 'feed'>('feed');
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
 
   useEffect(() => { setMounted(true); }, []);
@@ -384,7 +385,7 @@ export default function LifestyleModeBasecamp({ user }: Props) {
           </div>
           <div className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
             <div className="flex" style={{ borderBottom: `1px solid ${CN.border}` }}>
-              {(['friends', 'community', 'campgrounds'] as const).map(tab => (
+              {(['feed', 'friends', 'community', 'campgrounds'] as const).map(tab => (
                 <button key={tab} onClick={() => setFeedTab(tab)}
                   className="flex-1 px-4 py-3 text-xs font-semibold transition"
                   style={{
@@ -392,11 +393,12 @@ export default function LifestyleModeBasecamp({ user }: Props) {
                     borderBottom: feedTab === tab ? `2px solid ${CN.gold}` : '2px solid transparent',
                     background: feedTab === tab ? 'rgba(232,168,56,0.05)' : 'transparent',
                   }}>
-                  {tab === 'friends' ? '\u{1F465} Friends' : tab === 'community' ? '\u{1F3D5}\uFE0F Community' : '\u{1F4CD} Campgrounds'}
+                  {tab === 'feed' ? '\u2B50 For You' : tab === 'friends' ? '\u{1F465} Friends' : tab === 'community' ? '\u{1F3D5}\uFE0F Boards' : '\u{1F4CD} Campgrounds'}
                 </button>
               ))}
             </div>
             <div className="p-4">
+              {feedTab === 'feed' && <CommunityFeed />}
               {feedTab === 'friends' && <SocialFeed username={user?.username || ''} isOwnProfile={true} includePacking={true} />}
               {feedTab === 'community' && (
                 communityPosts.length === 0 ? (
