@@ -6940,6 +6940,10 @@ model RigTrip {
   coverImageUrl         String?
   totalMiles            Float             @default(0)
   totalNights           Int               @default(0)
+  totalFuelCost         Float?
+  direction             String?           // OUTBOUND | INBOUND | MULTI_LEG
+  tripRecapGenerated    Boolean           @default(false)
+  tripRecapUrl          String?
   statesVisited         String[]
   nationalParksVisited  String[]
   campgroundCount       Int               @default(0)
@@ -7709,4 +7713,139 @@ model LocationSaveToTrip {
 
   @@unique([locationId, userId])
   @@index([locationId])
+}
+
+// ─── Passenger Mode ─────────────────────────────────────────
+
+model PassengerSession {
+  id                  String    @id @default(cuid())
+  userId              String
+  rigId               String?
+  tripId              String?
+  direction           String    @default("OUTBOUND") // OUTBOUND | INBOUND
+  role                String    @default("PASSENGER") // DRIVER | PASSENGER
+  activatedAt         DateTime  @default(now())
+  endedAt             DateTime?
+  currentLat          Float?
+  currentLng          Float?
+  lastLocationUpdate  DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  roadStops           RoadStop[]
+  roadMissions        RoadMission[]
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([endedAt])
+}
+
+model RoadStop {
+  id              String   @id @default(cuid())
+  sessionId       String
+  tripId          String?
+  userId          String
+  stopType        String   // FUEL | FOOD | SCENIC | REST_AREA | OVERNIGHT | BORDER_CROSS | OTHER
+  name            String?
+  lat             Float?
+  lng             Float?
+  notes           String?
+  photoUrls       String[]
+  fuelPrice       Float?
+  fuelGallons     Float?
+  restaurantRating Int?
+  isOvernightStop Boolean  @default(false)
+  overnightStopId String?
+  duration        Int?
+  loggedAt        DateTime
+  createdAt       DateTime @default(now())
+
+  session         PassengerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([loggedAt])
+}
+
+model RoadMission {
+  id          String    @id @default(cuid())
+  sessionId   String
+  userId      String
+  missionType String    // STATE_SIGN | AIRSTREAM_SPOT | SCENIC_PHOTO | ROADSIDE_ATTRACTION | FUEL_LOG | FOOD_LOG | SUNRISE_SUNSET | WILDLIFE | VINTAGE_RV | LOCAL_DINER
+  title       String
+  description String?
+  hitchPrompt String?
+  photoUrl    String?
+  completedAt DateTime?
+  points      Int       @default(10)
+  createdAt   DateTime  @default(now())
+
+  session     PassengerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model TripDebrief {
+  id               String    @id @default(cuid())
+  tripId           String
+  userId           String
+  sessionId        String?
+  status           String    @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  currentStopIndex Int       @default(0)
+  photosCaptured   Int       @default(0)
+  reviewsCompleted Int       @default(0)
+  totalFuelCost    Float?
+  totalMiles       Float?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  answers          TripDebriefAnswer[]
+
+  @@index([tripId])
+  @@index([userId])
+}
+
+model TripDebriefAnswer {
+  id           String   @id @default(cuid())
+  debriefId    String
+  questionType String   // CAMPGROUND_RATING | STOP_RATING | PHOTO_CAPTION | TAG_PERSON | FUEL_EXPENSE | TRIP_MEMORY | WOULD_RETURN | TIP
+  refId        String?
+  refType      String?
+  answer       Json
+  createdAt    DateTime @default(now())
+
+  debrief      TripDebrief @relation(fields: [debriefId], references: [id], onDelete: Cascade)
+
+  @@index([debriefId])
+}
+
+model CoPilotBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeType String   // ROUTE_MASTER | FUEL_SAVER | CAMPGROUND_SCOUT | WEATHER_WATCHER | ROAD_WARRIOR | TRIP_HISTORIAN | MISSION_MASTER | MEMORY_KEEPER | SOCIAL_NAVIGATOR
+  earnedAt  DateTime @default(now())
+  tripCount Int      @default(0)
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+model CoPilotPoints {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  points    Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model CoPilotPointLog {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
