@@ -289,6 +289,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [overnightResults, setOvernightResults] = useState<any[]>([]);
   const [selectedOvernight, setSelectedOvernight] = useState<any>(null);
   const [overnightFlags, setOvernightFlags] = useState<Record<string, boolean>>({});
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({ name: '', stopType: 'OTHER', city: '', state: '', address: '' });
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
+  const [newlyCreatedStop, setNewlyCreatedStop] = useState(false);
   const [visitPhotos, setVisitPhotos] = useState<File[]>([]);
   const [visitPhotoPreview, setVisitPhotoPreview] = useState<string[]>([]);
   const [visitLinkUrl, setVisitLinkUrl] = useState('');
@@ -725,18 +729,25 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           await api.post(`/travel-map/visits/${newVisit.id}/photos`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).catch(() => {});
         }
       }
+      const wasNewStop = newlyCreatedStop && selectedOvernight;
+      const newStopName = selectedOvernight?.name;
       setShowAddVisitModal(false);
       setEditingVisit(null);
       setStayType('camping');
       setSelectedOvernight(null);
       setOvernightSearch('');
       setOvernightFlags({});
+      setShowQuickAdd(false);
+      setNewlyCreatedStop(false);
       setVisitPhotos([]);
       setVisitPhotoPreview([]);
       setVisitLinkUrl('');
       setGeoCoords(null);
       setVisitForm({ state: '', startDate: '', endDate: '', notes: '', campsiteId: '', eventId: '', attendeeIds: [], albumIds: [], visibility: 'PUBLIC' });
       await loadTravelMap();
+      if (wasNewStop) {
+        alert(`Visit logged! \u{1F319} ${newStopName} has been added to the RVUnicorn map \u2014 other RVers will thank you!`);
+      }
     } catch (error) {
       console.error('Save visit error:', error);
       alert('Failed to save visit');
@@ -1802,13 +1813,79 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                       </div>
                       <button type="button" onClick={() => { setSelectedOvernight(null); setOvernightSearch(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                     </div>
+                  ) : showQuickAdd ? (
+                    /* ── INLINE QUICK-ADD FORM ── */
+                    <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-3 space-y-3">
+                      <p className="text-xs font-bold text-amber-700">{'\u2795'} Add a new location</p>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Location name</label>
+                        <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm(f => ({ ...f, name: e.target.value }))} className="input text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-600 mb-1">Stop type</label>
+                        <div className="flex gap-1 flex-wrap">
+                          {[
+                            { value: 'RETAIL', emoji: '\u{1F3EA}', label: 'Retail' },
+                            { value: 'FUEL_CENTER', emoji: '\u26FD', label: 'Fuel' },
+                            { value: 'REST_AREA', emoji: '\u{1F6D1}', label: 'Rest Area' },
+                            { value: 'CASINO', emoji: '\u{1F3B0}', label: 'Casino' },
+                            { value: 'OTHER', emoji: '\u{1F4CD}', label: 'Other' },
+                          ].map(t => (
+                            <button key={t.value} type="button" onClick={() => setQuickAddForm(f => ({ ...f, stopType: t.value }))}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${quickAddForm.stopType === t.value ? 'border-amber-400 bg-amber-100 text-amber-800' : 'border-gray-200 text-gray-600'}`}>
+                              {t.emoji} {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-600 mb-0.5">City</label>
+                          <input type="text" value={quickAddForm.city} onChange={e => setQuickAddForm(f => ({ ...f, city: e.target.value }))} className="input text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-600 mb-0.5">State</label>
+                          <input type="text" value={quickAddForm.state} onChange={e => setQuickAddForm(f => ({ ...f, state: e.target.value }))} className="input text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Address (optional)</label>
+                        <input type="text" value={quickAddForm.address} onChange={e => setQuickAddForm(f => ({ ...f, address: e.target.value }))} placeholder="Helps place it on the map" className="input text-sm" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" disabled={quickAddSaving || !quickAddForm.name.trim() || !quickAddForm.city.trim()}
+                          onClick={async () => {
+                            setQuickAddSaving(true);
+                            try {
+                              const { data: newStop } = await api.post('/overnight-stops', {
+                                name: quickAddForm.name, stopType: quickAddForm.stopType,
+                                city: quickAddForm.city, state: quickAddForm.state || visitForm.state,
+                                address: quickAddForm.address || `${quickAddForm.city}, ${quickAddForm.state || visitForm.state}`,
+                                latitude: geoCoords?.lat || 0, longitude: geoCoords?.lng || 0,
+                              });
+                              setSelectedOvernight(newStop);
+                              setNewlyCreatedStop(true);
+                              setShowQuickAdd(false);
+                              setQuickAddForm({ name: '', stopType: 'OTHER', city: '', state: '', address: '' });
+                            } catch { alert('Failed to add location'); }
+                            setQuickAddSaving(false);
+                          }}
+                          className="flex-1 py-2 rounded-lg text-xs font-bold text-white transition hover:brightness-110 disabled:opacity-50" style={{ background: '#E8A838' }}>
+                          {quickAddSaving ? 'Adding...' : '\u2713 Use this location'}
+                        </button>
+                        <button type="button" onClick={() => { setShowQuickAdd(false); setQuickAddForm({ name: '', stopType: 'OTHER', city: '', state: '', address: '' }); }}
+                          className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700">{'\u2715'} Cancel</button>
+                      </div>
+                    </div>
                   ) : (
+                    /* ── SEARCH WITH ADD FALLBACK ── */
                     <>
                       <input type="text" value={overnightSearch}
                         onChange={(e) => {
-                          setOvernightSearch(e.target.value);
-                          if (e.target.value.length >= 2) {
-                            api.get(`/overnight-stops?search=${encodeURIComponent(e.target.value)}&state=${visitForm.state}`).then(r => {
+                          const val = e.target.value;
+                          setOvernightSearch(val);
+                          if (val.length >= 2) {
+                            api.get(`/overnight-stops?search=${encodeURIComponent(val)}&state=${visitForm.state}`).then(r => {
                               setOvernightResults(Array.isArray(r.data) ? r.data : []);
                             }).catch(() => setOvernightResults([]));
                           } else {
@@ -1817,10 +1894,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                         }}
                         placeholder="Search Cracker Barrel, Walmart, Love's, rest areas..."
                         className="input" />
-                      {overnightResults.length > 0 && (
-                        <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                      {overnightSearch.length >= 2 && (
+                        <div className="mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
                           {overnightResults.map((stop: any) => (
-                            <button key={stop.id} type="button" onClick={() => { setSelectedOvernight(stop); setOvernightResults([]); setOvernightSearch(''); }}
+                            <button key={stop.id} type="button" onClick={() => { setSelectedOvernight(stop); setOvernightResults([]); setOvernightSearch(''); setNewlyCreatedStop(false); }}
                               className="w-full flex items-center gap-2 p-2 hover:bg-amber-50 text-left border-b border-gray-100 last:border-0">
                               <span className="text-sm">{stop.stopType === 'FUEL_CENTER' ? '\u26FD' : stop.stopType === 'REST_AREA' ? '\u{1F6D1}' : '\u{1F3EA}'}</span>
                               <div className="flex-1 min-w-0">
@@ -1829,6 +1906,39 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                               </div>
                             </button>
                           ))}
+                          {overnightResults.length === 0 && (
+                            <div className="p-2 text-center text-xs text-gray-400">{'\u{1F50D}'} No results for '{overnightSearch}'</div>
+                          )}
+                          {/* Always show Add fallback */}
+                          <button type="button" onClick={() => {
+                            // Smart chain detection
+                            const q = overnightSearch.toLowerCase();
+                            let detectedType = 'OTHER';
+                            let detectedName = overnightSearch;
+                            let detectedCity = '';
+                            const fuelKeys = ['flying j', 'flyingj', 'pilot', 'loves', "love's", 'ta travel', 'petro', 'kwik trip', 'speedway', "buc-ee", 'bucees'];
+                            const retailKeys = ['cracker barrel', 'walmart', 'wal-mart', "cabela", 'bass pro', 'costco', "sam's club"];
+                            const restKeys = ['rest area', 'rest stop', 'welcome center', 'travel plaza', 'turnpike'];
+                            if (fuelKeys.some(k => q.includes(k))) detectedType = 'FUEL_CENTER';
+                            else if (retailKeys.some(k => q.includes(k))) detectedType = 'RETAIL';
+                            else if (restKeys.some(k => q.includes(k))) detectedType = 'REST_AREA';
+                            // Try to extract city: last word(s) after known chain name
+                            const chainNames = [...fuelKeys, ...retailKeys, ...restKeys];
+                            for (const cn of chainNames) {
+                              if (q.includes(cn)) {
+                                const after = overnightSearch.slice(q.indexOf(cn) + cn.length).trim();
+                                if (after.length >= 2) { detectedCity = after; detectedName = overnightSearch.slice(0, q.indexOf(cn) + cn.length).trim(); }
+                                break;
+                              }
+                            }
+                            setQuickAddForm({ name: detectedName || overnightSearch, stopType: detectedType, city: detectedCity, state: visitForm.state ? (STATE_NAMES[visitForm.state] || visitForm.state) : '', address: '' });
+                            setShowQuickAdd(true);
+                            setOvernightResults([]);
+                          }}
+                            className="w-full p-2.5 text-left border-t border-gray-200 hover:bg-amber-50 transition flex items-center gap-2">
+                            <span className="text-amber-500 font-bold text-sm">{'\u2795'}</span>
+                            <span className="text-sm text-amber-700 font-medium">Add '{overnightSearch}' as a new location</span>
+                          </button>
                         </div>
                       )}
                     </>
