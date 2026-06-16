@@ -28,15 +28,14 @@ export interface NearbyRig {
 }
 
 interface Props {
-  items: RVCircleItem[];
-  nearbyRigs: NearbyRig[];
+  data: { items: RVCircleItem[]; nearbyRigs: NearbyRig[] } | null;
 }
 
-export default function RVCircleCard(props: Props | null) {
+export default function RVCircleCard({ data }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   // Loading skeleton
-  if (props === null) {
+  if (data === null) {
     return (
       <div className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
         <div className="p-4 space-y-3">
@@ -56,7 +55,7 @@ export default function RVCircleCard(props: Props | null) {
     );
   }
 
-  const { items, nearbyRigs } = props;
+  const { items, nearbyRigs } = data;
 
   // Empty state
   if (items.length === 0 && nearbyRigs.length === 0) {

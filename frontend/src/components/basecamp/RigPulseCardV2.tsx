@@ -79,7 +79,7 @@ function ActiveTripState({ data }: { data: RigPulseData }) {
           <div style={{ fontSize: 16, fontWeight: 700, color: CN.cream, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{data.rigEmoji} {data.rigName}</div>
           <div style={{ fontSize: 12, color: CN.muted }}>{trip.name}</div>
         </div>
-        {data.coPilots.length > 0 && <AvatarStack avatars={data.coPilots} size={28} />}
+        {data.coPilots?.length > 0 && <AvatarStack avatars={data.coPilots} size={28} />}
       </div>
       <div style={{ marginBottom: 10 }}>
         <span style={{ fontSize: 32, fontWeight: 800, color: CN.gold, letterSpacing: -1 }}>{trip.daysAway ?? '?'}</span>
@@ -112,7 +112,7 @@ function IdleState({ data }: { data: RigPulseData }) {
     );
   }
   if (data.lastSavedCampground) items.push(<ContextItem key="saved" icon="\u2764\ufe0f">Last saved: {data.lastSavedCampground.name}, {data.lastSavedCampground.state}</ContextItem>);
-  if (data.newFollowers.length > 0) {
+  if (data.newFollowers?.length > 0) {
     const first = data.newFollowers[0];
     const rest = data.newFollowers.length - 1;
     items.push(

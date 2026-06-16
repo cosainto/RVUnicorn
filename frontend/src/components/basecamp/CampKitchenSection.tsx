@@ -44,7 +44,9 @@ export default function CampKitchenSection({ data }: Props) {
     );
   }
 
-  const { contextLabel, recipes, fromRigsFollowed } = data;
+  const contextLabel = data.contextLabel || 'Recipes for you';
+  const recipes = data.recipes || [];
+  const fromRigsFollowed = data.fromRigsFollowed || [];
   if (!recipes.length && !fromRigsFollowed.length) return null;
 
   return (

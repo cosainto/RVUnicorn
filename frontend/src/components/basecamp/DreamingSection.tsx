@@ -66,7 +66,10 @@ export default function DreamingSection({ data }: Props) {
     );
   }
 
-  const { myWishlist, friendsWishlist, rigRecommendations, nearTrip } = data;
+  const myWishlist = data.myWishlist || [];
+  const friendsWishlist = data.friendsWishlist || [];
+  const rigRecommendations = data.rigRecommendations || [];
+  const nearTrip = data.nearTrip || [];
   const allEmpty = !myWishlist.length && !friendsWishlist.length && !rigRecommendations.length && !nearTrip.length;
   if (allEmpty) return null;
 

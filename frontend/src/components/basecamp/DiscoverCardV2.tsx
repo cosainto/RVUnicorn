@@ -62,7 +62,7 @@ export default function DiscoverCardV2({ data }: Props) {
 
         {/* Horizontal scroll row */}
         <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-          {data.items.map(item => (
+          {(data.items || []).map(item => (
             <Link key={item.id} to={itemLink(item.type, item.id)} className="flex-shrink-0 transition hover:opacity-80" style={{ width: 100 }}>
               {item.imageUrl ? (
                 <img src={item.imageUrl} alt="" className="w-full rounded-xl object-cover" style={{ height: 70 }} />

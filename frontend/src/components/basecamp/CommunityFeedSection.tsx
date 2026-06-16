@@ -56,7 +56,8 @@ export default function CommunityFeedSection({ data }: Props) {
     );
   }
 
-  const { topItem, recentItems } = data;
+  const topItem = data.topItem || null;
+  const recentItems = data.recentItems || [];
   const hasContent = topItem || recentItems.length > 0;
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
