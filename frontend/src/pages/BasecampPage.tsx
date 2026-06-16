@@ -2423,14 +2423,14 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* ── Return to Driving Mode banner (minimized — driver only) ─────── */}
+      {/* ── Return to On The Road banner (minimized — driver only) ─────── */}
       {/* Passengers see the DriveCompanionWidget instead, mounted in App.tsx */}
       {isDriving && drivingMinimized && driveRole === 'driver' && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-blue-900 border-b border-blue-700 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">🚐</span>
             <div>
-              <p className="text-sm font-bold text-white">Guardian Mode Active</p>
+              <p className="text-sm font-bold text-white">Passenger Mode Active</p>
               <p className="text-xs text-blue-300">Your drive is still being tracked</p>
             </div>
           </div>
@@ -3200,10 +3200,10 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 text-sm mb-1">Set up your Rig Profile</p>
                     <p className="text-gray-500 text-xs mb-3 leading-relaxed">
-                      Add your RV details once — Hitch uses them for campsite filters, gas cost estimates, Guardian Mode fatigue tracking, and personalized trip planning.
+                      Add your RV details once — Hitch uses them for campsite filters, gas cost estimates, Passenger Mode fatigue tracking, and personalized trip planning.
                     </p>
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {['📐 Length & type','⛽ MPG & fuel','🗺️ Campsite filters','🛡️ Guardian Mode'].map(item => (
+                      {['📐 Length & type','⛽ MPG & fuel','🗺️ Campsite filters','🛡️ Passenger Mode'].map(item => (
                         <span key={item} className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full">{item}</span>
                       ))}
                     </div>

@@ -676,8 +676,8 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
               style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.25)' }}>
               <Navigation className="w-5 h-5 text-amber-400" />
               <div className="flex-1 text-left">
-                <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>Start Driving Mode</p>
-                <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Guardian Mode · Fatigue score · Co-pilot</p>
+                <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>We're On The Road</p>
+                <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Passenger Mode · Fatigue score · Co-pilot</p>
               </div>
               <span className="text-xs font-semibold" style={{ color: '#E8A838' }}>Start →</span>
             </button>
@@ -842,15 +842,15 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
                 </button>
               </div>
 
-              {/* Start Driving */}
+              {/* On The Road */}
               {onStartDrive && (
                 <button onClick={onStartDrive}
                   className="w-full flex items-center gap-3 rounded-xl px-4 py-3 transition hover:brightness-110"
                   style={{ background: '#1a2d4a', border: '1px solid rgba(232,168,56,0.25)' }}>
                   <Navigation className="w-5 h-5 text-amber-400" />
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>Start Driving Mode</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Guardian Mode · Fatigue score · Co-pilot</p>
+                    <p className="text-sm font-bold" style={{ color: '#F5F0E8' }}>We're On The Road</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Passenger Mode · Fatigue score · Co-pilot</p>
                   </div>
                   <span className="text-xs font-semibold" style={{ color: '#E8A838' }}>Start →</span>
                 </button>

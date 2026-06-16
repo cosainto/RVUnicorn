@@ -29,6 +29,7 @@ import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
 import { UserActionsMenu } from '../components/BlockUserButton';
 import FollowingSection from '../components/FollowingSection';
 import FollowersSection from '../components/FollowersSection';
+import RigsFollowingSection from '../components/RigsFollowingSection';
 
 interface Profile {
   id: string; username: string; firstName: string; lastName: string;
@@ -535,6 +536,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
               {/* Friends */}
               {activeContentTab === 'friends' && (
                 <div className="dark-feed"><div className="flat-card p-5"><Top8Friends username={username} /></div>
+                  {profile && <div className="mt-4"><RigsFollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                   {profile && <div className="flat-card p-5 mt-4"><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                   {profile?.isCreator && <div className="flat-card p-5 mt-4"><FollowersSection creatorId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                 </div>
@@ -582,6 +584,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       </Link>
                     ))}
                   </div>
+                  {profile && <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><RigsFollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                   {profile && <div className="mt-4 pt-4 dark-feed" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}><FollowingSection userId={profile.id} isOwnProfile={isOwnProfile} /></div>}
                 </div>
               )}

@@ -164,6 +164,7 @@ import { registerUtilityScoreCron } from './cron/utility-score.cron';
 import { registerContributionScoreCron } from './cron/contributionScore.cron';
 import { registerEmailCampaignCrons } from './cron/email-campaigns.cron';
 import { registerEmailDigestCrons } from './cron/email-digest.cron';
+import { registerWishlistNotificationCron } from './cron/wishlist-notification.cron';
 import doThisHereRoutes from './routes/doThisHere.routes';
 import emailRoutes from './routes/email.routes';
 
@@ -432,6 +433,7 @@ registerUtilityScoreCron();
 registerContributionScoreCron();
 registerEmailCampaignCrons();
 registerEmailDigestCrons();
+registerWishlistNotificationCron();
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

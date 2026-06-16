@@ -86,7 +86,7 @@ export default function PrivacyPolicyPage() {
 
           <H3>1.2 Information We Collect Automatically</H3>
           <P><strong style={{ color: '#F5F0E8' }}>Device and Usage Information:</strong> We automatically collect your IP address, browser type, operating system, device identifiers, pages visited, features used, time spent, and referring URLs.</P>
-          <P><strong style={{ color: '#F5F0E8' }}>Location Data:</strong> With your permission, we collect precise GPS location for features including auto check-in (geo-fence detection), proximity-based campground discovery, Guardian Mode driving safety, and "nearby campers" features. You can disable location access in your device settings at any time.</P>
+          <P><strong style={{ color: '#F5F0E8' }}>Location Data:</strong> With your permission, we collect precise GPS location for features including auto check-in (geo-fence detection), proximity-based campground discovery, Passenger Mode driving safety, and "nearby campers" features. You can disable location access in your device settings at any time.</P>
           <P><strong style={{ color: '#F5F0E8' }}>Push Notification Tokens:</strong> If you enable push notifications, we store a device token (VAPID-based web push subscription) to deliver notifications to your device.</P>
           <P><strong style={{ color: '#F5F0E8' }}>Cookies and Local Storage:</strong> We use cookies and browser local storage for session management, preference storage, and keeping you logged in.</P>
 
@@ -128,7 +128,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <H3>Safety</H3>
           <ul className="list-disc pl-6 mb-4">
-            <Li>Deliver Guardian Mode driving safety alerts</Li>
+            <Li>Deliver Passenger Mode driving safety alerts</Li>
             <Li>Send high-wind, weather, and rig-fit warnings before your trips</Li>
             <Li>Detect and prevent fraudulent or abusive activity</Li>
           </ul>

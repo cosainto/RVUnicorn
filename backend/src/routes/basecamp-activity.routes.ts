@@ -131,6 +131,7 @@ function formatMessage(activity: any): string {
     case 'MAP_SHOUTOUT': return `${actor} left you a shoutout from the map! 📍 "${meta.message || ''}"`;
     case 'CAMP_MARKET_FEEDBACK_REQUEST': return `Your trade "${entity}" is complete! Leave feedback for ${meta.buyerName || meta.sellerName || 'the other party'}.`;
     case 'CAMP_MARKET_FEEDBACK_REMINDER': return meta.message || `How did your trade for "${entity}" go? Leave feedback!`;
+    case 'RIG_POST': return `${actor} posted to ${meta.rigName || 'their rig'}: "${entity}"`;
     default: return `Activity in ${entity}`;
   }
 }
@@ -147,7 +148,8 @@ function getIcon(type: string): string {
     'CREATOR_VIDEO_UPLOAD': '🎬',
     'MAP_SHOUTOUT': '📍',
     'CAMP_MARKET_FEEDBACK_REQUEST': '🛒',
-    'CAMP_MARKET_FEEDBACK_REMINDER': '⏰'
+    'CAMP_MARKET_FEEDBACK_REMINDER': '⏰',
+    'RIG_POST': '🚐'
   };
   return icons[type] || '📦';
 }
@@ -160,6 +162,7 @@ function getLink(activity: any): string {
   if (activity.entityType === 'TRIP') return `/travel?trip=${activity.entityId}`;
   if (activity.entityType === 'CREATOR_CONTENT') return `/creators/${(activity.metadata as any)?.creatorUsername || 'unknown'}/content/${activity.entityId}`;
   if (activity.type === 'MAP_SHOUTOUT') return `/profile/${activity.entityId}`;
+  if (activity.entityType === 'RigPost') return `/rig/${(activity.metadata as any)?.rigSlug || 'unknown'}`;
   return '/basecamp';
 }
 

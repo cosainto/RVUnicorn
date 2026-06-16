@@ -1046,4 +1046,359 @@ router.get('/suggest-stops', authenticateToken, async (req: any, res: Response) 
   }
 });
 
+// ============== SOCIAL RECOMMENDATIONS ==============
+
+// GET /campground-features/:campgroundId/social-recommendations
+router.get('/:campgroundId/social-recommendations', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+    const userId = req.userId;
+
+    // Get users the current user follows (friends)
+    const followedCreators = await prisma.creatorFollow.findMany({
+      where: { followerId: userId },
+      select: { creatorId: true },
+    });
+    const rigFollows = await prisma.rigFollow.findMany({
+      where: { userId },
+      select: { rig: { select: { ownerId: true } } },
+    });
+    const friendIds = [...new Set([
+      ...followedCreators.map((f: any) => f.creatorId),
+      ...rigFollows.map((f: any) => f.rig.ownerId),
+    ])].filter((id: string) => id !== userId);
+
+    // Friends who stayed at this campground
+    let friendsWhoStayed: any[] = [];
+    if (friendIds.length > 0) {
+      const visits = await prisma.rigCampsiteVisit.findMany({
+        where: { campgroundId, userId: { in: friendIds }, isPrivate: false },
+        select: {
+          userId: true,
+          visitedAt: true,
+          rating: true,
+          tips: true,
+          rig: { select: { rigName: true, rigClass: true } },
+          user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        },
+        orderBy: { visitedAt: 'desc' },
+        take: 20,
+      });
+      friendsWhoStayed = visits.map((v: any) => ({
+        userId: v.user.id,
+        username: v.user.username,
+        avatarUrl: v.user.profilePicture,
+        firstName: v.user.firstName,
+        rigName: v.rig?.rigName || null,
+        visitedAt: v.visitedAt,
+        rating: v.rating,
+        tip: v.tips?.[0] || null,
+      }));
+    }
+
+    // Friends who wishlisted this campground
+    let friendsWhoWishlisted: any[] = [];
+    if (friendIds.length > 0) {
+      const wishlists = await prisma.campgroundWishlist.findMany({
+        where: { campgroundId, userId: { in: friendIds } },
+        select: {
+          user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        },
+        take: 10,
+      });
+      friendsWhoWishlisted = wishlists.map((w: any) => ({
+        userId: w.user.id,
+        username: w.user.username,
+        avatarUrl: w.user.profilePicture,
+        firstName: w.user.firstName,
+      }));
+    }
+
+    // Get current user's rig for similarity matching
+    const userRig = await prisma.rig.findFirst({
+      where: { ownerId: userId },
+      select: { id: true, rigClass: true, make: true, lengthFeet: true, vibeTags: true },
+    });
+
+    // Rig similarity matching
+    let rigSimilarRecommendations: any[] = [];
+    const similarRigStats = { classMatch: 0, toyHaulerMatch: 0, familyMatch: 0, petMatch: 0 };
+
+    if (userRig) {
+      // Get all visits to this campground with rig data (excluding current user)
+      const allVisits = await prisma.rigCampsiteVisit.findMany({
+        where: { campgroundId, userId: { not: userId }, isPrivate: false },
+        select: {
+          userId: true,
+          visitedAt: true,
+          rating: true,
+          tips: true,
+          rig: {
+            select: {
+              id: true, rigName: true, rigClass: true, make: true, lengthFeet: true,
+              vibeTags: true, owner: { select: { id: true, username: true, profilePicture: true } },
+            },
+          },
+        },
+        orderBy: { visitedAt: 'desc' },
+        take: 100,
+      });
+
+      // Score each rig for similarity
+      const scoredVisits = allVisits.map((v: any) => {
+        let score = 0;
+        const rig = v.rig;
+        if (!rig) return { ...v, score: 0 };
+
+        if (userRig.rigClass && rig.rigClass === userRig.rigClass) score += 30;
+        if (userRig.make && rig.make === userRig.make) score += 20;
+
+        const userTags = userRig.vibeTags || [];
+        const rigTags = rig.vibeTags || [];
+        if (userTags.includes('pet-friendly') && rigTags.includes('pet-friendly')) score += 15;
+        if (userTags.includes('family') && rigTags.includes('family')) score += 15;
+        if (userTags.includes('full-timer') && rigTags.includes('full-timer')) score += 20;
+        if (userTags.includes('boondocker') && rigTags.includes('boondocker')) score += 15;
+
+        if (userRig.lengthFeet && rig.lengthFeet && Math.abs(userRig.lengthFeet - rig.lengthFeet) <= 5) score += 10;
+
+        return { ...v, score };
+      });
+
+      // Filter by similarity threshold and take top results
+      const similar = scoredVisits
+        .filter((v: any) => v.score > 40)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 10);
+
+      rigSimilarRecommendations = similar.map((v: any) => ({
+        rigId: v.rig?.id,
+        rigName: v.rig?.rigName,
+        ownerUsername: v.rig?.owner?.username,
+        ownerAvatar: v.rig?.owner?.profilePicture,
+        rigClass: v.rig?.rigClass,
+        visitedAt: v.visitedAt,
+        rating: v.rating,
+        tip: v.tips?.[0] || null,
+      }));
+
+      // Aggregate stats
+      similarRigStats.classMatch = allVisits.filter((v: any) => v.rig?.rigClass === userRig.rigClass).length;
+      similarRigStats.petMatch = allVisits.filter((v: any) => (v.rig?.vibeTags || []).includes('pet-friendly')).length;
+      similarRigStats.familyMatch = allVisits.filter((v: any) => (v.rig?.vibeTags || []).includes('family')).length;
+    }
+
+    // Aggregate tips grouped by rig class and tags
+    const allTips = [...friendsWhoStayed, ...rigSimilarRecommendations]
+      .filter((r: any) => r.tip)
+      .map((r: any) => ({
+        content: r.tip,
+        authorUsername: r.username || r.ownerUsername,
+        rigClass: r.rigClass || null,
+      }))
+      .slice(0, 10);
+
+    res.json({
+      friendsWhoStayed,
+      friendsWhoWishlisted,
+      rigSimilarRecommendations,
+      similarRigStats,
+      aggregateTips: allTips,
+    });
+  } catch (e: any) {
+    console.error('[Social] recommendations error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============== WISHLIST NOTIFICATION PREFERENCES ==============
+
+// GET /campground-features/:campgroundId/wishlist-notification-pref
+router.get('/:campgroundId/wishlist-notification-pref', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const pref = await prisma.campgroundWishlistNotificationPref.findUnique({
+      where: { userId_campgroundId: { userId: req.userId, campgroundId: req.params.campgroundId } },
+    });
+    res.json(pref || { notifyNewReviews: true, notifyFriendVisit: true, notifyAvailability: false });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /campground-features/:campgroundId/wishlist-notification-pref
+router.put('/:campgroundId/wishlist-notification-pref', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { notifyNewReviews, notifyFriendVisit, notifyAvailability } = req.body;
+
+    const pref = await prisma.campgroundWishlistNotificationPref.upsert({
+      where: { userId_campgroundId: { userId: req.userId, campgroundId: req.params.campgroundId } },
+      create: {
+        userId: req.userId,
+        campgroundId: req.params.campgroundId,
+        notifyNewReviews: notifyNewReviews ?? true,
+        notifyFriendVisit: notifyFriendVisit ?? true,
+        notifyAvailability: notifyAvailability ?? false,
+      },
+      update: {
+        ...(notifyNewReviews !== undefined && { notifyNewReviews }),
+        ...(notifyFriendVisit !== undefined && { notifyFriendVisit }),
+        ...(notifyAvailability !== undefined && { notifyAvailability }),
+      },
+    });
+
+    res.json(pref);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /campground-features/:campgroundId/wishlist-stats (for campground owners — anonymous aggregate only)
+router.get('/:campgroundId/wishlist-stats', authenticateToken, async (req: any, res: Response) => {
+  try {
+    // Verify user is admin of this campground
+    const isAdmin = await prisma.campgroundAdmin.findFirst({
+      where: { campgroundId: req.params.campgroundId, userId: req.userId },
+    });
+    const campground = await prisma.campground.findUnique({
+      where: { id: req.params.campgroundId },
+      select: { claimedById: true },
+    });
+    if (!isAdmin && campground?.claimedById !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const totalWishlists = await prisma.campgroundWishlist.count({
+      where: { campgroundId: req.params.campgroundId },
+    });
+
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newThisWeek = await prisma.campgroundWishlist.count({
+      where: { campgroundId: req.params.campgroundId, createdAt: { gte: oneWeekAgo } },
+    });
+
+    // NEVER expose individual user identities
+    res.json({
+      totalWishlists,
+      newThisWeek,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============== TRAVEL INTELLIGENCE: ALSO VISITED ==============
+
+// GET /campground-features/:campgroundId/also-visited
+router.get('/:campgroundId/also-visited', async (req: Request, res: Response) => {
+  try {
+    const { campgroundId } = req.params;
+
+    // Get the campground's location and lat/lng
+    const campground = await prisma.campground.findUnique({
+      where: { id: campgroundId },
+      select: { latitude: true, longitude: true },
+    });
+    if (!campground?.latitude || !campground?.longitude) {
+      return res.json([]);
+    }
+
+    // Find all users who stayed at this campground
+    const stays = await prisma.rigCampsiteVisit.findMany({
+      where: { campgroundId },
+      select: { userId: true, visitedAt: true },
+    });
+    // Also check RigTripStop for stays
+    const tripStops = await prisma.rigTripStop.findMany({
+      where: { campgroundId },
+      select: { trip: { select: { rig: { select: { ownerId: true } } } }, arrivedAt: true, departedAt: true },
+    });
+
+    if (stays.length === 0 && tripStops.length === 0) return res.json([]);
+
+    // Build list of { userId, stayStart, stayEnd }
+    const userStays: { userId: string; start: Date; end: Date }[] = [];
+    for (const s of stays) {
+      const visitDate = new Date(s.visitedAt);
+      userStays.push({ userId: s.userId, start: visitDate, end: new Date(visitDate.getTime() + 3 * 24 * 60 * 60 * 1000) });
+    }
+    for (const ts of tripStops) {
+      if (!ts.trip?.rig?.ownerId) continue;
+      const start = new Date(ts.arrivedAt);
+      const end = ts.departedAt ? new Date(ts.departedAt) : new Date(start.getTime() + 3 * 24 * 60 * 60 * 1000);
+      // Extend window ±3 days
+      userStays.push({
+        userId: ts.trip.rig.ownerId,
+        start: new Date(start.getTime() - 3 * 24 * 60 * 60 * 1000),
+        end: new Date(end.getTime() + 3 * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    const userIds = [...new Set(userStays.map(s => s.userId))];
+    if (userIds.length === 0) return res.json([]);
+
+    // Find ExperienceVisit records from these users within 50 miles (~0.725 degrees)
+    const nearbyExperiences = await prisma.nearbyExperience.findMany({
+      where: {
+        latitude: { gte: campground.latitude - 0.725, lte: campground.latitude + 0.725 },
+        longitude: { gte: campground.longitude - 0.725, lte: campground.longitude + 0.725 },
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        latitude: true,
+        longitude: true,
+        photoUrls: true,
+        visits: {
+          where: { userId: { in: userIds } },
+          select: { userId: true, visitedAt: true },
+        },
+        reviews: {
+          select: { rating: true },
+          take: 50,
+        },
+      },
+    });
+
+    // Filter: only experiences that users actually visited during their stay window
+    const results = nearbyExperiences
+      .map((exp: any) => {
+        // Count how many campground visitors also visited this experience
+        const matchingVisits = exp.visits.filter((v: any) => {
+          const visitDate = new Date(v.visitedAt);
+          return userStays.some(s => s.userId === v.userId && visitDate >= s.start && visitDate <= s.end);
+        });
+
+        if (matchingVisits.length === 0) return null;
+
+        // Calculate distance from campground
+        const dLat = (exp.latitude - campground.latitude) * 69; // rough miles per degree lat
+        const dLng = (exp.longitude - campground.longitude) * 69 * Math.cos(campground.latitude * Math.PI / 180);
+        const distance = Math.sqrt(dLat * dLat + dLng * dLng);
+
+        // Average rating
+        const ratings = exp.reviews.map((r: any) => r.rating).filter(Boolean);
+        const avgRating = ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : null;
+
+        return {
+          experienceId: exp.id,
+          name: exp.name,
+          category: exp.category,
+          distance: Math.round(distance * 10) / 10,
+          visitCount: matchingVisits.length,
+          avgRating: avgRating ? Math.round(avgRating * 10) / 10 : null,
+          photoUrl: exp.photoUrls?.[0] || null,
+        };
+      })
+      .filter(Boolean)
+      .sort((a: any, b: any) => b.visitCount - a.visitCount)
+      .slice(0, 5);
+
+    res.json(results);
+  } catch (e: any) {
+    console.error('[AlsoVisited] error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

@@ -47,6 +47,8 @@ import CampfireTips from '../components/CampfireTips';
 import HarvestHostsTab from '../components/HarvestHostsTab';
 import NearbyBusinesses from '../components/NearbyBusinesses';
 import CampgroundSocialProof from '../components/CampgroundSocialProof';
+import CampgroundSocialRecommendations from '../components/CampgroundSocialRecommendations';
+import CampgroundAlsoVisited from '../components/CampgroundAlsoVisited';
 
 const ActionButton = ({ as = "button", href, onClick, icon, children, variant = "tertiary", ...rest }: any) => {
   const base = "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -299,6 +301,8 @@ export default function CampgroundDetailPage() {
     }
   }, [user]);
   const [inWishlist, setInWishlist] = useState(false);
+  const [wishlistNotifPrefs, setWishlistNotifPrefs] = useState({ notifyNewReviews: true, notifyFriendVisit: true, notifyAvailability: false });
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [campgroundBadges, setCampgroundBadges] = useState<{locationBadges: any[]; regionBadges: any[]; totalBadges: number}>({ locationBadges: [], regionBadges: [], totalBadges: 0 });
   const [customBadges, setCustomBadges] = useState<any[]>([]);
   const [campgroundRules, setCampgroundRules] = useState<any>(null);
@@ -314,6 +318,12 @@ export default function CampgroundDetailPage() {
       api.get(`/wishlist/check/${id}`).then(res => setInWishlist(res.data.inWishlist)).catch(() => {});
     } if (user) { checkIfFavorited(); checkIfAdmin();
     loadFeaturedAnnouncements(); checkIfMuted(); } } }, [id, user]);
+  useEffect(() => {
+    if (!inWishlist || !user || !id) return;
+    api.get(`/campground-features/${id}/wishlist-notification-pref`)
+      .then(r => setWishlistNotifPrefs(r.data))
+      .catch(() => {});
+  }, [inWishlist, user, id]);
   useEffect(() => { if (campground) loadTabData(); }, [campground, activeTab]);
 
   const loadCampground = async () => {
@@ -667,6 +677,40 @@ export default function CampgroundDetailPage() {
                 <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><span className="text-sm">🧞</span></div>
                 <span className="text-white/70 text-xs">{campground._count?.checkIns || 0}</span>
               </button>
+              {inWishlist && (
+                <div className="relative">
+                  <button onClick={() => setShowNotifPrefs(!showNotifPrefs)} className="flex flex-col items-center gap-0.5" title="Notification preferences">
+                    <div className="w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition bg-white/20 text-white hover:bg-white/30">
+                      <Bell className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] text-white/70">Alerts</span>
+                  </button>
+                  {showNotifPrefs && (
+                    <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-xl p-3 z-50 min-w-[200px]" onClick={e => e.stopPropagation()}>
+                      <p className="text-xs font-bold text-gray-800 mb-2">🔔 Notify me when:</p>
+                      {[
+                        { key: 'notifyFriendVisit', label: 'Friends visit here' },
+                        { key: 'notifyNewReviews', label: 'New reviews posted' },
+                        { key: 'notifyAvailability', label: 'Availability updates' },
+                      ].map(item => (
+                        <label key={item.key} className="flex items-center gap-2 py-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(wishlistNotifPrefs as any)[item.key]}
+                            onChange={async (e) => {
+                              const updated = { ...wishlistNotifPrefs, [item.key]: e.target.checked };
+                              setWishlistNotifPrefs(updated);
+                              try { await api.put(`/campground-features/${id}/wishlist-notification-pref`, updated); } catch {}
+                            }}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs text-gray-700">{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <button onClick={toggleMute} className="flex flex-col items-center gap-0.5" title={isMuted ? "Unmute" : "Mute"}>
                 <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</div>
                 <span className="text-white/70 text-xs">{isMuted ? 'muted' : 'follow'}</span>
@@ -1825,6 +1869,12 @@ export default function CampgroundDetailPage() {
                 </div>
               )}
               
+              {/* Social Recommendations */}
+              <CampgroundSocialRecommendations campgroundId={campground.id} isAdventure={isAdventure} isNeon={isNeon} />
+
+              {/* Travel Intelligence: Also Visited */}
+              <CampgroundAlsoVisited campgroundId={campground.id} isAdventure={isAdventure} isNeon={isNeon} />
+
               {/* Live Activity Feed */}
               <div className="mb-4">
                 <CampgroundLiveFeed campgroundId={campground.id} onViewEvents={() => setActiveTab('events')} />

@@ -571,7 +571,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ═══ SECTION 7: DRIVING MODE TEASER ═══ */}
+        {/* ═══ SECTION 7: ON THE ROAD TEASER ═══ */}
         <section ref={sec7.ref} className="py-24 px-6" style={{ background: '#FFFFFF' }}>
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             {/* Left — Fatigue mockup */}
@@ -600,10 +600,10 @@ export default function LandingPage() {
                 YOUR SAFETY CO-PILOT
               </p>
               <h2 className={`font-playfair text-3xl md:text-4xl font-bold mb-6 fade-up fade-up-d1 ${sec7.inView ? 'visible' : ''}`} style={{ color: '#1E293B' }}>
-                Guardian Mode keeps you sharp on every mile.
+                Passenger Mode keeps you sharp on every mile.
               </h2>
               <p className={`text-lg leading-relaxed mb-8 fade-up fade-up-d2 ${sec7.inView ? 'visible' : ''}`} style={{ color: '#64748B' }}>
-                RVUnicorn's Driving Mode tracks fatigue, suggests rest stops built for your rig size, and keeps your co-pilot in the loop — even on remote stretches.
+                RVUnicorn's On The Road mode tracks fatigue, suggests rest stops built for your rig size, and keeps your co-pilot in the loop — even on remote stretches.
               </p>
               <div className={`fade-up fade-up-d3 ${sec7.inView ? 'visible' : ''}`}>
                 <Link to="/register" className="inline-block px-6 py-3 text-sm font-medium rounded-full border transition-all hover:bg-sky-50"

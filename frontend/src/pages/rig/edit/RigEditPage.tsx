@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Truck, Users, FileText, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Truck, Users, FileText, Sparkles, AlertTriangle, QrCode } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ToastProvider';
 import api from '../../../services/api';
@@ -17,6 +17,10 @@ export default function RigEditPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('identity');
   const [form, setForm] = useState<any>({});
+  const [qrData, setQrData] = useState<any>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [privacyEnabled, setPrivacyEnabled] = useState(false);
+  const [privacyDuration, setPrivacyDuration] = useState('until_off');
 
   useEffect(() => {
     if (!slug) return;
@@ -24,6 +28,19 @@ export default function RigEditPage() {
       .then(r => { setRig(r.data); setForm(r.data); setLoading(false); })
       .catch(() => { setLoading(false); navigate('/basecamp'); });
   }, [slug]);
+
+  useEffect(() => {
+    if (activeTab !== 'qr-sticker' || !slug) return;
+    setQrLoading(true);
+    api.get(`/rigs/${slug}/qr-code`)
+      .then(r => {
+        setQrData(r.data);
+        if (r.data?.privacyEnabled) setPrivacyEnabled(r.data.privacyEnabled);
+        if (r.data?.privacyDuration) setPrivacyDuration(r.data.privacyDuration);
+      })
+      .catch(() => {})
+      .finally(() => setQrLoading(false));
+  }, [activeTab, slug]);
 
   const saveField = async (fields: Record<string, any>) => {
     if (!rig?.id) return;
@@ -54,6 +71,7 @@ export default function RigEditPage() {
     { id: 'pilots', label: 'Pilots', icon: Users },
     { id: 'creator', label: 'Creator', icon: Sparkles },
     { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'qr-sticker', label: 'QR Sticker', icon: QrCode },
     { id: 'danger', label: 'Danger Zone', icon: AlertTriangle },
   ];
 
@@ -223,6 +241,120 @@ export default function RigEditPage() {
             <h3 className="text-sm font-bold mb-3">Document Vault</h3>
             <p className="text-xs" style={{ color: CN.muted }}>Upload and manage your rig documents — insurance, registration, title, manuals.</p>
             <p className="text-xs mt-4" style={{ color: CN.muted }}>Document management coming soon.</p>
+          </div>
+        )}
+
+        {/* ═══ QR STICKER TAB ═══ */}
+        {activeTab === 'qr-sticker' && (
+          <div className="space-y-4">
+            <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              <h3 className="text-sm font-bold mb-4">Your Rig Sticker</h3>
+              {qrLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: CN.gold, borderTopColor: 'transparent' }} />
+                </div>
+              ) : qrData?.cardImageUrl ? (
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <img src={qrData.cardImageUrl} alt="Rig Sticker" style={{ width: 300 }} className="rounded-xl" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => window.open(qrData.cardImageUrl, '_blank')}
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+                      style={{ background: CN.gold, color: CN.bg }}
+                    >
+                      Download Sticker
+                    </button>
+                    <button
+                      onClick={() => window.open(qrData.qrCodeUrl, '_blank')}
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+                      style={{ background: 'transparent', color: CN.gold, border: `1px solid ${CN.gold}` }}
+                    >
+                      Download QR Only
+                    </button>
+                  </div>
+                  {(qrData.scanCount !== undefined || qrData.uniqueVisitorCount !== undefined) && (
+                    <p className="text-xs" style={{ color: CN.muted }}>
+                      Your QR has been scanned {qrData.scanCount || 0} times by {qrData.uniqueVisitorCount || 0} unique visitors
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <QrCode className="w-12 h-12 mx-auto mb-3" style={{ color: CN.muted }} />
+                  <p className="text-xs mb-4" style={{ color: CN.muted }}>Generate a QR sticker for your rig. People can scan it to discover your rig page.</p>
+                  <button
+                    onClick={async () => {
+                      setQrLoading(true);
+                      try {
+                        const { data } = await api.post(`/rigs/${slug}/qr-code`);
+                        setQrData(data);
+                        addLocalToast('Sticker generated!', 'success');
+                      } catch {
+                        addLocalToast('Failed to generate sticker', 'error');
+                      } finally {
+                        setQrLoading(false);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+                    style={{ background: CN.gold, color: CN.bg }}
+                  >
+                    Generate Sticker
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {qrData?.cardImageUrl && (
+              <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                <h3 className="text-sm font-bold mb-3">Privacy Mode</h3>
+                <p className="text-xs mb-3" style={{ color: CN.muted }}>When enabled, scanning your QR code will not reveal your current location or trip details.</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={privacyEnabled}
+                      onChange={async (e) => {
+                        const enabled = e.target.checked;
+                        setPrivacyEnabled(enabled);
+                        try {
+                          await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled, duration: privacyDuration });
+                          addLocalToast(enabled ? 'Privacy mode enabled' : 'Privacy mode disabled', 'success');
+                        } catch {
+                          setPrivacyEnabled(!enabled);
+                          addLocalToast('Failed to update privacy', 'error');
+                        }
+                      }}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-xs" style={{ color: CN.cream }}>Enable Privacy Mode</span>
+                  </label>
+                </div>
+                {privacyEnabled && (
+                  <select
+                    value={privacyDuration}
+                    onChange={async (e) => {
+                      const duration = e.target.value;
+                      setPrivacyDuration(duration);
+                      try {
+                        await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled: true, duration });
+                        addLocalToast('Privacy duration updated', 'success');
+                      } catch {
+                        addLocalToast('Failed to update duration', 'error');
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs focus:outline-none"
+                    style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }}
+                  >
+                    <option value="2hr">2 hours</option>
+                    <option value="4hr">4 hours</option>
+                    <option value="8hr">8 hours</option>
+                    <option value="until_off">Until I turn off</option>
+                  </select>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { optionalAuth } from '../middleware/auth.middleware';
+import QRCode from 'qrcode';
+import sharp from 'sharp';
+import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
 const prisma = new PrismaClient() as any;
@@ -2248,6 +2251,675 @@ router.post('/:slug/trips/:tripId/normalize', authenticateToken, async (req: any
     }
     res.json({ assigned, total: posts.length });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ============== QR CODE RIG STICKER SYSTEM ==============
+
+// Helper: generate branded sticker card image
+async function generateStickerCard(qrPngBuffer: Buffer, rigName: string, rigEmoji: string): Promise<Buffer> {
+  const cardWidth = 600;
+  const cardHeight = 800;
+  const qrSize = 340;
+  const padding = 40;
+
+  // Resize QR code to target size with white background
+  const qrResized = await sharp(qrPngBuffer)
+    .resize(qrSize, qrSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .png()
+    .toBuffer();
+
+  // Build SVG overlay with navy background, gold border, text elements
+  const escapedName = (rigEmoji ? rigEmoji + ' ' : '') + (rigName || 'My Rig');
+  const safeDisplayName = escapedName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const svg = `<svg width="${cardWidth}" height="${cardHeight}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${cardWidth}" height="${cardHeight}" rx="24" fill="#1B2B4B"/>
+    <rect x="8" y="8" width="${cardWidth - 16}" height="${cardHeight - 16}" rx="20" fill="none" stroke="#C9A84C" stroke-width="3"/>
+    <text x="${cardWidth / 2}" y="80" text-anchor="middle" font-size="36" font-weight="bold" fill="#C9A84C" font-family="Georgia, serif">${safeDisplayName}</text>
+    <rect x="${(cardWidth - qrSize - 40) / 2}" y="120" width="${qrSize + 40}" height="${qrSize + 40}" rx="16" fill="white"/>
+    <text x="${cardWidth / 2}" y="${120 + qrSize + 40 + 50}" text-anchor="middle" font-size="18" fill="#C9A84C" font-family="Georgia, serif">Scan to follow our adventure</text>
+    <text x="${cardWidth / 2}" y="${cardHeight - 40}" text-anchor="middle" font-size="22" font-weight="bold" fill="#C9A84C" font-family="Georgia, serif">RVUnicorn</text>
+    <text x="${cardWidth / 2}" y="${cardHeight - 18}" text-anchor="middle" font-size="11" fill="#8B9BB4" font-family="Arial, sans-serif">www.rvunicorn.com</text>
+  </svg>`;
+
+  // Compose: navy card background with QR code overlaid
+  const card = await sharp(Buffer.from(svg))
+    .composite([
+      { input: qrResized, top: 140, left: (cardWidth - qrSize) / 2 }
+    ])
+    .png()
+    .toBuffer();
+
+  return card;
+}
+
+// POST /rigs/:slug/qr-code — generate QR code for rig
+router.post('/:slug/qr-code', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, rigName: true, rigEmoji: true, slug: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    if (rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    // Check for existing active QR code
+    const existing = await prisma.rigQRCode.findFirst({ where: { rigId: rig.id, isActive: true } });
+    if (existing) return res.json({ qrCodeUrl: existing.qrCodeUrl, cardImageUrl: existing.cardImageUrl, downloadUrl: existing.cardImageUrl });
+
+    // Generate QR code PNG buffer (min 300x300 for scanability)
+    const qrUrl = `https://www.rvunicorn.com/rig/${rig.slug}?scan=true`;
+    const qrPngBuffer = await QRCode.toBuffer(qrUrl, { width: 400, margin: 2, color: { dark: '#1B2B4B', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+
+    // Upload QR code PNG to Cloudinary
+    const qrCodeUrl = await uploadBufferToCloudinary(qrPngBuffer, 'rig-qr-codes');
+
+    // Generate branded sticker card
+    const cardBuffer = await generateStickerCard(qrPngBuffer, rig.rigName || rig.slug, rig.rigEmoji || '');
+
+    // Upload card to Cloudinary
+    const cardImageUrl = await uploadBufferToCloudinary(cardBuffer, 'rig-sticker-cards');
+
+    // Create database record
+    await prisma.rigQRCode.create({
+      data: {
+        rigId: rig.id,
+        userId: req.userId,
+        qrCodeUrl,
+        cardImageUrl,
+      }
+    });
+
+    res.json({ qrCodeUrl, cardImageUrl, downloadUrl: cardImageUrl });
+  } catch (e: any) {
+    console.error('[QR] generate error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /rigs/:slug/qr-code — get existing QR code (or create if none)
+router.get('/:slug/qr-code', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, rigName: true, rigEmoji: true, slug: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    if (rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    let qrCode = await prisma.rigQRCode.findFirst({ where: { rigId: rig.id, isActive: true } });
+
+    if (!qrCode) {
+      // Auto-generate
+      const qrUrl = `https://www.rvunicorn.com/rig/${rig.slug}?scan=true`;
+      const qrPngBuffer = await QRCode.toBuffer(qrUrl, { width: 400, margin: 2, color: { dark: '#1B2B4B', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+      const qrCodeUrl = await uploadBufferToCloudinary(qrPngBuffer, 'rig-qr-codes');
+      const cardBuffer = await generateStickerCard(qrPngBuffer, rig.rigName || rig.slug, rig.rigEmoji || '');
+      const cardImageUrl = await uploadBufferToCloudinary(cardBuffer, 'rig-sticker-cards');
+
+      qrCode = await prisma.rigQRCode.create({
+        data: { rigId: rig.id, userId: req.userId, qrCodeUrl, cardImageUrl }
+      });
+    }
+
+    res.json({
+      qrCodeUrl: qrCode.qrCodeUrl,
+      cardImageUrl: qrCode.cardImageUrl,
+      downloadUrl: qrCode.cardImageUrl,
+      scanCount: qrCode.scanCount,
+      privacyMode: qrCode.privacyMode,
+      privacyExpiresAt: qrCode.privacyExpiresAt,
+    });
+  } catch (e: any) {
+    console.error('[QR] get error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /rigs/:slug/qr-code/privacy — toggle privacy mode
+router.post('/:slug/qr-code/privacy', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    if (rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { enabled, expiresInHours } = req.body;
+    const qrCode = await prisma.rigQRCode.findFirst({ where: { rigId: rig.id, isActive: true } });
+    if (!qrCode) return res.status(404).json({ error: 'No QR code found — generate one first' });
+
+    const privacyExpiresAt = enabled && expiresInHours
+      ? new Date(Date.now() + expiresInHours * 60 * 60 * 1000)
+      : null;
+
+    const updated = await prisma.rigQRCode.update({
+      where: { id: qrCode.id },
+      data: { privacyMode: !!enabled, privacyExpiresAt },
+    });
+
+    res.json({ privacyMode: updated.privacyMode, privacyExpiresAt: updated.privacyExpiresAt });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /rigs/:slug/qr-code/scan — log a scan
+router.post('/:slug/qr-code/scan', optionalAuth, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, rigName: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const qrCode = await prisma.rigQRCode.findFirst({ where: { rigId: rig.id, isActive: true } });
+    if (!qrCode) return res.status(404).json({ error: 'No QR code for this rig' });
+
+    // Check privacy mode
+    if (qrCode.privacyMode) {
+      // Check if privacy has expired
+      if (qrCode.privacyExpiresAt && new Date() > new Date(qrCode.privacyExpiresAt)) {
+        await prisma.rigQRCode.update({ where: { id: qrCode.id }, data: { privacyMode: false, privacyExpiresAt: null } });
+      } else {
+        return res.json({ privacyMode: true, message: 'This rig is currently in private mode.' });
+      }
+    }
+
+    const { lat, lng } = req.body;
+    const scannedByUserId = req.userId || null;
+
+    // Find nearby campground (within ~1 mile ≈ 0.0145 degrees)
+    let campgroundId: string | null = null;
+    if (lat && lng) {
+      const nearby = await prisma.campground.findFirst({
+        where: {
+          latitude: { gte: lat - 0.0145, lte: lat + 0.0145 },
+          longitude: { gte: lng - 0.0145, lte: lng + 0.0145 },
+        },
+        select: { id: true },
+      });
+      campgroundId = nearby?.id || null;
+    }
+
+    // Increment scan count
+    await prisma.rigQRCode.update({ where: { id: qrCode.id }, data: { scanCount: { increment: 1 } } });
+
+    // Create scan record
+    const scan = await prisma.rigQRScan.create({
+      data: {
+        qrCodeId: qrCode.id,
+        rigId: rig.id,
+        scannedByUserId,
+        scannerLat: lat || null,
+        scannerLng: lng || null,
+        campgroundId,
+      }
+    });
+
+    // Check if this is a new unique scanner
+    let isFirstScan = false;
+    if (scannedByUserId) {
+      const previousScans = await prisma.rigQRScan.count({
+        where: { rigId: rig.id, scannedByUserId, id: { not: scan.id } }
+      });
+      isFirstScan = previousScans === 0;
+
+      // Award 'Rig Discoverer' badge to scanner if first time scanning ANY rig
+      if (isFirstScan) {
+        const existingBadge = await prisma.userBadge.findFirst({
+          where: { userId: scannedByUserId, badgeName: 'Rig Discoverer' }
+        });
+        if (!existingBadge) {
+          try {
+            await prisma.userBadge.create({
+              data: { userId: scannedByUserId, badgeName: 'Rig Discoverer', badgeEmoji: '🔍', badgeDescription: 'Discovered a rig by scanning their QR code', earnedAt: new Date() }
+            });
+          } catch { /* badge table might differ — non-critical */ }
+        }
+      }
+
+      // Notify rig owner
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: rig.ownerId,
+            type: 'QR_SCAN',
+            title: 'Someone just discovered your rig via QR scan! 👀',
+            body: isFirstScan ? 'A new visitor scanned your QR code!' : 'Your QR code was scanned again!',
+            data: JSON.stringify({ rigId: rig.id, scannerId: scannedByUserId, campgroundId }),
+          }
+        });
+      } catch { /* notification model might differ — non-critical */ }
+
+      // Award 'QR Pioneer' badge to rig owner on first-ever scan
+      const totalScans = await prisma.rigQRScan.count({ where: { rigId: rig.id } });
+      if (totalScans === 1) {
+        try {
+          await prisma.userBadge.create({
+            data: { userId: rig.ownerId, badgeName: 'QR Pioneer', badgeEmoji: '🏷️', badgeDescription: 'Your rig QR code was scanned for the first time', earnedAt: new Date() }
+          });
+        } catch { /* non-critical */ }
+      }
+    }
+
+    res.json({ success: true, isFirstScan, campgroundId, rigName: rig.rigName });
+  } catch (e: any) {
+    console.error('[QR] scan error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /rigs/:slug/qr-code/scans — scan analytics for rig owner
+router.get('/:slug/qr-code/scans', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    if (rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const qrCode = await prisma.rigQRCode.findFirst({ where: { rigId: rig.id, isActive: true } });
+    if (!qrCode) return res.json({ totalScans: 0, uniqueScanners: 0, scansByCampground: [], followerConversionRate: 0 });
+
+    // Total scans
+    const totalScans = qrCode.scanCount;
+
+    // Unique scanners
+    const uniqueScannersResult = await prisma.rigQRScan.groupBy({
+      by: ['scannedByUserId'],
+      where: { rigId: rig.id, scannedByUserId: { not: null } },
+    });
+    const uniqueScanners = uniqueScannersResult.length;
+
+    // Scans by campground
+    const scansByCampground = await prisma.rigQRScan.groupBy({
+      by: ['campgroundId'],
+      where: { rigId: rig.id, campgroundId: { not: null } },
+      _count: true,
+    });
+
+    // Campground names
+    const campgroundIds = scansByCampground.map((s: any) => s.campgroundId).filter(Boolean);
+    const campgrounds = campgroundIds.length > 0
+      ? await prisma.campground.findMany({ where: { id: { in: campgroundIds } }, select: { id: true, name: true } })
+      : [];
+    const campMap = Object.fromEntries(campgrounds.map((c: any) => [c.id, c.name]));
+
+    // Follower conversion: scanners who also follow this rig
+    const scannerIds = uniqueScannersResult.map((s: any) => s.scannedByUserId).filter(Boolean);
+    let followCount = 0;
+    if (scannerIds.length > 0) {
+      followCount = await prisma.rigFollow.count({
+        where: { rigId: rig.id, userId: { in: scannerIds } },
+      });
+    }
+    const followerConversionRate = uniqueScanners > 0 ? Math.round((followCount / uniqueScanners) * 100) : 0;
+
+    res.json({
+      totalScans,
+      uniqueScanners,
+      scansByCampground: scansByCampground.map((s: any) => ({
+        campgroundId: s.campgroundId,
+        campgroundName: campMap[s.campgroundId] || 'Unknown',
+        count: s._count,
+      })),
+      followerConversionRate,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============== MAP WITH ALBUM PHOTOS ==============
+
+// GET /rigs/:slug/map-with-albums — route map data with photo overlays
+router.get('/:slug/map-with-albums', async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    // Get all trips with stops and routes
+    const trips = await prisma.rigTrip.findMany({
+      where: { rigId: rig.id },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        stops: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            tripId: true,
+            campgroundId: true,
+            name: true,
+            lat: true,
+            lng: true,
+            order: true,
+            arrivedAt: true,
+            departedAt: true,
+            nightsStayed: true,
+            coverImageUrl: true,
+            photoCount: true,
+            stopType: true,
+          },
+        },
+        routes: {
+          select: {
+            fromStopId: true,
+            toStopId: true,
+            polyline: true,
+            distanceMiles: true,
+          },
+        },
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    // Get all journeys for color coding
+    const journeys = await prisma.rigJourney.findMany({
+      where: { rigId: rig.id },
+      select: { id: true, name: true, segments: { select: { id: true, name: true, fromLocation: true, toLocation: true, order: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Build stop map for route lat/lng resolution
+    const allStops: any[] = [];
+    const stopMap: Record<string, any> = {};
+    for (const trip of trips) {
+      for (const stop of trip.stops) {
+        allStops.push(stop);
+        stopMap[stop.id] = stop;
+      }
+    }
+
+    // Get album photos for stops — find RigPosts with photos associated with each stop
+    const stopIds = allStops.map(s => s.id);
+    const postsWithPhotos = stopIds.length > 0
+      ? await prisma.rigPost.findMany({
+          where: {
+            rigId: rig.id,
+            stopId: { in: stopIds },
+            photos: { isEmpty: false },
+          },
+          select: {
+            stopId: true,
+            photos: true,
+            likeCount: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    // Also check RigMomentBundle photos for stops
+    const bundlesWithPhotos = stopIds.length > 0
+      ? await prisma.rigMomentBundle.findMany({
+          where: {
+            rigId: rig.id,
+            stopId: { in: stopIds },
+            photoUrls: { isEmpty: false },
+          },
+          select: {
+            stopId: true,
+            photoUrls: true,
+            featuredMediaUrl: true,
+            bundledAt: true,
+          },
+        })
+      : [];
+
+    // Group photos by stopId and pick best cover photo
+    const photosByStop: Record<string, { coverPhotoUrl: string; topPhotoUrl: string; topPhotoLikes: number; photoCount: number; allPhotos: string[] }> = {};
+
+    for (const post of postsWithPhotos) {
+      if (!post.stopId) continue;
+      if (!photosByStop[post.stopId]) {
+        photosByStop[post.stopId] = { coverPhotoUrl: '', topPhotoUrl: '', topPhotoLikes: 0, photoCount: 0, allPhotos: [] };
+      }
+      const entry = photosByStop[post.stopId];
+      const photos = Array.isArray(post.photos) ? post.photos : [];
+      entry.allPhotos.push(...photos);
+      entry.photoCount += photos.length;
+
+      // Track top liked photo
+      const likeCount = post.likeCount || 0;
+      if (likeCount > entry.topPhotoLikes && photos.length > 0) {
+        entry.topPhotoLikes = likeCount;
+        entry.topPhotoUrl = photos[0];
+      }
+    }
+
+    // Merge bundle photos
+    for (const bundle of bundlesWithPhotos) {
+      if (!bundle.stopId) continue;
+      if (!photosByStop[bundle.stopId]) {
+        photosByStop[bundle.stopId] = { coverPhotoUrl: '', topPhotoUrl: '', topPhotoLikes: 0, photoCount: 0, allPhotos: [] };
+      }
+      const entry = photosByStop[bundle.stopId];
+      const photos = Array.isArray(bundle.photoUrls) ? bundle.photoUrls : [];
+      entry.allPhotos.push(...photos);
+      entry.photoCount += photos.length;
+      if (!entry.coverPhotoUrl && bundle.featuredMediaUrl) {
+        entry.coverPhotoUrl = bundle.featuredMediaUrl;
+      }
+    }
+
+    // Set cover photo (most recent as fallback, stop's own coverImageUrl as last resort)
+    for (const stopId of Object.keys(photosByStop)) {
+      const entry = photosByStop[stopId];
+      if (!entry.coverPhotoUrl && entry.allPhotos.length > 0) {
+        entry.coverPhotoUrl = entry.allPhotos[0]; // Most recent (posts ordered desc)
+      }
+      if (!entry.topPhotoUrl && entry.allPhotos.length > 0) {
+        entry.topPhotoUrl = entry.allPhotos[0];
+      }
+    }
+
+    // Build response stops with album data
+    const stopsWithAlbums = allStops.map(stop => {
+      const album = photosByStop[stop.id];
+      const fallbackCover = stop.coverImageUrl || null;
+      return {
+        ...stop,
+        albumData: album ? {
+          photoCount: album.photoCount,
+          coverPhotoUrl: album.coverPhotoUrl || fallbackCover,
+          topPhotoUrl: album.topPhotoUrl || fallbackCover,
+          topPhotoLikes: album.topPhotoLikes,
+          allPhotos: album.allPhotos.slice(0, 5), // First 5 for preview strip
+        } : (fallbackCover ? {
+          photoCount: stop.photoCount || 0,
+          coverPhotoUrl: fallbackCover,
+          topPhotoUrl: fallbackCover,
+          topPhotoLikes: 0,
+          allPhotos: [fallbackCover],
+        } : null),
+      };
+    });
+
+    // Build routes with lat/lng from stops
+    const routes = [];
+    for (const trip of trips) {
+      for (const route of trip.routes) {
+        const fromStop = stopMap[route.fromStopId];
+        const toStop = stopMap[route.toStopId];
+        if (fromStop?.lat && fromStop?.lng && toStop?.lat && toStop?.lng) {
+          routes.push({
+            fromLat: fromStop.lat,
+            fromLng: fromStop.lng,
+            toLat: toStop.lat,
+            toLng: toStop.lng,
+            polyline: route.polyline,
+            tripId: trip.id,
+            tripName: trip.name,
+            distanceMiles: route.distanceMiles,
+          });
+        }
+      }
+    }
+
+    res.json({
+      stops: stopsWithAlbums,
+      routes,
+      journeys,
+    });
+  } catch (e: any) {
+    console.error('[Map] map-with-albums error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============== JOURNEY SEGMENT HIERARCHY ==============
+
+// POST /rigs/:slug/journeys — create a Journey
+router.post('/:slug/journeys', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { name, description, startDate, endDate, status, coverImageUrl } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Journey name is required' });
+
+    const journey = await prisma.rigJourney.create({
+      data: {
+        rigId: rig.id,
+        userId: req.userId,
+        name: name.trim(),
+        description: description || null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        status: status || 'PLANNED',
+        coverImageUrl: coverImageUrl || null,
+      },
+      include: { segments: { orderBy: { order: 'asc' } } },
+    });
+
+    res.json(journey);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /rigs/:slug/journeys — list all journeys
+router.get('/:slug/journeys', async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const journeys = await prisma.rigJourney.findMany({
+      where: { rigId: rig.id },
+      include: { segments: { orderBy: { order: 'asc' } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(journeys);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /rigs/:slug/journeys/:journeyId — edit journey
+router.put('/:slug/journeys/:journeyId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { name, description, startDate, endDate, status, coverImageUrl, totalMiles, totalNights, statesVisited } = req.body;
+
+    const journey = await prisma.rigJourney.update({
+      where: { id: req.params.journeyId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+        ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(status !== undefined && { status }),
+        ...(coverImageUrl !== undefined && { coverImageUrl }),
+        ...(totalMiles !== undefined && { totalMiles }),
+        ...(totalNights !== undefined && { totalNights }),
+        ...(statesVisited !== undefined && { statesVisited }),
+      },
+      include: { segments: { orderBy: { order: 'asc' } } },
+    });
+
+    res.json(journey);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /rigs/:slug/journeys/:journeyId/segments — add a segment
+router.post('/:slug/journeys/:journeyId/segments', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { name, fromLocation, toLocation, startDate, endDate, order, distanceMiles, stops } = req.body;
+    if (!name?.trim() || !fromLocation?.trim() || !toLocation?.trim()) {
+      return res.status(400).json({ error: 'Name, fromLocation, and toLocation are required' });
+    }
+
+    // Auto-calculate order if not provided
+    let segmentOrder = order;
+    if (segmentOrder === undefined || segmentOrder === null) {
+      const lastSegment = await prisma.rigJourneySegment.findFirst({
+        where: { journeyId: req.params.journeyId },
+        orderBy: { order: 'desc' },
+        select: { order: true },
+      });
+      segmentOrder = (lastSegment?.order ?? -1) + 1;
+    }
+
+    const segment = await prisma.rigJourneySegment.create({
+      data: {
+        journeyId: req.params.journeyId,
+        rigId: rig.id,
+        name: name.trim(),
+        fromLocation: fromLocation.trim(),
+        toLocation: toLocation.trim(),
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        order: segmentOrder,
+        distanceMiles: distanceMiles || null,
+        stops: stops || null,
+      },
+    });
+
+    res.json(segment);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /rigs/:slug/journeys/:journeyId/segments/:segmentId — edit segment
+router.put('/:slug/journeys/:journeyId/segments/:segmentId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { name, fromLocation, toLocation, startDate, endDate, order, distanceMiles, stops } = req.body;
+
+    const segment = await prisma.rigJourneySegment.update({
+      where: { id: req.params.segmentId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(fromLocation !== undefined && { fromLocation }),
+        ...(toLocation !== undefined && { toLocation }),
+        ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+        ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(order !== undefined && { order }),
+        ...(distanceMiles !== undefined && { distanceMiles }),
+        ...(stops !== undefined && { stops }),
+      },
+    });
+
+    res.json(segment);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /rigs/:slug/journeys/:journeyId/segments/:segmentId — delete segment
+router.delete('/:slug/journeys/:journeyId/segments/:segmentId', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+
+    await prisma.rigJourneySegment.delete({ where: { id: req.params.segmentId } });
+
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export { getFollowersForUser };

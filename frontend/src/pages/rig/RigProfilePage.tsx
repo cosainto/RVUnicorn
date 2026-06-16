@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Heart, Share2, Edit, MapPin, Moon, Route, Map, Star, Wrench, Users, Truck, ChevronDown, ExternalLink, Youtube, Instagram, Globe } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,7 @@ import RigTimelineTab from '../../components/rig/RigTimelineTab';
 import RigRecipesTab from '../../components/rig/RigRecipesTab';
 import RigShowcase from '../../components/rig/RigShowcase';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
+import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
@@ -36,6 +37,8 @@ function StatPill({ icon, value, label, href }: { icon: string; value: number | 
 
 export default function RigProfilePage() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
   const { requireAuth, gateModalProps } = useGate();
   const [rig, setRig] = useState<any>(null);
@@ -47,6 +50,7 @@ export default function RigProfilePage() {
   const [trips, setTrips] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [showAllSpecs, setShowAllSpecs] = useState(false);
+  const [showScanOverlay, setShowScanOverlay] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -58,6 +62,37 @@ export default function RigProfilePage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [slug, user?.id]);
+
+  // Scanner overlay when ?scan=true
+  useEffect(() => {
+    if (searchParams.get('scan') !== 'true' || !rig) return;
+    setShowScanOverlay(true);
+    // Record the scan
+    const recordScan = async () => {
+      try {
+        const payload: any = {};
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              api.post(`/rigs/${slug}/qr-code/scan`, {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              }).catch(() => {});
+            },
+            () => {
+              api.post(`/rigs/${slug}/qr-code/scan`, {}).catch(() => {});
+            }
+          );
+        } else {
+          await api.post(`/rigs/${slug}/qr-code/scan`, payload);
+        }
+      } catch {}
+    };
+    recordScan();
+    // Auto-fade after 5 seconds
+    const timer = setTimeout(() => setShowScanOverlay(false), 5000);
+    return () => clearTimeout(timer);
+  }, [rig, searchParams, slug]);
 
   // Load tab data on tab change
   useEffect(() => {
@@ -138,6 +173,89 @@ export default function RigProfilePage() {
 
   return (
     <>
+      {/* ═══ SCANNER WELCOME OVERLAY ═══ */}
+      {showScanOverlay && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(15,28,53,0.92)',
+            backdropFilter: 'blur(20px)',
+            cursor: 'pointer',
+          }}
+          onClick={() => setShowScanOverlay(false)}
+        >
+          {rig.heroPhoto && (
+            <img
+              src={rig.heroPhoto}
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: 'blur(30px) brightness(0.3)',
+                zIndex: 0,
+              }}
+            />
+          )}
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '2rem' }}>
+            <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: CN.gold, fontFamily: "'Playfair Display', serif", marginBottom: '0.5rem' }}>
+              You discovered {rigTitle}!
+            </p>
+            <p style={{ fontSize: '1rem', color: CN.cream, marginBottom: '2rem', opacity: 0.8 }}>
+              {rigSubtitle}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFollow();
+                  setShowScanOverlay(false);
+                }}
+                style={{
+                  padding: '0.75rem 2rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  background: CN.gold,
+                  color: CN.bg,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {following ? 'Following' : 'Follow This Rig'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowScanOverlay(false);
+                  setActiveTab('timeline');
+                }}
+                style={{
+                  padding: '0.75rem 2rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  background: 'transparent',
+                  color: CN.gold,
+                  border: `2px solid ${CN.gold}`,
+                  cursor: 'pointer',
+                }}
+              >
+                View Their Journey
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Helmet>
         <title>{rigTitle} · {rigSubtitle} · RVUnicorn</title>
         <meta name="description" content={`${rigTitle} is a ${rigSubtitle} that has traveled ${rig.totalStatesCount || 0} states and ${rig.totalMilesDriven || 0} miles. Follow ${owner.firstName}'s RV adventures on RVUnicorn.`} />
@@ -670,11 +788,7 @@ export default function RigProfilePage() {
 
             {/* ═══ MAPS TAB ═══ */}
             {activeTab === 'maps' && (
-              <div className="text-center py-12">
-                <span className="text-4xl block mb-2">🗺️</span>
-                <p className="text-sm text-white/40">Interactive route map coming soon</p>
-                <p className="text-xs text-white/25 mt-1">Showing all states visited, campgrounds, and routes</p>
-              </div>
+              <RigMapWithPhotos slug={slug!} />
             )}
 
             {/* ═══ TRAVEL HUB TABS ═══ */}

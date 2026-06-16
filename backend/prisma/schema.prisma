@@ -455,6 +455,9 @@ model User {
   rigJournalEntriesCreated                         RigJournalEntry[]
   rigChecklistsCreated                             RigChecklist[]
   rigCoPilotRoles                                  RigCoPilot[]
+  rigQRCodes                                       RigQRCode[]
+  rigJourneys                                      RigJourney[]
+  campgroundWishlistNotificationPrefs              CampgroundWishlistNotificationPref[]
 
   @@index([email])
   @@index([username])
@@ -3382,14 +3385,15 @@ model GearAdEvent {
 }
 
 model CampgroundWishlist {
-  id           String     @id
-  userId       String
-  campgroundId String
-  notes        String?
-  priority     Int?       @default(0)
-  createdAt    DateTime   @default(now())
-  campground   Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String     @id
+  userId           String
+  campgroundId     String
+  notes            String?
+  priority         Int?       @default(0)
+  createdAt        DateTime   @default(now())
+  campground       Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationPref CampgroundWishlistNotificationPref?
 
   @@unique([userId, campgroundId])
   @@index([campgroundId])
@@ -6382,6 +6386,10 @@ model Rig {
   totalMilesAllTime     Float     @default(0)
   totalNightsAllTime    Int       @default(0)
   totalCampgroundsAllTime Int     @default(0)
+  qrCodes               RigQRCode[]
+  qrScans               RigQRScan[]
+  journeys              RigJourney[]
+  journeySegments       RigJourneySegment[]
 }
 
 model RigPilot {
@@ -7850,4 +7858,112 @@ model CoPilotPointLog {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model RigQRCode {
+  id               String    @id @default(cuid())
+  rigId            String
+  userId           String
+  qrCodeUrl        String
+  cardImageUrl     String?
+  isActive         Boolean   @default(true)
+  privacyMode      Boolean   @default(false)
+  privacyExpiresAt DateTime?
+  scanCount        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  rig              Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scans            RigQRScan[]
+
+  @@index([rigId])
+  @@index([userId])
+}
+
+model RigQRScan {
+  id              String   @id @default(cuid())
+  qrCodeId        String
+  rigId           String
+  scannedByUserId String?
+  scannerLat      Float?
+  scannerLng      Float?
+  campgroundId    String?
+  createdAt       DateTime @default(now())
+
+  qrCode          RigQRCode @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  rig             Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([qrCodeId])
+  @@index([rigId])
+  @@index([scannedByUserId])
+}
+
+model CampgroundWishlistNotificationPref {
+  id                 String   @id @default(cuid())
+  userId             String
+  campgroundId       String
+  wishlistId         String?  @unique
+  notifyNewReviews   Boolean  @default(true)
+  notifyFriendVisit  Boolean  @default(true)
+  notifyAvailability Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wishlist           CampgroundWishlist? @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, campgroundId])
+  @@index([campgroundId])
+}
+
+enum JourneyStatus {
+  ACTIVE
+  COMPLETED
+  PLANNED
+}
+
+model RigJourney {
+  id            String        @id @default(cuid())
+  rigId         String
+  userId        String
+  name          String
+  description   String?
+  startDate     DateTime?
+  endDate       DateTime?
+  status        JourneyStatus @default(PLANNED)
+  coverImageUrl String?
+  totalMiles    Float         @default(0)
+  totalNights   Int           @default(0)
+  statesVisited String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  rig           Rig           @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments      RigJourneySegment[]
+
+  @@index([rigId])
+  @@index([userId])
+}
+
+model RigJourneySegment {
+  id            String    @id @default(cuid())
+  journeyId     String
+  rigId         String
+  name          String
+  fromLocation  String
+  toLocation    String
+  startDate     DateTime?
+  endDate       DateTime?
+  order         Int
+  distanceMiles Float?
+  stops         Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  journey       RigJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  rig           Rig        @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
+  @@index([rigId])
 }

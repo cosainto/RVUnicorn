@@ -32,17 +32,24 @@ export default function RigTripMode({ slug, isOwner, rigName }: Props) {
   const [newStopState, setNewStopState] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showOlderTrips, setShowOlderTrips] = useState(false);
+  const [journeys, setJourneys] = useState<any[]>([]);
+  const [showStartJourney, setShowStartJourney] = useState(false);
+  const [journeyName, setJourneyName] = useState('');
+  const [journeySegments, setJourneySegments] = useState<{ name: string; from: string; to: string; startDate: string; endDate: string }[]>([{ name: '', from: '', to: '', startDate: '', endDate: '' }]);
+  const [expandedJourney, setExpandedJourney] = useState<string | null>(null);
 
   useEffect(() => { load(); }, [slug]);
 
   const load = async () => {
     try {
-      const [active, trips] = await Promise.all([
+      const [active, trips, journeyData] = await Promise.all([
         api.get(`/rigs/${slug}/trips/active`).then(r => r.data).catch(() => null),
         api.get(`/rigs/${slug}/trips`).then(r => r.data).catch(() => []),
+        api.get(`/rigs/${slug}/journeys`).then(r => r.data).catch(() => []),
       ]);
       setTrip(active);
       setAllTrips(trips);
+      setJourneys(journeyData);
       if (active?.stops?.length > 0) {
         const current = active.stops.find((s: any) => s.isCurrentStop);
         if (current) setExpandedStop(current.id);
@@ -93,6 +100,34 @@ export default function RigTripMode({ slug, isOwner, rigName }: Props) {
     } catch {}
   };
 
+  const createJourney = async () => {
+    if (!journeyName.trim() || journeySegments.some(s => !s.name.trim())) return;
+    setSubmitting(true);
+    try {
+      const { data: journey } = await api.post(`/rigs/${slug}/journeys`, { name: journeyName });
+      for (const seg of journeySegments) {
+        await api.post(`/rigs/${slug}/journeys/${journey.id}/segments`, seg);
+      }
+      setShowStartJourney(false);
+      setJourneyName('');
+      setJourneySegments([{ name: '', from: '', to: '', startDate: '', endDate: '' }]);
+      load();
+    } catch (e: any) { alert(e?.response?.data?.error || 'Failed to create journey'); }
+    setSubmitting(false);
+  };
+
+  const addSegmentRow = () => {
+    setJourneySegments([...journeySegments, { name: '', from: '', to: '', startDate: '', endDate: '' }]);
+  };
+
+  const removeSegmentRow = (index: number) => {
+    setJourneySegments(journeySegments.filter((_, i) => i !== index));
+  };
+
+  const updateSegment = (index: number, field: string, value: string) => {
+    setJourneySegments(journeySegments.map((s, i) => i === index ? { ...s, [field]: value } : s));
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-400" /></div>;
 
   // ═══ NO ACTIVE TRIP STATE ═══
@@ -105,7 +140,10 @@ export default function RigTripMode({ slug, isOwner, rigName }: Props) {
             <span className="text-4xl block mb-2">🗺️</span>
             <h3 className="font-bold text-white text-lg">Start a Trip</h3>
             <p className="text-xs text-white/40 mt-1 mb-4">Document your journey with stops, routes, and milestones</p>
-            <button onClick={() => setShowStartTrip(true)} className="px-5 py-2 bg-amber-500 text-gray-900 font-semibold rounded-xl text-sm hover:bg-amber-400 transition">Start Trip</button>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setShowStartTrip(true)} className="px-5 py-2 bg-amber-500 text-gray-900 font-semibold rounded-xl text-sm hover:bg-amber-400 transition">Start a Simple Trip</button>
+              <button onClick={() => setShowStartJourney(true)} className="px-5 py-2 bg-gray-700 text-amber-400 font-semibold rounded-xl text-sm hover:bg-gray-600 border border-amber-500/30 transition">Start a Journey</button>
+            </div>
           </div>
         )}
         {!isOwner && completedTrips.length === 0 && (
@@ -130,6 +168,69 @@ export default function RigTripMode({ slug, isOwner, rigName }: Props) {
           </div>
         )}
 
+        {/* Journeys Section */}
+        {journeys.length > 0 && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-3">Journeys</h3>
+            {journeys.map((j: any) => {
+              const isExpanded = expandedJourney === j.id;
+              const segments = j.segments || [];
+              const statusColor = j.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' : j.status === 'COMPLETED' ? 'bg-white/10 text-white/50' : 'bg-amber-500/20 text-amber-400';
+              return (
+                <div key={j.id} className="rounded-xl mb-2 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button onClick={() => setExpandedJourney(isExpanded ? null : j.id)} className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition">
+                    <span className="text-lg">🗺️</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-amber-400 truncate">{j.name}</h4>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>{j.status || 'PLANNED'}</span>
+                      </div>
+                      <p className="text-[10px] text-white/40 mt-0.5">{segments.length} segment{segments.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    {isExpanded ? <ChevronDown className="w-4 h-4 text-white/20" /> : <ChevronRight className="w-4 h-4 text-white/20" />}
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-white/5 pt-3">
+                      <div className="space-y-1">
+                        {segments.map((seg: any, si: number) => {
+                          const isLast = si === segments.length - 1;
+                          const branch = isLast ? '└── ' : '├── ';
+                          const startStr = seg.startDate ? new Date(seg.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                          const endStr = seg.endDate ? new Date(seg.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                          const dateRange = startStr && endStr ? ` (${startStr}-${endStr})` : startStr ? ` (${startStr})` : '';
+                          return (
+                            <div key={seg.id || si} className="flex items-start gap-1">
+                              <span className="text-white/25 text-xs font-mono flex-shrink-0 leading-5">{branch}</span>
+                              <div className="text-xs text-gray-300 leading-5">
+                                <span className="font-semibold text-white/70">Segment {si + 1}:</span>{' '}
+                                {seg.name || `${seg.from || '?'} → ${seg.to || '?'}`}
+                                {seg.from && seg.to && seg.name && <span className="text-white/30"> · {seg.from} → {seg.to}</span>}
+                                {dateRange && <span className="text-white/30">{dateRange}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {(j.totalMiles || j.totalNights || j.statesVisited?.length) && (
+                        <div className="mt-3 pt-2 border-t border-white/5 text-[10px] text-white/40 flex gap-3">
+                          {j.totalMiles > 0 && <span>🛣️ {Math.round(j.totalMiles).toLocaleString()} miles</span>}
+                          {j.totalNights > 0 && <span>🌙 {j.totalNights} nights</span>}
+                          {j.statesVisited?.length > 0 && <span>🗺️ {j.statesVisited.length} states</span>}
+                        </div>
+                      )}
+                      {isOwner && (
+                        <div className="mt-2 flex gap-2">
+                          <button onClick={() => { /* edit journey placeholder */ }} className="text-[10px] text-amber-400/60 hover:text-amber-400 transition">Edit Journey</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Start Trip Modal */}
         {showStartTrip && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowStartTrip(false)}>
@@ -139,6 +240,49 @@ export default function RigTripMode({ slug, isOwner, rigName }: Props) {
               <div className="flex gap-2">
                 <button onClick={startTrip} disabled={!newTripName.trim() || submitting} className="flex-1 py-2.5 bg-primary-600 text-white font-semibold rounded-xl disabled:opacity-50">{submitting ? 'Starting...' : 'Start Journey'}</button>
                 <button onClick={() => setShowStartTrip(false)} className="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Start Journey Modal */}
+        {showStartJourney && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowStartJourney(false)}>
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900 text-lg">Start a Journey</h3>
+                <button onClick={() => setShowStartJourney(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              </div>
+              <input value={journeyName} onChange={e => setJourneyName(e.target.value)} placeholder="Journey name (e.g. Summer Southwest Tour 2026)" className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 mb-4" />
+
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Segments</p>
+              <div className="space-y-3">
+                {journeySegments.map((seg, i) => (
+                  <div key={i} className="border border-gray-200 rounded-xl p-3 relative">
+                    {journeySegments.length > 1 && (
+                      <button onClick={() => removeSegmentRow(i)} className="absolute top-2 right-2 text-gray-300 hover:text-red-400"><X className="w-4 h-4" /></button>
+                    )}
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1.5">Segment {i + 1}</p>
+                    <input value={seg.name} onChange={e => updateSegment(i, 'name', e.target.value)} placeholder="Segment name" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-2" />
+                    <div className="flex gap-2 mb-2">
+                      <input value={seg.from} onChange={e => updateSegment(i, 'from', e.target.value)} placeholder="From" className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2" />
+                      <span className="text-gray-300 self-center">→</span>
+                      <input value={seg.to} onChange={e => updateSegment(i, 'to', e.target.value)} placeholder="To" className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2" />
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="date" value={seg.startDate} onChange={e => updateSegment(i, 'startDate', e.target.value)} className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-600" />
+                      <input type="date" value={seg.endDate} onChange={e => updateSegment(i, 'endDate', e.target.value)} className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-600" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addSegmentRow} className="w-full mt-2 py-2 border border-dashed border-gray-300 text-gray-500 text-xs font-semibold rounded-xl hover:border-gray-400 hover:text-gray-600 transition flex items-center justify-center gap-1">
+                <Plus className="w-3.5 h-3.5" />Add Segment
+              </button>
+
+              <div className="flex gap-2 mt-4">
+                <button onClick={createJourney} disabled={!journeyName.trim() || journeySegments.some(s => !s.name.trim()) || submitting} className="flex-1 py-2.5 bg-amber-500 text-gray-900 font-semibold rounded-xl disabled:opacity-50 hover:bg-amber-400 transition">{submitting ? 'Creating...' : 'Create Journey'}</button>
+                <button onClick={() => setShowStartJourney(false)} className="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl">Cancel</button>
               </div>
             </div>
           </div>

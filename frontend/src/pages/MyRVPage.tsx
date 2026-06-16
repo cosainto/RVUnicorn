@@ -882,7 +882,7 @@ export default function MyRVPage() {
       {/* Drive History */}
       {driveHistory.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">🛡️ Guardian Mode — Drive History</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">🛡️ Passenger Mode — Drive History</h3>
           <div className="space-y-3">
             {driveHistory.slice(0, 5).map((session: any) => {
               const gradeColor = session.grade === 'A' ? 'text-green-600 bg-green-50 border-green-200'
