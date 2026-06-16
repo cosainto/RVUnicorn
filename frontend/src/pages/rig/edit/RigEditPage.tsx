@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Truck, Users, FileText, Sparkles, AlertTriangle, QrCode } from 'lucide-react';
+import { ArrowLeft, Save, Truck, Users, FileText, Sparkles, AlertTriangle, QrCode, Download } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ToastProvider';
+import html2canvas from 'html2canvas';
 import api from '../../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', gold: '#E8A838', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', orange: '#D4621A' };
@@ -246,116 +247,9 @@ export default function RigEditPage() {
 
         {/* ═══ QR STICKER TAB ═══ */}
         {activeTab === 'qr-sticker' && (
-          <div className="space-y-4">
-            <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              <h3 className="text-sm font-bold mb-4">Your Rig Sticker</h3>
-              {qrLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: CN.gold, borderTopColor: 'transparent' }} />
-                </div>
-              ) : qrData?.cardImageUrl ? (
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <img src={qrData.cardImageUrl} alt="Rig Sticker" style={{ width: 300 }} className="rounded-xl" />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => window.open(qrData.cardImageUrl, '_blank')}
-                      className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
-                      style={{ background: CN.gold, color: CN.bg }}
-                    >
-                      Download Sticker
-                    </button>
-                    <button
-                      onClick={() => window.open(qrData.qrCodeUrl, '_blank')}
-                      className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
-                      style={{ background: 'transparent', color: CN.gold, border: `1px solid ${CN.gold}` }}
-                    >
-                      Download QR Only
-                    </button>
-                  </div>
-                  {(qrData.scanCount !== undefined || qrData.uniqueVisitorCount !== undefined) && (
-                    <p className="text-xs" style={{ color: CN.muted }}>
-                      Your QR has been scanned {qrData.scanCount || 0} times by {qrData.uniqueVisitorCount || 0} unique visitors
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <QrCode className="w-12 h-12 mx-auto mb-3" style={{ color: CN.muted }} />
-                  <p className="text-xs mb-4" style={{ color: CN.muted }}>Generate a QR sticker for your rig. People can scan it to discover your rig page.</p>
-                  <button
-                    onClick={async () => {
-                      setQrLoading(true);
-                      try {
-                        const { data } = await api.post(`/rigs/${slug}/qr-code`);
-                        setQrData(data);
-                        addLocalToast('Sticker generated!', 'success');
-                      } catch {
-                        addLocalToast('Failed to generate sticker', 'error');
-                      } finally {
-                        setQrLoading(false);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
-                    style={{ background: CN.gold, color: CN.bg }}
-                  >
-                    Generate Sticker
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {qrData?.cardImageUrl && (
-              <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                <h3 className="text-sm font-bold mb-3">Privacy Mode</h3>
-                <p className="text-xs mb-3" style={{ color: CN.muted }}>When enabled, scanning your QR code will not reveal your current location or trip details.</p>
-                <div className="flex items-center gap-3 mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={privacyEnabled}
-                      onChange={async (e) => {
-                        const enabled = e.target.checked;
-                        setPrivacyEnabled(enabled);
-                        try {
-                          await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled, duration: privacyDuration });
-                          addLocalToast(enabled ? 'Privacy mode enabled' : 'Privacy mode disabled', 'success');
-                        } catch {
-                          setPrivacyEnabled(!enabled);
-                          addLocalToast('Failed to update privacy', 'error');
-                        }
-                      }}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-xs" style={{ color: CN.cream }}>Enable Privacy Mode</span>
-                  </label>
-                </div>
-                {privacyEnabled && (
-                  <select
-                    value={privacyDuration}
-                    onChange={async (e) => {
-                      const duration = e.target.value;
-                      setPrivacyDuration(duration);
-                      try {
-                        await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled: true, duration });
-                        addLocalToast('Privacy duration updated', 'success');
-                      } catch {
-                        addLocalToast('Failed to update duration', 'error');
-                      }
-                    }}
-                    className="px-3 py-2 rounded-lg text-xs focus:outline-none"
-                    style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }}
-                  >
-                    <option value="2hr">2 hours</option>
-                    <option value="4hr">4 hours</option>
-                    <option value="8hr">8 hours</option>
-                    <option value="until_off">Until I turn off</option>
-                  </select>
-                )}
-              </div>
-            )}
-          </div>
+          <QRStickerTab slug={slug!} qrData={qrData} setQrData={setQrData} qrLoading={qrLoading} setQrLoading={setQrLoading}
+            privacyEnabled={privacyEnabled} setPrivacyEnabled={setPrivacyEnabled} privacyDuration={privacyDuration} setPrivacyDuration={setPrivacyDuration}
+            addLocalToast={addLocalToast} rig={rig} />
         )}
 
         {/* ═══ DANGER ZONE ═══ */}
@@ -371,6 +265,137 @@ export default function RigEditPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── QR Sticker Tab (client-side rendered sticker card) ───
+
+function QRStickerTab({ slug, qrData, setQrData, qrLoading, setQrLoading, privacyEnabled, setPrivacyEnabled, privacyDuration, setPrivacyDuration, addLocalToast, rig }: any) {
+  const stickerRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const rigDisplayName = (qrData?.rigEmoji || rig?.rigEmoji || '') + ' ' + (qrData?.rigName || rig?.rigName || 'My Rig');
+
+  const downloadSticker = async () => {
+    if (!stickerRef.current) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(stickerRef.current, { scale: 2, backgroundColor: null, useCORS: true });
+      const link = document.createElement('a');
+      link.download = `${slug}-rig-sticker.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      addLocalToast('Failed to download sticker', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+        <h3 className="text-sm font-bold mb-4">Your Rig Sticker</h3>
+        {qrLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: CN.gold, borderTopColor: 'transparent' }} />
+          </div>
+        ) : qrData?.qrCodeUrl ? (
+          <div className="space-y-4">
+            {/* Client-rendered sticker card */}
+            <div className="flex justify-center">
+              <div ref={stickerRef} style={{
+                width: 300, height: 400, background: '#1B2B4B', borderRadius: 16, border: '3px solid #C9A84C',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                padding: '20px 16px', boxSizing: 'border-box',
+              }}>
+                <p style={{ color: '#C9A84C', fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, fontWeight: 700, textAlign: 'center', margin: 0, lineHeight: 1.2 }}>
+                  {rigDisplayName.trim()}
+                </p>
+                <div style={{ background: 'white', borderRadius: 10, padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={qrData.qrCodeUrl} alt="QR Code" style={{ width: 180, height: 180 }} crossOrigin="anonymous" />
+                </div>
+                <p style={{ color: '#C9A84C', fontFamily: "'Playfair Display', Georgia, serif", fontSize: 11, textAlign: 'center', margin: 0 }}>
+                  Scan to follow our adventure
+                </p>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ color: '#C9A84C', fontFamily: "'Playfair Display', Georgia, serif", fontSize: 14, fontWeight: 700, margin: 0 }}>RVUnicorn</p>
+                  <p style={{ color: '#8B9BB4', fontSize: 8, margin: 0 }}>www.rvunicorn.com</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button onClick={downloadSticker} disabled={downloading}
+                className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110 flex items-center gap-1.5 disabled:opacity-50"
+                style={{ background: CN.gold, color: CN.bg }}>
+                <Download className="w-3.5 h-3.5" /> {downloading ? 'Capturing...' : 'Download Sticker'}
+              </button>
+              <button onClick={() => window.open(qrData.qrCodeUrl, '_blank')}
+                className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+                style={{ background: 'transparent', color: CN.gold, border: `1px solid ${CN.gold}` }}>
+                Download QR Only
+              </button>
+            </div>
+            {qrData.scanCount !== undefined && (
+              <p className="text-xs text-center" style={{ color: CN.muted }}>
+                Your QR has been scanned {qrData.scanCount || 0} times
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <QrCode className="w-12 h-12 mx-auto mb-3" style={{ color: CN.muted }} />
+            <p className="text-xs mb-4" style={{ color: CN.muted }}>Generate a QR sticker for your rig. People can scan it to discover your rig page.</p>
+            <button onClick={async () => {
+              setQrLoading(true);
+              try {
+                const { data } = await api.post(`/rigs/${slug}/qr-code`);
+                setQrData(data);
+                addLocalToast('QR code generated!', 'success');
+              } catch { addLocalToast('Failed to generate QR code', 'error'); }
+              finally { setQrLoading(false); }
+            }} className="px-4 py-2 rounded-lg text-xs font-bold transition hover:brightness-110"
+              style={{ background: CN.gold, color: CN.bg }}>
+              Generate Sticker
+            </button>
+          </div>
+        )}
+      </div>
+
+      {qrData?.qrCodeUrl && (
+        <div className="rounded-xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+          <h3 className="text-sm font-bold mb-3">Privacy Mode</h3>
+          <p className="text-xs mb-3" style={{ color: CN.muted }}>When enabled, QR scanners see a friendly message instead of your rig page.</p>
+          <label className="flex items-center gap-2 cursor-pointer mb-3">
+            <input type="checkbox" checked={privacyEnabled} onChange={async (e) => {
+              const enabled = e.target.checked;
+              setPrivacyEnabled(enabled);
+              const hours = privacyDuration === '2hr' ? 2 : privacyDuration === '4hr' ? 4 : privacyDuration === '8hr' ? 8 : null;
+              try {
+                await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled, expiresInHours: hours });
+                addLocalToast(enabled ? 'Privacy mode enabled' : 'Privacy mode disabled', 'success');
+              } catch { setPrivacyEnabled(!enabled); addLocalToast('Failed to update privacy', 'error'); }
+            }} className="w-4 h-4 rounded" />
+            <span className="text-xs" style={{ color: CN.cream }}>Enable Privacy Mode</span>
+          </label>
+          {privacyEnabled && (
+            <select value={privacyDuration} onChange={async (e) => {
+              const dur = e.target.value;
+              setPrivacyDuration(dur);
+              const hours = dur === '2hr' ? 2 : dur === '4hr' ? 4 : dur === '8hr' ? 8 : null;
+              try { await api.post(`/rigs/${slug}/qr-code/privacy`, { enabled: true, expiresInHours: hours }); addLocalToast('Duration updated', 'success'); }
+              catch { addLocalToast('Failed to update', 'error'); }
+            }} className="px-3 py-2 rounded-lg text-xs focus:outline-none"
+              style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }}>
+              <option value="2hr">2 hours</option>
+              <option value="4hr">4 hours</option>
+              <option value="8hr">8 hours</option>
+              <option value="until_off">Until I turn off</option>
+            </select>
+          )}
+        </div>
+      )}
     </div>
   );
 }

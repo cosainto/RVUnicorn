@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { optionalAuth } from '../middleware/auth.middleware';
 import QRCode from 'qrcode';
-import sharp from 'sharp';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
@@ -2255,43 +2254,6 @@ router.post('/:slug/trips/:tripId/normalize', authenticateToken, async (req: any
 
 // ============== QR CODE RIG STICKER SYSTEM ==============
 
-// Helper: generate branded sticker card image
-async function generateStickerCard(qrPngBuffer: Buffer, rigName: string, rigEmoji: string): Promise<Buffer> {
-  const cardWidth = 600;
-  const cardHeight = 800;
-  const qrSize = 340;
-  const padding = 40;
-
-  // Resize QR code to target size with white background
-  const qrResized = await sharp(qrPngBuffer)
-    .resize(qrSize, qrSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
-    .png()
-    .toBuffer();
-
-  // Build SVG overlay with navy background, gold border, text elements
-  const escapedName = (rigEmoji ? rigEmoji + ' ' : '') + (rigName || 'My Rig');
-  const safeDisplayName = escapedName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const svg = `<svg width="${cardWidth}" height="${cardHeight}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="${cardWidth}" height="${cardHeight}" rx="24" fill="#1B2B4B"/>
-    <rect x="8" y="8" width="${cardWidth - 16}" height="${cardHeight - 16}" rx="20" fill="none" stroke="#C9A84C" stroke-width="3"/>
-    <text x="${cardWidth / 2}" y="80" text-anchor="middle" font-size="36" font-weight="bold" fill="#C9A84C" font-family="Georgia, serif">${safeDisplayName}</text>
-    <rect x="${(cardWidth - qrSize - 40) / 2}" y="120" width="${qrSize + 40}" height="${qrSize + 40}" rx="16" fill="white"/>
-    <text x="${cardWidth / 2}" y="${120 + qrSize + 40 + 50}" text-anchor="middle" font-size="18" fill="#C9A84C" font-family="Georgia, serif">Scan to follow our adventure</text>
-    <text x="${cardWidth / 2}" y="${cardHeight - 40}" text-anchor="middle" font-size="22" font-weight="bold" fill="#C9A84C" font-family="Georgia, serif">RVUnicorn</text>
-    <text x="${cardWidth / 2}" y="${cardHeight - 18}" text-anchor="middle" font-size="11" fill="#8B9BB4" font-family="Arial, sans-serif">www.rvunicorn.com</text>
-  </svg>`;
-
-  // Compose: navy card background with QR code overlaid
-  const card = await sharp(Buffer.from(svg))
-    .composite([
-      { input: qrResized, top: 140, left: (cardWidth - qrSize) / 2 }
-    ])
-    .png()
-    .toBuffer();
-
-  return card;
-}
-
 // POST /rigs/:slug/qr-code — generate QR code for rig
 router.post('/:slug/qr-code', authenticateToken, async (req: any, res: Response) => {
   try {
@@ -2310,23 +2272,16 @@ router.post('/:slug/qr-code', authenticateToken, async (req: any, res: Response)
     // Upload QR code PNG to Cloudinary
     const qrCodeUrl = await uploadBufferToCloudinary(qrPngBuffer, 'rig-qr-codes');
 
-    // Generate branded sticker card
-    const cardBuffer = await generateStickerCard(qrPngBuffer, rig.rigName || rig.slug, rig.rigEmoji || '');
-
-    // Upload card to Cloudinary
-    const cardImageUrl = await uploadBufferToCloudinary(cardBuffer, 'rig-sticker-cards');
-
-    // Create database record
+    // Create database record (card is rendered client-side)
     await prisma.rigQRCode.create({
       data: {
         rigId: rig.id,
         userId: req.userId,
         qrCodeUrl,
-        cardImageUrl,
       }
     });
 
-    res.json({ qrCodeUrl, cardImageUrl, downloadUrl: cardImageUrl });
+    res.json({ qrCodeUrl, rigName: rig.rigName, rigEmoji: rig.rigEmoji });
   } catch (e: any) {
     console.error('[QR] generate error:', e);
     res.status(500).json({ error: e.message });
@@ -2347,21 +2302,19 @@ router.get('/:slug/qr-code', authenticateToken, async (req: any, res: Response) 
       const qrUrl = `https://www.rvunicorn.com/rig/${rig.slug}?scan=true`;
       const qrPngBuffer = await QRCode.toBuffer(qrUrl, { width: 400, margin: 2, color: { dark: '#1B2B4B', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
       const qrCodeUrl = await uploadBufferToCloudinary(qrPngBuffer, 'rig-qr-codes');
-      const cardBuffer = await generateStickerCard(qrPngBuffer, rig.rigName || rig.slug, rig.rigEmoji || '');
-      const cardImageUrl = await uploadBufferToCloudinary(cardBuffer, 'rig-sticker-cards');
 
       qrCode = await prisma.rigQRCode.create({
-        data: { rigId: rig.id, userId: req.userId, qrCodeUrl, cardImageUrl }
+        data: { rigId: rig.id, userId: req.userId, qrCodeUrl }
       });
     }
 
     res.json({
       qrCodeUrl: qrCode.qrCodeUrl,
-      cardImageUrl: qrCode.cardImageUrl,
-      downloadUrl: qrCode.cardImageUrl,
       scanCount: qrCode.scanCount,
       privacyMode: qrCode.privacyMode,
       privacyExpiresAt: qrCode.privacyExpiresAt,
+      rigName: rig.rigName,
+      rigEmoji: rig.rigEmoji,
     });
   } catch (e: any) {
     console.error('[QR] get error:', e);
