@@ -62,7 +62,9 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
     const yesterday = new Date(now.getTime() - 48 * 60 * 60 * 1000);
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // ─── Parallel data fetches ───
+    // ─── Parallel data fetches (each wrapped in catch for resilience) ───
+    const safe = (p: Promise<any>, fallback: any = null) => p.catch((e: any) => { console.error('[BasecampV2] query failed:', e.message); return fallback; });
+
     const [
       userRig,
       followedRigIds,
@@ -70,8 +72,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       activeCheckIn,
       userWithPrefs,
     ] = await Promise.all([
-      // User's rig
-      prisma.rig.findFirst({
+      safe(prisma.rig.findFirst({
         where: { ownerId: userId },
         select: {
           id: true, rigName: true, rigEmoji: true, heroPhoto: true, rigClass: true,
@@ -79,29 +80,25 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
           totalMilesAllTime: true, slug: true,
           pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
         },
-      }),
-      // Rigs user follows
-      prisma.rigFollow.findMany({
+      })),
+      safe(prisma.rigFollow.findMany({
         where: { userId },
         select: { rigId: true, rig: { select: { id: true, ownerId: true, rigName: true, rigEmoji: true, slug: true, heroPhoto: true, owner: { select: { id: true, username: true, profilePicture: true } } } } },
         take: 100,
-      }),
-      // Users followed via CreatorFollow
-      prisma.creatorFollow.findMany({
+      }), []),
+      safe(prisma.creatorFollow.findMany({
         where: { followerId: userId },
         select: { creatorId: true },
         take: 200,
-      }),
-      // Active check-in
-      prisma.checkIn.findFirst({
+      }), []),
+      safe(prisma.checkIn.findFirst({
         where: { userId, isActive: true },
         select: { campground: { select: { id: true, name: true } }, checkInDate: true },
-      }),
-      // User preferences
-      prisma.user.findUnique({
+      })),
+      safe(prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, firstName: true, homeLatitude: true, homeLongitude: true, hasPets: true, rvType: true },
-      }),
+      })),
     ]);
 
     const rigId = userRig?.id;
@@ -125,8 +122,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       followedRigRecipes,
       communityFeed,
     ] = await Promise.all([
-      // Active trip
-      rigId && userRig?.activeTripId
+      safe(rigId && userRig?.activeTripId
         ? prisma.rigTrip.findUnique({
             where: { id: userRig.activeTripId },
             select: { id: true, name: true, totalMiles: true, totalNights: true, statesVisited: true, startDate: true, endDate: true, status: true,
@@ -138,87 +134,74 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
               select: { id: true, name: true, totalMiles: true, totalNights: true, statesVisited: true, startDate: true, endDate: true, status: true,
                 stops: { orderBy: { order: 'desc' }, take: 1, select: { name: true, state: true } } },
             })
-          : Promise.resolve(null),
-      // Last check-in
-      prisma.checkIn.findFirst({
+          : Promise.resolve(null)),
+      safe(prisma.checkIn.findFirst({
         where: { userId },
         orderBy: { checkInDate: 'desc' },
         select: { campground: { select: { name: true } }, checkInDate: true },
-      }),
-      // Last photo post on rig
-      rigId ? prisma.rigPost.findFirst({
-        where: { rigId, photos: { isEmpty: false } },
+      })),
+      safe(rigId ? prisma.rigPost.findFirst({
+        where: { rigId, NOT: { photos: { equals: [] } } },
         orderBy: { createdAt: 'desc' },
-        select: { photos: true, createdAt: true, trip: { select: { name: true } } },
-      }) : Promise.resolve(null),
-      // Last saved campground (wishlist)
-      prisma.campgroundWishlist.findFirst({
+        select: { photos: true, createdAt: true, tripId: true },
+      }) : Promise.resolve(null)),
+      safe(prisma.campgroundWishlist.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
         select: { campground: { select: { name: true, state: true } }, createdAt: true },
-      }),
-      // New followers (last 7 days)
-      rigId ? prisma.rigFollow.findMany({
+      })),
+      safe(rigId ? prisma.rigFollow.findMany({
         where: { rigId, followedAt: { gte: oneWeekAgo } },
         orderBy: { followedAt: 'desc' },
         take: 3,
         select: { user: { select: { id: true, username: true, profilePicture: true, firstName: true } } },
-      }) : Promise.resolve([]),
-      // RV Circle: recent timeline items from followed rigs
-      followedRigIdList.length > 0 ? prisma.rigTimelineItem.findMany({
+      }) : Promise.resolve([]), []),
+      safe(followedRigIdList.length > 0 ? prisma.rigTimelineItem.findMany({
         where: { rigId: { in: followedRigIdList }, occurredAt: { gte: yesterday } },
         orderBy: { occurredAt: 'desc' },
         take: 20,
         select: { id: true, rigId: true, itemType: true, title: true, previewImageUrl: true, previewText: true, occurredAt: true, refId: true, refType: true },
-      }) : Promise.resolve([]),
-      // RV Circle: recent posts from followed rigs
-      followedRigIdList.length > 0 ? prisma.rigPost.findMany({
-        where: { rigId: { in: followedRigIdList }, createdAt: { gte: yesterday }, photos: { isEmpty: false } },
+      }) : Promise.resolve([]), []),
+      safe(followedRigIdList.length > 0 ? prisma.rigPost.findMany({
+        where: { rigId: { in: followedRigIdList }, createdAt: { gte: yesterday }, NOT: { photos: { equals: [] } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
-        select: { id: true, rigId: true, photos: true, createdAt: true, title: true, body: true, stopId: true,
-          stop: { select: { name: true, state: true } } },
-      }) : Promise.resolve([]),
-      // RV Circle: recent trip stops from followed rigs
-      followedRigIdList.length > 0 ? prisma.rigTripStop.findMany({
+        select: { id: true, rigId: true, photos: true, createdAt: true, title: true, body: true, stopId: true },
+      }) : Promise.resolve([]), []),
+      safe(followedRigIdList.length > 0 ? prisma.rigTripStop.findMany({
         where: { rigId: { in: followedRigIdList }, arrivedAt: { gte: yesterday } },
         orderBy: { arrivedAt: 'desc' },
         take: 10,
         select: { id: true, rigId: true, name: true, state: true, arrivedAt: true, coverImageUrl: true, campgroundId: true, tripId: true },
-      }) : Promise.resolve([]),
-      // Dreaming: user's wishlist
-      prisma.campgroundWishlist.findMany({
+      }) : Promise.resolve([]), []),
+      safe(prisma.campgroundWishlist.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: { campgroundId: true, createdAt: true, campground: { select: { id: true, name: true, state: true, imageUrl: true, googleRating: true } } },
-      }),
-      // Dreaming: friends' wishlists
-      friendIds.length > 0 ? prisma.campgroundWishlist.findMany({
+      }), []),
+      safe(friendIds.length > 0 ? prisma.campgroundWishlist.findMany({
         where: { userId: { in: friendIds.slice(0, 50) } },
         orderBy: { createdAt: 'desc' },
         take: 4,
         select: { campgroundId: true, campground: { select: { id: true, name: true, state: true, imageUrl: true } },
           user: { select: { firstName: true, profilePicture: true } } },
-      }) : Promise.resolve([]),
-      // Camp Kitchen: recent recipes
-      prisma.recipe.findMany({
+      }) : Promise.resolve([]), []),
+      safe(prisma.recipe.findMany({
         where: { privacy: 'PUBLIC' },
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: { id: true, title: true, imageUrl: true, category: true, difficulty: true, userId: true,
           user: { select: { username: true } } },
-      }),
-      // Camp Kitchen: from followed rigs
-      friendIds.length > 0 ? prisma.recipe.findMany({
+      }), []),
+      safe(friendIds.length > 0 ? prisma.recipe.findMany({
         where: { userId: { in: friendIds.slice(0, 50) }, privacy: 'PUBLIC' },
         orderBy: { createdAt: 'desc' },
         take: 3,
         select: { id: true, title: true, imageUrl: true, category: true,
           user: { select: { username: true } } },
-      }) : Promise.resolve([]),
-      // Community feed
-      prisma.boardPost.findMany({
+      }) : Promise.resolve([]), []),
+      safe(prisma.boardPost.findMany({
         orderBy: { createdAt: 'desc' },
         take: 16,
         select: {
@@ -226,7 +209,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
           author: { select: { username: true, profilePicture: true } },
           _count: { select: { comments: true } },
         },
-      }),
+      }), []),
     ]);
 
     // ─── Build rig lookup map ───
@@ -259,7 +242,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       } : null,
       lastPhoto: lastPhotoPost ? {
         url: lastPhotoPost.photos?.[0] || null,
-        tripName: lastPhotoPost.trip?.name || null,
+        tripName: null,
         date: lastPhotoPost.createdAt,
       } : null,
       lastSavedCampground: lastSavedCampground ? {
@@ -311,7 +294,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       const rig = rigMap[post.rigId];
       if (!rig) continue;
       const photoCount = Array.isArray(post.photos) ? post.photos.length : 0;
-      const location = post.stop ? `${post.stop.name}${post.stop.state ? ', ' + post.stop.state : ''}` : null;
+      const location = null; // stopId exists but no relation — would need separate lookup
       circleItems.push({
         type: 'PHOTO_UPLOAD',
         actorRigName: rig.rigName || 'A rig',
