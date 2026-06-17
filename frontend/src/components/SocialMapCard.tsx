@@ -87,9 +87,27 @@ export default function SocialMapCard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Init map ──────────────────────────────────────────────────────────
+  // ── Init map (wait for Google Maps SDK) ────────────────────────────────
+  const [mapsReady, setMapsReady] = useState(false);
+
   useEffect(() => {
-    if (!mapRef.current || !window.google) return;
+    if (window.google?.maps) {
+      setMapsReady(true);
+      return;
+    }
+    // Poll for Google Maps SDK availability
+    const interval = setInterval(() => {
+      if (window.google?.maps) {
+        setMapsReady(true);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapsReady) return;
+    if (googleMapRef.current) return; // already initialized
     googleMapRef.current = new google.maps.Map(mapRef.current, {
       center: { lat: 39.8, lng: -98.5 },
       zoom: 4,
@@ -104,7 +122,7 @@ export default function SocialMapCard() {
       ],
     });
     infoRef.current = new google.maps.InfoWindow();
-  }, []);
+  }, [mapsReady]);
 
   // ── Curation: de-dupe albums against live ──────────────────────────────
   const getCuratedAlbums = useCallback((): RecentAlbum[] => {
@@ -119,7 +137,7 @@ export default function SocialMapCard() {
 
   // ── Build markers ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!googleMapRef.current) return;
+    if (!googleMapRef.current || !mapsReady) return;
 
     // Clear existing
     markersRef.current.forEach(m => m.setMap(null));
@@ -335,7 +353,7 @@ export default function SocialMapCard() {
         google.maps.event.removeListener(listener);
       });
     }
-  }, [liveFriends, recentAlbums, upcomingTrips, activeLayers, getCuratedAlbums]);
+  }, [liveFriends, recentAlbums, upcomingTrips, activeLayers, getCuratedAlbums, mapsReady]);
 
   // ── Toggle layers ─────────────────────────────────────────────────────
   const toggleLayer = (layer: SocialLayer) => {
@@ -398,10 +416,10 @@ export default function SocialMapCard() {
       </div>
 
       {/* Map or empty state */}
-      <div className="relative" style={{ height: '280px' }}>
+      <div style={{ height: 300, position: 'relative' }}>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-            <div className="animate-pulse text-gray-400 text-sm">Loading map...</div>
+            <div className="animate-spin w-6 h-6 border-2 border-[#E8622A] border-t-transparent rounded-full" />
           </div>
         )}
 
@@ -413,7 +431,7 @@ export default function SocialMapCard() {
           </div>
         )}
 
-        <div ref={mapRef} className="w-full h-full" />
+        <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
       </div>
     </div>
   );
