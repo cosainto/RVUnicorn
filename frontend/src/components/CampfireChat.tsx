@@ -21,6 +21,10 @@ interface ChatMessage {
   isSystem: boolean;
   isHitch: boolean;
   isPulse?: boolean;
+  isBanter?: boolean;
+  characterKey?: string;
+  banterGroupId?: string;
+  isReaction?: boolean;
   user?: ChatUser;
   replyToId?: string;
   replyToContent?: string;
@@ -474,14 +478,49 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
           )}
 
           {allMessages.map((msg, idx) => {
-            // LAYER 1 — Ambient Pulse (but NOT AI character replies which have replyToId)
-            if ((msg.isPulse || msg.isSystem) && !msg.replyToId) return (
+            // LAYER 1 — Ambient Pulse (but NOT AI character replies which have replyToId, and NOT banter)
+            if ((msg.isPulse || msg.isSystem) && !msg.replyToId && !msg.isBanter) return (
               <div key={msg.id} className="flex justify-center py-0.5">
                 <span className="text-[11px] bg-[#1B2B4B]/8 text-gray-500 px-3 py-1 rounded-full">
                   {msg.content}
                 </span>
               </div>
             );
+
+            // LAYER 1.5 — Banter Messages (ambient character-to-character exchange)
+            if (msg.isBanter && msg.characterKey) {
+              const character = getCharacter(msg.characterKey);
+              // Check if this is the first message in a banter group (to add spacing)
+              const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+              const isGroupStart = !prevMsg || prevMsg.banterGroupId !== msg.banterGroupId;
+              const isGroupEnd = idx === allMessages.length - 1 || allMessages[idx + 1]?.banterGroupId !== msg.banterGroupId;
+
+              // Reaction chip — small inline tag, not a full bubble
+              if (msg.isReaction) {
+                return (
+                  <div key={msg.id} className={`flex items-center gap-1.5 ml-10 ${isGroupEnd ? 'mb-2' : 'mb-0.5'}`}>
+                    <img src={character.image} alt={character.name} className="w-5 h-5 rounded-full object-cover border border-[#C9A84C]/20" />
+                    <span className="text-[10px] font-semibold text-[#C9A84C]/80 bg-[#1B2B4B]/10 px-2 py-0.5 rounded-full">
+                      {character.name}: {msg.content}
+                    </span>
+                  </div>
+                );
+              }
+
+              // Standard banter line
+              return (
+                <div key={msg.id} className={`flex items-start gap-2 max-w-[80%] ${isGroupStart ? 'mt-3' : 'mt-0.5'} ${isGroupEnd && !allMessages[idx + 1]?.isReaction ? 'mb-2' : ''}`}>
+                  <img src={character.image} alt={character.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5 border border-[#C9A84C]/20 opacity-80" />
+                  <div className="flex-1">
+                    <div className="text-[10px] font-bold text-[#C9A84C]/70 mb-0.5">{character.name}</div>
+                    <div className="bg-[#1B2B4B]/80 text-white/90 rounded-xl rounded-tl-none px-3 py-1.5 text-[13px] leading-relaxed border-l-2 border-[#C9A84C]/30 italic"
+                      style={{ boxShadow: '0 1px 6px rgba(232, 98, 42, 0.08)' }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
 
             // LAYER 2 — Character Messages (Hitch, Walter, Wallet, Scout, etc.)
             if (msg.isHitch || (msg.isSystem && msg.replyToId)) {

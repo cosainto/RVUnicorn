@@ -4208,23 +4208,27 @@ model CampfireRoom {
 }
 
 model CampfireMessage {
-  id        String            @id @default(cuid())
-  roomId    String
-  userId    String?
-  isSystem  Boolean           @default(false)
-  isHitch   Boolean           @default(false)
-  content   String
-  replyToId String?
-  mode      String            @default("PUBLIC") // PUBLIC | AI
-  createdAt DateTime          @default(now())
-  room      CampfireRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  replyTo   CampfireMessage?  @relation("CampfireReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   CampfireMessage[] @relation("CampfireReplies")
+  id           String            @id @default(cuid())
+  roomId       String
+  userId       String?
+  isSystem     Boolean           @default(false)
+  isHitch      Boolean           @default(false)
+  isBanter     Boolean           @default(false)
+  characterKey String?
+  banterGroupId String?
+  content      String
+  replyToId    String?
+  mode         String            @default("PUBLIC") // PUBLIC | AI
+  createdAt    DateTime          @default(now())
+  room         CampfireRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyTo      CampfireMessage?  @relation("CampfireReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      CampfireMessage[] @relation("CampfireReplies")
 
   @@index([roomId])
   @@index([createdAt])
   @@index([replyToId])
+  @@index([isBanter])
 }
 
 model TriviaWeek {

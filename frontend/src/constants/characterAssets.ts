@@ -42,8 +42,8 @@ const HANNAH_BASE = `${CLOUDINARY_BASE}/v1781042437/rvunicorn/characters/hannah.
 export const HOLDEN: CharacterAsset = {
   id: 'holden',
   name: 'Holden',
-  description: 'Junior Ranger guide for outdoor kid adventures — scavenger hunts, fishing, wildlife, and playground fun',
-  keywords: ['children', 'adventure', 'scavenger hunts', 'fishing', 'wildlife', 'playground'],
+  description: 'Junior Ranger guide for outdoor kid adventures — scavenger hunts, fishing, wildlife, playground fun, sports, and electronics',
+  keywords: ['children', 'adventure', 'scavenger hunts', 'fishing', 'wildlife', 'playground', 'sports', 'electronics'],
   image: HOLDEN_BASE,
   sizes: {
     chatAvatar: sized(HOLDEN_BASE, 40, 40),
@@ -59,8 +59,8 @@ export const HOLDEN: CharacterAsset = {
 export const HANNAH: CharacterAsset = {
   id: 'hannah',
   name: 'Hannah',
-  description: 'Junior Ranger guide for family trip planning — educational activities, events, museums, dining, and nearby attractions',
-  keywords: ['family', 'trip planning', 'educational', 'events', 'museums', 'dining', 'nearby attractions'],
+  description: 'Junior Ranger guide — cheerful, encouraging 9-year-old who loves art, nature, and doing the right thing for everyone',
+  keywords: ['family', 'art', 'nature', 'encouraging', 'cheerful', 'events', 'museums', 'nearby attractions'],
   image: HANNAH_BASE,
   sizes: {
     chatAvatar: sized(HANNAH_BASE, 40, 40),
