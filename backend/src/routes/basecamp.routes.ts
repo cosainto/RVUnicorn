@@ -1991,4 +1991,171 @@ router.post('/admin/trigger-stargazing', authenticateToken, async (req: any, res
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════
+// GET /api/basecamp/social-map — Social map data for Basecamp
+// Returns friends' live check-ins, recent albums, and upcoming trips
+// ══════════════════════════════════════════════════════════════════════
+router.get('/social-map', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+
+    // Get friend IDs
+    const friendships = await db.friendship.findMany({
+      where: { status: 'ACCEPTED', OR: [{ initiatorId: userId }, { receiverId: userId }] },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds: string[] = friendships.map((f: any) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    if (friendIds.length === 0) {
+      return res.json({ liveFriends: [], recentAlbums: [], upcomingFriendTrips: [] });
+    }
+
+    // ── 1. Live Friends (currently checked in) ─────────────────────────
+    const liveCheckins = await db.checkIn.findMany({
+      where: { userId: { in: friendIds }, isActive: true },
+      select: {
+        id: true,
+        checkInDate: true,
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        campground: { select: { id: true, name: true, latitude: true, longitude: true, state: true } },
+      },
+      orderBy: { checkInDate: 'desc' },
+    });
+
+    const liveFriends = liveCheckins
+      .filter((c: any) => c.campground?.latitude && c.campground?.longitude)
+      .map((c: any) => ({
+        userId: c.user.id,
+        username: c.user.username,
+        firstName: c.user.firstName,
+        avatarUrl: c.user.profilePicture,
+        campgroundId: c.campground.id,
+        campgroundName: c.campground.name,
+        latitude: c.campground.latitude,
+        longitude: c.campground.longitude,
+        state: c.campground.state,
+        checkedInAt: c.checkInDate,
+      }));
+
+    // ── 2. Recent Albums (friends' albums with geodata) ────────────────
+    // Query StateVisits from friends that have albums attached
+    const recentStateVisits = await db.stateVisit.findMany({
+      where: {
+        userId: { in: friendIds },
+        visibility: { not: 'PRIVATE' },
+        OR: [
+          { latitude: { not: null } },
+          { campsite: { latitude: { not: null } } },
+        ],
+        albums: { some: {} },
+      },
+      select: {
+        id: true,
+        userId: true,
+        latitude: true,
+        longitude: true,
+        startDate: true,
+        campsite: { select: { id: true, name: true, latitude: true, longitude: true } },
+        user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        albums: {
+          select: {
+            album: { select: { id: true, title: true, coverPhotoUrl: true, createdAt: true, privacy: true } },
+          },
+          take: 1,
+        },
+      },
+      orderBy: { startDate: 'desc' },
+      take: 30,
+    });
+
+    const recentAlbums = recentStateVisits
+      .map((sv: any) => {
+        const album = sv.albums[0]?.album;
+        if (!album || album.privacy === 'PRIVATE') return null;
+        const lat = sv.latitude || sv.campsite?.latitude;
+        const lng = sv.longitude || sv.campsite?.longitude;
+        if (!lat || !lng) return null;
+        return {
+          albumId: album.id,
+          albumTitle: album.title,
+          ownerUsername: sv.user.username,
+          ownerFirstName: sv.user.firstName,
+          ownerAvatarUrl: sv.user.profilePicture,
+          coverImageUrl: album.coverPhotoUrl,
+          campgroundName: sv.campsite?.name || null,
+          campgroundId: sv.campsite?.id || null,
+          latitude: lat,
+          longitude: lng,
+          createdAt: album.createdAt,
+        };
+      })
+      .filter(Boolean);
+
+    // ── 3. Upcoming Friend Trips (future, shared) ──────────────────────
+    const now = new Date();
+    const upcomingTrips = await db.trip.findMany({
+      where: {
+        userId: { in: friendIds },
+        visibility: { not: 'PRIVATE' },
+        startDate: { gte: now },
+      },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        coverImage: true,
+        user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        stays: {
+          select: {
+            campground: { select: { id: true, name: true, latitude: true, longitude: true, state: true } },
+          },
+          take: 1,
+        },
+        days: {
+          select: {
+            stops: {
+              select: { latitude: true, longitude: true, campgroundId: true, campground: { select: { id: true, name: true, latitude: true, longitude: true } } },
+              take: 1,
+            },
+          },
+          take: 1,
+        },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 15,
+    });
+
+    const upcomingFriendTrips = upcomingTrips
+      .map((t: any) => {
+        // Try stays first, then trip stops
+        const stay = t.stays?.[0];
+        const stop = t.days?.[0]?.stops?.[0];
+        const campground = stay?.campground || stop?.campground;
+        const lat = campground?.latitude || stop?.latitude;
+        const lng = campground?.longitude || stop?.longitude;
+        if (!lat || !lng) return null;
+        return {
+          tripId: t.id,
+          tripTitle: t.title,
+          ownerUsername: t.user.username,
+          ownerFirstName: t.user.firstName,
+          ownerAvatarUrl: t.user.profilePicture,
+          campgroundName: campground?.name || null,
+          campgroundId: campground?.id || null,
+          latitude: lat,
+          longitude: lng,
+          departureDate: t.startDate,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ liveFriends, recentAlbums, upcomingFriendTrips });
+  } catch (e: any) {
+    console.error('[Basecamp] Social map error:', e);
+    res.json({ liveFriends: [], recentAlbums: [], upcomingFriendTrips: [] });
+  }
+});
+
 export default router;
