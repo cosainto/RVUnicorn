@@ -2518,9 +2518,9 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Trip Intelligence Header — unified FROM/TO search + confidence + driving */}
+      {/* Trip Intelligence — demoted from big header to compact link card */}
+      {/* Full Trip Intelligence lives on the Road Trip detail page now */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
-        <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} />
         {hasFutureTrip && nextEvent?.campground?.id && (
           <CampMarket campgroundId={nextEvent.campground.id} compact />
         )}
