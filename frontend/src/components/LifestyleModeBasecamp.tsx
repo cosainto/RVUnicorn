@@ -7,6 +7,7 @@ import RVCircleCard from './basecamp/RVCircleCard';
 import DiscoverCardV2 from './basecamp/DiscoverCardV2';
 import DreamingSection from './basecamp/DreamingSection';
 import CampKitchenSection from './basecamp/CampKitchenSection';
+import CommunityFeedSection from './basecamp/CommunityFeedSection';
 import TravelMap from './TravelMap';
 
 const CN = {
@@ -221,6 +222,9 @@ export default function LifestyleModeBasecamp({ user }: Props) {
           <DiscoverCardV2 data={data?.discover || null} />
           <DreamingSection data={data?.dreaming || null} />
           <CampKitchenSection data={data?.campKitchen || null} />
+
+          {/* ═══ NETWORK FEED (from your community) ═══ */}
+          <CommunityFeedSection data={data?.communityFeed || null} />
 
           {/* ═══ TIER 7 — AMBIENT / SYSTEM (capped when social-rich) ═══ */}
           {/* When social is thin, allow more system ambiance */}
