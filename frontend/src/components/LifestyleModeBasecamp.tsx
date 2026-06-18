@@ -9,6 +9,7 @@ import DreamingSection from './basecamp/DreamingSection';
 import CampKitchenSection from './basecamp/CampKitchenSection';
 import BasecampFeed from './basecamp/BasecampFeed';
 import TravelMap from './TravelMap';
+import TripIntelligenceHeader from './basecamp/TripIntelligenceHeader';
 
 const CN = {
   bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45',
@@ -104,16 +105,23 @@ export default function LifestyleModeBasecamp({ user }: Props) {
             </div>
           )}
 
-          {/* ═══ TIER 2 — SOCIAL MAP ═══ */}
+          {/* ═══ TIER 2 — SOCIAL MAP + TRIP INTELLIGENCE ═══ */}
           {user?.id && (
-            <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              <TravelMap
-                userId={user.id}
-                isOwnProfile={true}
-                compact={false}
-                socialMode={true}
-                defaultLayers={['visits', 'friendsCheckins', 'recentAlbums', 'upcomingFriendTrips']}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2">
+                <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                  <TravelMap
+                    userId={user.id}
+                    isOwnProfile={true}
+                    compact={false}
+                    socialMode={true}
+                    defaultLayers={['visits', 'friendsCheckins', 'recentAlbums', 'upcomingFriendTrips']}
+                  />
+                </div>
+              </div>
+              <div className="lg:col-span-1">
+                <TripIntelligenceHeader compactMode={true} />
+              </div>
             </div>
           )}
 
