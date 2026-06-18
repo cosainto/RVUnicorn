@@ -57,6 +57,7 @@ interface USMapSVGProps {
   };
   userProfilePicture?: string;
   showHighways?: boolean;
+  darkMode?: boolean;
   onStateClick: (state: string) => void;
   onStateHover?: (state: string | null) => void;
   onMarkerClick?: (marker: MapMarker) => void;
@@ -147,19 +148,20 @@ const darkenColor = (hex: string, percent: number = 15): string => {
   return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
 };
 
-export default function USMapSVG({ 
-  visitedStates, 
-  plannedStates = [], 
+export default function USMapSVG({
+  visitedStates,
+  plannedStates = [],
   stateColors,
   markers = [],
   highways = [],
   tripRoute,
   userProfilePicture,
   showHighways = false,
-  onStateClick, 
-  onStateHover, 
+  darkMode = false,
+  onStateClick,
+  onStateHover,
   onMarkerClick,
-  isInteractive 
+  isInteractive
 }: USMapSVGProps) {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -173,11 +175,11 @@ export default function USMapSVG({
               const isPlanned = plannedStates.includes(stateCode);
               const customColor = stateColors?.[stateCode];
               
-              // Determine colors based on state
-              let fillColor = '#e5e7eb'; // Default gray
-              let strokeColor = '#9ca3af';
-              let hoverColor = '#d1d5db';
-              let pressedColor = '#d1d5db';
+              // Determine colors based on state + dark mode
+              let fillColor = darkMode ? '#2a3b58' : '#e5e7eb';
+              let strokeColor = darkMode ? '#3d4f6e' : '#9ca3af';
+              let hoverColor = darkMode ? '#334a6a' : '#d1d5db';
+              let pressedColor = darkMode ? '#253350' : '#d1d5db';
 
               // Priority: customColor > visited > planned > default
               if (customColor) {
@@ -186,15 +188,15 @@ export default function USMapSVG({
                 hoverColor = lightenColor(customColor, 20);
                 pressedColor = darkenColor(customColor, 15);
               } else if (isVisited) {
-                fillColor = '#f97316';
-                strokeColor = '#ea580c';
-                hoverColor = '#fb923c';
-                pressedColor = '#ea580c';
+                fillColor = darkMode ? '#E8622A' : '#f97316';
+                strokeColor = darkMode ? '#c75a10' : '#ea580c';
+                hoverColor = darkMode ? '#f07040' : '#fb923c';
+                pressedColor = darkMode ? '#c75a10' : '#ea580c';
               } else if (isPlanned) {
-                fillColor = '#93c5fd';
-                strokeColor = '#60a5fa';
-                hoverColor = '#bfdbfe';
-                pressedColor = '#60a5fa';
+                fillColor = darkMode ? '#4a80c4' : '#93c5fd';
+                strokeColor = darkMode ? '#3b6eab' : '#60a5fa';
+                hoverColor = darkMode ? '#5a90d4' : '#bfdbfe';
+                pressedColor = darkMode ? '#3b6eab' : '#60a5fa';
               }
               
               return (

@@ -1042,15 +1042,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       {/* Header */}
       <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className={`text-lg font-bold ${socialMode ? '' : 'text-gray-900'}`} style={socialMode ? { color: '#F5F0E8' } : undefined}>
             {visitedStates.length} {visitedStates.length === 1 ? 'State' : 'States'} Visited
             {plannedStates.length > 0 && ` • ${plannedStates.length} Planned`}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className={`text-sm ${socialMode ? '' : 'text-gray-600'}`} style={socialMode ? { color: '#8B9BB4' } : undefined}>
             {isOwnProfile ? 'Click a state to view or add visits' : 'Click a state to view trips'}
           </p>
         </div>
-        
+
       </div>
 
       {/* ══ SOCIAL MODE: Grouped Controls + Chips ══ */}
@@ -1105,42 +1105,42 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             {/* Collapsible layer groups */}
             <div className="mb-3 space-y-1">
               {/* ── Personal ── */}
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
-                <button onClick={() => toggleGroup('personal')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
+                <button onClick={() => toggleGroup('personal')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
                   <span className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> Personal</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400">{['visits', 'favorites', 'upcomingTrips'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['visits', 'favorites', 'upcomingTrips'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.personal ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
                 {expandedGroups.personal && (
                   <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('visits')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('visits') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>My Visits</button>
-                    <button onClick={() => toggleLayer('favorites')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('favorites') ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Favorites</button>
-                    <button onClick={() => toggleLayer('upcomingTrips')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('upcomingTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>My Trips</button>
+                    <button onClick={() => toggleLayer('visits')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('visits') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Visits</button>
+                    <button onClick={() => toggleLayer('favorites')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('favorites') ? 'bg-red-50 border-red-300 text-red-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Favorites</button>
+                    <button onClick={() => toggleLayer('upcomingTrips')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('upcomingTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Trips</button>
                   </div>
                 )}
               </div>
 
               {/* ── Social (Travel Activity) ── */}
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
-                <button onClick={() => toggleGroup('social')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
+                <button onClick={() => toggleGroup('social')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
                   <span className="flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Social</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400">{isSocialOn ? 'on' : 'off'}</span>
+                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{isSocialOn ? 'on' : 'off'}</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.social ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
                 {expandedGroups.social && (
                   <div className="px-3 py-2 space-y-2">
-                    <button onClick={toggleSocialMaster} className={`w-full px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSocialOn ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                    <button onClick={toggleSocialMaster} className={`w-full px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSocialOn ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>
                       Travel Activity {isSocialOn ? '(ON)' : '(OFF)'}
                     </button>
                     {isSocialOn && (
                       <div className="flex flex-wrap gap-2 pl-1">
-                        <button onClick={() => toggleLayer('friendsCheckins')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('friendsCheckins') ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-gray-200 text-gray-400'}`}>Active</button>
-                        <button onClick={() => toggleLayer('recentAlbums')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('recentAlbums') ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-gray-200 text-gray-400'}`}>Albums</button>
-                        <button onClick={() => toggleLayer('upcomingFriendTrips')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('upcomingFriendTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-400'}`}>Upcoming</button>
+                        <button onClick={() => toggleLayer('friendsCheckins')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('friendsCheckins') ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Active</button>
+                        <button onClick={() => toggleLayer('recentAlbums')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('recentAlbums') ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Albums</button>
+                        <button onClick={() => toggleLayer('upcomingFriendTrips')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('upcomingFriendTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Upcoming</button>
                       </div>
                     )}
                   </div>
@@ -1148,36 +1148,36 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               </div>
 
               {/* ── Travel ── */}
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
-                <button onClick={() => toggleGroup('travel')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
+                <button onClick={() => toggleGroup('travel')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
                   <span className="flex items-center gap-2"><Route className="w-3.5 h-3.5" /> Travel</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400">{['highways', 'freeOvernight'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['highways', 'freeOvernight'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.travel ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
                 {expandedGroups.travel && (
                   <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('highways')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('highways') ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Highways</button>
-                    <button onClick={() => toggleLayer('freeOvernight')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('freeOvernight') ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Free Overnight</button>
+                    <button onClick={() => toggleLayer('highways')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('highways') ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Highways</button>
+                    <button onClick={() => toggleLayer('freeOvernight')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('freeOvernight') ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Free Overnight</button>
                   </div>
                 )}
               </div>
 
               {/* ── Utilities ── */}
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
-                <button onClick={() => toggleGroup('utilities')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
+                <button onClick={() => toggleGroup('utilities')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
                   <span className="flex items-center gap-2"><Fuel className="w-3.5 h-3.5" /> Utilities</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400">{['gasPrices', 'gasStations', 'restStops'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['gasPrices', 'gasStations', 'restStops'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.utilities ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
                 {expandedGroups.utilities && (
                   <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('gasPrices')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasPrices') ? 'bg-green-50 border-green-300 text-green-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Gas Prices</button>
-                    <button onClick={() => toggleLayer('gasStations')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasStations') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Truck Stops</button>
-                    <button onClick={() => toggleLayer('restStops')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('restStops') ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Rest Stops</button>
+                    <button onClick={() => toggleLayer('gasPrices')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasPrices') ? 'bg-green-50 border-green-300 text-green-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Gas Prices</button>
+                    <button onClick={() => toggleLayer('gasStations')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasStations') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Truck Stops</button>
+                    <button onClick={() => toggleLayer('restStops')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('restStops') ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Rest Stops</button>
                   </div>
                 )}
               </div>
@@ -1208,7 +1208,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       )}
 
       {/* US Map */}
-      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4 relative">
+      <div className={`rounded-lg p-4 relative ${socialMode ? '' : 'bg-gradient-to-br from-blue-50 to-green-50'}`} style={socialMode ? { background: '#16284a' } : undefined}>
         <USMapSVG
           markers={finalMarkers}
           visitedStates={activeLayers.includes('visits') ? visitedStates : []}
@@ -1216,6 +1216,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
           stateColors={getStateColors()}
           highways={activeLayers.includes('highways') ? getDisplayHighways() : []}
           showHighways={activeLayers.includes('highways')}
+          darkMode={socialMode}
           tripRoute={activeRoute || undefined}
           userProfilePicture={profilePicture}
           onStateClick={handleStateClick}
@@ -1277,21 +1278,21 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         {socialMode && (
           <div className="absolute bottom-3 right-3 z-10">
             {showLegend ? (
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-2.5 text-[11px] space-y-1.5 max-w-[160px]">
+              <div className="backdrop-blur-sm rounded-lg shadow-lg p-2.5 text-[11px] space-y-1.5 max-w-[160px]" style={{ background: 'rgba(14,24,44,0.92)', border: '1px solid #243552' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-gray-700 text-[10px] uppercase tracking-wide">Legend</span>
-                  <button onClick={() => setShowLegend(false)} className="text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>
+                  <span className="font-semibold text-[10px] uppercase tracking-wide" style={{ color: '#E8A838' }}>Legend</span>
+                  <button onClick={() => setShowLegend(false)} style={{ color: '#8B9BB4' }}><X className="w-3 h-3" /></button>
                 </div>
                 {activeLayers.includes('visits') && <>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-500"></div><span className="text-gray-600">Visited</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-blue-300"></div><span className="text-gray-600">Planned</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#E8622A' }}></div><span style={{ color: '#F5F0E8' }}>Visited</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#4a80c4' }}></div><span style={{ color: '#F5F0E8' }}>Planned</span></div>
                 </>}
-                {activeLayers.includes('friendsCheckins') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></div><span className="text-gray-600">Friends (live)</span></div>}
-                {activeLayers.includes('recentAlbums') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100"></div><span className="text-gray-600">Albums</span></div>}
-                {activeLayers.includes('upcomingFriendTrips') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-indigo-400 opacity-60"></div><span className="text-gray-600">Upcoming</span></div>}
+                {activeLayers.includes('friendsCheckins') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div><span style={{ color: '#F5F0E8' }}>Friends (live)</span></div>}
+                {activeLayers.includes('recentAlbums') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm" style={{ background: '#E8A838' }}></div><span style={{ color: '#F5F0E8' }}>Albums</span></div>}
+                {activeLayers.includes('upcomingFriendTrips') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-indigo-400 opacity-60"></div><span style={{ color: '#F5F0E8' }}>Upcoming</span></div>}
               </div>
             ) : (
-              <button onClick={() => setShowLegend(true)} className="bg-white/90 backdrop-blur-sm rounded-full shadow px-2.5 py-1 text-[10px] font-medium text-gray-600 hover:bg-white flex items-center gap-1">
+              <button onClick={() => setShowLegend(true)} className="backdrop-blur-sm rounded-full shadow px-2.5 py-1 text-[10px] font-medium flex items-center gap-1" style={{ background: 'rgba(14,24,44,0.85)', color: '#8B9BB4', border: '1px solid #243552' }}>
                 <Info className="w-3 h-3" /> Legend
               </button>
             )}
