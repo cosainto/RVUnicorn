@@ -87,8 +87,9 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
   const [destFocused, setDestFocused] = useState(false);
 
   // Quick check results
-  const [quickReport, setQuickReport] = useState<QuickReport | null>(null);
+  const [quickReport, setQuickReport] = useState<any>(null);
   const [checking, setChecking] = useState(false);
+  const [showStopSuggestions, setShowStopSuggestions] = useState(false);
 
   // V2 corridor analysis
   const [v2Report, setV2Report] = useState<any>(null);
@@ -800,19 +801,49 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
                 <div className="space-y-2 mb-3">
                   {quickReport.flags.map((f: any) => {
                     const sev = SEV_BADGE[f.severity] || SEV_BADGE.medium;
+                    const hasSuggestions = (f.id === 'fatigue' || f.id === 'no_breaks') && quickReport.overnightSuggestions?.length > 0;
                     return (
-                      <div key={f.id} className="flex items-start gap-2 rounded-lg p-2.5" style={{ background: 'rgba(255,255,255,0.03)', borderLeft: `3px solid ${f.severity === 'critical' ? '#ef4444' : f.severity === 'high' ? '#D4621A' : '#E8A838'}` }}>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sev.bg} ${sev.text}`}>{sev.label}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold" style={{ color: '#F5F0E8' }}>{f.label}</p>
-                          {f.action && (
-                            f.actionUrl ? (
-                              <Link to={f.actionUrl} className="text-[10px] font-semibold" style={{ color: '#E8A838' }}>{f.action} →</Link>
-                            ) : (
-                              <p className="text-[10px]" style={{ color: '#E8A838' }}>{f.action}</p>
-                            )
-                          )}
+                      <div key={f.id}>
+                        <div className="flex items-start gap-2 rounded-lg p-2.5" style={{ background: 'rgba(255,255,255,0.03)', borderLeft: `3px solid ${f.severity === 'critical' ? '#ef4444' : f.severity === 'high' ? '#D4621A' : '#E8A838'}` }}>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sev.bg} ${sev.text}`}>{sev.label}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold" style={{ color: '#F5F0E8' }}>{f.label}</p>
+                            {hasSuggestions ? (
+                              <button
+                                onClick={() => setShowStopSuggestions(prev => !prev)}
+                                className="text-[10px] font-semibold flex items-center gap-1 mt-0.5"
+                                style={{ color: '#E8A838' }}
+                              >
+                                {showStopSuggestions ? 'Hide stops' : 'View recommended stops'} {showStopSuggestions ? '▲' : '▼'}
+                              </button>
+                            ) : f.action && (
+                              f.actionUrl ? (
+                                <Link to={f.actionUrl} className="text-[10px] font-semibold" style={{ color: '#E8A838' }}>{f.action} →</Link>
+                              ) : (
+                                <p className="text-[10px]" style={{ color: '#E8A838' }}>{f.action}</p>
+                              )
+                            )}
+                          </div>
                         </div>
+                        {/* Overnight stop suggestions dropdown */}
+                        {hasSuggestions && showStopSuggestions && (
+                          <div className="mt-1 ml-6 space-y-1">
+                            {quickReport.overnightSuggestions.map((s: any) => (
+                              <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(232,168,56,0.06)', border: '1px solid rgba(232,168,56,0.15)' }}>
+                                <span className="text-sm flex-shrink-0">{'\u{1F319}'}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[11px] font-semibold" style={{ color: '#F5F0E8' }}>{s.name}</p>
+                                  <p className="text-[10px]" style={{ color: '#8B9BB4' }}>
+                                    {s.city}, {s.state}
+                                    {s.offRouteMiles != null && ` · ${s.offRouteMiles}mi off route`}
+                                    {s.chain && ` · ${s.chain.replace(/_/g, ' ')}`}
+                                  </p>
+                                </div>
+                                {s.isRVFriendly === true && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>RV OK</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
