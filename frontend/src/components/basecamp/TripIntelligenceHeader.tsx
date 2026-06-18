@@ -354,7 +354,7 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
       {/* Header with mode toggle */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <button onClick={() => setMinimized(!minimized)} className="flex items-center gap-1.5 group">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Trip Intelligence</p>
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#E8A838' }}>Quick Trip Intelligence</p>
           {minimized && <span className="text-[10px] font-medium" style={{ color: 'rgba(245,240,232,0.4)' }}>(expand to plan)</span>}
           {minimized ? <ChevronDown className="w-3.5 h-3.5 text-amber-400 opacity-60 group-hover:opacity-100 transition" /> : <ChevronUp className="w-3.5 h-3.5 text-amber-400 opacity-60 group-hover:opacity-100 transition" />}
         </button>
