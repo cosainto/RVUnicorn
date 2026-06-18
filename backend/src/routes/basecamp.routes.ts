@@ -2040,8 +2040,15 @@ router.get('/social-map', authenticateToken, async (req: any, res) => {
       }));
 
     // ── 2. Recent Albums (friends' albums with geodata) ────────────────
-    // Query StateVisits from friends that have albums attached
-    const recentStateVisits = await db.stateVisit.findMany({
+    // Three paths to get album location:
+    //   A) StateVisit with lat/lng → StateVisitAlbum → PhotoAlbum
+    //   B) PhotoAlbum → Event → Campground with lat/lng
+    //   C) PhotoAlbum → Photos → PhotoCampgroundTag → Campground with lat/lng
+    const seenAlbumIds = new Set<string>();
+    const recentAlbums: any[] = [];
+
+    // Path A: StateVisit albums
+    const stateVisitAlbums = await db.stateVisit.findMany({
       where: {
         userId: { in: friendIds },
         visibility: { not: 'PRIVATE' },
@@ -2052,17 +2059,11 @@ router.get('/social-map', authenticateToken, async (req: any, res) => {
         albums: { some: {} },
       },
       select: {
-        id: true,
-        userId: true,
-        latitude: true,
-        longitude: true,
-        startDate: true,
+        latitude: true, longitude: true, startDate: true,
         campsite: { select: { id: true, name: true, latitude: true, longitude: true } },
         user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
         albums: {
-          select: {
-            album: { select: { id: true, title: true, coverPhotoUrl: true, createdAt: true, privacy: true } },
-          },
+          select: { album: { select: { id: true, title: true, coverPhotoUrl: true, createdAt: true, privacy: true } } },
           take: 1,
         },
       },
@@ -2070,28 +2071,89 @@ router.get('/social-map', authenticateToken, async (req: any, res) => {
       take: 30,
     });
 
-    const recentAlbums = recentStateVisits
-      .map((sv: any) => {
-        const album = sv.albums[0]?.album;
-        if (!album || album.privacy === 'PRIVATE') return null;
-        const lat = sv.latitude || sv.campsite?.latitude;
-        const lng = sv.longitude || sv.campsite?.longitude;
-        if (!lat || !lng) return null;
-        return {
-          albumId: album.id,
-          albumTitle: album.title,
-          ownerUsername: sv.user.username,
-          ownerFirstName: sv.user.firstName,
-          ownerAvatarUrl: sv.user.profilePicture,
-          coverImageUrl: album.coverPhotoUrl,
-          campgroundName: sv.campsite?.name || null,
-          campgroundId: sv.campsite?.id || null,
-          latitude: lat,
-          longitude: lng,
-          createdAt: album.createdAt,
-        };
-      })
-      .filter(Boolean);
+    for (const sv of stateVisitAlbums) {
+      const album = (sv as any).albums[0]?.album;
+      if (!album || album.privacy === 'PRIVATE' || seenAlbumIds.has(album.id)) continue;
+      const lat = (sv as any).latitude || (sv as any).campsite?.latitude;
+      const lng = (sv as any).longitude || (sv as any).campsite?.longitude;
+      if (!lat || !lng) continue;
+      seenAlbumIds.add(album.id);
+      recentAlbums.push({
+        albumId: album.id, albumTitle: album.title,
+        ownerUsername: (sv as any).user.username, ownerFirstName: (sv as any).user.firstName,
+        ownerAvatarUrl: (sv as any).user.profilePicture, coverImageUrl: album.coverPhotoUrl,
+        campgroundName: (sv as any).campsite?.name || null, campgroundId: (sv as any).campsite?.id || null,
+        latitude: lat, longitude: lng, createdAt: album.createdAt,
+      });
+    }
+
+    // Path B: Albums linked to Events with campground location
+    const eventAlbums = await db.photoAlbum.findMany({
+      where: {
+        userId: { in: friendIds },
+        privacy: { not: 'PRIVATE' },
+        eventId: { not: null },
+        event: { campground: { latitude: { not: null } } },
+      },
+      select: {
+        id: true, title: true, coverPhotoUrl: true, createdAt: true,
+        user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        event: { select: { campground: { select: { id: true, name: true, latitude: true, longitude: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    for (const a of eventAlbums) {
+      if (seenAlbumIds.has((a as any).id)) continue;
+      const cg = (a as any).event?.campground;
+      if (!cg?.latitude || !cg?.longitude) continue;
+      seenAlbumIds.add((a as any).id);
+      recentAlbums.push({
+        albumId: (a as any).id, albumTitle: (a as any).title,
+        ownerUsername: (a as any).user.username, ownerFirstName: (a as any).user.firstName,
+        ownerAvatarUrl: (a as any).user.profilePicture, coverImageUrl: (a as any).coverPhotoUrl,
+        campgroundName: cg.name, campgroundId: cg.id,
+        latitude: cg.latitude, longitude: cg.longitude, createdAt: (a as any).createdAt,
+      });
+    }
+
+    // Path C: Albums with photos tagged to a campground
+    const taggedAlbums = await db.photoAlbum.findMany({
+      where: {
+        userId: { in: friendIds },
+        privacy: { not: 'PRIVATE' },
+        photos: { some: { campgroundTags: { some: { campground: { latitude: { not: null } } } } } },
+      },
+      select: {
+        id: true, title: true, coverPhotoUrl: true, createdAt: true,
+        user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        photos: {
+          where: { campgroundTags: { some: {} } },
+          select: { campgroundTags: { select: { campground: { select: { id: true, name: true, latitude: true, longitude: true } } }, take: 1 } },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    for (const a of taggedAlbums) {
+      if (seenAlbumIds.has((a as any).id)) continue;
+      const cg = (a as any).photos?.[0]?.campgroundTags?.[0]?.campground;
+      if (!cg?.latitude || !cg?.longitude) continue;
+      seenAlbumIds.add((a as any).id);
+      recentAlbums.push({
+        albumId: (a as any).id, albumTitle: (a as any).title,
+        ownerUsername: (a as any).user.username, ownerFirstName: (a as any).user.firstName,
+        ownerAvatarUrl: (a as any).user.profilePicture, coverImageUrl: (a as any).coverPhotoUrl,
+        campgroundName: cg.name, campgroundId: cg.id,
+        latitude: cg.latitude, longitude: cg.longitude, createdAt: (a as any).createdAt,
+      });
+    }
+
+    // Sort all albums newest-first
+    recentAlbums.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // ── 3. Upcoming Friend Trips (future, shared) ──────────────────────
     const now = new Date();
