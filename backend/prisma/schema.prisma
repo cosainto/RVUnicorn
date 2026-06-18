@@ -50,6 +50,7 @@ model User {
   rvSleeps                                        Int?
   rvSlideouts                                     Int?
   showCampingStatus                               Boolean                       @default(true)
+  isSystem                                        Boolean                       @default(false)
   lastActiveAt                                    DateTime?
   creatorBio                                      String?
   creatorCoverImage                               String?
@@ -7970,4 +7971,14 @@ model RigJourneySegment {
 
   @@index([journeyId])
   @@index([rigId])
+}
+
+model UserFeedTab {
+  id         String   @id @default(cuid())
+  userId     String
+  tab        String   // 'network' | 'community'
+  lastSeenAt DateTime @default(now())
+
+  @@unique([userId, tab])
+  @@index([userId])
 }

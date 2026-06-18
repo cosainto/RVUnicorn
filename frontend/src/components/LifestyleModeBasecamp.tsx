@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, MapPin, Image, Calendar, MessageCircle, ThumbsUp, ChevronRight, Sparkles } from 'lucide-react';
+import { MessageCircle, ChevronRight, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import RigPulseCardV2 from './basecamp/RigPulseCardV2';
 import RVCircleCard from './basecamp/RVCircleCard';
 import DiscoverCardV2 from './basecamp/DiscoverCardV2';
 import DreamingSection from './basecamp/DreamingSection';
 import CampKitchenSection from './basecamp/CampKitchenSection';
-import CommunityFeedSection from './basecamp/CommunityFeedSection';
+import BasecampFeed from './basecamp/BasecampFeed';
 import TravelMap from './TravelMap';
 
 const CN = {
@@ -26,7 +26,6 @@ export default function LifestyleModeBasecamp({ user }: Props) {
   const [error, setError] = useState(false);
   const [socialPulse, setSocialPulse] = useState<any[]>([]);
   const [hotStrip, setHotStrip] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'community'>('home');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -72,70 +71,9 @@ export default function LifestyleModeBasecamp({ user }: Props) {
     });
   }
 
-  if (activeTab === 'community') {
-    return (
-      <div style={{ background: CN.bg, minHeight: '100vh' }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-12 pt-6">
-          {/* Tab bar */}
-          <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ background: CN.cardAlt }}>
-            <button onClick={() => setActiveTab('home')} className="flex-1 py-2 rounded-md text-sm font-medium transition" style={{ color: CN.muted }}>Home</button>
-            <button onClick={() => setActiveTab('community')} className="flex-1 py-2 rounded-md text-sm font-semibold transition" style={{ background: CN.card, color: CN.gold }}>Community</button>
-          </div>
-          {/* Community tab: link to full community page + highlights */}
-          <div className="space-y-3">
-            <div className="rounded-xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-sm" style={{ color: CN.cream }}>Discussions & Polls</h3>
-                <Link to="/community" className="text-xs font-medium flex items-center gap-1" style={{ color: CN.gold }}>
-                  View All <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-              {hotStrip.length > 0 ? (
-                <div className="space-y-2">
-                  {hotStrip.slice(0, 5).map((post: any, i: number) => (
-                    <Link key={post.id || i} to={`/community`} className="block rounded-lg p-3 transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-                      <div className="flex items-start gap-3">
-                        {post.authorAvatar ? (
-                          <img src={post.authorAvatar} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: CN.border, color: CN.gold }}>
-                            {post.authorFirstName?.[0] || '?'}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate" style={{ color: CN.cream }}>{(post.content || post.preview || '').slice(0, 80)}</p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="flex items-center gap-1 text-[10px]" style={{ color: CN.muted }}>
-                              <ThumbsUp className="w-3 h-3" /> {post.likeCount || 0}
-                            </span>
-                            <span className="flex items-center gap-1 text-[10px]" style={{ color: CN.muted }}>
-                              <MessageCircle className="w-3 h-3" /> {post.commentCount || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-center py-4" style={{ color: CN.muted }}>No trending discussions yet. Start one in the community!</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ background: CN.bg, minHeight: '100vh' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-12 pt-6">
-
-        {/* ── Tab bar ── */}
-        <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ background: CN.cardAlt }}>
-          <button onClick={() => setActiveTab('home')} className="flex-1 py-2 rounded-md text-sm font-semibold transition" style={{ background: CN.card, color: CN.gold }}>Home</button>
-          <button onClick={() => setActiveTab('community')} className="flex-1 py-2 rounded-md text-sm font-medium transition" style={{ color: CN.muted }}>Community</button>
-        </div>
 
         <div className="space-y-4">
 
@@ -224,7 +162,7 @@ export default function LifestyleModeBasecamp({ user }: Props) {
           <CampKitchenSection data={data?.campKitchen || null} />
 
           {/* ═══ NETWORK FEED (from your community) ═══ */}
-          <CommunityFeedSection data={data?.communityFeed || null} />
+          <BasecampFeed />
 
           {/* ═══ TIER 7 — AMBIENT / SYSTEM (capped when social-rich) ═══ */}
           {/* When social is thin, allow more system ambiance */}

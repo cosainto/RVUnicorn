@@ -203,7 +203,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       }) : Promise.resolve([]), []),
       safe(prisma.boardPost.findMany({
         where: {
-          author: { username: { not: 'rvunicorn-system' } },
+          author: { isSystem: false },
           isCharacterPost: false,
         },
         orderBy: { createdAt: 'desc' },
@@ -476,6 +476,161 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
   } catch (e: any) {
     console.error('[BasecampV2] dashboard error:', e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// FEED TAB ENDPOINTS — Network vs Community feeds + unseen tracking
+// ══════════════════════════════════════════════════════════════════════
+
+// GET /network-feed — posts from friends + followed users only, no system
+router.get('/network-feed', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    // Get friend IDs
+    const friendships = await prisma.friendship.findMany({
+      where: { status: 'ACCEPTED', OR: [{ initiatorId: userId }, { receiverId: userId }] },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds: string[] = friendships.map((f: any) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    // Get followed user IDs (from rig follows)
+    const rigFollows = await prisma.rigFollow.findMany({
+      where: { userId },
+      select: { rig: { select: { ownerId: true } } },
+    });
+    const followedUserIds: string[] = rigFollows.map((rf: any) => rf.rig?.ownerId).filter(Boolean);
+
+    const circleIds = [...new Set([...friendIds, ...followedUserIds])];
+    if (circleIds.length === 0) {
+      return res.json({ items: [], newestAt: null });
+    }
+
+    const posts = await prisma.boardPost.findMany({
+      where: {
+        authorId: { in: circleIds },
+        author: { isSystem: false },
+        isCharacterPost: false,
+        isPublic: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true, title: true, body: true, createdAt: true, voteScore: true,
+        postType: true, imageUrl: true, tags: true,
+        author: { select: { id: true, username: true, firstName: true, profilePicture: true } },
+        _count: { select: { comments: true } },
+      },
+    });
+
+    const items = posts.map((p: any) => ({
+      postId: p.id,
+      type: p.postType || 'DISCUSSION',
+      authorId: p.author?.id,
+      authorUsername: p.author?.username,
+      authorFirstName: p.author?.firstName,
+      authorAvatar: p.author?.profilePicture,
+      preview: p.title,
+      body: p.body?.slice(0, 150),
+      imageUrl: p.imageUrl,
+      tags: p.tags || [],
+      likeCount: p.voteScore || 0,
+      commentCount: p._count?.comments || 0,
+      createdAt: p.createdAt,
+    }));
+
+    res.json({ items, newestAt: items[0]?.createdAt || null });
+  } catch (e: any) {
+    console.error('[BasecampV2] network-feed error:', e);
+    res.json({ items: [], newestAt: null });
+  }
+});
+
+// GET /community-feed — all public posts including system, for community tab
+router.get('/community-feed', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const posts = await prisma.boardPost.findMany({
+      where: { isPublic: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true, title: true, body: true, createdAt: true, voteScore: true,
+        postType: true, imageUrl: true, tags: true, isCharacterPost: true,
+        author: { select: { id: true, username: true, firstName: true, profilePicture: true, isSystem: true } },
+        _count: { select: { comments: true } },
+      },
+    });
+
+    const items = posts.map((p: any) => ({
+      postId: p.id,
+      type: p.postType || 'DISCUSSION',
+      authorUsername: p.author?.username,
+      authorFirstName: p.author?.firstName,
+      authorAvatar: p.author?.profilePicture,
+      isSystem: p.author?.isSystem || p.isCharacterPost || false,
+      preview: p.title,
+      body: p.body?.slice(0, 150),
+      imageUrl: p.imageUrl,
+      tags: p.tags || [],
+      likeCount: p.voteScore || 0,
+      commentCount: p._count?.comments || 0,
+      createdAt: p.createdAt,
+    }));
+
+    res.json({ items, newestAt: items[0]?.createdAt || null });
+  } catch (e: any) {
+    console.error('[BasecampV2] community-feed error:', e);
+    res.json({ items: [], newestAt: null });
+  }
+});
+
+// GET /feed-tab-state — returns lastSeenAt + newestAt per tab for badge logic
+router.get('/feed-tab-state', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+    const tabs = await prisma.userFeedTab.findMany({ where: { userId } });
+    const networkSeen = tabs.find((t: any) => t.tab === 'network')?.lastSeenAt || null;
+    const communitySeen = tabs.find((t: any) => t.tab === 'community')?.lastSeenAt || null;
+
+    // Get newest timestamps for each feed
+    const [newestNetwork, newestCommunity] = await Promise.all([
+      prisma.boardPost.findFirst({
+        where: { author: { isSystem: false }, isCharacterPost: false, isPublic: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+      prisma.boardPost.findFirst({
+        where: { isPublic: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    res.json({
+      network: { lastSeenAt: networkSeen, newestAt: newestNetwork?.createdAt || null },
+      community: { lastSeenAt: communitySeen, newestAt: newestCommunity?.createdAt || null },
+    });
+  } catch (e: any) {
+    res.json({ network: { lastSeenAt: null, newestAt: null }, community: { lastSeenAt: null, newestAt: null } });
+  }
+});
+
+// POST /feed-tab-seen — mark a tab as seen
+router.post('/feed-tab-seen', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { tab } = req.body;
+    if (!['network', 'community'].includes(tab)) return res.status(400).json({ error: 'Invalid tab' });
+    await prisma.userFeedTab.upsert({
+      where: { userId_tab: { userId: req.userId, tab } },
+      update: { lastSeenAt: new Date() },
+      create: { userId: req.userId, tab, lastSeenAt: new Date() },
+    });
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.json({ ok: false });
   }
 });
 
