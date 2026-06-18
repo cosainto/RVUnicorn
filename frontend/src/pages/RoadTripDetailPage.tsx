@@ -366,6 +366,18 @@ export default function RoadTripDetailPage() {
     setSavingMpg(false);
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Auto-load map route on mount
+  useEffect(() => {
+    if (roadTrip && !mapRoute) {
+      api.get(`/road-trips/${id}/map-route`)
+        .then(({ data: d }) => { if (d.route) setMapRoute(d.route); if (d.newStates) setMapNewStates(d.newStates); })
+        .catch(() => {});
+      setShowMap(true);
+    }
+  }, [roadTrip]);
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>;
   if (!roadTrip) return null;
 
@@ -382,18 +394,6 @@ export default function RoadTripDetailPage() {
   const effectiveFuelPrice = effectiveFuelType === 'diesel' ? (fuelPrices?.diesel || 3.90) : (fuelPrices?.gasoline || 3.50);
   const totalFuelCost = totalMiles > 0 ? Math.round((totalMiles / effectiveMpg) * effectiveFuelPrice * 100) / 100 : 0;
   const hasConflicts = Object.values(driveInfos).some(d => d.conflict);
-
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Auto-load map route on mount
-  useEffect(() => {
-    if (roadTrip && !mapRoute) {
-      api.get(`/road-trips/${id}/map-route`)
-        .then(({ data: d }) => { if (d.route) setMapRoute(d.route); if (d.newStates) setMapNewStates(d.newStates); })
-        .catch(() => {});
-      setShowMap(true);
-    }
-  }, [roadTrip]);
 
   // Compute total drive time for header
   const totalDriveHours = Object.values(driveInfos).reduce((sum, d) => sum + (d?.durationHours || 0), 0);
