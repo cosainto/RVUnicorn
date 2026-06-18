@@ -43,6 +43,41 @@ router.get('/my-trips', authenticateToken, async (req: Request, res: Response) =
 });
 
 // Get a single trip by ID
+// ══ Public trip view by shareToken (MUST be before /:id) ══
+router.get('/public/:token', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const trip = await prisma.savedTrip.findFirst({
+      where: { shareToken: token },
+      include: {
+        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
+        campground: { select: { id: true, name: true, state: true, imageUrl: true, latitude: true, longitude: true } },
+      },
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    await prisma.savedTrip.update({ where: { id: trip.id }, data: { viewCount: { increment: 1 } } });
+
+    const hours = Math.floor(trip.durationSeconds / 3600);
+    const mins = Math.round((trip.durationSeconds % 3600) / 60);
+    const miles = Math.round(trip.distanceMeters * 0.000621371);
+
+    res.json({
+      id: trip.id, name: trip.name, description: trip.description,
+      originAddress: trip.originAddress, destinationAddress: trip.destinationAddress,
+      originLat: trip.originLat, originLng: trip.originLng,
+      destinationLat: trip.destinationLat, destinationLng: trip.destinationLng,
+      distanceMiles: miles, driveTime: `${hours}h ${mins}m`,
+      estimatedFuelCost: trip.estimatedFuelCost, polyline: trip.polyline,
+      plannedStops: trip.plannedStops, campground: trip.campground,
+      owner: trip.user, viewCount: trip.viewCount, createdAt: trip.createdAt,
+    });
+  } catch (error: any) {
+    console.error('Public trip view error:', error);
+    res.status(500).json({ error: 'Failed to fetch trip' });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -484,52 +519,6 @@ router.post('/:id/share', authenticateToken, async (req: Request, res: Response)
   } catch (error: any) {
     console.error('Share trip error:', error);
     res.status(500).json({ error: 'Failed to share trip' });
-  }
-});
-
-// ══ Public trip view by shareToken ══
-router.get('/public/:token', async (req: Request, res: Response) => {
-  try {
-    const { token } = req.params;
-    const trip = await prisma.savedTrip.findFirst({
-      where: { shareToken: token },
-      include: {
-        user: { select: { id: true, username: true, firstName: true, lastName: true, profilePicture: true } },
-        campground: { select: { id: true, name: true, state: true, imageUrl: true, latitude: true, longitude: true } },
-      },
-    });
-    if (!trip) return res.status(404).json({ error: 'Trip not found' });
-
-    // Increment view count
-    await prisma.savedTrip.update({ where: { id: trip.id }, data: { viewCount: { increment: 1 } } });
-
-    const hours = Math.floor(trip.durationSeconds / 3600);
-    const mins = Math.round((trip.durationSeconds % 3600) / 60);
-    const miles = Math.round(trip.distanceMeters * 0.000621371);
-
-    res.json({
-      id: trip.id,
-      name: trip.name,
-      description: trip.description,
-      originAddress: trip.originAddress,
-      destinationAddress: trip.destinationAddress,
-      originLat: trip.originLat,
-      originLng: trip.originLng,
-      destinationLat: trip.destinationLat,
-      destinationLng: trip.destinationLng,
-      distanceMiles: miles,
-      driveTime: `${hours}h ${mins}m`,
-      estimatedFuelCost: trip.estimatedFuelCost,
-      polyline: trip.polyline,
-      plannedStops: trip.plannedStops,
-      campground: trip.campground,
-      owner: trip.user,
-      viewCount: trip.viewCount,
-      createdAt: trip.createdAt,
-    });
-  } catch (error: any) {
-    console.error('Public trip view error:', error);
-    res.status(500).json({ error: 'Failed to fetch trip' });
   }
 });
 
