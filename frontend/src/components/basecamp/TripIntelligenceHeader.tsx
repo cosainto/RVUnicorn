@@ -382,6 +382,37 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
         </div>
       )}
 
+      {/* Empty/invite state when minimized with no report yet */}
+      {minimized && !quickReport && !checking && (
+        <div className="px-4 pb-3">
+          <p className="text-[11px] mb-2" style={{ color: 'rgba(245,240,232,0.5)' }}>
+            Check drive time, fuel costs, weather, and route safety before you hit the road.
+          </p>
+          <button
+            onClick={() => setMinimized(false)}
+            className="w-full py-2 rounded-lg text-xs font-semibold transition hover:brightness-110"
+            style={{ background: 'rgba(232,168,56,0.15)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.25)' }}
+          >
+            Run a Quick Check →
+          </button>
+          {hasTrips && activeTrip && (
+            <div className="flex items-center gap-2 mt-2 px-1">
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#E8A838' }} />
+              <p className="text-[10px] truncate" style={{ color: 'rgba(245,240,232,0.4)' }}>
+                Next: {activeTrip.title}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {minimized && !quickReport && checking && (
+        <div className="px-4 pb-3 flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.5)' }}>Analyzing route...</p>
+        </div>
+      )}
+
       {!minimized && <>
       {/* FROM / TO inputs */}
       <div className="px-4 pb-3 space-y-2">
