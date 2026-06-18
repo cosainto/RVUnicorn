@@ -352,6 +352,48 @@ ${days ? `<p>${trip.startDate.toLocaleDateString()} — ${trip.endDate!.toLocale
   } catch { next(); }
 });
 
+// SSR for /route/:token (shared saved trip)
+router.get('/route/:token', async (req: Request, res: Response, next: NextFunction) => {
+  if (!shouldSSR(req)) return next();
+  try {
+    const trip = await db.savedTrip.findFirst({
+      where: { shareToken: req.params.token },
+      include: { user: { select: { firstName: true, lastName: true } }, campground: { select: { name: true, state: true, imageUrl: true } } },
+    });
+    if (!trip) return next();
+    const ownerName = `${trip.user.firstName} ${trip.user.lastName}`;
+    const miles = Math.round(trip.distanceMeters * 0.000621371);
+    const hours = Math.floor(trip.durationSeconds / 3600);
+    const photo = trip.campground?.imageUrl || 'https://res.cloudinary.com/dy6eetmh7/image/upload/w_1200,h_630,c_pad,b_rgb:1a2e4a/v1774218289/rvunicorn/Logo_RVUnicorn.png';
+    const desc = `${trip.originAddress} → ${trip.destinationAddress} · ${miles} mi · ${hours}h drive${trip.estimatedFuelCost ? ` · $${trip.estimatedFuelCost.toFixed(0)} fuel` : ''}`;
+    const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${trip.name} · ${ownerName} · RVUnicorn</title>
+<meta name="description" content="${desc}">
+<meta property="og:title" content="${trip.name} — ${ownerName}'s Route">
+<meta property="og:description" content="${desc}">
+<meta property="og:image" content="${photo}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://www.rvunicorn.com/route/${req.params.token}">
+<meta property="og:type" content="article"><meta property="og:site_name" content="RVUnicorn">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${trip.name}">
+<meta name="twitter:image" content="${photo}">
+<link rel="canonical" href="https://www.rvunicorn.com/route/${req.params.token}">
+</head><body style="background:#0F1C35;color:#F5F0E8;font-family:sans-serif;margin:0">
+<div id="ssr-content" style="max-width:700px;margin:0 auto;padding:20px">
+<h1>${trip.name}</h1><p>A route by ${ownerName}</p>
+<p>${trip.originAddress} → ${trip.destinationAddress}</p>
+<p>${miles} miles · ${hours}h drive</p>
+<p><a href="https://www.rvunicorn.com/register" style="color:#E8A838">Plan your own trip on RVUnicorn →</a></p>
+</div>
+<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){var r=document.getElementById('root');var o=new MutationObserver(function(){if(r.children.length>0){document.getElementById('ssr-content')?.remove();o.disconnect()}});o.observe(r,{childList:true})})</script>
+</body></html>`;
+    res.set('Content-Type', 'text/html');
+    res.send(html);
+  } catch { next(); }
+});
+
 // SSR for /u/:username (public profile)
 router.get('/u/:username', async (req: Request, res: Response, next: NextFunction) => {
   if (!shouldSSR(req)) return next();

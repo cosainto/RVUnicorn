@@ -59,6 +59,7 @@ const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage
 const HitchOnboarding = lazy(() => import('./components/HitchOnboarding'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const PublicTripPage = lazy(() => import('./pages/public/PublicTripPage'));
+const PublicRoutePage = lazy(() => import('./pages/public/PublicRoutePage'));
 const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage'));
 const PublicPostPage = lazy(() => import('./pages/public/PublicPostPage'));
 const PublicBoardThread = lazy(() => import('./pages/public/PublicBoardThread'));
@@ -243,6 +244,7 @@ function AppContent() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/trips/:slug/view" element={<PublicTripViewPage />} />
           <Route path="/t/:tripId" element={<PublicTripPage />} />
+          <Route path="/route/:token" element={<PublicRoutePage />} />
           <Route path="/u/:username" element={<PublicProfilePage />} />
           <Route path="/posts/public/:postId" element={<PublicPostPage />} />
           <Route path="/boards/public/:threadId" element={<PublicBoardThread />} />

@@ -2088,6 +2088,7 @@ model SavedTrip {
   plannedEndDate       DateTime?
   eventId              String?
   visibility           String             @default("PRIVATE")
+  shareToken           String?            @unique
   viewCount            Int                @default(0)
   copyCount            Int                @default(0)
   createdAt            DateTime           @default(now())

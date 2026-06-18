@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent, Navigation, LocateFixed, Route } from 'lucide-react';
+import { Search, MapPin, Home, ChevronDown, ChevronUp, RefreshCw, Fuel, Clock, Thermometer, Wind, AlertTriangle, CheckCircle2, Pencil, X, ArrowRight, Tent, Navigation, LocateFixed, Route, Share2, Copy, Check, Mail } from 'lucide-react';
 import api from '../../services/api';
 import PreTripIntelligenceCard from './PreTripIntelligenceCard';
 import RouteCoPilotV2Card from './RouteCoPilotV2Card';
@@ -90,6 +90,10 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
   const [quickReport, setQuickReport] = useState<any>(null);
   const [checking, setChecking] = useState(false);
   const [showStopSuggestions, setShowStopSuggestions] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   // V2 corridor analysis
   const [v2Report, setV2Report] = useState<any>(null);
@@ -226,6 +230,52 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
       setQuickReport(data);
     } catch { }
     setChecking(false);
+  }
+
+  // ── Share route ──────────────────────────────────────────
+  async function handleShare() {
+    setSharing(true);
+    try {
+      // Save the trip first if not saved, then share
+      const saveRes = await api.post('/saved-trips', {
+        name: `${startLabel} → ${destLabel}`,
+        originAddress: startLabel, originLat: startLat, originLng: startLon,
+        destinationAddress: destLabel, destinationLat: destLat, destinationLng: destLon,
+        campgroundId: destCampgroundId,
+        distanceMeters: Math.round((quickReport?.driveMiles || 0) * 1609.34),
+        durationSeconds: Math.round((quickReport?.driveHours || 0) * 3600),
+        polyline: '',
+        estimatedFuelCost: quickReport?.fuelEstimate,
+        estimatedFuelGallons: quickReport?.fuelGallons,
+        mpgUsed: quickReport?.rvMpg,
+      });
+      const tripId = saveRes.data?.id;
+      if (!tripId) throw new Error('Save failed');
+
+      // Generate share token
+      const shareRes = await api.post(`/saved-trips/${tripId}/share`);
+      const url = shareRes.data?.url;
+      if (!url) throw new Error('Share failed');
+      setShareUrl(url);
+
+      const shareText = `Check out my route: ${startLabel} → ${destLabel}${quickReport?.driveMiles ? ` · ${quickReport.driveMiles.toFixed(0)} mi` : ''}`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: `${startLabel} → ${destLabel}`, text: shareText, url });
+        } catch {}
+      } else {
+        setShowShareMenu(true);
+      }
+    } catch (e) {
+      console.error('[Share] error:', e);
+    }
+    setSharing(false);
+  }
+
+  function handleShareCopy() {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl).then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); }).catch(() => {});
   }
 
   // ── V2 Corridor Analysis ──────────────────────────────────
@@ -883,27 +933,52 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <Link to={`/road-trips/new?destLabel=${encodeURIComponent(destLabel)}&destLat=${destLat}&destLon=${destLon}${destCampgroundId ? `&destCampgroundId=${destCampgroundId}` : ''}&startLabel=${encodeURIComponent(startLabel)}&startLat=${startLat}&startLon=${startLon}`}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
-                  style={{ background: '#E8A838', color: '#0F1C35' }}>
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition whitespace-nowrap"
+                  style={{ background: '#E8A838', color: '#0F1C35', minWidth: 120 }}>
                   Save Trip <ArrowRight className="w-4 h-4" />
                 </Link>
+                <button onClick={handleShare} disabled={sharing || !quickReport}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition disabled:opacity-50 whitespace-nowrap"
+                  style={{ background: 'rgba(232,168,56,0.12)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.25)' }}>
+                  <Share2 className={`w-3.5 h-3.5 ${sharing ? 'animate-spin' : ''}`} />
+                  {sharing ? 'Sharing...' : 'Share'}
+                </button>
                 {!v2Report && (
                   <button onClick={runCorridorAnalysis} disabled={v2Loading}
-                    className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50"
+                    className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50 whitespace-nowrap"
                     style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
                     <Route className={`w-3 h-3 ${v2Loading ? 'animate-spin' : ''}`} />
                     {v2Loading ? 'Analyzing...' : 'Route Analysis'}
                   </button>
                 )}
                 <button onClick={runQuickCheck} disabled={checking}
-                  className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-[10px] font-semibold transition disabled:opacity-50 whitespace-nowrap"
                   style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(245,240,232,0.6)' }}>
                   <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
               </div>
+
+              {/* Share menu fallback (desktop) */}
+              {showShareMenu && shareUrl && (
+                <div className="mb-3 rounded-lg p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #243552' }}>
+                  <div className="flex items-center gap-2">
+                    <input readOnly value={shareUrl} className="flex-1 px-2 py-1.5 rounded text-xs" style={{ background: '#0F1C35', color: '#F5F0E8', border: '1px solid #243552' }} />
+                    <button onClick={handleShareCopy} className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold" style={{ background: '#E8A838', color: '#0F1C35' }}>
+                      {shareCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={`sms:?body=${encodeURIComponent(`Check out this route: ${startLabel} → ${destLabel} ${shareUrl}`)}`} className="flex-1 text-center py-1.5 rounded text-[10px] font-semibold" style={{ background: '#243552', color: '#F5F0E8' }}>💬 Text</a>
+                    <a href={`mailto:?subject=${encodeURIComponent(`Route: ${startLabel} → ${destLabel}`)}&body=${encodeURIComponent(`Check out this route on RVUnicorn:\n${shareUrl}`)}`} className="flex-1 text-center py-1.5 rounded text-[10px] font-semibold" style={{ background: '#243552', color: '#F5F0E8' }}><Mail className="w-3 h-3 inline" /> Email</a>
+                    <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="flex-1 text-center py-1.5 rounded text-[10px] font-semibold" style={{ background: '#243552', color: '#F5F0E8' }}>Facebook</a>
+                    <a href={`https://x.com/intent/tweet?text=${encodeURIComponent(`Check out this route: ${startLabel} → ${destLabel}`)}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener" className="flex-1 text-center py-1.5 rounded text-[10px] font-semibold" style={{ background: '#243552', color: '#F5F0E8' }}>X</a>
+                  </div>
+                  <button onClick={() => setShowShareMenu(false)} className="text-[10px]" style={{ color: '#8B9BB4' }}>Close</button>
+                </div>
+              )}
 
               {/* On The Road */}
               {onStartDrive && (
