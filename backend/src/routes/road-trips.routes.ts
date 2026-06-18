@@ -272,6 +272,51 @@ router.post('/', authenticateToken, async (req: any, res) => {
   }
 });
 
+// POST /api/road-trips/create-from-intelligence — create a road trip with first stop from Trip Intelligence data
+router.post('/create-from-intelligence', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { startLabel, destLabel, destLat, destLon, destCampgroundId } = req.body;
+
+    if (!destLabel) return res.status(400).json({ error: 'Destination is required' });
+
+    const title = `${startLabel || 'Home'} → ${destLabel}`;
+
+    // Create the road trip
+    const roadTrip = await prisma.roadTrip.create({
+      data: { userId, title, privacy: 'PUBLIC' },
+    });
+
+    // Create an Event as the first stop
+    let campgroundId = destCampgroundId || null;
+
+    // If we have a campgroundId, verify it exists
+    if (campgroundId) {
+      const cg = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { id: true } });
+      if (!cg) campgroundId = null;
+    }
+
+    const event = await prisma.event.create({
+      data: {
+        organizerId: userId,
+        title: destLabel,
+        location: destLabel,
+        campgroundId,
+        isPublic: true,
+        roadTripId: roadTrip.id,
+        stopNumber: 1,
+        startDate: new Date(Date.now() + 7 * 86400000), // default 1 week out
+        endDate: new Date(Date.now() + 8 * 86400000),
+      },
+    });
+
+    res.status(201).json({ roadTripId: roadTrip.id, eventId: event.id });
+  } catch (e: any) {
+    console.error('[RoadTrips] create-from-intelligence error:', e);
+    res.status(500).json({ error: 'Failed to create road trip' });
+  }
+});
+
 // PUT /api/road-trips/update-rv — update user's rvMpg and/or rvFuelType
 router.put('/update-rv', authenticateToken, async (req: any, res) => {
   try {

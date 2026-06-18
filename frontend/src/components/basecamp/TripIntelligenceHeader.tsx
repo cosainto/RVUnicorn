@@ -94,6 +94,7 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // V2 corridor analysis
   const [v2Report, setV2Report] = useState<any>(null);
@@ -276,6 +277,23 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
   function handleShareCopy() {
     if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl).then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); }).catch(() => {});
+  }
+
+  // ── Save trip and open planner ──────────────────────────────
+  async function handleSaveTrip() {
+    if (!destLabel || !destLat || !destLon) return;
+    setSaving(true);
+    try {
+      const { data } = await api.post('/road-trips/create-from-intelligence', {
+        startLabel, destLabel, destLat, destLon, destCampgroundId,
+      });
+      if (data?.roadTripId) {
+        navigate(`/road-trips/${data.roadTripId}`);
+      }
+    } catch (e) {
+      console.error('[TripIntelligence] Save trip error:', e);
+    }
+    setSaving(false);
   }
 
   // ── V2 Corridor Analysis ──────────────────────────────────
@@ -934,11 +952,11 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
 
               {/* Actions */}
               <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <Link to={`/road-trips/new?destLabel=${encodeURIComponent(destLabel)}&destLat=${destLat}&destLon=${destLon}${destCampgroundId ? `&destCampgroundId=${destCampgroundId}` : ''}&startLabel=${encodeURIComponent(startLabel)}&startLat=${startLat}&startLon=${startLon}`}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition whitespace-nowrap"
+                <button onClick={handleSaveTrip} disabled={saving || !destLabel}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition whitespace-nowrap disabled:opacity-50"
                   style={{ background: '#E8A838', color: '#0F1C35', minWidth: 120 }}>
-                  Save Trip <ArrowRight className="w-4 h-4" />
-                </Link>
+                  {saving ? 'Saving...' : 'Save Trip'} <ArrowRight className="w-4 h-4" />
+                </button>
                 <button onClick={handleShare} disabled={sharing || !quickReport}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition disabled:opacity-50 whitespace-nowrap"
                   style={{ background: 'rgba(232,168,56,0.12)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.25)' }}>
