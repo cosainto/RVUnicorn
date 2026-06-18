@@ -7983,3 +7983,15 @@ model UserFeedTab {
   @@unique([userId, tab])
   @@index([userId])
 }
+
+model EmailSendLog {
+  id         String   @id @default(cuid())
+  userId     String
+  emailType  String   // WEEKLY_DIGEST, DAILY_DIGEST, PRE_TRIP_7DAY, etc.
+  periodKey  String   // e.g. "2026-W25" for weekly, "2026-06-18" for daily
+  sentAt     DateTime @default(now())
+
+  @@unique([userId, emailType, periodKey])
+  @@index([userId])
+  @@index([emailType, periodKey])
+}

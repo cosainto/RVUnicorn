@@ -9,6 +9,34 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Hitch at RVUnicorn <hitch@updates.rvunicorn.com>';
 const APP_URL = 'https://www.rvunicorn.com';
 
+// ── Idempotency guard: prevents duplicate sends across any concurrent runs ──
+// Insert BEFORE sending. If unique constraint fails → already sent → skip.
+function getWeekKey(): string {
+  const now = new Date();
+  const jan1 = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+  return `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+function getDayKey(): string {
+  return new Date().toISOString().slice(0, 10); // "2026-06-18"
+}
+
+async function claimSend(userId: string, emailType: string, periodKey: string): Promise<boolean> {
+  try {
+    await (prisma as any).emailSendLog.create({ data: { userId, emailType, periodKey } });
+    return true; // claimed successfully — ok to send
+  } catch (e: any) {
+    if (e?.code === 'P2002') return false; // unique constraint → already sent
+    throw e;
+  }
+}
+
+// ── Kill switch ──
+function isDigestEnabled(): boolean {
+  return process.env.DISABLE_DIGEST !== 'true';
+}
+
 // ─── Content type → friendly label & emoji ──────────────────
 
 const CONTENT_LABELS: Record<string, { emoji: string; label: string }> = {
@@ -101,7 +129,9 @@ function buildDigestSection(
 // ─── Send daily digests ─────────────────────────────────────
 
 export async function sendDailyDigests() {
+  if (!isDigestEnabled()) { console.log('[EmailDigest] Daily digest disabled via DISABLE_DIGEST'); return; }
   console.log('[EmailDigest] Running daily digest...');
+  const dayKey = getDayKey();
 
   // Find all users with pending DAILY digest items
   const usersWithItems = await prisma.emailDigestQueue.groupBy({
@@ -127,6 +157,10 @@ export async function sendDailyDigests() {
       // Check preference: global kill switch
       const prefs = await prisma.emailPreference.findUnique({ where: { userId } });
       if (prefs && !prefs.allEmails) continue;
+
+      // Idempotency guard
+      const claimed = await claimSend(userId, 'DAILY_DIGEST', dayKey);
+      if (!claimed) { console.log(`[EmailDigest] Daily digest already sent to ${userId} for ${dayKey}, skipping`); continue; }
 
       // Group items by content type
       const grouped = new Map<string, Array<{ contentData: any }>>();
@@ -203,7 +237,9 @@ export async function sendDailyDigests() {
 // ─── Send weekly digests ────────────────────────────────────
 
 export async function sendWeeklyDigests() {
+  if (!isDigestEnabled()) { console.log('[EmailDigest] Weekly digest disabled via DISABLE_DIGEST'); return; }
   console.log('[EmailDigest] Running weekly digest...');
+  const weekKey = getWeekKey();
 
   // Find all users with pending WEEKLY digest items
   const usersWithItems = await prisma.emailDigestQueue.groupBy({
@@ -237,6 +273,10 @@ export async function sendWeeklyDigests() {
         where: { userId, sentAt: { gte: monthStart }, type: { in: ['WEEKLY_DIGEST_ROLLUP', 'DAILY_DIGEST'] } },
       });
       if (marketingCount >= 2) continue;
+
+      // Idempotency guard — claim this send BEFORE building/sending
+      const claimed = await claimSend(userId, 'WEEKLY_DIGEST', weekKey);
+      if (!claimed) { console.log(`[EmailDigest] Weekly digest already sent to ${userId} for ${weekKey}, skipping`); continue; }
 
       // Group items by content type
       const grouped = new Map<string, Array<{ contentData: any }>>();

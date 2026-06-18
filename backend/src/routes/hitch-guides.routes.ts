@@ -961,11 +961,14 @@ Return ONLY valid JSON:
 
 
 // POST /api/hitch/weekly-digest/:userId
-// Call this from a cron job (e.g. Railway cron or external scheduler) every Monday
+// DEPRECATED — replaced by email-digest.cron.ts. This had no dedup guards.
 router.post('/weekly-digest/:userId', async (req: any, res) => {
+  console.log('[HitchGuides] Legacy /weekly-digest/:userId called — returning no-op.');
+  return res.json({ success: false, message: 'DEPRECATED: use internal cron scheduler.' });
+
+  // ── LEGACY CODE BELOW (disabled) ──
   try {
     const { userId } = req.params;
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1054,19 +1057,19 @@ Sign off warmly as Hitch 🦄`,
 
 
 // POST /api/hitch/send-weekly-digests
-// Called by Railway cron job every Monday at 8am
-// Railway Cron setup: Add a cron job in Railway dashboard
-//   Schedule: 0 8 * * 1  (every Monday 8am UTC)
-//   Command: curl -X POST https://your-backend-url/api/hitch/send-weekly-digests -H "X-Cron-Secret: $CRON_SECRET"
+// DEPRECATED — replaced by email-digest.cron.ts (node-cron based).
+// This legacy endpoint had no dedup guards and caused duplicate sends.
+// Kept as a no-op so external cron callers don't get 404s.
 router.post('/send-weekly-digests', async (req: any, res) => {
+  console.log('[HitchGuides] Legacy /send-weekly-digests called — returning no-op. Use email-digest.cron.ts instead.');
+  return res.json({ queued: 0, message: 'DEPRECATED: weekly digests are now handled by the internal cron scheduler. This endpoint is a no-op.' });
+
+  // ── LEGACY CODE BELOW (disabled) ──
   try {
-    // Verify cron secret to prevent unauthorized calls
     const cronSecret = req.headers['x-cron-secret'];
     if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
-    // Get all users with emails who have been active in last 30 days
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const activeUsers = await prisma.user.findMany({
       where: {
