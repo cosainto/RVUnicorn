@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, MapPin, Calendar, X, Search, AlertTriangle, GripVertical, Sparkles, Clock, Route, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Plus, MapPin, Calendar, X, Search, AlertTriangle, GripVertical, Sparkles, Clock, Route, CheckCircle, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import TravelMap from '../components/TravelMap';
 
@@ -313,6 +313,18 @@ export default function RoadTripDetailPage() {
     } catch { showToast('Failed to save order', 'error'); await loadRoadTrip(); }
   };
 
+  const handleDeleteTrip = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/road-trips/${id}`);
+      navigate('/road-trips');
+    } catch {
+      showToast('Failed to delete trip', 'error');
+    }
+    setDeleting(false);
+    setShowDeleteConfirm(false);
+  };
+
   const handleSaveHomeLocation = async () => {
     if (!homeEditValue.trim()) return;
     setRecalculatingHome(true);
@@ -367,6 +379,8 @@ export default function RoadTripDetailPage() {
   };
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Auto-load map route on mount
   useEffect(() => {
@@ -435,6 +449,9 @@ export default function RoadTripDetailPage() {
             {hasConflicts && <span className="bg-red-500/30 border border-red-300/50 px-2 py-0.5 rounded-full text-[10px] font-bold">⚠️ Conflicts</span>}
             <button onClick={() => setShowAddStop(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
               <Plus className="w-3 h-3" /> Add Stop
+            </button>
+            <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1 px-2 py-1.5 text-white/60 hover:text-red-300 text-xs rounded-lg transition" title="Delete trip">
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -1085,6 +1102,25 @@ export default function RoadTripDetailPage() {
                 <button onClick={handleSaveHomeLocation} disabled={recalculatingHome || !homeEditValue.trim()}
                   className="flex-1 py-2.5 text-sm font-semibold text-white bg-green-500 rounded-xl hover:bg-green-600 transition disabled:opacity-50">
                   {recalculatingHome ? 'Recalculating...' : 'Save & Recalculate'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Trip Confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-t-2xl" />
+            <div className="p-5">
+              <h2 className="text-base font-bold text-gray-900 mb-2">Delete this trip?</h2>
+              <p className="text-sm text-gray-500 mb-4">This will permanently delete <span className="font-semibold text-gray-700">{roadTrip.title}</span> and remove all stops from it. This can't be undone.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
+                <button onClick={handleDeleteTrip} disabled={deleting} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition disabled:opacity-50">
+                  {deleting ? 'Deleting...' : 'Delete Trip'}
                 </button>
               </div>
             </div>
