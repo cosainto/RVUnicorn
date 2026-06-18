@@ -383,6 +383,22 @@ export default function RoadTripDetailPage() {
   const totalFuelCost = totalMiles > 0 ? Math.round((totalMiles / effectiveMpg) * effectiveFuelPrice * 100) / 100 : 0;
   const hasConflicts = Object.values(driveInfos).some(d => d.conflict);
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Auto-load map route on mount
+  useEffect(() => {
+    if (roadTrip && !mapRoute) {
+      api.get(`/road-trips/${id}/map-route`)
+        .then(({ data: d }) => { if (d.route) setMapRoute(d.route); if (d.newStates) setMapNewStates(d.newStates); })
+        .catch(() => {});
+      setShowMap(true);
+    }
+  }, [roadTrip]);
+
+  // Compute total drive time for header
+  const totalDriveHours = Object.values(driveInfos).reduce((sum, d) => sum + (d?.durationHours || 0), 0);
+  const totalDriveText = totalDriveHours > 0 ? `${Math.floor(totalDriveHours)}h ${Math.round((totalDriveHours % 1) * 60)}m` : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Toast */}
@@ -393,42 +409,202 @@ export default function RoadTripDetailPage() {
           {toast.msg}
         </div>
       )}
-      {/* Hero Banner */}
+
+      {/* ═══ PART A: THIN TRIP HEADER ═══ */}
       <div className={`bg-gradient-to-r ${gradient} text-white`}>
-        <div className="max-w-4xl mx-auto px-4 py-10">
-          <button onClick={() => navigate('/road-trips')} className="flex items-center gap-2 text-white/80 hover:text-white mb-6 text-sm">
-            <ArrowLeft className="w-4 h-4" /> All Road Trips
-          </button>
-          <h1 className="text-4xl font-bold mb-2" style={{ fontFamily }}>{roadTrip.title}</h1>
-          {roadTrip.description && <p className="text-white/80 mb-4">{roadTrip.description}</p>}
-          <div className="flex items-center gap-6 text-sm text-white/90 flex-wrap">
-            <span>📍 {roadTrip.stops.length} stops</span>
-            {totalNights > 0 && <span>🌙 {totalNights} nights</span>}
-            {states.length > 0 && <span>🗺️ {states.join(' · ')}</span>}
-            {totalMiles > 0 && <span>🚗 ~{totalMiles.toLocaleString()} miles total (est.)</span>}
-            {hasConflicts && <span className="bg-red-500/30 border border-red-300/50 px-2 py-0.5 rounded-full text-xs font-bold">⚠️ Route conflicts detected</span>}
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => navigate('/road-trips')} className="text-white/70 hover:text-white flex-shrink-0">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold truncate" style={{ fontFamily }}>{roadTrip.title}</h1>
+              <p className="text-xs text-white/70 truncate">
+                {homeLocation || 'Home'} → {roadTrip.stops.length} stop{roadTrip.stops.length !== 1 ? 's' : ''}
+                {states.length > 0 && ` · ${states.join(', ')}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {totalDriveText && (
+              <div className="text-right">
+                <p className="text-lg font-bold">{totalDriveText}</p>
+                <p className="text-[10px] text-white/60 uppercase">Total Drive</p>
+              </div>
+            )}
+            {hasConflicts && <span className="bg-red-500/30 border border-red-300/50 px-2 py-0.5 rounded-full text-[10px] font-bold">⚠️ Conflicts</span>}
+            <button onClick={() => setShowAddStop(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Plus className="w-3 h-3" /> Add Stop
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Action bar */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <h2 className="text-xl font-bold text-gray-900">Stops</h2>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowAddStop(true)}
-              className="flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl hover:opacity-90 transition shadow-md"
-              style={{ backgroundColor: roadTrip.color }}>
-              <Plus className="w-4 h-4" /> Add Stop
-            </button>
-          </div>
+      {/* ═══ MAIN LAYOUT: Sidebar + Map ═══ */}
+      <div className="max-w-7xl mx-auto flex" style={{ minHeight: 'calc(100vh - 60px)' }}>
+
+        {/* ═══ PART B: COLLAPSIBLE SIDEBAR ═══ */}
+        <div className={`border-r border-gray-200 bg-white flex-shrink-0 overflow-y-auto transition-all ${sidebarOpen ? 'w-80' : 'w-0'}`} style={{ maxHeight: 'calc(100vh - 60px)' }}>
+          {sidebarOpen && (
+            <div className="p-3 space-y-3">
+              {/* Glance metrics */}
+              <div className="grid grid-cols-2 gap-2">
+                {totalMiles > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-gray-400">Distance</p>
+                    <p className="text-sm font-bold text-gray-900">~{totalMiles.toLocaleString()} mi</p>
+                  </div>
+                )}
+                {totalFuelCost > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-gray-400">Fuel</p>
+                    <p className="text-sm font-bold text-gray-900">${totalFuelCost.toFixed(2)}</p>
+                  </div>
+                )}
+                {totalDriveText && (
+                  <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                    <p className="text-xs text-gray-400">Drive Time</p>
+                    <p className="text-sm font-bold text-gray-900">{totalDriveText}</p>
+                  </div>
+                )}
+                <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                  <p className="text-xs text-gray-400">Stops</p>
+                  <p className="text-sm font-bold text-gray-900">{roadTrip.stops.length}</p>
+                </div>
+              </div>
+
+              {/* RV info compact */}
+              <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg">
+                {rvProfile?.rvPhotoUrl ? (
+                  <img src={rvProfile.rvPhotoUrl} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <span className="text-lg flex-shrink-0">🚐</span>
+                )}
+                <div className="flex-1 min-w-0 text-xs">
+                  <p className="font-medium text-gray-800 truncate">{rvProfile?.rvModel || rvProfile?.rvType || 'My RV'}</p>
+                  <p className="text-gray-500">{effectiveMpg} MPG · {effectiveFuelType === 'diesel' ? 'Diesel' : 'Gas'}</p>
+                </div>
+                <button onClick={() => setShowMpgModal(true)} className="text-[10px] text-gray-400 hover:text-gray-600 flex-shrink-0">✏️</button>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button onClick={() => setShowAddStop(true)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: roadTrip.color }}>
+                  <Plus className="w-3 h-3" /> Add Stop
+                </button>
+              </div>
+
+              {/* Stop itinerary */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">Itinerary</p>
+                {roadTrip.stops.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 text-xs">
+                    <p>🏕️ No stops yet</p>
+                    <p className="mt-1">Add your first stop</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {/* Home → first stop */}
+                    {driveInfos['__home_to_first__'] && (
+                      <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-green-700 bg-green-50 rounded-lg">
+                        <span>🏠</span>
+                        <span className="truncate">{homeLocation || 'Home'} → Stop 1 · {driveInfos['__home_to_first__'].durationText}</span>
+                      </div>
+                    )}
+                    {roadTrip.stops.map((stop: any, i: number) => {
+                      const drive = i > 0 ? driveInfos[stop.id] : null;
+                      return (
+                        <div key={stop.id}>
+                          {drive && (
+                            <div className={`flex items-center gap-1.5 px-2 py-1 text-[10px] ${drive.conflict ? 'text-red-600' : 'text-blue-600'}`}>
+                              <Route className="w-3 h-3" />
+                              <span>{drive.distanceText} · {drive.durationText}{drive.gasCostText ? ` · ${drive.gasCostText}` : ''}</span>
+                            </div>
+                          )}
+                          <div
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 transition cursor-pointer group"
+                            draggable
+                            onDragStart={() => { dragItem.current = i; setDragging(stop.id); }}
+                            onDragEnter={() => { dragOverItem.current = i; setDragOver(stop.id); }}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => e.preventDefault()}
+                          >
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style={{ backgroundColor: roadTrip.color }}>{i + 1}</div>
+                            {stop.campground?.imageUrl ? (
+                              <img src={stop.campground.imageUrl} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                            ) : null}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-900 truncate">{stop.title || stop.campground?.name || `Stop ${i+1}`}</p>
+                              <p className="text-[10px] text-gray-500 truncate">{stop.campground?.city}, {stop.campground?.state}</p>
+                            </div>
+                            <GripVertical className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Last stop → home */}
+                    {driveInfos['__last_to_home__'] && (
+                      <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-green-700 bg-green-50 rounded-lg">
+                        <span>🏠</span>
+                        <span className="truncate">Stop {roadTrip.stops.length} → Home · {driveInfos['__last_to_home__'].durationText}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen(prev => !prev)}
+          className="w-6 flex items-center justify-center bg-white border-r border-gray-200 hover:bg-gray-50 flex-shrink-0 text-gray-400"
+        >
+          {sidebarOpen ? '‹' : '›'}
+        </button>
 
-        {/* RV Profile + Trip Summary Card */}
+        {/* ═══ PART C: MAP AS PRIMARY ═══ */}
+        <div className="flex-1 min-w-0 overflow-hidden relative">
+          <div className="p-4 h-full">
+            {showMap && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 h-full">
+                {mapNewStates.length > 0 && (
+                  <div className="mb-3 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg flex items-center gap-2 text-xs">
+                    <span className="w-3 h-3 rounded bg-teal-600 flex-shrink-0" />
+                    <span className="text-teal-800 font-medium">New states:</span>
+                    <span className="text-teal-700">{mapNewStates.join(', ')}</span>
+                  </div>
+                )}
+                <TravelMap
+                  userId={roadTrip.userId}
+                  isOwnProfile={true}
+                  compact={false}
+                  showTripFilter={true}
+                  initialRoute={mapRoute}
+                  newStateHighlights={mapNewStates}
+                />
+              </div>
+            )}
+            {!showMap && (
+              <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                Loading route map...
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ══ HIDDEN: Original stops detail (kept for drag-reorder + stop cards logic) ══ */}
+      <div className="max-w-4xl mx-auto px-4 py-8 hidden">
+        {/* Action bar — hidden, actions moved to header + sidebar */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h2 className="text-xl font-bold text-gray-900">Stops</h2>
+        </div>
+
+        {/* RV Profile card — hidden, compacted into sidebar */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 shadow-sm">
           <div className="flex items-start justify-between gap-4 flex-wrap">
-            {/* Left: Trip totals */}
             <div className="flex gap-6 flex-wrap">
               {totalMiles > 0 && (
                 <div className="text-center">
@@ -444,7 +620,6 @@ export default function RoadTripDetailPage() {
                 </div>
               )}
             </div>
-            {/* Right: RV info */}
             <div className="flex items-center gap-3">
               {rvProfile?.rvPhotoUrl ? (
                 <img src={rvProfile.rvPhotoUrl} alt="Your RV"
@@ -743,8 +918,8 @@ export default function RoadTripDetailPage() {
         </div>
       )}
 
-      {/* Route Map Section */}
-      <div className="max-w-4xl mx-auto px-4 pb-8">
+      {/* Route Map Section — hidden, map now primary in main area */}
+      <div className="max-w-4xl mx-auto px-4 pb-8 hidden">
         <button
           onClick={async () => {
             setShowMap(prev => {
