@@ -6,7 +6,7 @@ import DiscoverCardV2 from './basecamp/DiscoverCardV2';
 import DreamingSection from './basecamp/DreamingSection';
 import CampKitchenSection from './basecamp/CampKitchenSection';
 import CommunityFeedSection from './basecamp/CommunityFeedSection';
-import SocialMapCard from './SocialMapCard';
+import TravelMap from './TravelMap';
 
 const CN = {
   bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45',
@@ -31,11 +31,21 @@ export default function LifestyleModeBasecamp({ user }: Props) {
     <div style={{ background: CN.bg, minHeight: '100vh' }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-12 space-y-4 pt-6">
 
+        {/* ═══ SOCIAL MAP (choropleth) ═══ */}
+        {user?.id && (
+          <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+            <TravelMap
+              userId={user.id}
+              isOwnProfile={true}
+              compact={false}
+              socialMode={true}
+              defaultLayers={['visits', 'friendsCheckins', 'recentAlbums', 'upcomingFriendTrips']}
+            />
+          </div>
+        )}
+
         {/* ═══ MODULE 1: RIG PULSE (above fold) ═══ */}
         <RigPulseCardV2 data={data?.rigPulse || null} />
-
-        {/* ═══ FRIENDS MAP (social) ═══ */}
-        <SocialMapCard />
 
         {/* ═══ MODULE 2: YOUR RV CIRCLE (above fold) ═══ */}
         <RVCircleCard data={data?.rvCircle || null} />

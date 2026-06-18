@@ -18,6 +18,8 @@ interface TravelMapProps {
   profilePicture?: string;
   initialRoute?: any;       // pre-built route (skips active-route fetch)
   newStateHighlights?: string[]; // state codes to highlight as "new"
+  defaultLayers?: MapLayer[];   // override default active layers
+  socialMode?: boolean;         // enables social map layers (albums, upcoming friend trips)
 }
 
 interface StateVisit {
@@ -187,7 +189,7 @@ const VISIBILITY_OPTIONS = [
   { value: 'PRIVATE', label: 'Private', icon: Lock, color: 'text-gray-600', bg: 'bg-gray-100', description: 'Only you can see' },
 ];
 
-type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins' | 'freeOvernight';
+type MapLayer = 'visits' | 'gasPrices' | 'gasStations' | 'restStops' | 'highways' | 'favorites' | 'upcomingTrips' | 'friendsCheckins' | 'freeOvernight' | 'recentAlbums' | 'upcomingFriendTrips';
 
 // Gas thresholds (national avg ~$3.30)
 const getGasPriceColor = (price: number): string => {
@@ -213,7 +215,7 @@ const getFuelPriceColor = (price: number, fuelType: 'regular' | 'diesel'): strin
   return fuelType === 'diesel' ? getDieselPriceColor(price) : getGasPriceColor(price);
 };
 
-export default function TravelMap({ userId, isOwnProfile, compact = false, showTripFilter = false, profilePicture, initialRoute, newStateHighlights = [] }: TravelMapProps) {
+export default function TravelMap({ userId, isOwnProfile, compact = false, showTripFilter = false, profilePicture, initialRoute, newStateHighlights = [], defaultLayers, socialMode = false }: TravelMapProps) {
   // Original state
   const [visitedStates, setVisitedStates] = useState<string[]>([]);
   const [plannedStates, setPlannedStates] = useState<string[]>([]);
@@ -249,7 +251,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [isCurrentlyCamping, setIsCurrentlyCamping] = useState(false);
 
   // Roadtrip state
-  const [activeLayers, setActiveLayers] = useState<MapLayer[]>(['visits', 'friendsCheckins']);
+  const [activeLayers, setActiveLayers] = useState<MapLayer[]>(defaultLayers || ['visits', 'friendsCheckins']);
   const [gasPrices, setGasPrices] = useState<GasPrice[]>([]);
   const [gasStations, setGasStations] = useState<GasStation[]>([]);
   const [restStops, setRestStops] = useState<RestStop[]>([]);
@@ -263,6 +265,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [loadingRoadtrip, setLoadingRoadtrip] = useState(true);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [stateDetail, setStateDetail] = useState<any>(null);
+
+  // Social map state (albums + upcoming friend trips)
+  const [socialAlbums, setSocialAlbums] = useState<any[]>([]);
+  const [socialUpcoming, setSocialUpcoming] = useState<any[]>([]);
   const [stateDetailLoading, setStateDetailLoading] = useState(false);
   const [stateDetailError, setStateDetailError] = useState<string | null>(null);
   const [shoutoutTarget, setShoutoutTarget] = useState<{ user: any; campgroundId?: string; campgroundName?: string } | null>(null);
@@ -308,6 +314,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       loadAlbums();
       loadEvents();
     }
+    if (socialMode) {
+      loadSocialMapData();
+      loadFriendsCheckins();
+    }
   }, [userId]);
 
   // Sync initialRoute prop -> activeRoute state whenever it arrives
@@ -336,6 +346,9 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
     }
     if (activeLayers.includes('friendsCheckins') && friendsCheckins.length === 0) {
       loadFriendsCheckins();
+    }
+    if ((activeLayers.includes('recentAlbums') || activeLayers.includes('upcomingFriendTrips')) && socialAlbums.length === 0 && socialUpcoming.length === 0) {
+      loadSocialMapData();
     }
   }, [activeLayers, selectedInterstate]);
 
@@ -410,6 +423,16 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       setFriendsCheckins(data.checkIns || data || []);
     } catch (error) {
       console.error('Load friends checkins error:', error);
+    }
+  };
+
+  const loadSocialMapData = async () => {
+    try {
+      const { data } = await api.get('/basecamp/social-map');
+      setSocialAlbums(data.recentAlbums || []);
+      setSocialUpcoming(data.upcomingFriendTrips || []);
+    } catch (error) {
+      console.error('Load social map error:', error);
     }
   };
 
@@ -918,6 +941,38 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         type: "friendCheckin" as const,
         user: c.user,
       })) : []),
+    // Recent albums markers (curated)
+    ...(activeLayers.includes('recentAlbums') ? (() => {
+      // Curation: de-dupe against live friends at same campground, cap 15
+      const liveCgIds = new Set(friendsCheckins.filter((c: any) => c.campground?.id).map((c: any) => c.campground.id));
+      return socialAlbums
+        .filter((a: any) => a.latitude && a.longitude && (!a.campgroundId || !liveCgIds.has(a.campgroundId)))
+        .slice(0, 15)
+        .map((a: any) => ({
+          id: `album-${a.albumId}`,
+          name: `${a.ownerFirstName || 'Friend'}'s album: ${a.albumTitle}`,
+          latitude: a.latitude,
+          longitude: a.longitude,
+          type: "recentAlbum" as const,
+          albumId: a.albumId,
+          coverImageUrl: a.coverImageUrl,
+          user: { id: '', username: a.ownerUsername, firstName: a.ownerFirstName, profilePicture: a.ownerAvatarUrl },
+        }));
+    })() : []),
+    // Upcoming friend trips markers (cap 10, soonest first)
+    ...(activeLayers.includes('upcomingFriendTrips') ? socialUpcoming
+      .filter((t: any) => t.latitude && t.longitude)
+      .slice(0, 10)
+      .map((t: any) => ({
+        id: `friend-trip-${t.tripId}`,
+        name: `${t.ownerFirstName || 'Friend'}'s trip: ${t.tripTitle}`,
+        latitude: t.latitude,
+        longitude: t.longitude,
+        type: "upcomingFriendTrip" as const,
+        tripId: t.tripId,
+        departureDate: t.departureDate,
+        user: { id: '', username: t.ownerUsername, firstName: t.ownerFirstName, profilePicture: t.ownerAvatarUrl },
+      })) : []),
     // Home location marker
     ...(homeLocation ? [{
       id: 'home-location',
@@ -928,6 +983,47 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
       isCurrentlyCamping: isCurrentlyCamping,
     }] : []),
   ];
+
+  // ── Phase 4: Lightweight proximity clustering for social markers ──
+  // On a fixed national SVG, markers within ~2° overlap visually.
+  // Only cluster social marker types; leave campgrounds/gas/etc untouched.
+  const CLUSTER_RADIUS = 2; // degrees
+  const SOCIAL_TYPES = new Set(['friendCheckin', 'recentAlbum', 'upcomingFriendTrip']);
+  const TYPE_PRIORITY: Record<string, number> = { friendCheckin: 3, recentAlbum: 2, upcomingFriendTrip: 1 };
+
+  const socialMarkers = mapMarkers.filter(m => SOCIAL_TYPES.has(m.type));
+  const otherMarkers = mapMarkers.filter(m => !SOCIAL_TYPES.has(m.type));
+
+  const clustered: typeof mapMarkers = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < socialMarkers.length; i++) {
+    if (used.has(i)) continue;
+    const anchor = socialMarkers[i];
+    const group = [anchor];
+    used.add(i);
+
+    for (let j = i + 1; j < socialMarkers.length; j++) {
+      if (used.has(j)) continue;
+      const other = socialMarkers[j];
+      const dLat = Math.abs(anchor.latitude - other.latitude);
+      const dLng = Math.abs(anchor.longitude - other.longitude);
+      if (dLat < CLUSTER_RADIUS && dLng < CLUSTER_RADIUS) {
+        group.push(other);
+        used.add(j);
+      }
+    }
+
+    if (group.length === 1) {
+      clustered.push(anchor);
+    } else {
+      // Pick highest-priority marker as the cluster face
+      group.sort((a, b) => (TYPE_PRIORITY[b.type] || 0) - (TYPE_PRIORITY[a.type] || 0));
+      clustered.push({ ...group[0], clusterCount: group.length });
+    }
+  }
+
+  const finalMarkers = [...otherMarkers, ...clustered];
 
   if (loading) {
     return (
@@ -1051,6 +1147,30 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               <Users className="w-6 h-6" />
               <span className="text-sm font-medium">Friends</span>
             </button>
+
+            {socialMode && (
+              <>
+                <button
+                  onClick={() => toggleLayer('recentAlbums')}
+                  className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                    activeLayers.includes('recentAlbums') ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Image className="w-6 h-6" />
+                  <span className="text-sm font-medium">Albums</span>
+                </button>
+
+                <button
+                  onClick={() => toggleLayer('upcomingFriendTrips')}
+                  className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                    activeLayers.includes('upcomingFriendTrips') ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Calendar className="w-6 h-6" />
+                  <span className="text-sm font-medium">Upcoming</span>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Gas Price Options */}
@@ -1218,12 +1338,24 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             <span className="text-gray-600">Friends ({friendsCheckins.length})</span>
           </div>
         )}
+        {activeLayers.includes('recentAlbums') && socialAlbums.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Image className="w-4 h-4 text-amber-500" />
+            <span className="text-gray-600">Albums ({Math.min(socialAlbums.length, 15)})</span>
+          </div>
+        )}
+        {activeLayers.includes('upcomingFriendTrips') && socialUpcoming.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-indigo-500" />
+            <span className="text-gray-600">Upcoming ({Math.min(socialUpcoming.length, 10)})</span>
+          </div>
+        )}
       </div>
 
       {/* US Map */}
       <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4 relative">
         <USMapSVG
-          markers={mapMarkers}
+          markers={finalMarkers}
           visitedStates={activeLayers.includes('visits') ? visitedStates : []}
           plannedStates={activeLayers.includes('visits') ? plannedStates : []}
           stateColors={getStateColors()}
@@ -1256,6 +1388,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               });
               setShoutoutMsg('');
               setShoutoutSent(false);
+            } else if (marker.type === 'recentAlbum' && marker.albumId) {
+              navigate(`/albums/${marker.albumId}`);
+            } else if (marker.type === 'upcomingFriendTrip' && marker.tripId) {
+              navigate(`/trips/${marker.tripId}`);
             }
           }}
           isInteractive={true}

@@ -6,7 +6,7 @@ interface MapMarker {
   name: string;
   latitude: number;
   longitude: number;
-  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home' | 'favorite' | 'upcomingTrip' | 'friendCheckin' | 'overnightStop' | 'freeOvernight';
+  type: 'campground' | 'attraction' | 'visit' | 'gasStation' | 'restStop' | 'home' | 'favorite' | 'upcomingTrip' | 'friendCheckin' | 'overnightStop' | 'freeOvernight' | 'recentAlbum' | 'upcomingFriendTrip';
   isCurrentlyCamping?: boolean;
   isVisited?: boolean;
   brand?: string;
@@ -18,6 +18,10 @@ interface MapMarker {
     profilePicture?: string;
   };
   tripId?: string;
+  albumId?: string;
+  coverImageUrl?: string;
+  departureDate?: string;
+  clusterCount?: number;
 }
 
 interface HighwayLine {
@@ -109,6 +113,12 @@ const getMarkerColor = (marker: MapMarker) => {
   }
   if (marker.type === 'friendCheckin') {
     return '#10b981'; // emerald for friends' check-ins
+  }
+  if (marker.type === 'recentAlbum') {
+    return '#E8A838'; // gold for albums
+  }
+  if (marker.type === 'upcomingFriendTrip') {
+    return '#6366f1'; // indigo for upcoming friend trips
   }
   return '#6b7280'; // gray default
 };
@@ -422,6 +432,98 @@ export default function USMapSVG({
                     stroke="#fff"
                     strokeWidth={1}
                   />
+                  {/* Cluster badge */}
+                  {marker.clusterCount && marker.clusterCount > 1 && (
+                    <>
+                      <circle cx={14} cy={-24} r={8} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
+                      <text x={14} y={-20} textAnchor="middle" fill="#fff" fontSize={9} fontWeight="bold" fontFamily="sans-serif">{marker.clusterCount}</text>
+                    </>
+                  )}
+                </>
+              ) : marker.type === 'recentAlbum' ? (
+                <>
+                  {/* Album marker — rounded square thumbnail with owner badge */}
+                  <defs>
+                    <clipPath id={`album-clip-${marker.id}`}>
+                      <rect x={-14} y={-22} width={28} height={28} rx={4} />
+                    </clipPath>
+                    <clipPath id={`album-owner-${marker.id}`}>
+                      <circle cx={12} cy={4} r={6} />
+                    </clipPath>
+                  </defs>
+                  {/* Thumbnail background */}
+                  <rect x={-14} y={-22} width={28} height={28} rx={4} fill="#1B2B4B" stroke="#E8A838" strokeWidth={1.5} />
+                  {/* Cover image */}
+                  {marker.coverImageUrl ? (
+                    <image
+                      href={marker.coverImageUrl}
+                      x={-14} y={-22} width={28} height={28}
+                      clipPath={`url(#album-clip-${marker.id})`}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  ) : (
+                    <text x={0} y={-6} textAnchor="middle" fill="#E8A838" fontSize={12} fontFamily="sans-serif">📷</text>
+                  )}
+                  {/* Owner avatar badge */}
+                  <circle cx={12} cy={4} r={7} fill="#fff" />
+                  {marker.user?.profilePicture ? (
+                    <image
+                      href={marker.user.profilePicture}
+                      x={6} y={-2} width={12} height={12}
+                      clipPath={`url(#album-owner-${marker.id})`}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  ) : (
+                    <circle cx={12} cy={4} r={6} fill="#1B2B4B" />
+                  )}
+                  {/* Cluster badge */}
+                  {marker.clusterCount && marker.clusterCount > 1 && (
+                    <>
+                      <circle cx={-10} cy={-18} r={7} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
+                      <text x={-10} y={-14.5} textAnchor="middle" fill="#fff" fontSize={8} fontWeight="bold" fontFamily="sans-serif">{marker.clusterCount}</text>
+                    </>
+                  )}
+                </>
+              ) : marker.type === 'upcomingFriendTrip' ? (
+                <>
+                  {/* Upcoming friend trip — faded pin with calendar glyph */}
+                  <g opacity={0.6}>
+                    <ellipse cx={0} cy={2} rx={4} ry={2} fill="rgba(0,0,0,0.15)" />
+                    <path
+                      d="M0,-12 C-6,-12 -8,-6 -8,-4 C-8,2 0,8 0,8 C0,8 8,2 8,-4 C8,-6 6,-12 0,-12"
+                      fill="#6366f1"
+                      stroke="#fff"
+                      strokeWidth={1}
+                    />
+                    {/* Calendar icon */}
+                    <rect x={-4} y={-8} width={8} height={7} rx={1} fill="#fff" />
+                    <rect x={-4} y={-8} width={8} height={3} rx={1} fill="#6366f1" />
+                    <text x={0} y={-2.5} textAnchor="middle" fill="#6366f1" fontSize={4} fontWeight="bold" fontFamily="sans-serif">
+                      {marker.departureDate ? new Date(marker.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).replace(' ', '\n').split('\n')[0] : ''}
+                    </text>
+                  </g>
+                  {/* Owner avatar badge */}
+                  {marker.user?.profilePicture && (
+                    <>
+                      <defs>
+                        <clipPath id={`up-clip-${marker.id}`}><circle cx={8} cy={-14} r={5} /></clipPath>
+                      </defs>
+                      <circle cx={8} cy={-14} r={6} fill="#fff" />
+                      <image
+                        href={marker.user.profilePicture}
+                        x={3} y={-19} width={10} height={10}
+                        clipPath={`url(#up-clip-${marker.id})`}
+                        preserveAspectRatio="xMidYMid slice"
+                      />
+                    </>
+                  )}
+                  {/* Cluster badge */}
+                  {marker.clusterCount && marker.clusterCount > 1 && (
+                    <>
+                      <circle cx={-8} cy={-14} r={7} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
+                      <text x={-8} y={-10.5} textAnchor="middle" fill="#fff" fontSize={8} fontWeight="bold" fontFamily="sans-serif">{marker.clusterCount}</text>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
