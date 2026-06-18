@@ -4,7 +4,7 @@ import {
   MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, Heart, Navigation, Tent,
   Eye, EyeOff, UserCheck, Lock, Copy, ExternalLink,
   Fuel, Coffee, ParkingCircle, Layers, DollarSign, Route,
-  ShowerHead, Store, Truck, Dog, Wifi, Droplet, RefreshCw, Send
+  ShowerHead, Store, Truck, Dog, Wifi, Droplet, RefreshCw, Send, ChevronDown, Info
 } from 'lucide-react';
 import api from '../services/api';
 import USMapSVG from './USMapSVG';
@@ -269,6 +269,10 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   // Social map state (albums + upcoming friend trips)
   const [socialAlbums, setSocialAlbums] = useState<any[]>([]);
   const [socialUpcoming, setSocialUpcoming] = useState<any[]>([]);
+
+  // Grouped controls state (Basecamp social mode only)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [showLegend, setShowLegend] = useState(false);
   const [stateDetailLoading, setStateDetailLoading] = useState(false);
   const [stateDetailError, setStateDetailError] = useState<string | null>(null);
   const [shoutoutTarget, setShoutoutTarget] = useState<{ user: any; campgroundId?: string; campgroundName?: string } | null>(null);
@@ -1049,308 +1053,159 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         
       </div>
 
-      {/* Layer Control Panel */}
-      {showLayerPanel && !compact && (
+      {/* ══ SOCIAL MODE: Grouped Controls + Chips ══ */}
+      {showLayerPanel && !compact && socialMode && (() => {
+        const SOCIAL_LAYERS: MapLayer[] = ['friendsCheckins', 'recentAlbums', 'upcomingFriendTrips'];
+        const isSocialOn = SOCIAL_LAYERS.some(l => activeLayers.includes(l));
+        const toggleGroup = (group: string) => setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+        const toggleSocialMaster = () => {
+          if (isSocialOn) {
+            setActiveLayers(prev => prev.filter(l => !SOCIAL_LAYERS.includes(l)));
+          } else {
+            setActiveLayers(prev => [...prev, ...SOCIAL_LAYERS.filter(l => !prev.includes(l))]);
+          }
+        };
+
+        // Build chip data from active layers
+        const chips: { label: string; layer: MapLayer | 'social'; color: string }[] = [];
+        if (activeLayers.includes('visits')) chips.push({ label: 'My Visits', layer: 'visits', color: 'bg-orange-100 text-orange-700 border-orange-200' });
+        if (activeLayers.includes('favorites')) chips.push({ label: 'Favorites', layer: 'favorites', color: 'bg-red-100 text-red-700 border-red-200' });
+        if (activeLayers.includes('upcomingTrips')) chips.push({ label: 'My Trips', layer: 'upcomingTrips', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' });
+        if (isSocialOn) chips.push({ label: 'Travel Activity', layer: 'social', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' });
+        if (activeLayers.includes('highways')) chips.push({ label: 'Highways', layer: 'highways', color: 'bg-purple-100 text-purple-700 border-purple-200' });
+        if (activeLayers.includes('freeOvernight')) chips.push({ label: 'Free Overnight', layer: 'freeOvernight', color: 'bg-teal-100 text-teal-700 border-teal-200' });
+        if (activeLayers.includes('gasPrices')) chips.push({ label: 'Gas Prices', layer: 'gasPrices', color: 'bg-green-100 text-green-700 border-green-200' });
+        if (activeLayers.includes('gasStations')) chips.push({ label: 'Truck Stops', layer: 'gasStations', color: 'bg-orange-100 text-orange-700 border-orange-200' });
+        if (activeLayers.includes('restStops')) chips.push({ label: 'Rest Stops', layer: 'restStops', color: 'bg-blue-100 text-blue-700 border-blue-200' });
+
+        return (
+          <>
+            {/* Active filter chips — single scrollable row */}
+            {chips.length > 0 && (
+              <div className="mb-3 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="flex gap-1.5 pb-1" style={{ minWidth: 'max-content' }}>
+                  {chips.map(chip => (
+                    <span key={chip.label} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${chip.color}`}>
+                      {chip.label}
+                      <button
+                        onClick={() => {
+                          if (chip.layer === 'social') { toggleSocialMaster(); }
+                          else { toggleLayer(chip.layer as MapLayer); }
+                        }}
+                        className="ml-0.5 opacity-60 hover:opacity-100"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Collapsible layer groups */}
+            <div className="mb-3 space-y-1">
+              {/* ── Personal ── */}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <button onClick={() => toggleGroup('personal')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                  <span className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> Personal</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400">{['visits', 'favorites', 'upcomingTrips'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.personal ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {expandedGroups.personal && (
+                  <div className="px-3 py-2 flex flex-wrap gap-2">
+                    <button onClick={() => toggleLayer('visits')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('visits') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>My Visits</button>
+                    <button onClick={() => toggleLayer('favorites')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('favorites') ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Favorites</button>
+                    <button onClick={() => toggleLayer('upcomingTrips')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('upcomingTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>My Trips</button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Social (Travel Activity) ── */}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <button onClick={() => toggleGroup('social')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                  <span className="flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Social</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400">{isSocialOn ? 'on' : 'off'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.social ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {expandedGroups.social && (
+                  <div className="px-3 py-2 space-y-2">
+                    <button onClick={toggleSocialMaster} className={`w-full px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSocialOn ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      Travel Activity {isSocialOn ? '(ON)' : '(OFF)'}
+                    </button>
+                    {isSocialOn && (
+                      <div className="flex flex-wrap gap-2 pl-1">
+                        <button onClick={() => toggleLayer('friendsCheckins')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('friendsCheckins') ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-gray-200 text-gray-400'}`}>Active</button>
+                        <button onClick={() => toggleLayer('recentAlbums')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('recentAlbums') ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-gray-200 text-gray-400'}`}>Albums</button>
+                        <button onClick={() => toggleLayer('upcomingFriendTrips')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('upcomingFriendTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-gray-200 text-gray-400'}`}>Upcoming</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Travel ── */}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <button onClick={() => toggleGroup('travel')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                  <span className="flex items-center gap-2"><Route className="w-3.5 h-3.5" /> Travel</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400">{['highways', 'freeOvernight'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.travel ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {expandedGroups.travel && (
+                  <div className="px-3 py-2 flex flex-wrap gap-2">
+                    <button onClick={() => toggleLayer('highways')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('highways') ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Highways</button>
+                    <button onClick={() => toggleLayer('freeOvernight')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('freeOvernight') ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Free Overnight</button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Utilities ── */}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <button onClick={() => toggleGroup('utilities')} className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700">
+                  <span className="flex items-center gap-2"><Fuel className="w-3.5 h-3.5" /> Utilities</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400">{['gasPrices', 'gasStations', 'restStops'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.utilities ? 'rotate-180' : ''}`} />
+                  </span>
+                </button>
+                {expandedGroups.utilities && (
+                  <div className="px-3 py-2 flex flex-wrap gap-2">
+                    <button onClick={() => toggleLayer('gasPrices')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasPrices') ? 'bg-green-50 border-green-300 text-green-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Gas Prices</button>
+                    <button onClick={() => toggleLayer('gasStations')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasStations') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Truck Stops</button>
+                    <button onClick={() => toggleLayer('restStops')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('restStops') ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>Rest Stops</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ══ NON-SOCIAL MODE: Original flat grid (TravelMapPage, Profile) ══ */}
+      {showLayerPanel && !compact && !socialMode && (
         <div className="mb-4 bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Layers className="w-4 h-4" />
             Map Layers
           </h4>
-          
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            <button
-              onClick={() => toggleLayer('visits')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('visits') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <MapPin className="w-6 h-6" />
-              <span className="text-sm font-medium">My Visits</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('gasPrices')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('gasPrices') ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <DollarSign className="w-6 h-6" />
-              <span className="text-sm font-medium">Gas Prices</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('highways')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('highways') ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Route className="w-6 h-6" />
-              <span className="text-sm font-medium">Highways</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('gasStations')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('gasStations') ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Fuel className="w-6 h-6" />
-              <span className="text-sm font-medium">Truck Stops</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('restStops')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('restStops') ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Coffee className="w-6 h-6" />
-              <span className="text-sm font-medium">Rest Stops</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('favorites')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('favorites') ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Heart className="w-6 h-6" />
-              <span className="text-sm font-medium">Favorites</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('upcomingTrips')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('upcomingTrips') ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Tent className="w-6 h-6" />
-              <span className="text-sm font-medium">Upcoming Trips</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('freeOvernight')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('freeOvernight') ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <span className="text-2xl leading-none">🌙</span>
-              <span className="text-sm font-medium">Free Overnight</span>
-            </button>
-
-            <button
-              onClick={() => toggleLayer('friendsCheckins')}
-              className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                activeLayers.includes('friendsCheckins') ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <Users className="w-6 h-6" />
-              <span className="text-sm font-medium">Friends</span>
-            </button>
-
-            {socialMode && (
-              <>
-                <button
-                  onClick={() => toggleLayer('recentAlbums')}
-                  className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                    activeLayers.includes('recentAlbums') ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Image className="w-6 h-6" />
-                  <span className="text-sm font-medium">Albums</span>
-                </button>
-
-                <button
-                  onClick={() => toggleLayer('upcomingFriendTrips')}
-                  className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
-                    activeLayers.includes('upcomingFriendTrips') ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Calendar className="w-6 h-6" />
-                  <span className="text-sm font-medium">Upcoming</span>
-                </button>
-              </>
-            )}
+            <button onClick={() => toggleLayer('visits')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('visits') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 hover:border-gray-300'}`}><MapPin className="w-6 h-6" /><span className="text-sm font-medium">My Visits</span></button>
+            <button onClick={() => toggleLayer('gasPrices')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('gasPrices') ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'}`}><DollarSign className="w-6 h-6" /><span className="text-sm font-medium">Gas Prices</span></button>
+            <button onClick={() => toggleLayer('highways')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('highways') ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-gray-300'}`}><Route className="w-6 h-6" /><span className="text-sm font-medium">Highways</span></button>
+            <button onClick={() => toggleLayer('gasStations')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('gasStations') ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 hover:border-gray-300'}`}><Fuel className="w-6 h-6" /><span className="text-sm font-medium">Truck Stops</span></button>
+            <button onClick={() => toggleLayer('restStops')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('restStops') ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'}`}><Coffee className="w-6 h-6" /><span className="text-sm font-medium">Rest Stops</span></button>
+            <button onClick={() => toggleLayer('favorites')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('favorites') ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'}`}><Heart className="w-6 h-6" /><span className="text-sm font-medium">Favorites</span></button>
+            <button onClick={() => toggleLayer('upcomingTrips')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('upcomingTrips') ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-gray-300'}`}><Tent className="w-6 h-6" /><span className="text-sm font-medium">Upcoming Trips</span></button>
+            <button onClick={() => toggleLayer('freeOvernight')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('freeOvernight') ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 hover:border-gray-300'}`}><span className="text-2xl leading-none">🌙</span><span className="text-sm font-medium">Free Overnight</span></button>
+            <button onClick={() => toggleLayer('friendsCheckins')} className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${activeLayers.includes('friendsCheckins') ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 hover:border-gray-300'}`}><Users className="w-6 h-6" /><span className="text-sm font-medium">Friends</span></button>
           </div>
-
-          {/* Gas Price Options */}
-          {activeLayers.includes('gasPrices') && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-gray-700">Fuel Type:</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFuelType('regular')}
-                      className={`px-3 py-1 rounded-full text-sm ${fuelType === 'regular' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      Regular
-                    </button>
-                    <button
-                      onClick={() => setFuelType('diesel')}
-                      className={`px-3 py-1 rounded-full text-sm ${fuelType === 'diesel' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      Diesel
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={updateGasPrices}
-                  disabled={updatingPrices}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${updatingPrices ? 'animate-spin' : ''}`} />
-                  Update Prices
-                </button>
-              </div>
-              
-              {/* Price Legend — thresholds differ for gas vs diesel */}
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-gray-600">{fuelType === 'diesel' ? 'Diesel' : 'Gas'} Price:</span>
-                {fuelType === 'diesel' ? (
-                  <>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div><span>&lt;$3.40</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div><span>$3.40-3.60</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div><span>$3.60-3.80</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div><span>$3.80-4.10</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div><span>&gt;$4.10</span></div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div><span>&lt;$2.90</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div><span>$2.90-3.10</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div><span>$3.10-3.30</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div><span>$3.30-3.50</span></div>
-                    <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div><span>&gt;$3.50</span></div>
-                  </>
-                )}
-              </div>
-
-              {/* Price Stats */}
-              {priceStats && (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  <div className="bg-green-50 p-2 rounded">
-                    <span className="text-gray-600">Cheapest {fuelType}:</span>
-                    <p className="font-bold text-green-700">
-                      {fuelType === 'diesel' ? priceStats.cheapest.diesel?.stateName : priceStats.cheapest.regular?.stateName} - $
-                      {fuelType === 'diesel' ? priceStats.cheapest.diesel?.dieselPrice?.toFixed(2) || "N/A" : priceStats.cheapest.regular?.regularPrice?.toFixed(2) || "N/A"}
-                    </p>
-                  </div>
-                  <div className="bg-red-50 p-2 rounded">
-                    <span className="text-gray-600">Most Expensive:</span>
-                    <p className="font-bold text-red-700">
-                      {fuelType === 'diesel' ? priceStats.mostExpensive.diesel?.stateName : priceStats.mostExpensive.regular?.stateName} - $
-                      {fuelType === 'diesel' ? priceStats.mostExpensive.diesel?.dieselPrice?.toFixed(2) || "N/A" : priceStats.mostExpensive.regular?.regularPrice?.toFixed(2) || "N/A"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 p-2 rounded col-span-2">
-                    <span className="text-gray-600">National Average:</span>
-                    <p className="font-bold text-blue-700">
-                      ${fuelType === 'diesel' ? priceStats.nationalAverage.diesel?.toFixed(2) || "N/A" : priceStats.nationalAverage.regular?.toFixed(2) || "N/A"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Trip Route Filter - only on full Travel Map page */}
-          {showTripFilter && (activeLayers.includes('gasStations') || activeLayers.includes('restStops') || activeLayers.includes('highways')) && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-start gap-3 flex-col">
-                <div className="flex items-center gap-3 flex-wrap w-full">
-                  <span className="text-sm font-medium text-gray-700 flex-shrink-0">🗺️ Filter by Trip:</span>
-                  <select
-                    value={selectedTripId}
-                    onChange={(e) => handleTripSelect(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white min-w-0"
-                  >
-                    <option value="">— Show all stops —</option>
-                    {upcomingTrips.map((trip: any) => (
-                      <option key={trip.id} value={trip.id}>
-                        🏕️ {trip.name || trip.title}
-                        {trip.startDate ? ` · ${new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {(loadingRoadtrip || loadingTripRoute) && (
-                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                  )}
-                </div>
-                {selectedTripRoute && (
-                  <p className="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg w-full">
-                    ✓ Showing fuel stops, rest areas, and truck stops along your route corridor
-                    {selectedTripRoute.eventName && <span className="font-semibold"> for {selectedTripRoute.eventName}</span>}
-                  </p>
-                )}
-                {!selectedTripId && (
-                  <p className="text-xs text-gray-400">
-                    Select a trip to filter stops along your route, or browse all stops on the map.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       )}
-
-      {/* Legend */}
-      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
-        {activeLayers.includes('visits') && (
-          <>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-orange-500"></div>
-              <span className="text-gray-600">Visited</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-blue-300"></div>
-              <span className="text-gray-600">Planned</span>
-            </div>
-          </>
-        )}
-        {activeLayers.includes('gasStations') && (
-          <div className="flex items-center gap-2">
-            <Fuel className="w-4 h-4 text-orange-500" />
-            <span className="text-gray-600">Truck Stops ({gasStations.length})</span>
-          </div>
-        )}
-        {activeLayers.includes('restStops') && (
-          <div className="flex items-center gap-2">
-            <Coffee className="w-4 h-4 text-blue-500" />
-            <span className="text-gray-600">Rest Stops ({restStops.length})</span>
-          </div>
-        )}
-        {activeLayers.includes('favorites') && (
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-red-500" />
-            <span className="text-gray-600">Favorites ({favorites.length})</span>
-          </div>
-        )}
-        {activeLayers.includes('upcomingTrips') && (
-          <div className="flex items-center gap-2">
-            <Tent className="w-4 h-4 text-indigo-500" />
-            <span className="text-gray-600">Upcoming ({upcomingTrips.length})</span>
-          </div>
-        )}
-        {activeLayers.includes('friendsCheckins') && (
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-emerald-500" />
-            <span className="text-gray-600">Friends ({friendsCheckins.length})</span>
-          </div>
-        )}
-        {activeLayers.includes('recentAlbums') && socialAlbums.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Image className="w-4 h-4 text-amber-500" />
-            <span className="text-gray-600">Albums ({Math.min(socialAlbums.length, 15)})</span>
-          </div>
-        )}
-        {activeLayers.includes('upcomingFriendTrips') && socialUpcoming.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-500" />
-            <span className="text-gray-600">Upcoming ({Math.min(socialUpcoming.length, 10)})</span>
-          </div>
-        )}
-      </div>
 
       {/* US Map */}
       <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4 relative">
@@ -1414,6 +1269,31 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                   ? `📅 Planned (${getStateVisits(hoveredState).filter(v => isPlannedVisit(v.startDate)).length})`
                   : 'Not visited'}
               </p>
+            )}
+          </div>
+        )}
+
+        {/* Floating corner legend (socialMode only) */}
+        {socialMode && (
+          <div className="absolute bottom-3 right-3 z-10">
+            {showLegend ? (
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-2.5 text-[11px] space-y-1.5 max-w-[160px]">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-gray-700 text-[10px] uppercase tracking-wide">Legend</span>
+                  <button onClick={() => setShowLegend(false)} className="text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>
+                </div>
+                {activeLayers.includes('visits') && <>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-500"></div><span className="text-gray-600">Visited</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-blue-300"></div><span className="text-gray-600">Planned</span></div>
+                </>}
+                {activeLayers.includes('friendsCheckins') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></div><span className="text-gray-600">Friends (live)</span></div>}
+                {activeLayers.includes('recentAlbums') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm border border-amber-400 bg-amber-100"></div><span className="text-gray-600">Albums</span></div>}
+                {activeLayers.includes('upcomingFriendTrips') && <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-indigo-400 opacity-60"></div><span className="text-gray-600">Upcoming</span></div>}
+              </div>
+            ) : (
+              <button onClick={() => setShowLegend(true)} className="bg-white/90 backdrop-blur-sm rounded-full shadow px-2.5 py-1 text-[10px] font-medium text-gray-600 hover:bg-white flex items-center gap-1">
+                <Info className="w-3 h-3" /> Legend
+              </button>
             )}
           </div>
         )}
