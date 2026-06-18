@@ -77,8 +77,10 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         select: {
           id: true, rigName: true, rigEmoji: true, heroPhoto: true, rigClass: true,
           totalMiles: true, totalNights: true, statesVisited: true, activeTripId: true,
-          totalMilesAllTime: true, slug: true,
+          totalMilesAllTime: true, totalStatesVisited: true, totalCampgroundsAllTime: true,
+          totalNightsAllTime: true, followerCount: true, slug: true,
           pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
+          memories: { where: { isPinned: true }, orderBy: { order: 'asc' }, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
         },
       })),
       safe(prisma.rigFollow.findMany({
@@ -261,6 +263,10 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         firstName: f.user.firstName,
       })),
       totalMilesAllTime: userRig?.totalMilesAllTime || 0,
+      totalNightsAllTime: userRig?.totalNightsAllTime || 0,
+      totalStatesVisited: userRig?.totalStatesVisited?.length || 0,
+      totalCampgroundsAllTime: userRig?.totalCampgroundsAllTime || 0,
+      followerCount: userRig?.followerCount || 0,
       rigName: userRig?.rigName || 'My Rig',
       rigEmoji: userRig?.rigEmoji || '',
       rigPhoto: userRig?.heroPhoto || null,
@@ -269,6 +275,12 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         userId: p.user.id,
         username: p.user.username,
         avatarUrl: p.user.profilePicture,
+      })),
+      pinnedMemories: (userRig?.memories || []).map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        photoUrl: m.photoUrls?.[0] || null,
+        date: m.date,
       })),
     };
 
