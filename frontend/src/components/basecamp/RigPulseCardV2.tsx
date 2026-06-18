@@ -55,11 +55,11 @@ function AvatarStack({ avatars, size = 24 }: { avatars: { avatarUrl: string | nu
 function HitchNudge({ data }: { data: RigPulseData }) {
   let line: string;
   if (data.hasActiveTrip && data.trip?.destination && data.trip.daysAway != null) {
-    line = `Counting down to ${data.trip.destination} \u2014 ${data.trip.daysAway} days! \ud83d\udd25`;
+    line = `Counting down to ${data.trip.destination} \u2014 ${data.trip.daysAway} days! \u{1F525}`;
   } else if (data.lastCheckIn?.daysAgo != null && data.lastCheckIn.daysAgo > 30) {
     line = `It's been a while since your last adventure...`;
   } else {
-    line = `When did you last hit the road? Let's plan something \ud83d\uddfa`;
+    line = `When did you last hit the road? Let's plan something \u{1F5FA}`;
   }
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${CN.border}` }}>
@@ -106,7 +106,7 @@ function IdleState({ data }: { data: RigPulseData }) {
     const daysAgo = data.lastPhoto.date ? Math.floor((Date.now() - new Date(data.lastPhoto.date).getTime()) / 86400000) : null;
     items.push(
       <div key="photo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <ContextItem icon="\ud83d\udcf8">Last photo: {data.lastPhoto.tripName || 'Trip'}{daysAgo != null ? ` \u00b7 ${daysAgo}d ago` : ''}</ContextItem>
+        <ContextItem icon="\u{1F4F8}">Last photo: {data.lastPhoto.tripName || 'Trip'}{daysAgo != null ? ` \u00b7 ${daysAgo}d ago` : ''}</ContextItem>
         <img src={data.lastPhoto.url} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
       </div>
     );
@@ -122,7 +122,7 @@ function IdleState({ data }: { data: RigPulseData }) {
       </div>
     );
   }
-  if (data.totalMilesAllTime > 0) items.push(<ContextItem key="miles" icon="\ud83d\ude90">{data.totalMilesAllTime.toLocaleString()} total miles in Pursuit of Memories</ContextItem>);
+  if (data.totalMilesAllTime > 0) items.push(<ContextItem key="miles" icon="\u{1F690}">{data.totalMilesAllTime.toLocaleString()} total miles in Pursuit of Memories</ContextItem>);
 
   return (
     <div style={{ background: CN.card, borderRadius: 16, padding: 16, borderLeft: '3px solid rgba(232,168,56,0.4)', maxHeight: 250, overflow: 'hidden' }}>

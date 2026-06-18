@@ -479,8 +479,8 @@ setInterval(() => {
   if (now.getDay() === 1 && hourUTC === 14) {
     weeklyPromptCron().catch(e => console.error('[CommunityAI Weekly]', e));
   }
-  // Board revival: daily at 10am CT (15:00 UTC)
-  if (hourUTC === 15) {
+  // Board revival: Wednesday only at 10am CT (15:00 UTC) — was daily, throttled to reduce system noise
+  if (now.getDay() === 3 && hourUTC === 15) {
     boardRevivalCron().catch(e => console.error('[CommunityAI Revival]', e));
   }
 }, 60 * 60 * 1000);

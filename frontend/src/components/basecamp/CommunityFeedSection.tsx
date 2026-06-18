@@ -58,9 +58,14 @@ export default function CommunityFeedSection({ data }: Props) {
 
   if (allItems.length === 0) {
     return (
-      <div className="rounded-xl p-4 text-center" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-        <MessageCircle className="w-5 h-5 mx-auto mb-2" style={{ color: CN.muted }} />
-        <p className="text-xs" style={{ color: CN.muted }}>Follow some RVers to fill your feed!</p>
+      <div className="rounded-xl p-5 text-center" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+        <div className="text-2xl mb-2">🏕️</div>
+        <p className="text-sm font-semibold mb-1" style={{ color: CN.cream }}>Your network is quiet right now</p>
+        <p className="text-xs mb-3" style={{ color: CN.muted }}>Follow rigs, find campers, or check in at your next stop — real activity from your community will show up here.</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link to="/community" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.gold, color: CN.bg }}>Find Campers</Link>
+          <Link to="/campgrounds" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.border}` }}>Explore Campgrounds</Link>
+        </div>
       </div>
     );
   }

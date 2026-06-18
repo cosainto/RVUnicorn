@@ -202,6 +202,10 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
           user: { select: { username: true } } },
       }) : Promise.resolve([]), []),
       safe(prisma.boardPost.findMany({
+        where: {
+          author: { username: { not: 'rvunicorn-system' } },
+          isCharacterPost: false,
+        },
         orderBy: { createdAt: 'desc' },
         take: 16,
         select: {
