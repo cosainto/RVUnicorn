@@ -54,7 +54,7 @@ const SEV_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   low: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'LOW' },
 };
 
-export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?: () => void } = {}) {
+export default function TripIntelligenceHeader({ onStartDrive, compactMode = false }: { onStartDrive?: () => void; compactMode?: boolean } = {}) {
   const navigate = useNavigate();
 
   // Session data
@@ -215,7 +215,7 @@ export default function TripIntelligenceHeader({ onStartDrive }: { onStartDrive?
   async function runQuickCheck() {
     if (!startLat || !startLon || !destLat || !destLon) return;
     setChecking(true);
-    setExpanded(true);
+    if (!compactMode) setExpanded(true);
     try {
       const { data } = await api.post('/trip-intelligence/quick-check', {
         startLat, startLon, startLabel,
