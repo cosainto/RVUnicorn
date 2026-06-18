@@ -105,25 +105,21 @@ export default function LifestyleModeBasecamp({ user }: Props) {
             </div>
           )}
 
-          {/* ═══ TIER 2 — SOCIAL MAP + TRIP INTELLIGENCE ═══ */}
+          {/* ═══ TIER 2 — FULL-WIDTH MAP HERO ═══ */}
           {user?.id && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <div className="lg:col-span-2">
-                <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  <TravelMap
-                    userId={user.id}
-                    isOwnProfile={true}
-                    compact={false}
-                    socialMode={true}
-                    defaultLayers={['visits', 'friendsCheckins', 'recentAlbums', 'upcomingFriendTrips']}
-                  />
-                </div>
-              </div>
-              <div className="lg:col-span-1">
-                <TripIntelligenceHeader compactMode={true} />
-              </div>
+            <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              <TravelMap
+                userId={user.id}
+                isOwnProfile={true}
+                compact={false}
+                socialMode={true}
+                defaultLayers={['visits', 'friendsCheckins', 'recentAlbums', 'upcomingFriendTrips']}
+              />
             </div>
           )}
+
+          {/* ═══ TRIP INTELLIGENCE — full-width horizontal card below map ═══ */}
+          <TripIntelligenceHeader compactMode={false} />
 
           {/* ═══ TIER 3 — RECENT REAL ACTIVITY ═══ */}
           {/* Rig Pulse (active trip or idle rig status — rich, personal) */}

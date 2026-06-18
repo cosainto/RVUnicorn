@@ -3170,34 +3170,32 @@ export default function BasecampPage({ user }: BasecampProps) {
             )}
           </div>
         )}
-        {/* ── MAP + TRIP INTELLIGENCE (side by side, above main grid) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          {/* Map — takes 2 columns, primary visual */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
-              <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary-600" />
-                  Travel Map
-                  <span className="text-xs font-normal text-gray-400">{visitedStatesCount} states</span>
-                </h3>
-                <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">Full Map →</Link>
-              </div>
-              <div className="px-2 pb-2" style={{ minHeight: '300px' }}>
-                <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
-              </div>
+        {/* ── FULL-WIDTH MAP HERO ── */}
+        <div className="mb-4">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary-600" />
+                Travel Map
+                <span className="text-xs font-normal text-gray-400">{visitedStatesCount} states</span>
+              </h3>
+              <Link to="/travel" className="text-xs text-primary-600 hover:text-primary-700 font-medium">Full Map →</Link>
+            </div>
+            <div className="px-2 pb-2" style={{ minHeight: '300px' }}>
+              <TravelMap userId={user.id} isOwnProfile={true} compact={true} profilePicture={user?.profilePicture || undefined} />
             </div>
           </div>
-          {/* Trip Intelligence — takes 1 column, right of map */}
-          <div className="lg:col-span-1">
-            <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} compactMode={true} />
-            {nextEvent && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 font-medium mt-3">
-                <span>📍</span>
-                <span>Next: <span className="font-semibold">{nextEvent.title || nextEvent.name}</span> in {countdown.days}d</span>
-              </div>
-            )}
-          </div>
+        </div>
+
+        {/* ── TRIP INTELLIGENCE — full-width horizontal card below map ── */}
+        <div className="mb-6">
+          <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} compactMode={false} />
+          {nextEvent && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 font-medium mt-2">
+              <span>📍</span>
+              <span>Next: <span className="font-semibold">{nextEvent.title || nextEvent.name}</span> in {countdown.days}d</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

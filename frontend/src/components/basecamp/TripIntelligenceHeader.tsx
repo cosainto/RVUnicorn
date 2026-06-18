@@ -855,7 +855,7 @@ export default function TripIntelligenceHeader({ onStartDrive, compactMode = fal
                 <Link to={`/road-trips/new?destLabel=${encodeURIComponent(destLabel)}&destLat=${destLat}&destLon=${destLon}${destCampgroundId ? `&destCampgroundId=${destCampgroundId}` : ''}&startLabel=${encodeURIComponent(startLabel)}&startLat=${startLat}&startLon=${startLon}`}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
                   style={{ background: '#E8A838', color: '#0F1C35' }}>
-                  Save as Trip <ArrowRight className="w-4 h-4" />
+                  Save Trip <ArrowRight className="w-4 h-4" />
                 </Link>
                 {!v2Report && (
                   <button onClick={runCorridorAnalysis} disabled={v2Loading}

@@ -1102,85 +1102,53 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               </div>
             )}
 
-            {/* Collapsible layer groups */}
-            <div className="mb-3 space-y-1">
-              {/* ── Personal ── */}
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
-                <button onClick={() => toggleGroup('personal')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
-                  <span className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> Personal</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['visits', 'favorites', 'upcomingTrips'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.personal ? 'rotate-180' : ''}`} />
-                  </span>
-                </button>
-                {expandedGroups.personal && (
-                  <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('visits')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('visits') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Visits</button>
-                    <button onClick={() => toggleLayer('favorites')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('favorites') ? 'bg-red-50 border-red-300 text-red-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Favorites</button>
-                    <button onClick={() => toggleLayer('upcomingTrips')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('upcomingTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Trips</button>
+            {/* Compact "Layers" popover — replaces four stacked groups */}
+            <div className="mb-3">
+              <button
+                onClick={() => setExpandedGroups(prev => ({ ...prev, _layersOpen: !prev._layersOpen }))}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                style={{ background: '#1e3050', color: '#F5F0E8', border: '1px solid #243552' }}
+              >
+                <Layers className="w-3.5 h-3.5" style={{ color: '#E8A838' }} />
+                Layers
+                <ChevronDown className={`w-3 h-3 transition-transform ${expandedGroups._layersOpen ? 'rotate-180' : ''}`} style={{ color: '#8B9BB4' }} />
+              </button>
+              {expandedGroups._layersOpen && (
+                <div className="mt-2 rounded-lg p-3 space-y-3" style={{ background: '#1e3050', border: '1px solid #243552' }}>
+                  {/* Personal */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#8B9BB4' }}>Personal</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => toggleLayer('visits')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('visits') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Visits</button>
+                      <button onClick={() => toggleLayer('favorites')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('favorites') ? 'bg-red-50 border-red-300 text-red-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Favorites</button>
+                      <button onClick={() => toggleLayer('upcomingTrips')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('upcomingTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>My Trips</button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* ── Social (Travel Activity) ── */}
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
-                <button onClick={() => toggleGroup('social')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
-                  <span className="flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Social</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{isSocialOn ? 'on' : 'off'}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.social ? 'rotate-180' : ''}`} />
-                  </span>
-                </button>
-                {expandedGroups.social && (
-                  <div className="px-3 py-2 space-y-2">
-                    <button onClick={toggleSocialMaster} className={`w-full px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSocialOn ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>
-                      Travel Activity {isSocialOn ? '(ON)' : '(OFF)'}
-                    </button>
-                    {isSocialOn && (
-                      <div className="flex flex-wrap gap-2 pl-1">
+                  {/* Social */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#8B9BB4' }}>Social</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={toggleSocialMaster} className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition ${isSocialOn ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Travel Activity</button>
+                      {isSocialOn && <>
                         <button onClick={() => toggleLayer('friendsCheckins')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('friendsCheckins') ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Active</button>
                         <button onClick={() => toggleLayer('recentAlbums')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('recentAlbums') ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Albums</button>
                         <button onClick={() => toggleLayer('upcomingFriendTrips')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('upcomingFriendTrips') ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-[#243552] text-[#8B9BB4]'}`}>Upcoming</button>
-                      </div>
-                    )}
+                      </>}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* ── Travel ── */}
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
-                <button onClick={() => toggleGroup('travel')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
-                  <span className="flex items-center gap-2"><Route className="w-3.5 h-3.5" /> Travel</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['highways', 'freeOvernight'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.travel ? 'rotate-180' : ''}`} />
-                  </span>
-                </button>
-                {expandedGroups.travel && (
-                  <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('highways')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('highways') ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Highways</button>
-                    <button onClick={() => toggleLayer('freeOvernight')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('freeOvernight') ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Free Overnight</button>
+                  {/* Travel + Utilities */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#8B9BB4' }}>Travel & Utilities</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => toggleLayer('highways')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('highways') ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Highways</button>
+                      <button onClick={() => toggleLayer('freeOvernight')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('freeOvernight') ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Free Overnight</button>
+                      <button onClick={() => toggleLayer('gasPrices')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('gasPrices') ? 'bg-green-50 border-green-300 text-green-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Gas Prices</button>
+                      <button onClick={() => toggleLayer('gasStations')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('gasStations') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Truck Stops</button>
+                      <button onClick={() => toggleLayer('restStops')} className={`px-2.5 py-1 rounded text-[11px] font-medium border transition ${activeLayers.includes('restStops') ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Rest Stops</button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* ── Utilities ── */}
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #243552' }}>
-                <button onClick={() => toggleGroup('utilities')} className="w-full flex items-center justify-between px-3 py-2 transition text-sm font-medium" style={{ background: '#1e3050', color: '#F5F0E8' }}>
-                  <span className="flex items-center gap-2"><Fuel className="w-3.5 h-3.5" /> Utilities</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: '#E8A838' }}>{['gasPrices', 'gasStations', 'restStops'].filter(l => activeLayers.includes(l as MapLayer)).length} on</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expandedGroups.utilities ? 'rotate-180' : ''}`} />
-                  </span>
-                </button>
-                {expandedGroups.utilities && (
-                  <div className="px-3 py-2 flex flex-wrap gap-2">
-                    <button onClick={() => toggleLayer('gasPrices')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasPrices') ? 'bg-green-50 border-green-300 text-green-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Gas Prices</button>
-                    <button onClick={() => toggleLayer('gasStations')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('gasStations') ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Truck Stops</button>
-                    <button onClick={() => toggleLayer('restStops')} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${activeLayers.includes('restStops') ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-[#243552] text-[#8B9BB4] hover:border-[#3d4f6e]'}`}>Rest Stops</button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </>
         );
