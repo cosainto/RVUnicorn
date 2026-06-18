@@ -2518,13 +2518,12 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Trip Intelligence Header — unified FROM/TO search + confidence + driving */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
-        <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} compactMode={true} />
-        {hasFutureTrip && nextEvent?.campground?.id && (
+      {/* CampMarket (kept at top, compact) */}
+      {hasFutureTrip && nextEvent?.campground?.id && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
           <CampMarket campgroundId={nextEvent.campground.id} compact />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Do This Now — context-aware activity suggestions when checked in */}
       {isCamping && activeCheckIn?.campground && (
@@ -3355,6 +3354,9 @@ export default function BasecampPage({ user }: BasecampProps) {
 
           {/* ── SIDEBAR ─────────────────────────────────────────── */}
           <div className="space-y-4">
+
+            {/* ── Trip Intelligence (moved from top → sidebar) ──── */}
+            <TripIntelligenceHeader onStartDrive={() => driveSession.startDrive(nextEvent as any)} compactMode={true} />
 
             {/* ── Last-Minute Deals ────────────────────────────────── */}
             <LastMinuteDeals compact />
