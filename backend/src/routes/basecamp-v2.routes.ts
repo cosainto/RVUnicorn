@@ -1,6 +1,9 @@
 import { Router, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { PrismaClient } from '@prisma/client';
+import '../services/feedSources';  // register all feed sources on startup
+import { getBothFeeds, RawFeedItem } from '../services/feedRegistry';
+import { enrichFeedItems, EnrichmentData } from '../services/feedEnrichment';
 
 const router = Router();
 const prisma = new PrismaClient() as any;
@@ -517,104 +520,65 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
 // FEED TAB ENDPOINTS — Network vs Community feeds + unseen tracking
 // ══════════════════════════════════════════════════════════════════════
 
-// GET /network-feed — posts from friends + followed users only, no system
+// ─── Serialize RawFeedItem → API response shape ───
+function serializeFeedItem(item: RawFeedItem, enrichment?: EnrichmentData) {
+  return {
+    postId: item.entityId,
+    type: item.entityType,
+    sourceKey: item.sourceKey,
+    authorId: item.actorId,
+    authorUsername: item.payload.authorUsername,
+    authorFirstName: item.payload.authorFirstName,
+    authorAvatar: item.payload.authorAvatar || null,
+    preview: item.payload.preview,
+    body: item.payload.body,
+    imageUrl: item.payload.imageUrl || null,
+    tags: item.payload.tags || [],
+    likeCount: item.payload.likeCount || 0,
+    commentCount: item.payload.commentCount || 0,
+    createdAt: item.createdAt,
+    // Source-specific fields
+    campgroundName: item.payload.campgroundName || null,
+    campgroundState: item.payload.campgroundState || null,
+    rigName: item.payload.rigName || null,
+    isActive: item.payload.isActive ?? null,
+    isTrending: item.payload.isTrending || false,
+    isSubscribed: item.payload.isSubscribed || false,
+    // Enrichment (only present when threshold is met)
+    enrichment: enrichment || null,
+  };
+}
+
+// GET /network-feed — people you're friends with, and their activity
 router.get('/network-feed', authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.userId;
+    const { network, ctx } = await getBothFeeds(userId);
+    const enrichments = await enrichFeedItems(network.items, ctx.friendIds);
 
-    // Get friend IDs
-    const friendships = await prisma.friendship.findMany({
-      where: { status: 'ACCEPTED', OR: [{ initiatorId: userId }, { receiverId: userId }] },
-      select: { initiatorId: true, receiverId: true },
-    });
-    const friendIds: string[] = friendships.map((f: any) =>
-      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    const items = network.items.map(item =>
+      serializeFeedItem(item, enrichments.get(item.entityId))
     );
 
-    // Get followed user IDs (from rig follows)
-    const rigFollows = await prisma.rigFollow.findMany({
-      where: { userId },
-      select: { rig: { select: { ownerId: true } } },
-    });
-    const followedUserIds: string[] = rigFollows.map((rf: any) => rf.rig?.ownerId).filter(Boolean);
-
-    const circleIds = [...new Set([...friendIds, ...followedUserIds])];
-    if (circleIds.length === 0) {
-      return res.json({ items: [], newestAt: null });
-    }
-
-    const posts = await prisma.boardPost.findMany({
-      where: {
-        authorId: { in: circleIds },
-        author: { isSystem: false },
-        isCharacterPost: false,
-        isPublic: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      select: {
-        id: true, title: true, body: true, createdAt: true, voteScore: true,
-        postType: true, imageUrl: true, tags: true,
-        author: { select: { id: true, username: true, firstName: true, profilePicture: true } },
-        _count: { select: { comments: true } },
-      },
-    });
-
-    const items = posts.map((p: any) => ({
-      postId: p.id,
-      type: p.postType || 'DISCUSSION',
-      authorId: p.author?.id,
-      authorUsername: p.author?.username,
-      authorFirstName: p.author?.firstName,
-      authorAvatar: p.author?.profilePicture,
-      preview: p.title,
-      body: p.body?.slice(0, 150),
-      imageUrl: p.imageUrl,
-      tags: p.tags || [],
-      likeCount: p.voteScore || 0,
-      commentCount: p._count?.comments || 0,
-      createdAt: p.createdAt,
-    }));
-
-    res.json({ items, newestAt: items[0]?.createdAt || null });
+    res.json({ items, newestAt: network.newestAt });
   } catch (e: any) {
     console.error('[BasecampV2] network-feed error:', e);
     res.json({ items: [], newestAt: null });
   }
 });
 
-// GET /community-feed — all public posts including system, for community tab
+// GET /community-feed — things you follow that aren't a personal friendship
 router.get('/community-feed', authenticateToken, async (req: any, res: Response) => {
   try {
-    const posts = await prisma.boardPost.findMany({
-      where: { isPublic: true },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      select: {
-        id: true, title: true, body: true, createdAt: true, voteScore: true,
-        postType: true, imageUrl: true, tags: true, isCharacterPost: true,
-        author: { select: { id: true, username: true, firstName: true, profilePicture: true, isSystem: true } },
-        _count: { select: { comments: true } },
-      },
-    });
+    const userId = req.userId;
+    const { community, ctx } = await getBothFeeds(userId);
+    const enrichments = await enrichFeedItems(community.items, ctx.friendIds);
 
-    const items = posts.map((p: any) => ({
-      postId: p.id,
-      type: p.postType || 'DISCUSSION',
-      authorUsername: p.author?.username,
-      authorFirstName: p.author?.firstName,
-      authorAvatar: p.author?.profilePicture,
-      isSystem: p.author?.isSystem || p.isCharacterPost || false,
-      preview: p.title,
-      body: p.body?.slice(0, 150),
-      imageUrl: p.imageUrl,
-      tags: p.tags || [],
-      likeCount: p.voteScore || 0,
-      commentCount: p._count?.comments || 0,
-      createdAt: p.createdAt,
-    }));
+    const items = community.items.map(item =>
+      serializeFeedItem(item, enrichments.get(item.entityId))
+    );
 
-    res.json({ items, newestAt: items[0]?.createdAt || null });
+    res.json({ items, newestAt: community.newestAt });
   } catch (e: any) {
     console.error('[BasecampV2] community-feed error:', e);
     res.json({ items: [], newestAt: null });
@@ -625,27 +589,16 @@ router.get('/community-feed', authenticateToken, async (req: any, res: Response)
 router.get('/feed-tab-state', authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.userId;
-    const tabs = await prisma.userFeedTab.findMany({ where: { userId } });
+    const [tabs, { network, community }] = await Promise.all([
+      prisma.userFeedTab.findMany({ where: { userId } }),
+      getBothFeeds(userId),
+    ]);
     const networkSeen = tabs.find((t: any) => t.tab === 'network')?.lastSeenAt || null;
     const communitySeen = tabs.find((t: any) => t.tab === 'community')?.lastSeenAt || null;
 
-    // Get newest timestamps for each feed
-    const [newestNetwork, newestCommunity] = await Promise.all([
-      prisma.boardPost.findFirst({
-        where: { author: { isSystem: false }, isCharacterPost: false, isPublic: true },
-        orderBy: { createdAt: 'desc' },
-        select: { createdAt: true },
-      }),
-      prisma.boardPost.findFirst({
-        where: { isPublic: true },
-        orderBy: { createdAt: 'desc' },
-        select: { createdAt: true },
-      }),
-    ]);
-
     res.json({
-      network: { lastSeenAt: networkSeen, newestAt: newestNetwork?.createdAt || null },
-      community: { lastSeenAt: communitySeen, newestAt: newestCommunity?.createdAt || null },
+      network: { lastSeenAt: networkSeen, newestAt: network.newestAt },
+      community: { lastSeenAt: communitySeen, newestAt: community.newestAt },
     });
   } catch (e: any) {
     res.json({ network: { lastSeenAt: null, newestAt: null }, community: { lastSeenAt: null, newestAt: null } });
