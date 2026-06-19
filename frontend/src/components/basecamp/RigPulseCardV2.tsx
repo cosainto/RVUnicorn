@@ -65,7 +65,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
           <span style={{ fontSize: 18 }}>{data.rigEmoji || '\u{1F690}'}</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>My Rig</span>
         </div>
-        <Link to={rigPageUrl} style={{ fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>View Rig Page &rarr;</Link>
+        <Link to={rigPageUrl} style={{ fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>My Rig &rarr;</Link>
       </div>
 
       {/* Hero image */}
@@ -203,7 +203,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
         {/* CTAs */}
         <div style={{ display: 'flex', gap: 8 }}>
           <Link to="/trips/new" style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 8, background: CN.gold, color: CN.bg, fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>Plan a Trip</Link>
-          <Link to={rigPageUrl} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 8, background: 'transparent', border: `1px solid ${CN.gold}`, color: CN.gold, fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>View Rig Page</Link>
+          <Link to={rigPageUrl} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 8, background: 'transparent', border: `1px solid ${CN.gold}`, color: CN.gold, fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>My Rig</Link>
         </div>
       </div>
     </div>
