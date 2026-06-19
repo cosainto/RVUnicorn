@@ -257,7 +257,7 @@ export default function HouseholdSettingsPage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1 block">Make & Model</label>
-                    <input type="text" placeholder="Coachman Pursuit 31bh" value={rvForm.rvModel}
+                    <input type="text" placeholder="Coachmen Pursuit 31bh" value={rvForm.rvModel}
                       onChange={e => setRvForm(f => ({...f, rvModel: e.target.value}))}
                       className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
                   </div>

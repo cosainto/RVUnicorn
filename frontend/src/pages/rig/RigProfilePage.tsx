@@ -58,6 +58,10 @@ export default function RigProfilePage() {
       .then(r => {
         setRig(r.data);
         setFollowing(!!r.data?.isFollowing);
+        // Track profile visit (fires once per page load, skips own profile)
+        if (r.data?.ownerId && r.data.ownerId !== user?.id) {
+          api.post(`/analytics/profile-visit/${r.data.ownerId}`, { source: 'RIG_PAGE' }).catch(() => {});
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));

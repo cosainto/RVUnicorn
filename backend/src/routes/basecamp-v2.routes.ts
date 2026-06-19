@@ -82,8 +82,16 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
           totalMiles: true, totalNights: true, statesVisited: true, activeTripId: true,
           totalMilesAllTime: true, totalStatesVisited: true, totalCampgroundsAllTime: true,
           totalNightsAllTime: true, followerCount: true, slug: true,
+          // Owner dashboard fields
+          year: true, make: true, model: true, lengthFeet: true, grossWeight: true,
+          fuelType: true, towingCapacity: true, slideoutCount: true,
+          freshWaterGal: true, grayWaterGal: true, blackWaterGal: true,
+          tireSizeFront: true, tireSizeRear: true, tireInstallDate: true,
+          purchaseDate: true, purchasePrice: true, currentOdometer: true,
+          avgMPG: true, coverPhotoUrl: true, galleryPhotoUrls: true,
           pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
           memories: { where: { isPinned: true }, orderBy: { order: 'asc' }, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
+          posts: { orderBy: { createdAt: 'desc' }, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
         },
       })),
       safe(prisma.rigFollow.findMany({
@@ -299,6 +307,32 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         date: m.date,
       })),
       rigClass: userRig?.rigClass || null,
+      coverPhoto: userRig?.coverPhotoUrl || userRig?.heroPhoto || null,
+      recentPhotos: (userRig?.posts || [])
+        .filter((p: any) => p.photos?.length > 0)
+        .flatMap((p: any) => p.photos)
+        .slice(0, 6),
+      // Owner dashboard detail fields
+      ownerDetails: {
+        year: userRig?.year || null,
+        make: userRig?.make || null,
+        model: userRig?.model || null,
+        lengthFeet: userRig?.lengthFeet || null,
+        grossWeight: userRig?.grossWeight || null,
+        fuelType: userRig?.fuelType || null,
+        towingCapacity: userRig?.towingCapacity || null,
+        slideoutCount: userRig?.slideoutCount || null,
+        freshWaterGal: userRig?.freshWaterGal || null,
+        grayWaterGal: userRig?.grayWaterGal || null,
+        blackWaterGal: userRig?.blackWaterGal || null,
+        tireSizeFront: userRig?.tireSizeFront || null,
+        tireSizeRear: userRig?.tireSizeRear || null,
+        tireInstallDate: userRig?.tireInstallDate || null,
+        purchaseDate: userRig?.purchaseDate || null,
+        purchasePrice: userRig?.purchasePrice || null,
+        currentOdometer: userRig?.currentOdometer || null,
+        avgMPG: userRig?.avgMPG || null,
+      },
       maintenance: {
         serviceCount: maintenanceRecords.length,
         totalSpent: maintenanceRecords.reduce((sum: number, r: any) => sum + (r.cost || 0), 0),

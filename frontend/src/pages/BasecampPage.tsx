@@ -3451,7 +3451,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 text-sm truncate">{rvInfo.rvYear} {rvInfo.rvMake} {rvInfo.rvModel}</p>
-                      {rvInfo.rvType && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{rvInfo.rvType?.replace('_', ' ')}</span>}
+                      {rvInfo.rvType && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{rvInfo.rvType?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>}
                     </div>
                   </div>
                   {maintenanceStats && (
