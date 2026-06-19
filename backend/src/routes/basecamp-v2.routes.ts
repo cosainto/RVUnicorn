@@ -68,32 +68,48 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
     // ─── Parallel data fetches (each wrapped in catch for resilience) ───
     const safe = (p: Promise<any>, fallback: any = null) => p.catch((e: any) => { console.error('[BasecampV2] query failed:', e.message); return fallback; });
 
+    // Rig select shape — reused for owned + co-pilot queries
+    const rigSelect = {
+      id: true, rigName: true, rigEmoji: true, heroPhoto: true, rigClass: true,
+      totalMiles: true, totalNights: true, statesVisited: true, activeTripId: true,
+      totalMilesAllTime: true, totalStatesVisited: true, totalCampgroundsAllTime: true,
+      totalNightsAllTime: true, followerCount: true, slug: true,
+      // Owner dashboard fields
+      year: true, make: true, model: true, lengthFeet: true, grossWeight: true,
+      fuelType: true, towingCapacity: true, slideoutCount: true,
+      freshWaterGal: true, grayWaterGal: true, blackWaterGal: true,
+      tireSizeFront: true, tireSizeRear: true, tireInstallDate: true,
+      purchaseDate: true, purchasePrice: true, currentOdometer: true,
+      avgMPG: true, coverPhotoUrl: true, galleryPhotoUrls: true,
+      pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
+      memories: { where: { isPinned: true }, orderBy: { order: 'asc' } as any, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
+      posts: { orderBy: { createdAt: 'desc' } as any, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
+    };
+
     const [
-      userRig,
+      ownedRigs,
+      coPilotRigs,
+      coPilotRigs2,
       followedRigIds,
       followedUserIds,
       activeCheckIn,
       userWithPrefs,
     ] = await Promise.all([
-      safe(prisma.rig.findFirst({
+      // All rigs the user owns (may include stubs)
+      safe(prisma.rig.findMany({
         where: { ownerId: userId },
-        select: {
-          id: true, rigName: true, rigEmoji: true, heroPhoto: true, rigClass: true,
-          totalMiles: true, totalNights: true, statesVisited: true, activeTripId: true,
-          totalMilesAllTime: true, totalStatesVisited: true, totalCampgroundsAllTime: true,
-          totalNightsAllTime: true, followerCount: true, slug: true,
-          // Owner dashboard fields
-          year: true, make: true, model: true, lengthFeet: true, grossWeight: true,
-          fuelType: true, towingCapacity: true, slideoutCount: true,
-          freshWaterGal: true, grayWaterGal: true, blackWaterGal: true,
-          tireSizeFront: true, tireSizeRear: true, tireInstallDate: true,
-          purchaseDate: true, purchasePrice: true, currentOdometer: true,
-          avgMPG: true, coverPhotoUrl: true, galleryPhotoUrls: true,
-          pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
-          memories: { where: { isPinned: true }, orderBy: { order: 'asc' }, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
-          posts: { orderBy: { createdAt: 'desc' }, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
-        },
-      })),
+        select: rigSelect,
+      }), []),
+      // Rigs via RigPilot (co-pilot)
+      safe(prisma.rigPilot.findMany({
+        where: { userId },
+        select: { rig: { select: rigSelect } },
+      }), []),
+      // Rigs via RigCoPilot
+      safe(prisma.rigCoPilot.findMany({
+        where: { userId },
+        select: { rig: { select: rigSelect } },
+      }), []),
       safe(prisma.rigFollow.findMany({
         where: { userId },
         select: { rigId: true, rig: { select: { id: true, ownerId: true, rigName: true, rigEmoji: true, slug: true, heroPhoto: true, owner: { select: { id: true, username: true, profilePicture: true } } } } },
@@ -120,6 +136,31 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         },
       })),
     ]);
+
+    // ─── Resolve the user's canonical rig (owned OR co-pilot) ───
+    // Gather all candidate rigs, de-dup by id, pick the best one (most content).
+    const candidateRigs: any[] = [
+      ...ownedRigs,
+      ...coPilotRigs.map((cp: any) => cp.rig),
+      ...coPilotRigs2.map((cp: any) => cp.rig),
+    ];
+    const candidateRigMap = new Map<string, any>();
+    for (const r of candidateRigs) {
+      if (r?.id && !candidateRigMap.has(r.id)) candidateRigMap.set(r.id, r);
+    }
+    const uniqueRigs = Array.from(candidateRigMap.values());
+    // Score: prefer rigs with a name, cover photo, followers, and content
+    function rigScore(r: any): number {
+      let s = 0;
+      if (r.rigName) s += 100;
+      if (r.heroPhoto || r.coverPhotoUrl) s += 50;
+      if (r.followerCount) s += r.followerCount;
+      if (r.totalMilesAllTime) s += 10;
+      if (r.posts?.length) s += r.posts.length * 5;
+      return s;
+    }
+    uniqueRigs.sort((a, b) => rigScore(b) - rigScore(a));
+    const userRig = uniqueRigs[0] || null;
 
     const rigId = userRig?.id;
     const followedRigs = followedRigIds.map((f: any) => f.rig);
@@ -298,7 +339,8 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       totalStatesVisited: userRig?.totalStatesVisited?.length || 0,
       totalCampgroundsAllTime: userRig?.totalCampgroundsAllTime || 0,
       followerCount: userRig?.followerCount || 0,
-      rigName: userRig?.rigName || (userWithPrefs?.rvMake && userWithPrefs?.rvModel ? `${userWithPrefs.rvYear || ''} ${userWithPrefs.rvMake} ${userWithPrefs.rvModel}`.trim() : 'My Rig'),
+      rigName: userRig?.rigName || null,
+      rigSpec: [userRig?.year, userRig?.make || userWithPrefs?.rvMake, userRig?.model || userWithPrefs?.rvModel].filter(Boolean).join(' ') || null,
       rigEmoji: userRig?.rigEmoji || '',
       rigPhoto: userRig?.heroPhoto || null,
       rigSlug: userRig?.slug || null,

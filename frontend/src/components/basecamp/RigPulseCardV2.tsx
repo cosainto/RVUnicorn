@@ -60,7 +60,8 @@ interface RigPulseData {
   totalStatesVisited?: number;
   totalCampgroundsAllTime?: number;
   followerCount?: number;
-  rigName: string;
+  rigName: string | null;
+  rigSpec: string | null;
   rigEmoji: string;
   rigPhoto: string | null;
   rigSlug: string | null;
@@ -139,7 +140,9 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
   const maint = data.maintenance;
   const od = data.ownerDetails;
   const coverImg = data.coverPhoto || data.rigPhoto;
-  const hasNoRig = !data.rigName || data.rigName === 'My Rig';
+  // User truly has no rig when there's no slug (no rig record found at all)
+  const hasNoRig = !data.rigSlug;
+  const displayTitle = data.rigName || data.rigSpec || 'My Rig';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -150,23 +153,30 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
           ════════════════════════════════════════════════════════════════ */}
       <div style={{ background: CN.card, borderRadius: 16, overflow: 'hidden' }}>
 
-        {/* Header — rig name as title */}
+        {/* Header — rig name as title, spec as subtitle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${CN.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 18 }}>{data.rigEmoji || '\u{1F690}'}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>
-              {hasNoRig ? 'Set Up Your Rig' : data.rigName}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{data.rigEmoji || '\u{1F690}'}</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {hasNoRig ? 'Set Up Your Rig' : displayTitle}
+              </p>
+              {!hasNoRig && data.rigName && data.rigSpec && (
+                <p style={{ fontSize: 10, color: CN.muted, margin: 0 }}>{data.rigSpec}</p>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Link to={editUrl} style={{ fontSize: 10, color: CN.muted, textDecoration: 'none', fontWeight: 600 }}>Edit</Link>
-            <Link to={rigPageUrl} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>View &rarr;</Link>
-          </div>
+          {!hasNoRig && (
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <Link to={editUrl} style={{ fontSize: 10, color: CN.muted, textDecoration: 'none', fontWeight: 600 }}>Edit</Link>
+              <Link to={rigPageUrl} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>View &rarr;</Link>
+            </div>
+          )}
         </div>
 
         {/* Cover photo */}
         {coverImg ? (
-          <img src={coverImg} alt={data.rigName} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+          <img src={coverImg} alt={displayTitle} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
         ) : (
           <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: CN.cardAlt }}>
             <div style={{ textAlign: 'center' }}>
@@ -261,12 +271,12 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
             </div>
           )}
 
-          {/* Empty state for brand-new rig */}
-          {!hasStats && !data.hasActiveTrip && data.newFollowers?.length === 0 && !data.recentPhotos?.length && (
+          {/* Empty state — ONLY when user truly has no rig record */}
+          {hasNoRig && (
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <p style={{ fontSize: 12, color: CN.cream, fontWeight: 600, marginBottom: 4 }}>Your rig's story starts here</p>
-              <p style={{ fontSize: 11, color: CN.muted, marginBottom: 8 }}>Add photos, log trips, and build your journey — followers and stats will grow as you go.</p>
-              <Link to={editUrl} style={{ fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>Set up your rig profile &rarr;</Link>
+              <p style={{ fontSize: 11, color: CN.muted, marginBottom: 8 }}>Set up your rig profile to track trips, share photos, and connect with other RVers.</p>
+              <Link to="/my-rv" style={{ fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>Set up your rig profile &rarr;</Link>
             </div>
           )}
         </div>
