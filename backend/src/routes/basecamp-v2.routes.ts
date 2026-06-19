@@ -537,10 +537,14 @@ function serializeFeedItem(item: RawFeedItem, enrichment?: EnrichmentData) {
     likeCount: item.payload.likeCount || 0,
     commentCount: item.payload.commentCount || 0,
     createdAt: item.createdAt,
-    // Source-specific fields
+    // Source-specific fields for link resolution
+    campgroundId: item.payload.campgroundId || null,
     campgroundName: item.payload.campgroundName || null,
     campgroundState: item.payload.campgroundState || null,
+    rigId: item.payload.rigId || null,
+    rigSlug: item.payload.rigSlug || null,
     rigName: item.payload.rigName || null,
+    tripKitId: item.payload.tripKitId || null,
     isActive: item.payload.isActive ?? null,
     isTrending: item.payload.isTrending || false,
     isSubscribed: item.payload.isSubscribed || false,

@@ -39,9 +39,13 @@ interface FeedItem {
   likeCount: number;
   commentCount: number;
   createdAt: string;
+  campgroundId?: string | null;
   campgroundName?: string | null;
   campgroundState?: string | null;
+  rigId?: string | null;
+  rigSlug?: string | null;
   rigName?: string | null;
+  tripKitId?: string | null;
   isActive?: boolean | null;
   isTrending?: boolean;
   isSubscribed?: boolean;
@@ -320,17 +324,42 @@ function sourceLabel(item: FeedItem): string | null {
   return labels[item.type] || null;
 }
 
+// ── Resolve the best link target per item type ──
+function resolveLink(item: FeedItem): string {
+  switch (item.type) {
+    case 'checkin':
+    case 'wishlist-add':
+    case 'campground-post':
+    case 'campground-announcement':
+      return item.campgroundId ? `/campgrounds/${item.campgroundId}` : '/community';
+    case 'rig-post':
+    case 'rig-mod':
+      return item.rigSlug ? `/rig/${item.rigSlug}` : '/community';
+    case 'tripkit':
+      return item.tripKitId ? `/creator/trip-kits/${item.tripKitId}/edit` : '/community';
+    case 'thread':
+      return '/community';
+    case 'board-post':
+      return '/community';
+    case 'activity':
+      return '/community';
+    default:
+      return '/community';
+  }
+}
+
 // ── Differentiated feed card ──
 function FeedCard({ item }: { item: FeedItem }) {
   const hasImage = !!item.imageUrl;
   const hasEnrichment = !!item.enrichment;
   const isEnrichedCard = hasImage || hasEnrichment;
   const label = sourceLabel(item);
+  const href = resolveLink(item);
 
   // Enriched / rich card (has image or enrichment data)
   if (isEnrichedCard) {
     return (
-      <Link to="/community" className="block rounded-xl overflow-hidden transition hover:brightness-110" style={{ background: CN.cardAlt }}>
+      <Link to={href} className="block rounded-xl overflow-hidden transition hover:brightness-110" style={{ background: CN.cardAlt }}>
         {hasImage && (
           <div className="relative">
             <img src={item.imageUrl!} alt="" className="w-full h-28 object-cover" />
@@ -381,7 +410,7 @@ function FeedCard({ item }: { item: FeedItem }) {
 
   // Plain compact row (no image, no enrichment)
   return (
-    <Link to="/community" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
+    <Link to={href} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
       <div className="flex-shrink-0">
         <Avatar src={item.authorAvatar} name={item.authorFirstName || item.authorUsername} />
       </div>

@@ -34,7 +34,7 @@ const source: FeedSource = {
           postType: true,
           createdAt: true,
           author: { select: { id: true, username: true, firstName: true, profilePicture: true } },
-          rig: { select: { id: true, rigName: true, heroPhoto: true } },
+          rig: { select: { id: true, slug: true, rigName: true, heroPhoto: true } },
         },
       }),
       prisma.rigMod.findMany({
@@ -55,7 +55,7 @@ const source: FeedSource = {
           likes: true,
           createdAt: true,
           user: { select: { id: true, username: true, firstName: true, profilePicture: true } },
-          rig: { select: { id: true, rigName: true, heroPhoto: true } },
+          rig: { select: { id: true, slug: true, rigName: true, heroPhoto: true } },
         },
       }),
     ]);
@@ -74,6 +74,7 @@ const source: FeedSource = {
         authorFirstName: p.author?.firstName,
         authorAvatar: p.author?.profilePicture || null,
         rigId: p.rigId,
+        rigSlug: p.rig?.slug,
         rigName: p.rig?.rigName,
         postType: p.postType,
       },
@@ -93,6 +94,7 @@ const source: FeedSource = {
         authorFirstName: m.user?.firstName,
         authorAvatar: m.user?.profilePicture || null,
         rigId: m.rigId,
+        rigSlug: m.rig?.slug,
         rigName: m.rig?.rigName,
         likeCount: m.likes || 0,
         modCategory: m.category,
