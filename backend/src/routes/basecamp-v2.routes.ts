@@ -110,7 +110,14 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       })),
       safe(prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, firstName: true, homeLatitude: true, homeLongitude: true, hasPets: true, rvType: true },
+        select: {
+          id: true, firstName: true, homeLatitude: true, homeLongitude: true, hasPets: true, rvType: true,
+          // Fallback RV fields from signup (used when Rig fields are empty)
+          rvMake: true, rvModel: true, rvYear: true, rvLength: true, rvWeight: true,
+          rvFuelType: true, rvSlideouts: true, rvMpg: true, rvGvwr: true, rvOdometer: true,
+          rvFreshWaterGal: true, rvGreyWaterGal: true, rvBlackWaterGal: true,
+          rvSolarWatts: true, rvGeneratorWatts: true,
+        },
       })),
     ]);
 
@@ -291,7 +298,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       totalStatesVisited: userRig?.totalStatesVisited?.length || 0,
       totalCampgroundsAllTime: userRig?.totalCampgroundsAllTime || 0,
       followerCount: userRig?.followerCount || 0,
-      rigName: userRig?.rigName || 'My Rig',
+      rigName: userRig?.rigName || (userWithPrefs?.rvMake && userWithPrefs?.rvModel ? `${userWithPrefs.rvYear || ''} ${userWithPrefs.rvMake} ${userWithPrefs.rvModel}`.trim() : 'My Rig'),
       rigEmoji: userRig?.rigEmoji || '',
       rigPhoto: userRig?.heroPhoto || null,
       rigSlug: userRig?.slug || null,
@@ -306,32 +313,34 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         photoUrl: m.photoUrls?.[0] || null,
         date: m.date,
       })),
-      rigClass: userRig?.rigClass || null,
+      rigClass: userRig?.rigClass || userWithPrefs?.rvType || null,
       coverPhoto: userRig?.coverPhotoUrl || userRig?.heroPhoto || null,
       recentPhotos: (userRig?.posts || [])
         .filter((p: any) => p.photos?.length > 0)
         .flatMap((p: any) => p.photos)
         .slice(0, 6),
-      // Owner dashboard detail fields
+      // Owner dashboard detail fields (Rig fields with User signup fallbacks)
       ownerDetails: {
-        year: userRig?.year || null,
-        make: userRig?.make || null,
-        model: userRig?.model || null,
-        lengthFeet: userRig?.lengthFeet || null,
-        grossWeight: userRig?.grossWeight || null,
-        fuelType: userRig?.fuelType || null,
+        year: userRig?.year || userWithPrefs?.rvYear || null,
+        make: userRig?.make || userWithPrefs?.rvMake || null,
+        model: userRig?.model || userWithPrefs?.rvModel || null,
+        lengthFeet: userRig?.lengthFeet || (userWithPrefs?.rvLength ? Number(userWithPrefs.rvLength) : null),
+        grossWeight: userRig?.grossWeight || userWithPrefs?.rvGvwr || userWithPrefs?.rvWeight || null,
+        fuelType: userRig?.fuelType || userWithPrefs?.rvFuelType || null,
         towingCapacity: userRig?.towingCapacity || null,
-        slideoutCount: userRig?.slideoutCount || null,
-        freshWaterGal: userRig?.freshWaterGal || null,
-        grayWaterGal: userRig?.grayWaterGal || null,
-        blackWaterGal: userRig?.blackWaterGal || null,
+        slideoutCount: userRig?.slideoutCount || userWithPrefs?.rvSlideouts || null,
+        freshWaterGal: userRig?.freshWaterGal || (userWithPrefs?.rvFreshWaterGal ? Math.round(userWithPrefs.rvFreshWaterGal) : null),
+        grayWaterGal: userRig?.grayWaterGal || (userWithPrefs?.rvGreyWaterGal ? Math.round(userWithPrefs.rvGreyWaterGal) : null),
+        blackWaterGal: userRig?.blackWaterGal || (userWithPrefs?.rvBlackWaterGal ? Math.round(userWithPrefs.rvBlackWaterGal) : null),
         tireSizeFront: userRig?.tireSizeFront || null,
         tireSizeRear: userRig?.tireSizeRear || null,
         tireInstallDate: userRig?.tireInstallDate || null,
         purchaseDate: userRig?.purchaseDate || null,
         purchasePrice: userRig?.purchasePrice || null,
-        currentOdometer: userRig?.currentOdometer || null,
-        avgMPG: userRig?.avgMPG || null,
+        currentOdometer: userRig?.currentOdometer || userWithPrefs?.rvOdometer || null,
+        avgMPG: userRig?.avgMPG || userWithPrefs?.rvMpg || null,
+        solarWatts: userWithPrefs?.rvSolarWatts || null,
+        generatorWatts: userWithPrefs?.rvGeneratorWatts || null,
       },
       maintenance: {
         serviceCount: maintenanceRecords.length,

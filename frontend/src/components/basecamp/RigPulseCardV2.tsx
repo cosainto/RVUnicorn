@@ -42,6 +42,8 @@ interface OwnerDetails {
   purchasePrice: number | null;
   currentOdometer: number | null;
   avgMPG: number | null;
+  solarWatts: number | null;
+  generatorWatts: number | null;
 }
 
 interface RigPulseData {
@@ -292,10 +294,12 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
             <DetailRow label="Fuel Type" value={od?.fuelType ? humanizeFuel(od.fuelType) : null} editUrl={editUrl} />
             <DetailRow label="Towing Capacity" value={od?.towingCapacity ? `${od.towingCapacity.toLocaleString()} lbs` : null} editUrl={editUrl} />
             <DetailRow label="Slideouts" value={od?.slideoutCount} editUrl={editUrl} />
+            <DetailRow label="Solar" value={od?.solarWatts ? `${od.solarWatts}W` : null} editUrl={editUrl} />
+            <DetailRow label="Generator" value={od?.generatorWatts ? `${od.generatorWatts}W` : null} editUrl={editUrl} />
           </div>
 
           {/* Tanks & Tires */}
-          {(od?.freshWaterGal || od?.grayWaterGal || od?.blackWaterGal || od?.tireSizeFront) && (
+          {(od?.freshWaterGal || od?.grayWaterGal || od?.blackWaterGal || od?.tireSizeFront || od?.tireSizeRear) && (
             <div style={{ marginBottom: 14 }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Tanks & Tires</p>
               <DetailRow label="Fresh Water" value={od?.freshWaterGal ? `${od.freshWaterGal} gal` : null} editUrl={editUrl} />
