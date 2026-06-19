@@ -123,6 +123,8 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       recipes,
       followedRigRecipes,
       communityFeed,
+      maintenanceRecords,
+      maintenanceReminders,
     ] = await Promise.all([
       safe(rigId && userRig?.activeTripId
         ? prisma.rigTrip.findUnique({
@@ -216,6 +218,17 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
           _count: { select: { comments: true } },
         },
       }), []),
+      // Maintenance records + reminders for rig health
+      safe(prisma.maintenanceRecord.findMany({
+        where: { userId },
+        orderBy: { serviceDate: 'desc' },
+        take: 50,
+        select: { id: true, cost: true, serviceDate: true, status: true },
+      }), []),
+      safe(prisma.maintenanceReminder.findMany({
+        where: { userId, isActive: true },
+        select: { id: true, title: true, nextDueDate: true, nextDueMileage: true, category: true },
+      }), []),
     ]);
 
     // ─── Build rig lookup map ───
@@ -282,6 +295,15 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         photoUrl: m.photoUrls?.[0] || null,
         date: m.date,
       })),
+      rigClass: userRig?.rigClass || null,
+      maintenance: {
+        serviceCount: maintenanceRecords.length,
+        totalSpent: maintenanceRecords.reduce((sum: number, r: any) => sum + (r.cost || 0), 0),
+        overdueCount: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) < new Date()).length,
+        upcomingCount: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) >= new Date()).length,
+        overdue: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) < new Date()).slice(0, 2).map((r: any) => ({ id: r.id, title: r.title, category: r.category })),
+        upcoming: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) >= new Date()).slice(0, 2).map((r: any) => ({ id: r.id, title: r.title, category: r.category, dueDate: r.nextDueDate })),
+      },
     };
 
     // ─── Build rvCircle ───
