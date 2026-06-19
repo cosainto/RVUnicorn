@@ -2572,8 +2572,8 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* Inspirational Quote — hidden when Lifestyle Mode is active */}
-      {!isDefaultMode && isPlanning && !nextEvent && (
+      {/* Inspirational Quote — disabled, replaced by LifestyleModeBasecamp */}
+      {false && !isDefaultMode && isPlanning && !nextEvent && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -2836,9 +2836,9 @@ export default function BasecampPage({ user }: BasecampProps) {
       )}
       {/* ── END TRIP PLANNING MODE PANEL ──────────────────────────── */}
 
-      {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
-      
-      {isPlanning && !isDefaultMode && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* ── TRIP PLANNING MODE PANEL — disabled, replaced by LifestyleModeBasecamp ── */}
+
+      {false && isPlanning && !isDefaultMode && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User Status - Collapsed Composer */}
         {userProfile && (
           <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
