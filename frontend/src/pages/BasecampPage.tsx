@@ -2532,14 +2532,15 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* ═══ STATE C: LIFESTYLE MODE ═══ */}
-      {/* When user has no active check-in and no upcoming trip, render the full Lifestyle Mode feed */}
-      {isDefaultMode && (
+      {/* ═══ STATE C: LIFESTYLE MODE (default + planning) ═══ */}
+      {/* Render the redesigned Lifestyle Mode for both default and planning states (not camping) */}
+      {!isCamping && (
         <LifestyleModeBasecamp user={user} />
       )}
 
       {/* Legacy: New User Welcome Checklist — hidden when Lifestyle Mode is active */}
-      {!isDefaultMode && isPlanning && !nextEvent && plannedTrips.length === 0 && (
+      {/* Legacy planning-mode content — hidden, replaced by LifestyleModeBasecamp */}
+      {false && !isDefaultMode && isPlanning && !nextEvent && plannedTrips.length === 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-1">Welcome to RVUnicorn!</h3>
