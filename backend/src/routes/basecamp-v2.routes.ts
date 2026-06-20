@@ -84,6 +84,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
       memories: { where: { isPinned: true }, orderBy: { order: 'asc' } as any, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
       posts: { orderBy: { createdAt: 'desc' } as any, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
+      _count: { select: { posts: true, followers: true } },
     };
 
     const [
@@ -338,7 +339,8 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       totalNightsAllTime: userRig?.totalNightsAllTime || 0,
       totalStatesVisited: userRig?.totalStatesVisited?.length || 0,
       totalCampgroundsAllTime: userRig?.totalCampgroundsAllTime || 0,
-      followerCount: userRig?.followerCount || 0,
+      followerCount: userRig?.followerCount || userRig?._count?.followers || 0,
+      postCount: userRig?._count?.posts || 0,
       rigName: userRig?.rigName || null,
       rigSpec: [userRig?.year, userRig?.make || userWithPrefs?.rvMake, userRig?.model || userWithPrefs?.rvModel].filter(Boolean).join(' ') || null,
       rigEmoji: userRig?.rigEmoji || '',

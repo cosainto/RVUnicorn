@@ -46,12 +46,13 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
     ]);
 
     // Fetch co-pilots (travel partners on the same rig — NOT friends)
+    const { resolveUserRigId } = require('../services/rigResolver');
     let coPilotNames: string[] = [];
     try {
-      const userRigs = await prisma.rig.findMany({ where: { ownerId: userId }, select: { id: true } });
-      if (userRigs.length > 0) {
+      const userRig = await resolveUserRigId(userId);
+      if (userRig) {
         const pilots = await prisma.rigPilot.findMany({
-          where: { rigId: { in: userRigs.map((r: any) => r.id) }, userId: { not: userId } },
+          where: { rigId: userRig.id, userId: { not: userId } },
           include: { user: { select: { firstName: true, id: true } } },
         });
         coPilotNames = pilots.map((p: any) => p.user.firstName).filter(Boolean);
@@ -61,10 +62,10 @@ router.post('/daily-briefing', authenticateToken, async (req: any, res: Response
     // Fetch friend activity (EXCLUDING co-pilots)
     const coPilotUserIds = new Set<string>();
     try {
-      const userRigs = await prisma.rig.findMany({ where: { ownerId: userId }, select: { id: true } });
-      if (userRigs.length > 0) {
+      const userRig = await resolveUserRigId(userId);
+      if (userRig) {
         const pilots = await prisma.rigPilot.findMany({
-          where: { rigId: { in: userRigs.map((r: any) => r.id) } },
+          where: { rigId: userRig.id },
           select: { userId: true },
         });
         pilots.forEach((p: any) => coPilotUserIds.add(p.userId));

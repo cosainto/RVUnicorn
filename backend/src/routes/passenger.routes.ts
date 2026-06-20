@@ -398,7 +398,8 @@ router.post('/trip-recap/:tripId', authenticateToken, async (req: any, res: Resp
     if (ANTHROPIC_API_KEY && stops.length > 0) {
       try {
         const trip = await prisma.event.findUnique({ where: { id: tripId }, select: { title: true, campground: { select: { name: true } } } });
-        const rig = await prisma.rig.findFirst({ where: { ownerId: req.userId }, select: { rigName: true } });
+        const { resolveUserRig } = require('../services/rigResolver');
+        const rig = await resolveUserRig(req.userId, { rigName: true, id: true, slug: true, heroPhoto: true, coverPhotoUrl: true, followerCount: true, totalMilesAllTime: true });
         const statesCrossed = [...new Set(stops.filter((s: any) => s.stopType === 'BORDER_CROSS').map((s: any) => s.name))];
         const context = `Rig: ${rig?.rigName || 'their rig'}. Trip: ${trip?.title || 'road trip'} to ${trip?.campground?.name || 'destination'}. ${stops.length} stops logged. ${fuelStops} fuel stops. ${statesCrossed.length > 0 ? 'States crossed: ' + statesCrossed.join(', ') + '.' : ''} Total fuel: $${totalFuelCost.toFixed(0)}.`;
 

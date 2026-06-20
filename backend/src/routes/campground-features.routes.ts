@@ -1114,11 +1114,9 @@ router.get('/:campgroundId/social-recommendations', authenticateToken, async (re
       }));
     }
 
-    // Get current user's rig for similarity matching
-    const userRig = await prisma.rig.findFirst({
-      where: { ownerId: userId },
-      select: { id: true, rigClass: true, make: true, lengthFeet: true, vibeTags: true },
-    });
+    // Get current user's canonical rig for similarity matching
+    const { resolveUserRig } = require('../services/rigResolver');
+    const userRig = await resolveUserRig(userId, { id: true, slug: true, rigName: true, heroPhoto: true, coverPhotoUrl: true, followerCount: true, totalMilesAllTime: true, rigClass: true, make: true, lengthFeet: true, vibeTags: true });
 
     // Rig similarity matching
     let rigSimilarRecommendations: any[] = [];

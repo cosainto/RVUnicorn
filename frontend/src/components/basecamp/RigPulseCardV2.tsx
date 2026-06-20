@@ -60,6 +60,7 @@ interface RigPulseData {
   totalStatesVisited?: number;
   totalCampgroundsAllTime?: number;
   followerCount?: number;
+  postCount?: number;
   rigName: string | null;
   rigSpec: string | null;
   rigEmoji: string;
@@ -135,7 +136,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
 
   const rigPageUrl = data.rigSlug ? `/rig/${data.rigSlug}` : '/my-rv';
   const editUrl = data.rigSlug ? `/rig/${data.rigSlug}/edit` : '/my-rv';
-  const hasStats = data.totalMilesAllTime > 0 || (data.totalStatesVisited ?? 0) > 0 || (data.totalCampgroundsAllTime ?? 0) > 0;
+  const hasStats = data.totalMilesAllTime > 0 || (data.totalStatesVisited ?? 0) > 0 || (data.totalCampgroundsAllTime ?? 0) > 0 || (data.postCount ?? 0) > 0;
   const [rigInfoOpen, setRigInfoOpen] = useState(false);
   const maint = data.maintenance;
   const od = data.ownerDetails;
@@ -238,6 +239,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
               {(data.totalStatesVisited ?? 0) > 0 && <><div style={{ width: 1, background: CN.border, margin: '4px 4px' }} /><div style={{ flex: 1, textAlign: 'center' }}><p style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>{data.totalStatesVisited}</p><p style={{ fontSize: 9, color: CN.muted, textTransform: 'uppercase' }}>States</p></div></>}
               {(data.totalNightsAllTime ?? 0) > 0 && <><div style={{ width: 1, background: CN.border, margin: '4px 4px' }} /><div style={{ flex: 1, textAlign: 'center' }}><p style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>{data.totalNightsAllTime}</p><p style={{ fontSize: 9, color: CN.muted, textTransform: 'uppercase' }}>Nights</p></div></>}
               {(data.totalCampgroundsAllTime ?? 0) > 0 && <><div style={{ width: 1, background: CN.border, margin: '4px 4px' }} /><div style={{ flex: 1, textAlign: 'center' }}><p style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>{data.totalCampgroundsAllTime}</p><p style={{ fontSize: 9, color: CN.muted, textTransform: 'uppercase' }}>Camps</p></div></>}
+              {(data.postCount ?? 0) > 0 && <><div style={{ width: 1, background: CN.border, margin: '4px 4px' }} /><div style={{ flex: 1, textAlign: 'center' }}><p style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>{data.postCount}</p><p style={{ fontSize: 9, color: CN.muted, textTransform: 'uppercase' }}>Posts</p></div></>}
             </div>
           )}
 

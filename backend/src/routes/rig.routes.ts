@@ -24,8 +24,9 @@ const safeUserSelect = {
  * Used by notification code to avoid duplicate notifications.
  */
 async function getFollowersForUser(userId: string): Promise<string[]> {
-  // Find user's rig
-  const rig = await prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true } });
+  // Find user's canonical rig (owned or co-pilot)
+  const { resolveUserRigId } = require('../services/rigResolver');
+  const rig = await resolveUserRigId(userId);
 
   if (rig) {
     const rigFollows = await prisma.rigFollow.findMany({
@@ -105,6 +106,18 @@ async function isOwner(rigId: string, userId: string): Promise<boolean> {
 router.post('/migrate-from-user', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
+
+    // Guard: don't create a duplicate if the user already has a rig (owned or co-pilot)
+    const [existingOwned, existingPilot, existingCoPilot] = await Promise.all([
+      prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true, slug: true } }),
+      prisma.rigPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true } } } }),
+      prisma.rigCoPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true } } } }),
+    ]);
+    const existingRig = existingOwned || existingPilot?.rig || existingCoPilot?.rig;
+    if (existingRig) {
+      return res.json({ ...existingRig, alreadyExists: true });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1301,12 +1314,10 @@ router.post('/admin/migrate-follows', authenticateToken, async (req: Request, re
     let migrated = 0;
     let skipped = 0;
 
+    const { resolveUserRigId } = require('../services/rigResolver');
     for (const cf of creatorFollows) {
-      // Find the rig owned by the creator being followed
-      const rig = await prisma.rig.findFirst({
-        where: { ownerId: cf.creatorId },
-        select: { id: true },
-      });
+      // Find the canonical rig for the creator being followed
+      const rig = await resolveUserRigId(cf.creatorId);
 
       if (!rig) {
         skipped++;

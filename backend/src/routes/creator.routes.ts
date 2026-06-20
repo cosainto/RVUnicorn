@@ -793,11 +793,9 @@ router.post('/follow/:creatorId', authenticateToken, async (req, res) => {
       },
     });
 
-    // Find creator's rig for sync
-    const creatorRig = await prisma.rig.findFirst({
-      where: { ownerId: creatorId },
-      select: { id: true },
-    });
+    // Find creator's canonical rig for sync
+    const { resolveUserRigId } = require('../services/rigResolver');
+    const creatorRig = await resolveUserRigId(creatorId);
 
     if (existing) {
       await prisma.creatorFollow.delete({ where: { id: existing.id } });
