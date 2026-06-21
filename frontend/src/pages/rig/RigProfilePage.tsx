@@ -363,7 +363,7 @@ export default function RigProfilePage() {
               <StatPill icon="🌙" value={rig.totalNightsCamped || 0} label="Nights" href={`/rig/${slug}/trips`} />
               <StatPill icon="🗺️" value={rig.totalTripCount || 0} label="Trips" href={`/rig/${slug}/trips`} />
               <StatPill icon="🏕️" value={rig.totalStatesCount || 0} label="States" />
-              <StatPill icon="🛣️" value={rig.totalMilesDriven ? `${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0'} label="Miles" href={`/rig/${slug}/stats`} />
+              <StatPill icon="🛣️" value={rig.totalMilesDriven ? `${rig.milesEstimated !== false ? '~' : ''}${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0'} label={rig.milesEstimated !== false && rig.totalMilesDriven ? 'Est. Miles' : 'Miles'} href={`/rig/${slug}/stats`} />
             </div>
           </div>
         </div>

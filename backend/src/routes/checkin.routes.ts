@@ -373,7 +373,7 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
 
     res.json({ success: true });
 
-    // Roll up rig stats after checkout (non-blocking)
+    // Roll up rig stats + mileage after checkout (non-blocking)
     setImmediate(async () => {
       try {
         const { resolveUserRigId } = require('../services/rigResolver');
@@ -381,8 +381,10 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
         if (rig) {
           const { rollupRigStats } = require('../services/rigStatsRollup');
           await rollupRigStats(rig.id);
+          const { rollupRigMileage } = require('../services/rigMileage');
+          await rollupRigMileage(rig.id);
         }
-      } catch (e: any) { console.error('[CheckOut] rig stats rollup error:', e.message); }
+      } catch (e: any) { console.error('[CheckOut] rig rollup error:', e.message); }
     });
 
     // Notify emergency contacts of checkout via SMS (non-blocking)

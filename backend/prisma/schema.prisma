@@ -6323,6 +6323,9 @@ model Rig {
   totalTripCount    Int?      @default(0)
   totalStatesCount  Int?      @default(0)
   avgMPG            Float?
+  milesBaseline     Float?    @default(0)
+  milesBaselineAt   DateTime?
+  milesEstimated    Boolean   @default(true)
   solarWatts        Int?
   generatorWatts    Int?
   specs             Json?
@@ -8006,3 +8009,17 @@ model EmailSendLog {
   @@index([userId])
   @@index([emailType, periodKey])
 }
+
+model RigLegCache {
+  id              String   @id @default(cuid())
+  campgroundAId   String
+  campgroundBId   String
+  distanceMiles   Float
+  durationMinutes Int?
+  computedAt      DateTime @default(now())
+
+  @@unique([campgroundAId, campgroundBId])
+  @@index([campgroundAId])
+  @@index([campgroundBId])
+}
+

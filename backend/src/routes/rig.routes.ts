@@ -705,6 +705,52 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
   }
 });
 
+// ============== MILEAGE ==============
+
+// POST /:slug/mileage/sync — recompute mileage from check-ins via HERE
+router.post('/:slug/mileage/sync', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const isOwner = rig.ownerId === req.userId;
+    const isPilot = !isOwner && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: req.userId } } });
+    if (!isOwner && !isPilot) return res.status(403).json({ error: 'Not authorized' });
+
+    const { rollupRigMileage } = require('../services/rigMileage');
+    const result = await rollupRigMileage(rig.id);
+    res.json(result);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /:slug/mileage/correct — set a sticky correction baseline
+router.post('/:slug/mileage/correct', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const isOwner = rig.ownerId === req.userId;
+    const isPilot = !isOwner && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: req.userId } } });
+    if (!isOwner && !isPilot) return res.status(403).json({ error: 'Not authorized' });
+
+    const { correctedMiles } = req.body;
+    if (typeof correctedMiles !== 'number' || correctedMiles < 0) {
+      return res.status(400).json({ error: 'correctedMiles must be a non-negative number' });
+    }
+
+    await prisma.rig.update({
+      where: { id: rig.id },
+      data: {
+        milesBaseline: correctedMiles,
+        milesBaselineAt: new Date(),
+        milesEstimated: false,
+        totalMilesDriven: correctedMiles,
+        totalMilesAllTime: correctedMiles,
+      },
+    });
+
+    res.json({ ok: true, milesBaseline: correctedMiles, milesEstimated: false });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ============== VISIBILITY ==============
 
 router.patch('/:rigId/posts/:postId/visibility', authenticateToken, async (req: Request, res: Response) => {
