@@ -437,7 +437,7 @@ export default function RigProfilePage() {
 
             {/* ═══ PULSE TAB (default — the canonical feed) ═══ */}
             {activeTab === 'pulse' && (
-              <RigTimelineTab slug={slug!} isOwner={isOwner} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} />
+              <RigTimelineTab slug={slug!} isOwner={isOwner || isPilot} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} rigId={rig.id} />
             )}
 
             {/* ═══ TRIPS TAB ═══ */}

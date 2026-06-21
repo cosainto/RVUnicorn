@@ -1,81 +1,231 @@
+/**
+ * RigPostComposer — "Share Your Experience" multi-format composer.
+ * Posts into the Pulse feed via existing create endpoints.
+ */
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Camera } from 'lucide-react';
 import { useToast } from '../ToastProvider';
 import api from '../../services/api';
 
-const CN = { bg: '#0F1C35', card: '#162236', gold: '#E8A838', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
-const POST_TYPES = [
-  { id: 'trip_recap', label: 'Trip Recap', icon: '🗺️' },
-  { id: 'mod_update', label: 'Mod Update', icon: '🔧' },
-  { id: 'tip', label: 'Road Tip', icon: '💡' },
-  { id: 'road_report', label: 'Road Report', icon: '📡' },
+const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
+
+const FORMATS = [
+  { id: 'photo', label: 'Photos', icon: '📸', hint: 'Share photos from the road' },
+  { id: 'campfire_story', label: 'Campfire Story', icon: '🔥', hint: 'Tell a short moment' },
+  { id: 'blog', label: 'Blog / Story', icon: '✍️', hint: 'Write a longer story' },
+  { id: 'recipe', label: 'Camp Kitchen', icon: '🍳', hint: 'What are you cooking?' },
+  { id: 'mod', label: 'Mod / Upgrade', icon: '🛠', hint: 'Before & after upgrade' },
+  { id: 'night_sky', label: 'Night Sky', icon: '🌌', hint: 'Stargazing moment' },
+  { id: 'game_night', label: 'Game Night', icon: '🎲', hint: 'What did you play?' },
+  { id: 'video', label: 'Vlog / Video', icon: '🎥', hint: 'Share a video clip' },
+  { id: 'milestone', label: 'Milestone', icon: '🏆', hint: 'Celebrate an achievement' },
 ];
 
 interface Props {
   rigId: string;
+  slug: string;
   isOpen: boolean;
   onClose: () => void;
   onPublished: () => void;
 }
 
-export default function RigPostComposer({ rigId, isOpen, onClose, onPublished }: Props) {
+export default function RigPostComposer({ rigId, slug, isOpen, onClose, onPublished }: Props) {
   const { addLocalToast } = useToast();
-  const [postType, setPostType] = useState('road_report');
+  const [format, setFormat] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
   if (!isOpen) return null;
 
-  const handlePublish = async () => {
-    if (!body.trim() && !title.trim()) { addLocalToast('Write something first', 'warning'); return; }
-    setPublishing(true);
-    try {
-      await api.post(`/rigs/${rigId}/posts`, {
-        postType,
-        title: title.trim() || undefined,
-        body: body.trim(),
-        photos: [],
-      });
-      addLocalToast('Post published!', 'success');
-      onPublished();
-      onClose();
-      setTitle(''); setBody(''); setPostType('road_report');
-    } catch { addLocalToast('Failed to publish', 'error'); }
-    finally { setPublishing(false); }
+  const reset = () => { setFormat(null); setTitle(''); setBody(''); setPhotoUrls([]); };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setUploading(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files).slice(0, 8)) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'rvunicorn_unsigned');
+      try {
+        const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/image/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.secure_url) urls.push(data.secure_url);
+      } catch {}
+    }
+    setPhotoUrls(prev => [...prev, ...urls]);
+    setUploading(false);
   };
 
+  const handlePublish = async () => {
+    if (!format) return;
+    if (!body.trim() && !title.trim() && photoUrls.length === 0) {
+      addLocalToast('Add some content first', 'warning');
+      return;
+    }
+    setPublishing(true);
+    try {
+      if (format === 'blog') {
+        await api.post(`/rigs/${slug}/stories`, {
+          title: title.trim() || 'Untitled Story',
+          body: body.trim(),
+          coverImageUrl: photoUrls[0] || null,
+          isPublished: true,
+        });
+      } else if (format === 'recipe') {
+        await api.post(`/rigs/${slug}/recipes`, {
+          title: title.trim() || 'Camp Recipe',
+          description: body.trim(),
+          photoUrls,
+          cookingMethod: 'CAMPFIRE',
+          difficulty: 'EASY',
+          ingredients: [],
+          steps: [],
+        });
+      } else if (format === 'mod') {
+        await api.post(`/rigs/${slug}/mods-hub`, {
+          title: title.trim() || 'Rig Mod',
+          description: body.trim(),
+          category: 'OTHER',
+          beforePhotoUrls: [],
+          afterPhotoUrls: photoUrls,
+          difficulty: 'MODERATE',
+        });
+      } else if (format === 'video') {
+        await api.post(`/rigs/${slug}/videos`, {
+          title: title.trim() || 'Video',
+          description: body.trim(),
+          videoUrl: body.trim(), // user pastes video URL in body
+          videoType: 'SHORT_CLIP',
+        });
+      } else {
+        // photo, campfire_story, night_sky, game_night, milestone — all use RigPost
+        await api.post(`/rigs/${rigId}/posts`, {
+          postType: format,
+          title: title.trim() || undefined,
+          body: body.trim(),
+          photos: photoUrls,
+        });
+      }
+
+      // Sync timeline
+      api.post(`/rigs/${slug}/timeline/sync`).catch(() => {});
+
+      addLocalToast('Published!', 'success');
+      onPublished();
+      onClose();
+      reset();
+    } catch {
+      addLocalToast('Failed to publish', 'error');
+    }
+    setPublishing(false);
+  };
+
+  // ── FORMAT PICKER ──
+  if (!format) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+        <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 max-h-[85vh] overflow-y-auto" style={{ background: CN.card, border: `1px solid ${CN.border}` }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold" style={{ color: CN.cream }}>Share Your Experience</h3>
+            <button onClick={onClose} style={{ color: CN.muted }}><X className="w-5 h-5" /></button>
+          </div>
+          <p className="text-xs mb-4" style={{ color: CN.muted }}>What's the story today?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {FORMATS.map(f => (
+              <button key={f.id} onClick={() => setFormat(f.id)}
+                className="flex flex-col items-center gap-1 p-3 rounded-xl text-center transition hover:brightness-110"
+                style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                <span className="text-xl">{f.icon}</span>
+                <span className="text-[10px] font-semibold" style={{ color: CN.cream }}>{f.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeFormat = FORMATS.find(f => f.id === format)!;
+  const showPhotoUpload = ['photo', 'campfire_story', 'blog', 'recipe', 'mod', 'night_sky', 'game_night', 'milestone'].includes(format);
+  const showTitle = ['blog', 'recipe', 'mod', 'milestone', 'video'].includes(format);
+  const bodyPlaceholder = format === 'campfire_story' ? 'Tell your campfire moment...'
+    : format === 'night_sky' ? 'What did you see in the sky tonight?'
+    : format === 'game_night' ? 'What did you play? Who won?'
+    : format === 'recipe' ? 'Describe the dish...'
+    : format === 'mod' ? 'What did you upgrade and why?'
+    : format === 'video' ? 'Paste your video URL...'
+    : format === 'milestone' ? 'What milestone did you hit?'
+    : 'Share your experience...';
+
+  // ── COMPOSE FORM ──
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
-      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto" style={{ background: CN.card, border: `1px solid ${CN.border}` }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold" style={{ color: CN.cream }}>New Rig Post</h3>
-          <button onClick={onClose} style={{ color: CN.muted }}><X className="w-5 h-5" /></button>
+      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 max-h-[85vh] overflow-y-auto" style={{ background: CN.card, border: `1px solid ${CN.border}` }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setFormat(null)} className="text-xs" style={{ color: CN.muted }}>&larr;</button>
+            <span className="text-lg">{activeFormat.icon}</span>
+            <h3 className="text-sm font-bold" style={{ color: CN.cream }}>{activeFormat.label}</h3>
+          </div>
+          <button onClick={() => { onClose(); reset(); }} style={{ color: CN.muted }}><X className="w-5 h-5" /></button>
         </div>
+        <p className="text-[10px] mb-3" style={{ color: CN.muted }}>{activeFormat.hint}</p>
 
-        {/* Post type selector */}
-        <div className="flex gap-1.5 mb-4 overflow-x-auto">
-          {POST_TYPES.map(t => (
-            <button key={t.id} onClick={() => setPostType(t.id)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition"
-              style={{ background: postType === t.id ? `${CN.gold}20` : 'transparent', color: postType === t.id ? CN.gold : CN.muted, border: `1px solid ${postType === t.id ? CN.gold : CN.border}` }}>
-              {t.icon} {t.label}
-            </button>
-          ))}
-        </div>
+        {/* Title (optional for some formats) */}
+        {showTitle && (
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Title"
+            className="w-full px-3 py-2 rounded-lg text-sm mb-3 focus:outline-none"
+            style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }} />
+        )}
 
-        <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Title (optional)"
-          className="w-full px-3 py-2 rounded-lg text-sm mb-3 focus:outline-none"
-          style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }} />
-
-        <textarea value={body} onChange={e => setBody(e.target.value)} rows={6} placeholder="Share your update..."
+        {/* Body */}
+        <textarea value={body} onChange={e => setBody(e.target.value)} rows={format === 'blog' ? 8 : 4} placeholder={bodyPlaceholder}
           className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none"
           style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }} />
 
-        <button onClick={handlePublish} disabled={publishing}
+        {/* Photo upload */}
+        {showPhotoUpload && (
+          <div className="mt-3">
+            {photoUrls.length > 0 && (
+              <div className="flex gap-2 mb-2 overflow-x-auto">
+                {photoUrls.map((url, i) => (
+                  <div key={i} className="relative flex-shrink-0">
+                    <img src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                    <button onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
+                      style={{ background: '#ef4444', color: 'white' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition hover:brightness-110"
+              style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+              {uploading ? (
+                <span className="text-xs" style={{ color: CN.muted }}>Uploading...</span>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4" style={{ color: CN.gold }} />
+                  <span className="text-xs font-semibold" style={{ color: CN.gold }}>
+                    {photoUrls.length > 0 ? 'Add more photos' : 'Add photos'}
+                  </span>
+                </>
+              )}
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
+        )}
+
+        {/* Publish */}
+        <button onClick={handlePublish} disabled={publishing || uploading}
           className="w-full mt-4 py-2.5 rounded-xl text-sm font-bold transition hover:brightness-110 disabled:opacity-50"
           style={{ background: CN.gold, color: CN.bg }}>
-          {publishing ? 'Publishing...' : 'Publish'}
+          {publishing ? 'Publishing...' : 'Share'}
         </button>
       </div>
     </div>
