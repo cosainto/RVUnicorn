@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Heart, Edit, Truck } from 'lucide-react';
+import RigPostComposer from '../../components/rig/RigPostComposer';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGate } from '../../hooks/useGate';
 import GateModal from '../../components/public/GateModal';
@@ -39,6 +40,8 @@ export default function RigProfilePage() {
   const [activeTab, setActiveTab] = useState('pulse');
   const [mods, setMods] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+  const [heroComposerOpen, setHeroComposerOpen] = useState(false);
+  const [heroComposerFormat, setHeroComposerFormat] = useState<string | null>(null);
   const [showScanOverlay, setShowScanOverlay] = useState(false);
 
   useEffect(() => {
@@ -377,6 +380,44 @@ export default function RigProfilePage() {
               <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family, where has it taken you?</p>
             ) : null}
             {rig.purchaseDate && <p className="text-[10px] mt-1" style={{ color: CN.muted }}>Traveling since {new Date(rig.purchaseDate).getFullYear()}</p>}
+          </div>
+        )}
+
+        {/* ═══ SHARE YOUR EXPERIENCE — format card grid (owner/pilot only) ═══ */}
+        {(isOwner || isPilot) && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5" style={{ background: CN.body }}>
+            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {[
+                { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road' },
+                { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
+                { id: 'campfire_story', icon: '🔥', label: 'Campfire', hint: 'A short moment' },
+                { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
+                { id: 'video', icon: '🎥', label: 'Vlog', hint: 'A video clip' },
+                { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
+                { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
+                { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after' },
+                { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement' },
+              ].map(c => (
+                <button key={c.id} onClick={() => { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }}
+                  className="flex flex-col items-start p-3 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: CN.card, border: `1px solid ${CN.border}` }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
+                  <span className="text-lg mb-1">{c.icon}</span>
+                  <span className="text-[11px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
+                  <span className="text-[9px] leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
+                </button>
+              ))}
+            </div>
+            <RigPostComposer
+              rigId={rig.id}
+              slug={slug!}
+              isOpen={heroComposerOpen}
+              initialFormat={heroComposerFormat}
+              onClose={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
+              onPublished={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
+            />
           </div>
         )}
 
