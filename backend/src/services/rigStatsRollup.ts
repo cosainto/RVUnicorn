@@ -114,15 +114,14 @@ export async function rollupRigStats(rigId: string): Promise<{
   const deduped = deduplicateStays(stays);
 
   // Compute stats
+  // Trips = count of deduplicated check-in events (revisits count, co-pilot overlap collapses)
   let totalNights = 0;
   const stateSet = new Set<string>();
-  const tripSet = new Set<string>();
 
   for (const stay of deduped) {
     const nights = Math.max(0, Math.round((stay.checkOutDate.getTime() - stay.checkInDate.getTime()) / 86400000));
     totalNights += nights;
     if (stay.state) stateSet.add(stay.state);
-    if (stay.tripId) tripSet.add(stay.tripId);
   }
 
   const statesVisited = Array.from(stateSet).sort();
@@ -146,7 +145,7 @@ export async function rollupRigStats(rigId: string): Promise<{
     data: {
       totalNightsCamped: totalNights,
       totalStatesCount: statesVisited.length,
-      totalTripCount: tripSet.size,
+      totalTripCount: deduped.length,
       totalMilesDriven: totalMiles,
       totalStatesVisited: statesVisited,
       totalNightsAllTime: totalNights,
@@ -157,7 +156,7 @@ export async function rollupRigStats(rigId: string): Promise<{
   return {
     nights: totalNights,
     states: statesVisited.length,
-    trips: tripSet.size,
+    trips: deduped.length,
     miles: totalMiles,
     statesVisited,
   };
