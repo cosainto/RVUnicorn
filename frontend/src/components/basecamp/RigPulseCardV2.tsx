@@ -10,9 +10,10 @@
  *   RV details (real values or "add" affordance), ownership stats, quick actions
  *   wired to existing create flows. Maintenance health.
  */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check, X } from 'lucide-react';
+import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
@@ -106,25 +107,113 @@ function SkeletonCard() {
   );
 }
 
-// ─── DETAIL ROW (shows value or "Add" affordance) ───
-function DetailRow({ label, value, editUrl }: { label: string; value: string | number | null | undefined; editUrl?: string }) {
-  if (value) {
+// ─── RIG CLASS & FUEL TYPE OPTIONS ───
+const RIG_CLASSES = [
+  { value: 'CLASS_A', label: 'Class A' },
+  { value: 'CLASS_B', label: 'Class B' },
+  { value: 'CLASS_C', label: 'Class C' },
+  { value: 'FIFTH_WHEEL', label: 'Fifth Wheel' },
+  { value: 'TRAVEL_TRAILER', label: 'Travel Trailer' },
+  { value: 'POP_UP', label: 'Pop-Up' },
+  { value: 'TRUCK_CAMPER', label: 'Truck Camper' },
+  { value: 'VAN', label: 'Van / Campervan' },
+  { value: 'TOY_HAULER', label: 'Toy Hauler' },
+];
+
+const FUEL_TYPES = [
+  { value: 'gas', label: 'Gas' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'propane', label: 'Propane' },
+];
+
+// ─── EDITABLE DETAIL ROW ───
+function EditableRow({ label, value, displayValue, fieldKey, inputType = 'text', unit, options, onSave }: {
+  label: string;
+  value: string | number | null | undefined;
+  displayValue?: string;
+  fieldKey: string;
+  inputType?: 'text' | 'number' | 'date' | 'select';
+  unit?: string;
+  options?: { value: string; label: string }[];
+  onSave: (key: string, val: string | number | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value ?? ''));
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => { setDraft(String(value ?? '')); setEditing(true); };
+  const cancel = () => setEditing(false);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const val = draft.trim() === '' ? null : (inputType === 'number' ? Number(draft) : draft);
+      await onSave(fieldKey, val);
+      setEditing(false);
+    } catch { /* error handled by parent */ }
+    setSaving(false);
+  };
+
+  if (editing) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${CN.border}` }}>
-        <span style={{ fontSize: 11, color: CN.muted }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: CN.cream }}>{value}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 0', borderBottom: `1px solid ${CN.border}` }}>
+        <span style={{ fontSize: 11, color: CN.muted, flexShrink: 0, width: 90 }}>{label}</span>
+        {inputType === 'select' && options ? (
+          <select value={draft} onChange={e => setDraft(e.target.value)}
+            style={{ flex: 1, fontSize: 11, background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.gold}`, borderRadius: 4, padding: '3px 6px', outline: 'none' }}>
+            <option value="">— None —</option>
+            {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        ) : (
+          <input type={inputType === 'number' ? 'number' : inputType === 'date' ? 'date' : 'text'}
+            value={draft} onChange={e => setDraft(e.target.value)} autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
+            style={{ flex: 1, fontSize: 11, background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.gold}`, borderRadius: 4, padding: '3px 6px', outline: 'none', minWidth: 0 }}
+            placeholder={unit ? `e.g. 33` : ''} />
+        )}
+        {unit && <span style={{ fontSize: 9, color: CN.muted, flexShrink: 0 }}>{unit}</span>}
+        <button onClick={save} disabled={saving} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}>
+          <Check style={{ width: 14, height: 14, color: '#22c55e' }} />
+        </button>
+        <button onClick={cancel} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}>
+          <X style={{ width: 14, height: 14, color: CN.muted }} />
+        </button>
       </div>
     );
   }
-  if (editUrl) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${CN.border}` }}>
-        <span style={{ fontSize: 11, color: CN.muted }}>{label}</span>
-        <Link to={editUrl} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>+ Add</Link>
+
+  const shown = displayValue ?? (value != null ? String(value) : null);
+
+  return (
+    <div onClick={startEdit} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${CN.border}`, cursor: 'pointer' }}>
+      <span style={{ fontSize: 11, color: CN.muted }}>{label}</span>
+      {shown ? (
+        <span style={{ fontSize: 11, fontWeight: 600, color: CN.cream }}>{shown}{unit ? ` ${unit}` : ''}</span>
+      ) : (
+        <span style={{ fontSize: 10, color: CN.gold, fontWeight: 600 }}>+ Add</span>
+      )}
+    </div>
+  );
+}
+
+// ─── READ-ONLY ROW (for derived values like MPG, odometer) ───
+function ReadOnlyRow({ label, value, unit, actionLabel, actionTo }: { label: string; value: string | number | null | undefined; unit?: string; actionLabel?: string; actionTo?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: `1px solid ${CN.border}` }}>
+      <span style={{ fontSize: 11, color: CN.muted }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {value != null ? (
+          <span style={{ fontSize: 11, fontWeight: 600, color: CN.cream }}>{value}{unit ? ` ${unit}` : ''}</span>
+        ) : (
+          <span style={{ fontSize: 10, color: CN.muted }}>—</span>
+        )}
+        {actionLabel && actionTo && (
+          <Link to={actionTo} style={{ fontSize: 9, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>{actionLabel}</Link>
+        )}
       </div>
-    );
-  }
-  return null;
+    </div>
+  );
 }
 
 // ─── QUICK ACTION BUTTON ───
@@ -148,8 +237,21 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
   const editUrl = data.rigSlug ? `/rig/${data.rigSlug}/edit` : '/my-rv';
   const hasStats = data.totalMilesAllTime > 0 || (data.totalStatesVisited ?? 0) > 0 || (data.totalCampgroundsAllTime ?? 0) > 0 || (data.postCount ?? 0) > 0;
   const [rigInfoOpen, setRigInfoOpen] = useState(true);
+  const [localDetails, setLocalDetails] = useState(data.ownerDetails || {} as any);
+  const [localClass, setLocalClass] = useState(data.rigClass);
   const maint = data.maintenance;
-  const od = data.ownerDetails;
+  const od = localDetails;
+
+  const saveField = useCallback(async (key: string, val: string | number | null) => {
+    try {
+      await api.patch('/basecamp/v2/rig-details', { [key]: val });
+      setLocalDetails((prev: any) => ({ ...prev, [key]: val }));
+      if (key === 'rigClass') setLocalClass(val as string | null);
+    } catch (err) {
+      console.error('[RigPulse] save failed:', err);
+      throw err;
+    }
+  }, []);
   const coverImg = data.coverPhoto || data.rigPhoto;
   // User truly has no rig when there's no slug (no rig record found at all)
   const hasNoRig = !data.rigSlug;
@@ -316,43 +418,41 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
         </button>
 
         {rigInfoOpen && <div style={{ padding: 16 }}>
-          {/* RV Details */}
+          {/* RV Details — inline editable */}
           <div style={{ marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>RV Details</p>
-            <DetailRow label="Year" value={od?.year} editUrl={editUrl} />
-            <DetailRow label="Make" value={od?.make} editUrl={editUrl} />
-            <DetailRow label="Model" value={od?.model} editUrl={editUrl} />
-            <DetailRow label="Class" value={humanizeClass(data.rigClass)} editUrl={editUrl} />
-            <DetailRow label="Length" value={od?.lengthFeet ? `${od.lengthFeet} ft` : null} editUrl={editUrl} />
-            <DetailRow label="Weight" value={od?.grossWeight ? `${od.grossWeight.toLocaleString()} lbs` : null} editUrl={editUrl} />
-            <DetailRow label="Fuel Type" value={od?.fuelType ? humanizeFuel(od.fuelType) : null} editUrl={editUrl} />
-            <DetailRow label="Towing Capacity" value={od?.towingCapacity ? `${od.towingCapacity.toLocaleString()} lbs` : null} editUrl={editUrl} />
-            <DetailRow label="Slideouts" value={od?.slideoutCount} editUrl={editUrl} />
-            <DetailRow label="Solar" value={od?.solarWatts ? `${od.solarWatts}W` : null} editUrl={editUrl} />
-            <DetailRow label="Generator" value={od?.generatorWatts ? `${od.generatorWatts}W` : null} editUrl={editUrl} />
+            <EditableRow label="Year" value={od?.year} fieldKey="year" inputType="number" onSave={saveField} />
+            <EditableRow label="Make" value={od?.make} fieldKey="make" onSave={saveField} />
+            <EditableRow label="Model" value={od?.model} fieldKey="model" onSave={saveField} />
+            <EditableRow label="Class" value={localClass} displayValue={humanizeClass(localClass)} fieldKey="rigClass" inputType="select" options={RIG_CLASSES} onSave={saveField} />
+            <EditableRow label="Length" value={od?.lengthFeet} fieldKey="lengthFeet" inputType="number" unit="ft" onSave={saveField} />
+            <EditableRow label="Weight" value={od?.grossWeight} fieldKey="grossWeight" inputType="number" unit="lbs" onSave={saveField} />
+            <EditableRow label="Fuel Type" value={od?.fuelType} displayValue={humanizeFuel(od?.fuelType)} fieldKey="fuelType" inputType="select" options={FUEL_TYPES} onSave={saveField} />
+            <EditableRow label="Towing" value={od?.towingCapacity} fieldKey="towingCapacity" inputType="number" unit="lbs" onSave={saveField} />
+            <EditableRow label="Slideouts" value={od?.slideoutCount} fieldKey="slideoutCount" inputType="number" onSave={saveField} />
+            <EditableRow label="Solar" value={od?.solarWatts} fieldKey="solarWatts" inputType="number" unit="W" onSave={saveField} />
+            <EditableRow label="Generator" value={od?.generatorWatts} fieldKey="generatorWatts" inputType="number" unit="W" onSave={saveField} />
           </div>
 
-          {/* Tanks & Tires */}
-          {(od?.freshWaterGal || od?.grayWaterGal || od?.blackWaterGal || od?.tireSizeFront || od?.tireSizeRear) && (
-            <div style={{ marginBottom: 14 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Tanks & Tires</p>
-              <DetailRow label="Fresh Water" value={od?.freshWaterGal ? `${od.freshWaterGal} gal` : null} editUrl={editUrl} />
-              <DetailRow label="Gray Water" value={od?.grayWaterGal ? `${od.grayWaterGal} gal` : null} editUrl={editUrl} />
-              <DetailRow label="Black Water" value={od?.blackWaterGal ? `${od.blackWaterGal} gal` : null} editUrl={editUrl} />
-              <DetailRow label="Tires (Front)" value={od?.tireSizeFront} editUrl={editUrl} />
-              <DetailRow label="Tires (Rear)" value={od?.tireSizeRear} editUrl={editUrl} />
-            </div>
-          )}
+          {/* Tanks & Tires — inline editable */}
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Tanks & Tires</p>
+            <EditableRow label="Fresh Water" value={od?.freshWaterGal} fieldKey="freshWaterGal" inputType="number" unit="gal" onSave={saveField} />
+            <EditableRow label="Gray Water" value={od?.grayWaterGal} fieldKey="grayWaterGal" inputType="number" unit="gal" onSave={saveField} />
+            <EditableRow label="Black Water" value={od?.blackWaterGal} fieldKey="blackWaterGal" inputType="number" unit="gal" onSave={saveField} />
+            <EditableRow label="Tires (Front)" value={od?.tireSizeFront} fieldKey="tireSizeFront" onSave={saveField} />
+            <EditableRow label="Tires (Rear)" value={od?.tireSizeRear} fieldKey="tireSizeRear" onSave={saveField} />
+          </div>
 
-          {/* Ownership Info */}
+          {/* Ownership — editable + derived fields */}
           <div style={{ marginBottom: 14 }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Ownership</p>
-            <DetailRow label="Purchase Date" value={od?.purchaseDate ? new Date(od.purchaseDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null} editUrl={editUrl} />
-            <DetailRow label="Odometer" value={od?.currentOdometer ? `${od.currentOdometer.toLocaleString()} mi` : null} editUrl={editUrl} />
-            <DetailRow label="Avg MPG" value={od?.avgMPG ? od.avgMPG.toFixed(1) : null} />
-            {data.totalMilesAllTime > 0 && <DetailRow label="Miles Traveled" value={data.totalMilesAllTime.toLocaleString()} />}
-            {(data.totalStatesVisited ?? 0) > 0 && <DetailRow label="States Visited" value={data.totalStatesVisited!} />}
-            {(data.totalCampgroundsAllTime ?? 0) > 0 && <DetailRow label="Campgrounds" value={data.totalCampgroundsAllTime!} />}
+            <EditableRow label="Purchase Date" value={od?.purchaseDate ? od.purchaseDate.slice(0, 10) : null} displayValue={od?.purchaseDate ? new Date(od.purchaseDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : undefined} fieldKey="purchaseDate" inputType="date" onSave={saveField} />
+            <ReadOnlyRow label="Odometer" value={od?.currentOdometer ? od.currentOdometer.toLocaleString() : null} unit="mi" actionLabel="+ Fuel Log" actionTo={rigPageUrl} />
+            <ReadOnlyRow label="Avg MPG" value={od?.avgMPG ? od.avgMPG.toFixed(1) : null} actionLabel="+ Fuel Log" actionTo={rigPageUrl} />
+            {data.totalMilesAllTime > 0 && <ReadOnlyRow label="Miles Traveled" value={data.totalMilesAllTime.toLocaleString()} />}
+            {(data.totalStatesVisited ?? 0) > 0 && <ReadOnlyRow label="States Visited" value={data.totalStatesVisited!} />}
+            {(data.totalCampgroundsAllTime ?? 0) > 0 && <ReadOnlyRow label="Campgrounds" value={data.totalCampgroundsAllTime!} />}
           </div>
 
           {/* Rig Health / Maintenance */}

@@ -80,7 +80,8 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       freshWaterGal: true, grayWaterGal: true, blackWaterGal: true,
       tireSizeFront: true, tireSizeRear: true, tireInstallDate: true,
       purchaseDate: true, purchasePrice: true, currentOdometer: true,
-      avgMPG: true, coverPhotoUrl: true, galleryPhotoUrls: true,
+      avgMPG: true, solarWatts: true, generatorWatts: true,
+      coverPhotoUrl: true, galleryPhotoUrls: true,
       pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
       rigMemories: { where: { isPinned: true }, orderBy: { order: 'asc' } as any, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
       posts: { orderBy: { createdAt: 'desc' } as any, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
@@ -383,8 +384,8 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         purchasePrice: userRig?.purchasePrice || null,
         currentOdometer: userRig?.currentOdometer || userWithPrefs?.rvOdometer || null,
         avgMPG: userRig?.avgMPG || userWithPrefs?.rvMpg || null,
-        solarWatts: userWithPrefs?.rvSolarWatts || null,
-        generatorWatts: userWithPrefs?.rvGeneratorWatts || null,
+        solarWatts: userRig?.solarWatts || userWithPrefs?.rvSolarWatts || null,
+        generatorWatts: userRig?.generatorWatts || userWithPrefs?.rvGeneratorWatts || null,
       },
       maintenance: {
         serviceCount: maintenanceRecords.length,
@@ -601,6 +602,76 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
   } catch (e: any) {
     console.error('[BasecampV2] dashboard error:', e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// RIG DETAILS — inline editing from Basecamp card
+// ══════════════════════════════════════════════════════════════════════
+
+// Allowed rig fields that can be updated from the Basecamp card
+const EDITABLE_RIG_FIELDS = new Set([
+  'year', 'make', 'model', 'rigClass', 'lengthFeet', 'grossWeight',
+  'fuelType', 'towingCapacity', 'slideoutCount', 'solarWatts', 'generatorWatts',
+  'freshWaterGal', 'grayWaterGal', 'blackWaterGal',
+  'tireSizeFront', 'tireSizeRear',
+  'purchaseDate', 'currentOdometer', 'avgMPG',
+]);
+
+router.patch('/rig-details', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    // Resolve the user's canonical rig
+    const { resolveUserRigId } = require('../services/rigResolver');
+    const rig = await resolveUserRigId(userId);
+    if (!rig) return res.status(404).json({ error: 'No rig found' });
+
+    // Check authorization (owner or editor)
+    const rigRecord = await prisma.rig.findUnique({ where: { id: rig.id }, select: { ownerId: true } });
+    if (!rigRecord) return res.status(404).json({ error: 'Rig not found' });
+
+    const isOwner = rigRecord.ownerId === userId;
+    let isEditor = false;
+    if (!isOwner) {
+      const pilot = await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId } } });
+      isEditor = !!pilot; // co-pilots can edit rig details
+    }
+    if (!isOwner && !isEditor) return res.status(403).json({ error: 'Not authorized' });
+
+    // Filter to only allowed fields and sanitize types
+    const updates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(req.body)) {
+      if (!EDITABLE_RIG_FIELDS.has(key)) continue;
+      if (value === '' || value === null) { updates[key] = null; continue; }
+
+      // Type coercion
+      if (['year', 'grossWeight', 'towingCapacity', 'slideoutCount', 'solarWatts', 'generatorWatts', 'freshWaterGal', 'grayWaterGal', 'blackWaterGal', 'currentOdometer'].includes(key)) {
+        updates[key] = parseInt(String(value), 10) || null;
+      } else if (['lengthFeet', 'avgMPG'].includes(key)) {
+        updates[key] = parseFloat(String(value)) || null;
+      } else if (key === 'purchaseDate') {
+        updates[key] = value ? new Date(String(value)) : null;
+      } else {
+        updates[key] = String(value);
+      }
+    }
+
+    if (Object.keys(updates).length === 0) return res.json({ ok: true, updated: {} });
+
+    const updated = await prisma.rig.update({
+      where: { id: rig.id },
+      data: updates,
+      select: { id: true, ...Object.fromEntries(Object.keys(updates).map(k => [k, true])) },
+    });
+
+    // Invalidate dashboard cache for this user
+    dashboardCache.delete(userId);
+
+    res.json({ ok: true, updated });
+  } catch (e: any) {
+    console.error('[BasecampV2] rig-details update error:', e);
+    res.status(500).json({ error: 'Failed to update rig details' });
   }
 });
 

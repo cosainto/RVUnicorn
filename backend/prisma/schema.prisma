@@ -6321,6 +6321,9 @@ model Rig {
   totalTripCount    Int?      @default(0)
   totalStatesCount  Int?      @default(0)
   avgMPG            Float?
+  solarWatts        Int?
+  generatorWatts    Int?
+  specs             Json?
   totalFuelCost     Float?
   creatorBio        String?
   creatorBioHash    String?
