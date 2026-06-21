@@ -16,16 +16,17 @@ import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
 
-function StatPill({ icon, value, label, href }: { icon: string; value: number | string; label: string; href?: string }) {
+function StatPill({ icon, value, label, href, onClick }: { icon: string; value: number | string; label: string; href?: string; onClick?: () => void }) {
   const content = (
     <div className="text-center p-3 rounded-xl transition-all duration-200" style={{
-      background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.3)', cursor: href ? 'pointer' : 'default',
+      background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.3)', cursor: (href || onClick) ? 'pointer' : 'default',
     }}>
       <span className="text-sm block mb-0.5">{icon}</span>
       <span className="text-2xl font-bold block" style={{ fontFamily: "'Playfair Display', serif", color: CN.gold }}>{typeof value === 'number' ? value.toLocaleString() : value}</span>
       <span className="text-[10px] font-semibold uppercase tracking-wider block" style={{ color: CN.muted }}>{label}</span>
     </div>
   );
+  if (onClick) return <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, width: '100%' }}>{content}</button>;
   return href ? <Link to={href}>{content}</Link> : content;
 }
 
@@ -43,6 +44,10 @@ export default function RigProfilePage() {
   const [trips, setTrips] = useState<any[]>([]);
   const [heroComposerOpen, setHeroComposerOpen] = useState(false);
   const [heroComposerFormat, setHeroComposerFormat] = useState<string | null>(null);
+  const [milesModalOpen, setMilesModalOpen] = useState(false);
+  const [editMiles, setEditMiles] = useState('');
+  const [editMpg, setEditMpg] = useState('');
+  const [milesSaving, setMilesSaving] = useState(false);
   const [showScanOverlay, setShowScanOverlay] = useState(false);
 
   useEffect(() => {
@@ -363,7 +368,7 @@ export default function RigProfilePage() {
               <StatPill icon="🌙" value={rig.totalNightsCamped || 0} label="Nights" href={`/rig/${slug}/trips`} />
               <StatPill icon="🗺️" value={rig.totalTripCount || 0} label="Trips" href={`/rig/${slug}/trips`} />
               <StatPill icon="🏕️" value={rig.totalStatesCount || 0} label="States" />
-              <StatPill icon="🛣️" value={rig.totalMilesDriven ? `${rig.milesEstimated !== false ? '~' : ''}${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0'} label={rig.milesEstimated !== false && rig.totalMilesDriven ? 'Est. Miles' : 'Miles'} href={`/rig/${slug}/stats`} />
+              <StatPill icon="🛣️" value={rig.totalMilesDriven ? `${rig.milesEstimated !== false ? '~' : ''}${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0'} label={rig.milesEstimated !== false && rig.totalMilesDriven ? 'Est. Miles' : 'Miles'} onClick={(isOwner || isPilot) ? () => { setEditMiles(String(Math.round(rig.totalMilesDriven || 0))); setEditMpg(String(rig.avgMPG || '')); setMilesModalOpen(true); } : undefined} href={!(isOwner || isPilot) ? `/rig/${slug}/stats` : undefined} />
             </div>
           </div>
         </div>
@@ -530,6 +535,73 @@ export default function RigProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Miles / MPG Edit Modal */}
+      {milesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setMilesModalOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold mb-4" style={{ color: CN.cream }}>Edit Miles & MPG</h3>
+
+            {/* Miles */}
+            <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: CN.muted }}>Total Miles</label>
+            <div className="flex items-center gap-2 mb-3">
+              <input type="number" value={editMiles} onChange={e => setEditMiles(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none"
+                style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }}
+                placeholder="e.g. 12000" />
+              <span className="text-xs" style={{ color: CN.muted }}>mi</span>
+            </div>
+            <p className="text-[9px] mb-4" style={{ color: CN.muted }}>
+              {rig.milesEstimated !== false
+                ? 'Currently estimated from check-in routes. Setting a value confirms it as your corrected total.'
+                : 'This is your confirmed total. Future check-in legs will add on top.'}
+            </p>
+
+            {/* MPG */}
+            <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: CN.muted }}>Average MPG</label>
+            <div className="flex items-center gap-2 mb-3">
+              <input type="number" step="0.1" value={editMpg} onChange={e => setEditMpg(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none"
+                style={{ background: CN.bg, border: `1px solid ${CN.border}`, color: CN.cream }}
+                placeholder="e.g. 8.5" />
+              <span className="text-xs" style={{ color: CN.muted }}>mpg</span>
+            </div>
+            <p className="text-[9px] mb-4" style={{ color: CN.muted }}>
+              Fuel logs will override this with a calculated value when available.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button onClick={() => setMilesModalOpen(false)}
+                className="flex-1 py-2 rounded-xl text-xs font-semibold"
+                style={{ background: 'transparent', border: `1px solid ${CN.border}`, color: CN.muted }}>
+                Cancel
+              </button>
+              <button disabled={milesSaving} onClick={async () => {
+                setMilesSaving(true);
+                try {
+                  const miles = parseFloat(editMiles);
+                  const mpg = editMpg ? parseFloat(editMpg) : null;
+                  if (!isNaN(miles) && miles >= 0) {
+                    await api.post(`/rigs/${slug}/mileage/correct`, { correctedMiles: miles });
+                    setRig((r: any) => ({ ...r, totalMilesDriven: miles, milesEstimated: false }));
+                  }
+                  if (mpg !== null && !isNaN(mpg) && mpg >= 0) {
+                    await api.patch('/basecamp/v2/rig-details', { avgMPG: mpg, _source: 'user' });
+                    setRig((r: any) => ({ ...r, avgMPG: mpg }));
+                  }
+                  setMilesModalOpen(false);
+                } catch {}
+                setMilesSaving(false);
+              }}
+                className="flex-1 py-2 rounded-xl text-xs font-bold transition hover:brightness-110"
+                style={{ background: CN.gold, color: CN.bg, opacity: milesSaving ? 0.6 : 1 }}>
+                {milesSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <GateModal {...gateModalProps} />
     </>
