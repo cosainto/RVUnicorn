@@ -375,6 +375,15 @@ router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Rig not found' });
     }
 
+    // De-duplicate pilots by person (same firstName+lastName = same person, multiple accounts)
+    const seenNames = new Set<string>();
+    const dedupedPilots = (rig.pilots || []).filter((p: any) => {
+      const name = `${p.user?.firstName || ''}:${p.user?.lastName || ''}`.toLowerCase();
+      if (seenNames.has(name)) return false;
+      seenNames.add(name);
+      return true;
+    });
+
     // Check if the requesting user follows this rig
     let isFollowing = false;
     if (userId) {
@@ -384,7 +393,7 @@ router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
       isFollowing = !!follow;
     }
 
-    res.json({ ...rig, isFollowing });
+    res.json({ ...rig, pilots: dedupedPilots, isFollowing });
   } catch (error: any) {
     console.error('[Rig] get profile error:', error.message);
     res.status(500).json({ error: 'Failed to get rig profile' });
