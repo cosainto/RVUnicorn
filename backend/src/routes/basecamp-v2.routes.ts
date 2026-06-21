@@ -82,7 +82,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       purchaseDate: true, purchasePrice: true, currentOdometer: true,
       avgMPG: true, coverPhotoUrl: true, galleryPhotoUrls: true,
       pilots: { select: { user: { select: { id: true, username: true, profilePicture: true } } }, take: 5 },
-      memories: { where: { isPinned: true }, orderBy: { order: 'asc' } as any, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
+      rigMemories: { where: { isPinned: true }, orderBy: { order: 'asc' } as any, take: 4, select: { id: true, title: true, photoUrls: true, date: true } },
       posts: { orderBy: { createdAt: 'desc' } as any, take: 4, select: { id: true, photos: true, postType: true, createdAt: true } },
       _count: { select: { posts: true, followers: true } },
     };
@@ -351,7 +351,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         username: p.user.username,
         avatarUrl: p.user.profilePicture,
       })),
-      pinnedMemories: (userRig?.memories || []).map((m: any) => ({
+      pinnedMemories: (userRig?.rigMemories || []).map((m: any) => ({
         id: m.id,
         title: m.title,
         photoUrl: m.photoUrls?.[0] || null,
