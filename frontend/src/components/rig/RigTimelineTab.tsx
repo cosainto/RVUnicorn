@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, Play } from 'lucide-react';
 import api from '../../services/api';
 import CampsiteSocialProofInline from './CampsiteSocialProofInline';
-import RigPostComposer from './RigPostComposer';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
@@ -93,23 +92,14 @@ interface Props {
   rigId?: string;
 }
 
-export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ownerName, rigId }: Props) {
+export default function RigTimelineTab({ slug, rigName, ownerAvatar, ownerName }: Props) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [composerFormat, setComposerFormat] = useState<string | null>(null);
 
-  const openFormat = (formatId: string) => {
-    setComposerFormat(formatId);
-    setComposerOpen(true);
-  };
-  const openPicker = () => {
-    setComposerFormat(null);
-    setComposerOpen(true);
-  };
+
 
   useEffect(() => { loadInitial(); }, [slug]);
 
@@ -135,50 +125,12 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
     setLoadingMore(false);
   };
 
-  const handlePublished = () => {
-    loadInitial(); // refresh feed
-  };
 
-  // ── FORMAT CARDS ──
-  const FORMAT_CARDS = [
-    { id: 'photo', icon: '📸', label: 'Photos', hint: 'Share photos from the road' },
-    { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
-    { id: 'campfire_story', icon: '🔥', label: 'Campfire Story', hint: 'Tell a short moment' },
-    { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
-    { id: 'video', icon: '🎥', label: 'Vlog', hint: 'Share a video clip' },
-    { id: 'blog', icon: '✍️', label: 'Blog / Story', hint: 'Write a longer story' },
-    { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
-    { id: 'mod', icon: '🛠', label: 'Mod / Upgrade', hint: 'Before & after upgrade' },
-    { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'Celebrate an achievement' },
-  ];
 
-  const ComposerBar = isOwner ? (
-    <div className="mb-6">
-      {/* Lead-in */}
-      <div className="flex items-center gap-3 mb-3">
-        {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-9 h-9 rounded-full object-cover" /> : <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `${CN.gold}20`, color: CN.gold }}>+</div>}
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: CN.cream, margin: 0 }}>What's the story today?</p>
-      </div>
-      {/* Card grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-        {FORMAT_CARDS.map(c => (
-          <button key={c.id} onClick={() => openFormat(c.id)}
-            className="flex flex-col items-start p-3.5 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: CN.card, border: `1px solid ${CN.border}` }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
-            <span className="text-xl mb-1.5">{c.icon}</span>
-            <span className="text-xs font-bold" style={{ color: CN.cream }}>{c.label}</span>
-            <span className="text-[10px] mt-0.5 leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  ) : null;
+
 
   if (loading) return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {ComposerBar}
       <SkeletonCard /><SkeletonCard /><SkeletonCard />
     </div>
   );
@@ -186,27 +138,17 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
-        {ComposerBar}
         <div className="text-center py-16">
           <span className="text-5xl block mb-4">📖</span>
           <h3 className="font-bold text-xl" style={{ color: CN.cream }}>Start Your Rig Story</h3>
-          <p className="text-sm mt-2 mb-6" style={{ color: CN.muted }}>Share your first photo, recipe, or campfire moment</p>
-          {isOwner && (
-            <button onClick={openPicker}
-              className="px-6 py-3 rounded-xl text-sm font-bold transition hover:brightness-110"
-              style={{ background: CN.gold, color: CN.bg }}>
-              Share Your First Experience
-            </button>
-          )}
+          <p className="text-sm mt-2 mb-6" style={{ color: CN.muted }}>Share your first photo, recipe, or campfire moment using the cards above</p>
         </div>
-        {rigId && <RigPostComposer rigId={rigId} slug={slug} isOpen={composerOpen} initialFormat={composerFormat} onClose={() => { setComposerOpen(false); setComposerFormat(null); }} onPublished={handlePublished} />}
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {ComposerBar}
 
       {items.map(item => {
         const title = smartTitle(item);
@@ -398,8 +340,6 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
         </button>
       )}
 
-      {/* Composer modal */}
-      {rigId && <RigPostComposer rigId={rigId} slug={slug} isOpen={composerOpen} initialFormat={composerFormat} onClose={() => { setComposerOpen(false); setComposerFormat(null); }} onPublished={handlePublished} />}
     </div>
   );
 }
