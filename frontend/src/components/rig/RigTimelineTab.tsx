@@ -101,7 +101,6 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   const [loadingMore, setLoadingMore] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerFormat, setComposerFormat] = useState<string | null>(null);
-  const [showMoreFormats, setShowMoreFormats] = useState(false);
 
   const openFormat = (formatId: string) => {
     setComposerFormat(formatId);
@@ -140,55 +139,40 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
     loadInitial(); // refresh feed
   };
 
-  // ── FORMAT CHIPS (visible set + More) ──
-  const VISIBLE_CHIPS = [
-    { id: 'photo', icon: '📸', label: 'Photos' },
-    { id: 'recipe', icon: '🍳', label: 'Cooking' },
-    { id: 'campfire_story', icon: '🔥', label: 'Campfire' },
-    { id: 'night_sky', icon: '🌌', label: 'Night Sky' },
-    { id: 'video', icon: '🎥', label: 'Vlog' },
-  ];
-  const MORE_CHIPS = [
-    { id: 'blog', icon: '✍️', label: 'Blog' },
-    { id: 'game_night', icon: '🎲', label: 'Game Night' },
-    { id: 'mod', icon: '🛠', label: 'Mod' },
-    { id: 'milestone', icon: '🏆', label: 'Milestone' },
+  // ── FORMAT CARDS ──
+  const FORMAT_CARDS = [
+    { id: 'photo', icon: '📸', label: 'Photos', hint: 'Share photos from the road' },
+    { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
+    { id: 'campfire_story', icon: '🔥', label: 'Campfire Story', hint: 'Tell a short moment' },
+    { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
+    { id: 'video', icon: '🎥', label: 'Vlog', hint: 'Share a video clip' },
+    { id: 'blog', icon: '✍️', label: 'Blog / Story', hint: 'Write a longer story' },
+    { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
+    { id: 'mod', icon: '🛠', label: 'Mod / Upgrade', hint: 'Before & after upgrade' },
+    { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'Celebrate an achievement' },
   ];
 
   const ComposerBar = isOwner ? (
-    <div className="rounded-2xl mb-4 overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-      {/* Prompt */}
-      <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-        {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover" /> : <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: `${CN.gold}20`, color: CN.gold }}>+</div>}
-        <span className="text-sm" style={{ color: CN.muted }}>What's the story today?</span>
+    <div className="mb-6">
+      {/* Lead-in */}
+      <div className="flex items-center gap-3 mb-3">
+        {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-9 h-9 rounded-full object-cover" /> : <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `${CN.gold}20`, color: CN.gold }}>+</div>}
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: CN.cream, margin: 0 }}>What's the story today?</p>
       </div>
-      {/* Chip row */}
-      <div className="px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
-        {VISIBLE_CHIPS.map(c => (
+      {/* Card grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+        {FORMAT_CARDS.map(c => (
           <button key={c.id} onClick={() => openFormat(c.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition hover:brightness-125 flex-shrink-0"
-            style={{ background: `${CN.gold}12`, color: CN.gold, border: `1px solid ${CN.gold}30` }}>
-            <span>{c.icon}</span>{c.label}
+            className="flex flex-col items-start p-3.5 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: CN.card, border: `1px solid ${CN.border}` }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
+            <span className="text-xl mb-1.5">{c.icon}</span>
+            <span className="text-xs font-bold" style={{ color: CN.cream }}>{c.label}</span>
+            <span className="text-[10px] mt-0.5 leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
           </button>
         ))}
-        <button onClick={() => setShowMoreFormats(v => !v)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition hover:brightness-125 flex-shrink-0"
-          style={{ background: 'transparent', color: CN.muted, border: `1px solid ${CN.border}` }}>
-          {showMoreFormats ? '− Less' : '+ More'}
-        </button>
       </div>
-      {/* More chips row (expanded) */}
-      {showMoreFormats && (
-        <div className="px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
-          {MORE_CHIPS.map(c => (
-            <button key={c.id} onClick={() => openFormat(c.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition hover:brightness-125 flex-shrink-0"
-              style={{ background: `${CN.gold}12`, color: CN.gold, border: `1px solid ${CN.gold}30` }}>
-              <span>{c.icon}</span>{c.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   ) : null;
 
