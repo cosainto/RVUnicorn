@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Heart, Share2, Edit, MapPin, Moon, Route, Map, Star, Wrench, Users, Truck, ChevronDown, ExternalLink, Youtube, Instagram, Globe } from 'lucide-react';
+import { Heart, Edit, Truck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGate } from '../../hooks/useGate';
 import GateModal from '../../components/public/GateModal';
-import AlbumPhotoGrid from '../../components/AlbumPhotoGrid';
-import RigActivityFeed from '../../components/rig/RigActivityFeed';
-import RigJourneyTab from '../../components/rig/RigJourneyTab';
-import RigMomentsTab from '../../components/rig/RigMomentsTab';
-import RigCommunityTab from '../../components/rig/RigCommunityTab';
-import RigFeedV2 from '../../components/rig/RigFeedV2';
 import RigTripMode from '../../components/rig/RigTripMode';
-import { PhotosTab, VideosTab, CampsitesTab, RecsTab, ModsTab, GearTab, MaintenanceTab, ResourcesTab, AchievementsTab, CommunityHubTab } from '../../components/rig/RigHubTabs';
+import { PhotosTab, VideosTab, CampsitesTab, ModsTab, GearTab, MaintenanceTab } from '../../components/rig/RigHubTabs';
 import RigTimelineTab from '../../components/rig/RigTimelineTab';
-import RigRecipesTab from '../../components/rig/RigRecipesTab';
 import RigShowcase from '../../components/rig/RigShowcase';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
@@ -38,18 +31,14 @@ function StatPill({ icon, value, label, href }: { icon: string; value: number | 
 export default function RigProfilePage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
   const { user } = useAuth();
   const { requireAuth, gateModalProps } = useGate();
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState('timeline');
+  const [activeTab, setActiveTab] = useState('pulse');
   const [mods, setMods] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
-  const [showAllSpecs, setShowAllSpecs] = useState(false);
   const [showScanOverlay, setShowScanOverlay] = useState(false);
 
   useEffect(() => {
@@ -104,14 +93,8 @@ export default function RigProfilePage() {
     if (activeTab === 'trips' && trips.length === 0) {
       api.get(`/rigs/${rig.id}/trips`).then(r => setTrips(r.data || [])).catch(() => {});
     }
-    if (activeTab === 'mods' && mods.length === 0) {
+    if (activeTab === 'build' && mods.length === 0) {
       api.get(`/rigs/${rig.id}/mods`).then(r => setMods(r.data || [])).catch(() => {});
-    }
-    if (activeTab === 'posts' && posts.length === 0) {
-      api.get(`/rigs/${rig.id}/posts`).then(r => setPosts(r.data || [])).catch(() => {});
-    }
-    if (activeTab === 'overview' && events.length === 0) {
-      api.get(`/rigs/${rig.id}/events`).then(r => setEvents(r.data || [])).catch(() => {});
     }
   }, [activeTab, rig?.id]);
 
@@ -157,22 +140,11 @@ export default function RigProfilePage() {
   const rigMeta = [rig.rigClass?.replace('_', ' '), rig.lengthFeet ? `${rig.lengthFeet}ft` : null, rig.fuelType].filter(Boolean).join(' · ');
 
   const TABS = [
-    { id: 'timeline', label: '📖 Timeline' },
-    { id: 'feed', label: '🗺️ Trips' },
-    { id: 'photos', label: '📸 Photos' },
-    { id: 'videos', label: '🎥 Videos' },
-    { id: 'recipes', label: '🍳 Recipes' },
-    { id: 'mods-hub', label: '🧰 Mods' },
-    { id: 'campsites', label: '\u{1F3D5}\uFE0F Places Stayed' },
-    { id: 'journal', label: '📖 Journal' },
-    { id: 'maps', label: '🗺️ Maps' },
-    { id: 'recs', label: '⭐ Recs' },
-    { id: 'gear', label: '📦 Gear' },
-    { id: 'maintenance', label: '🛠 Maintenance' },
-    { id: 'achievements', label: '🏆 Achievements' },
-    { id: 'followers', label: `👥 Followers (${rig.followerCount || 0})` },
-    { id: 'community-hub', label: '🌐 Community' },
-    { id: 'overview', label: 'ℹ️ About' },
+    { id: 'pulse', label: 'Pulse' },
+    { id: 'trips', label: 'Trips' },
+    { id: 'media', label: 'Media' },
+    { id: 'build', label: 'Build' },
+    { id: 'map', label: 'Map' },
   ];
 
   return (
@@ -463,350 +435,50 @@ export default function RigProfilePage() {
           {/* Tab content */}
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-            {/* ═══ OVERVIEW TAB ═══ */}
-            {activeTab === 'overview' && (
-              <>
-                {/* Module A: Rig Story */}
-                {rig.creatorBio && (
-                  <div className="rounded-2xl p-5" style={{ background: '#F5F0E8', borderLeft: `3px solid ${CN.gold}` }}>
-                    <p className="text-xs font-bold mb-2" style={{ color: CN.gold }}>🔥 Rig Chronicles</p>
-                    <p className="text-sm leading-relaxed" style={{ fontFamily: "'Playfair Display', serif", color: '#1A2B45' }}>{rig.creatorBio}</p>
-                  </div>
-                )}
-
-                {/* Module B: Specs */}
-                <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  <h3 className="text-sm font-bold mb-4" style={{ color: CN.cream }}>Specs</h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                    {[
-                      ['Class', rig.rigClass?.replace('_', ' ')],
-                      ['Length', rig.lengthFeet ? `${rig.lengthFeet} ft` : null],
-                      ['Slideouts', rig.slideoutCount],
-                      ['Fuel', rig.fuelType],
-                      ['Chassis', rig.chassisMake],
-                      ['Roof', rig.roofType],
-                      ['Engine', rig.engineSize],
-                      ['Fresh Water', rig.freshWaterGal ? `${rig.freshWaterGal} gal` : null],
-                      ['Gray Water', rig.grayWaterGal ? `${rig.grayWaterGal} gal` : null],
-                      ['Black Water', rig.blackWaterGal ? `${rig.blackWaterGal} gal` : null],
-                      ['Tires', rig.tireSizeFront],
-                    ].map(([label, val]) => (
-                      <div key={label as string} className="flex justify-between py-1" style={{ borderBottom: `1px solid ${CN.border}30` }}>
-                        <span className="text-xs" style={{ color: CN.muted }}>{label}</span>
-                        <span className="text-xs font-semibold" style={{ color: CN.cream }}>{val || '—'}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {!showAllSpecs ? (
-                    <button onClick={() => setShowAllSpecs(true)} className="text-xs mt-3 flex items-center gap-1" style={{ color: CN.gold }}>
-                      <ChevronDown className="w-3 h-3" /> More specs
-                    </button>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-2">
-                      {[
-                        ['GVWR', rig.grossWeight ? `${rig.grossWeight.toLocaleString()} lbs` : null],
-                        ['Towing', rig.towingCapacity ? `${rig.towingCapacity.toLocaleString()} lbs` : null],
-                        ['Purchase Date', rig.purchaseDate ? new Date(rig.purchaseDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null],
-                        ['Odometer', rig.currentOdometer ? `${rig.currentOdometer.toLocaleString()} mi` : null],
-                      ].map(([label, val]) => (
-                        <div key={label as string} className="flex justify-between py-1" style={{ borderBottom: `1px solid ${CN.border}30` }}>
-                          <span className="text-xs" style={{ color: CN.muted }}>{label}</span>
-                          <span className="text-xs font-semibold" style={{ color: CN.cream }}>{val || '—'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {isOwner && (
-                    <Link to={`/rig/${slug}/edit`} className="text-xs mt-3 inline-block" style={{ color: CN.gold }}>Edit Specs →</Link>
-                  )}
-                </div>
-
-                {/* Module G: Road Stats Snapshot */}
-                <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>Road Stats</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      { label: 'Avg MPG', value: rig.avgMPG ? `${rig.avgMPG.toFixed(1)}` : '—', icon: '⛽' },
-                      { label: 'Total Fuel', value: rig.totalFuelCost ? `$${Math.round(rig.totalFuelCost).toLocaleString()}` : '—', icon: '💰' },
-                      { label: 'Total Miles', value: rig.totalMilesDriven ? `${Math.round(rig.totalMilesDriven).toLocaleString()}` : '—', icon: '🛣️' },
-                      { label: 'Trips', value: rig.totalTripCount || 0, icon: '🗺️' },
-                      { label: 'Nights', value: rig.totalNightsCamped || 0, icon: '🌙' },
-                      { label: 'States', value: rig.totalStatesCount || 0, icon: '🏕️' },
-                    ].map(s => (
-                      <div key={s.label} className="p-3 rounded-xl text-center" style={{ background: CN.cardAlt }}>
-                        <span className="text-sm">{s.icon}</span>
-                        <p className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: CN.gold }}>{s.value}</p>
-                        <p className="text-[10px] uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <Link to={`/rig/${slug}/stats`} className="text-xs mt-3 inline-block" style={{ color: CN.gold }}>See full stats →</Link>
-                </div>
-
-                {/* Module: Activity Feed */}
-                <RigActivityFeed rigId={rig.id} rigName={rig.rigName} isOwner={isOwner} cn={CN} />
-
-                {/* Module H: Pilots & Crew */}
-                <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>The Crew</h3>
-                  <div className="space-y-3">
-                    <Link to={`/profile/${owner.username}`} className="flex items-center gap-3 p-3 rounded-xl transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-                      {owner.profilePicture ? <img src={owner.profilePicture} alt="" className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: CN.gold, color: CN.bg }}>{owner.firstName?.[0]}</div>}
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: CN.cream }}>{owner.firstName} {owner.lastName}</p>
-                        <p className="text-[11px]" style={{ color: CN.muted }}>Owner</p>
-                      </div>
-                    </Link>
-                    {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
-                      <Link key={p.userId} to={`/profile/${p.user?.username || p.userId}`} className="flex items-center gap-3 p-3 rounded-xl transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-                        {p.user?.profilePicture ? <img src={p.user.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold" style={{ background: CN.gold, color: CN.bg }}>{p.user?.firstName?.[0]}</div>}
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName}</p>
-                          <p className="text-[11px]" style={{ color: CN.muted }}>{p.role}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Module: Upcoming Events */}
-                {events.filter((e: any) => new Date(e.startTime) > new Date()).length > 0 && (
-                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                    <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>Upcoming Events</h3>
-                    <div className="space-y-3">
-                      {events
-                        .filter((e: any) => new Date(e.startTime) > new Date())
-                        .slice(0, 3)
-                        .map((e: any) => (
-                          <div key={e.id} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: CN.cardAlt }}>
-                            <div className="text-center flex-shrink-0 w-10">
-                              <p className="text-xs font-bold" style={{ color: CN.gold }}>
-                                {new Date(e.startTime).toLocaleDateString('en-US', { month: 'short' })}
-                              </p>
-                              <p className="text-lg font-bold" style={{ color: CN.cream }}>
-                                {new Date(e.startTime).getDate()}
-                              </p>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold" style={{ color: CN.cream }}>{e.title}</p>
-                              <p className="text-[11px]" style={{ color: CN.muted }}>
-                                {e.type} {e.campground ? `· ${e.campground.name}` : ''}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px]" style={{ color: CN.muted }}>{e.rsvpCount} RSVP{e.rsvpCount !== 1 ? 's' : ''}</span>
-                                {user && !isOwner && (
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        const { data } = await api.post(`/rigs/${rig.id}/events/${e.id}/rsvp`);
-                                        setEvents(evts => evts.map(ev => ev.id === e.id ? {
-                                          ...ev,
-                                          userHasRsvped: data.rsvped,
-                                          rsvpCount: ev.rsvpCount + (data.rsvped ? 1 : -1),
-                                        } : ev));
-                                      } catch {}
-                                    }}
-                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition"
-                                    style={{
-                                      background: e.userHasRsvped ? CN.gold : 'transparent',
-                                      color: e.userHasRsvped ? CN.bg : CN.gold,
-                                      border: `1px solid ${CN.gold}`,
-                                    }}
-                                  >
-                                    {e.userHasRsvped ? 'Going' : 'RSVP'}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Module I: Creator Links */}
-                {rig.isCreatorEnabled && (rig.youtubeUrl || rig.instagramUrl || rig.tiktokUrl || rig.websiteUrl) && (
-                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                    <h3 className="text-sm font-bold mb-3" style={{ color: CN.cream }}>Follow {rigTitle} Everywhere</h3>
-                    <div className="flex gap-3">
-                      {rig.youtubeUrl && <a href={rig.youtubeUrl} target="_blank" rel="noopener" className="w-10 h-10 rounded-full flex items-center justify-center transition hover:brightness-110" style={{ border: `1px solid ${CN.gold}`, color: CN.gold }}><Youtube className="w-5 h-5" /></a>}
-                      {rig.instagramUrl && <a href={rig.instagramUrl} target="_blank" rel="noopener" className="w-10 h-10 rounded-full flex items-center justify-center transition hover:brightness-110" style={{ border: `1px solid ${CN.gold}`, color: CN.gold }}><Instagram className="w-5 h-5" /></a>}
-                      {rig.tiktokUrl && <a href={rig.tiktokUrl} target="_blank" rel="noopener" className="w-10 h-10 rounded-full flex items-center justify-center transition hover:brightness-110" style={{ border: `1px solid ${CN.gold}`, color: CN.gold }}><ExternalLink className="w-5 h-5" /></a>}
-                      {rig.websiteUrl && <a href={rig.websiteUrl} target="_blank" rel="noopener" className="w-10 h-10 rounded-full flex items-center justify-center transition hover:brightness-110" style={{ border: `1px solid ${CN.gold}`, color: CN.gold }}><Globe className="w-5 h-5" /></a>}
-                    </div>
-                  </div>
-                )}
-              </>
+            {/* ═══ PULSE TAB (default — the canonical feed) ═══ */}
+            {activeTab === 'pulse' && (
+              <RigTimelineTab slug={slug!} isOwner={isOwner} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} />
             )}
 
             {/* ═══ TRIPS TAB ═══ */}
-            {activeTab === 'trips' && (
-              <div>
-                {trips.length === 0 ? (
-                  <p className="text-center py-16" style={{ color: CN.muted }}>No trips recorded yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {trips.map((t: any) => (
-                      <Link key={t.id} to={`/trips/${t.id}`} className="rounded-2xl overflow-hidden transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                        <div className="relative">
-                          <AlbumPhotoGrid
-                            photos={t.coverPhotos || (t.coverImage ? [t.coverImage] : [])}
-                            totalPhotoCount={t.totalPhotoCount || (t.coverImage ? 1 : 0)}
-                            campgroundName={t.campgroundName}
-                            campgroundPhoto={t.campgroundImageUrl}
-                          />
-                          {t.nightsCount > 0 && <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold z-10" style={{ background: `${CN.gold}30`, color: CN.gold }}>🌙 {t.nightsCount} nights</span>}
-                        </div>
-                        <div className="p-4">
-                          <p className="text-sm font-bold mb-1" style={{ color: CN.cream }}>{t.title || t.campgroundName || 'Trip'}</p>
-                          <p className="text-[11px]" style={{ color: CN.muted }}>
-                            {t.startDate && new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            {t.campgroundState && ` · ${t.campgroundState}`}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ═══ MODS TAB ═══ */}
-            {activeTab === 'mods' && (
-              <div>
-                {(isOwner || isPilot) && (
-                  <Link to={`/rig/${slug}/edit`} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold mb-4 transition hover:brightness-110" style={{ background: CN.gold, color: CN.bg }}>
-                    <Wrench className="w-3 h-3" /> Log a Mod
-                  </Link>
-                )}
-                {mods.length === 0 ? (
-                  <p className="text-center py-16" style={{ color: CN.muted }}>No mods logged yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {mods.map((m: any) => (
-                      <div key={m.id} className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                        {(m.beforePhoto || m.afterPhoto || m.photos?.length > 0) && (
-                          <div className="flex h-40">
-                            {m.beforePhoto && <img src={m.beforePhoto} alt="Before" className="w-1/2 h-full object-cover" />}
-                            {m.afterPhoto && <img src={m.afterPhoto} alt="After" className="w-1/2 h-full object-cover" />}
-                            {!m.beforePhoto && !m.afterPhoto && m.photos?.[0] && <img src={m.photos[0]} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                        )}
-                        <div className="p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-bold" style={{ color: CN.cream }}>{m.title}</p>
-                            {m.category && <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: `${CN.gold}20`, color: CN.gold }}>{m.category}</span>}
-                          </div>
-                          {m.description && <p className="text-xs leading-relaxed mb-2" style={{ color: CN.muted }}>{m.description}</p>}
-                          <div className="flex items-center gap-3 text-[11px]" style={{ color: CN.muted }}>
-                            {m.modDate && <span>{new Date(m.modDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>}
-                            {m.cost && isOwner && <span>${m.cost.toLocaleString()}</span>}
-                            {m.productLink && <a href={m.productLink} target="_blank" rel="noopener" className="flex items-center gap-0.5" style={{ color: CN.gold }}>View product <ExternalLink className="w-3 h-3" /></a>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ═══ POSTS TAB ═══ */}
-            {activeTab === 'posts' && (
-              <div>
-                {posts.length === 0 ? (
-                  <p className="text-center py-16" style={{ color: CN.muted }}>No posts yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {posts.map((p: any) => (
-                      <div key={p.id} className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{
-                            background: p.postType === 'trip_recap' ? '#22c55e20' : p.postType === 'mod_update' ? `${CN.orange}20` : `${CN.gold}20`,
-                            color: p.postType === 'trip_recap' ? '#22c55e' : p.postType === 'mod_update' ? CN.orange : CN.gold,
-                          }}>{p.postType?.replace('_', ' ')}</span>
-                          <span className="text-[10px]" style={{ color: CN.muted }}>{new Date(p.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        {p.title && <h4 className="text-sm font-bold mb-1" style={{ color: CN.cream }}>{p.title}</h4>}
-                        {p.body && <p className="text-xs leading-relaxed" style={{ color: CN.muted }}>{p.body.length > 200 ? p.body.slice(0, 200) + '...' : p.body}</p>}
-                        {p.photos?.length > 0 && (
-                          <div className="flex gap-2 mt-3 overflow-x-auto">
-                            {p.photos.slice(0, 4).map((photo: string, i: number) => (
-                              <img key={i} src={photo} alt="" className="w-24 h-24 rounded-lg object-cover flex-shrink-0" />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ═══ CAMPGROUNDS TAB ═══ */}
-            {activeTab === 'campgrounds' && (
-              <div className="text-center py-16">
-                <p style={{ color: CN.muted }}>Campgrounds this rig has visited</p>
-                <Link to={`/profile/${owner.username}/campgrounds`} className="text-xs mt-2 inline-block" style={{ color: CN.gold }}>
-                  View {owner.firstName}'s campgrounds →
-                </Link>
-              </div>
-            )}
-
-            {/* ═══ STATS TAB ═══ */}
-            {activeTab === 'stats' && (
-              <div className="text-center py-16">
-                <p style={{ color: CN.muted }}>Detailed stats coming soon</p>
-                <p className="text-xs mt-2" style={{ color: CN.muted }}>Miles over time, MPG trends, seasonal analysis</p>
-              </div>
-            )}
-
-            {/* ═══ JOURNEY TAB ═══ */}
-            {activeTab === 'journey' && rig && (
-              <RigJourneyTab slug={slug!} rigId={rig.id} isOwner={isOwner} />
-            )}
-
-            {/* ═══ MOMENTS TAB ═══ */}
-            {activeTab === 'moments' && (
-              <RigMomentsTab slug={slug!} isOwner={isOwner} />
-            )}
-
-            {/* ═══ FEED / TRIP MODE TAB ═══ */}
-            {activeTab === 'feed' && rig && (
+            {activeTab === 'trips' && rig && (
               <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
             )}
 
-            {/* ═══ TIMELINE TAB ═══ */}
-            {activeTab === 'timeline' && <RigTimelineTab slug={slug!} isOwner={isOwner} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} />}
-
-            {/* ═══ RECIPES TAB ═══ */}
-            {activeTab === 'recipes' && <RigRecipesTab slug={slug!} isOwner={isOwner} />}
-
-            {/* ═══ JOURNAL TAB ═══ */}
-            {activeTab === 'journal' && rig && (
-              <div>
-                {/* Renders journal entries — reuses stories endpoint for now */}
-                <RigTimelineTab slug={slug!} isOwner={isOwner} />
-              </div>
+            {/* ═══ MEDIA TAB (photos + videos as filtered views) ═══ */}
+            {activeTab === 'media' && (
+              <>
+                <PhotosTab slug={slug!} isOwner={isOwner} />
+                <VideosTab slug={slug!} isOwner={isOwner} />
+              </>
             )}
 
-            {/* ═══ MAPS TAB ═══ */}
-            {activeTab === 'maps' && (
-              <RigMapWithPhotos slug={slug!} />
+            {/* ═══ BUILD TAB (mods + gear + maintenance) ═══ */}
+            {activeTab === 'build' && (
+              <>
+                <ModsTab slug={slug!} isOwner={isOwner} />
+                <GearTab slug={slug!} isOwner={isOwner} />
+                <MaintenanceTab slug={slug!} isOwner={isOwner} />
+              </>
             )}
 
-            {/* ═══ TRAVEL HUB TABS ═══ */}
-            {activeTab === 'photos' && <PhotosTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'videos' && <VideosTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'campsites' && <CampsitesTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'recs' && <RecsTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'mods-hub' && <ModsTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'gear' && <GearTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'maintenance' && <MaintenanceTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'resources' && <ResourcesTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'achievements' && <AchievementsTab slug={slug!} isOwner={isOwner} />}
-            {activeTab === 'followers' && rig && <RigFollowersTab rigId={rig.id} rigName={rigTitle} />}
-            {activeTab === 'community-hub' && rig && <CommunityHubTab slug={slug!} isOwner={isOwner} rigName={rigTitle} />}
+            {/* ═══ MAP TAB ═══ */}
+            {activeTab === 'map' && (
+              <>
+                <RigMapWithPhotos slug={slug!} />
+                <CampsitesTab slug={slug!} isOwner={isOwner} />
+              </>
+            )}
+
+            {/* ═══ FOLLOWERS (accessed via header count click, not a visible tab) ═══ */}
+            {activeTab === 'followers' && rig && (
+              <>
+                <button onClick={() => setActiveTab('pulse')} className="text-xs mb-4 flex items-center gap-1" style={{ color: CN.gold }}>
+                  &larr; Back to Pulse
+                </button>
+                <RigFollowersTab rigId={rig.id} rigName={rigTitle} />
+              </>
+            )}
 
           </div>
         </div>

@@ -10,16 +10,43 @@ async function getRig(slug: string) {
   return prisma.rig.findUnique({ where: { slug }, select: { id: true, ownerId: true } });
 }
 
-// ═══ TIMELINE ═══
+// ═══ PULSE FEED (unified timeline) ═══
+// Supports filter param: 'media' (photos+videos), 'build' (mods+maintenance), or all
 router.get('/:slug/timeline', async (req: any, res) => {
   try {
     const rig = await getRig(req.params.slug);
     if (!rig) return res.status(404).json({ error: 'Rig not found' });
     const limit = parseInt(req.query.limit) || 30;
+    const filter = req.query.filter as string | undefined;
+
     const where: any = { rigId: rig.id };
     if (req.query.cursor) where.occurredAt = { lt: new Date(req.query.cursor) };
-    const items = await prisma.rigTimelineItem.findMany({ where, orderBy: { occurredAt: 'desc' }, take: limit });
-    res.json({ items, nextCursor: items.length === limit ? items[items.length - 1].occurredAt.toISOString() : null });
+
+    // Apply filter for sub-views
+    if (filter === 'media') where.itemType = { in: ['PHOTO_ALBUM', 'VIDEO'] };
+    else if (filter === 'build') where.itemType = { in: ['MOD', 'MAINTENANCE'] };
+    else if (filter === 'trips') where.tripId = { not: null };
+
+    const [items, activeTrip, upcomingTrip] = await Promise.all([
+      prisma.rigTimelineItem.findMany({ where, orderBy: { occurredAt: 'desc' }, take: limit }),
+      prisma.rigTrip.findFirst({
+        where: { rigId: rig.id, status: 'ACTIVE' },
+        select: { id: true, name: true, startDate: true, totalMiles: true, totalNights: true, statesVisited: true, coverImageUrl: true, campgroundCount: true,
+          stops: { orderBy: { order: 'desc' }, take: 1, select: { name: true, state: true, isCurrentStop: true } } },
+      }),
+      prisma.rigTrip.findFirst({
+        where: { rigId: rig.id, status: 'ACTIVE', startDate: { gt: new Date() } },
+        orderBy: { startDate: 'asc' },
+        select: { id: true, name: true, startDate: true, coverImageUrl: true },
+      }),
+    ]);
+
+    res.json({
+      items,
+      nextCursor: items.length === limit ? items[items.length - 1].occurredAt.toISOString() : null,
+      activeTrip: activeTrip || null,
+      upcomingTrip: upcomingTrip || null,
+    });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

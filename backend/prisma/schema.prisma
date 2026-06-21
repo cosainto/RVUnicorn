@@ -1331,6 +1331,7 @@ model CheckIn {
   id              String       @id @default(cuid())
   userId          String
   campgroundId    String?
+  tripId          String?
   checkInDate     DateTime
   checkOutDate    DateTime?
   siteNumber      String?
@@ -1350,6 +1351,7 @@ model CheckIn {
   @@index([harvestHostId])
   @@index([overnightSpotId])
   @@index([isActive])
+  @@index([tripId])
 }
 
 model Sticker {
@@ -7140,6 +7142,7 @@ model RigMod {
   id               String   @id @default(cuid())
   rigId            String
   userId           String
+  tripId           String?
   title            String
   category         String   @default("OTHER")
   description      String
@@ -7158,6 +7161,7 @@ model RigMod {
   rig              Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([rigId, category])
+  @@index([tripId])
 }
 
 model RigGearItem {
@@ -7186,6 +7190,7 @@ model RigMaintenanceLog {
   id               String    @id @default(cuid())
   rigId            String
   userId           String
+  tripId           String?
   title            String
   category         String    @default("OTHER")
   description      String?
@@ -7212,6 +7217,7 @@ model RigMaintenanceLog {
   rig              Rig       @relation(fields: [rigId], references: [id], onDelete: Cascade)
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([rigId, serviceDate])
+  @@index([tripId])
 }
 
 model RigResource {
