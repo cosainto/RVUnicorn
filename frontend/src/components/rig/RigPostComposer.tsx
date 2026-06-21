@@ -25,13 +25,21 @@ interface Props {
   rigId: string;
   slug: string;
   isOpen: boolean;
+  initialFormat?: string | null;
   onClose: () => void;
   onPublished: () => void;
 }
 
-export default function RigPostComposer({ rigId, slug, isOpen, onClose, onPublished }: Props) {
+export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, onClose, onPublished }: Props) {
   const { addLocalToast } = useToast();
-  const [format, setFormat] = useState<string | null>(null);
+  const [format, setFormat] = useState<string | null>(initialFormat || null);
+
+  // Sync format when initialFormat changes (chip clicked while already open)
+  const [lastInitial, setLastInitial] = useState(initialFormat);
+  if (initialFormat !== lastInitial) {
+    setLastInitial(initialFormat);
+    if (initialFormat) setFormat(initialFormat);
+  }
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
