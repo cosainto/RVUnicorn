@@ -272,11 +272,13 @@ export default function RigProfilePage() {
                   <Edit className="w-3 h-3" /> Edit
                 </Link>
               )}
-              <button onClick={handleFollow} className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition" style={{
-                background: following ? CN.gold : 'rgba(0,0,0,0.5)', color: following ? CN.bg : CN.cream, backdropFilter: 'blur(8px)',
+              <button onClick={handleFollow} className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition hover:brightness-110" style={{
+                background: following ? CN.gold : `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
+                color: CN.bg, backdropFilter: 'blur(8px)',
+                border: following ? `1.5px solid ${CN.gold}` : 'none',
               }}>
                 <Heart className={`w-3 h-3 ${following ? 'fill-current' : ''}`} />
-                {following ? 'Following' : 'Follow'}
+                {following ? 'Following' : 'Follow This Journey'}
               </button>
             </div>
           </div>
@@ -318,12 +320,13 @@ export default function RigProfilePage() {
                 <span className="text-xs" style={{ color: CN.muted }}>Contributor{(rig.pilots?.length || 0) !== 0 ? 's' : ''}</span>
               </div>
               {!isOwner && !isPilot && (
-                <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold transition hover:brightness-110" style={{
-                  background: following ? 'transparent' : CN.gold,
+                <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold transition hover:brightness-110 flex items-center gap-1.5" style={{
+                  background: following ? 'transparent' : `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
                   color: following ? CN.gold : CN.bg,
                   border: `1.5px solid ${CN.gold}`,
                 }}>
-                  {following ? 'Following' : 'Follow'}
+                  <Heart className={`w-3 h-3 ${following ? 'fill-current' : ''}`} />
+                  {following ? 'Following' : 'Follow This Journey'}
                 </button>
               )}
               {rig.contributionScore > 0 && (
