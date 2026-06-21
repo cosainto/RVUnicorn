@@ -6404,12 +6404,13 @@ model Rig {
 }
 
 model RigPilot {
-  id        String   @id @default(cuid())
-  rigId     String
-  userId    String
-  role      String   @default("co-pilot")
-  canEdit   Boolean  @default(false)
-  addedAt   DateTime @default(now())
+  id                   String   @id @default(cuid())
+  rigId                String
+  userId               String
+  role                 String   @default("co-pilot")
+  canEdit              Boolean  @default(false)
+  shareActivityWithRig Boolean  @default(true)
+  addedAt              DateTime @default(now())
   rig       Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([rigId, userId])

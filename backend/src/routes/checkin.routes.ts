@@ -373,6 +373,18 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
 
     res.json({ success: true });
 
+    // Roll up rig stats after checkout (non-blocking)
+    setImmediate(async () => {
+      try {
+        const { resolveUserRigId } = require('../services/rigResolver');
+        const rig = await resolveUserRigId(userId);
+        if (rig) {
+          const { rollupRigStats } = require('../services/rigStatsRollup');
+          await rollupRigStats(rig.id);
+        }
+      } catch (e: any) { console.error('[CheckOut] rig stats rollup error:', e.message); }
+    });
+
     // Notify emergency contacts of checkout via SMS (non-blocking)
     if (activeCheckIn?.campground) {
       setImmediate(async () => {

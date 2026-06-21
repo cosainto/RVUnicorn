@@ -1682,24 +1682,15 @@ router.delete('/:slug/live', authenticateToken, async (req: any, res) => {
 router.post('/:slug/sync-stats', authenticateToken, async (req: any, res) => {
   try {
     const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
-    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
-    const episodes = await prisma.journeyEpisode.findMany({ where: { rigId: rig.id }, select: { startDate: true, endDate: true, startLocation: true, endLocation: true } });
-    const moments = await prisma.rigMoment.findMany({ where: { rigId: rig.id }, select: { lat: true, lng: true } });
-    const statesSet = new Set<string>();
-    let totalNights = 0;
-    for (const ep of episodes) {
-      if (ep.endDate && ep.startDate) {
-        totalNights += Math.ceil((new Date(ep.endDate).getTime() - new Date(ep.startDate).getTime()) / 86400000);
-      }
-      if (ep.startLocation) statesSet.add(ep.startLocation.split(',').pop()?.trim() || '');
-      if (ep.endLocation) statesSet.add(ep.endLocation.split(',').pop()?.trim() || '');
-    }
-    statesSet.delete('');
-    await prisma.rig.update({
-      where: { id: rig.id },
-      data: { totalNights, statesVisited: Array.from(statesSet), totalMiles: rig.totalMilesDriven || 0 },
-    });
-    res.json({ totalNights, statesVisited: Array.from(statesSet) });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    // Owner or any pilot can trigger sync
+    const isOwner = rig.ownerId === req.userId;
+    const isPilot = !isOwner && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: req.userId } } });
+    if (!isOwner && !isPilot) return res.status(403).json({ error: 'Not authorized' });
+
+    const { rollupRigStats } = require('../services/rigStatsRollup');
+    const stats = await rollupRigStats(rig.id);
+    res.json(stats);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2086,8 +2077,22 @@ router.post('/:slug/trips/:tripId/stops', authenticateToken, async (req: any, re
 
     // Generate Hitch one-liner (non-blocking)
     setImmediate(async () => {
-      const FALLBACK_LINES = ['Another adventure begins! 🔥', 'The campfire is calling! 🏕️', 'New stop, new memories! 🗺️', 'Welcome to your next chapter! ✨', 'The open road delivered again! 🚐', 'Time to set up camp! ⛺', 'Home is wherever you park it! 🏠', 'Let the campfire stories begin! 🔥'];
-      let hitchLine = FALLBACK_LINES[Math.floor(Math.random() * FALLBACK_LINES.length)];
+      const ARRIVAL_LINES = [
+        'Another adventure begins! 🔥', 'The campfire is calling! 🏕️', 'New stop, new memories! 🗺️',
+        'Welcome to your next chapter! ✨', 'The open road delivered again! 🚐', 'Time to set up camp! ⛺',
+        'Home is wherever you park it! 🏠', 'Let the campfire stories begin! 🔥',
+        'Wheels down, adventure up! 🛞', 'Found our spot for the night! 🌙',
+        'Parked and ready to explore! 🧭', 'Another pin on the map! 📍',
+        'The view from here is worth the drive! 🌄', 'Settling in under the stars! ⭐',
+        'Road dust settling, campfire rising! 🔥', 'New neighbors, new stories! 👋',
+        'The journey continues! 🛣️', 'Made it — let the good times roll! 🎉',
+        'Camp mode: activated! 🏕️', 'This is what it is all about! 🌲',
+        'Another beautiful stop on the road! 🚐', 'Unplugged and loving it! 🔌',
+        'Set up and ready for sunset! 🌅', 'Rolling into a new adventure! 🗺️',
+      ];
+      // Use stop count to rotate through the pool (no randomness = no back-to-back repeats)
+      const stopCount = await prisma.rigTripStop.count({ where: { tripId: req.params.tripId } }).catch(() => 0);
+      let hitchLine = ARRIVAL_LINES[stopCount % ARRIVAL_LINES.length];
       try {
         const Anthropic = require('@anthropic-ai/sdk');
         const anthropic = new Anthropic.default();
