@@ -10,6 +10,7 @@ import RigTripMode from '../../components/rig/RigTripMode';
 import { PhotosTab, VideosTab, CampsitesTab, ModsTab, GearTab, MaintenanceTab } from '../../components/rig/RigHubTabs';
 import RigTimelineTab from '../../components/rig/RigTimelineTab';
 import RigShowcase from '../../components/rig/RigShowcase';
+import RigStatesMap from '../../components/rig/RigStatesMap';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
 import api from '../../services/api';
@@ -376,34 +377,38 @@ export default function RigProfilePage() {
           </div>
         </div>
 
-        {/* ═══ SHARE YOUR EXPERIENCE — format card grid (owner/pilot only) ═══ */}
+        {/* ═══ RIG STATES MAP ═══ */}
+        {rig.totalStatesVisited?.length > 0 && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2">
+            <RigStatesMap visitedStates={rig.totalStatesVisited} />
+          </div>
+        )}
+
+        {/* ═══ SHARE YOUR EXPERIENCE — one row of six buttons (owner/pilot only) ═══ */}
         {(isOwner || isPilot) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-2">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-2">
             <div className="rounded-2xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {[
                   { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road', route: '/albums' },
-                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?", route: '/recipes' },
-                  { id: 'campfire_story', icon: '🔥', label: 'Campfire', hint: 'A short moment' },
-                  { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
-                  { id: 'video', icon: '🎥', label: 'Vlog', hint: 'A video clip' },
+                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's cooking?", route: '/recipes' },
+                  { id: 'video', icon: '🎥', label: 'Video', hint: 'Record or upload' },
                   { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
-                  { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
-                  { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after', route: `/rig/${slug}/edit` },
-                  { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement', route: '/badges' },
+                  { id: 'milestone', icon: '🏆', label: 'Milestones', hint: 'Achievements', route: '/badges' },
+                  { id: 'followers', icon: '👥', label: 'Followers', hint: `${rig.followerCount || 0} following`, action: 'followers' },
                 ].map(c => (
                   <button key={c.id} onClick={() => {
-                    if ((c as any).route) navigate((c as any).route);
+                    if ((c as any).action === 'followers') setActiveTab('followers');
+                    else if ((c as any).route) navigate((c as any).route);
                     else { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }
                   }}
-                    className="flex flex-col items-start p-3 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex flex-col items-center p-3 rounded-xl text-center transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                     style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
                     <span className="text-lg mb-1">{c.icon}</span>
-                    <span className="text-[11px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
-                    <span className="text-[9px] leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
+                    <span className="text-[10px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
                   </button>
                 ))}
               </div>

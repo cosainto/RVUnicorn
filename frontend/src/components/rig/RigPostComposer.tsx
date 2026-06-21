@@ -43,12 +43,13 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
   if (!isOpen) return null;
 
-  const reset = () => { setFormat(null); setTitle(''); setBody(''); setPhotoUrls([]); };
+  const reset = () => { setFormat(null); setTitle(''); setBody(''); setPhotoUrls([]); setVideoUrl(''); };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -115,7 +116,8 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
         await api.post(`/rigs/${slug}/videos`, {
           title: title.trim() || 'Video',
           description: body.trim(),
-          videoUrl: body.trim(), // user pastes video URL in body
+          videoUrl: videoUrl || null,
+          thumbnailUrl: photoUrls[0] || null,
           videoType: 'SHORT_CLIP',
         });
       } else {
@@ -174,7 +176,7 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
     : format === 'game_night' ? 'What did you play? Who won?'
     : format === 'recipe' ? 'Describe the dish...'
     : format === 'mod' ? 'What did you upgrade and why?'
-    : format === 'video' ? 'Paste your video URL...'
+    : format === 'video' ? 'Add a title or description for your video...'
     : format === 'milestone' ? 'What milestone did you hit?'
     : 'Share your experience...';
 
@@ -234,6 +236,59 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
               )}
               <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
             </label>
+          </div>
+        )}
+
+        {/* Video upload/record (for video format) */}
+        {format === 'video' && (
+          <div className="mt-3">
+            {videoUrl && (
+              <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg" style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                <span className="text-xs" style={{ color: CN.cream }}>Video ready</span>
+                <button onClick={() => setVideoUrl('')} className="ml-auto text-[9px]" style={{ color: CN.muted }}>Remove</button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition hover:brightness-110"
+                style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                <span className="text-xs font-semibold" style={{ color: CN.gold }}>📹 Record Video</span>
+                <input type="file" accept="video/*" capture="environment" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('upload_preset', 'rvunicorn_unsigned');
+                  formData.append('resource_type', 'video');
+                  try {
+                    const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/video/upload', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.secure_url) setVideoUrl(data.secure_url);
+                  } catch {}
+                  setUploading(false);
+                }} className="hidden" />
+              </label>
+              <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition hover:brightness-110"
+                style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                <span className="text-xs font-semibold" style={{ color: CN.gold }}>📁 Upload Video</span>
+                <input type="file" accept="video/*" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('upload_preset', 'rvunicorn_unsigned');
+                  formData.append('resource_type', 'video');
+                  try {
+                    const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/video/upload', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.secure_url) setVideoUrl(data.secure_url);
+                  } catch {}
+                  setUploading(false);
+                }} className="hidden" />
+              </label>
+            </div>
+            {uploading && <p className="text-[10px] mt-2 text-center" style={{ color: CN.muted }}>Uploading video...</p>}
           </div>
         )}
 
