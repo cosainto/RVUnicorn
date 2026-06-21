@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Heart, Edit, Truck } from 'lucide-react';
 import RigPostComposer from '../../components/rig/RigPostComposer';
@@ -32,6 +32,7 @@ function StatPill({ icon, value, label, href }: { icon: string; value: number | 
 export default function RigProfilePage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { requireAuth, gateModalProps } = useGate();
   const [rig, setRig] = useState<any>(null);
@@ -374,17 +375,20 @@ export default function RigProfilePage() {
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 {[
-                  { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road' },
-                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
+                  { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road', route: '/albums' },
+                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?", route: '/recipes' },
                   { id: 'campfire_story', icon: '🔥', label: 'Campfire', hint: 'A short moment' },
                   { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
                   { id: 'video', icon: '🎥', label: 'Vlog', hint: 'A video clip' },
                   { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
                   { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
-                  { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after' },
-                  { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement' },
+                  { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after', route: `/rig/${slug}/edit` },
+                  { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement', route: '/badges' },
                 ].map(c => (
-                  <button key={c.id} onClick={() => { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }}
+                  <button key={c.id} onClick={() => {
+                    if ((c as any).route) navigate((c as any).route);
+                    else { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }
+                  }}
                     className="flex flex-col items-start p-3 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
                     style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}

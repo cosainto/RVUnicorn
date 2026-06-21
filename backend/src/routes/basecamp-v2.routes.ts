@@ -228,7 +228,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         select: { id: true, rigId: true, itemType: true, title: true, previewImageUrl: true, previewText: true, occurredAt: true, refId: true, refType: true },
       }) : Promise.resolve([]), []),
       safe(followedRigIdList.length > 0 ? prisma.rigPost.findMany({
-        where: { rigId: { in: followedRigIdList }, createdAt: { gte: yesterday }, NOT: { photos: { equals: [] } } },
+        where: { rigId: { in: followedRigIdList }, createdAt: { gte: yesterday }, NOT: { photos: { equals: [] } }, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: { id: true, rigId: true, photos: true, createdAt: true, title: true, body: true, stopId: true },

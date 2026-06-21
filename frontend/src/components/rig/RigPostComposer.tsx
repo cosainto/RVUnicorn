@@ -78,12 +78,20 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
     setPublishing(true);
     try {
       if (format === 'blog') {
-        await api.post(`/rigs/${slug}/stories`, {
-          title: title.trim() || 'Untitled Story',
-          body: body.trim(),
-          coverImageUrl: photoUrls[0] || null,
-          isPublished: true,
-        });
+        // Fan out to two surfaces from one write:
+        // 1. BoardPost on trip-reports board → appears in Basecamp community feed
+        // 2. RigStory → syncs to rig timeline
+        const blogTitle = title.trim() || 'Untitled Story';
+        const blogBody = body.trim();
+        const coverImg = photoUrls[0] || null;
+        await Promise.all([
+          api.post('/boards/trip-reports/posts', {
+            title: blogTitle, body: blogBody, postType: 'BLOG', imageUrl: coverImg,
+          }).catch(() => {}),
+          api.post(`/rigs/${slug}/stories`, {
+            title: blogTitle, body: blogBody, coverImageUrl: coverImg, isPublished: true,
+          }).catch(() => {}),
+        ]);
       } else if (format === 'recipe') {
         await api.post(`/rigs/${slug}/recipes`, {
           title: title.trim() || 'Camp Recipe',

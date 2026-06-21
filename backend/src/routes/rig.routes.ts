@@ -617,7 +617,7 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
     const { rigId } = req.params;
 
     const posts = await prisma.rigPost.findMany({
-      where: { rigId, isPublic: true },
+      where: { rigId, isPublic: true, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
       include: { author: { select: safeUserSelect } },
       orderBy: { createdAt: 'desc' },
     });
@@ -636,7 +636,7 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
     const { authorized } = await isOwnerOrEditor(rigId, userId);
     if (!authorized) return res.status(403).json({ error: 'Not authorized' });
 
-    const { title, body, photos, postType, tripId, isPublic } = req.body;
+    const { title, body, photos, postType, tripId, isPublic, visibility } = req.body;
 
     const rig = await prisma.rig.findUnique({
       where: { id: rigId },
@@ -653,6 +653,7 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
         postType: postType || 'road_report',
         tripId,
         isPublic: isPublic !== false,
+        visibility: visibility || 'PUBLIC',
       },
       include: { author: { select: safeUserSelect } },
     });
@@ -701,6 +702,51 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
   } catch (error: any) {
     console.error('[Rig] create post error:', error.message);
     res.status(500).json({ error: 'Failed to create rig post' });
+  }
+});
+
+// ============== VISIBILITY ==============
+
+router.patch('/:rigId/posts/:postId/visibility', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { rigId, postId } = req.params;
+    const userId = (req as any).userId;
+    const { authorized } = await isOwnerOrEditor(rigId, userId);
+    if (!authorized) return res.status(403).json({ error: 'Not authorized' });
+
+    const { visibility } = req.body;
+    if (!['PUBLIC', 'FRIENDS_ONLY', 'BOTH'].includes(visibility)) {
+      return res.status(400).json({ error: 'Invalid visibility. Use PUBLIC, FRIENDS_ONLY, or BOTH' });
+    }
+
+    const post = await prisma.rigPost.update({
+      where: { id: postId },
+      data: {
+        visibility,
+        isPublic: visibility !== 'FRIENDS_ONLY',
+      },
+    });
+
+    // Re-sync timeline: if pulled to FRIENDS_ONLY, remove from public timeline
+    if (visibility === 'FRIENDS_ONLY') {
+      await prisma.rigTimelineItem.deleteMany({ where: { rigId, refId: postId } }).catch(() => {});
+    } else {
+      // Re-add to timeline if promoting to PUBLIC/BOTH
+      const { syncTimelineItem } = require('../services/rigTimeline');
+      await syncTimelineItem('PHOTO_ALBUM', postId, rigId, {
+        title: post.title || 'Photos',
+        previewImageUrl: post.photos?.[0],
+        previewText: post.body?.slice(0, 100),
+        tripId: post.tripId,
+        stopId: post.stopId,
+        occurredAt: post.createdAt,
+      });
+    }
+
+    res.json({ ok: true, visibility: post.visibility });
+  } catch (error: any) {
+    console.error('[Rig] update post visibility error:', error.message);
+    res.status(500).json({ error: 'Failed to update visibility' });
   }
 });
 

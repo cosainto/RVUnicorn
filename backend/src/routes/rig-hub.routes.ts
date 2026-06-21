@@ -252,7 +252,8 @@ router.get('/:slug/showcase', async (req: any, res) => {
   try {
     const rig = await getRig(req.params.slug);
     if (!rig) return res.status(404).json({ error: 'Rig not found' });
-    const where: any = { rigId: rig.id, isRigPhoto: true };
+    const { publicVisibilityFilter } = require('../services/rigVisibility');
+    const where: any = { rigId: rig.id, isRigPhoto: true, ...publicVisibilityFilter };
     if (req.query.category) where.photoCategory = req.query.category;
     const photos = await prisma.rigPost.findMany({
       where, orderBy: { createdAt: 'desc' },

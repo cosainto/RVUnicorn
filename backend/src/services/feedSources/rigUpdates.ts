@@ -20,6 +20,7 @@ const source: FeedSource = {
         where: {
           rigId: { in: ctx.followedRigIds },
           isPublic: true,
+          OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }],
           createdAt: { gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
         },
         orderBy: { createdAt: 'desc' },

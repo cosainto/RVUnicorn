@@ -6487,6 +6487,7 @@ model RigPost {
   photoCategory String?         // RIG_EXTERIOR | RIG_INTERIOR | RIG_FLOORPLAN | RIG_DETAIL | RIG_SETUP | TRAVEL | CAMPSITE | NATURE | FOOD | PEOPLE | OTHER
   isRigPhoto    Boolean         @default(false)
   isPublic      Boolean         @default(true)
+  visibility    String          @default("PUBLIC")  // PUBLIC | FRIENDS_ONLY | BOTH
   createdAt     DateTime        @default(now())
   rig           Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
   author        User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
