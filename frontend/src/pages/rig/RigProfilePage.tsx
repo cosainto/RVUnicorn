@@ -369,7 +369,7 @@ export default function RigProfilePage() {
 
         {/* ═══ SHARE YOUR EXPERIENCE — format card grid (owner/pilot only) ═══ */}
         {(isOwner || isPilot) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5" style={{ background: CN.body }}>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-5" style={{ background: CN.body }}>
             <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               {[
