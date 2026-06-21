@@ -659,10 +659,28 @@ router.patch('/rig-details', authenticateToken, async (req: any, res: Response) 
 
     if (Object.keys(updates).length === 0) return res.json({ ok: true, updated: {} });
 
+    // Read current specs metadata
+    const currentRig = await prisma.rig.findUnique({ where: { id: rig.id }, select: { specs: true } });
+    const specsMetadata: Record<string, any> = (currentRig?.specs as any) || {};
+
+    // Determine source from request (defaults to "user")
+    const source = req.body._source || 'user';
+    const verifiedByUser = source === 'user';
+
+    // Update per-field metadata
+    for (const key of Object.keys(updates)) {
+      specsMetadata[key] = {
+        source,
+        confidence: req.body._confidence?.[key] || (source === 'user' ? null : 'medium'),
+        verifiedByUser,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
     const updated = await prisma.rig.update({
       where: { id: rig.id },
-      data: updates,
-      select: { id: true, ...Object.fromEntries(Object.keys(updates).map(k => [k, true])) },
+      data: { ...updates, specs: specsMetadata },
+      select: { id: true, specs: true, ...Object.fromEntries(Object.keys(updates).map(k => [k, true])) },
     });
 
     // Invalidate dashboard cache for this user

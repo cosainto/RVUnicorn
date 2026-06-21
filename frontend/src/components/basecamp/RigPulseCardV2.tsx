@@ -12,7 +12,7 @@
  */
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Check, X } from 'lucide-react';
+import { ChevronDown, Check, X, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
@@ -216,6 +216,162 @@ function ReadOnlyRow({ label, value, unit, actionLabel, actionTo }: { label: str
   );
 }
 
+// ─── FIELD LABELS FOR DISPLAY ───
+const FIELD_LABELS: Record<string, string> = {
+  lengthFeet: 'Length', grossWeight: 'Weight (GVWR)', towingCapacity: 'Towing Capacity',
+  slideoutCount: 'Slideouts', freshWaterGal: 'Fresh Water', grayWaterGal: 'Gray Water',
+  blackWaterGal: 'Black Water', fuelType: 'Fuel Type', fuelCapacityGal: 'Fuel Capacity',
+  solarWatts: 'Solar', generatorWatts: 'Generator', tireSizeFront: 'Tires (Front)',
+  tireSizeRear: 'Tires (Rear)', sleeps: 'Sleeps', engineSize: 'Engine', chassisMake: 'Chassis',
+};
+
+const FIELD_UNITS: Record<string, string> = {
+  lengthFeet: 'ft', grossWeight: 'lbs', towingCapacity: 'lbs',
+  freshWaterGal: 'gal', grayWaterGal: 'gal', blackWaterGal: 'gal',
+  fuelCapacityGal: 'gal', solarWatts: 'W', generatorWatts: 'W', sleeps: 'people',
+};
+
+const SAFETY_FIELDS = new Set(['grossWeight', 'towingCapacity', 'fuelCapacityGal']);
+
+// ─── HITCH REVIEW SCREEN ───
+function HitchReviewScreen({ specs, onConfirm, onCancel }: {
+  specs: Record<string, { value: any; unit: string | null; confidence: string; source: string; isSafetyCritical: boolean; verifiedByUser: boolean }>;
+  onConfirm: (confirmed: Record<string, any>) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [edits, setEdits] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const [k, v] of Object.entries(specs)) {
+      init[k] = v.value != null ? String(v.value) : '';
+    }
+    return init;
+  });
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const toggleConfirm = (key: string) => {
+    setConfirmed(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const result: Record<string, any> = {};
+    const confidenceMap: Record<string, string> = {};
+    for (const [key, spec] of Object.entries(specs)) {
+      const edited = edits[key]?.trim();
+      if (!edited) continue; // skip empty/unknown
+      const wasEdited = String(spec.value) !== edited;
+      result[key] = edited;
+      if (!wasEdited && !confirmed.has(key) && SAFETY_FIELDS.has(key)) continue; // safety fields need explicit confirm
+      confidenceMap[key] = spec.confidence;
+    }
+    try {
+      await onConfirm(result);
+    } catch {}
+    setSaving(false);
+  };
+
+  const fieldKeys = Object.entries(specs).sort(([, a], [, b]) => {
+    if (a.value != null && b.value == null) return -1;
+    if (a.value == null && b.value != null) return 1;
+    return 0;
+  });
+
+  return (
+    <div style={{ background: CN.card, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: `1px solid ${CN.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Sparkles style={{ width: 16, height: 16, color: CN.gold }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>Hitch found your RV specs</span>
+      </div>
+
+      <div style={{ padding: '8px 16px' }}>
+        <p style={{ fontSize: 10, color: CN.muted, marginBottom: 10 }}>
+          These are Hitch's suggestions based on your RV model. Review each field — tap to edit, confirm what's correct, skip what's not.
+        </p>
+
+        {fieldKeys.map(([key, spec]) => {
+          const label = FIELD_LABELS[key] || key;
+          const unit = FIELD_UNITS[key] || spec.unit || '';
+          const hasValue = spec.value != null;
+          const isSafety = SAFETY_FIELDS.has(key);
+          const isConfirmed = confirmed.has(key);
+          const editValue = edits[key] || '';
+
+          return (
+            <div key={key} style={{ padding: '6px 0', borderBottom: `1px solid ${CN.border}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {/* Confirm checkbox */}
+                <button onClick={() => hasValue && toggleConfirm(key)} style={{
+                  width: 20, height: 20, borderRadius: 4, border: `1px solid ${isConfirmed ? '#22c55e' : CN.border}`,
+                  background: isConfirmed ? 'rgba(34,197,94,0.15)' : 'transparent', cursor: hasValue ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0,
+                }}>
+                  {isConfirmed && <Check style={{ width: 12, height: 12, color: '#22c55e' }} />}
+                </button>
+
+                {/* Label */}
+                <span style={{ fontSize: 11, color: CN.muted, width: 85, flexShrink: 0 }}>{label}</span>
+
+                {/* Value / Input */}
+                {hasValue ? (
+                  <input value={editValue} onChange={e => setEdits(prev => ({ ...prev, [key]: e.target.value }))}
+                    style={{ flex: 1, fontSize: 11, background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.border}`, borderRadius: 4, padding: '3px 6px', outline: 'none', minWidth: 0 }} />
+                ) : (
+                  <span style={{ flex: 1, fontSize: 10, color: CN.muted, fontStyle: 'italic' }}>Unknown — add manually</span>
+                )}
+
+                {unit && hasValue && <span style={{ fontSize: 9, color: CN.muted, flexShrink: 0 }}>{unit}</span>}
+
+                {/* Confidence badge */}
+                {hasValue && (
+                  <span style={{
+                    fontSize: 8, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                    background: spec.confidence === 'high' ? 'rgba(34,197,94,0.15)' : spec.confidence === 'medium' ? 'rgba(232,168,56,0.15)' : 'rgba(239,68,68,0.15)',
+                    color: spec.confidence === 'high' ? '#22c55e' : spec.confidence === 'medium' ? CN.gold : '#ef4444',
+                  }}>
+                    {spec.confidence}
+                  </span>
+                )}
+              </div>
+
+              {/* Safety warning */}
+              {isSafety && hasValue && !isConfirmed && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, marginLeft: 26 }}>
+                  <AlertTriangle style={{ width: 10, height: 10, color: CN.orange }} />
+                  <span style={{ fontSize: 9, color: CN.orange }}>Verify against your door sticker or owner's manual</span>
+                </div>
+              )}
+
+              {/* Unconfirmed indicator */}
+              {hasValue && !isConfirmed && !isSafety && (
+                <p style={{ fontSize: 9, color: CN.muted, marginLeft: 26, marginTop: 1 }}>Hitch's suggestion — tap checkbox to confirm</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+        <button onClick={onCancel} style={{
+          flex: 1, padding: '9px 0', borderRadius: 8, background: 'transparent',
+          border: `1px solid ${CN.border}`, color: CN.muted, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+        }}>Cancel</button>
+        <button onClick={handleSave} disabled={saving} style={{
+          flex: 1, padding: '9px 0', borderRadius: 8, background: CN.gold,
+          border: 'none', color: CN.bg, fontWeight: 700, fontSize: 12, cursor: 'pointer',
+          opacity: saving ? 0.6 : 1,
+        }}>
+          {saving ? 'Saving...' : 'Save to My Rig'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── QUICK ACTION BUTTON ───
 function QuickAction({ label, to }: { label: string; to: string }) {
   return (
@@ -239,12 +395,14 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
   const [rigInfoOpen, setRigInfoOpen] = useState(true);
   const [localDetails, setLocalDetails] = useState(data.ownerDetails || {} as any);
   const [localClass, setLocalClass] = useState(data.rigClass);
+  const [hitchLoading, setHitchLoading] = useState(false);
+  const [hitchSpecs, setHitchSpecs] = useState<Record<string, any> | null>(null);
   const maint = data.maintenance;
   const od = localDetails;
 
   const saveField = useCallback(async (key: string, val: string | number | null) => {
     try {
-      await api.patch('/basecamp/v2/rig-details', { [key]: val });
+      await api.patch('/basecamp/v2/rig-details', { [key]: val, _source: 'user' });
       setLocalDetails((prev: any) => ({ ...prev, [key]: val }));
       if (key === 'rigClass') setLocalClass(val as string | null);
     } catch (err) {
@@ -252,6 +410,33 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
       throw err;
     }
   }, []);
+
+  const triggerHitch = useCallback(async () => {
+    const year = od?.year || data.ownerDetails?.year;
+    const make = od?.make || data.ownerDetails?.make;
+    const model = od?.model || data.ownerDetails?.model;
+    if (!year || !make || !model) return;
+    setHitchLoading(true);
+    try {
+      const res = await api.post('/hitch/autofill', { year, make, model });
+      setHitchSpecs(res.data?.specs || null);
+    } catch (err) {
+      console.error('[Hitch] autofill failed:', err);
+    }
+    setHitchLoading(false);
+  }, [od, data.ownerDetails]);
+
+  const confirmHitchSpecs = useCallback(async (confirmed: Record<string, any>) => {
+    const confidence: Record<string, string> = {};
+    if (hitchSpecs) {
+      for (const [k, v] of Object.entries(hitchSpecs)) {
+        if (confirmed[k] !== undefined) confidence[k] = (v as any).confidence;
+      }
+    }
+    await api.patch('/basecamp/v2/rig-details', { ...confirmed, _source: 'hitch', _confidence: confidence });
+    setLocalDetails((prev: any) => ({ ...prev, ...confirmed }));
+    setHitchSpecs(null);
+  }, [hitchSpecs]);
   const coverImg = data.coverPhoto || data.rigPhoto;
   // User truly has no rig when there's no slug (no rig record found at all)
   const hasNoRig = !data.rigSlug;
@@ -403,6 +588,17 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
+          HITCH REVIEW SCREEN (appears when autofill results are ready)
+          ════════════════════════════════════════════════════════════════ */}
+      {hitchSpecs && (
+        <HitchReviewScreen
+          specs={hitchSpecs}
+          onConfirm={confirmHitchSpecs}
+          onCancel={() => setHitchSpecs(null)}
+        />
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
           SECTION 2 — OWNER'S DASHBOARD ("My Rig Info")
           Operational data: RV details, maintenance, quick actions.
           ════════════════════════════════════════════════════════════════ */}
@@ -532,6 +728,27 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
               </div>
             )}
           </div>
+
+          {/* Build with Hitch CTA — only when year/make/model are set */}
+          {od?.year && od?.make && od?.model && !hitchSpecs && (
+            <button onClick={triggerHitch} disabled={hitchLoading}
+              style={{
+                width: '100%', padding: '10px 0', borderRadius: 8, marginBottom: 14,
+                background: `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
+                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: hitchLoading ? 0.7 : 1,
+              }}>
+              {hitchLoading ? (
+                <Loader2 style={{ width: 14, height: 14, color: CN.bg, animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <Sparkles style={{ width: 14, height: 14, color: CN.bg }} />
+              )}
+              <span style={{ fontSize: 12, fontWeight: 700, color: CN.bg }}>
+                {hitchLoading ? 'Looking up specs...' : 'Build with Hitch'}
+              </span>
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </button>
+          )}
 
           {/* Quick Actions */}
           <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Quick Actions</p>

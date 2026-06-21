@@ -1377,3 +1377,113 @@ Context: ${context || 'General camping question'}`,
     res.status(500).json({ error: 'Failed to answer' });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════
+// BUILD WITH HITCH — RV spec autofill from year + make + model
+// ══════════════════════════════════════════════════════════════════════
+
+const autofillCache = new Map<string, { data: any; expiresAt: number }>();
+const AUTOFILL_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const SAFETY_FIELDS = new Set(['grossWeight', 'towingCapacity', 'fuelCapacityGal']);
+
+const AUTOFILL_PROMPT = `You are an RV specification lookup assistant. Given a year, make, and model of an RV, return the factory specifications as structured JSON.
+
+CRITICAL RULES:
+- Only return values you are reasonably confident about for this SPECIFIC year/make/model.
+- If you are NOT confident about a field, set its value to "unknown". Do NOT guess or fabricate.
+- Better to return "unknown" than a wrong number. RV specs are safety-adjacent.
+- Return values in the units specified.
+
+Return ONLY valid JSON in this exact format (no markdown, no explanation):
+{
+  "lengthFeet": { "value": <number or "unknown">, "unit": "ft", "confidence": "high"|"medium"|"low" },
+  "grossWeight": { "value": <number or "unknown">, "unit": "lbs", "confidence": "high"|"medium"|"low" },
+  "towingCapacity": { "value": <number or "unknown">, "unit": "lbs", "confidence": "high"|"medium"|"low" },
+  "slideoutCount": { "value": <number or "unknown">, "unit": "count", "confidence": "high"|"medium"|"low" },
+  "freshWaterGal": { "value": <number or "unknown">, "unit": "gal", "confidence": "high"|"medium"|"low" },
+  "grayWaterGal": { "value": <number or "unknown">, "unit": "gal", "confidence": "high"|"medium"|"low" },
+  "blackWaterGal": { "value": <number or "unknown">, "unit": "gal", "confidence": "high"|"medium"|"low" },
+  "fuelType": { "value": <"gas"|"diesel"|"unknown">, "unit": null, "confidence": "high"|"medium"|"low" },
+  "fuelCapacityGal": { "value": <number or "unknown">, "unit": "gal", "confidence": "high"|"medium"|"low" },
+  "solarWatts": { "value": <number or "unknown">, "unit": "W", "confidence": "high"|"medium"|"low" },
+  "generatorWatts": { "value": <number or "unknown">, "unit": "W", "confidence": "high"|"medium"|"low" },
+  "tireSizeFront": { "value": <string or "unknown">, "unit": null, "confidence": "high"|"medium"|"low" },
+  "tireSizeRear": { "value": <string or "unknown">, "unit": null, "confidence": "high"|"medium"|"low" },
+  "sleeps": { "value": <number or "unknown">, "unit": "people", "confidence": "high"|"medium"|"low" },
+  "engineSize": { "value": <string or "unknown">, "unit": null, "confidence": "high"|"medium"|"low" },
+  "chassisMake": { "value": <string or "unknown">, "unit": null, "confidence": "high"|"medium"|"low" }
+}`;
+
+router.post('/autofill', authenticateToken, async (req: any, res) => {
+  try {
+    const { year, make, model } = req.body;
+    if (!year || !make || !model) {
+      return res.status(400).json({ error: 'year, make, and model are required' });
+    }
+
+    // Check cache
+    const cacheKey = `autofill:${String(year).toLowerCase()}:${String(make).toLowerCase().trim()}:${String(model).toLowerCase().trim()}`;
+    const cached = autofillCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return res.json({ specs: cached.data, cached: true });
+    }
+
+    // Call Haiku
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `Look up factory specifications for this RV: ${year} ${make} ${model}`,
+      }],
+      system: AUTOFILL_PROMPT,
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+
+    // Parse JSON from response
+    let specs: Record<string, any> = {};
+    try {
+      // Extract JSON even if wrapped in markdown
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        specs = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseErr) {
+      console.error('[Hitch Autofill] JSON parse error:', parseErr);
+      return res.status(500).json({ error: 'Failed to parse spec data' });
+    }
+
+    // Sanitize: ensure all fields follow the shape, mark unknowns
+    const sanitized: Record<string, any> = {};
+    for (const [key, field] of Object.entries(specs)) {
+      if (!field || typeof field !== 'object') continue;
+      const val = (field as any).value;
+      sanitized[key] = {
+        value: val === 'unknown' || val === null || val === undefined ? null : val,
+        unit: (field as any).unit || null,
+        confidence: ['high', 'medium', 'low'].includes((field as any).confidence) ? (field as any).confidence : 'low',
+        source: 'hitch',
+        isSafetyCritical: SAFETY_FIELDS.has(key),
+        verifiedByUser: false,
+      };
+    }
+
+    // Cache the result (lookup result only, never user data)
+    autofillCache.set(cacheKey, { data: sanitized, expiresAt: Date.now() + AUTOFILL_TTL_MS });
+
+    // Prune stale cache entries
+    if (autofillCache.size > 200) {
+      const now = Date.now();
+      for (const [k, v] of autofillCache) {
+        if (now > v.expiresAt) autofillCache.delete(k);
+      }
+    }
+
+    res.json({ specs: sanitized, cached: false });
+  } catch (e: any) {
+    console.error('[Hitch Autofill] error:', e.message);
+    res.status(500).json({ error: 'Failed to look up RV specs' });
+  }
+});
