@@ -159,11 +159,17 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
             <span style={{ fontSize: 18, flexShrink: 0 }}>{data.rigEmoji || '\u{1F690}'}</span>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {hasNoRig ? 'Set Up Your Rig' : displayTitle}
-              </p>
-              {!hasNoRig && data.rigName && data.rigSpec && (
-                <p style={{ fontSize: 10, color: CN.muted, margin: 0 }}>{data.rigSpec}</p>
+              {hasNoRig ? (
+                <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0 }}>Set Up Your Rig</p>
+              ) : (
+                <Link to={rigPageUrl} style={{ textDecoration: 'none', display: 'block', minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {displayTitle}
+                  </p>
+                  {data.rigName && data.rigSpec && (
+                    <p style={{ fontSize: 10, color: CN.muted, margin: 0 }}>{data.rigSpec}</p>
+                  )}
+                </Link>
               )}
             </div>
           </div>
