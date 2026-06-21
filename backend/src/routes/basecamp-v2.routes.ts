@@ -283,7 +283,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         where: { userId },
         orderBy: { serviceDate: 'desc' },
         take: 50,
-        select: { id: true, cost: true, serviceDate: true, status: true },
+        select: { id: true, title: true, category: true, cost: true, serviceDate: true, status: true, receiptImage: true },
       }), []),
       safe(prisma.maintenanceReminder.findMany({
         where: { userId, isActive: true },
@@ -393,6 +393,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         upcomingCount: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) >= new Date()).length,
         overdue: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) < new Date()).slice(0, 2).map((r: any) => ({ id: r.id, title: r.title, category: r.category })),
         upcoming: maintenanceReminders.filter((r: any) => r.nextDueDate && new Date(r.nextDueDate) >= new Date()).slice(0, 2).map((r: any) => ({ id: r.id, title: r.title, category: r.category, dueDate: r.nextDueDate })),
+        recentRecords: maintenanceRecords.slice(0, 5).map((r: any) => ({ id: r.id, title: r.title, category: r.category, cost: r.cost, serviceDate: r.serviceDate, hasReceipt: !!r.receiptImage })),
       },
     };
 

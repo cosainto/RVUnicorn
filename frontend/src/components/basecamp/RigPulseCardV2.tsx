@@ -16,6 +16,15 @@ import { ChevronDown } from 'lucide-react';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
+interface MaintenanceRecord {
+  id: string;
+  title: string;
+  category: string;
+  cost: number | null;
+  serviceDate: string;
+  hasReceipt: boolean;
+}
+
 interface MaintenanceData {
   serviceCount: number;
   totalSpent: number;
@@ -23,6 +32,7 @@ interface MaintenanceData {
   upcomingCount: number;
   overdue: { id: string; title: string; category: string }[];
   upcoming: { id: string; title: string; category: string; dueDate: string }[];
+  recentRecords?: MaintenanceRecord[];
 }
 
 interface OwnerDetails {
@@ -137,7 +147,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
   const rigPageUrl = data.rigSlug ? `/rig/${data.rigSlug}` : '/my-rv';
   const editUrl = data.rigSlug ? `/rig/${data.rigSlug}/edit` : '/my-rv';
   const hasStats = data.totalMilesAllTime > 0 || (data.totalStatesVisited ?? 0) > 0 || (data.totalCampgroundsAllTime ?? 0) > 0 || (data.postCount ?? 0) > 0;
-  const [rigInfoOpen, setRigInfoOpen] = useState(false);
+  const [rigInfoOpen, setRigInfoOpen] = useState(true);
   const maint = data.maintenance;
   const od = data.ownerDetails;
   const coverImg = data.coverPhoto || data.rigPhoto;
@@ -347,8 +357,11 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
 
           {/* Rig Health / Maintenance */}
           <div style={{ background: CN.cardAlt, borderRadius: 10, padding: 12, marginBottom: 14 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Rig Health</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: maint?.overdue?.length || maint?.upcoming?.length ? 10 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Rig Health</p>
+              <Link to="/maintenance" style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>View All &rarr;</Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
               <div style={{ background: CN.card, borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
                 <p style={{ fontSize: 16, fontWeight: 700, color: CN.cream }}>{maint?.serviceCount ?? 0}</p>
                 <p style={{ fontSize: 9, color: CN.muted }}>Service Records</p>
@@ -366,6 +379,8 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
                 <p style={{ fontSize: 9, color: CN.muted }}>Upcoming</p>
               </div>
             </div>
+
+            {/* Overdue alerts */}
             {maint?.overdue && maint.overdue.length > 0 && (
               <div style={{ marginBottom: 6 }}>
                 {maint.overdue.map(item => (
@@ -377,8 +392,10 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
                 ))}
               </div>
             )}
+
+            {/* Upcoming reminders */}
             {maint?.upcoming && maint.upcoming.length > 0 && (
-              <div>
+              <div style={{ marginBottom: 6 }}>
                 {maint.upcoming.map(item => (
                   <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', fontSize: 11 }}>
                     <span style={{ color: CN.gold }}>{'\u{1F527}'}</span>
@@ -388,19 +405,42 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
                 ))}
               </div>
             )}
+
+            {/* Recent Service History */}
+            {maint?.recentRecords && maint.recentRecords.length > 0 && (
+              <div style={{ borderTop: `1px solid ${CN.border}`, paddingTop: 8, marginTop: 4 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Recent Service History</p>
+                {maint.recentRecords.map(rec => (
+                  <Link key={rec.id} to="/maintenance" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${CN.border}`, textDecoration: 'none' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, margin: 0 }}>{rec.title}</p>
+                      <p style={{ fontSize: 9, color: CN.muted, margin: 0 }}>
+                        {rec.category} &middot; {new Date(rec.serviceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    {rec.cost != null && <span style={{ fontSize: 11, fontWeight: 600, color: CN.cream, flexShrink: 0 }}>${rec.cost.toLocaleString()}</span>}
+                    {rec.hasReceipt && <span style={{ fontSize: 10, flexShrink: 0 }} title="Receipt attached">{'\u{1F4CE}'}</span>}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Empty maintenance state */}
+            {(!maint || maint.serviceCount === 0) && (
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <p style={{ fontSize: 11, color: CN.muted, marginBottom: 6 }}>No service records yet. Track maintenance to stay on top of your rig.</p>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
           <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Quick Actions</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
-            <QuickAction label="+ Maintenance" to="/maintenance" />
+            <QuickAction label="+ Add Service Record" to="/maintenance" />
+            <QuickAction label="+ Upload Receipt" to="/maintenance" />
             <QuickAction label="+ Modification" to={data.rigSlug ? `/rig/${data.rigSlug}/mods` : '/my-rv'} />
             <QuickAction label="+ Fuel Log" to={rigPageUrl} />
-            <QuickAction label="+ Document" to={rigPageUrl} />
           </div>
-          <Link to="/maintenance" style={{ display: 'block', textAlign: 'center', fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>
-            Manage Maintenance &rarr;
-          </Link>
         </div>}
       </div>
     </div>
