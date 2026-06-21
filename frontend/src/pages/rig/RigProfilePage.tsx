@@ -369,30 +369,32 @@ export default function RigProfilePage() {
 
         {/* ═══ SHARE YOUR EXPERIENCE — format card grid (owner/pilot only) ═══ */}
         {(isOwner || isPilot) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-5" style={{ background: CN.body }}>
-            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {[
-                { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road' },
-                { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
-                { id: 'campfire_story', icon: '🔥', label: 'Campfire', hint: 'A short moment' },
-                { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
-                { id: 'video', icon: '🎥', label: 'Vlog', hint: 'A video clip' },
-                { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
-                { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
-                { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after' },
-                { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement' },
-              ].map(c => (
-                <button key={c.id} onClick={() => { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }}
-                  className="flex flex-col items-start p-3 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: CN.card, border: `1px solid ${CN.border}` }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
-                  <span className="text-lg mb-1">{c.icon}</span>
-                  <span className="text-[11px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
-                  <span className="text-[9px] leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
-                </button>
-              ))}
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-2">
+            <div className="rounded-2xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {[
+                  { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road' },
+                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's on the stove?" },
+                  { id: 'campfire_story', icon: '🔥', label: 'Campfire', hint: 'A short moment' },
+                  { id: 'night_sky', icon: '🌌', label: 'Night Sky', hint: 'Stargazing tonight?' },
+                  { id: 'video', icon: '🎥', label: 'Vlog', hint: 'A video clip' },
+                  { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
+                  { id: 'game_night', icon: '🎲', label: 'Game Night', hint: 'What did you play?' },
+                  { id: 'mod', icon: '🛠', label: 'Mod', hint: 'Before & after' },
+                  { id: 'milestone', icon: '🏆', label: 'Milestone', hint: 'An achievement' },
+                ].map(c => (
+                  <button key={c.id} onClick={() => { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }}
+                    className="flex flex-col items-start p-3 rounded-xl text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
+                    <span className="text-lg mb-1">{c.icon}</span>
+                    <span className="text-[11px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
+                    <span className="text-[9px] leading-snug" style={{ color: CN.muted }}>{c.hint}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <RigPostComposer
               rigId={rig.id}
