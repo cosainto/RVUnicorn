@@ -367,22 +367,6 @@ export default function RigProfilePage() {
           </div>
         </div>
 
-        {/* ═══ RIG SHOWCASE ═══ */}
-        <RigShowcase slug={slug!} rigName={rigTitle} rigSubtitle={rigSubtitle} isOwner={isOwner} galleryPhotoUrls={rig.galleryPhotoUrls} />
-
-        {/* ═══ OUR STORY SECTION ═══ */}
-        {(rig.story || isOwner) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4" style={{ background: CN.body }}>
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.gold }}>Our Story</h3>
-            {rig.story ? (
-              <p className="text-sm leading-relaxed line-clamp-3" style={{ color: CN.cream }}>{rig.story}</p>
-            ) : isOwner ? (
-              <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family, where has it taken you?</p>
-            ) : null}
-            {rig.purchaseDate && <p className="text-[10px] mt-1" style={{ color: CN.muted }}>Traveling since {new Date(rig.purchaseDate).getFullYear()}</p>}
-          </div>
-        )}
-
         {/* ═══ SHARE YOUR EXPERIENCE — format card grid (owner/pilot only) ═══ */}
         {(isOwner || isPilot) && (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5" style={{ background: CN.body }}>
@@ -418,6 +402,22 @@ export default function RigProfilePage() {
               onClose={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
               onPublished={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
             />
+          </div>
+        )}
+
+        {/* ═══ RIG SHOWCASE ═══ */}
+        <RigShowcase slug={slug!} rigName={rigTitle} rigSubtitle={rigSubtitle} isOwner={isOwner} galleryPhotoUrls={rig.galleryPhotoUrls} />
+
+        {/* ═══ OUR STORY SECTION ═══ */}
+        {(rig.story || isOwner) && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4" style={{ background: CN.body }}>
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.gold }}>Our Story</h3>
+            {rig.story ? (
+              <p className="text-sm leading-relaxed line-clamp-3" style={{ color: CN.cream }}>{rig.story}</p>
+            ) : isOwner ? (
+              <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family, where has it taken you?</p>
+            ) : null}
+            {rig.purchaseDate && <p className="text-[10px] mt-1" style={{ color: CN.muted }}>Traveling since {new Date(rig.purchaseDate).getFullYear()}</p>}
           </div>
         )}
 
