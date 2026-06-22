@@ -60,6 +60,7 @@ export default function RigMemoryPage() {
   const [submittingQ, setSubmittingQ] = useState(false);
   const [maintenance, setMaintenance] = useState<any[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [rigStats, setRigStats] = useState<any>(null);
   const [comparison, setComparison] = useState<any>(null);
   const isOwnProfile = user?.username === username;
 
@@ -121,6 +122,16 @@ export default function RigMemoryPage() {
         api.get(`/profile/${username}`).catch(() => ({ data: null })),
       ]);
       setRig(rigRes.data);
+      // Fetch the shared rig stats (uses the rig owner's userId to find their rig)
+      const profileUserId = rigRes.data?.user?.id;
+      if (profileUserId) {
+        api.get(`/rigs/user/${profileUserId}/owned`).then(r => {
+          const rigs = r.data || [];
+          if (rigs[0]?.slug) {
+            api.get(`/rigs/${rigs[0].slug}`).then(rr => setRigStats(rr.data)).catch(() => {});
+          }
+        }).catch(() => {});
+      }
 
       // Load trips — /trips/my returns the AUTHENTICATED user's events, so
       // only call it when viewing your own rig page. Otherwise we'd show
@@ -249,22 +260,22 @@ export default function RigMemoryPage() {
                   </div>
                 )}
 
-                {/* Lifetime stats */}
+                {/* Lifetime stats — prefer shared rig stats when available */}
                 <div className="grid grid-cols-4 gap-3 mt-5 pt-4" style={{ borderTop: '1px solid var(--glass-border)' }}>
                   {[
-                    { v: trips.length, l: 'Trips' },
-                    { v: trips.reduce((s, t) => s + daysBetween(t.startDate, t.endDate), 0), l: 'Nights' },
-                    {
-                      // Sum miles across all trips, preferring actualMiles over distanceMiles
-                      v: Math.round(trips.reduce((s, t) => s + (t.tripPlans?.[0]?.actualMiles || t.tripPlans?.[0]?.distanceMiles || 0), 0)).toLocaleString(),
-                      l: 'Miles',
-                    },
-                    { v: photos.length, l: 'Photos' },
-                    { v: new Set(trips.map(t => t.location).filter(Boolean)).size, l: 'Places' },
+                    { v: rigStats?.totalTripCount ?? trips.length, l: 'Trips' },
+                    { v: rigStats?.totalNightsCamped ?? trips.reduce((s: number, t: any) => s + daysBetween(t.startDate, t.endDate), 0), l: 'Nights' },
+                    { v: rigStats?.totalStatesCount ?? new Set(trips.map((t: any) => t.location).filter(Boolean)).size, l: 'States' },
+                    { v: rigStats?.totalMilesDriven ? `${rigStats.milesEstimated !== false ? '~' : ''}${Math.round(rigStats.totalMilesDriven).toLocaleString()}` : '0', l: rigStats?.milesEstimated !== false && rigStats?.totalMilesDriven ? 'Est. Miles' : 'Miles' },
                   ].map(s => (
                     <div key={s.l} className="text-center"><span className="font-playfair text-xl font-bold block">{s.v}</span><span className="text-[10px] uppercase" style={{ color: '#E8A838', letterSpacing: '0.08em' }}>{s.l}</span></div>
                   ))}
                 </div>
+                {rigStats?.slug && (
+                  <Link to={`/rig/${rigStats.slug}`} className="block text-center mt-2 text-[10px] font-semibold" style={{ color: '#E8A838' }}>
+                    View full rig profile &rarr;
+                  </Link>
+                )}
 
                 <button onClick={() => setShowMods(!showMods)} className="flex items-center gap-1.5 mt-4 text-[12px] font-medium" style={{ color: '#E8A838' }}>
                   {'\u{1F527}'} Mods & Upgrades <ChevronDown className="w-3.5 h-3.5" style={{ transform: showMods ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }} />
