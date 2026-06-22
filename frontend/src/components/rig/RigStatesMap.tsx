@@ -49,12 +49,12 @@ export default function RigStatesMap({ visitedStates }: Props) {
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
-                  fill={isVisited ? CN.gold : CN.bg}
-                  stroke={CN.border}
+                  fill={isVisited ? CN.gold : '#1E3354'}
+                  stroke={'#2A4570'}
                   strokeWidth={0.5}
                   style={{
                     default: { outline: 'none' },
-                    hover: { fill: isVisited ? CN.orange : CN.cardAlt, outline: 'none', cursor: 'default' },
+                    hover: { fill: isVisited ? CN.orange : '#253D5E', outline: 'none', cursor: 'default' },
                     pressed: { outline: 'none' },
                   }}
                 />
