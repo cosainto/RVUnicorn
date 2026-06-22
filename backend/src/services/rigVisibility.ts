@@ -109,11 +109,12 @@ export async function canViewTrip(
   viewerId: string | null,
   ownerId: string,
   rigId?: string,
+  tripId?: string,
 ): Promise<boolean> {
   // PUBLIC or SHARED → visible to everyone
   if (tripVisibility === 'PUBLIC' || tripVisibility === 'SHARED') return true;
 
-  // PRIVATE → only owner/co-pilots
+  // PRIVATE → only owner, co-pilots, or invited trip members
   if (!viewerId) return false;
   if (viewerId === ownerId) return true;
 
@@ -122,6 +123,14 @@ export async function canViewTrip(
       where: { rigId_userId: { rigId, userId: viewerId } },
     });
     if (pilot) return true;
+  }
+
+  // Check trip-scoped invite (Viewer or Joiner with ACCEPTED status)
+  if (tripId) {
+    const member = await prisma.rigTripMember.findUnique({
+      where: { tripId_userId: { tripId, userId: viewerId } },
+    });
+    if (member && member.status === 'ACCEPTED') return true;
   }
 
   return false;

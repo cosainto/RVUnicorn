@@ -1039,6 +1039,166 @@ router.post('/route-stops', authenticateToken, async (req: any, res) => {
   }
 });
 
+// ============== TOWN/ZIP STOP SEARCH ==============
+
+// POST /search-stops — geocode a town/ZIP and find nearby real stops
+router.post('/search-stops', authenticateToken, async (req: any, res) => {
+  try {
+    const { query, radius = 30 } = req.body; // query = town name or ZIP
+    if (!query?.trim()) return res.status(400).json({ error: 'Search query required' });
+
+    // 1. Geocode via HERE
+    const geoUrl = `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(query.trim())}&limit=1&apikey=${HERE_API_KEY_ROUTE}`;
+    const geoRes = await fetch(geoUrl);
+    const geoData = await geoRes.json() as any;
+    const position = geoData?.items?.[0]?.position;
+    if (!position) return res.json({ location: null, stops: [], message: 'Location not found' });
+
+    const { lat, lng } = position;
+    const locationName = geoData.items[0].address?.label || query;
+
+    // 2. Search campgrounds nearby
+    const degRadius = radius / 69; // rough miles-to-degrees
+    const campgrounds = await prisma.campground.findMany({
+      where: {
+        latitude: { gte: lat - degRadius, lte: lat + degRadius },
+        longitude: { gte: lng - degRadius, lte: lng + degRadius },
+      },
+      select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, imageUrl: true, tier: true },
+      take: 10,
+    });
+
+    // 3. Search overnight stops nearby
+    const overnightStops = await prisma.overnightStop.findMany({
+      where: {
+        latitude: { gte: lat - degRadius * 0.7, lte: lat + degRadius * 0.7 },
+        longitude: { gte: lng - degRadius * 0.7, lte: lng + degRadius * 0.7 },
+      },
+      select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, stopType: true, chain: true, isRVFriendly: true },
+      take: 10,
+    }).catch(() => []);
+
+    // 4. Calculate distances and categorize
+    const stops: any[] = [];
+    for (const cg of campgrounds) {
+      if (!cg.latitude || !cg.longitude) continue;
+      const dLat = (cg.latitude - lat) * 69;
+      const dLng = (cg.longitude - lng) * 69 * Math.cos(lat * Math.PI / 180);
+      const miles = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 10) / 10;
+      if (miles <= radius) stops.push({ category: 'CAMPGROUND', id: cg.id, name: cg.name, city: cg.city, state: cg.state, lat: cg.latitude, lng: cg.longitude, imageUrl: cg.imageUrl, distanceMiles: miles });
+    }
+    for (const os of overnightStops) {
+      if (!os.latitude || !os.longitude) continue;
+      const dLat = (os.latitude - lat) * 69;
+      const dLng = (os.longitude - lng) * 69 * Math.cos(lat * Math.PI / 180);
+      const miles = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 10) / 10;
+      if (miles <= radius) stops.push({ category: 'OVERNIGHT', id: os.id, name: os.name, city: os.city, state: os.state, lat: os.latitude, lng: os.longitude, chain: os.chain, isRVFriendly: os.isRVFriendly, distanceMiles: miles });
+    }
+
+    stops.sort((a, b) => a.distanceMiles - b.distanceMiles);
+
+    res.json({
+      location: { lat, lng, name: locationName },
+      stops: stops.slice(0, 15),
+      noOptionsFound: stops.length === 0,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ============== TRIP INVITES ==============
+
+// POST /:slug/trips/:tripId/invite — invite a friend to a trip
+router.post('/:slug/trips/:tripId/invite', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const { authorized } = await isOwnerOrEditor(rig.id, req.userId);
+    if (!authorized) return res.status(403).json({ error: 'Not authorized' });
+
+    const { userId, accessLevel = 'JOINER' } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (!['VIEWER', 'JOINER'].includes(accessLevel)) return res.status(400).json({ error: 'accessLevel must be VIEWER or JOINER' });
+
+    // Verify invitee is a friend
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { initiatorId: req.userId, receiverId: userId },
+          { initiatorId: userId, receiverId: req.userId },
+        ],
+      },
+    });
+    if (!friendship) return res.status(400).json({ error: 'Can only invite friends' });
+
+    const member = await prisma.rigTripMember.upsert({
+      where: { tripId_userId: { tripId: req.params.tripId, userId } },
+      create: {
+        tripId: req.params.tripId,
+        userId,
+        inviterId: req.userId,
+        role: 'CREW',
+        accessLevel,
+        status: 'PENDING',
+      },
+      update: { accessLevel, status: 'PENDING', inviterId: req.userId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+    });
+
+    res.json(member);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /:slug/trips/:tripId/invite/:memberId — accept/decline/change level/revoke
+router.patch('/:slug/trips/:tripId/invite/:memberId', authenticateToken, async (req: any, res) => {
+  try {
+    const member = await prisma.rigTripMember.findUnique({ where: { id: req.params.memberId } });
+    if (!member) return res.status(404).json({ error: 'Invite not found' });
+
+    const { action, accessLevel } = req.body; // action: accept | decline | change_level | revoke
+
+    if (action === 'accept' && member.userId === req.userId) {
+      await prisma.rigTripMember.update({ where: { id: member.id }, data: { status: 'ACCEPTED', joinedAt: new Date() } });
+      return res.json({ ok: true, status: 'ACCEPTED' });
+    }
+
+    if (action === 'decline' && member.userId === req.userId) {
+      await prisma.rigTripMember.update({ where: { id: member.id }, data: { status: 'DECLINED' } });
+      return res.json({ ok: true, status: 'DECLINED' });
+    }
+
+    // Owner actions: change level or revoke
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const { authorized } = await isOwnerOrEditor(rig.id, req.userId);
+    if (!authorized) return res.status(403).json({ error: 'Not authorized' });
+
+    if (action === 'change_level' && ['VIEWER', 'JOINER'].includes(accessLevel)) {
+      await prisma.rigTripMember.update({ where: { id: member.id }, data: { accessLevel } });
+      return res.json({ ok: true, accessLevel });
+    }
+
+    if (action === 'revoke') {
+      await prisma.rigTripMember.delete({ where: { id: member.id } });
+      return res.json({ ok: true, revoked: true });
+    }
+
+    res.status(400).json({ error: 'Invalid action' });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /:slug/trips/:tripId/members — list trip members with access levels
+router.get('/:slug/trips/:tripId/members', optionalAuth, async (req: any, res) => {
+  try {
+    const members = await prisma.rigTripMember.findMany({
+      where: { tripId: req.params.tripId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } } },
+      orderBy: { joinedAt: 'asc' },
+    });
+    res.json(members);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ============== CAMP SESSION ==============
 
 // GET /:slug/session/active — get the active Camp Session for this rig

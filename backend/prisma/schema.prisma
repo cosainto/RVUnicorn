@@ -7068,16 +7068,20 @@ model RigTripMilestone {
 }
 
 model RigTripMember {
-  id       String   @id @default(cuid())
-  tripId   String
-  userId   String
-  joinedAt DateTime @default(now())
-  role     String   @default("DRIVER") // DRIVER | COPILOT | CREW
+  id          String   @id @default(cuid())
+  tripId      String
+  userId      String
+  inviterId   String?
+  joinedAt    DateTime @default(now())
+  role        String   @default("DRIVER") // DRIVER | COPILOT | CREW
+  accessLevel String   @default("JOINER") // VIEWER | JOINER
+  status      String   @default("PENDING") // PENDING | ACCEPTED | DECLINED
 
   trip     RigTrip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tripId, userId])
+  @@index([userId, status])
 }
 
 // ═══ Rig Travel Hub Content ═══
