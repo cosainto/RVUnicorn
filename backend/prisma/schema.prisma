@@ -7423,6 +7423,11 @@ enum RigStopType {
   OVERNIGHT
   ATTRACTION
   FUEL
+  STORAGE
+  FAMILY_PERSONAL
+  HOTEL
+  REST_AREA
+  CUSTOM
   OTHER
 }
 
@@ -8056,4 +8061,23 @@ model PageFeedback {
 
   @@index([pageType, pageId])
   @@index([userId])
+}
+
+model PersonalPlace {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  lat         Float?
+  lng         Float?
+  placeType   String   @default("CUSTOM")  // STORAGE | FAMILY_PERSONAL | HOTEL | REST_AREA | CUSTOM | OTHER
+  notes       String?
+  isPrivate   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([placeType])
 }

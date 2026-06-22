@@ -838,6 +838,207 @@ router.get('/feedback/:pageType/:pageId', async (req: any, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ============== PERSONAL PLACES ==============
+
+// POST /personal-places — create a saved personal place (private by default)
+router.post('/personal-places', authenticateToken, async (req: any, res) => {
+  try {
+    const { name, address, city, state, lat, lng, placeType, notes } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+
+    const place = await prisma.personalPlace.create({
+      data: {
+        userId: req.userId,
+        name: name.trim(),
+        address: address?.trim() || null,
+        city: city?.trim() || null,
+        state: state?.trim() || null,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null,
+        placeType: placeType || 'CUSTOM',
+        notes: notes?.trim() || null,
+        isPrivate: true,
+      },
+    });
+    res.status(201).json(place);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /personal-places — list user's saved personal places
+router.get('/personal-places', authenticateToken, async (req: any, res) => {
+  try {
+    const places = await prisma.personalPlace.findMany({
+      where: { userId: req.userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(places);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /personal-places/:id — delete a personal place
+router.delete('/personal-places/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const place = await prisma.personalPlace.findUnique({ where: { id: req.params.id } });
+    if (!place || place.userId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    await prisma.personalPlace.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ============== ROUTE-AWARE STOP RECOMMENDATIONS ==============
+
+const HERE_API_KEY_ROUTE = process.env.HERE_API_KEY || '15BglBtc7-1HzjsdvTvzscQGOYwrpZPvJWZRqkyOrLE';
+
+// Decode HERE flexible polyline (simplified — returns array of [lat, lng])
+function decodeFlexPolyline(encoded: string): [number, number][] {
+  // HERE uses flexible polyline encoding; this is a simplified decoder
+  const points: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  try {
+    // Skip header byte
+    const header = encoded.charCodeAt(index++) - 63;
+    const precision = Math.pow(10, -(header & 0x0F));
+    const thirdDim = (header >> 4) & 0x07;
+
+    while (index < encoded.length) {
+      let shift = 0, result = 0, byte;
+      do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1F) << shift; shift += 5; } while (byte >= 0x20);
+      lat += (result & 1 ? ~(result >> 1) : result >> 1);
+
+      shift = 0; result = 0;
+      do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1F) << shift; shift += 5; } while (byte >= 0x20);
+      lng += (result & 1 ? ~(result >> 1) : result >> 1);
+
+      if (thirdDim) { // skip altitude if present
+        shift = 0; result = 0;
+        do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1F) << shift; shift += 5; } while (byte >= 0x20);
+      }
+
+      points.push([lat * precision, lng * precision]);
+    }
+  } catch { /* fallback: return what we have */ }
+  return points;
+}
+
+// POST /route-stops — get route-aware stop recommendations
+router.post('/route-stops', authenticateToken, async (req: any, res) => {
+  try {
+    const { originLat, originLng, destLat, destLng, maxDriveHours = 8 } = req.body;
+    if (!originLat || !originLng || !destLat || !destLng) {
+      return res.status(400).json({ error: 'Origin and destination coordinates required' });
+    }
+
+    // 1. Get route with polyline from HERE
+    const routeUrl = `https://router.hereapi.com/v8/routes?transportMode=car&origin=${originLat},${originLng}&destination=${destLat},${destLng}&return=summary,polyline&apikey=${HERE_API_KEY_ROUTE}`;
+    const routeRes = await fetch(routeUrl);
+    const routeData = await routeRes.json() as any;
+
+    const sections = routeData?.routes?.[0]?.sections || [];
+    if (sections.length === 0) return res.json({ waypoints: [], totalMiles: 0, totalHours: 0 });
+
+    const totalMeters = sections.reduce((s: number, sec: any) => s + (sec.summary?.length || 0), 0);
+    const totalSeconds = sections.reduce((s: number, sec: any) => s + (sec.summary?.duration || 0), 0);
+    const totalMiles = Math.round(totalMeters / 1609.344);
+    const totalHours = Math.round(totalSeconds / 3600 * 10) / 10;
+
+    // 2. Decode polyline and find waypoints at maxDriveHours intervals
+    const allPoints: [number, number][] = [];
+    for (const sec of sections) {
+      if (sec.polyline) {
+        const pts = decodeFlexPolyline(sec.polyline);
+        allPoints.push(...pts);
+      }
+    }
+
+    const maxDriveSeconds = maxDriveHours * 3600;
+    const waypoints: { lat: number; lng: number; hoursFromStart: number; milesFromStart: number }[] = [];
+
+    if (allPoints.length > 2 && totalSeconds > maxDriveSeconds) {
+      // Interpolate points at each maxDriveHours interval
+      const segmentCount = Math.floor(totalSeconds / maxDriveSeconds);
+      for (let i = 1; i <= segmentCount; i++) {
+        const targetFraction = (i * maxDriveSeconds) / totalSeconds;
+        const pointIndex = Math.min(Math.floor(targetFraction * allPoints.length), allPoints.length - 1);
+        const pt = allPoints[pointIndex];
+        if (pt) {
+          waypoints.push({
+            lat: pt[0],
+            lng: pt[1],
+            hoursFromStart: Math.round(i * maxDriveHours * 10) / 10,
+            milesFromStart: Math.round(targetFraction * totalMiles),
+          });
+        }
+      }
+    }
+
+    // 3. For each waypoint, find nearby campgrounds + overnight stops
+    const recommendations: any[] = [];
+    for (const wp of waypoints) {
+      const nearby: any[] = [];
+
+      // Search campgrounds near waypoint (within ~30 miles)
+      const campgrounds = await prisma.campground.findMany({
+        where: {
+          latitude: { gte: wp.lat - 0.5, lte: wp.lat + 0.5 },
+          longitude: { gte: wp.lng - 0.5, lte: wp.lng + 0.5 },
+        },
+        select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, imageUrl: true, tier: true },
+        take: 5,
+      });
+
+      for (const cg of campgrounds) {
+        if (!cg.latitude || !cg.longitude) continue;
+        const dLat = (cg.latitude - wp.lat) * 69;
+        const dLng = (cg.longitude - wp.lng) * 69 * Math.cos(wp.lat * Math.PI / 180);
+        const miles = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 10) / 10;
+        if (miles <= 30) {
+          nearby.push({ type: 'CAMPGROUND', id: cg.id, name: cg.name, city: cg.city, state: cg.state, lat: cg.latitude, lng: cg.longitude, imageUrl: cg.imageUrl, distanceMiles: miles });
+        }
+      }
+
+      // Search overnight stops near waypoint
+      const overnightStops = await prisma.overnightStop.findMany({
+        where: {
+          latitude: { gte: wp.lat - 0.3, lte: wp.lat + 0.3 },
+          longitude: { gte: wp.lng - 0.3, lte: wp.lng + 0.3 },
+          isRVFriendly: true,
+        },
+        select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, stopType: true, chain: true },
+        take: 5,
+      }).catch(() => []);
+
+      for (const os of overnightStops) {
+        if (!os.latitude || !os.longitude) continue;
+        const dLat = (os.latitude - wp.lat) * 69;
+        const dLng = (os.longitude - wp.lng) * 69 * Math.cos(wp.lat * Math.PI / 180);
+        const miles = Math.round(Math.sqrt(dLat * dLat + dLng * dLng) * 10) / 10;
+        if (miles <= 20) {
+          nearby.push({ type: 'OVERNIGHT', id: os.id, name: os.name, city: os.city, state: os.state, lat: os.latitude, lng: os.longitude, chain: os.chain, distanceMiles: miles });
+        }
+      }
+
+      nearby.sort((a, b) => a.distanceMiles - b.distanceMiles);
+
+      recommendations.push({
+        waypoint: wp,
+        stops: nearby.slice(0, 8),
+        noOptionsFound: nearby.length === 0,
+      });
+    }
+
+    res.json({
+      totalMiles,
+      totalHours,
+      maxDriveHours,
+      waypointCount: waypoints.length,
+      recommendations,
+    });
+  } catch (e: any) {
+    console.error('[RouteStops] error:', e.message);
+    res.status(500).json({ error: 'Failed to compute route stops' });
+  }
+});
+
 // ============== CAMP SESSION ==============
 
 // GET /:slug/session/active — get the active Camp Session for this rig
