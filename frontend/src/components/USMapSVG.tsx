@@ -301,15 +301,15 @@ export default function USMapSVG({
         {/* User position marker on active route */}
         {tripRoute?.currentPosition && tripRoute.currentPosition.longitude && tripRoute.currentPosition.latitude && !isNaN(Number(tripRoute.currentPosition.longitude)) && !isNaN(Number(tripRoute.currentPosition.latitude)) && (
           <Marker coordinates={[Number(tripRoute.currentPosition.longitude), Number(tripRoute.currentPosition.latitude)]}>
-            <g transform="translate(-12, -12)">
-              <circle cx="12" cy="12" r="13" fill="#f97316" stroke="white" strokeWidth="2" />
+            <g transform="translate(-18, -18)">
+              <circle cx="18" cy="18" r="20" fill="#f97316" stroke="white" strokeWidth="3" />
               {userProfilePicture ? (
-                <image href={userProfilePicture} x="1" y="1" width="22" height="22" clipPath="url(#circle-clip)" style={{borderRadius: '50%'}} />
+                <image href={userProfilePicture} x="2" y="2" width="32" height="32" clipPath="url(#circle-clip)" style={{borderRadius: '50%'}} />
               ) : (
-                <text x="12" y="17" textAnchor="middle" fontSize="14">🚐</text>
+                <text x="18" y="24" textAnchor="middle" fontSize="18">🚐</text>
               )}
               <clipPath id="circle-clip">
-                <circle cx="12" cy="12" r="11" />
+                <circle cx="18" cy="18" r="16" />
               </clipPath>
             </g>
           </Marker>
@@ -400,17 +400,17 @@ export default function USMapSVG({
                 </>
               ) : marker.type === 'friendCheckin' && marker.user ? (
                 <>
-                  {/* Friend check-in - profile picture */}
+                  {/* Friend check-in - profile picture (larger, prominent) */}
                   <defs>
                     <clipPath id={`clip-${marker.id}`}>
-                      <circle cx={0} cy={-10} r={18} />
+                      <circle cx={0} cy={-14} r={25} />
                     </clipPath>
                   </defs>
                   {/* White background circle */}
                   <circle
                     cx={0}
-                    cy={-10}
-                    r={20}
+                    cy={-14}
+                    r={28}
                     fill="#fff"
                     stroke="#10b981"
                     strokeWidth={4}
@@ -418,27 +418,27 @@ export default function USMapSVG({
                   {/* Profile image */}
                   <image
                     href={marker.user.profilePicture || '/default-avatar.png'}
-                    x={-18}
-                    y={-26}
-                    width={36}
-                    height={36}
+                    x={-25}
+                    y={-39}
+                    width={50}
+                    height={50}
                     clipPath={`url(#clip-${marker.id})`}
                     preserveAspectRatio="xMidYMid slice"
                   />
                   {/* Small location pin at bottom */}
                   <circle
                     cx={0}
-                    cy={8}
-                    r={3}
+                    cy={12}
+                    r={4}
                     fill="#10b981"
                     stroke="#fff"
-                    strokeWidth={1}
+                    strokeWidth={1.5}
                   />
                   {/* Cluster badge */}
                   {marker.clusterCount && marker.clusterCount > 1 && (
                     <>
-                      <circle cx={14} cy={-24} r={8} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
-                      <text x={14} y={-20} textAnchor="middle" fill="#fff" fontSize={9} fontWeight="bold" fontFamily="sans-serif">{marker.clusterCount}</text>
+                      <circle cx={20} cy={-34} r={10} fill="#ef4444" stroke="#fff" strokeWidth={2} />
+                      <text x={20} y={-30} textAnchor="middle" fill="#fff" fontSize={10} fontWeight="bold" fontFamily="sans-serif">{marker.clusterCount}</text>
                     </>
                   )}
                 </>
