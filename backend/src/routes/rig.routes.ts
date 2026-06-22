@@ -2658,11 +2658,18 @@ router.post('/:slug/trips', authenticateToken, async (req: any, res) => {
     const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, activeTripId: true } });
     if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
     if (rig.activeTripId) return res.status(400).json({ error: 'A trip is already active. Complete it first.' });
-    const { name, description, startDate } = req.body;
+    const { name, description, startDate, tripMode, tripType, visibility } = req.body;
     if (!name) return res.status(400).json({ error: 'Trip name required' });
     const trip = await prisma.rigTrip.create({
-      data: { rigId: rig.id, name, description, startDate: startDate ? new Date(startDate) : new Date(), status: 'ACTIVE',
-        members: { create: { userId: req.userId, role: 'DRIVER' } } },
+      data: {
+        rigId: rig.id, name, description,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        status: 'ACTIVE',
+        tripMode: tripMode || 'ONE_WAY',
+        tripType: tripType || 'UNCLASSIFIED',
+        visibility: visibility || 'PRIVATE',
+        members: { create: { userId: req.userId, role: 'DRIVER', accessLevel: 'JOINER', status: 'ACCEPTED' } },
+      },
     });
     await prisma.rig.update({ where: { id: rig.id }, data: { activeTripId: trip.id } });
     res.status(201).json(trip);

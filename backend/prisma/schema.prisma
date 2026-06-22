@@ -6972,6 +6972,7 @@ model RigTrip {
   totalMiles            Float             @default(0)
   totalNights           Int               @default(0)
   totalFuelCost         Float?
+  tripMode              String            @default("ONE_WAY") // ONE_WAY | ROUND_TRIP
   direction             String?           // OUTBOUND | INBOUND | MULTI_LEG
   tripRecapGenerated    Boolean           @default(false)
   tripRecapUrl          String?
@@ -7001,6 +7002,7 @@ model RigTripStop {
   state                 String?
   country               String       @default("US")
   stopType              RigStopType  @default(CAMPGROUND)
+  legType               String       @default("OUTBOUND") // OUTBOUND | RETURN
   mapPinType            String?      // GOLD | MOON | ORANGE — derived from stopType
   hitchOneLiner         String?
   lat                   Float?
@@ -7035,6 +7037,7 @@ model RigTripRoute {
   toStopId        String
   distanceMiles   Float
   durationMinutes Int?
+  legType         String   @default("OUTBOUND") // OUTBOUND | RETURN
   roadType        String   @default("MIXED") // HIGHWAY | SCENIC | OFFGRID | MIXED
   polyline        String?
   fuelStops       Int      @default(0)

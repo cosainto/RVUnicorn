@@ -126,7 +126,11 @@ export default function TripPlanner() {
     startDate: '',
     endDate: '',
     privacy: 'PUBLIC',
+    tripMode: 'ONE_WAY' as 'ONE_WAY' | 'ROUND_TRIP',
+    tripType: 'CAMPING',
   });
+  const [instantMiles, setInstantMiles] = useState<{ oneWay: number; roundTrip: number } | null>(null);
+  const [loadingMiles, setLoadingMiles] = useState(false);
 
   const [newStop, setNewStop] = useState({
     stopType: 'CAMPGROUND',
@@ -236,7 +240,10 @@ export default function TripPlanner() {
         startDate: '',
         endDate: '',
         privacy: 'PUBLIC',
+        tripMode: 'ONE_WAY',
+        tripType: 'CAMPING',
       });
+      setInstantMiles(null);
       alert('Trip created! 🗺️');
     } catch (error) {
       console.error('Create trip error:', error);
@@ -790,15 +797,28 @@ export default function TripPlanner() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Location *
+                      Destination *
                     </label>
                     <input
                       type="text"
                       value={newTrip.endLocation}
-                      onChange={(e) => setNewTrip({ ...newTrip, endLocation: e.target.value })}
+                      onChange={(e) => {
+                        setNewTrip({ ...newTrip, endLocation: e.target.value });
+                        setInstantMiles(null);
+                      }}
+                      onBlur={async () => {
+                        if (newTrip.startLocation && newTrip.endLocation && newTrip.startLocation !== newTrip.endLocation) {
+                          setLoadingMiles(true);
+                          try {
+                            const { data } = await api.post('/road-trips/drive-time', { origin: newTrip.startLocation, destination: newTrip.endLocation });
+                            setInstantMiles({ oneWay: data.distanceMiles || 0, roundTrip: (data.distanceMiles || 0) * 2 });
+                          } catch { setInstantMiles(null); }
+                          setLoadingMiles(false);
+                        }
+                      }}
                       className="input"
                       required
-                      placeholder="Denver, CO"
+                      placeholder="47 Racquet Club Dr, Pawleys Island, SC"
                     />
                     {userProfile?.homeCity && userProfile?.homeState && newTrip.endLocation !== `${userProfile.homeCity}, ${userProfile.homeState}` && (
                       <button
@@ -809,6 +829,52 @@ export default function TripPlanner() {
                         🏠 Use home: {userProfile.homeCity}, {userProfile.homeState}
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Instant mileage */}
+                {(instantMiles || loadingMiles) && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary-50 border border-primary-200">
+                    <Navigation className="w-5 h-5 text-primary-600" />
+                    {loadingMiles ? (
+                      <span className="text-sm text-gray-500">Calculating distance...</span>
+                    ) : instantMiles && (
+                      <div className="text-sm">
+                        <span className="font-bold text-primary-700">{instantMiles.oneWay.toLocaleString()} miles</span>
+                        <span className="text-gray-500"> one way</span>
+                        {newTrip.tripMode === 'ROUND_TRIP' && (
+                          <span className="text-gray-500"> · <span className="font-bold text-primary-700">{instantMiles.roundTrip.toLocaleString()} miles</span> round trip</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* One-way / Round-trip toggle + Trip type */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trip Direction</label>
+                    <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                      <button type="button" onClick={() => setNewTrip({ ...newTrip, tripMode: 'ONE_WAY' })}
+                        className={`flex-1 py-2 text-sm font-semibold transition ${newTrip.tripMode === 'ONE_WAY' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                        One Way →
+                      </button>
+                      <button type="button" onClick={() => setNewTrip({ ...newTrip, tripMode: 'ROUND_TRIP' })}
+                        className={`flex-1 py-2 text-sm font-semibold transition ${newTrip.tripMode === 'ROUND_TRIP' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                        Round Trip ↔
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trip Type</label>
+                    <select value={newTrip.tripType} onChange={e => setNewTrip({ ...newTrip, tripType: e.target.value })} className="input">
+                      <option value="CAMPING">🏕️ Camping Trip</option>
+                      <option value="BOONDOCKING">⛺ Boondocking</option>
+                      <option value="TRANSIT">🚐 Travel Day</option>
+                      <option value="FAMILY_PERSONAL">🏠 Family / Personal</option>
+                      <option value="STORAGE_SERVICE">🔒 Storage / Service</option>
+                      <option value="OTHER">📍 Other</option>
+                    </select>
                   </div>
                 </div>
                 
