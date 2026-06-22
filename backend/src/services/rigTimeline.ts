@@ -70,36 +70,85 @@ export async function buildTimeline(rigId: string) {
     });
   }
 
-  // Trip stops (check-ins from RigTripStop)
-  const stops = await prisma.rigTripStop.findMany({ where: { rigId }, select: { id: true, name: true, coverImageUrl: true, state: true, city: true, hitchOneLiner: true, campgroundId: true, tripId: true, arrivedAt: true }, take: 200 }).catch(() => []);
-  for (const s of stops) {
-    await syncTimelineItem('CHECKIN', s.id, rigId, {
-      title: `Checked into ${s.name}`, previewImageUrl: s.coverImageUrl,
-      previewText: JSON.stringify({ state: s.state, city: s.city, location: s.city ? `${s.city}, ${s.state}` : s.state, hitchLine: s.hitchOneLiner, campgroundId: s.campgroundId }),
-      tripId: s.tripId, stopId: s.id, occurredAt: s.arrivedAt,
-    });
-  }
-
-  // Also sync check-ins from CheckIn table (crew members' campground check-ins)
+  // Check-ins — DEDUPED into one timeline item per stay (not per row)
+  // Collects all crew check-ins, groups by campground, merges overlapping/adjacent dates
   const rig = await prisma.rig.findUnique({ where: { id: rigId }, select: { ownerId: true } });
   if (rig) {
     const pilots = await prisma.rigPilot.findMany({ where: { rigId, shareActivityWithRig: true }, select: { userId: true } }).catch(() => []);
     const crewIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId)])];
     const checkIns = await prisma.checkIn.findMany({
       where: { userId: { in: crewIds }, campgroundId: { not: null }, checkOutDate: { not: null } },
-      select: { id: true, campgroundId: true, checkInDate: true, tripId: true, campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } } },
-      orderBy: { checkInDate: 'desc' },
-      take: 200,
+      select: { id: true, campgroundId: true, checkInDate: true, checkOutDate: true, tripId: true, campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } } },
+      orderBy: { checkInDate: 'asc' },
+      take: 500,
     }).catch(() => []);
+
+    // Group by campground and merge overlapping/adjacent stays
+    const byCampground = new Map<string, any[]>();
     for (const ci of checkIns) {
-      if (!ci.campground) continue;
-      const cg = ci.campground;
-      await syncTimelineItem('CHECKIN', `checkin-${ci.id}`, rigId, {
+      if (!ci.campgroundId || !ci.campground) continue;
+      const list = byCampground.get(ci.campgroundId) || [];
+      list.push(ci);
+      byCampground.set(ci.campgroundId, list);
+    }
+
+    const dedupedStays: any[] = [];
+    for (const [cgId, group] of byCampground) {
+      group.sort((a: any, b: any) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+      let cur = { ...group[0], checkInDate: new Date(group[0].checkInDate), checkOutDate: new Date(group[0].checkOutDate) };
+      for (let i = 1; i < group.length; i++) {
+        const next = group[i];
+        const nextIn = new Date(next.checkInDate).getTime();
+        const curOut = cur.checkOutDate.getTime();
+        if (nextIn <= curOut + 86400000) {
+          // Overlapping/adjacent — merge
+          const nextOut = new Date(next.checkOutDate).getTime();
+          if (nextOut > curOut) cur.checkOutDate = new Date(nextOut);
+          if (!cur.tripId && next.tripId) cur.tripId = next.tripId;
+        } else {
+          dedupedStays.push(cur);
+          cur = { ...next, checkInDate: new Date(next.checkInDate), checkOutDate: new Date(next.checkOutDate) };
+        }
+      }
+      dedupedStays.push(cur);
+    }
+
+    // Delete old per-row CHECKIN timeline items and replace with deduped stays
+    await prisma.rigTimelineItem.deleteMany({ where: { rigId, itemType: 'CHECKIN' } }).catch(() => {});
+
+    for (const stay of dedupedStays) {
+      const cg = stay.campground;
+      const nights = Math.max(1, Math.round((stay.checkOutDate.getTime() - stay.checkInDate.getTime()) / 86400000));
+      const startStr = stay.checkInDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = stay.checkOutDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateRange = nights > 1 ? `${startStr}–${endStr}` : startStr;
+
+      await syncTimelineItem('CHECKIN', `stay-${cg.id}-${stay.checkInDate.toISOString().slice(0, 10)}`, rigId, {
         title: `Checked into ${cg.name}`,
         previewImageUrl: cg.imageUrl || undefined,
-        previewText: JSON.stringify({ state: cg.state, city: cg.city, location: cg.city ? `${cg.city}, ${cg.state}` : cg.state, campgroundId: cg.id, campgroundName: cg.name }),
-        tripId: ci.tripId || undefined,
-        occurredAt: ci.checkInDate,
+        previewText: JSON.stringify({
+          state: cg.state, city: cg.city,
+          location: cg.city ? `${cg.city}, ${cg.state}` : cg.state,
+          campgroundId: cg.id, campgroundName: cg.name,
+          nights, dateRange,
+          checkOutDate: stay.checkOutDate.toISOString(),
+        }),
+        tripId: stay.tripId || undefined,
+        occurredAt: stay.checkInDate,
+      });
+    }
+  }
+
+  // Also sync RigTripStop check-ins (if any exist and aren't duplicates of CheckIn-based stays)
+  const stops = await prisma.rigTripStop.findMany({ where: { rigId }, select: { id: true, name: true, coverImageUrl: true, state: true, city: true, hitchOneLiner: true, campgroundId: true, tripId: true, arrivedAt: true }, take: 200 }).catch(() => []);
+  for (const s of stops) {
+    // Only sync if not already covered by a CheckIn-based stay
+    const existing = await prisma.rigTimelineItem.findFirst({ where: { rigId, itemType: 'CHECKIN', previewText: { contains: s.campgroundId || 'none' } } }).catch(() => null);
+    if (!existing) {
+      await syncTimelineItem('CHECKIN', s.id, rigId, {
+        title: `Checked into ${s.name}`, previewImageUrl: s.coverImageUrl,
+        previewText: JSON.stringify({ state: s.state, city: s.city, location: s.city ? `${s.city}, ${s.state}` : s.state, hitchLine: s.hitchOneLiner, campgroundId: s.campgroundId }),
+        tripId: s.tripId, stopId: s.id, occurredAt: s.arrivedAt,
       });
     }
   }

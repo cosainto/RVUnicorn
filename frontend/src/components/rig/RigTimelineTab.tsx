@@ -190,6 +190,8 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
           const location = d.location || d.city || d.state || '';
           const hitchLine = d.hitchLine || 'Another adventure begins!';
           const hasPhoto = !!item.previewImageUrl;
+          const nights = d.nights || null;
+          const dateRange = d.dateRange || null;
 
           const bannerContent = (
             <div className="relative" style={{ height: 220, cursor: d.campgroundId ? 'pointer' : 'default' }}>
@@ -210,6 +212,12 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
                 <span className="text-2xl block mb-1">📍</span>
                 <h4 className="text-xl font-bold text-white drop-shadow-lg leading-tight">{campName}</h4>
                 {location && <p className="text-sm text-white/60 mt-1">{location}</p>}
+                {(nights || dateRange) && (
+                  <p className="text-xs text-white/50 mt-1">
+                    {dateRange && <span>{dateRange}</span>}
+                    {nights && nights > 1 && <span>{dateRange ? ' · ' : ''}{nights} nights</span>}
+                  </p>
+                )}
               </div>
               <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
                 <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_32,h_32,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-6 h-6 rounded-full flex-shrink-0" />
