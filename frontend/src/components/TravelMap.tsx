@@ -279,6 +279,7 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [shoutoutMsg, setShoutoutMsg] = useState('');
   const [shoutoutSending, setShoutoutSending] = useState(false);
   const [shoutoutSent, setShoutoutSent] = useState(false);
+  const [pinAlbumData, setPinAlbumData] = useState<{ hasPhotos: boolean; count: number; rigSlug: string | null } | null>(null);
   const [fuelType, setFuelType] = useState<'regular' | 'diesel'>('diesel');
   const [updatingPrices, setUpdatingPrices] = useState(true);
   const [priceStats, setPriceStats] = useState<any>(null);
@@ -1205,13 +1206,19 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               if (stop) setSelectedRestStop(stop);
             } else if (marker.type === 'friendCheckin' && marker.user) {
               const checkin = friendsCheckins.find((c: any) => c.userId === marker.user?.id || c.user?.id === marker.user?.id);
+              const cgId = checkin?.campgroundId || checkin?.campground?.id;
               setShoutoutTarget({
                 user: marker.user,
-                campgroundId: checkin?.campgroundId || checkin?.campground?.id,
+                campgroundId: cgId,
                 campgroundName: marker.name?.replace(`${marker.user.firstName || ''} at `, '') || checkin?.campground?.name,
               });
               setShoutoutMsg('');
               setShoutoutSent(false);
+              setPinAlbumData(null);
+              // Check for trip album photos (non-blocking)
+              if (cgId && marker.user?.id) {
+                api.get(`/rigs/photos-at-campground/${cgId}/${marker.user.id}`).then(r => setPinAlbumData(r.data)).catch(() => {});
+              }
             } else if (marker.type === 'recentAlbum' && marker.albumId) {
               navigate(`/albums/${marker.albumId}`);
             } else if (marker.type === 'upcomingFriendTrip' && marker.tripId) {
@@ -1286,6 +1293,20 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               </div>
               <button onClick={() => setShoutoutTarget(null)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
+            {/* Quick actions */}
+            <div className="flex border-b border-gray-100">
+              <button onClick={() => { setShoutoutTarget(null); navigate(`/profile/${shoutoutTarget.user.username}`); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition">
+                👤 View Profile
+              </button>
+              {pinAlbumData?.hasPhotos && pinAlbumData.rigSlug && (
+                <button onClick={() => { setShoutoutTarget(null); navigate(`/rig/${pinAlbumData.rigSlug}`); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition border-l border-gray-100">
+                  📸 Trip Album ({pinAlbumData.count})
+                </button>
+              )}
+            </div>
+
             <div className="p-5">
               {shoutoutSent ? (
                 <div className="text-center py-4">

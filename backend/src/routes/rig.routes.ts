@@ -763,6 +763,52 @@ router.get('/:slug/session/:sessionId/posts', optionalAuth, async (req: any, res
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ============== CAMPGROUND PHOTOS CHECK ==============
+
+// GET /photos-at-campground/:campgroundId/:userId — check if user has visible photos at a campground
+router.get('/photos-at-campground/:campgroundId/:userId', optionalAuth, async (req: any, res) => {
+  try {
+    const { campgroundId, userId } = req.params;
+    const viewerId = (req as any).userId || null;
+
+    // Find rig posts by this user with photos that reference this campground (via check-in timeline)
+    // Also check RigPost photos where the post was made during a stay at this campground
+    const { publicVisibilityFilter, canViewRigContent } = require('../services/rigVisibility');
+
+    // Find the user's rig
+    const rig = await prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true, ownerId: true } });
+    if (!rig) {
+      // Check if user is a pilot on any rig
+      const pilot = await prisma.rigPilot.findFirst({ where: { userId }, select: { rigId: true, rig: { select: { id: true, ownerId: true } } } });
+      if (!pilot) return res.json({ hasPhotos: false, count: 0 });
+    }
+
+    const rigId = rig?.id;
+    if (!rigId) return res.json({ hasPhotos: false, count: 0 });
+
+    // Find posts with photos at this campground
+    // Photos are linked to campgrounds via check-in tripId or directly
+    const posts = await prisma.rigPost.findMany({
+      where: {
+        rigId,
+        NOT: { photos: { equals: [] } },
+        ...publicVisibilityFilter,
+      },
+      select: { id: true, photos: true, visibility: true, tripId: true },
+      take: 10,
+    });
+
+    // Filter by visibility for the viewer
+    let visibleCount = 0;
+    for (const post of posts) {
+      const canView = await canViewRigContent(post.visibility, viewerId, rig?.ownerId || userId, rigId);
+      if (canView) visibleCount += post.photos.length;
+    }
+
+    res.json({ hasPhotos: visibleCount > 0, count: visibleCount, rigSlug: rig ? await prisma.rig.findUnique({ where: { id: rigId }, select: { slug: true } }).then((r: any) => r?.slug) : null });
+  } catch (e: any) { res.json({ hasPhotos: false, count: 0 }); }
+});
+
 // ============== MILEAGE ==============
 
 // POST /:slug/mileage/sync — recompute mileage from check-ins via HERE
