@@ -705,18 +705,151 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
   }
 });
 
+// ============== ENTITY FOLLOW (rig ↔ campsite) ==============
+
+// POST /:slug/follow-campground/:campgroundId — rig follows a campsite
+router.post('/:slug/follow-campground/:campgroundId', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const { authorized } = await isOwnerOrEditor(rig.id, req.userId);
+    if (!authorized) return res.status(403).json({ error: 'Not authorized' });
+
+    const campgroundId = req.params.campgroundId;
+    const existing = await prisma.entityFollow.findUnique({
+      where: { followerType_followerId_targetType_targetId: { followerType: 'RIG', followerId: rig.id, targetType: 'CAMPGROUND', targetId: campgroundId } },
+    });
+
+    if (existing) {
+      await prisma.entityFollow.delete({ where: { id: existing.id } });
+      return res.json({ following: false });
+    }
+
+    await prisma.entityFollow.create({
+      data: { followerType: 'RIG', followerId: rig.id, targetType: 'CAMPGROUND', targetId: campgroundId },
+    });
+    res.json({ following: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /campground/:campgroundId/follow-rig/:rigId — campsite follows a rig (claimed only)
+router.post('/campground/:campgroundId/follow-rig/:rigId', authenticateToken, async (req: any, res) => {
+  try {
+    const { campgroundId, rigId } = req.params;
+
+    // Verify campground is claimed by this user
+    const campground = await prisma.campground.findUnique({ where: { id: campgroundId }, select: { claimedById: true } });
+    if (!campground?.claimedById) return res.status(403).json({ error: 'Campground must be claimed to follow rigs' });
+    if (campground.claimedById !== req.userId) {
+      const admin = await prisma.campgroundAdmin.findUnique({ where: { userId_campgroundId: { userId: req.userId, campgroundId } } });
+      if (!admin) return res.status(403).json({ error: 'Not a manager of this campground' });
+    }
+
+    const existing = await prisma.entityFollow.findUnique({
+      where: { followerType_followerId_targetType_targetId: { followerType: 'CAMPGROUND', followerId: campgroundId, targetType: 'RIG', targetId: rigId } },
+    });
+
+    if (existing) {
+      await prisma.entityFollow.delete({ where: { id: existing.id } });
+      return res.json({ following: false });
+    }
+
+    await prisma.entityFollow.create({
+      data: { followerType: 'CAMPGROUND', followerId: campgroundId, targetType: 'RIG', targetId: rigId, managerId: req.userId },
+    });
+    res.json({ following: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /:slug/following-campgrounds — campgrounds this rig follows
+router.get('/:slug/following-campgrounds', async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    const follows = await prisma.entityFollow.findMany({
+      where: { followerType: 'RIG', followerId: rig.id, targetType: 'CAMPGROUND' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const campgroundIds = follows.map((f: any) => f.targetId);
+    const campgrounds = campgroundIds.length > 0 ? await prisma.campground.findMany({
+      where: { id: { in: campgroundIds } },
+      select: { id: true, name: true, imageUrl: true, city: true, state: true },
+    }) : [];
+
+    res.json(campgrounds);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /campground/:campgroundId/following-rigs — rigs this campsite follows (claimed campgrounds only)
+router.get('/campground/:campgroundId/following-rigs', async (req: any, res) => {
+  try {
+    const follows = await prisma.entityFollow.findMany({
+      where: { followerType: 'CAMPGROUND', followerId: req.params.campgroundId, targetType: 'RIG' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rigIds = follows.map((f: any) => f.targetId);
+    const rigs = rigIds.length > 0 ? await prisma.rig.findMany({
+      where: { id: { in: rigIds }, isPublic: true },
+      select: { id: true, slug: true, rigName: true, heroPhoto: true, followerCount: true },
+    }) : [];
+
+    res.json(rigs);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ============== PAGE FEEDBACK (open — any logged-in user) ==============
+
+// POST /feedback — leave feedback on a rig or campsite page
+router.post('/feedback', authenticateToken, async (req: any, res) => {
+  try {
+    const { pageType, pageId, content, rating } = req.body;
+    if (!['RIG', 'CAMPGROUND'].includes(pageType)) return res.status(400).json({ error: 'pageType must be RIG or CAMPGROUND' });
+    if (!pageId || !content?.trim()) return res.status(400).json({ error: 'pageId and content required' });
+
+    const feedback = await prisma.pageFeedback.create({
+      data: { userId: req.userId, pageType, pageId, content: content.trim(), rating: rating ? Math.min(5, Math.max(1, parseInt(rating))) : null },
+    });
+    res.status(201).json(feedback);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /feedback/:pageType/:pageId — get feedback for a page
+router.get('/feedback/:pageType/:pageId', async (req: any, res) => {
+  try {
+    const { pageType, pageId } = req.params;
+    const feedback = await prisma.pageFeedback.findMany({
+      where: { pageType, pageId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    // Enrich with user data
+    const userIds = [...new Set(feedback.map((f: any) => f.userId))];
+    const users = userIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
+    }) : [];
+    const userMap = new Map(users.map((u: any) => [u.id, u]));
+
+    res.json(feedback.map((f: any) => ({ ...f, user: userMap.get(f.userId) || null })));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ============== CAMP SESSION ==============
 
 // GET /:slug/session/active — get the active Camp Session for this rig
 router.get('/:slug/session/active', optionalAuth, async (req: any, res) => {
   try {
-    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, activeTripId: true } });
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, activeTripId: true } });
     if (!rig || !rig.activeTripId) return res.json({ session: null });
 
     const session = await prisma.rigTrip.findUnique({
       where: { id: rig.activeTripId },
       select: {
-        id: true, name: true, campgroundId: true, sessionType: true, status: true,
+        id: true, name: true, campgroundId: true, sessionType: true, status: true, visibility: true,
         startDate: true, endDate: true, coverImageUrl: true, totalNights: true,
         statesVisited: true,
       },
@@ -724,6 +857,13 @@ router.get('/:slug/session/active', optionalAuth, async (req: any, res) => {
 
     if (!session || session.status !== 'ACTIVE' || session.sessionType !== 'CAMP') {
       return res.json({ session: null });
+    }
+
+    // Gate: private sessions only visible to owner/co-pilot
+    if (session.visibility === 'PRIVATE') {
+      const viewerId = req.userId || null;
+      const isOwnerOrPilot = viewerId === rig.ownerId || (viewerId && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: viewerId } } }));
+      if (!isOwnerOrPilot) return res.json({ session: null });
     }
 
     // Get campground details
@@ -2168,21 +2308,26 @@ router.post('/:slug/trips', authenticateToken, async (req: any, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:slug/trips', async (req: any, res) => {
+router.get('/:slug/trips', optionalAuth, async (req: any, res) => {
   try {
-    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
     if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const viewerId = req.userId || null;
+    const isOwnerOrPilot = viewerId === rig.ownerId || (viewerId && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: viewerId } } }));
+    const where: any = { rigId: rig.id };
+    if (!isOwnerOrPilot) where.visibility = { not: 'PRIVATE' }; // non-owners can't see private trips
     const trips = await prisma.rigTrip.findMany({
-      where: { rigId: rig.id }, orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
+      where, orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
       include: { _count: { select: { stops: true, routes: true, members: true } } },
     });
-    res.json(trips);
+    const { scrubTripLocation } = require('../services/rigVisibility');
+    res.json(trips.map((t: any) => scrubTripLocation(t, !!isOwnerOrPilot)));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:slug/trips/active', async (req: any, res) => {
+router.get('/:slug/trips/active', optionalAuth, async (req: any, res) => {
   try {
-    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, activeTripId: true } });
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true, activeTripId: true } });
     if (!rig || !rig.activeTripId) return res.json(null);
     const trip = await prisma.rigTrip.findUnique({
       where: { id: rig.activeTripId },
@@ -2193,12 +2338,19 @@ router.get('/:slug/trips/active', async (req: any, res) => {
         members: { include: { user: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } } } },
       },
     });
-    res.json(trip);
+    if (!trip) return res.json(null);
+    // Private active trip: only show to owner/co-pilot
+    const viewerId = req.userId || null;
+    const isOwnerOrPilot = viewerId === rig.ownerId || (viewerId && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: viewerId } } }));
+    if (trip.visibility === 'PRIVATE' && !isOwnerOrPilot) return res.json(null);
+    const { scrubTripLocation } = require('../services/rigVisibility');
+    res.json(scrubTripLocation(trip, !!isOwnerOrPilot));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:slug/trips/:tripId', async (req: any, res) => {
+router.get('/:slug/trips/:tripId', optionalAuth, async (req: any, res) => {
   try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, ownerId: true } });
     const trip = await prisma.rigTrip.findUnique({
       where: { id: req.params.tripId },
       include: {
@@ -2210,7 +2362,11 @@ router.get('/:slug/trips/:tripId', async (req: any, res) => {
       },
     });
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
-    res.json(trip);
+    const viewerId = req.userId || null;
+    const isOwnerOrPilot = rig && (viewerId === rig.ownerId || (viewerId && await prisma.rigPilot.findUnique({ where: { rigId_userId: { rigId: rig.id, userId: viewerId } } })));
+    if (trip.visibility === 'PRIVATE' && !isOwnerOrPilot) return res.status(404).json({ error: 'Trip not found' });
+    const { scrubTripLocation } = require('../services/rigVisibility');
+    res.json(scrubTripLocation(trip, !!isOwnerOrPilot));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

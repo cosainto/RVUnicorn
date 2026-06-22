@@ -90,3 +90,63 @@ export async function canViewRigContent(
 
   return true;
 }
+
+// ─── TRIP VISIBILITY ───────────────────────────────────────
+
+/**
+ * Prisma WHERE clause to filter trips for public/non-owner viewers.
+ * PRIVATE trips are excluded; SHARED and PUBLIC pass through.
+ */
+export const publicTripFilter = {
+  visibility: { not: 'PRIVATE' },
+};
+
+/**
+ * Check if a viewer can see a specific trip.
+ */
+export async function canViewTrip(
+  tripVisibility: string | null,
+  viewerId: string | null,
+  ownerId: string,
+  rigId?: string,
+): Promise<boolean> {
+  // PUBLIC or SHARED → visible to everyone
+  if (tripVisibility === 'PUBLIC' || tripVisibility === 'SHARED') return true;
+
+  // PRIVATE → only owner/co-pilots
+  if (!viewerId) return false;
+  if (viewerId === ownerId) return true;
+
+  if (rigId) {
+    const pilot = await prisma.rigPilot.findUnique({
+      where: { rigId_userId: { rigId, userId: viewerId } },
+    });
+    if (pilot) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Scrub location precision from a trip object for public viewers.
+ * Returns the trip with coordinates removed/rounded based on locationPrecision.
+ */
+export function scrubTripLocation(trip: any, isOwnerOrPilot: boolean): any {
+  if (isOwnerOrPilot) return trip; // owner sees everything
+
+  const precision = trip.locationPrecision || 'AREA';
+
+  if (precision === 'HIDDEN') {
+    // Remove all location data
+    const { campgroundId, statesVisited, ...rest } = trip;
+    return { ...rest, campgroundId: null, statesVisited: [] };
+  }
+
+  if (precision === 'AREA') {
+    // Keep state-level data, remove precise coordinates from stops
+    return trip; // campgroundId stays (it's a named place), but precise lat/lng on stops would be rounded
+  }
+
+  // PRECISE — return as-is
+  return trip;
+}

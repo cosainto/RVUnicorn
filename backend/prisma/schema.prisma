@@ -6960,6 +6960,9 @@ model RigTrip {
   rigId                 String
   campgroundId          String?
   sessionType           String?           @default("CAMP") // CAMP | TRAVEL | BUILD | STORY | MILESTONE
+  tripType              String            @default("UNCLASSIFIED") // CAMPING | BOONDOCKING | TRANSIT | FAMILY_PERSONAL | STORAGE_SERVICE | OTHER | UNCLASSIFIED
+  visibility            String            @default("PRIVATE") // PRIVATE | SHARED | PUBLIC
+  locationPrecision     String            @default("AREA") // HIDDEN | AREA | PRECISE
   name                  String
   description           String?
   status                String            @default("ACTIVE") // ACTIVE | COMPLETED | ARCHIVED
@@ -8025,3 +8028,32 @@ model RigLegCache {
   @@index([campgroundBId])
 }
 
+
+model EntityFollow {
+  id              String   @id @default(cuid())
+  followerType    String                        // RIG | CAMPGROUND
+  followerId      String                        // rig id or campground id
+  targetType      String                        // RIG | CAMPGROUND
+  targetId        String                        // rig id or campground id
+  managerId       String?                       // the real user behind a campsite action (claimedById)
+  createdAt       DateTime @default(now())
+
+  @@unique([followerType, followerId, targetType, targetId])
+  @@index([followerType, followerId])
+  @@index([targetType, targetId])
+  @@index([managerId])
+}
+
+model PageFeedback {
+  id          String   @id @default(cuid())
+  userId      String
+  pageType    String                             // RIG | CAMPGROUND
+  pageId      String                             // rig id or campground id
+  content     String
+  rating      Int?                               // optional 1-5
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([pageType, pageId])
+  @@index([userId])
+}
