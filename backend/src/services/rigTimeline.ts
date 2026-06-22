@@ -70,7 +70,7 @@ export async function buildTimeline(rigId: string) {
     });
   }
 
-  // Trip stops (check-ins)
+  // Trip stops (check-ins from RigTripStop)
   const stops = await prisma.rigTripStop.findMany({ where: { rigId }, select: { id: true, name: true, coverImageUrl: true, state: true, city: true, hitchOneLiner: true, campgroundId: true, tripId: true, arrivedAt: true }, take: 200 }).catch(() => []);
   for (const s of stops) {
     await syncTimelineItem('CHECKIN', s.id, rigId, {
@@ -78,6 +78,30 @@ export async function buildTimeline(rigId: string) {
       previewText: JSON.stringify({ state: s.state, city: s.city, location: s.city ? `${s.city}, ${s.state}` : s.state, hitchLine: s.hitchOneLiner, campgroundId: s.campgroundId }),
       tripId: s.tripId, stopId: s.id, occurredAt: s.arrivedAt,
     });
+  }
+
+  // Also sync check-ins from CheckIn table (crew members' campground check-ins)
+  const rig = await prisma.rig.findUnique({ where: { id: rigId }, select: { ownerId: true } });
+  if (rig) {
+    const pilots = await prisma.rigPilot.findMany({ where: { rigId, shareActivityWithRig: true }, select: { userId: true } }).catch(() => []);
+    const crewIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId)])];
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: { in: crewIds }, campgroundId: { not: null }, checkOutDate: { not: null } },
+      select: { id: true, campgroundId: true, checkInDate: true, tripId: true, campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } } },
+      orderBy: { checkInDate: 'desc' },
+      take: 200,
+    }).catch(() => []);
+    for (const ci of checkIns) {
+      if (!ci.campground) continue;
+      const cg = ci.campground;
+      await syncTimelineItem('CHECKIN', `checkin-${ci.id}`, rigId, {
+        title: `Checked into ${cg.name}`,
+        previewImageUrl: cg.imageUrl || undefined,
+        previewText: JSON.stringify({ state: cg.state, city: cg.city, location: cg.city ? `${cg.city}, ${cg.state}` : cg.state, campgroundId: cg.id, campgroundName: cg.name }),
+        tripId: ci.tripId || undefined,
+        occurredAt: ci.checkInDate,
+      });
+    }
   }
 
   // Trip milestones
