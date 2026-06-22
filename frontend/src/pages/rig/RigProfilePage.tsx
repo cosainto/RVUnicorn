@@ -404,7 +404,7 @@ export default function RigProfilePage() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-2">
             <div className="rounded-2xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {[
                   { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road', route: '/albums' },
                   { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's cooking?", route: '/recipes' },
@@ -418,12 +418,12 @@ export default function RigProfilePage() {
                     else if ((c as any).route) navigate((c as any).route);
                     else { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }
                   }}
-                    className="flex flex-col items-center p-3 rounded-xl text-center transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex flex-col items-center py-5 px-2 rounded-xl text-center transition-all duration-150 hover:scale-[1.03] active:scale-[0.97]"
                     style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
-                    <span className="text-lg mb-1">{c.icon}</span>
-                    <span className="text-[10px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
+                    <span className="text-2xl mb-2">{c.icon}</span>
+                    <span className="text-xs font-bold" style={{ color: CN.cream }}>{c.label}</span>
                   </button>
                 ))}
               </div>
