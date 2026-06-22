@@ -979,7 +979,7 @@ router.get('/:id/social-proof', optionalAuth, async (req: Request, res: Response
             profilePicture: true,
             firstName: true,
             lastName: true,
-            rigs: {
+            ownedRigs: {
               where: { isPublic: true },
               take: 1,
               select: { rigName: true, slug: true },
@@ -1002,8 +1002,8 @@ router.get('/:id/social-proof', optionalAuth, async (req: Request, res: Response
       username: f.user.username,
       avatarUrl: f.user.profilePicture,
       firstName: f.user.firstName,
-      rigName: f.user.rigs[0]?.rigName || null,
-      rigSlug: f.user.rigs[0]?.slug || null,
+      rigName: f.user.ownedRigs?.[0]?.rigName || null,
+      rigSlug: f.user.ownedRigs?.[0]?.slug || null,
       isFriend: friendIdSet.has(f.user.id),
     }));
 

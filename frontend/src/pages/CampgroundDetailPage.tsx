@@ -338,12 +338,12 @@ export default function CampgroundDetailPage() {
   const loadTabData = async () => {
     if (!campground) return;
     try {
-      if (activeTab === 'reviews') { const r = await api.get(`/campground-features/${campground.id}/reviews`); setReviews(r.data.reviews); setAvgRating(r.data.averageRating); }
-      if (activeTab === 'photos') { const p = await api.get(`/campground-features/${campground.id}/photos`); setPhotos(p.data); if (isAdmin) { try { const pp = await api.get(`/campground-features/${campground.id}/photos/pending`); setPendingPhotos(pp.data); } catch {} } }
-      if (activeTab === 'events') { const e = await api.get(`/campground-features/${campground.id}/events`); setEvents(e.data); }
-      if (activeTab === 'news') { const n = await api.get(`/campground-features/${campground.id}/announcements`); setAnnouncements(n.data); }
-      if (activeTab === 'map') { const m = await api.get(`/campground-features/${campground.id}/map`); setCampgroundMapUrl(m.data.mapUrl); }
-      if (activeTab === 'threads') { const t = await api.get(`/threads?campgroundId=${campground.id}`); setThreads(t.data); }
+      if (activeTab === 'reviews') { const r = await api.get(`/campground-features/${campground.id}/reviews`); setReviews(r.data?.reviews || []); setAvgRating(r.data?.averageRating || 0); }
+      if (activeTab === 'photos') { const p = await api.get(`/campground-features/${campground.id}/photos`); setPhotos(Array.isArray(p.data) ? p.data : []); if (isAdmin) { try { const pp = await api.get(`/campground-features/${campground.id}/photos/pending`); setPendingPhotos(Array.isArray(pp.data) ? pp.data : []); } catch {} } }
+      if (activeTab === 'events') { const e = await api.get(`/campground-features/${campground.id}/events`); setEvents(Array.isArray(e.data) ? e.data : []); }
+      if (activeTab === 'news') { const n = await api.get(`/campground-features/${campground.id}/announcements`); setAnnouncements(Array.isArray(n.data) ? n.data : []); }
+      if (activeTab === 'map') { const m = await api.get(`/campground-features/${campground.id}/map`); setCampgroundMapUrl(m.data?.mapUrl || null); }
+      if (activeTab === 'threads') { const t = await api.get(`/threads?campgroundId=${campground.id}`); setThreads(Array.isArray(t.data) ? t.data : []); }
     } catch {}
   };
 
