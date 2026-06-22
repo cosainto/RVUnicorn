@@ -223,6 +223,8 @@ export default function EventsPage() {
     attendeeIds: [] as string[],
     privacy: 'PUBLIC',
     isMultiStop: false,
+    tripMode: 'ONE_WAY' as 'ONE_WAY' | 'ROUND_TRIP',
+    tripType: 'CAMPING',
   });
 
   // Multi-stop state
@@ -566,6 +568,8 @@ export default function EventsPage() {
         attendeeIds: [],
         privacy: 'PUBLIC',
         isMultiStop: false,
+        tripMode: 'ONE_WAY',
+        tripType: 'CAMPING',
       });
       loadEvents();
       loadDiscoverEvents();
@@ -1086,11 +1090,39 @@ export default function EventsPage() {
                 </div>
               </div>
 
+              {/* Trip Direction + Type */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Trip Direction</label>
+                  <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                    <button type="button" onClick={() => setFormData({ ...formData, tripMode: 'ONE_WAY' })}
+                      className={`flex-1 py-2 text-sm font-semibold transition ${formData.tripMode === 'ONE_WAY' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      One Way →
+                    </button>
+                    <button type="button" onClick={() => setFormData({ ...formData, tripMode: 'ROUND_TRIP' })}
+                      className={`flex-1 py-2 text-sm font-semibold transition ${formData.tripMode === 'ROUND_TRIP' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      Round Trip ↔
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Trip Type</label>
+                  <select value={formData.tripType} onChange={e => setFormData({ ...formData, tripType: e.target.value })} className="input w-full">
+                    <option value="CAMPING">🏕️ Camping Trip</option>
+                    <option value="BOONDOCKING">⛺ Boondocking</option>
+                    <option value="TRANSIT">🚐 Travel Day</option>
+                    <option value="FAMILY_PERSONAL">🏠 Family / Personal</option>
+                    <option value="STORAGE_SERVICE">🔒 Storage / Service</option>
+                    <option value="OTHER">📍 Other</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Multi-stop toggle */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">🗺️ Multi-stop road trip?</p>
-                  <p className="text-xs text-gray-500">Add multiple campgrounds with dates</p>
+                  <p className="text-sm font-semibold text-gray-800">🗺️ Multi-stop trip?</p>
+                  <p className="text-xs text-gray-500">Add stops along your route</p>
                 </div>
                 <div
                   onClick={() => { setFormData(f => ({ ...f, isMultiStop: !f.isMultiStop })); setMultiStops([]); }}
@@ -1128,7 +1160,7 @@ export default function EventsPage() {
               {/* Multi-stop builder */}
               {formData.isMultiStop && (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-gray-700">Campground Stops</p>
+                  <p className="text-sm font-semibold text-gray-700">Stops Along the Way</p>
 
                   {/* Existing stops */}
                   {multiStops.map((stop, idx) => (
@@ -1172,7 +1204,7 @@ export default function EventsPage() {
                             type="text"
                             value={stopSearch}
                             onChange={e => setStopSearch(e.target.value)}
-                            placeholder="Search campground..."
+                            placeholder="Search campground or enter address..."
                             className="input w-full pl-8 text-sm"
                           />
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
