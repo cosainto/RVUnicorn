@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, Play } from 'lucide-react';
 import api from '../../services/api';
 import CampsiteSocialProofInline from './CampsiteSocialProofInline';
+import CampSessionCard from './CampSessionCard';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
@@ -93,16 +94,22 @@ interface Props {
   rigId?: string;
 }
 
-export default function RigTimelineTab({ slug, rigName, ownerAvatar, ownerName }: Props) {
+export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ownerName, rigId }: Props) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [activeSession, setActiveSession] = useState<any>(null);
 
+  useEffect(() => { loadInitial(); loadSession(); }, [slug]);
 
-
-  useEffect(() => { loadInitial(); }, [slug]);
+  const loadSession = async () => {
+    try {
+      const { data } = await api.get(`/rigs/${slug}/session/active`);
+      setActiveSession(data.session || null);
+    } catch {}
+  };
 
   const loadInitial = async () => {
     try {
@@ -150,6 +157,11 @@ export default function RigTimelineTab({ slug, rigName, ownerAvatar, ownerName }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+
+      {/* Active Camp Session — pinned at top */}
+      {activeSession && rigId && (
+        <CampSessionCard session={activeSession} rigId={rigId} slug={slug} isOwner={isOwner} ownerAvatar={ownerAvatar} rigName={rigName} />
+      )}
 
       {items.map(item => {
         const title = smartTitle(item);

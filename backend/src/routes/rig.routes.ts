@@ -705,6 +705,64 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
   }
 });
 
+// ============== CAMP SESSION ==============
+
+// GET /:slug/session/active — get the active Camp Session for this rig
+router.get('/:slug/session/active', optionalAuth, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug }, select: { id: true, activeTripId: true } });
+    if (!rig || !rig.activeTripId) return res.json({ session: null });
+
+    const session = await prisma.rigTrip.findUnique({
+      where: { id: rig.activeTripId },
+      select: {
+        id: true, name: true, campgroundId: true, sessionType: true, status: true,
+        startDate: true, endDate: true, coverImageUrl: true, totalNights: true,
+        statesVisited: true,
+      },
+    });
+
+    if (!session || session.status !== 'ACTIVE' || session.sessionType !== 'CAMP') {
+      return res.json({ session: null });
+    }
+
+    // Get campground details
+    const campground = session.campgroundId
+      ? await prisma.campground.findUnique({ where: { id: session.campgroundId }, select: { id: true, name: true, imageUrl: true, city: true, state: true } })
+      : null;
+
+    // Get attached posts count
+    const postCount = await prisma.rigPost.count({ where: { tripId: session.id } });
+
+    // Get days at camp
+    const daysAtCamp = session.startDate ? Math.max(1, Math.ceil((Date.now() - new Date(session.startDate).getTime()) / 86400000)) : 1;
+
+    res.json({
+      session: {
+        ...session,
+        campground,
+        postCount,
+        daysAtCamp,
+      },
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /:slug/session/:sessionId/posts — get posts attached to a session
+router.get('/:slug/session/:sessionId/posts', optionalAuth, async (req: any, res) => {
+  try {
+    const posts = await prisma.rigPost.findMany({
+      where: { tripId: req.params.sessionId, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, title: true, body: true, photos: true, postType: true, createdAt: true,
+        author: { select: { id: true, firstName: true, profilePicture: true } },
+      },
+    });
+    res.json(posts);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ============== MILEAGE ==============
 
 // POST /:slug/mileage/sync — recompute mileage from check-ins via HERE

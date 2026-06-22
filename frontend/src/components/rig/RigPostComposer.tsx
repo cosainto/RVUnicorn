@@ -26,11 +26,12 @@ interface Props {
   slug: string;
   isOpen: boolean;
   initialFormat?: string | null;
+  activeSessionId?: string | null;
   onClose: () => void;
   onPublished: () => void;
 }
 
-export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, onClose, onPublished }: Props) {
+export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, activeSessionId, onClose, onPublished }: Props) {
   const { addLocalToast } = useToast();
   const [format, setFormat] = useState<string | null>(initialFormat || null);
 
@@ -127,6 +128,7 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, on
           title: title.trim() || undefined,
           body: body.trim(),
           photos: photoUrls,
+          tripId: activeSessionId || undefined,
         });
       }
 

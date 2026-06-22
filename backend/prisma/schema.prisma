@@ -6958,6 +6958,8 @@ model RigInsightCard {
 model RigTrip {
   id                    String            @id @default(cuid())
   rigId                 String
+  campgroundId          String?
+  sessionType           String?           @default("CAMP") // CAMP | TRAVEL | BUILD | STORY | MILESTONE
   name                  String
   description           String?
   status                String            @default("ACTIVE") // ACTIVE | COMPLETED | ARCHIVED

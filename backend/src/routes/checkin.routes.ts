@@ -74,6 +74,50 @@ router.post('/', authenticateToken, async (req: any, res) => {
       }
     });
 
+    // Auto-create/join Camp Session on check-in (non-blocking)
+    if (campgroundId) {
+      setImmediate(async () => {
+        try {
+          const { resolveUserRigId } = require('../services/rigResolver');
+          const rig = await resolveUserRigId(userId);
+          if (!rig) return;
+
+          const rigRecord = await prisma.rig.findUnique({ where: { id: rig.id }, select: { activeTripId: true } });
+
+          // Check if there's already an active session at this campground
+          if (rigRecord?.activeTripId) {
+            const activeTrip = await prisma.rigTrip.findUnique({ where: { id: rigRecord.activeTripId }, select: { campgroundId: true, status: true } });
+            if (activeTrip?.campgroundId === campgroundId && activeTrip?.status === 'ACTIVE') return; // already in session here
+
+            // Different campground — complete the old session
+            if (activeTrip?.status === 'ACTIVE') {
+              await prisma.rigTrip.update({ where: { id: rigRecord.activeTripId }, data: { status: 'COMPLETED', endDate: new Date() } });
+            }
+          }
+
+          // Create new Camp Session
+          const cgName = checkIn.campground?.name || 'Camp';
+          const session = await prisma.rigTrip.create({
+            data: {
+              rigId: rig.id,
+              campgroundId,
+              sessionType: 'CAMP',
+              name: cgName,
+              startDate: checkIn.checkInDate,
+              status: 'ACTIVE',
+              coverImageUrl: checkIn.campground?.imageUrl || null,
+              statesVisited: checkIn.campground?.state ? [checkIn.campground.state] : [],
+              campgroundCount: 1,
+            },
+          });
+          await prisma.rig.update({ where: { id: rig.id }, data: { activeTripId: session.id } });
+
+          // Link the check-in to the session
+          await prisma.checkIn.update({ where: { id: checkIn.id }, data: { tripId: session.id } }).catch(() => {});
+        } catch (e: any) { console.error('[CheckIn] Camp Session creation error:', e.message); }
+      });
+    }
+
     // Award campground first stay badge — only on first ever campground check-in
     if (campgroundId) {
       const slug = 'campground-first-stay';
@@ -373,12 +417,22 @@ router.delete('/active', authenticateToken, async (req: any, res) => {
 
     res.json({ success: true });
 
-    // Roll up rig stats + mileage after checkout (non-blocking)
+    // Complete Camp Session + roll up rig stats + mileage after checkout (non-blocking)
     setImmediate(async () => {
       try {
         const { resolveUserRigId } = require('../services/rigResolver');
         const rig = await resolveUserRigId(userId);
         if (rig) {
+          // Complete active Camp Session
+          const rigRecord = await prisma.rig.findUnique({ where: { id: rig.id }, select: { activeTripId: true } });
+          if (rigRecord?.activeTripId) {
+            const activeTrip = await prisma.rigTrip.findUnique({ where: { id: rigRecord.activeTripId }, select: { status: true, sessionType: true, startDate: true } });
+            if (activeTrip?.status === 'ACTIVE' && activeTrip?.sessionType === 'CAMP') {
+              const nights = activeTrip.startDate ? Math.max(1, Math.round((Date.now() - new Date(activeTrip.startDate).getTime()) / 86400000)) : 1;
+              await prisma.rigTrip.update({ where: { id: rigRecord.activeTripId }, data: { status: 'COMPLETED', endDate: new Date(), totalNights: nights } });
+              await prisma.rig.update({ where: { id: rig.id }, data: { activeTripId: null } });
+            }
+          }
           const { rollupRigStats } = require('../services/rigStatsRollup');
           await rollupRigStats(rig.id);
           const { rollupRigMileage } = require('../services/rigMileage');
