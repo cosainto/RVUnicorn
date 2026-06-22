@@ -635,10 +635,14 @@ export default function EventsPage() {
               endDate: getDateString(7),
               location: '',
               campgroundId: null,
-        overnightSpotId: null,
-        destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
+              overnightSpotId: null,
+              destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER',
               imageUrl: '',
               attendeeIds: [],
+              privacy: 'PUBLIC',
+              isMultiStop: false,
+              tripMode: 'ONE_WAY',
+              tripType: 'CAMPING',
             });
             setShowCreateModal(true);
           }}
@@ -994,171 +998,151 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Create Event Modal */}
+      {/* Create Trip Modal — Adaptive by Trip Type */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.18)' }}>
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-[520px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto" style={{ background: '#1B2B4B', border: '1px solid rgba(232,168,56,0.18)' }}>
             <div className="p-5 sticky top-0 z-10 flex items-center justify-between" style={{ background: '#1B2E50', borderBottom: '1px solid rgba(232,168,56,0.1)' }}>
               <div className="flex items-center gap-3">
                 <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-9 h-9 rounded-full object-cover" />
                 <div>
                   <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>Plan a Trip</h2>
-                  <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Hitch will help with stops, routing & weather</p>
+                  <p className="text-[11px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Where is the rig headed?</p>
                 </div>
               </div>
               <button onClick={() => setShowCreateModal(false)} style={{ color: 'rgba(245,240,232,0.4)' }} className="hover:opacity-70 p-1">✕</button>
             </div>
 
-            {/* Character co-pilot suggestions */}
-            <div className="px-5 py-3 flex gap-2 overflow-x-auto" style={{ borderBottom: '1px solid rgba(232,168,56,0.06)', scrollbarWidth: 'none' }}>
-              {[
-                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261021/rvunicorn/characters/diesel.png', tip: 'I\'ll check height clearances for your rig on every route.' },
-                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png', tip: 'Add a national park — I know the best hidden trails.' },
-                { img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261086/rvunicorn/characters/luna.webp', tip: 'Need kid-friendly stops? I\'ve got you covered.' },
-              ].map((c, i) => (
-                <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg flex-shrink-0" style={{ background: 'rgba(232,168,56,0.05)', border: '1px solid rgba(232,168,56,0.08)' }}>
-                  <img src={c.img} alt="" className="w-6 h-6 rounded-full object-cover" />
-                  <p className="text-[10px] whitespace-nowrap" style={{ color: 'rgba(245,240,232,0.5)' }}>{c.tip}</p>
-                </div>
-              ))}
-            </div>
-
             <style>{`
-              .trip-form .text-gray-700, .trip-form .text-gray-900 { color: #F5F0E8 !important; }
-              .trip-form .text-gray-500, .trip-form .text-gray-600 { color: rgba(245,240,232,0.5) !important; }
-              .trip-form .input, .trip-form input, .trip-form select, .trip-form textarea { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
-              .trip-form .bg-white { background: #0F1C35 !important; }
-              .trip-form .bg-gray-50, .trip-form .bg-gray-100 { background: #1B2E50 !important; }
-              .trip-form .border-gray-200, .trip-form .border-gray-300 { border-color: rgba(232,168,56,0.1) !important; }
-              .trip-form .btn-primary { background: #E8622A !important; color: white !important; }
-              .trip-form .btn-secondary { background: transparent !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(245,240,232,0.5) !important; }
+              .trip-form-v2 input, .trip-form-v2 select, .trip-form-v2 textarea { background: #1B2E50 !important; border: 1px solid rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; border-radius: 8px; padding: 8px 12px; width: 100%; font-size: 14px; }
+              .trip-form-v2 input:focus, .trip-form-v2 select:focus, .trip-form-v2 textarea:focus { outline: none; border-color: rgba(232,168,56,0.4) !important; }
+              .trip-form-v2 input::placeholder, .trip-form-v2 textarea::placeholder { color: rgba(245,240,232,0.3); }
             `}</style>
-            <div className="p-6 space-y-4 trip-form">
-              {/* Title */}
+            <div className="p-5 space-y-5 trip-form-v2">
+
+              {/* ━━━ SECTION 1 — WHAT KIND OF TRIP? ━━━ */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Event Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="input w-full"
-                  placeholder="Summer Camping Trip 2024"
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  className="input w-full"
-                  placeholder="Tell everyone about this event..."
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Start Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="input w-full"
-                    required
-                  />
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: '#C9A84C' }}>What kind of trip?</p>
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'CAMPING', label: '🏕 Camping', supports_rt: true },
+                    { id: 'STORAGE_SERVICE', label: '🔧 Storage / Service', supports_rt: false },
+                    { id: 'FAMILY_PERSONAL', label: '👨‍👩‍👧 Family Visit', supports_rt: true },
+                    { id: 'BOONDOCKING', label: '🌵 Boondocking', supports_rt: false },
+                    { id: 'TRANSIT', label: '🚐 Relocation', supports_rt: false },
+                    { id: 'OTHER', label: '📅 Other', supports_rt: true },
+                  ].map(t => (
+                    <button key={t.id} type="button" onClick={() => {
+                      const newMode = !t.supports_rt ? 'ONE_WAY' : formData.tripMode;
+                      setFormData({ ...formData, tripType: t.id, tripMode: newMode as any, location: '', campgroundId: null });
+                    }}
+                      className="py-2.5 px-2 rounded-lg text-xs font-semibold text-center transition"
+                      style={{
+                        background: formData.tripType === t.id ? '#0F1C35' : 'rgba(255,255,255,0.03)',
+                        border: formData.tripType === t.id ? '1.5px solid #C9A84C' : '1px solid rgba(255,255,255,0.08)',
+                        color: formData.tripType === t.id ? '#C9A84C' : 'rgba(245,240,232,0.5)',
+                      }}>
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="input w-full"
-                  />
-                </div>
-              </div>
 
-              {/* Trip Direction + Type */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Trip Direction</label>
-                  <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                {/* One Way / Round Trip — only for types that support it */}
+                {['CAMPING', 'FAMILY_PERSONAL', 'OTHER'].includes(formData.tripType) && (
+                  <div className="flex rounded-lg overflow-hidden mt-3" style={{ border: '1px solid rgba(232,168,56,0.15)' }}>
                     <button type="button" onClick={() => setFormData({ ...formData, tripMode: 'ONE_WAY' })}
-                      className={`flex-1 py-2 text-sm font-semibold transition ${formData.tripMode === 'ONE_WAY' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      className="flex-1 py-2 text-sm font-semibold transition"
+                      style={{ background: formData.tripMode === 'ONE_WAY' ? '#0F1C35' : 'transparent', color: formData.tripMode === 'ONE_WAY' ? '#C9A84C' : 'rgba(245,240,232,0.4)' }}>
                       One Way →
                     </button>
                     <button type="button" onClick={() => setFormData({ ...formData, tripMode: 'ROUND_TRIP' })}
-                      className={`flex-1 py-2 text-sm font-semibold transition ${formData.tripMode === 'ROUND_TRIP' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      className="flex-1 py-2 text-sm font-semibold transition"
+                      style={{ background: formData.tripMode === 'ROUND_TRIP' ? '#0F1C35' : 'transparent', color: formData.tripMode === 'ROUND_TRIP' ? '#C9A84C' : 'rgba(245,240,232,0.4)' }}>
                       Round Trip ↔
                     </button>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Trip Type</label>
-                  <select value={formData.tripType} onChange={e => setFormData({ ...formData, tripType: e.target.value })} className="input w-full">
-                    <option value="CAMPING">🏕️ Camping Trip</option>
-                    <option value="BOONDOCKING">⛺ Boondocking</option>
-                    <option value="TRANSIT">🚐 Travel Day</option>
-                    <option value="FAMILY_PERSONAL">🏠 Family / Personal</option>
-                    <option value="STORAGE_SERVICE">🔒 Storage / Service</option>
-                    <option value="OTHER">📍 Other</option>
-                  </select>
-                </div>
+                )}
               </div>
 
-              {/* Multi-stop toggle */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">🗺️ Multi-stop trip?</p>
-                  <p className="text-xs text-gray-500">Add stops along your route</p>
+              {/* ━━━ SECTION 2 — WHERE ARE YOU GOING? ━━━ */}
+              <div style={{ borderTop: '0.5px solid rgba(232,168,56,0.08)', paddingTop: 16 }}>
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: '#C9A84C' }}>Where are you going?</p>
+
+                {/* Destination — adaptive by type */}
+                {formData.tripType === 'CAMPING' ? (
+                  <CampgroundSelector
+                    selectedCampgroundId={formData.campgroundId}
+                    manualLocation={formData.location}
+                    onCampgroundSelect={(id, name, location) => {
+                      setFormData({ ...formData, campgroundId: id, location: location || name, title: formData.title || `Camping Trip to ${name}` });
+                    }}
+                    onManualLocationChange={(location) => {
+                      setFormData({ ...formData, campgroundId: null, location, title: formData.title || `Camping Trip to ${location}` });
+                    }}
+                  />
+                ) : (
+                  <div>
+                    <input type="text" value={formData.location}
+                      onChange={e => {
+                        const loc = e.target.value;
+                        const typeLabels: Record<string, string> = { STORAGE_SERVICE: 'Service Trip', FAMILY_PERSONAL: 'Family Visit', BOONDOCKING: 'Boondocking', TRANSIT: 'Relocation', OTHER: 'Trip' };
+                        setFormData({ ...formData, location: loc, title: formData.title || `${typeLabels[formData.tripType] || 'Trip'} to ${loc}` });
+                      }}
+                      placeholder={formData.tripType === 'BOONDOCKING' ? 'Enter area, region, or GPS...' : 'Enter address or city...'}
+                    />
+                  </div>
+                )}
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Leaving on *</label>
+                    <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>
+                      Arriving around {formData.tripMode !== 'ROUND_TRIP' && <span style={{ color: 'rgba(245,240,232,0.3)' }}>(optional)</span>}
+                    </label>
+                    <input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
+                  </div>
                 </div>
-                <div
-                  onClick={() => { setFormData(f => ({ ...f, isMultiStop: !f.isMultiStop })); setMultiStops([]); }}
-                  className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors ${formData.isMultiStop ? 'bg-primary-500' : 'bg-gray-300'}`}
-                >
-                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.isMultiStop ? 'translate-x-5' : 'translate-x-0'}`} />
-                </div>
+
+                {/* Return dates — only for round trip */}
+                {formData.tripMode === 'ROUND_TRIP' && (
+                  <div className="grid grid-cols-2 gap-3 mt-3" style={{ borderTop: '0.5px solid rgba(232,168,56,0.06)', paddingTop: 12 }}>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Heading home on</label>
+                      <input type="date" value={(formData as any).returnDepartureDate || ''} onChange={e => setFormData({ ...formData, returnDepartureDate: e.target.value } as any)} />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Back by <span style={{ color: 'rgba(245,240,232,0.3)' }}>(optional)</span></label>
+                      <input type="date" value={(formData as any).returnArrivalDate || ''} onChange={e => setFormData({ ...formData, returnArrivalDate: e.target.value } as any)} />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Single campground selector */}
-              {!formData.isMultiStop && (
-                <CampgroundSelector
-                  selectedCampgroundId={formData.campgroundId}
-                  manualLocation={formData.location}
-                  onCampgroundSelect={(id, name, location) => {
-                    setFormData({ ...formData, campgroundId: id, location: location || name });
-                  }}
-                  onManualLocationChange={(location) => {
-                    setFormData({ ...formData, campgroundId: null, overnightSpotId: null, destinationType: 'CAMPGROUND' as 'CAMPGROUND' | 'OVERNIGHT_SPOT' | 'OTHER', location });
-                  }}
-                />
-              )}
+              {/* ━━━ SECTION 3 — STOPS ALONG THE WAY (collapsed) ━━━ */}
+              <div style={{ borderTop: '0.5px solid rgba(232,168,56,0.08)', paddingTop: 12 }}>
+                <button type="button" onClick={() => setFormData({ ...formData, isMultiStop: !formData.isMultiStop })}
+                  className="flex items-center gap-2 w-full text-left py-1"
+                  style={{ color: 'rgba(245,240,232,0.5)' }}>
+                  <span className="text-sm">{formData.isMultiStop ? '▾' : '›'}</span>
+                  <span className="text-sm font-semibold">🗺 Add stops along the way</span>
+                </button>
 
-              {/* Hitch Route Suggestions */}
-              {formData.campgroundId && !formData.isMultiStop && (
-                <HitchStopSuggestions campgroundId={formData.campgroundId} onAddStop={(cg: any) => {
-                  setFormData(prev => ({ ...prev, isMultiStop: true }));
-                  setMultiStops([
-                    { campgroundId: formData.campgroundId!, campgroundName: formData.location, campgroundLocation: '', campgroundState: '', nights: 1, notes: '' },
-                    { campgroundId: cg.id, campgroundName: cg.name, campgroundLocation: cg.location || '', campgroundState: cg.state || '', nights: 1, notes: cg.hitchTip || '' },
-                  ]);
-                }} />
-              )}
+                {formData.isMultiStop && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs mb-2" style={{ color: 'rgba(245,240,232,0.4)' }}>Add campground or address stops to your route</p>
+                    <p className="text-[10px] italic" style={{ color: 'rgba(245,240,232,0.3)' }}>Stops can be added after creating the trip</p>
+                  </div>
+                )}
+              </div>
 
-              {/* Multi-stop builder */}
-              {formData.isMultiStop && (
+              {/* Old single campground + hitch suggestions removed — handled in Section 2 */}
+
+              {/* Old multi-stop builder removed — stops are in Section 3 above */}
+              {false && formData.isMultiStop && (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-gray-700">Stops Along the Way</p>
 
@@ -1374,20 +1358,44 @@ export default function EventsPage() {
                 </select>
               </div>
 
-              {/* Submit */}
-              <div className="flex gap-3 pt-4 border-t">
+              {/* ━━━ SECTION 4 — TRIP DETAILS (collapsed) ━━━ */}
+              <div style={{ borderTop: '0.5px solid rgba(232,168,56,0.08)', paddingTop: 12 }}>
+                <button type="button" onClick={() => setFormData({ ...formData, showDetails: !(formData as any).showDetails } as any)}
+                  className="flex items-center gap-2 w-full text-left py-1"
+                  style={{ color: 'rgba(245,240,232,0.5)' }}>
+                  <span className="text-sm">{(formData as any).showDetails ? '▾' : '›'}</span>
+                  <span className="text-sm font-semibold">✏️ Add trip details (optional)</span>
+                </button>
+
+                {(formData as any).showDetails && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Trip Title</label>
+                      <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Give your trip a name" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Description <span style={{ color: 'rgba(245,240,232,0.3)' }}>(optional)</span></label>
+                      <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Notes, plans, or anything worth remembering..." />
+                    </div>
+                    {formData.tripType === 'STORAGE_SERVICE' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1" style={{ color: 'rgba(245,240,232,0.6)' }}>Service notes</label>
+                        <input type="text" value={(formData as any).serviceNotes || ''} onChange={e => setFormData({ ...formData, serviceNotes: e.target.value } as any)} placeholder="What is being done? Oil change, storage, repairs..." />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ━━━ SUBMIT ━━━ */}
+              <div className="pt-4 sticky bottom-0" style={{ background: '#1B2B4B' }}>
                 <button
                   onClick={handleCreateEvent}
-                  className="btn btn-primary flex-1"
-                  disabled={!formData.title || !formData.startDate}
+                  disabled={!formData.location || !formData.startDate}
+                  className="w-full py-3 rounded-xl text-sm font-bold transition hover:brightness-110 disabled:opacity-40"
+                  style={{ background: '#E8622A', color: 'white' }}
                 >
-                  ✨ Create Event
-                </button>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
+                  Create Trip →
                 </button>
               </div>
             </div>
