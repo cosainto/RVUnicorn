@@ -291,20 +291,7 @@ export default function RigProfilePage() {
             <p className="text-sm mb-1" style={{ color: CN.muted }}>{rigSubtitle}</p>
             {rigMeta && <p className="text-xs mb-3" style={{ color: CN.muted }}>{rigMeta}</p>}
 
-            {/* Pilot chips */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: CN.muted }}>Piloted by</span>
-              <Link to={`/profile/${owner.username || owner.id}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                {owner.profilePicture ? <img src={owner.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full" style={{ background: CN.gold }} />}
-                <span style={{ color: CN.cream }}>{owner.firstName}</span>
-              </Link>
-              {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
-                <Link key={p.userId} to={`/profile/${p.user?.username || p.userId}`} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  {p.user?.profilePicture ? <img src={p.user.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full" style={{ background: CN.gold }} />}
-                  <span style={{ color: CN.cream }}>{p.user?.firstName}</span>
-                </Link>
-              ))}
-            </div>
+            {/* Pilot chips removed — Crew section below handles this */}
 
             {/* Follower count + Follow button + Community Score badge */}
             <div className="flex items-center gap-4 mb-4">
@@ -366,6 +353,34 @@ export default function RigProfilePage() {
 
             {/* Rig emoji */}
             {rig.rigEmoji && <span className="text-2xl mb-2 block">{rig.rigEmoji}</span>}
+
+            {/* The Crew */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 mb-5">
+              <Link to={`/profile/${owner.username || owner.id}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                {owner.profilePicture ? (
+                  <img src={owner.profilePicture} alt={owner.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
+                ) : (
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
+                )}
+                <div className="text-center">
+                  <p className="text-xs font-bold" style={{ color: CN.cream }}>{owner.firstName} {owner.lastName?.[0] ? owner.lastName[0] + '.' : ''}</p>
+                  <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`, color: CN.bg }}>Owner</span>
+                </div>
+              </Link>
+              {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
+                <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                  {p.user?.profilePicture ? (
+                    <img src={p.user.profilePicture} alt={p.user.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: '#4CAF82' }} />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.user?.firstName?.[0] || '?'}</div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-xs font-bold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName?.[0] ? p.user.lastName[0] + '.' : ''}</p>
+                    <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.role === 'COPILOT' ? 'Co-Pilot' : p.role === 'CREW' ? 'Crew' : p.role || 'Co-Pilot'}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
 
             {/* Stat bar */}
             <div className="grid grid-cols-4 gap-2 mb-6">
@@ -440,39 +455,7 @@ export default function RigProfilePage() {
           </div>
         )}
 
-        {/* ═══ THE CREW ═══ */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6" style={{ background: CN.body }}>
-          <h3 className="text-lg font-bold mb-4" style={{ color: CN.cream }}>🚐 The Crew</h3>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
-            {/* Owner card */}
-            <Link to={`/profile/${owner.username || owner.id}`} className="flex flex-col items-center gap-2 p-4 rounded-2xl min-w-[120px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              {owner.profilePicture ? (
-                <img src={owner.profilePicture} alt={owner.firstName} className="w-16 h-16 rounded-full object-cover border-3" style={{ borderColor: CN.gold }} />
-              ) : (
-                <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
-              )}
-              <div className="text-center">
-                <p className="text-sm font-bold" style={{ color: CN.cream }}>{owner.firstName} {owner.lastName?.[0] ? owner.lastName[0] + '.' : ''}</p>
-                <span className="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'linear-gradient(135deg, #C9A84C, #E8A838)', color: '#0F1C35' }}>Owner</span>
-              </div>
-            </Link>
-
-            {/* Co-pilots */}
-            {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
-              <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-2 p-4 rounded-2xl min-w-[120px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                {p.user?.profilePicture ? (
-                  <img src={p.user.profilePicture} alt={p.user.firstName} className="w-16 h-16 rounded-full object-cover border-3" style={{ borderColor: '#4CAF82' }} />
-                ) : (
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.user?.firstName?.[0] || '?'}</div>
-                )}
-                <div className="text-center">
-                  <p className="text-sm font-bold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName?.[0] ? p.user.lastName[0] + '.' : ''}</p>
-                  <span className="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.role === 'COPILOT' ? 'Co-Pilot' : p.role === 'CREW' ? 'Crew' : p.role || 'Co-Pilot'}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+        {/* Crew moved above stats */}
 
         {/* ═══ ZONE 2: BODY ═══ */}
         <div style={{ background: CN.body }}>
