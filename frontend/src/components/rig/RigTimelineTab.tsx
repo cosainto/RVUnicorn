@@ -3,6 +3,7 @@
  * differentiated per-type cards and a "Share Your Experience" composer bar.
  */
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, Play } from 'lucide-react';
 import api from '../../services/api';
 import CampsiteSocialProofInline from './CampsiteSocialProofInline';
@@ -178,32 +179,38 @@ export default function RigTimelineTab({ slug, rigName, ownerAvatar, ownerName }
           const hitchLine = d.hitchLine || 'Another adventure begins!';
           const hasPhoto = !!item.previewImageUrl;
 
+          const bannerContent = (
+            <div className="relative" style={{ height: 220, cursor: d.campgroundId ? 'pointer' : 'default' }}>
+              {hasPhoto ? (
+                <img src={item.previewImageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a4a3a, #0F1C35, #1B2E50)' }} />
+              )}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.15) 100%)' }} />
+              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
+                <div className="flex items-center gap-2">
+                  {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" /> : null}
+                  <span className="text-xs text-white/80 font-semibold">{rigName} <span className="text-white/50 font-normal">checked in</span></span>
+                </div>
+                <span className="text-[10px] text-white/40">{timeAgo(item.occurredAt)}</span>
+              </div>
+              <div className="absolute bottom-12 left-0 right-0 text-center px-6">
+                <span className="text-2xl block mb-1">📍</span>
+                <h4 className="text-xl font-bold text-white drop-shadow-lg leading-tight">{campName}</h4>
+                {location && <p className="text-sm text-white/60 mt-1">{location}</p>}
+              </div>
+              <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
+                <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_32,h_32,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-6 h-6 rounded-full flex-shrink-0" />
+                <span className="text-[10px] text-white/70 italic bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">{hitchLine}</span>
+              </div>
+            </div>
+          );
+
           return (
             <div key={item.id} className="rounded-2xl shadow-lg overflow-hidden" style={{ background: CN.card }}>
-              <div className="relative" style={{ height: 220 }}>
-                {hasPhoto ? (
-                  <img src={item.previewImageUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a4a3a, #0F1C35, #1B2E50)' }} />
-                )}
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.15) 100%)' }} />
-                <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
-                  <div className="flex items-center gap-2">
-                    {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" /> : null}
-                    <span className="text-xs text-white/80 font-semibold">{rigName} <span className="text-white/50 font-normal">checked in</span></span>
-                  </div>
-                  <span className="text-[10px] text-white/40">{timeAgo(item.occurredAt)}</span>
-                </div>
-                <div className="absolute bottom-12 left-0 right-0 text-center px-6">
-                  <span className="text-2xl block mb-1">📍</span>
-                  <h4 className="text-xl font-bold text-white drop-shadow-lg leading-tight">{campName}</h4>
-                  {location && <p className="text-sm text-white/60 mt-1">{location}</p>}
-                </div>
-                <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
-                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_32,h_32,c_fill/v1775261116/rvunicorn/characters/hitch.png" alt="Hitch" className="w-6 h-6 rounded-full flex-shrink-0" />
-                  <span className="text-[10px] text-white/70 italic bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">{hitchLine}</span>
-                </div>
-              </div>
+              {d.campgroundId ? (
+                <Link to={`/campgrounds/${d.campgroundId}`} className="block transition hover:brightness-110">{bannerContent}</Link>
+              ) : bannerContent}
               <div className="px-4 py-2">
                 <div className="flex items-center gap-3 text-[10px] mb-1" style={{ color: CN.muted }}>
                   <span>📅 {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
