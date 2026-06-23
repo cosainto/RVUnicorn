@@ -9,7 +9,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/suggest', authenticateToken, async (req, res) => {
   try {
-    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing, rvFuelType, rvMpg, rvTankGallons, rvLength } = req.body;
+    const { startLocation, destination, nights, rvType, avoidHighways, hoursPerDay, milesPerDay, departureTime, arrivalDate, mealPref, stopFrequency, wantSightseeing, rvFuelType, rvMpg, rvTankGallons, rvLength, hoursBeforeBreak } = req.body;
 
     if (!startLocation || !nights) {
       return res.status(400).json({ error: 'startLocation and nights are required' });
@@ -107,6 +107,7 @@ router.post('/suggest', authenticateToken, async (req, res) => {
       : 'stops every 3-4 hours';
     const sightseeingPref = wantSightseeing ? 'YES - include attractions' : 'NO - efficient travel only';
     const avoidHwyStr = avoidHighways ? 'yes, prefer scenic routes' : 'no preference';
+    const breakInterval = hoursBeforeBreak ? `The user wants to stop for a break every ${hoursBeforeBreak} hours of driving. Suggest rest stops, fuel stops, or points of interest at those intervals along the route.` : '';
     const arrivalInfo = arrivalDate ? `Must arrive by: ${new Date(arrivalDate).toDateString()}` : '';
     const departureTimeInfo = departureTime ? `Departure time: ${departureTime}` : 'Departure time: 8:00 AM';
     const fuelNote = rvFuelType === 'diesel'
@@ -125,6 +126,7 @@ ${arrivalInfo}
 ${distanceContext}
 ${nightsOverrideNote}
 AVOID HIGHWAYS: ${avoidHwyStr}
+${breakInterval}
 MEALS: ${mealStyle}
 REST STOPS: ${snackFreq}
 SIGHTSEEING: ${sightseeingPref}

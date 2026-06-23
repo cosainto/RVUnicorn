@@ -92,7 +92,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
   const [aiForm, setAiForm] = useState({
     startLocation: homeLocation||'', destination: campDest, nights: 3,
     rvType: userRvType || 'Class A Motorhome', avoidHighways: false,
-    drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 8, milesPerDay: 300,
+    drivingLimitType: 'hours' as 'hours'|'miles', hoursPerDay: 8, milesPerDay: 300, hoursBeforeBreak: 2,
     departureTime: '8:00 AM', arrivalDate: arrivalDate||'', returnDate: '',
     wantSightseeing: false,
     mealPref: 'balanced' as 'fast'|'balanced'|'sitdown',
@@ -356,6 +356,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         wantSightseeing: aiForm.wantSightseeing,
         mealPref: aiForm.mealPref,
         stopFrequency: aiForm.stopFrequency,
+        hoursBeforeBreak: aiForm.hoursBeforeBreak,
         returnDate: aiForm.returnDate || undefined,
         rvFuelType: rvFuelType || 'gas',
         rvMpg: rvMpg || null,
@@ -634,6 +635,18 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                     <input type="range" min={50} max={800} step={25} value={aiForm.milesPerDay} className="w-full accent-primary-500"
                       onChange={e=>setAiForm(f=>({...f,milesPerDay:parseInt(e.target.value)}))} />
                   )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">⏱ Hours before a break</label>
+                  <p className="text-[10px] text-gray-400 mb-1">How long before stopping to rest?</p>
+                  <div className="flex items-center gap-2">
+                    <input type="range" min={1} max={4} step={0.5} value={aiForm.hoursBeforeBreak} className="flex-1 accent-primary-500"
+                      onChange={e=>setAiForm(f=>({...f,hoursBeforeBreak:parseFloat(e.target.value)}))} />
+                    <span className="text-xs font-bold text-primary-600 w-10 text-right">{aiForm.hoursBeforeBreak} hrs</span>
+                  </div>
+                  <div className="flex justify-between text-[8px] text-gray-400 mt-0.5 px-0.5">
+                    <span>1hr</span><span>1.5</span><span>2hrs</span><span>2.5</span><span>3hrs</span><span>3.5</span><span>4hrs</span>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Depart each morning</label>
