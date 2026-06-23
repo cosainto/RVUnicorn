@@ -1235,15 +1235,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
         </div>
       )}
 
-      {!trip && !loadingItinerary && tripPlan && (
-        <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-2xl">
-          <p className="text-sm text-gray-400 mb-3">No day-by-day itinerary yet</p>
-          <button onClick={()=>setShowHitch(true)}
-            className="inline-flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600">
-            <img src="/hitch.png" className="w-4 h-4 rounded-full"/> Ask Hitch to plan it
-          </button>
-        </div>
-      )}
+      {/* "No day-by-day itinerary" removed — timeline always shows START → DESTINATION */}
 
       {/* Edit Stop Modal */}
       {editingStop && (

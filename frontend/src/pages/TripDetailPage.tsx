@@ -1853,10 +1853,38 @@ export default function EventDetailPage() {
 
                   </div>
                 ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-600 mb-2">Plan your personal route to this event</p>
-                    <button onClick={openTripModal} className="btn btn-primary">Plan My Trip</button>
+                  <div className="space-y-4">
+                    {/* Minimal timeline even without trip plan */}
+                    <div className="border rounded-xl p-4">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                        <Navigation className="w-5 h-5" /> Journey
+                      </h4>
+                      <div className="space-y-0">
+                        {/* START */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center text-sm">🏠</div>
+                            <div className="w-0.5 flex-1 bg-gray-200 my-1" />
+                          </div>
+                          <div className="flex-1 pb-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Start</p>
+                            <p className="text-sm font-semibold text-gray-900">{userHomeLocation || 'Home'}</p>
+                          </div>
+                        </div>
+                        {/* DESTINATION */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center text-sm">🎯</div>
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-green-600">Destination</p>
+                            <p className="text-sm font-semibold text-gray-900">{event.location || event.campground?.name || 'Destination'}</p>
+                            {event.endDate && <p className="text-xs text-gray-500">Arriving {new Date(String(event.endDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={openTripModal} className="btn btn-primary w-full">Plan My Route</button>
                   </div>
                 )}
               </div>}
