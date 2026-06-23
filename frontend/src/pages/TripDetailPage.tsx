@@ -1707,50 +1707,105 @@ export default function EventDetailPage() {
                     <OdometerProjection tripPlan={tripPlan} event={event} />
                     </div>
 
-                    {/* Pit Stops Section */}
+                    {/* ═══ JOURNEY TIMELINE ═══ */}
                     <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-4">
                         <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                          <MapPin className="w-5 h-5" />
-                          Pit Stops ({tripPlan.pitStops?.length || 0})
+                          <Navigation className="w-5 h-5" />
+                          Journey Timeline
                         </h4>
                         <button onClick={() => setShowPitStopModal(true)} className="btn btn-secondary btn-sm flex items-center gap-1">
                           <Plus className="w-4 h-4" />Add Stop
                         </button>
                       </div>
 
-                      {tripPlan.pitStops && tripPlan.pitStops.length > 0 ? (
-                        <div className="space-y-2">
-                          {tripPlan.pitStops.map((stop: PitStop, index: number) => {
-                            const stopInfo = getStopTypeInfo(stop.stopType);
-                            return (
-                              <div key={stop.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-gray-200">
-                                  <span className="text-xl">{stopInfo.emoji}</span>
+                      <div className="space-y-0">
+                        {/* START */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center text-lg">🏠</div>
+                            <div className="w-0.5 flex-1 bg-gray-200 my-1" />
+                          </div>
+                          <div className="flex-1 pb-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-0.5">Start</p>
+                            <p className="font-semibold text-gray-900">{tripPlan.startLocation || event.location || 'Home'}</p>
+                            {event.startDate && <p className="text-xs text-gray-500">{new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
+                          </div>
+                        </div>
+
+                        {/* + Add Stop Here (before first stop) */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                          <div className="flex-1 py-1">
+                            <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">
+                              + Add Stop Here
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* STOPS */}
+                        {tripPlan.pitStops && tripPlan.pitStops.map((stop: PitStop, index: number) => {
+                          const stopInfo = getStopTypeInfo(stop.stopType);
+                          return (
+                            <div key={stop.id}>
+                              <div className="flex gap-3">
+                                <div className="flex flex-col items-center">
+                                  <div className="w-10 h-10 rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center text-lg">{stopInfo.emoji}</div>
+                                  <div className="w-0.5 flex-1 bg-gray-200 my-1" />
                                 </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">{stop.name}</p>
-                                  <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                                    <span className="bg-gray-100 px-2 py-0.5 rounded">{stopInfo.label}</span>
-                                    {stop.location && <span>📍 {stop.location}</span>}
-                                    {stop.estimatedDuration && <span>⏱️ {stop.estimatedDuration} min</span>}
+                                <div className="flex-1 pb-2">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">{stopInfo.label}</p>
+                                      <p className="font-semibold text-gray-900">{stop.name}</p>
+                                      {stop.location && <p className="text-xs text-gray-500">📍 {stop.location}</p>}
+                                      <div className="flex gap-2 mt-1 text-xs text-gray-400">
+                                        {stop.estimatedDuration && <span>⏱ {stop.estimatedDuration > 60 ? `${Math.round(stop.estimatedDuration / 60)} hrs` : `${stop.estimatedDuration} min`}</span>}
+                                        {stop.notes && <span>📝 {stop.notes}</span>}
+                                      </div>
+                                    </div>
+                                    <button onClick={() => handleDeletePitStop(stop.id)} className="text-gray-300 hover:text-red-500 p-1 transition" title="Remove stop">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                   </div>
-                                  {stop.notes && <p className="text-sm text-gray-600 mt-1">{stop.notes}</p>}
                                 </div>
-                                <button onClick={() => handleDeletePitStop(stop.id)} className="text-red-500 hover:text-red-700 p-1">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
                               </div>
-                            );
-                          })}
+                              {/* + Add Stop Here (after this stop) */}
+                              <div className="flex gap-3">
+                                <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                                <div className="flex-1 py-1">
+                                  <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">
+                                    + Add Stop Here
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* No stops message */}
+                        {(!tripPlan.pitStops || tripPlan.pitStops.length === 0) && (
+                          <div className="flex gap-3">
+                            <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                            <div className="flex-1 py-3 text-center">
+                              <p className="text-xs text-gray-400 italic">No stops planned yet</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* DESTINATION */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center text-lg">🏁</div>
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-green-600 mb-0.5">Destination</p>
+                            <p className="font-semibold text-gray-900">{event.campground?.name || event.location || 'Final Destination'}</p>
+                            {event.campground && <p className="text-xs text-gray-500">📍 {event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p>}
+                            {event.endDate && <p className="text-xs text-gray-500">Arriving {new Date(String(event.endDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-center py-6 bg-gray-50 rounded-lg">
-                          <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                          <p className="text-gray-500 text-sm">No pit stops planned</p>
-                          <button onClick={() => setShowPitStopModal(true)} className="text-primary-600 hover:text-primary-700 text-sm mt-1">+ Add your first stop</button>
-                        </div>
-                      )}
+                      </div>
                     </div>
 
                     {tripPlan.status === 'COMPLETED' && tripPlan.actualMiles && (

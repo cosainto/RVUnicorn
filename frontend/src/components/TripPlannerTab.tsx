@@ -49,7 +49,13 @@ function rvParkyUrl(lat?: number|null, lng?: number|null, name?: string) {
 }
 
 const RV_TYPES = ['Class A Motorhome','Class B Van','Class C Motorhome','Fifth Wheel','Travel Trailer','Pop-Up Camper','Truck Camper'];
-const DEP_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'];
+const DEP_TIMES = [
+  '5:00 AM','5:30 AM','6:00 AM','6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM',
+  '9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM',
+  '12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM',
+  '3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM',
+  '6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM',
+];
 
 export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation, rvMpg, rvFuelGal, rvLength, rvType: userRvType }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
@@ -649,7 +655,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Depart each morning</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Daily departure time</label>
                   <select className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
                     value={aiForm.departureTime} onChange={e=>setAiForm(f=>({...f,departureTime:e.target.value}))}>
                     {DEP_TIMES.map(t=><option key={t}>{t}</option>)}
