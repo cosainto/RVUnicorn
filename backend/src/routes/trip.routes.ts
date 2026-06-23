@@ -2193,4 +2193,57 @@ router.post('/:eventId/invite', authenticateToken, async (req: any, res) => {
   }
 });
 
+// POST /:id/stops — add a stop to a trip (auto-creates a TripDay if needed)
+router.post('/:id/stops', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.userId;
+
+    // Verify the event exists and user is the organizer
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, organizerId: true, startDate: true } });
+    if (!event) return res.status(404).json({ error: 'Trip not found' });
+    if (event.organizerId !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { stopType, name, address, city, state, notes, arrivalDate, departureDate, durationMins } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Stop name is required' });
+
+    // Find or create a TripDay for this stop
+    let tripDay = await prisma.tripDay.findFirst({
+      where: { tripId: eventId },
+      orderBy: { dayNumber: 'desc' },
+    });
+
+    if (!tripDay) {
+      tripDay = await prisma.tripDay.create({
+        data: {
+          tripId: eventId,
+          dayNumber: 1,
+          date: event.startDate || new Date(),
+          type: 'TRAVEL',
+        },
+      });
+    }
+
+    // Count existing stops for order
+    const stopCount = await prisma.tripStop.count({ where: { tripDayId: tripDay.id } });
+
+    const stop = await prisma.tripStop.create({
+      data: {
+        tripDayId: tripDay.id,
+        order: stopCount,
+        type: stopType || 'OTHER',
+        customName: name.trim(),
+        address: address || [city, state].filter(Boolean).join(', ') || null,
+        notes: notes || null,
+        durationMins: durationMins || null,
+      },
+    });
+
+    res.status(201).json(stop);
+  } catch (error: any) {
+    console.error('[Trip] add stop error:', error.message);
+    res.status(500).json({ error: 'Failed to add stop' });
+  }
+});
+
 export default router;
