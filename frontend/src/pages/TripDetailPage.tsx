@@ -1618,6 +1618,79 @@ export default function EventDetailPage() {
                 rvLength={(user as any)?.rvLength}
                 rvType={(user as any)?.rvType}
               />
+              {/* ═══ JOURNEY TIMELINE (outside the dead block) ═══ */}
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                  <Navigation className="w-5 h-5" /> Trip Itinerary
+                </h4>
+                <div className="space-y-0">
+                  {/* START */}
+                  <div className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center">🏠</div>
+                      <div className="w-0.5 flex-1 bg-gray-200 my-1" />
+                    </div>
+                    <div className="flex-1 pb-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-0.5">Start</p>
+                      <p className="font-semibold text-gray-900 text-sm">{tripPlan?.startLocation || userHomeLocation || 'Home'}</p>
+                      {event.startDate && <p className="text-xs text-gray-400">{new Date(String(event.startDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
+                    </div>
+                  </div>
+
+                  {/* + Add Stop */}
+                  <div className="flex gap-3">
+                    <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                    <div className="flex-1 py-1">
+                      <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                    </div>
+                  </div>
+
+                  {/* PIT STOPS */}
+                  {tripPlan?.pitStops?.map((stop: any) => {
+                    const si = STOP_TYPES.find((s: any) => s.id === stop.stopType) || STOP_TYPES[STOP_TYPES.length - 1];
+                    return (
+                      <div key={stop.id}>
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-9 h-9 rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center">{si.emoji}</div>
+                            <div className="w-0.5 flex-1 bg-gray-200 my-1" />
+                          </div>
+                          <div className="flex-1 pb-2">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">{si.label}</p>
+                                <p className="font-semibold text-gray-900 text-sm">{stop.name}</p>
+                                {stop.location && <p className="text-xs text-gray-400">📍 {stop.location}</p>}
+                                {stop.estimatedDuration && <p className="text-xs text-gray-400">⏱ {stop.estimatedDuration > 60 ? `${Math.round(stop.estimatedDuration / 60)} hrs` : `${stop.estimatedDuration} min`}</p>}
+                              </div>
+                              <button onClick={() => handleDeletePitStop(stop.id)} className="text-gray-300 hover:text-red-500 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                          <div className="flex-1 py-1">
+                            <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* DESTINATION */}
+                  <div className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="w-9 h-9 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center">🎯</div>
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-green-600 mb-0.5">Destination</p>
+                      <p className="font-semibold text-gray-900 text-sm">{tripPlan?.endLocation || event.location || 'Destination'}</p>
+                      {event.endDate && <p className="text-xs text-gray-400">Arriving {new Date(String(event.endDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}
               {false && <div className="bg-white rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
