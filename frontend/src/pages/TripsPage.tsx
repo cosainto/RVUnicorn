@@ -241,6 +241,7 @@ export default function EventsPage() {
   const [stopSearch, setStopSearch] = useState('');
   const [stopSearchResults, setStopSearchResults] = useState<any[]>([]);
   const [stopSearching, setStopSearching] = useState(false);
+  const [inlineStops, setInlineStops] = useState<Array<{ id: string; location: string; arrivalDate: string; departureDate: string }>>([]);
   const [addingStopAt, setAddingStopAt] = useState<number | null>(null);
   const [pendingStop, setPendingStop] = useState<any>(null);
   const [pendingDates, setPendingDates] = useState({ arrivalDate: '', departureDate: '' });
@@ -545,6 +546,22 @@ export default function EventsPage() {
         }
       }
 
+      // Save inline stops (from the new Section 3)
+      const validStops = inlineStops.filter(s => s.location.trim());
+      if (validStops.length > 0) {
+        for (let i = 0; i < validStops.length; i++) {
+          try {
+            await api.post(`/trips/${data.id}/stops`, {
+              stopType: 'OTHER',
+              name: validStops[i].location.trim(),
+              arrivalDate: validStops[i].arrivalDate || null,
+              departureDate: validStops[i].departureDate || null,
+              notes: '',
+            });
+          } catch {}
+        }
+      }
+
       // Invite attendees if any selected
       if (formData.attendeeIds.length > 0) {
         await api.post(`/trips/${data.id}/attendees`, {
@@ -555,6 +572,7 @@ export default function EventsPage() {
       alert('✅ Event created successfully!');
       setShowCreateModal(false);
       setMultiStops([]);
+      setInlineStops([]);
       setFormData({
         title: '',
         description: '',
@@ -1132,9 +1150,44 @@ export default function EventsPage() {
                 </button>
 
                 {formData.isMultiStop && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs mb-2" style={{ color: 'rgba(245,240,232,0.4)' }}>Add campground or address stops to your route</p>
-                    <p className="text-[10px] italic" style={{ color: 'rgba(245,240,232,0.3)' }}>Stops can be added after creating the trip</p>
+                  <div className="mt-3 space-y-3">
+                    {/* Stop rows */}
+                    {inlineStops.map((stop, idx) => (
+                      <div key={stop.id} className="rounded-xl p-3 relative" style={{ background: '#0F1C35', border: '1px solid rgba(232,168,56,0.1)' }}>
+                        {/* Stop number + remove */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: 'rgba(232,168,56,0.15)', color: '#C9A84C' }}>{idx + 1}</span>
+                          <button type="button" onClick={() => setInlineStops(prev => prev.filter(s => s.id !== stop.id))}
+                            className="text-xs transition" style={{ color: 'rgba(245,240,232,0.3)' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(245,240,232,0.3)')}>✕</button>
+                        </div>
+                        {/* Location */}
+                        <input type="text" value={stop.location}
+                          onChange={e => setInlineStops(prev => prev.map(s => s.id === stop.id ? { ...s, location: e.target.value } : s))}
+                          placeholder="City, address, or campground..." />
+                        {/* Dates */}
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div>
+                            <label className="block text-[9px] mb-0.5" style={{ color: 'rgba(245,240,232,0.4)' }}>Arriving (optional)</label>
+                            <input type="date" value={stop.arrivalDate}
+                              onChange={e => setInlineStops(prev => prev.map(s => s.id === stop.id ? { ...s, arrivalDate: e.target.value } : s))} />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] mb-0.5" style={{ color: 'rgba(245,240,232,0.4)' }}>Leaving (optional)</label>
+                            <input type="date" value={stop.departureDate}
+                              onChange={e => setInlineStops(prev => prev.map(s => s.id === stop.id ? { ...s, departureDate: e.target.value } : s))} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add stop button */}
+                    <button type="button" onClick={() => setInlineStops(prev => [...prev, { id: Math.random().toString(36).slice(2), location: '', arrivalDate: '', departureDate: '' }])}
+                      className="w-full py-2.5 rounded-xl text-xs font-semibold transition hover:brightness-110"
+                      style={{ border: '1px dashed rgba(201,168,76,0.3)', color: '#C9A84C', background: 'transparent' }}>
+                      {inlineStops.length === 0 ? '+ Add a Stop' : '+ Add Another Stop'}
+                    </button>
                   </div>
                 )}
               </div>
