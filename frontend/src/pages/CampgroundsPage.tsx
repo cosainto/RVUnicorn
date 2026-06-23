@@ -472,7 +472,7 @@ export default function CampgroundsPage() {
         </div>
       )}
 
-      {showSuggestModal && <SuggestCampground onClose={() => setShowSuggestModal(false)} onSubmit={() => { setShowSuggestModal(false); fetchCampgrounds(); }} />}
+      {showSuggestModal && <SuggestCampground onClose={() => setShowSuggestModal(false)} onSuccess={() => { setShowSuggestModal(false); fetchCampgrounds(); }} />}
     </div> }
     </div>
     </>
