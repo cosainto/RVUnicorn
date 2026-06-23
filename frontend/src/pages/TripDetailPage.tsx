@@ -417,9 +417,37 @@ export default function EventDetailPage() {
   };
 
   const handleAddPitStop = async () => {
-    if (!tripPlan) return;
     try {
-      await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, pitStopForm);
+      let planId = tripPlan?.id;
+      // If no trip plan exists, auto-create one
+      if (!planId && id) {
+        try {
+          const { data: newPlan } = await api.post(`/trip-planner/event/${id}/plan`, {
+            startLocation: event?.location || event?.campground?.name || '',
+            useHometown: true,
+            isDriving: true,
+          });
+          setTripPlan(newPlan);
+          planId = newPlan.id;
+        } catch {
+          // Fall back to adding as a trip stop instead
+          await api.post(`/trips/${id}/stops`, {
+            stopType: pitStopForm.stopType || 'OTHER',
+            name: pitStopForm.name,
+            address: pitStopForm.location || '',
+            notes: pitStopForm.notes || '',
+          });
+          setShowPitStopModal(false);
+          setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
+          addLocalToast('✅ Stop added!', 'success');
+          return;
+        }
+      }
+      if (!planId) {
+        addLocalToast('Unable to add stop — trip plan could not be created', 'error');
+        return;
+      }
+      await api.post(`/trip-planner/trip/${planId}/pit-stop`, pitStopForm);
       setShowPitStopModal(false);
       setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
       loadTripPlan();
