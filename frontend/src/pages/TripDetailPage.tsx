@@ -1818,15 +1818,26 @@ export default function EventDetailPage() {
                           </div>
                         )}
 
+                        {/* + Add Stop Here (before destination) */}
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                          <div className="flex-1 py-1">
+                            <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">
+                              + Add Stop Here
+                            </button>
+                          </div>
+                        </div>
+
                         {/* DESTINATION */}
                         <div className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center text-lg">🏁</div>
+                            <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center text-lg">🎯</div>
                           </div>
                           <div className="flex-1 pt-1">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-green-600 mb-0.5">Destination</p>
-                            <p className="font-semibold text-gray-900">{event.campground?.name || event.location || 'Final Destination'}</p>
-                            {event.campground && <p className="text-xs text-gray-500">📍 {event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p>}
+                            <p className="font-semibold text-gray-900">{tripPlan?.endLocation || event.location || event.campground?.name || 'Final Destination'}</p>
+                            {event.location && event.location !== event.campground?.name && <p className="text-xs text-gray-500">📍 {event.location}</p>}
+                            {!event.location && event.campground && <p className="text-xs text-gray-500">📍 {event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p>}
                             {event.endDate && <p className="text-xs text-gray-500">Arriving {new Date(String(event.endDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
                           </div>
                         </div>
