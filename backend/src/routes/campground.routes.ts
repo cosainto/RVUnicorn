@@ -1073,6 +1073,34 @@ router.get('/:id/social-proof', optionalAuth, async (req: Request, res: Response
   }
 });
 
+// POST /suggest — submit a campground suggestion
+router.post('/suggest', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { name, address, location, state, description, latitude, longitude, phone, website, email, amenities } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Campground name is required' });
+
+    const campground = await db.campground.create({
+      data: {
+        name: name.trim(),
+        location: address || location || '',
+        state: state || '',
+        description: description || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        phone: phone || null,
+        website: website || null,
+        email: email || null,
+        amenities: Array.isArray(amenities) ? amenities : [],
+      },
+    });
+
+    res.status(201).json(campground);
+  } catch (error: any) {
+    console.error('[Campground] suggest error:', error.message);
+    res.status(500).json({ error: 'Failed to submit campground suggestion' });
+  }
+});
+
 export default router;
 
 
