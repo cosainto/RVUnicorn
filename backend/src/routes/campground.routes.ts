@@ -1087,9 +1087,9 @@ router.post('/suggest', authenticateToken, async (req: any, res: Response) => {
         description: description || null,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        phone: phone || null,
-        website: website || null,
-        email: email || null,
+        businessPhone: phone || null,
+        websiteUrl: website || null,
+        businessEmail: email || null,
         amenities: Array.isArray(amenities) ? amenities : [],
       },
     });
