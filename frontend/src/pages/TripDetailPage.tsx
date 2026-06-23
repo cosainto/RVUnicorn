@@ -952,6 +952,31 @@ export default function EventDetailPage() {
         />
       )}
       <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* ═══ TRIP OVERVIEW CARD (single source of truth) ═══ */}
+      {event && (
+        <div className="mb-4 rounded-xl overflow-hidden" style={{ background: '#1B2B4B', borderLeft: '3px solid #C9A84C' }}>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#F5F0E8' }}>
+                <span>🚐</span>
+                <span>{event.location || event.campground?.name ? `${tripPlan?.startLocation || 'Home'} → ${event.campground?.name || event.location || 'Destination'}` : event.title}</span>
+              </div>
+              {isOrganizer && (
+                <button onClick={() => setShowTripModal(true)} className="text-xs px-2 py-0.5 rounded" style={{ color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}>Edit</button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-3 mt-1 text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>
+              {event.startDate && (
+                <span>📅 {new Date(String(event.startDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{event.endDate ? `–${new Date(String(event.endDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</span>
+              )}
+              <span>📍 {tripPlan?.pitStops?.length || 0} stop{(tripPlan?.pitStops?.length || 0) !== 1 ? 's' : ''}</span>
+              {tripPlan?.distanceMiles && <span>🛣 {tripPlan.distanceMiles} mi</span>}
+              {tripPlan?.durationMinutes && <span>⏱ {Math.floor(tripPlan.durationMinutes / 60)}h {tripPlan.durationMinutes % 60}m</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Road Trip Banner */}
       {event.roadTrip && (
         <div className="mb-4 rounded-xl overflow-hidden shadow-md">

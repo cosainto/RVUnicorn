@@ -569,20 +569,18 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
 
           {/* Hitch AI banner — only show big CTA when no itinerary exists yet */}
           {!showHitch && !trip ? (
-            <div className="px-4 py-4 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-gray-100">
               <button
                 onClick={() => setShowHitch(true)}
-                className="w-full relative flex items-center gap-3 px-5 py-3.5 rounded-2xl text-white font-semibold text-sm overflow-hidden shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{ background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 50%, #f97316 100%)', backgroundSize: '200% 200%', animation: 'hitchGlow 3s ease infinite' }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition hover:bg-gray-50"
+                style={{ border: '1px solid #e5e7eb' }}
               >
-                <style>{`@keyframes hitchGlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }`}</style>
-                <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity" />
-                <img src="/hitch.png" alt="Hitch" className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-white/40" />
+                <img src="/hitch.png" alt="Hitch" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                 <div className="flex-1 text-left">
-                  <p className="font-bold text-white leading-tight">Ask Hitch to Plan My Drive</p>
-                  <p className="text-xs text-orange-100 font-normal mt-0.5">Day-by-day itinerary · rest stops · fuel · overnight stays</p>
+                  <p className="font-semibold text-gray-800">🤠 Plan with Hitch</p>
+                  <p className="text-xs text-gray-400">Set drive preferences and generate an itinerary</p>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-lg">✨</div>
+                <span className="text-gray-400 text-xs">›</span>
               </button>
             </div>
           ) : showHitch ? (
@@ -797,23 +795,11 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
           </div>
         </div>
       ) : (
-        /* No trip yet */
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-          <img src="/hitch.png" alt="Hitch" className="w-20 h-20 rounded-full object-cover mx-auto mb-4 shadow-lg" />
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No route planned yet!</h3>
-          <p className="text-gray-500 max-w-sm mb-6">Let Hitch AI map out your drive — overnight stops, fuel stations, scenic detours and all. Just tell it where you're starting from.</p>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-sm w-full text-left mb-6">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">💡 What Hitch plans for you</p>
-            <ul className="space-y-1 text-sm text-amber-800">
-              <li>🗺️ Turn-by-turn route from your home base</li>
-              <li>⛽ Fuel stops based on your RV's tank size</li>
-              <li>🌙 Overnight stops along the way</li>
-              <li>🎯 Sightseeing detours if you want them</li>
-              <li>🚛 RV-safe roads — no low bridges!</li>
-            </ul>
-          </div>
-          <button onClick={() => { setShowHitch(true); onEditTrip(); }} className="px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition shadow-sm flex items-center gap-2">
-            <img src="/hitch.png" className="w-5 h-5 rounded-full" /> Plan My Route with Hitch
+        /* No trip yet — lightweight empty state */
+        <div className="flex flex-col items-center justify-center py-8 px-6 text-center">
+          <p className="text-gray-500 text-sm mb-4">No route planned yet. Add stops manually or let Hitch plan it.</p>
+          <button onClick={() => { setShowHitch(true); onEditTrip(); }} className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition text-sm flex items-center gap-2 mb-4">
+            🤠 Plan with Hitch
           </button>
 
           {/* Hitch AI form inline when no tripPlan */}
