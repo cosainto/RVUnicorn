@@ -45,13 +45,14 @@ export default function SuggestCampground({ onClose, onSuccess }: SuggestCampgro
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit suggestion');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to submit — please check all required fields');
       }
 
       onSuccess();
       onClose();
-    } catch (err) {
-      setError('Failed to submit campground suggestion');
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit campground suggestion');
     } finally {
       setLoading(false);
     }

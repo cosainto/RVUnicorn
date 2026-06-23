@@ -1079,14 +1079,23 @@ router.post('/suggest', authenticateToken, async (req: any, res: Response) => {
     const { name, address, location, state, description, latitude, longitude, phone, website, email, amenities } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Campground name is required' });
 
+    // Parse lat/lng safely — NaN becomes null
+    const parsedLat = latitude ? parseFloat(String(latitude)) : null;
+    const parsedLng = longitude ? parseFloat(String(longitude)) : null;
+    const safeLat = parsedLat && !isNaN(parsedLat) ? parsedLat : null;
+    const safeLng = parsedLng && !isNaN(parsedLng) ? parsedLng : null;
+
+    // Build location string from available data
+    const locationStr = address || location || [name, state].filter(Boolean).join(', ') || 'Unknown';
+
     const campground = await db.campground.create({
       data: {
         name: name.trim(),
-        location: address || location || '',
-        state: state || '',
+        location: locationStr,
+        state: state || null,
         description: description || null,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
+        latitude: safeLat,
+        longitude: safeLng,
         businessPhone: phone || null,
         websiteUrl: website || null,
         businessEmail: email || null,
@@ -1094,10 +1103,10 @@ router.post('/suggest', authenticateToken, async (req: any, res: Response) => {
       },
     });
 
-    res.status(201).json(campground);
+    res.status(201).json({ success: true, campground, message: `Thank you! ${name.trim()} has been submitted for review.` });
   } catch (error: any) {
-    console.error('[Campground] suggest error:', error.message);
-    res.status(500).json({ error: 'Failed to submit campground suggestion' });
+    console.error('[Campground] suggest error:', error.message, error.stack?.slice(0, 300));
+    res.status(500).json({ error: error.message || 'Failed to submit campground suggestion' });
   }
 });
 
