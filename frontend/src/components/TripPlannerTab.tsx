@@ -786,13 +786,7 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
             </div>
           )}
 
-          {/* Multi-Stop Trip Planner */}
-          <div className="px-4 py-4 border-b border-gray-100">
-            <MultiStopTripPlanner
-              tripPlanId={tripPlan.id}
-              onUpdate={onReload}
-            />
-          </div>
+          {/* Multi-Stop Trip Planner — hidden, journey timeline rendered in TripDetailPage */}
         </div>
       ) : (
         /* No trip yet — lightweight empty state */
