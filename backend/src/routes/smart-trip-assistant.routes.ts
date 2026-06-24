@@ -1237,7 +1237,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (s.isWellLit) badges.push('Well Lit');
             if (s.isPetFriendly) badges.push('Pet Friendly');
             results.push({
-              id: s.id, name: s.name, city: s.city, state: s.state,
+              id: s.id, name: s.name, address: s.address, city: s.city, state: s.state,
               lat: s.latitude, lng: s.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges, overnightStopId: s.id,

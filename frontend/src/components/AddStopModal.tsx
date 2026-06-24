@@ -47,6 +47,7 @@ const MAX_HOURS: Record<string, number> = {
 interface Rec {
   id: string;
   name: string;
+  address?: string;
   city?: string;
   state?: string;
   lat?: number;
@@ -208,7 +209,9 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
         notes: confirmForm.notes || undefined,
       });
     } else {
-      const location = [selected.city, selected.state].filter(Boolean).join(', ');
+      // Build full location: "3060 Owingsville Rd, Mt Sterling, KY"
+      const locationParts = [selected.address, selected.city, selected.state].filter(Boolean);
+      const location = locationParts.join(', ') || '';
       const defaultDurations: Record<string, number> = {
         OVERNIGHT: 720, CAMPGROUND: 720, NAP: 120, GAS: 20,
         FOOD: 45, LUNCH: 45, SNACK: 20, RELAX: 60, WALK: 60,
@@ -228,6 +231,7 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
         latitude: selected.lat || null,
         longitude: selected.lng || null,
         overnightStopId: selected.overnightStopId || null,
+        campgroundId: selected.campgroundId || null,
         estimatedArrival: confirmForm.arrivalDate ? new Date(confirmForm.arrivalDate).toISOString() : null,
         departureDate: confirmForm.departureDate ? new Date(confirmForm.departureDate).toISOString() : null,
       });
@@ -374,9 +378,8 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
                   <span>
                     Searching near:{' '}
                     {routeInfo?.targetCity && routeInfo?.targetState
-                      ? `${routeInfo.targetCity}, ${routeInfo.targetState}`
+                      ? `~${routeInfo.targetMiles || previewMiles} mi mark · ${routeInfo.targetCity}, ${routeInfo.targetState} area`
                       : `~${previewMiles} mi mark`}
-                    {routeInfo?.originName && ` (~${routeInfo.targetMiles || previewMiles} mi from ${routeInfo.originName})`}
                   </span>
                 </div>
 
@@ -423,7 +426,7 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
                             {rec.rating && rec.rating > 0 && <span className="text-xs text-amber-600 flex-shrink-0">⭐ {Math.round(rec.rating * 10) / 10}</span>}
                           </div>
                           <p className="text-xs text-gray-400 mt-0.5">
-                            {[rec.city, rec.state].filter(Boolean).join(', ')}
+                            {[rec.address, rec.city, rec.state].filter(Boolean).join(', ')}
                             {rec.distanceFromRoute !== undefined && rec.distanceFromRoute !== null && ` · ${rec.distanceFromRoute} mi from route`}
                           </p>
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -513,7 +516,7 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800">{typeInfo?.emoji} {selected.name}</p>
-                    <p className="text-xs text-gray-500">{[selected.city, selected.state].filter(Boolean).join(', ')}</p>
+                    <p className="text-xs text-gray-500">{[selected.address, selected.city, selected.state].filter(Boolean).join(', ')}</p>
                     {selected.rating && selected.rating > 0 && <span className="text-xs text-amber-600">⭐ {Math.round(selected.rating * 10) / 10}</span>}
                   </div>
                   <button onClick={() => setMode('recs')} className="text-xs text-primary-500 hover:text-primary-700 flex-shrink-0">Change</button>

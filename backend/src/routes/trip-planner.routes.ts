@@ -208,7 +208,7 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
   try {
     const { tripId } = req.params;
     const userId = (req as any).userId;
-    const { name, location, stopType, notes, estimatedDuration, latitude, longitude, overnightStopId, estimatedArrival, departureDate } = req.body;
+    const { name, location, stopType, notes, estimatedDuration, latitude, longitude, overnightStopId, campgroundId, estimatedArrival, departureDate } = req.body;
 
     const tripPlan = await prisma.tripPlan.findUnique({
       where: { id: tripId },
@@ -220,6 +220,7 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
     }
 
     const orderIndex = tripPlan.pitStops.length;
+    console.log('[PitStop] Creating with payload:', JSON.stringify({ name, location, stopType, latitude, longitude, overnightStopId, campgroundId }));
 
     const pitStop = await prisma.pitStop.create({
       data: {
@@ -233,6 +234,7 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
         ...(latitude ? { latitude } : {}),
         ...(longitude ? { longitude } : {}),
         ...(overnightStopId ? { overnightStopId } : {}),
+        ...(campgroundId ? { campgroundId } : {}),
         ...(estimatedArrival ? { estimatedArrival: new Date(estimatedArrival) } : {}),
         ...(departureDate ? { departureDate: new Date(departureDate) } : {}),
       }

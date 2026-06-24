@@ -1821,8 +1821,20 @@ export default function EventDetailPage() {
                     const labelColor = labelColors[stopKey] || 'text-amber-600';
                     // Smart duration display
                     const isOvernight = ['CAMPGROUND', 'OVERNIGHT'].includes(stopKey);
+                    const formatShortDate = (d: string | Date) => {
+                      const date = new Date(d);
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    };
+                    const overnightNights = stop.estimatedArrival && stop.departureDate
+                      ? Math.max(1, Math.round((new Date(stop.departureDate).getTime() - new Date(stop.estimatedArrival).getTime()) / 86400000))
+                      : (stop.estimatedDuration && stop.estimatedDuration >= 720 ? Math.round(stop.estimatedDuration / 720) : null);
+                    const overnightText = isOvernight
+                      ? (stop.estimatedArrival && stop.departureDate
+                        ? `Arrive ${formatShortDate(stop.estimatedArrival)} · Leave ${formatShortDate(stop.departureDate)} · ${overnightNights} night${overnightNights !== 1 ? 's' : ''}`
+                        : (overnightNights ? `${overnightNights} night${overnightNights !== 1 ? 's' : ''}` : null))
+                      : null;
                     const durationText = isOvernight
-                      ? (stop.estimatedDuration && stop.estimatedDuration >= 720 ? `${Math.round(stop.estimatedDuration / 720)} night` : (stop.departureDate && stop.estimatedArrival ? '1 night' : null))
+                      ? overnightText
                       : (stop.estimatedDuration ? (stop.estimatedDuration >= 60 ? `${Math.round(stop.estimatedDuration / 60)} hr${Math.round(stop.estimatedDuration / 60) > 1 ? 's' : ''}` : `${stop.estimatedDuration} min`) : null);
                     // The leg after this stop is at legIndex = stopIdx + 1
                     const nextLeg = legSuggestions.find((l: any) => l.legIndex === stopIdx + 1);

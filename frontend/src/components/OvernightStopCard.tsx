@@ -125,7 +125,7 @@ export default function OvernightStopCard({ stop, onAddToPitStops, compact }: Pr
                 <span className="text-[10px] text-red-600 font-semibold flex items-center gap-0.5"><XCircle className="w-3 h-3" /> Not Recommended</span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{stop.city}{stop.state ? ', ' + stop.state : ''}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{[stop.address, stop.city, stop.state].filter(Boolean).join(', ')}</p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
               <div className="flex items-center gap-1">
                 <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
