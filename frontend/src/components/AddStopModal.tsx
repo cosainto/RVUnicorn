@@ -71,7 +71,7 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
   const [selectedType, setSelectedType] = useState('');
   const [recs, setRecs] = useState<Rec[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
-  const [routeInfo, setRouteInfo] = useState<{ totalMiles: number; totalHours: number } | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ totalMiles: number; totalHours: number; targetMiles?: number; targetDriveHours?: number; originName?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -99,7 +99,7 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
     try {
       const { data } = await api.get(`/smart-trip/${tripPlanId}/stop-recommendations`, { params: { type } });
       setRecs(data.recommendations || []);
-      setRouteInfo({ totalMiles: data.totalMiles, totalHours: data.totalHours });
+      setRouteInfo({ totalMiles: data.totalMiles, totalHours: data.totalHours, targetMiles: data.targetMiles, targetDriveHours: data.targetDriveHours, originName: data.originName });
     } catch {
       setRecs([]);
     } finally {
@@ -273,7 +273,11 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
               {routeInfo && routeInfo.totalMiles > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
                   <p className="font-medium">Route: ~{routeInfo.totalMiles.toLocaleString()} mi · ~{routeInfo.totalHours}h</p>
-                  <p className="text-blue-500 mt-0.5">{SUBTITLES[selectedType] || 'Stops along your route'}</p>
+                  <p className="text-blue-500 mt-0.5">
+                    {routeInfo.targetMiles && routeInfo.targetDriveHours
+                      ? `Stops near the ~${routeInfo.targetDriveHours}h mark · ~${routeInfo.targetMiles} mi from ${routeInfo.originName || 'start'}`
+                      : (SUBTITLES[selectedType] || 'Stops along your route')}
+                  </p>
                 </div>
               )}
 

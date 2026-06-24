@@ -999,29 +999,78 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
     const totalMinutes = legs.reduce((s, l) => s + l.durationMinutes, 0);
     const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
-    // Build corridor sample points with cumulative drive time
+    // ── Build dense corridor points with drive time ──
     const corridorPoints: { lat: number; lng: number; driveHours: number; driveMiles: number }[] = [];
     let cumMiles = 0;
     let cumMins = 0;
     for (const leg of legs) {
-      for (let s = 0; s <= 3; s++) {
-        const frac = s / 3;
+      const steps = 6; // more granularity for accurate positioning
+      for (let s = 0; s <= steps; s++) {
+        const frac = s / steps;
         corridorPoints.push({
           lat: leg.fromLat + (leg.toLat - leg.fromLat) * frac,
           lng: leg.fromLng + (leg.toLng - leg.fromLng) * frac,
-          driveHours: Math.round((cumMins + leg.durationMinutes * frac) / 6) / 10,
-          driveMiles: Math.round(cumMiles + leg.distanceMiles * frac),
+          driveHours: (cumMins + leg.durationMinutes * frac) / 60,
+          driveMiles: cumMiles + leg.distanceMiles * frac,
         });
       }
       cumMiles += leg.distanceMiles;
       cumMins += leg.durationMinutes;
     }
 
+    // ── Determine target position for each stop type ──
+    // Use daily drive limit if set (default 8h), or halfway point
+    const dailyDriveHours = 8; // TODO: pull from user Hitch preferences when available
+    const halfwayHours = totalHours / 2;
+
+    // Target drive-time positions by stop type (in hours from origin)
+    const targetHoursByType: Record<string, number[]> = {
+      CAMPGROUND:  [dailyDriveHours, dailyDriveHours * 0.75],  // overnight at daily limit
+      OVERNIGHT:   [dailyDriveHours, dailyDriveHours * 0.85],  // end-of-day stops
+      GAS:         [totalHours * 0.35, totalHours * 0.65],      // ~1/3 and ~2/3 into trip
+      FOOD:        [4.5, 8.5],                                   // lunch ~4.5h, dinner ~8.5h
+      LUNCH:       [4, 5],                                       // lunch window
+      SNACK:       [2, totalHours * 0.5],                        // mid-morning, mid-trip
+      RELAX:       [3, totalHours * 0.5],                        // after 3h driving, mid-trip
+      WALK:        [2.5, totalHours * 0.4],                      // leg-stretch intervals
+      PLAY:        [halfwayHours, totalHours * 0.6],             // mid-trip, slightly past halfway
+      DOG:         [3, 6],                                        // every 3h intervals
+      NAP:         [3, totalHours * 0.4],                        // after 3h driving
+      REPAIR:      [halfwayHours],                                // nearest to mid-trip or destination
+    };
+
+    // Find the corridor point closest to each target hour
+    function findPointAtHour(targetHour: number): typeof corridorPoints[0] | null {
+      if (corridorPoints.length === 0) return null;
+      // Clamp to valid range (at least 1h from start, avoid origin area)
+      const clamped = Math.max(1, Math.min(targetHour, totalHours - 0.5));
+      let best = corridorPoints[0];
+      let bestDiff = Infinity;
+      for (const p of corridorPoints) {
+        const diff = Math.abs(p.driveHours - clamped);
+        if (diff < bestDiff) { bestDiff = diff; best = p; }
+      }
+      return best;
+    }
+
+    const targetHours = targetHoursByType[stopType] || [halfwayHours];
+    const searchPoints = targetHours
+      .map(h => findPointAtHour(h))
+      .filter((p): p is NonNullable<typeof p> => p !== null && p.driveHours >= 0.5); // never search near origin
+
+    // If no valid search points, use halfway
+    if (searchPoints.length === 0) {
+      const mid = findPointAtHour(halfwayHours);
+      if (mid) searchPoints.push(mid);
+    }
+
+    // Also build subtitle context
+    const targetMiles = searchPoints.length > 0 ? Math.round(searchPoints[0].driveMiles) : Math.round(totalMiles / 2);
+    const targetDriveH = searchPoints.length > 0 ? Math.round(searchPoints[0].driveHours * 10) / 10 : Math.round(halfwayHours * 10) / 10;
+
     // Type-specific query config
     interface RecConfig {
       corridorDeg: number; // search radius in degrees (~1 deg = 69mi)
-      minDriveHours?: number;
-      maxDriveHours?: number;
       source: 'overnightStop' | 'nearbyExperience' | 'campground' | 'mixed';
       overnightStopTypes?: string[];
       experienceCategories?: string[];
@@ -1029,37 +1078,25 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
     }
 
     const configs: Record<string, RecConfig> = {
-      CAMPGROUND: { corridorDeg: 0.25, minDriveHours: 4, maxDriveHours: 12, source: 'campground', minRating: 3.5 },
-      OVERNIGHT:  { corridorDeg: 0.15, minDriveHours: 6, maxDriveHours: 10, source: 'overnightStop' },
-      GAS:        { corridorDeg: 0.08, source: 'overnightStop', overnightStopTypes: ['FUEL_CENTER', 'GAS_STATION', 'TRUCK_STOP'] },
-      FOOD:       { corridorDeg: 0.08, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
-      LUNCH:      { corridorDeg: 0.05, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
-      SNACK:      { corridorDeg: 0.05, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
-      RELAX:      { corridorDeg: 0.2, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND', 'FISHING_SPOT'] },
-      WALK:       { corridorDeg: 0.08, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND'] },
-      PLAY:       { corridorDeg: 0.2, source: 'nearbyExperience', experienceCategories: ['ATTRACTION', 'MUSEUM', 'PLAYGROUND'] },
-      DOG:        { corridorDeg: 0.08, source: 'mixed' },
-      NAP:        { corridorDeg: 0.08, minDriveHours: 2, maxDriveHours: 4, source: 'overnightStop' },
-      REPAIR:     { corridorDeg: 0.15, source: 'nearbyExperience' },
+      CAMPGROUND: { corridorDeg: 0.4, source: 'campground', minRating: 3.5 },
+      OVERNIGHT:  { corridorDeg: 0.4, source: 'overnightStop' },
+      GAS:        { corridorDeg: 0.15, source: 'overnightStop', overnightStopTypes: ['FUEL_CENTER', 'GAS_STATION', 'TRUCK_STOP'] },
+      FOOD:       { corridorDeg: 0.15, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      LUNCH:      { corridorDeg: 0.1, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      SNACK:      { corridorDeg: 0.1, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      RELAX:      { corridorDeg: 0.3, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND', 'FISHING_SPOT'] },
+      WALK:       { corridorDeg: 0.15, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND'] },
+      PLAY:       { corridorDeg: 0.3, source: 'nearbyExperience', experienceCategories: ['ATTRACTION', 'MUSEUM', 'PLAYGROUND'] },
+      DOG:        { corridorDeg: 0.15, source: 'mixed' },
+      NAP:        { corridorDeg: 0.15, source: 'overnightStop' },
+      REPAIR:     { corridorDeg: 0.25, source: 'nearbyExperience' },
     };
 
     const config = configs[stopType] || configs.FOOD;
     const seenIds = new Set<string>();
     let results: any[] = [];
 
-    // Filter corridor points by drive time window
-    let searchPoints = corridorPoints;
-    if (config.minDriveHours || config.maxDriveHours) {
-      searchPoints = corridorPoints.filter(p =>
-        (!config.minDriveHours || p.driveHours >= config.minDriveHours) &&
-        (!config.maxDriveHours || p.driveHours <= config.maxDriveHours)
-      );
-      // Fallback: if too few points, use all
-      if (searchPoints.length < 2) searchPoints = corridorPoints;
-    }
-    // Sample max 8 corridor points to limit queries
-    const step = Math.max(1, Math.floor(searchPoints.length / 8));
-    const sampledPoints = searchPoints.filter((_, i) => i % step === 0).slice(0, 8);
+    const sampledPoints = searchPoints;
 
     for (const point of sampledPoints) {
       const deg = config.corridorDeg;
@@ -1204,6 +1241,8 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
       recommendations: results,
       totalMiles,
       totalHours,
+      targetMiles,
+      targetDriveHours: targetDriveH,
       originName: waypoints[0].name,
       destName: waypoints[waypoints.length - 1].name,
     });
