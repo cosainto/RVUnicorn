@@ -489,10 +489,12 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleAddPitStop = async () => {
+  const handleAddPitStop = async (directData?: any) => {
+    // Use directly-passed data if available (from AddStopModal.confirmAdd),
+    // otherwise fall back to pitStopForm (for manual/generic form entry)
+    const formData = directData || pitStopForm;
     try {
       let planId = tripPlan?.id;
-      // If no trip plan exists, auto-create one
       if (!planId && id) {
         try {
           const { data: newPlan } = await api.post(`/trip-planner/event/${id}/plan`, {
@@ -503,12 +505,11 @@ export default function EventDetailPage() {
           setTripPlan(newPlan);
           planId = newPlan.id;
         } catch {
-          // Fall back to adding as a trip stop instead
           await api.post(`/trips/${id}/stops`, {
-            stopType: pitStopForm.stopType || 'OTHER',
-            name: pitStopForm.name,
-            address: pitStopForm.location || '',
-            notes: pitStopForm.notes || '',
+            stopType: formData.stopType || 'OTHER',
+            name: formData.name,
+            address: formData.location || '',
+            notes: formData.notes || '',
           });
           setShowPitStopModal(false);
           setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
@@ -520,11 +521,13 @@ export default function EventDetailPage() {
         addLocalToast('Unable to add stop — trip plan could not be created', 'error');
         return;
       }
-      await api.post(`/trip-planner/trip/${planId}/pit-stop`, pitStopForm);
+      console.log('[AddStop] Saving pit stop:', JSON.stringify(formData));
+      await api.post(`/trip-planner/trip/${planId}/pit-stop`, formData);
       setShowPitStopModal(false);
       setPitStopForm({ name: '', location: '', stopType: 'GAS', notes: '', estimatedDuration: 15 });
+      setSummaryRefreshKey(k => k + 1);
       loadTripPlan();
-      addLocalToast('✅ Pit stop added!', 'success');
+      addLocalToast(`${formData.name || 'Stop'} added to your trip!`, 'success');
     } catch (error: any) {
       addLocalToast(error.response?.data?.error || 'Failed to add pit stop', 'error');
     }
