@@ -140,7 +140,7 @@ function calculateLegs(waypoints: Waypoint[]): LegInfo[] {
     if (from.lat && from.lng && to.lat && to.lng) {
       const straightLine = haversine(from.lat, from.lng, to.lat, to.lng);
       const roadMiles = Math.round(straightLine * 1.3);
-      const durationMins = Math.round((roadMiles / 50) * 60);
+      const durationMins = Math.round((roadMiles / 55) * 60); // 55 mph avg for RV
       legs.push({
         legIndex: i,
         fromName: from.name,

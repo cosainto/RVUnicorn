@@ -55,9 +55,11 @@ export default function SmartTripSummary({ tripPlanId, onSetMpg, refreshKey }: P
   const loadSummary = async () => {
     try {
       const { data } = await api.get(`/smart-trip/${tripPlanId}/summary`);
-      if (data) {
+      // If cached summary exists AND has valid data, use it
+      if (data && data.totalMiles > 0) {
         setSummary(data);
       } else {
+        // No cached data or stale zeros — force recalculate
         calculateSummary();
       }
     } catch {

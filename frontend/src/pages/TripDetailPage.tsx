@@ -322,9 +322,10 @@ export default function EventDetailPage() {
 
   const loadTripSummaryLegs = async (planId: string) => {
     try {
-      // Fetch or calculate summary to get leg distances
+      // Fetch cached summary — but only use if it has valid data
       let { data } = await api.get(`/smart-trip/${planId}/summary`);
-      if (!data || !data.legs) {
+      if (!data || !data.legs || data.totalMiles === 0) {
+        // No valid cache — force recalculate
         const calc = await api.post(`/smart-trip/${planId}/calculate-summary`);
         data = calc.data;
       }
@@ -535,15 +536,14 @@ export default function EventDetailPage() {
     // Find stop name for toast
     const stop = tripPlan?.pitStops?.find((s: any) => s.id === pitStopId);
     const stopName = stop?.name || 'Stop';
+    // Capture the trip plan id before the timeout (avoid stale closure)
+    const planId = tripPlan?.id;
 
     // Optimistic: hide the stop immediately
     setRemovedStopId(pitStopId);
 
     // Show undo toast
-    addLocalToast(
-      `${stopName} removed`,
-      'success'
-    );
+    addLocalToast(`${stopName} removed`, 'success');
 
     // Set a timer to actually delete after 3 seconds (undo window)
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -552,17 +552,19 @@ export default function EventDetailPage() {
         // 1. Delete the stop from the database
         await api.delete(`/trip-planner/pit-stop/${pitStopId}`);
         setRemovedStopId(null);
-        // 2. Reload the trip plan (which no longer has the stop)
-        await loadTripPlan();
-        // 3. NOW recalculate summary with updated stops
-        if (tripPlan?.id) {
+        // 2. Recalculate summary FIRST (stop is already deleted in DB)
+        if (planId) {
           try {
-            await api.post(`/smart-trip/${tripPlan.id}/calculate-summary`);
-            setSummaryRefreshKey(k => k + 1);
-          } catch {}
+            const { data: newSummary } = await api.post(`/smart-trip/${planId}/calculate-summary`);
+            console.log('[SmartTrip] Recalculated after delete:', newSummary?.totalMiles, 'mi');
+          } catch (e) {
+            console.error('[SmartTrip] Recalculate failed:', e);
+          }
         }
+        // 3. Reload everything with fresh data
+        setSummaryRefreshKey(k => k + 1);
+        await loadTripPlan();
       } catch (error: any) {
-        // Restore the stop on failure
         setRemovedStopId(null);
         addLocalToast(error.response?.data?.error || 'Could not remove stop — try again', 'error');
       }
