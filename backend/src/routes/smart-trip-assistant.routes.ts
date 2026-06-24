@@ -49,9 +49,11 @@ async function buildWaypoints(tripPlan: any): Promise<Waypoint[]> {
     let lng = tripPlan.startLongitude;
     // Geocode if missing
     if (!lat || !lng) {
+      console.log('[SmartTrip] Geocoding start:', tripPlan.startLocation);
       const coords = await geocodeAddress(tripPlan.startLocation);
       lat = coords?.lat ?? null;
       lng = coords?.lng ?? null;
+      console.log('[SmartTrip] Start coords:', lat, lng);
     }
     waypoints.push({ name: tripPlan.startLocation, lat, lng, type: 'HOME' });
   }
@@ -68,15 +70,33 @@ async function buildWaypoints(tripPlan: any): Promise<Waypoint[]> {
     });
   }
 
-  // Destination
-  if (tripPlan.endLatitude && tripPlan.endLongitude) {
+  // Destination — geocode if coordinates missing
+  let destLat = tripPlan.endLatitude;
+  let destLng = tripPlan.endLongitude;
+  if ((!destLat || !destLng) && tripPlan.endLocation) {
+    console.log('[SmartTrip] Geocoding destination:', tripPlan.endLocation);
+    const coords = await geocodeAddress(tripPlan.endLocation);
+    destLat = coords?.lat ?? null;
+    destLng = coords?.lng ?? null;
+    console.log('[SmartTrip] Destination coords:', destLat, destLng);
+  }
+  // Also try event campground coordinates as fallback
+  if ((!destLat || !destLng) && tripPlan.event?.campground) {
+    destLat = tripPlan.event.campground.latitude;
+    destLng = tripPlan.event.campground.longitude;
+    console.log('[SmartTrip] Using event campground coords:', destLat, destLng);
+  }
+  if (destLat && destLng) {
     waypoints.push({
-      name: tripPlan.endLocation,
-      lat: tripPlan.endLatitude,
-      lng: tripPlan.endLongitude,
+      name: tripPlan.endLocation || 'Destination',
+      lat: destLat,
+      lng: destLng,
       type: 'FINAL_DESTINATION',
     });
   }
+
+  console.log('[SmartTrip] Built', waypoints.length, 'waypoints, coords present:',
+    waypoints.map(w => `${w.name.substring(0, 20)}: ${!!w.lat}`).join(', '));
 
   return waypoints;
 }
@@ -162,6 +182,11 @@ router.post('/:tripPlanId/calculate-summary', authenticateToken, async (req: Req
 
     const waypoints = await buildWaypoints(tripPlan);
     const legs = calculateLegs(waypoints);
+
+    console.log('[SmartTrip] calculate-summary: waypoints:', waypoints.length, 'legs:', legs.length);
+    if (legs.length === 0) {
+      console.log('[SmartTrip] WARNING: 0 legs computed. Waypoints:', JSON.stringify(waypoints.map(w => ({ name: w.name, lat: w.lat, lng: w.lng }))));
+    }
 
     const totalMiles = legs.reduce((s, l) => s + l.distanceMiles, 0);
     const totalMinutes = legs.reduce((s, l) => s + l.durationMinutes, 0);

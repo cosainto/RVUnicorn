@@ -31,7 +31,7 @@ import TripScrapbook from '../components/TripScrapbook';
 import SmartStops from '../components/SmartStops';
 import SmartTripSummary from '../components/SmartTripSummary';
 import SmartConnector from '../components/SmartConnector';
-import CategoryStopFinder from '../components/CategoryStopFinder';
+import InlineAddStop from '../components/InlineAddStop';
 import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -218,6 +218,7 @@ export default function EventDetailPage() {
   const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
   const [legSuggestions, setLegSuggestions] = useState<any[]>([]);
   const [legSuggestionsLoading, setLegSuggestionsLoading] = useState(false);
+  const [tripSummaryLegs, setTripSummaryLegs] = useState<any[]>([]);
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
   const [packRefreshKey, setPackRefreshKey] = useState(0);
   const [discoveredStops, setDiscoveredStops] = useState<any>({ attractions: [], restaurants: [], gasStations: [] });
@@ -295,9 +296,10 @@ export default function EventDetailPage() {
       setTripLoading(true);
       const { data } = await api.get(`/trip-planner/event/${id}/my-trip`);
       setTripPlan(data);
-      // Load leg suggestions if trip plan has stops or destination
+      // Load leg suggestions and summary for leg info
       if (data?.id) {
         loadLegSuggestions(data.id);
+        loadTripSummaryLegs(data.id);
       }
     } catch (error) {
       console.error('Load trip plan error:', error);
@@ -318,6 +320,20 @@ export default function EventDetailPage() {
     }
   };
 
+  const loadTripSummaryLegs = async (planId: string) => {
+    try {
+      // Fetch or calculate summary to get leg distances
+      let { data } = await api.get(`/smart-trip/${planId}/summary`);
+      if (!data || !data.legs) {
+        const calc = await api.post(`/smart-trip/${planId}/calculate-summary`);
+        data = calc.data;
+      }
+      setTripSummaryLegs(data?.legs || []);
+    } catch {
+      setTripSummaryLegs([]);
+    }
+  };
+
   const handleDismissSuggestion = async (legIndex: number, suggestionId: string) => {
     if (!tripPlan) return;
     try {
@@ -333,10 +349,10 @@ export default function EventDetailPage() {
     await loadTripPlan();
   };
 
-  const handleCategoryStopAdd = async (stop: any, afterNodeIndex: number) => {
+  const handleInlineStopAdd = async (stop: any, legIndex: number) => {
     if (!tripPlan) return;
     await api.post(`/smart-trip/${tripPlan.id}/add-suggestion`, {
-      legIndex: afterNodeIndex,
+      legIndex,
       name: stop.name,
       address: [stop.city, stop.state].filter(Boolean).join(', '),
       latitude: stop.lat,
@@ -347,6 +363,7 @@ export default function EventDetailPage() {
       experienceId: stop.experienceId || null,
     });
     addLocalToast(`${stop.name} added to your trip!`, 'success');
+    setSummaryRefreshKey(k => k + 1);
     await loadTripPlan();
   };
 
@@ -532,14 +549,18 @@ export default function EventDetailPage() {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = setTimeout(async () => {
       try {
+        // 1. Delete the stop from the database
         await api.delete(`/trip-planner/pit-stop/${pitStopId}`);
-        // Invalidate cached summary
-        if (tripPlan?.id) {
-          try { await api.post(`/smart-trip/${tripPlan.id}/calculate-summary`); } catch {}
-        }
         setRemovedStopId(null);
-        setSummaryRefreshKey(k => k + 1);
-        loadTripPlan();
+        // 2. Reload the trip plan (which no longer has the stop)
+        await loadTripPlan();
+        // 3. NOW recalculate summary with updated stops
+        if (tripPlan?.id) {
+          try {
+            await api.post(`/smart-trip/${tripPlan.id}/calculate-summary`);
+            setSummaryRefreshKey(k => k + 1);
+          } catch {}
+        }
       } catch (error: any) {
         // Restore the stop on failure
         setRemovedStopId(null);
@@ -1747,12 +1768,13 @@ export default function EventDetailPage() {
                       onManualAdd={() => setShowPitStopModal(true)}
                     />
                   ) : (
-                    <div className="flex gap-3">
-                      <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
-                      <div className="flex-1 py-1">
-                        <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
-                      </div>
-                    </div>
+                    <InlineAddStop
+                      tripPlanId={tripPlan.id}
+                      legIndex={0}
+                      leg={tripSummaryLegs[0] || null}
+                      onAddStop={(stop) => handleInlineStopAdd(stop, 0)}
+                      onManualAdd={() => setShowPitStopModal(true)}
+                    />
                   )}
 
                   {/* PIT STOPS with Smart Connectors */}
@@ -1798,12 +1820,13 @@ export default function EventDetailPage() {
                             onManualAdd={() => setShowPitStopModal(true)}
                           />
                         ) : (
-                          <div className="flex gap-3">
-                            <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
-                            <div className="flex-1 py-1">
-                              <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
-                            </div>
-                          </div>
+                          <InlineAddStop
+                            tripPlanId={tripPlan.id}
+                            legIndex={stopIdx + 1}
+                            leg={tripSummaryLegs[stopIdx + 1] || null}
+                            onAddStop={(stop) => handleInlineStopAdd(stop, stopIdx + 1)}
+                            onManualAdd={() => setShowPitStopModal(true)}
+                          />
                         )}
                       </div>
                     );
@@ -1842,18 +1865,7 @@ export default function EventDetailPage() {
               </div>
               )}
 
-              {/* ═══ CATEGORY STOP FINDER ═══ */}
-              {tripPlan && (
-                <CategoryStopFinder
-                  tripPlanId={tripPlan.id}
-                  onAddStop={handleCategoryStopAdd}
-                  nodeNames={[
-                    tripPlan.startLocation || 'Start',
-                    ...(tripPlan.pitStops || []).map((s: any) => s.name),
-                    tripPlan.endLocation || 'Destination',
-                  ]}
-                />
-              )}
+              {/* Category stop finder is now integrated into each InlineAddStop connector */}
 
               {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}
               {false && <div className="bg-white rounded-lg border p-6">
