@@ -806,4 +806,163 @@ router.get('/:tripPlanId/stops-by-category', authenticateToken, async (req: Requ
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// GET /smart-trip/:tripPlanId/campground-recommendations
+// ═══════════════════════════════════════════════════════════════════════
+router.get('/:tripPlanId/campground-recommendations', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripPlanId } = req.params;
+    const userId = (req as any).userId;
+
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripPlanId },
+      include: {
+        pitStops: { orderBy: { orderIndex: 'asc' }, include: { campground: { select: { latitude: true, longitude: true } } } },
+        event: { include: { campground: { select: { latitude: true, longitude: true, name: true, location: true, state: true } } } },
+        user: { select: { rvType: true } },
+      },
+    });
+
+    if (!tripPlan || tripPlan.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const waypoints = await buildWaypoints(tripPlan);
+    const legs = calculateLegs(waypoints);
+
+    if (waypoints.length < 2 || !waypoints[0].lat || !waypoints[waypoints.length - 1].lat) {
+      return res.json({ recommendations: [], totalMiles: 0, totalHours: 0, message: 'Route coordinates unavailable' });
+    }
+
+    const origin = waypoints[0];
+    const dest = waypoints[waypoints.length - 1];
+    const totalMiles = legs.reduce((s, l) => s + l.distanceMiles, 0);
+    const totalHours = Math.round((legs.reduce((s, l) => s + l.durationMinutes, 0) / 60) * 10) / 10;
+
+    // Existing campground IDs in trip — exclude them
+    const existingCampgroundIds = new Set(
+      (tripPlan.pitStops || [])
+        .filter((s: any) => s.campgroundId)
+        .map((s: any) => s.campgroundId)
+    );
+
+    // Build corridor search points between 4-12 hours of driving from origin
+    // For a ~15h trip, 4-12h puts us at ~25-80% of the route
+    const corridorPoints: { lat: number; lng: number; driveHours: number; driveMiles: number }[] = [];
+    let cumulativeMiles = 0;
+    let cumulativeMinutes = 0;
+
+    // Sample points along the route at intervals
+    for (const leg of legs) {
+      const steps = 4;
+      for (let s = 0; s <= steps; s++) {
+        const frac = s / steps;
+        const pointMiles = cumulativeMiles + leg.distanceMiles * frac;
+        const pointMinutes = cumulativeMinutes + leg.durationMinutes * frac;
+        const pointHours = pointMinutes / 60;
+
+        if (pointHours >= 4 && pointHours <= 12) {
+          const lat = leg.fromLat + (leg.toLat - leg.fromLat) * frac;
+          const lng = leg.fromLng + (leg.toLng - leg.fromLng) * frac;
+          corridorPoints.push({ lat, lng, driveHours: Math.round(pointHours * 10) / 10, driveMiles: Math.round(pointMiles) });
+        }
+      }
+      cumulativeMiles += leg.distanceMiles;
+      cumulativeMinutes += leg.durationMinutes;
+    }
+
+    // If total drive < 4h, expand window to 2-totalHours
+    if (corridorPoints.length === 0) {
+      const midLat = (origin.lat! + dest.lat!) / 2;
+      const midLng = (origin.lng! + dest.lng!) / 2;
+      corridorPoints.push({ lat: midLat, lng: midLng, driveHours: totalHours / 2, driveMiles: totalMiles / 2 });
+    }
+
+    // Search campgrounds near corridor points
+    let allCampgrounds: any[] = [];
+    const seenIds = new Set<string>();
+
+    for (const point of corridorPoints) {
+      const campgrounds = await prisma.campground.findMany({
+        where: {
+          latitude: { gte: point.lat - 0.25, lte: point.lat + 0.25 },
+          longitude: { gte: point.lng - 0.25, lte: point.lng + 0.25 },
+          averageRating: { gte: 3.5 },
+        },
+        select: {
+          id: true, name: true, city: true, state: true,
+          latitude: true, longitude: true,
+          averageRating: true, ratingCount: true, googleRating: true, googleReviewCount: true,
+          hasElectricHookup: true, hasWaterHookup: true, hasSewerHookup: true,
+          hasPullThrough: true, isBigRigFriendly: true, isPetFriendly: true,
+          imageUrl: true,
+        },
+        take: 5,
+        orderBy: { averageRating: 'desc' },
+      });
+
+      for (const cg of campgrounds) {
+        if (seenIds.has(cg.id) || existingCampgroundIds.has(cg.id)) continue;
+        seenIds.add(cg.id);
+
+        const distFromRoute = cg.latitude && cg.longitude
+          ? Math.round(haversine(point.lat, point.lng, cg.latitude, cg.longitude))
+          : null;
+
+        if (distFromRoute !== null && distFromRoute > 30) continue; // Skip if > 30mi from route
+
+        const rating = cg.averageRating > 0 ? cg.averageRating : cg.googleRating || 0;
+        const reviewCount = (cg.ratingCount || 0) + (cg.googleReviewCount || 0);
+
+        const amenities: string[] = [];
+        if (cg.hasElectricHookup) amenities.push('Electric');
+        if (cg.hasWaterHookup) amenities.push('Water');
+        if (cg.hasSewerHookup) amenities.push('Sewer');
+        if (cg.hasPullThrough) amenities.push('Pull-through');
+        if (cg.isBigRigFriendly) amenities.push('Big Rig');
+        if (cg.isPetFriendly) amenities.push('Pet Friendly');
+
+        allCampgrounds.push({
+          campgroundId: cg.id,
+          name: cg.name,
+          city: cg.city,
+          state: cg.state,
+          latitude: cg.latitude,
+          longitude: cg.longitude,
+          rating: Math.round(rating * 10) / 10,
+          reviewCount,
+          driveHoursFromOrigin: point.driveHours,
+          driveMilesFromOrigin: point.driveMiles,
+          distanceFromRoute: distFromRoute,
+          amenities,
+          imageUrl: cg.imageUrl,
+        });
+      }
+    }
+
+    // Sort: rating desc, then distance from route
+    allCampgrounds.sort((a, b) => b.rating - a.rating || (a.distanceFromRoute || 99) - (b.distanceFromRoute || 99));
+
+    // Limit to 8
+    const recommendations = allCampgrounds.slice(0, 8);
+
+    let message = '';
+    if (recommendations.length < 3) {
+      message = 'Limited options on this route — showing nearest available campgrounds.';
+    }
+
+    res.json({
+      recommendations,
+      totalMiles,
+      totalHours,
+      originName: origin.name,
+      destName: dest.name,
+      message,
+    });
+  } catch (error: any) {
+    console.error('Campground recommendations error:', error);
+    res.status(500).json({ error: 'Failed to get campground recommendations' });
+  }
+});
+
 export default router;

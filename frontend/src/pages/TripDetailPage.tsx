@@ -32,6 +32,7 @@ import SmartStops from '../components/SmartStops';
 import SmartTripSummary from '../components/SmartTripSummary';
 import SmartConnector from '../components/SmartConnector';
 import InlineAddStop from '../components/InlineAddStop';
+import AddStopModal from '../components/AddStopModal';
 import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -87,6 +88,7 @@ interface PitStop {
 }
 
 const STOP_TYPES = [
+  { id: 'CAMPGROUND', label: 'Campground', emoji: '🏕️', icon: MapPin },
   { id: 'OVERNIGHT', label: 'Overnight', emoji: '🌙', icon: Moon },
   { id: 'NAP', label: 'Nap', emoji: '😴', icon: Moon },
   { id: 'SNACK', label: 'Snack', emoji: '🍿', icon: Coffee },
@@ -2485,54 +2487,30 @@ export default function EventDetailPage() {
 
       {/* Add Stop Modal */}
       {showPitStopModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Add Stop</h3>
-              <button onClick={() => setShowPitStopModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stop Type *</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {STOP_TYPES.map((type) => (
-                    <button key={type.id} onClick={() => setPitStopForm({ ...pitStopForm, stopType: type.id })} className={`p-2 rounded-lg border-2 text-center transition ${pitStopForm.stopType === type.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <span className="text-xl block">{type.emoji}</span>
-                      <span className="text-xs text-gray-600">{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                <input type="text" value={pitStopForm.name} onChange={(e) => setPitStopForm({ ...pitStopForm, name: e.target.value })} className="input w-full" placeholder="e.g., Love's Travel Stop" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input type="text" value={pitStopForm.location} onChange={(e) => setPitStopForm({ ...pitStopForm, location: e.target.value })} className="input w-full" placeholder="City, State or Address" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">How long are you staying?</label>
-                <div className="flex gap-2">
-                  <input type="number" value={pitStopForm.estimatedDuration} onChange={(e) => setPitStopForm({ ...pitStopForm, estimatedDuration: parseInt(e.target.value) || 0 })} className="input flex-1" min="1" placeholder="2" />
-                  <select value={(pitStopForm as any).durationUnit || 'hours'} onChange={(e) => setPitStopForm({ ...pitStopForm, durationUnit: e.target.value } as any)} className="input w-24">
-                    <option value="hours">Hours</option>
-                    <option value="days">Days</option>
-                  </select>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">Quick stops: hours · Overnight stays: days</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                <textarea value={pitStopForm.notes} onChange={(e) => setPitStopForm({ ...pitStopForm, notes: e.target.value })} className="input w-full" rows={2} placeholder="Any notes about this stop..." />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowPitStopModal(false)} className="btn btn-secondary flex-1">Cancel</button>
-              <button onClick={handleAddPitStop} disabled={!pitStopForm.name} className="btn btn-primary flex-1 disabled:opacity-50">Add to Itinerary</button>
-            </div>
-          </div>
-        </div>
+        <AddStopModal
+          tripPlanId={tripPlan?.id || ''}
+          onClose={() => setShowPitStopModal(false)}
+          onAddGenericStop={handleAddPitStop}
+          onAddCampground={async (cg: any) => {
+            if (!tripPlan?.id) return;
+            try {
+              await api.post(`/trip-planner/trip/${tripPlan.id}/campground-stop`, {
+                campgroundId: cg.campgroundId,
+                arrivalDate: cg.arrivalDate || null,
+                departureDate: cg.departureDate || null,
+                notes: cg.notes || null,
+              });
+              setShowPitStopModal(false);
+              addLocalToast(`${cg.name} added to your trip 🏕️`, 'success');
+              setSummaryRefreshKey(k => k + 1);
+              await loadTripPlan();
+            } catch (e: any) {
+              addLocalToast(e?.response?.data?.error || 'Failed to add campground', 'error');
+            }
+          }}
+          pitStopForm={pitStopForm}
+          setPitStopForm={setPitStopForm}
+        />
       )}
 
       {/* Smart RV Stops Modal */}
