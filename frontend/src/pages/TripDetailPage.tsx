@@ -29,6 +29,9 @@ import SupplyList from '../components/SupplyList';
 import EventAlbum from '../components/EventAlbum';
 import TripScrapbook from '../components/TripScrapbook';
 import SmartStops from '../components/SmartStops';
+import SmartTripSummary from '../components/SmartTripSummary';
+import SmartConnector from '../components/SmartConnector';
+import CategoryStopFinder from '../components/CategoryStopFinder';
 import EventCommentWall from '../components/EventCommentWall';
 import EventActivities from '../components/EventActivities';
 import ThingsToDoSection from '../components/ThingsToDoSection';
@@ -213,6 +216,8 @@ export default function EventDetailPage() {
   });
 
   const [showDiscoverStopsModal, setShowDiscoverStopsModal] = useState(false);
+  const [legSuggestions, setLegSuggestions] = useState<any[]>([]);
+  const [legSuggestionsLoading, setLegSuggestionsLoading] = useState(false);
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
   const [packRefreshKey, setPackRefreshKey] = useState(0);
   const [discoveredStops, setDiscoveredStops] = useState<any>({ attractions: [], restaurants: [], gasStations: [] });
@@ -290,11 +295,59 @@ export default function EventDetailPage() {
       setTripLoading(true);
       const { data } = await api.get(`/trip-planner/event/${id}/my-trip`);
       setTripPlan(data);
+      // Load leg suggestions if trip plan has stops or destination
+      if (data?.id) {
+        loadLegSuggestions(data.id);
+      }
     } catch (error) {
       console.error('Load trip plan error:', error);
     } finally {
       setTripLoading(false);
     }
+  };
+
+  const loadLegSuggestions = async (planId: string) => {
+    setLegSuggestionsLoading(true);
+    try {
+      const { data } = await api.post(`/smart-trip/${planId}/leg-suggestions`);
+      setLegSuggestions(data || []);
+    } catch {
+      setLegSuggestions([]);
+    } finally {
+      setLegSuggestionsLoading(false);
+    }
+  };
+
+  const handleDismissSuggestion = async (legIndex: number, suggestionId: string) => {
+    if (!tripPlan) return;
+    try {
+      await api.post(`/smart-trip/${tripPlan.id}/dismiss-suggestion`, { legIndex, suggestionId });
+      // Reload suggestions
+      loadLegSuggestions(tripPlan.id);
+    } catch {}
+  };
+
+  const handleAddSuggestionToTrip = async () => {
+    if (!tripPlan) return;
+    addLocalToast('Stop added to your trip!', 'success');
+    await loadTripPlan();
+  };
+
+  const handleCategoryStopAdd = async (stop: any, afterNodeIndex: number) => {
+    if (!tripPlan) return;
+    await api.post(`/smart-trip/${tripPlan.id}/add-suggestion`, {
+      legIndex: afterNodeIndex,
+      name: stop.name,
+      address: [stop.city, stop.state].filter(Boolean).join(', '),
+      latitude: stop.lat,
+      longitude: stop.lng,
+      stopType: stop.type,
+      campgroundId: stop.campgroundId || null,
+      overnightStopId: stop.overnightStopId || null,
+      experienceId: stop.experienceId || null,
+    });
+    addLocalToast(`${stop.name} added to your trip!`, 'success');
+    await loadTripPlan();
   };
 
   const handleCreateTripPlan = async () => {
@@ -1618,6 +1671,18 @@ export default function EventDetailPage() {
                 rvLength={(user as any)?.rvLength}
                 rvType={(user as any)?.rvType}
               />
+              {/* ═══ TRIP SUMMARY CARD ═══ */}
+              {tripPlan && (
+                <SmartTripSummary
+                  tripPlanId={tripPlan.id}
+                  onSetMpg={() => {
+                    // Scroll to or open RV specs form — for now navigate to settings
+                    const el = document.getElementById('trip-planner-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                />
+              )}
+
               {/* ═══ JOURNEY TIMELINE ═══ */}
               {tripPlan && (
               <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
@@ -1638,20 +1703,32 @@ export default function EventDetailPage() {
                     </div>
                   </div>
 
-                  {/* + Add Stop */}
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
-                    <div className="flex-1 py-1">
-                      <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                  {/* Smart Connector after START (leg 0) */}
+                  {legSuggestions.length > 0 && legSuggestions[0] ? (
+                    <SmartConnector
+                      tripPlanId={tripPlan.id}
+                      leg={legSuggestions[0]}
+                      onAddStop={handleAddSuggestionToTrip}
+                      onDismiss={handleDismissSuggestion}
+                      onManualAdd={() => setShowPitStopModal(true)}
+                    />
+                  ) : (
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                      <div className="flex-1 py-1">
+                        <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* PIT STOPS */}
-                  {tripPlan.pitStops?.map((stop: any) => {
+                  {/* PIT STOPS with Smart Connectors */}
+                  {tripPlan.pitStops?.map((stop: any, stopIdx: number) => {
                     const hasCampground = stop.campgroundId || stop.stopType === 'CAMPGROUND';
                     const si = hasCampground
                       ? { emoji: '🏕️', label: 'Campground' }
                       : (STOP_TYPES.find((s: any) => s.id === stop.stopType) || STOP_TYPES[STOP_TYPES.length - 1]);
+                    // The leg after this stop is at legIndex = stopIdx + 1
+                    const nextLeg = legSuggestions.find((l: any) => l.legIndex === stopIdx + 1);
                     return (
                       <div key={stop.id}>
                         <div className="flex gap-3">
@@ -1671,12 +1748,23 @@ export default function EventDetailPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-3">
-                          <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
-                          <div className="flex-1 py-1">
-                            <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                        {/* Smart Connector after this stop */}
+                        {nextLeg ? (
+                          <SmartConnector
+                            tripPlanId={tripPlan.id}
+                            leg={nextLeg}
+                            onAddStop={handleAddSuggestionToTrip}
+                            onDismiss={handleDismissSuggestion}
+                            onManualAdd={() => setShowPitStopModal(true)}
+                          />
+                        ) : (
+                          <div className="flex gap-3">
+                            <div className="flex flex-col items-center"><div className="w-0.5 flex-1 bg-gray-200" /></div>
+                            <div className="flex-1 py-1">
+                              <button onClick={() => setShowPitStopModal(true)} className="text-xs text-primary-500 hover:text-primary-700 border border-dashed border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition w-full text-center">+ Add Stop</button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1694,6 +1782,19 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               </div>
+              )}
+
+              {/* ═══ CATEGORY STOP FINDER ═══ */}
+              {tripPlan && (
+                <CategoryStopFinder
+                  tripPlanId={tripPlan.id}
+                  onAddStop={handleCategoryStopAdd}
+                  nodeNames={[
+                    tripPlan.startLocation || 'Start',
+                    ...(tripPlan.pitStops || []).map((s: any) => s.name),
+                    tripPlan.endLocation || 'Destination',
+                  ]}
+                />
               )}
 
               {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}

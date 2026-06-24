@@ -1594,8 +1594,22 @@ model TripPlan {
   ridingWith      User?              @relation("RidingWith", fields: [ridingWithId], references: [id])
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   mileageLogs     UserMileageLog[]
+  summaryData     Json?
+  legSuggestions  Json?
+  legDismissals   TripLegDismissal[]
 
   @@unique([eventId, userId])
+}
+
+model TripLegDismissal {
+  id            String   @id @default(cuid())
+  tripPlanId    String
+  legIndex      Int
+  suggestionId  String
+  dismissedAt   DateTime @default(now())
+  tripPlan      TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([tripPlanId, legIndex, suggestionId])
 }
 
 model UserMileageLog {
