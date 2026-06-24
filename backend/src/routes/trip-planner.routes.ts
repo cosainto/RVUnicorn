@@ -208,7 +208,7 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
   try {
     const { tripId } = req.params;
     const userId = (req as any).userId;
-    const { name, location, stopType, notes, estimatedDuration } = req.body;
+    const { name, location, stopType, notes, estimatedDuration, latitude, longitude, overnightStopId, estimatedArrival, departureDate } = req.body;
 
     const tripPlan = await prisma.tripPlan.findUnique({
       where: { id: tripId },
@@ -230,6 +230,11 @@ router.post('/trip/:tripId/pit-stop', authenticateToken, async (req: Request, re
         notes,
         estimatedDuration,
         orderIndex,
+        ...(latitude ? { latitude } : {}),
+        ...(longitude ? { longitude } : {}),
+        ...(overnightStopId ? { overnightStopId } : {}),
+        ...(estimatedArrival ? { estimatedArrival: new Date(estimatedArrival) } : {}),
+        ...(departureDate ? { departureDate: new Date(departureDate) } : {}),
       }
     });
 

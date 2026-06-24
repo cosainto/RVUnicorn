@@ -209,9 +209,29 @@ export default function AddStopModal({ tripPlanId, onClose, onAddGenericStop, on
       });
     } else {
       const location = [selected.city, selected.state].filter(Boolean).join(', ');
+      // Type-aware duration defaults
+      const defaultDurations: Record<string, number> = {
+        OVERNIGHT: 720, CAMPGROUND: 720, NAP: 120, GAS: 20,
+        FOOD: 45, LUNCH: 45, SNACK: 20, RELAX: 60, WALK: 60,
+        PLAY: 120, DOG: 30, REPAIR: 120, OTHER: 30,
+      };
+      const duration = OVERNIGHT_TYPES.has(selectedType)
+        ? (defaultDurations[selectedType] || 720) // overnight = 12h placeholder
+        : (parseInt(confirmForm.duration) || defaultDurations[selectedType] || 30);
+
       setPitStopForm((f: any) => ({
-        ...f, name: selected.name, location, stopType: selectedType,
-        notes: confirmForm.notes || '', estimatedDuration: parseInt(confirmForm.duration) || 30,
+        ...f,
+        name: selected.name,
+        location,
+        stopType: selectedType,
+        notes: confirmForm.notes || '',
+        estimatedDuration: duration,
+        // Pass coordinates and IDs for the backend
+        latitude: selected.lat || null,
+        longitude: selected.lng || null,
+        overnightStopId: selected.overnightStopId || null,
+        estimatedArrival: confirmForm.arrivalDate ? new Date(confirmForm.arrivalDate).toISOString() : null,
+        departureDate: confirmForm.departureDate ? new Date(confirmForm.departureDate).toISOString() : null,
       }));
       setTimeout(() => onAddGenericStop(), 50);
     }

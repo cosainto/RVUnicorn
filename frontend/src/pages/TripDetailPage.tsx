@@ -1787,22 +1787,57 @@ export default function EventDetailPage() {
                     const si = hasCampground
                       ? { emoji: '🏕️', label: 'Campground' }
                       : (STOP_TYPES.find((s: any) => s.id === stop.stopType) || STOP_TYPES[STOP_TYPES.length - 1]);
+                    // Per-type icon colors
+                    const iconStyles: Record<string, string> = {
+                      CAMPGROUND: 'bg-green-100 border-green-400',
+                      OVERNIGHT: 'bg-amber-100 border-amber-400',
+                      GAS: 'bg-yellow-100 border-yellow-400',
+                      FOOD: 'bg-orange-100 border-orange-400',
+                      LUNCH: 'bg-orange-100 border-orange-400',
+                      SNACK: 'bg-orange-100 border-orange-400',
+                      RELAX: 'bg-teal-100 border-teal-400',
+                      WALK: 'bg-teal-100 border-teal-400',
+                      PLAY: 'bg-purple-100 border-purple-400',
+                      DOG: 'bg-amber-100 border-amber-400',
+                      NAP: 'bg-slate-100 border-slate-400',
+                      REPAIR: 'bg-red-100 border-red-400',
+                    };
+                    const labelColors: Record<string, string> = {
+                      CAMPGROUND: 'text-green-600',
+                      OVERNIGHT: 'text-amber-600',
+                      GAS: 'text-yellow-700',
+                      FOOD: 'text-orange-600', LUNCH: 'text-orange-600', SNACK: 'text-orange-600',
+                      RELAX: 'text-teal-600', WALK: 'text-teal-600',
+                      PLAY: 'text-purple-600',
+                      DOG: 'text-amber-700',
+                      NAP: 'text-slate-600',
+                      REPAIR: 'text-red-600',
+                    };
+                    const stopKey = hasCampground ? 'CAMPGROUND' : (stop.stopType || 'OTHER');
+                    const iconStyle = iconStyles[stopKey] || 'bg-amber-50 border-amber-300';
+                    const labelColor = labelColors[stopKey] || 'text-amber-600';
+                    // Smart duration display
+                    const isOvernight = ['CAMPGROUND', 'OVERNIGHT'].includes(stopKey);
+                    const durationText = isOvernight
+                      ? (stop.estimatedDuration && stop.estimatedDuration >= 720 ? `${Math.round(stop.estimatedDuration / 720)} night` : (stop.departureDate && stop.estimatedArrival ? '1 night' : null))
+                      : (stop.estimatedDuration ? (stop.estimatedDuration >= 60 ? `${Math.round(stop.estimatedDuration / 60)} hr${Math.round(stop.estimatedDuration / 60) > 1 ? 's' : ''}` : `${stop.estimatedDuration} min`) : null);
                     // The leg after this stop is at legIndex = stopIdx + 1
                     const nextLeg = legSuggestions.find((l: any) => l.legIndex === stopIdx + 1);
                     return (
                       <div key={stop.id}>
                         <div className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="w-9 h-9 rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center">{si.emoji}</div>
+                            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${iconStyle}`}>{si.emoji}</div>
                             <div className="w-0.5 flex-1 bg-gray-200 my-1" />
                           </div>
                           <div className="flex-1 pb-2">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">{si.label}</p>
-                                <p className="font-semibold text-gray-900 text-sm">{stop.name}</p>
-                                {stop.location && <p className="text-xs text-gray-400">📍 {stop.location}</p>}
-                                {stop.estimatedDuration && <p className="text-xs text-gray-400">⏱ {stop.estimatedDuration > 60 ? `${Math.round(stop.estimatedDuration / 60)} hrs` : `${stop.estimatedDuration} min`}</p>}
+                                <p className={`text-[10px] font-bold uppercase tracking-wider ${labelColor} mb-0.5`}>{si.label}</p>
+                                <p className="font-semibold text-gray-900 text-sm">{stop.name || 'Unnamed stop'}</p>
+                                {stop.location && <p className="text-xs text-gray-400">{stop.location}</p>}
+                                {durationText && <p className="text-xs text-gray-400">⏱ {durationText}</p>}
+                                {!stop.name && <p className="text-xs text-amber-500 mt-0.5">Tap to add location details</p>}
                               </div>
                               <button
                                 onClick={() => handleDeletePitStop(stop.id)}
