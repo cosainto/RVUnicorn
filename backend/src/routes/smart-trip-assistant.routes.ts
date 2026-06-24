@@ -16,6 +16,52 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── Parse address into city/state ──────────────────────────────────────
+const US_STATES: Record<string, string> = {
+  'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
+  'colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA',
+  'hawaii':'HI','idaho':'ID','illinois':'IL','indiana':'IN','iowa':'IA','kansas':'KS',
+  'kentucky':'KY','louisiana':'LA','maine':'ME','maryland':'MD','massachusetts':'MA',
+  'michigan':'MI','minnesota':'MN','mississippi':'MS','missouri':'MO','montana':'MT',
+  'nebraska':'NE','nevada':'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM',
+  'new york':'NY','north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK',
+  'oregon':'OR','pennsylvania':'PA','rhode island':'RI','south carolina':'SC',
+  'south dakota':'SD','tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT',
+  'virginia':'VA','washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY',
+};
+const STATE_ABBREVS = new Set(Object.values(US_STATES));
+
+function parseCityState(address: string | null | undefined): { city: string; state: string } {
+  if (!address) return { city: '', state: '' };
+  // Try to extract city, state from address like "123 Main St, Louisville, KY 40202"
+  const parts = address.split(',').map(s => s.trim());
+  if (parts.length >= 2) {
+    // Last part might be "KY 40202" or "KY" or "Kentucky"
+    const lastPart = parts[parts.length - 1];
+    const stateMatch = lastPart.match(/^([A-Z]{2})\b/);
+    if (stateMatch && STATE_ABBREVS.has(stateMatch[1])) {
+      return { city: parts[parts.length - 2], state: stateMatch[1] };
+    }
+    // Check for full state name
+    const lowerLast = lastPart.toLowerCase().replace(/\d+/g, '').trim();
+    if (US_STATES[lowerLast]) {
+      return { city: parts[parts.length - 2], state: US_STATES[lowerLast] };
+    }
+    // Second-to-last might have state: "Louisville KY"
+    const secondLast = parts[parts.length - 2];
+    const stateMatch2 = secondLast.match(/([A-Z]{2})\s*$/);
+    if (stateMatch2 && STATE_ABBREVS.has(stateMatch2[1])) {
+      return { city: secondLast.replace(/\s*[A-Z]{2}\s*$/, '').trim(), state: stateMatch2[1] };
+    }
+    // Just use last two parts as city and state
+    if (parts.length >= 3) {
+      return { city: parts[parts.length - 2], state: lastPart.replace(/\d+/g, '').trim() };
+    }
+    return { city: parts[0], state: lastPart.replace(/\d+/g, '').trim() };
+  }
+  return { city: address, state: '' };
+}
+
 // ── Fetch current average diesel price ────────────────────────────────
 async function fetchDieselPrice(): Promise<number> {
   const FALLBACK = 3.65;
@@ -1213,8 +1259,9 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (seenIds.has(e.id)) continue; seenIds.add(e.id);
             const dist = e.latitude && e.longitude ? Math.round(haversine(point.lat, point.lng, e.latitude, e.longitude)) : null;
             if (dist !== null && dist > maxDistMiles) continue;
+            const parsed = parseCityState(e.address);
             results.push({
-              id: e.id, name: e.name, city: e.address, state: null,
+              id: e.id, name: e.name, city: parsed.city, state: parsed.state,
               lat: e.latitude, lng: e.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges: [e.category].filter(Boolean),
@@ -1235,8 +1282,9 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (seenIds.has(e.id)) continue; seenIds.add(e.id);
             const dist = e.latitude && e.longitude ? Math.round(haversine(point.lat, point.lng, e.latitude, e.longitude)) : null;
             if (dist !== null && dist > maxDistMiles) continue;
+            const parsedDog = parseCityState(e.address);
             results.push({
-              id: e.id, name: e.name, city: e.address, state: null,
+              id: e.id, name: e.name, city: parsedDog.city, state: parsedDog.state,
               lat: e.latitude, lng: e.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges: ['Pet Friendly', e.category].filter(Boolean),
@@ -1297,11 +1345,12 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
               const pLng = p.geometry?.location?.lng;
               if (!pLat || !pLng) continue;
               const dist = Math.round(haversine(pt.lat, pt.lng, pLat, pLng));
+              const gpParsed = parseCityState(p.vicinity || p.formatted_address || '');
               results.push({
                 id: `gp_${p.place_id}`,
                 name: p.name,
-                city: p.vicinity || '',
-                state: null,
+                city: gpParsed.city,
+                state: gpParsed.state,
                 lat: pLat, lng: pLng,
                 rating: p.rating || null,
                 driveHours: pt.driveHours, driveMiles: pt.driveMiles,
