@@ -352,24 +352,6 @@ export default function EventDetailPage() {
     await loadTripPlan();
   };
 
-  const handleInlineStopAdd = async (stop: any, legIndex: number) => {
-    if (!tripPlan) return;
-    await api.post(`/smart-trip/${tripPlan.id}/add-suggestion`, {
-      legIndex,
-      name: stop.name,
-      address: [stop.city, stop.state].filter(Boolean).join(', '),
-      latitude: stop.lat,
-      longitude: stop.lng,
-      stopType: stop.type,
-      campgroundId: stop.campgroundId || null,
-      overnightStopId: stop.overnightStopId || null,
-      experienceId: stop.experienceId || null,
-    });
-    addLocalToast(`${stop.name} added to your trip!`, 'success');
-    setSummaryRefreshKey(k => k + 1);
-    await loadTripPlan();
-  };
-
   const handleCreateTripPlan = async () => {
     if (!id) return;
     try {
@@ -1779,7 +1761,6 @@ export default function EventDetailPage() {
                       tripPlanId={tripPlan.id}
                       legIndex={0}
                       leg={tripSummaryLegs[0] || null}
-                      onAddStop={(stop) => handleInlineStopAdd(stop, 0)}
                       onManualAdd={() => setShowPitStopModal(true)}
                     />
                   )}
@@ -1878,7 +1859,6 @@ export default function EventDetailPage() {
                             tripPlanId={tripPlan.id}
                             legIndex={stopIdx + 1}
                             leg={tripSummaryLegs[stopIdx + 1] || null}
-                            onAddStop={(stop) => handleInlineStopAdd(stop, stopIdx + 1)}
                             onManualAdd={() => setShowPitStopModal(true)}
                           />
                         )}
@@ -1919,7 +1899,6 @@ export default function EventDetailPage() {
               </div>
               )}
 
-              {/* Category stop finder is now integrated into each InlineAddStop connector */}
 
               {/* Trip Cost Estimator now lives inside TripPlannerTab, auto-populated from itinerary */}
               {false && <div className="bg-white rounded-lg border p-6">
