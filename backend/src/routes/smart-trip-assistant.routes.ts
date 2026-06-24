@@ -965,4 +965,252 @@ router.get('/:tripPlanId/campground-recommendations', authenticateToken, async (
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// GET /smart-trip/:tripPlanId/stop-recommendations?type=GAS|FOOD|...
+// Unified recommendations for ALL stop types
+// ═══════════════════════════════════════════════════════════════════════
+router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripPlanId } = req.params;
+    const userId = (req as any).userId;
+    const stopType = ((req.query.type as string) || '').toUpperCase();
+
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripPlanId },
+      include: {
+        pitStops: { orderBy: { orderIndex: 'asc' }, include: { campground: { select: { latitude: true, longitude: true } } } },
+        event: { include: { campground: { select: { latitude: true, longitude: true, name: true, location: true, state: true } } } },
+        user: { select: { rvMpg: true, rvFuelGal: true, rvType: true } },
+      },
+    });
+
+    if (!tripPlan || tripPlan.userId !== userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const waypoints = await buildWaypoints(tripPlan);
+    const legs = calculateLegs(waypoints);
+
+    if (waypoints.length < 2 || !waypoints[0].lat || !waypoints[waypoints.length - 1].lat) {
+      return res.json({ recommendations: [], totalMiles: 0, totalHours: 0 });
+    }
+
+    const totalMiles = legs.reduce((s, l) => s + l.distanceMiles, 0);
+    const totalMinutes = legs.reduce((s, l) => s + l.durationMinutes, 0);
+    const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
+
+    // Build corridor sample points with cumulative drive time
+    const corridorPoints: { lat: number; lng: number; driveHours: number; driveMiles: number }[] = [];
+    let cumMiles = 0;
+    let cumMins = 0;
+    for (const leg of legs) {
+      for (let s = 0; s <= 3; s++) {
+        const frac = s / 3;
+        corridorPoints.push({
+          lat: leg.fromLat + (leg.toLat - leg.fromLat) * frac,
+          lng: leg.fromLng + (leg.toLng - leg.fromLng) * frac,
+          driveHours: Math.round((cumMins + leg.durationMinutes * frac) / 6) / 10,
+          driveMiles: Math.round(cumMiles + leg.distanceMiles * frac),
+        });
+      }
+      cumMiles += leg.distanceMiles;
+      cumMins += leg.durationMinutes;
+    }
+
+    // Type-specific query config
+    interface RecConfig {
+      corridorDeg: number; // search radius in degrees (~1 deg = 69mi)
+      minDriveHours?: number;
+      maxDriveHours?: number;
+      source: 'overnightStop' | 'nearbyExperience' | 'campground' | 'mixed';
+      overnightStopTypes?: string[];
+      experienceCategories?: string[];
+      minRating?: number;
+    }
+
+    const configs: Record<string, RecConfig> = {
+      CAMPGROUND: { corridorDeg: 0.25, minDriveHours: 4, maxDriveHours: 12, source: 'campground', minRating: 3.5 },
+      OVERNIGHT:  { corridorDeg: 0.15, minDriveHours: 6, maxDriveHours: 10, source: 'overnightStop' },
+      GAS:        { corridorDeg: 0.08, source: 'overnightStop', overnightStopTypes: ['FUEL_CENTER', 'GAS_STATION', 'TRUCK_STOP'] },
+      FOOD:       { corridorDeg: 0.08, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      LUNCH:      { corridorDeg: 0.05, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      SNACK:      { corridorDeg: 0.05, source: 'nearbyExperience', experienceCategories: ['RESTAURANT', 'FOOD', 'MARKET'] },
+      RELAX:      { corridorDeg: 0.2, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND', 'FISHING_SPOT'] },
+      WALK:       { corridorDeg: 0.08, source: 'nearbyExperience', experienceCategories: ['TRAIL', 'SCENIC_VIEW', 'PLAYGROUND'] },
+      PLAY:       { corridorDeg: 0.2, source: 'nearbyExperience', experienceCategories: ['ATTRACTION', 'MUSEUM', 'PLAYGROUND'] },
+      DOG:        { corridorDeg: 0.08, source: 'mixed' },
+      NAP:        { corridorDeg: 0.08, minDriveHours: 2, maxDriveHours: 4, source: 'overnightStop' },
+      REPAIR:     { corridorDeg: 0.15, source: 'nearbyExperience' },
+    };
+
+    const config = configs[stopType] || configs.FOOD;
+    const seenIds = new Set<string>();
+    let results: any[] = [];
+
+    // Filter corridor points by drive time window
+    let searchPoints = corridorPoints;
+    if (config.minDriveHours || config.maxDriveHours) {
+      searchPoints = corridorPoints.filter(p =>
+        (!config.minDriveHours || p.driveHours >= config.minDriveHours) &&
+        (!config.maxDriveHours || p.driveHours <= config.maxDriveHours)
+      );
+      // Fallback: if too few points, use all
+      if (searchPoints.length < 2) searchPoints = corridorPoints;
+    }
+    // Sample max 8 corridor points to limit queries
+    const step = Math.max(1, Math.floor(searchPoints.length / 8));
+    const sampledPoints = searchPoints.filter((_, i) => i % step === 0).slice(0, 8);
+
+    for (const point of sampledPoints) {
+      const deg = config.corridorDeg;
+
+      if (config.source === 'campground' || stopType === 'CAMPGROUND') {
+        const items = await prisma.campground.findMany({
+          where: {
+            latitude: { gte: point.lat - deg, lte: point.lat + deg },
+            longitude: { gte: point.lng - deg, lte: point.lng + deg },
+            ...(config.minRating ? { averageRating: { gte: config.minRating } } : {}),
+          },
+          select: {
+            id: true, name: true, city: true, state: true, latitude: true, longitude: true,
+            averageRating: true, ratingCount: true, googleRating: true, googleReviewCount: true,
+            hasElectricHookup: true, hasWaterHookup: true, hasSewerHookup: true,
+            hasPullThrough: true, isBigRigFriendly: true, isPetFriendly: true, imageUrl: true,
+          },
+          take: 4, orderBy: { averageRating: 'desc' },
+        });
+        for (const c of items) {
+          if (seenIds.has(c.id)) continue; seenIds.add(c.id);
+          const dist = c.latitude && c.longitude ? Math.round(haversine(point.lat, point.lng, c.latitude, c.longitude)) : null;
+          if (dist !== null && dist > 30) continue;
+          const badges: string[] = [];
+          if (c.hasElectricHookup) badges.push('Electric');
+          if (c.hasWaterHookup) badges.push('Water');
+          if (c.hasPullThrough) badges.push('Pull-through');
+          if (c.isBigRigFriendly) badges.push('Big Rig');
+          if (c.isPetFriendly) badges.push('Pet Friendly');
+          results.push({
+            id: c.id, name: c.name, city: c.city, state: c.state,
+            lat: c.latitude, lng: c.longitude,
+            rating: c.averageRating > 0 ? c.averageRating : c.googleRating || 0,
+            reviewCount: (c.ratingCount || 0) + (c.googleReviewCount || 0),
+            driveHours: point.driveHours, driveMiles: point.driveMiles,
+            distanceFromRoute: dist, badges, campgroundId: c.id, imageUrl: c.imageUrl,
+          });
+        }
+
+      } else if (config.source === 'overnightStop') {
+        const where: any = {
+          latitude: { gte: point.lat - deg, lte: point.lat + deg },
+          longitude: { gte: point.lng - deg, lte: point.lng + deg },
+        };
+        if (config.overnightStopTypes) {
+          where.stopType = { in: config.overnightStopTypes };
+        }
+        const items = await prisma.overnightStop.findMany({ where, take: 4, orderBy: { visitCount: 'desc' } });
+        for (const s of items) {
+          if (seenIds.has(s.id)) continue; seenIds.add(s.id);
+          const dist = s.latitude && s.longitude ? Math.round(haversine(point.lat, point.lng, s.latitude, s.longitude)) : null;
+          if (dist !== null && dist > 20) continue;
+          const badges: string[] = [];
+          if (s.isRVFriendly) badges.push('RV-Friendly');
+          if (s.hasDump) badges.push('Dump');
+          if (s.hasShowers) badges.push('Showers');
+          if (s.hasElectric) badges.push('Electric');
+          if (s.isWellLit) badges.push('Well Lit');
+          if (s.isPetFriendly) badges.push('Pet Friendly');
+          results.push({
+            id: s.id, name: s.name, city: s.city, state: s.state,
+            lat: s.latitude, lng: s.longitude, rating: null,
+            driveHours: point.driveHours, driveMiles: point.driveMiles,
+            distanceFromRoute: dist, badges, overnightStopId: s.id,
+            chain: s.chain || s.stopType,
+          });
+        }
+
+      } else if (config.source === 'nearbyExperience') {
+        const where: any = {
+          latitude: { gte: point.lat - deg, lte: point.lat + deg },
+          longitude: { gte: point.lng - deg, lte: point.lng + deg },
+        };
+        if (config.experienceCategories) {
+          where.category = { in: config.experienceCategories };
+        }
+        const items = await prisma.nearbyExperience.findMany({ where, take: 4 });
+        for (const e of items) {
+          if (seenIds.has(e.id)) continue; seenIds.add(e.id);
+          const dist = e.latitude && e.longitude ? Math.round(haversine(point.lat, point.lng, e.latitude, e.longitude)) : null;
+          if (dist !== null && dist > 20) continue;
+          results.push({
+            id: e.id, name: e.name, city: e.address, state: null,
+            lat: e.latitude, lng: e.longitude, rating: null,
+            driveHours: point.driveHours, driveMiles: point.driveMiles,
+            distanceFromRoute: dist, badges: [e.category].filter(Boolean),
+            experienceId: e.id, category: e.category,
+          });
+        }
+
+      } else if (config.source === 'mixed') {
+        // DOG BREAK: search parks + rest areas
+        const parks = await prisma.nearbyExperience.findMany({
+          where: {
+            latitude: { gte: point.lat - deg, lte: point.lat + deg },
+            longitude: { gte: point.lng - deg, lte: point.lng + deg },
+            category: { in: ['TRAIL', 'PLAYGROUND', 'SCENIC_VIEW'] },
+          },
+          take: 3,
+        });
+        for (const e of parks) {
+          if (seenIds.has(e.id)) continue; seenIds.add(e.id);
+          const dist = e.latitude && e.longitude ? Math.round(haversine(point.lat, point.lng, e.latitude, e.longitude)) : null;
+          if (dist !== null && dist > 10) continue;
+          results.push({
+            id: e.id, name: e.name, city: e.address, state: null,
+            lat: e.latitude, lng: e.longitude, rating: null,
+            driveHours: point.driveHours, driveMiles: point.driveMiles,
+            distanceFromRoute: dist, badges: ['Pet Friendly', e.category].filter(Boolean),
+            experienceId: e.id,
+          });
+        }
+        // Also add rest areas
+        const restAreas = await prisma.overnightStop.findMany({
+          where: {
+            latitude: { gte: point.lat - deg, lte: point.lat + deg },
+            longitude: { gte: point.lng - deg, lte: point.lng + deg },
+            stopType: { in: ['REST_AREA', 'WELCOME_CENTER'] },
+          },
+          take: 2,
+        });
+        for (const s of restAreas) {
+          if (seenIds.has(s.id)) continue; seenIds.add(s.id);
+          results.push({
+            id: s.id, name: s.name, city: s.city, state: s.state,
+            lat: s.latitude, lng: s.longitude, rating: null,
+            driveHours: point.driveHours, driveMiles: point.driveMiles,
+            distanceFromRoute: 0, badges: ['Rest Area', 'Dog Walk OK'],
+            overnightStopId: s.id,
+          });
+        }
+      }
+    }
+
+    // Sort: rating desc (or visitCount proxy via existing order), then distance
+    results.sort((a, b) => (b.rating || 0) - (a.rating || 0) || (a.distanceFromRoute || 99) - (b.distanceFromRoute || 99));
+
+    // Limit to 6
+    results = results.slice(0, 6);
+
+    res.json({
+      recommendations: results,
+      totalMiles,
+      totalHours,
+      originName: waypoints[0].name,
+      destName: waypoints[waypoints.length - 1].name,
+    });
+  } catch (error: any) {
+    console.error('Stop recommendations error:', error);
+    res.status(500).json({ error: 'Failed to get stop recommendations' });
+  }
+});
+
 export default router;
