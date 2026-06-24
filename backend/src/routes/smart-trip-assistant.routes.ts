@@ -1018,32 +1018,33 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
       cumMins += leg.durationMinutes;
     }
 
-    // ── Determine target position for each stop type ──
-    // Use daily drive limit if set (default 8h), or halfway point
-    const dailyDriveHours = 8; // TODO: pull from user Hitch preferences when available
+    // ── Determine target position ──
     const halfwayHours = totalHours / 2;
+    const defaultDriveHours = 8;
 
-    // Target drive-time positions by stop type (in hours from origin)
-    const targetHoursByType: Record<string, number[]> = {
-      CAMPGROUND:  [dailyDriveHours, dailyDriveHours * 0.75],  // overnight at daily limit
-      OVERNIGHT:   [dailyDriveHours, dailyDriveHours * 0.85],  // end-of-day stops
-      GAS:         [totalHours * 0.35, totalHours * 0.65],      // ~1/3 and ~2/3 into trip
-      FOOD:        [4.5, 8.5],                                   // lunch ~4.5h, dinner ~8.5h
-      LUNCH:       [4, 5],                                       // lunch window
-      SNACK:       [2, totalHours * 0.5],                        // mid-morning, mid-trip
-      RELAX:       [3, totalHours * 0.5],                        // after 3h driving, mid-trip
-      WALK:        [2.5, totalHours * 0.4],                      // leg-stretch intervals
-      PLAY:        [halfwayHours, totalHours * 0.6],             // mid-trip, slightly past halfway
-      DOG:         [3, 6],                                        // every 3h intervals
-      NAP:         [3, totalHours * 0.4],                        // after 3h driving
-      REPAIR:      [halfwayHours],                                // nearest to mid-trip or destination
+    // If driveHours is passed as query param, use it directly
+    const userDriveHours = req.query.driveHours ? parseFloat(req.query.driveHours as string) : null;
+
+    // Default targets by type (when no driveHours param)
+    const defaultHoursByType: Record<string, number[]> = {
+      CAMPGROUND:  [defaultDriveHours],
+      OVERNIGHT:   [defaultDriveHours],
+      GAS:         [totalHours * 0.35, totalHours * 0.65],
+      FOOD:        [4.5, 8.5],
+      LUNCH:       [4.5],
+      SNACK:       [2.5],
+      RELAX:       [3, halfwayHours],
+      WALK:        [2.5],
+      PLAY:        [halfwayHours],
+      DOG:         [3, 6],
+      NAP:         [3],
+      REPAIR:      [halfwayHours],
     };
 
-    // Find the corridor point closest to each target hour
+    // Find the corridor point closest to a target hour
     function findPointAtHour(targetHour: number): typeof corridorPoints[0] | null {
       if (corridorPoints.length === 0) return null;
-      // Clamp to valid range (at least 1h from start, avoid origin area)
-      const clamped = Math.max(1, Math.min(targetHour, totalHours - 0.5));
+      const clamped = Math.max(0.5, Math.min(targetHour, totalHours - 0.5));
       let best = corridorPoints[0];
       let bestDiff = Infinity;
       for (const p of corridorPoints) {
@@ -1053,20 +1054,44 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
       return best;
     }
 
-    const targetHours = targetHoursByType[stopType] || [halfwayHours];
+    // Build search points — user-specified driveHours overrides defaults
+    const targetHours = userDriveHours !== null ? [userDriveHours] : (defaultHoursByType[stopType] || [halfwayHours]);
     const searchPoints = targetHours
       .map(h => findPointAtHour(h))
-      .filter((p): p is NonNullable<typeof p> => p !== null && p.driveHours >= 0.5); // never search near origin
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    // If no valid search points, use halfway
     if (searchPoints.length === 0) {
       const mid = findPointAtHour(halfwayHours);
       if (mid) searchPoints.push(mid);
     }
 
-    // Also build subtitle context
     const targetMiles = searchPoints.length > 0 ? Math.round(searchPoints[0].driveMiles) : Math.round(totalMiles / 2);
     const targetDriveH = searchPoints.length > 0 ? Math.round(searchPoints[0].driveHours * 10) / 10 : Math.round(halfwayHours * 10) / 10;
+
+    // Reverse geocode the primary target point to get a city name
+    let targetCity = '';
+    let targetState = '';
+    if (searchPoints.length > 0) {
+      const tp = searchPoints[0];
+      try {
+        const rgResult = await geocodeAddress(`${tp.lat.toFixed(4)},${tp.lng.toFixed(4)}`);
+        // geocodeAddress doesn't do reverse geocode — do it manually
+        const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
+        if (GOOGLE_KEY) {
+          const rgRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${tp.lat},${tp.lng}&key=${GOOGLE_KEY}&result_type=locality`
+          );
+          if (rgRes.ok) {
+            const rgData: any = await rgRes.json();
+            const addr = rgData?.results?.[0]?.address_components;
+            if (addr) {
+              targetCity = addr.find((c: any) => c.types.includes('locality'))?.long_name || '';
+              targetState = addr.find((c: any) => c.types.includes('administrative_area_level_1'))?.short_name || '';
+            }
+          }
+        }
+      } catch {}
+    }
 
     // Type-specific query config
     interface RecConfig {
@@ -1306,6 +1331,8 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
       totalHours,
       targetMiles,
       targetDriveHours: targetDriveH,
+      targetCity,
+      targetState,
       originName: waypoints[0].name,
       destName: waypoints[waypoints.length - 1].name,
     });
