@@ -31,9 +31,10 @@ interface SummaryData {
 interface Props {
   tripPlanId: string;
   onSetMpg?: () => void;
+  refreshKey?: number;
 }
 
-export default function SmartTripSummary({ tripPlanId, onSetMpg }: Props) {
+export default function SmartTripSummary({ tripPlanId, onSetMpg, refreshKey }: Props) {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -43,6 +44,13 @@ export default function SmartTripSummary({ tripPlanId, onSetMpg }: Props) {
   useEffect(() => {
     loadSummary();
   }, [tripPlanId]);
+
+  // Recalculate when refreshKey changes (e.g. after stop removal)
+  useEffect(() => {
+    if (refreshKey && refreshKey > 0) {
+      calculateSummary();
+    }
+  }, [refreshKey]);
 
   const loadSummary = async () => {
     try {
