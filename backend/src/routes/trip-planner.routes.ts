@@ -18,7 +18,15 @@ router.get('/event/:eventId/my-trip', authenticateToken, async (req: Request, re
           select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true }
         },
         pitStops: {
-          orderBy: { orderIndex: 'asc' }
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            overnightStop: {
+              select: { id: true, name: true, address: true, city: true, state: true }
+            },
+            campground: {
+              select: { id: true, name: true, location: true, city: true, state: true }
+            }
+          }
         }
       }
     });

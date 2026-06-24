@@ -1819,6 +1819,13 @@ export default function EventDetailPage() {
                       : (stop.estimatedDuration ? (stop.estimatedDuration >= 60 ? `${Math.round(stop.estimatedDuration / 60)} hr${Math.round(stop.estimatedDuration / 60) > 1 ? 's' : ''}` : `${stop.estimatedDuration} min`) : null);
                     // The leg after this stop is at legIndex = stopIdx + 1
                     const nextLeg = legSuggestions.find((l: any) => l.legIndex === stopIdx + 1);
+                    // Build address lines from related overnightStop/campground or fall back to stop.location
+                    const related = stop.overnightStop || stop.campground;
+                    const addressLine1 = related?.address || related?.location || null;
+                    const cityStateZip = related
+                      ? `${related.city || ''}${related.state ? `, ${related.state}` : ''}`.trim()
+                      : null;
+                    const fallbackLocation = !related ? stop.location : null;
                     return (
                       <div key={stop.id}>
                         <div className="flex gap-3">
@@ -1831,7 +1838,9 @@ export default function EventDetailPage() {
                               <div className="min-w-0 flex-1">
                                 <p className={`text-[10px] font-bold uppercase tracking-wider ${labelColor} mb-0.5`}>{si.label}</p>
                                 <p className="font-semibold text-gray-900 text-sm">{stop.name || 'Unnamed stop'}</p>
-                                {stop.location && <p className="text-xs text-gray-400">{stop.location}</p>}
+                                {addressLine1 && <p className="text-xs text-gray-400">{addressLine1}</p>}
+                                {cityStateZip && <p className="text-xs text-gray-400">{cityStateZip}</p>}
+                                {fallbackLocation && <p className="text-xs text-gray-400">{fallbackLocation}</p>}
                                 {durationText && <p className="text-xs text-gray-400">⏱ {durationText}</p>}
                                 {!stop.name && <p className="text-xs text-amber-500 mt-0.5">Tap to add location details</p>}
                               </div>
