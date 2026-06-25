@@ -10,6 +10,9 @@ import RigTripMode from '../../components/rig/RigTripMode';
 import { PhotosTab, VideosTab, CampsitesTab, ModsTab, GearTab, MaintenanceTab } from '../../components/rig/RigHubTabs';
 import RigTimelineTab from '../../components/rig/RigTimelineTab';
 import RigShowcase from '../../components/rig/RigShowcase';
+import RigFeedbackSection from '../../components/rig/RigFeedbackSection';
+import RigFuelProfile from '../../components/rig/RigFuelProfile';
+import RigFuelHistory from '../../components/rig/RigFuelHistory';
 import RigStatesMap from '../../components/rig/RigStatesMap';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
@@ -480,7 +483,10 @@ export default function RigProfilePage() {
 
             {/* ═══ PULSE TAB (default — the canonical feed) ═══ */}
             {activeTab === 'pulse' && (
-              <RigTimelineTab slug={slug!} isOwner={isOwner || isPilot} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} rigId={rig.id} />
+              <>
+                <RigTimelineTab slug={slug!} isOwner={isOwner || isPilot} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} rigId={rig.id} />
+                <RigFeedbackSection pageType="RIG" pageId={rig.id} />
+              </>
             )}
 
             {/* ═══ TRIPS TAB ═══ */}
@@ -502,6 +508,10 @@ export default function RigProfilePage() {
                 <ModsTab slug={slug!} isOwner={isOwner} />
                 <GearTab slug={slug!} isOwner={isOwner} />
                 <MaintenanceTab slug={slug!} isOwner={isOwner} />
+                <div className="mt-6 space-y-4">
+                  <RigFuelProfile slug={slug!} isOwner={isOwner || isPilot} />
+                  <RigFuelHistory slug={slug!} />
+                </div>
               </>
             )}
 

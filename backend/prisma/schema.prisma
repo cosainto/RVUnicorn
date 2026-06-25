@@ -4078,6 +4078,13 @@ model RoadTrip {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Fuel tracking
+  isTowing                Boolean   @default(false)
+  startingFuelPct         Int       @default(100)
+  currentEstimatedFuelPct Float?
+  fuelStopsLogged         Int       @default(0)
+  totalFuelCost           Float?
+
   user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   stops Event[] @relation("RoadTripStops")
 
@@ -6420,6 +6427,17 @@ model Rig {
   qrScans               RigQRScan[]
   journeys              RigJourney[]
   journeySegments       RigJourneySegment[]
+
+  // Fuel profile
+  tankCapacityGallons     Float?
+  auxTankGallons          Float?
+  towingMpg               Float?
+  fuelProfileConfirmed    Boolean   @default(false)
+  fuelProfileUpdatedAt    DateTime?
+  fillUpPreferencePct     Int       @default(35)
+  reserveWarningPct       Int       @default(15)
+  rangeAnxiety            String    @default("NORMAL")
+  rigFuelStops            RigFuelStop[]
 }
 
 model RigPilot {
@@ -8106,4 +8124,48 @@ model PersonalPlace {
 
   @@index([userId])
   @@index([placeType])
+}
+
+
+model RigFuelStop {
+  id              String    @id @default(cuid())
+  rigId           String
+  tripId          String?
+  userId          String
+  stationName     String?
+  address         String?
+  city            String?
+  state           String?
+  lat             Float?
+  lng             Float?
+  gallonsAdded    Float?
+  pricePerGallon  Float?
+  totalCost       Float?
+  fuelPctBefore   Float?
+  fuelPctAfter    Float?
+  overnightStopId String?
+  loggedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  rig  Rig  @relation(fields: [rigId], references: [id], onDelete: Cascade)
+
+  @@index([rigId])
+  @@index([tripId])
+  @@index([userId])
+}
+
+model RigManufacturerSpecs {
+  id                   String   @id @default(cuid())
+  make                 String
+  model                String
+  year                 Int
+  fuelType             String
+  tankCapacityGallons  Float?
+  avgMpgLow            Float?
+  avgMpgHigh           Float?
+  avgMpgEstimate       Float?
+  source               String?
+  createdAt            DateTime @default(now())
+
+  @@unique([make, model, year])
 }

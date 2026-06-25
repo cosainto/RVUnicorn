@@ -30,6 +30,8 @@ import EventAlbum from '../components/EventAlbum';
 import TripScrapbook from '../components/TripScrapbook';
 import SmartStops from '../components/SmartStops';
 import SmartTripSummary from '../components/SmartTripSummary';
+import TripFuelStatus from '../components/TripFuelStatus';
+import FuelRecommendationNode from '../components/FuelRecommendationNode';
 import SmartConnector from '../components/SmartConnector';
 import InlineAddStop from '../components/InlineAddStop';
 import AddStopModal from '../components/AddStopModal';
@@ -156,6 +158,9 @@ export default function EventDetailPage() {
 
   const [userRvMpg, setUserRvMpg] = useState<number>(10);
   const [userRvTankGallons, setUserRvTankGallons] = useState<number>(50);
+  const [userRigSlug, setUserRigSlug] = useState<string | null>(null);
+  const [fuelRecs, setFuelRecs] = useState<any[]>([]);
+  const [dismissedFuelRecs, setDismissedFuelRecs] = useState<Set<number>>(new Set());
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || window.location.hash.replace('#', '') || 'details');
@@ -291,6 +296,13 @@ export default function EventDetailPage() {
       };
       if (data.rvType && tankByType[data.rvType]) setUserRvTankGallons(tankByType[data.rvType]);
     }).catch(() => {});
+    // Load user's rig slug for fuel features
+    if (user?.id) {
+      api.get(`/rigs/user/${user.id}/owned`).then(({ data }) => {
+        const rigs = Array.isArray(data) ? data : [];
+        if (rigs.length > 0) setUserRigSlug(rigs[0].slug);
+      }).catch(() => {});
+    }
     // Auto-process mileage logs for trips whose dates have passed
     api.post('/trip-planner/process-auto-mileage', {}).catch(() => {});
   }, []);
@@ -326,6 +338,12 @@ export default function EventDetailPage() {
       if (data?.id) {
         loadLegSuggestions(data.id);
         loadTripSummaryLegs(data.id);
+        // Load fuel recommendations if user has a rig
+        if (userRigSlug) {
+          api.get(`/rigs/${userRigSlug}/trips/${data.id}/fuel-recommendations`)
+            .then(r => setFuelRecs(r.data?.recommendations || []))
+            .catch(() => {});
+        }
       }
     } catch (error) {
       console.error('Load trip plan error:', error);
@@ -1751,6 +1769,20 @@ export default function EventDetailPage() {
                 />
               )}
 
+              {/* ═══ FUEL STATUS ═══ */}
+              {tripPlan && userRigSlug && (
+                <TripFuelStatus rigSlug={userRigSlug} tripPlanId={tripPlan.id} />
+              )}
+              {tripPlan && !userRigSlug && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+                  <span className="text-xl">💡</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">Add your rig's fuel specs for accurate fuel cost estimates and smart stop recommendations</p>
+                  </div>
+                  <a href="/my-rig" className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap">Set up fuel profile</a>
+                </div>
+              )}
+
               {/* ═══ JOURNEY TIMELINE ═══ */}
               {tripPlan && (
               <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
@@ -1791,6 +1823,25 @@ export default function EventDetailPage() {
                       onManualAdd={() => setShowPitStopModal(true)}
                     />
                   )}
+
+                  {/* Fuel recommendations for leg 0 */}
+                  {fuelRecs.filter(r => r.legIndex === 0 && !dismissedFuelRecs.has(r.mileMarker)).map((rec, i) => (
+                    <FuelRecommendationNode
+                      key={`fuel-0-${i}`}
+                      rec={rec}
+                      onAddToTrip={async (r) => {
+                        if (!r.nearbyStation || !tripPlan) return;
+                        await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, {
+                          name: r.nearbyStation.name, location: `${r.nearbyStation.city}, ${r.nearbyStation.state}`,
+                          stopType: 'GAS', latitude: r.nearbyStation.lat, longitude: r.nearbyStation.lng,
+                          overnightStopId: r.nearbyStation.id, estimatedDuration: 20,
+                        });
+                        setDismissedFuelRecs(s => new Set(s).add(r.mileMarker));
+                        loadTripPlan();
+                      }}
+                      onDismiss={(r) => setDismissedFuelRecs(s => new Set(s).add(r.mileMarker))}
+                    />
+                  ))}
 
                   {/* PIT STOPS with Smart Connectors */}
                   {tripPlan.pitStops?.filter((stop: any) => stop.id !== removedStopId).map((stop: any, stopIdx: number) => {
@@ -1907,6 +1958,24 @@ export default function EventDetailPage() {
                             onManualAdd={() => setShowPitStopModal(true)}
                           />
                         )}
+                        {/* Fuel recommendations for this leg */}
+                        {fuelRecs.filter(r => r.legIndex === stopIdx + 1 && !dismissedFuelRecs.has(r.mileMarker)).map((rec, i) => (
+                          <FuelRecommendationNode
+                            key={`fuel-${stopIdx + 1}-${i}`}
+                            rec={rec}
+                            onAddToTrip={async (r) => {
+                              if (!r.nearbyStation || !tripPlan) return;
+                              await api.post(`/trip-planner/trip/${tripPlan.id}/pit-stop`, {
+                                name: r.nearbyStation.name, location: `${r.nearbyStation.city}, ${r.nearbyStation.state}`,
+                                stopType: 'GAS', latitude: r.nearbyStation.lat, longitude: r.nearbyStation.lng,
+                                overnightStopId: r.nearbyStation.id, estimatedDuration: 20,
+                              });
+                              setDismissedFuelRecs(s => new Set(s).add(r.mileMarker));
+                              loadTripPlan();
+                            }}
+                            onDismiss={(r) => setDismissedFuelRecs(s => new Set(s).add(r.mileMarker))}
+                          />
+                        ))}
                       </div>
                     );
                   })}

@@ -3620,5 +3620,153 @@ router.delete('/:slug/journeys/:journeyId/segments/:segmentId', authenticateToke
   }
 });
 
+// ── FUEL PROFILE ROUTES ──
+import { detectManufacturerSpecs, autoPopulateFuelProfile, estimateCurrentFuelPct, calculateFuelStopPositions } from '../services/fuelProfileService';
+
+// GET /rigs/:slug/fuel-profile
+router.get('/:slug/fuel-profile', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const specs = await detectManufacturerSpecs(rig.make, rig.model, rig.year);
+    res.json({
+      fuelType: rig.fuelType, tankCapacityGallons: rig.tankCapacityGallons, auxTankGallons: rig.auxTankGallons,
+      averageMpg: rig.avgMPG, towingMpg: rig.towingMpg, fuelProfileConfirmed: rig.fuelProfileConfirmed,
+      fuelProfileUpdatedAt: rig.fuelProfileUpdatedAt, fillUpPreferencePct: rig.fillUpPreferencePct,
+      reserveWarningPct: rig.reserveWarningPct, rangeAnxiety: rig.rangeAnxiety,
+      manufacturerSpecs: specs || null,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /rigs/:slug/fuel-profile
+router.put('/:slug/fuel-profile', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { fuelType, tankCapacityGallons, auxTankGallons, averageMpg, towingMpg, fillUpPreferencePct, reserveWarningPct, rangeAnxiety } = req.body;
+    const updated = await prisma.rig.update({
+      where: { id: rig.id },
+      data: {
+        ...(fuelType !== undefined && { fuelType }),
+        ...(tankCapacityGallons !== undefined && { tankCapacityGallons: parseFloat(tankCapacityGallons) || null }),
+        ...(auxTankGallons !== undefined && { auxTankGallons: parseFloat(auxTankGallons) || null }),
+        ...(averageMpg !== undefined && { avgMPG: parseFloat(averageMpg) || null }),
+        ...(towingMpg !== undefined && { towingMpg: parseFloat(towingMpg) || null }),
+        ...(fillUpPreferencePct !== undefined && { fillUpPreferencePct: parseInt(fillUpPreferencePct) }),
+        ...(reserveWarningPct !== undefined && { reserveWarningPct: parseInt(reserveWarningPct) }),
+        ...(rangeAnxiety !== undefined && { rangeAnxiety }),
+        fuelProfileConfirmed: true,
+        fuelProfileUpdatedAt: new Date(),
+      },
+    });
+    res.json({ success: true, fuelProfileConfirmed: true, fuelProfileUpdatedAt: updated.fuelProfileUpdatedAt });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /rigs/:slug/fuel-profile/detect
+router.post('/:slug/fuel-profile/detect', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const result = await autoPopulateFuelProfile(rig.id);
+    res.json(result);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /rigs/:slug/fuel-profile/confirm
+router.post('/:slug/fuel-profile/confirm', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { fuelType, tankCapacityGallons, averageMpg } = req.body;
+    await prisma.rig.update({
+      where: { id: rig.id },
+      data: {
+        ...(fuelType && { fuelType }),
+        ...(tankCapacityGallons && { tankCapacityGallons: parseFloat(tankCapacityGallons) }),
+        ...(averageMpg && { avgMPG: parseFloat(averageMpg) }),
+        fuelProfileConfirmed: true,
+        fuelProfileUpdatedAt: new Date(),
+      },
+    });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /manufacturer-specs/lookup
+router.get('/manufacturer-specs/lookup', async (req: any, res) => {
+  try {
+    const { make, model, year } = req.query;
+    const specs = await detectManufacturerSpecs(make, model, year ? parseInt(year) : null);
+    res.json(specs || { found: false });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── TRIP FUEL ROUTES ──
+
+// GET /rigs/:slug/trips/:tripPlanId/fuel-status
+router.get('/:slug/trips/:tripPlanId/fuel-status', authenticateToken, async (req: any, res) => {
+  try {
+    const status = await estimateCurrentFuelPct(req.params.tripPlanId);
+    if (!status) return res.json({ available: false });
+    res.json({ available: true, ...status });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /rigs/:slug/trips/:tripPlanId/fuel-recommendations
+router.get('/:slug/trips/:tripPlanId/fuel-recommendations', authenticateToken, async (req: any, res) => {
+  try {
+    const recommendations = await calculateFuelStopPositions(req.params.tripPlanId);
+    res.json({ recommendations });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /rigs/:slug/fuel-stops — log a fuel stop
+router.post('/:slug/fuel-stops', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' });
+    const { tripId, stationName, address, city, state, lat, lng, gallonsAdded, pricePerGallon, totalCost, fuelPctBefore, fuelPctAfter, overnightStopId } = req.body;
+    const fuelStop = await prisma.rigFuelStop.create({
+      data: {
+        rigId: rig.id, userId: req.userId, tripId: tripId || null,
+        stationName, address, city, state, lat, lng,
+        gallonsAdded: gallonsAdded ? parseFloat(gallonsAdded) : null,
+        pricePerGallon: pricePerGallon ? parseFloat(pricePerGallon) : null,
+        totalCost: totalCost ? parseFloat(totalCost) : null,
+        fuelPctBefore: fuelPctBefore ? parseFloat(fuelPctBefore) : null,
+        fuelPctAfter: fuelPctAfter ? parseFloat(fuelPctAfter) : null,
+        overnightStopId: overnightStopId || null,
+      },
+    });
+    res.json(fuelStop);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /rigs/:slug/fuel-stops — fuel stop history
+router.get('/:slug/fuel-stops', authenticateToken, async (req: any, res) => {
+  try {
+    const rig = await prisma.rig.findUnique({ where: { slug: req.params.slug } });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const stops = await prisma.rigFuelStop.findMany({
+      where: { rigId: rig.id },
+      orderBy: { loggedAt: 'desc' },
+      take: 50,
+    });
+    const totals = await prisma.rigFuelStop.aggregate({
+      where: { rigId: rig.id },
+      _sum: { gallonsAdded: true, totalCost: true },
+      _count: true,
+    });
+    res.json({
+      stops,
+      totalGallons: totals._sum.gallonsAdded || 0,
+      totalCost: totals._sum.totalCost || 0,
+      totalStops: totals._count,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export { getFollowersForUser };
 export default router;
