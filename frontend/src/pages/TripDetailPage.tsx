@@ -87,6 +87,30 @@ interface PitStop {
   orderIndex: number;
 }
 
+function CopyAddressBtn({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(address);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border mt-1 transition-colors duration-150 ${
+        copied
+          ? 'border-emerald-500 text-emerald-600'
+          : 'border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-[#1B2B4B]'
+      }`}
+    >
+      {copied ? (
+        <><Check className="w-3.5 h-3.5" /> Copied!</>
+      ) : (
+        <><Copy className="w-3.5 h-3.5" /> Copy Address</>
+      )}
+    </button>
+  );
+}
+
 const STOP_TYPES = [
   { id: 'CAMPGROUND', label: 'Campground', emoji: '🏕️', icon: MapPin },
   { id: 'OVERNIGHT', label: 'Overnight', emoji: '🌙', icon: Moon },
@@ -1745,12 +1769,7 @@ export default function EventDetailPage() {
                       <p className="font-semibold text-gray-900 text-sm">{tripPlan.startLocation || userHomeLocation || 'Home'}</p>
                       {event.startDate && <p className="text-xs text-gray-400">{new Date(String(event.startDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
                       {(tripPlan.startLocation || userHomeLocation) && (
-                        <button
-                          onClick={() => { navigator.clipboard.writeText(tripPlan.startLocation || userHomeLocation || ''); addLocalToast('Address copied!', 'success'); }}
-                          className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-primary-600 mt-1 transition"
-                        >
-                          <Copy className="w-3 h-3" /> Copy address
-                        </button>
+                        <CopyAddressBtn address={tripPlan.startLocation || userHomeLocation || ''} />
                       )}
                     </div>
                   </div>
@@ -1859,18 +1878,7 @@ export default function EventDetailPage() {
                                 {fallbackLocation && <p className="text-xs text-gray-400">{fallbackLocation}</p>}
                                 {durationText && <p className="text-xs text-gray-400">⏱ {durationText}</p>}
                                 {!stop.name && <p className="text-xs text-amber-500 mt-0.5">Tap to add location details</p>}
-                                {copyAddress && (
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(copyAddress);
-                                      addLocalToast('Address copied!', 'success');
-                                    }}
-                                    className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-primary-600 mt-1 transition"
-                                    title="Copy address to clipboard"
-                                  >
-                                    <Copy className="w-3 h-3" /> Copy address
-                                  </button>
-                                )}
+                                {copyAddress && <CopyAddressBtn address={copyAddress} />}
                               </div>
                               <button
                                 onClick={() => handleDeletePitStop(stop.id)}
@@ -1931,12 +1939,7 @@ export default function EventDetailPage() {
                       <p className="font-semibold text-gray-900 text-sm">{tripPlan.endLocation || event.location || 'Destination'}</p>
                       {event.endDate && <p className="text-xs text-gray-400">Arriving {new Date(String(event.endDate)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>}
                       {(tripPlan.endLocation || event.location) && (
-                        <button
-                          onClick={() => { navigator.clipboard.writeText(tripPlan.endLocation || event.location || ''); addLocalToast('Address copied!', 'success'); }}
-                          className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-primary-600 mt-1 transition"
-                        >
-                          <Copy className="w-3 h-3" /> Copy address
-                        </button>
+                        <CopyAddressBtn address={tripPlan.endLocation || event.location || ''} />
                       )}
                     </div>
                   </div>
