@@ -17,7 +17,7 @@ interface Deal {
   maxRigLength: number | null;
   allowsPets: boolean;
   distance?: number;
-  campground: { id: string; name: string; city?: string; state?: string; imageUrl?: string };
+  campground: { id: string; name: string; city?: string; state?: string; zipCode?: string; imageUrl?: string };
 }
 
 interface Props {
@@ -132,7 +132,7 @@ export default function LastMinuteDeals({ compact = false, lat, lon, radiusMiles
                 <h3 className="font-bold text-gray-900 text-sm">{deal.campground.name}</h3>
                 <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3" />
-                  {deal.campground.city ? `${deal.campground.city}, ` : ''}{deal.campground.state}
+                  {`${deal.campground.city || ''}${deal.campground.state ? `, ${deal.campground.state}` : ''}${deal.campground.zipCode ? ` ${deal.campground.zipCode}` : ''}`}
                   {deal.distance && ` · ${deal.distance}mi`}
                 </p>
                 <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">

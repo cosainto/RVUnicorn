@@ -13,7 +13,7 @@ import YourKindOfPlace from '../components/YourKindOfPlace';
 import { Leaf } from 'lucide-react';
 
 interface Campground {
-  id: string; name: string; slug: string; location: string; state: string | null;
+  id: string; name: string; slug: string; location: string; city?: string | null; state: string | null; zipCode?: string | null;
   description: string; latitude: number | null; longitude: number | null;
   amenities: string[]; imageUrl: string | null; phone: string | null; website: string | null;
   _count?: { reviews: number };
@@ -419,7 +419,7 @@ export default function CampgroundsPage() {
                 {c.imageUrl && <img src={c.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate" style={{ color: '#F5F0E8' }}>{c.name}</p>
-                  <p className="text-[10px] truncate" style={{ color: 'rgba(245,240,232,0.5)' }}>{c.location}</p>
+                  <p className="text-[10px] truncate" style={{ color: 'rgba(245,240,232,0.5)' }}>{`${c.city || c.location || ''}${c.state ? `, ${c.state}` : ''}${c.zipCode ? ` ${c.zipCode}` : ''}`}</p>
                 </div>
               </Link>
             ))}
@@ -438,7 +438,7 @@ export default function CampgroundsPage() {
             </div>
             <div className="p-4">
               <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">{c.name}</h3>
-              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{c.location}</p>
+              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{`${c.city || c.location || ''}${c.state ? `, ${c.state}` : ''}${c.zipCode ? ` ${c.zipCode}` : ''}`}</p>
               <p className="text-xs text-gray-500 mb-3 line-clamp-2">{stripHtml(c.description)}</p>
               {c.amenities && c.amenities.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-3">

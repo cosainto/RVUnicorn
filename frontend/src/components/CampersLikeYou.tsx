@@ -72,7 +72,7 @@ export default function CampersLikeYou() {
                 )}
               </div>
               <p className="text-xs text-gray-400 flex items-center gap-1">
-                <MapPin className="w-3 h-3" />{camp.city}, {camp.state}
+                <MapPin className="w-3 h-3" />{camp.city}{camp.state ? `, ${camp.state}` : ''}{(camp as any).zipCode ? ` ${(camp as any).zipCode}` : ''}
               </p>
               {camp.googleRating && (
                 <p className="text-xs text-amber-600 flex items-center gap-1">

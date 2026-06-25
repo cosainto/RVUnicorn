@@ -119,10 +119,54 @@ async function backfillNearbyExperiences() {
   console.log(`NearbyExperience done: ${updated} updated out of ${exps.length}`);
 }
 
+async function backfillCampgrounds() {
+  const camps = await prisma.campground.findMany({
+    where: {
+      zipCode: null,
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+    select: { id: true, name: true, latitude: true, longitude: true, city: true, state: true },
+  });
+
+  console.log(`\n=== Campground: ${camps.length} records missing zipCode ===`);
+  let updated = 0;
+  let failed = 0;
+
+  for (let i = 0; i < camps.length; i++) {
+    const c = camps[i];
+    if (!c.latitude || !c.longitude) continue;
+    try {
+      const geo = await reverseGeocode(c.latitude, c.longitude);
+      if (geo.zip) {
+        const updateData: any = { zipCode: geo.zip };
+        if (!c.city && geo.city) updateData.city = geo.city;
+        if (!c.state && geo.state) updateData.state = geo.state;
+        await prisma.campground.update({ where: { id: c.id }, data: updateData });
+        updated++;
+      } else {
+        failed++;
+      }
+      if ((i + 1) % 100 === 0) {
+        console.log(`  Progress: ${i + 1}/${camps.length} (${updated} updated, ${failed} no zip found)`);
+      }
+      // Rate limit: ~20 QPS
+      await sleep(50);
+    } catch (err: any) {
+      failed++;
+      console.error(`  Error on ${c.name}: ${err.message}`);
+      await sleep(200);
+    }
+  }
+
+  console.log(`Campground done: ${updated} updated, ${failed} failed out of ${camps.length}`);
+}
+
 async function main() {
   console.log('Starting zip code backfill...');
   await backfillOvernightStops();
   await backfillNearbyExperiences();
+  await backfillCampgrounds();
   console.log('\nBackfill complete!');
 }
 

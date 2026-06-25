@@ -75,7 +75,7 @@ export default function HitchCampgroundFinder() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 truncate">{match.campground.name}</p>
                 <p className="text-xs text-gray-400 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />{match.campground.city}, {match.campground.state}
+                  <MapPin className="w-3 h-3" />{match.campground.city}{match.campground.state ? `, ${match.campground.state}` : ''}{(match.campground as any).zipCode ? ` ${(match.campground as any).zipCode}` : ''}
                 </p>
                 {match.campground.rating && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">

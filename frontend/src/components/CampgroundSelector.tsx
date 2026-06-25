@@ -6,7 +6,9 @@ interface Campground {
   id: string;
   name: string;
   location: string;
+  city?: string;
   state?: string;
+  zipCode?: string;
 }
 
 interface CampgroundSelectorProps {
@@ -191,7 +193,7 @@ export default function CampgroundSelector({
                         <div>
                           <p className="font-medium text-gray-900">{campground.name}</p>
                           <p className="text-sm text-gray-600">
-                            {campground.location}{campground.state ? `, ${campground.state}` : ''}
+                            {`${campground.city || campground.location || ''}${campground.state ? `, ${campground.state}` : ''}${campground.zipCode ? ` ${campground.zipCode}` : ''}`}
                           </p>
                         </div>
                       </div>
