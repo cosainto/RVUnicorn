@@ -1,16 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
 const prisma = new PrismaClient() as any;
 
-// Middleware to verify authenticated user
-const requireAuth = (req: Request, res: Response, next: any) => {
-  if (!(req as any).user?.userId) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  next();
-};
+// Local alias — uses the real auth middleware that populates req.user
+const requireAuth = authenticateToken;
 
 // Helper: check if user is campground owner
 const isCampgroundOwner = async (userId: string, campgroundId: string) => {
@@ -58,7 +54,7 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
         OR: [
           { status: 'APPROVED' },
           // Show pending/rejected only to owner
-          ...(((req as any).user?.userId) ? [{ createdById: (req as any).user.userId }] : []),
+          ...((req as any).userId ? [{ createdById: (req as any).userId }] : []),
         ],
       },
       include: {
@@ -75,9 +71,12 @@ router.get('/:campgroundId', async (req: Request, res: Response) => {
 });
 
 // GET /api/campground-badges/:campgroundId/my-awards - Get user's awards for this campground
-router.get('/:campgroundId/my-awards', requireAuth, async (req: Request, res: Response) => {
+router.get('/:campgroundId/my-awards', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
+    if (!userId) {
+      return res.json({ awards: [] });
+    }
     const awards = await prisma.campgroundBadgeAward.findMany({
       where: {
         userId,
@@ -96,7 +95,7 @@ router.get('/:campgroundId/my-awards', requireAuth, async (req: Request, res: Re
 // POST /api/campground-badges/:campgroundId - Create a badge (owner only)
 router.post('/:campgroundId', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const { campgroundId } = req.params;
 
     // Verify ownership
@@ -169,7 +168,7 @@ router.post('/:campgroundId', requireAuth, async (req: Request, res: Response) =
 // PATCH /api/campground-badges/:campgroundId/:badgeId - Update badge (owner, only if pending)
 router.patch('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const { campgroundId, badgeId } = req.params;
 
     if (!(await isCampgroundOwner(userId, campgroundId))) {
@@ -208,7 +207,7 @@ router.patch('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: R
 // DELETE /api/campground-badges/:campgroundId/:badgeId - Delete badge (owner)
 router.delete('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const { campgroundId, badgeId } = req.params;
 
     if (!(await isCampgroundOwner(userId, campgroundId))) {
@@ -225,7 +224,7 @@ router.delete('/:campgroundId/:badgeId', requireAuth, async (req: Request, res: 
 // POST /api/campground-badges/:campgroundId/:badgeId/manual-award - Owner manually awards (CUSTOM type)
 router.post('/:campgroundId/:badgeId/manual-award', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const { campgroundId, badgeId } = req.params;
     const { targetUserIds } = req.body;
 
@@ -294,7 +293,7 @@ router.post('/:campgroundId/:badgeId/manual-award', requireAuth, async (req: Req
 // GET /api/campground-badges/admin/pending - Get all pending badges
 router.get('/admin/pending', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     
     // Check if admin (you can expand this check)
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
@@ -321,7 +320,7 @@ router.get('/admin/pending', requireAuth, async (req: Request, res: Response) =>
 // POST /api/campground-badges/admin/:badgeId/approve - Approve a badge
 router.post('/admin/:badgeId/approve', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
     if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
@@ -345,7 +344,7 @@ router.post('/admin/:badgeId/approve', requireAuth, async (req: Request, res: Re
 // POST /api/campground-badges/admin/:badgeId/reject - Reject a badge
 router.post('/admin/:badgeId/reject', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
     if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
@@ -369,7 +368,7 @@ router.post('/admin/:badgeId/reject', requireAuth, async (req: Request, res: Res
 // GET /api/campground-badges/admin/stats - Badge system stats
 router.get('/admin/stats', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).userId;
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
     if (user?.email !== 'will@rvunicorn.com' && user?.email !== 'will@kindletribe.com' && user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });

@@ -329,7 +329,7 @@ export default function CampgroundDetailPage() {
   const loadCampground = async () => {
     try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
         setBannerPosition(data.bannerPosition || '50% 50%');
-      try { const badgeRes = await api.get(`/badges/campground/${id}`); setCampgroundBadges(badgeRes.data); } catch {}
+      try { const badgeRes = await api.get(`/badges/campground/${id}`); if (badgeRes.data && badgeRes.data.locationBadges) setCampgroundBadges(badgeRes.data); } catch {}
       try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data.badges || [])); } catch {}
       try { const rulesRes = await api.get(`/campground-features/${id}/rules`); setCampgroundRules(rulesRes.data.rules); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
@@ -534,8 +534,8 @@ export default function CampgroundDetailPage() {
   };
 
   const BadgeIcons = () => {
-    if (campgroundBadges.totalBadges === 0) return null;
-    const allBadges = [...campgroundBadges.locationBadges, ...campgroundBadges.regionBadges];
+    if (!campgroundBadges || !campgroundBadges.totalBadges) return null;
+    const allBadges = [...(campgroundBadges.locationBadges || []), ...(campgroundBadges.regionBadges || [])];
     return (
       <span className="inline-flex items-center gap-2 ml-3 align-middle">
         {allBadges.map(b => (
