@@ -689,4 +689,123 @@ router.post('/trip/:tripId/campground-stop', authenticateToken, async (req: Requ
 });
 
 
+// ── DATE VALIDATION ROUTES ──
+import { validateTripDates, autoRescheduleStops } from '../services/tripDateValidator';
+
+// POST /trip-planner/trip/:tripId/validate-dates
+router.post('/trip/:tripId/validate-dates', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripId },
+      include: { pitStops: { orderBy: { orderIndex: 'asc' } }, event: true },
+    });
+    if (!tripPlan) return res.status(404).json({ error: 'Trip not found' });
+
+    const { departureDate, arrivalDate } = req.body;
+    const dep = departureDate || tripPlan.arrivalDate || tripPlan.event?.startDate;
+    const arr = arrivalDate || tripPlan.event?.endDate;
+
+    const stops = (tripPlan.pitStops || []).map((s: any) => ({
+      id: s.id,
+      name: s.name || 'Stop',
+      arrivalDate: s.estimatedArrival,
+      departureDate: s.departureDate,
+    }));
+
+    // Try to get leg distances from summary
+    let legs: any[] = [];
+    try {
+      const summary = await prisma.tripPlanSummary.findFirst({ where: { tripPlanId: tripId } });
+      if (summary?.legs) {
+        legs = (summary.legs as any[]).map((l: any, i: number) => ({
+          fromName: i === 0 ? (tripPlan.startLocation || 'Start') : (stops[i - 1]?.name || 'Stop'),
+          toName: i < stops.length ? (stops[i]?.name || 'Stop') : (tripPlan.endLocation || 'Destination'),
+          distanceMiles: l.distanceMiles || 0,
+          daysAvailable: 0, // calculated below
+        }));
+      }
+    } catch {}
+
+    const result = validateTripDates(
+      { departureDate: dep, arrivalDate: arr },
+      stops,
+      legs.length > 0 ? legs : undefined,
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Validate dates error:', error);
+    res.status(500).json({ error: 'Failed to validate dates' });
+  }
+});
+
+// POST /trip-planner/trip/:tripId/auto-reschedule
+router.post('/trip/:tripId/auto-reschedule', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const tripPlan = await prisma.tripPlan.findUnique({
+      where: { id: tripId },
+      include: { pitStops: { orderBy: { orderIndex: 'asc' } }, event: true },
+    });
+    if (!tripPlan) return res.status(404).json({ error: 'Trip not found' });
+
+    const dep = new Date(req.body.departureDate || tripPlan.arrivalDate || tripPlan.event?.startDate || new Date());
+    const arr = new Date(req.body.arrivalDate || tripPlan.event?.endDate || new Date());
+
+    const stops = (tripPlan.pitStops || []).map((s: any) => ({
+      id: s.id,
+      name: s.name || 'Stop',
+      arrivalDate: s.estimatedArrival,
+      departureDate: s.departureDate,
+    }));
+
+    // Get leg distances
+    let legDistances: number[] = [];
+    try {
+      const summary = await prisma.tripPlanSummary.findFirst({ where: { tripPlanId: tripId } });
+      if (summary?.legs) {
+        legDistances = (summary.legs as any[]).map((l: any) => l.distanceMiles || 100);
+      }
+    } catch {}
+    if (legDistances.length === 0) {
+      legDistances = stops.map(() => 200); // default 200 miles per leg
+    }
+
+    const result = autoRescheduleStops(dep, arr, stops, legDistances);
+    res.json({ suggestions: result, departureDate: dep, arrivalDate: arr });
+  } catch (error: any) {
+    console.error('Auto-reschedule error:', error);
+    res.status(500).json({ error: 'Failed to auto-reschedule' });
+  }
+});
+
+// POST /trip-planner/trip/:tripId/apply-reschedule
+router.post('/trip/:tripId/apply-reschedule', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const userId = (req as any).userId;
+    const tripPlan = await prisma.tripPlan.findUnique({ where: { id: tripId } });
+    if (!tripPlan || tripPlan.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const { stops } = req.body; // Array of { id, newArrival, newDeparture }
+    if (!Array.isArray(stops)) return res.status(400).json({ error: 'stops array required' });
+
+    for (const s of stops) {
+      await prisma.pitStop.update({
+        where: { id: s.id },
+        data: {
+          estimatedArrival: s.newArrival ? new Date(s.newArrival) : undefined,
+          departureDate: s.newDeparture ? new Date(s.newDeparture) : undefined,
+        },
+      });
+    }
+
+    res.json({ success: true, updatedCount: stops.length });
+  } catch (error: any) {
+    console.error('Apply reschedule error:', error);
+    res.status(500).json({ error: 'Failed to apply reschedule' });
+  }
+});
+
 export default router;

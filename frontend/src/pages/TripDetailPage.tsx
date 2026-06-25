@@ -32,6 +32,7 @@ import SmartStops from '../components/SmartStops';
 import SmartTripSummary from '../components/SmartTripSummary';
 import TripFuelStatus from '../components/TripFuelStatus';
 import FuelRecommendationNode from '../components/FuelRecommendationNode';
+import TripConflictPanel, { ConflictBadge } from '../components/TripConflictPanel';
 import SmartConnector from '../components/SmartConnector';
 import InlineAddStop from '../components/InlineAddStop';
 import AddStopModal from '../components/AddStopModal';
@@ -161,6 +162,9 @@ export default function EventDetailPage() {
   const [userRigSlug, setUserRigSlug] = useState<string | null>(null);
   const [fuelRecs, setFuelRecs] = useState<any[]>([]);
   const [dismissedFuelRecs, setDismissedFuelRecs] = useState<Set<number>>(new Set());
+  const [dateConflicts, setDateConflicts] = useState<any>(null);
+  const [conflictsDismissed, setConflictsDismissed] = useState(false);
+  const conflictDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || window.location.hash.replace('#', '') || 'details');
@@ -344,12 +348,25 @@ export default function EventDetailPage() {
             .then(r => setFuelRecs(r.data?.recommendations || []))
             .catch(() => {});
         }
+        // Validate dates
+        runDateValidation(data.id);
       }
     } catch (error) {
       console.error('Load trip plan error:', error);
     } finally {
       setTripLoading(false);
     }
+  };
+
+  const runDateValidation = (planId?: string) => {
+    const pid = planId || tripPlan?.id;
+    if (!pid) return;
+    if (conflictDebounceRef.current) clearTimeout(conflictDebounceRef.current);
+    conflictDebounceRef.current = setTimeout(() => {
+      api.post(`/trip-planner/trip/${pid}/validate-dates`, {})
+        .then(r => { setDateConflicts(r.data); setConflictsDismissed(false); })
+        .catch(() => {});
+    }, 500);
   };
 
   const loadLegSuggestions = async (planId: string) => {
@@ -1783,11 +1800,26 @@ export default function EventDetailPage() {
                 </div>
               )}
 
+              {/* ═══ DATE CONFLICT PANEL ═══ */}
+              {tripPlan && dateConflicts?.hasConflicts && !conflictsDismissed && (
+                <TripConflictPanel
+                  tripPlanId={tripPlan.id}
+                  eventId={id!}
+                  result={dateConflicts}
+                  onDismiss={() => setConflictsDismissed(true)}
+                  onResolved={() => { loadTripPlan(); loadEvent(); }}
+                  onDeleteStop={(stopId) => handleDeletePitStop(stopId)}
+                />
+              )}
+
               {/* ═══ JOURNEY TIMELINE ═══ */}
               {tripPlan && (
               <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
                   <Navigation className="w-5 h-5" /> Trip Itinerary
+                  {conflictsDismissed && dateConflicts?.hasConflicts && (
+                    <ConflictBadge count={dateConflicts.conflicts.length} onClick={() => setConflictsDismissed(false)} />
+                  )}
                 </h4>
                 <div className="space-y-0">
                   {/* START */}
