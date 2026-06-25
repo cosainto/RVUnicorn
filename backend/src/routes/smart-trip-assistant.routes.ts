@@ -1187,7 +1187,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
               ...(config.minRating ? { OR: [{ averageRating: { gte: config.minRating } }, { googleRating: { gte: config.minRating } }] } : {}),
             },
             select: {
-              id: true, name: true, city: true, state: true, latitude: true, longitude: true,
+              id: true, name: true, city: true, state: true, zipCode: true, latitude: true, longitude: true,
               averageRating: true, ratingCount: true, googleRating: true, googleReviewCount: true,
               hasElectricHookup: true, hasWaterHookup: true, hasSewerHookup: true,
               hasPullThrough: true, isBigRigFriendly: true, isPetFriendly: true, imageUrl: true,
@@ -1206,7 +1206,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (c.isBigRigFriendly) badges.push('Big Rig');
             if (c.isPetFriendly) badges.push('Pet Friendly');
             results.push({
-              id: c.id, name: c.name, city: c.city, state: c.state,
+              id: c.id, name: c.name, city: c.city, state: c.state, zip: c.zipCode || null,
               lat: c.latitude, lng: c.longitude,
               rating: c.averageRating > 0 ? c.averageRating : c.googleRating || 0,
               reviewCount: (c.ratingCount || 0) + (c.googleReviewCount || 0),
@@ -1237,7 +1237,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (s.isWellLit) badges.push('Well Lit');
             if (s.isPetFriendly) badges.push('Pet Friendly');
             results.push({
-              id: s.id, name: s.name, address: s.address, city: s.city, state: s.state,
+              id: s.id, name: s.name, address: s.address, city: s.city, state: s.state, zip: s.zip || null,
               lat: s.latitude, lng: s.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges, overnightStopId: s.id,
@@ -1261,7 +1261,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (dist !== null && dist > maxDistMiles) continue;
             const parsed = parseCityState(e.address);
             results.push({
-              id: e.id, name: e.name, city: parsed.city, state: parsed.state,
+              id: e.id, name: e.name, city: e.city || parsed.city, state: e.state || parsed.state, zip: e.zip || null,
               lat: e.latitude, lng: e.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges: [e.category].filter(Boolean),
@@ -1284,7 +1284,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
             if (dist !== null && dist > maxDistMiles) continue;
             const parsedDog = parseCityState(e.address);
             results.push({
-              id: e.id, name: e.name, city: parsedDog.city, state: parsedDog.state,
+              id: e.id, name: e.name, city: e.city || parsedDog.city, state: e.state || parsedDog.state, zip: e.zip || null,
               lat: e.latitude, lng: e.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: dist, badges: ['Pet Friendly', e.category].filter(Boolean),
@@ -1302,7 +1302,7 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
           for (const s of restAreas) {
             if (seenIds.has(s.id)) continue; seenIds.add(s.id);
             results.push({
-              id: s.id, name: s.name, city: s.city, state: s.state,
+              id: s.id, name: s.name, city: s.city, state: s.state, zip: s.zip || null,
               lat: s.latitude, lng: s.longitude, rating: null,
               driveHours: point.driveHours, driveMiles: point.driveMiles,
               distanceFromRoute: 0, badges: ['Rest Area', 'Dog Walk OK'],

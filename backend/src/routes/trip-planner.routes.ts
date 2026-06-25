@@ -21,10 +21,10 @@ router.get('/event/:eventId/my-trip', authenticateToken, async (req: Request, re
           orderBy: { orderIndex: 'asc' },
           include: {
             overnightStop: {
-              select: { id: true, name: true, address: true, city: true, state: true }
+              select: { id: true, name: true, address: true, city: true, state: true, zip: true }
             },
             campground: {
-              select: { id: true, name: true, location: true, city: true, state: true }
+              select: { id: true, name: true, location: true, city: true, state: true, zipCode: true }
             }
           }
         }

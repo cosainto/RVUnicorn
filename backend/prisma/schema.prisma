@@ -3764,6 +3764,7 @@ model OvernightStop {
   address            String
   city               String?
   state              String?
+  zip                String?
   latitude           Float
   longitude          Float
   stopType           String
@@ -3846,6 +3847,7 @@ model HarvestHost {
   address               String
   city                  String?
   state                 String?
+  zip                   String?
   latitude              Float
   longitude             Float
   website               String?
@@ -6570,6 +6572,9 @@ model NearbyExperience {
   placeId             String?              @unique // Google Places ID or internal
   name                String
   address             String?
+  city                String?
+  state               String?
+  zip                 String?
   category            String               @default("OTHER") // TRAIL, RESTAURANT, ATTRACTION, MUSEUM, MARKET, SCENIC_VIEW, FISHING_SPOT, PLAYGROUND, OTHER
   description         String?
   website             String?

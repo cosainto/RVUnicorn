@@ -1822,8 +1822,9 @@ export default function EventDetailPage() {
                     // Build address lines from related overnightStop/campground or fall back to stop.location
                     const related = stop.overnightStop || stop.campground;
                     const addressLine1 = related?.address || related?.location || null;
+                    const relatedZip = related?.zip || related?.zipCode || null;
                     const cityStateZip = related
-                      ? `${related.city || ''}${related.state ? `, ${related.state}` : ''}`.trim()
+                      ? `${related.city || ''}${related.state ? `, ${related.state}` : ''}${relatedZip ? ` ${relatedZip}` : ''}`.trim()
                       : null;
                     const fallbackLocation = !related ? stop.location : null;
                     return (
