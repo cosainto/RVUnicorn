@@ -1345,12 +1345,23 @@ router.get('/:tripPlanId/stop-recommendations', authenticateToken, async (req: R
               const pLng = p.geometry?.location?.lng;
               if (!pLat || !pLng) continue;
               const dist = Math.round(haversine(pt.lat, pt.lng, pLat, pLng));
-              const gpParsed = parseCityState(p.vicinity || p.formatted_address || '');
+              // Parse structured address from formatted_address: "3060 Owingsville Rd, Mt Sterling, KY 40353, USA"
+              const fAddr = p.formatted_address || p.vicinity || '';
+              const addrParts = fAddr.split(',').map((s: string) => s.trim());
+              const streetAddr = addrParts[0] || '';
+              const gpCity = addrParts.length >= 3 ? addrParts[addrParts.length - 3] : '';
+              const stateZipPart = addrParts.length >= 2 ? addrParts[addrParts.length - 2] : '';
+              const stateZipMatch = stateZipPart.match(/^([A-Z]{2})\s+(\d{5})/);
+              const gpState = stateZipMatch ? stateZipMatch[1] : parseCityState(fAddr).state;
+              const gpZip = stateZipMatch ? stateZipMatch[2] : null;
+              const gpParsed = parseCityState(p.vicinity || fAddr);
               results.push({
                 id: `gp_${p.place_id}`,
                 name: p.name,
-                city: gpParsed.city,
-                state: gpParsed.state,
+                address: streetAddr || null,
+                city: gpCity || gpParsed.city,
+                state: gpState || gpParsed.state,
+                zip: gpZip,
                 lat: pLat, lng: pLng,
                 rating: p.rating || null,
                 driveHours: pt.driveHours, driveMiles: pt.driveMiles,
