@@ -364,8 +364,8 @@ export default function EventDetailPage() {
     if (conflictDebounceRef.current) clearTimeout(conflictDebounceRef.current);
     conflictDebounceRef.current = setTimeout(() => {
       api.post(`/trip-planner/trip/${pid}/validate-dates`, {})
-        .then(r => { setDateConflicts(r.data); setConflictsDismissed(false); })
-        .catch(() => {});
+        .then(r => { setDateConflicts(r.data?.hasConflicts ? r.data : null); setConflictsDismissed(false); })
+        .catch(() => { setDateConflicts(null); });
     }, 500);
   };
 
@@ -923,6 +923,13 @@ export default function EventDetailPage() {
     }
   }, [pulse.tripState]);
 
+  // Auto-open travel phase when trip plan has stops
+  useEffect(() => {
+    if (tripPlan?.pitStops?.length > 0 && !userToggledPhases.current) {
+      setOpenPhases(prev => new Set([...prev, 'travel']));
+    }
+  }, [tripPlan?.pitStops?.length]);
+
   // Auto-open the post-trip survey when Hitch's notification deep-links
   // here with ?survey=open. We wait until the event has loaded so the
   // modal can render the campground name in its header.
@@ -1422,7 +1429,7 @@ export default function EventDetailPage() {
           { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: '#E6F1FB', color: '#185FA5' },
           { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
           { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
-        ].filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id)).map(phase => (
+        ].filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id) || (phase.id === 'travel' && tripPlan)).map(phase => (
           <div key={phase.id} id={`phase-${phase.id}`} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition scroll-mt-32 ${
             statePhaseMap[pulse.tripState] === phase.id ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-gray-200'
           }`}>
