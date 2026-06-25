@@ -1966,7 +1966,40 @@ export default function EventDetailPage() {
                                 {addressLine1 && <p className="text-xs text-gray-400">{addressLine1}</p>}
                                 {cityStateZip && <p className="text-xs text-gray-400">{cityStateZip}</p>}
                                 {fallbackLocation && <p className="text-xs text-gray-400">{fallbackLocation}</p>}
-                                {durationText && <p className="text-xs text-gray-400">⏱ {durationText}</p>}
+                                {/* Editable dates */}
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-[10px] text-gray-400">📅</span>
+                                  <label className="text-[10px] text-gray-500">Arrive:</label>
+                                  <input
+                                    type="date"
+                                    value={stop.estimatedArrival ? new Date(stop.estimatedArrival).toISOString().split('T')[0] : ''}
+                                    onChange={async (e) => {
+                                      try {
+                                        await api.put(`/trip-planner/pit-stop/${stop.id}`, { estimatedArrival: e.target.value ? new Date(e.target.value).toISOString() : null });
+                                        loadTripPlan();
+                                      } catch {}
+                                    }}
+                                    className="text-[10px] border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:border-primary-400 focus:outline-none"
+                                  />
+                                  <label className="text-[10px] text-gray-500">Leave:</label>
+                                  <input
+                                    type="date"
+                                    value={stop.departureDate ? new Date(stop.departureDate).toISOString().split('T')[0] : ''}
+                                    onChange={async (e) => {
+                                      try {
+                                        await api.put(`/trip-planner/pit-stop/${stop.id}`, { departureDate: e.target.value ? new Date(e.target.value).toISOString() : null });
+                                        loadTripPlan();
+                                      } catch {}
+                                    }}
+                                    className="text-[10px] border border-gray-200 rounded px-1.5 py-0.5 text-gray-600 focus:border-primary-400 focus:outline-none"
+                                  />
+                                  {isOvernight && overnightNights !== null && (
+                                    <span className="text-[10px] text-gray-400">· {overnightNights} night{overnightNights !== 1 ? 's' : ''}</span>
+                                  )}
+                                  {!isOvernight && durationText && (
+                                    <span className="text-[10px] text-gray-400">· {durationText}</span>
+                                  )}
+                                </div>
                                 {!stop.name && <p className="text-xs text-amber-500 mt-0.5">Tap to add location details</p>}
                                 {copyAddress && <CopyAddressBtn address={copyAddress} />}
                               </div>

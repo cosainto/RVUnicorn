@@ -59,7 +59,9 @@ interface LegInfo {
 function toDate(d: string | Date | null | undefined): Date | null {
   if (!d) return null;
   const date = new Date(d);
-  return isNaN(date.getTime()) ? null : date;
+  if (isNaN(date.getTime())) return null;
+  // Normalize to midnight UTC to avoid time-of-day comparison issues
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -114,9 +116,10 @@ export function validateTripDates(
   }
 
   // CHECK 6 — STOP BEFORE DEPARTURE
+  // Same-day arrival at a stop on departure day is valid (depart morning, arrive at stop evening)
   for (const stop of stops) {
     const sArr = toDate(stop.arrivalDate);
-    if (sArr && sArr < dep) {
+    if (sArr && sArr.getTime() < dep.getTime()) {
       conflicts.push({
         type: TripConflict.STOP_BEFORE_DEPARTURE,
         severity: 'ERROR',
@@ -148,11 +151,14 @@ export function validateTripDates(
   }
 
   // CHECK 3 — STOP AFTER ARRIVAL
+  // A stop's departure on the same day as arrival is valid (leave morning, arrive afternoon)
+  // Only conflict if stop departure is strictly AFTER trip arrival
   for (const stop of stops) {
     const sArr = toDate(stop.arrivalDate);
     const sDep = toDate(stop.departureDate);
-    if ((sArr && sArr >= arr) || (sDep && sDep > arr)) {
-      const relevant = sDep && sDep > arr ? sDep : sArr!;
+    if (sArr && sArr >= arr) {
+      // Stop ARRIVAL is on or after trip arrival — this is a real conflict
+      const relevant = sArr;
       const driveHoursToEnd = (stop.distanceToNextMiles || 200) / 55;
       const daysNeeded = Math.ceil(driveHoursToEnd / dailyDriveHours);
       const suggestedArr = addDays(relevant, daysNeeded);
@@ -258,13 +264,22 @@ export function validateTripDates(
     }
   }
 
+  // Deduplicate: remove conflicts that reference the same stop with the same type
+  const seen = new Set<string>();
+  const deduped = conflicts.filter(c => {
+    const key = `${c.type}:${c.affectedStopIds.sort().join(',')}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   const suggestedArrivalDate = totalDaysNeeded > daysAvailable
     ? isoDate(addDays(dep, totalDaysNeeded))
     : null;
 
   return {
-    hasConflicts: conflicts.length > 0,
-    conflicts,
+    hasConflicts: deduped.length > 0,
+    conflicts: deduped,
     suggestedArrivalDate,
     totalDaysNeeded,
     totalDaysAvailable: daysAvailable,

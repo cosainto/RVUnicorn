@@ -260,7 +260,7 @@ router.put('/pit-stop/:pitStopId', authenticateToken, async (req: Request, res: 
   try {
     const { pitStopId } = req.params;
     const userId = (req as any).userId;
-    const { name, location, stopType, notes, estimatedDuration, orderIndex } = req.body;
+    const { name, location, stopType, notes, estimatedDuration, orderIndex, estimatedArrival, departureDate } = req.body;
 
     const pitStop = await prisma.pitStop.findUnique({
       where: { id: pitStopId },
@@ -273,7 +273,16 @@ router.put('/pit-stop/:pitStopId', authenticateToken, async (req: Request, res: 
 
     const updated = await prisma.pitStop.update({
       where: { id: pitStopId },
-      data: { name, location, stopType, notes, estimatedDuration, orderIndex }
+      data: {
+        ...(name !== undefined && { name }),
+        ...(location !== undefined && { location }),
+        ...(stopType !== undefined && { stopType }),
+        ...(notes !== undefined && { notes }),
+        ...(estimatedDuration !== undefined && { estimatedDuration }),
+        ...(orderIndex !== undefined && { orderIndex }),
+        ...(estimatedArrival !== undefined && { estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null }),
+        ...(departureDate !== undefined && { departureDate: departureDate ? new Date(departureDate) : null }),
+      }
     });
 
     res.json(updated);
@@ -703,7 +712,8 @@ router.post('/trip/:tripId/validate-dates', authenticateToken, async (req: Reque
     if (!tripPlan) return res.status(404).json({ error: 'Trip not found' });
 
     const { departureDate, arrivalDate } = req.body;
-    const dep = departureDate || tripPlan.arrivalDate || tripPlan.event?.startDate;
+    // Departure = event start date, Arrival = event end date
+    const dep = departureDate || tripPlan.event?.startDate;
     const arr = arrivalDate || tripPlan.event?.endDate;
 
     const stops = (tripPlan.pitStops || []).map((s: any) => ({
@@ -750,7 +760,7 @@ router.post('/trip/:tripId/auto-reschedule', authenticateToken, async (req: Requ
     });
     if (!tripPlan) return res.status(404).json({ error: 'Trip not found' });
 
-    const dep = new Date(req.body.departureDate || tripPlan.arrivalDate || tripPlan.event?.startDate || new Date());
+    const dep = new Date(req.body.departureDate || tripPlan.event?.startDate || new Date());
     const arr = new Date(req.body.arrivalDate || tripPlan.event?.endDate || new Date());
 
     const stops = (tripPlan.pitStops || []).map((s: any) => ({
