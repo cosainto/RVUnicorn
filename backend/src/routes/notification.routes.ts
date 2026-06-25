@@ -23,10 +23,14 @@ router.get('/stream', (req: any, res) => {
     req.userId = decoded.userId;
   } catch { res.status(401).end(); return; }
   const userId = req.userId;
+  const allowedOrigins = ['https://www.rvunicorn.com', 'https://rvunicorn.com', 'http://localhost:5173'];
+  const origin = req.headers.origin || '';
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Credentials': 'true',
   });
 
   const heartbeat = setInterval(() => res.write('event: ping\ndata: {}\n\n'), 30000);

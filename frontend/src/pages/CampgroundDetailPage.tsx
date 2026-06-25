@@ -330,8 +330,8 @@ export default function CampgroundDetailPage() {
     try { setLoading(true); const { data } = await api.get(`/campgrounds/${id}`); setCampground(data);
         setBannerPosition(data.bannerPosition || '50% 50%');
       try { const badgeRes = await api.get(`/badges/campground/${id}`); if (badgeRes.data && badgeRes.data.locationBadges) setCampgroundBadges(badgeRes.data); } catch {}
-      try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data.badges || [])); } catch {}
-      try { const rulesRes = await api.get(`/campground-features/${id}/rules`); setCampgroundRules(rulesRes.data.rules); } catch {} }
+      try { const cbRes = await api.get(`/campground-badges/${id}`); setCustomBadges(Array.isArray(cbRes.data) ? cbRes.data : (cbRes.data?.badges || [])); } catch {}
+      try { const rulesRes = await api.get(`/campground-features/${id}/rules`); setCampgroundRules(rulesRes.data?.rules || null); } catch {} }
     catch { setCampground(null); } finally { setLoading(false); }
   };
 
@@ -353,7 +353,7 @@ export default function CampgroundDetailPage() {
     if (!id) return; 
     try { 
       const { data } = await api.get(`/campground-features/${id}/announcements/featured`); 
-      setFeaturedAnnouncements(data); 
+      setFeaturedAnnouncements(Array.isArray(data) ? data : []);
     } catch {} 
   };
   const checkIfMuted = async () => { if (!id || !user) return; try { const { data } = await api.get(`/mute/check/campground/${id}`); setIsMuted(data.isMuted); } catch {} };

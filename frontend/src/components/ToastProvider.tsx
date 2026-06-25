@@ -326,11 +326,9 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
       });
 
       es.addEventListener('error', () => {
-        // Reconnect after 5s
+        // Close cleanly — do not retry infinitely
         es.close();
-        setTimeout(() => {
-          // Will reconnect on next render
-        }, 5000);
+        eventSourceRef.current = null;
       });
 
       eventSourceRef.current = es;

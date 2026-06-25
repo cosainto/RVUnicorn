@@ -8,6 +8,7 @@ import ToastProvider from './components/ToastProvider';
 import Navbar from './components/Navbar';
 import GuideUnlockToast from './components/GuideUnlockToast';
 import HitchFloatingChat from './components/HitchFloatingChat';
+import ErrorBoundary from './components/ErrorBoundary';
 import MobileBottomNav from './components/MobileBottomNav';
 
 // Retry lazy imports — handles stale chunks after deploys
@@ -463,7 +464,9 @@ function AppContent() {
           <Route
             path="/campgrounds/:id"
             element={
-                <CampgroundDetailPage />
+                <ErrorBoundary fallbackPath="/campgrounds" fallbackLabel="Back to Campgrounds">
+                  <CampgroundDetailPage />
+                </ErrorBoundary>
             }
           />
           <Route
