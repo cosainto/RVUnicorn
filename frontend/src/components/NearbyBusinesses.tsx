@@ -25,7 +25,7 @@ export default function NearbyBusinesses({ campgroundId }: { campgroundId: strin
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    api.get(`/local-business/near/${campgroundId}`).then(r => setBusinesses(r.data.businesses || [])).catch(() => {});
+    api.get(`/local-business/near/${campgroundId}`).then(r => setBusinesses(r.data?.businesses || [])).catch(() => {});
   }, [campgroundId]);
 
   if (businesses.length === 0) return null;

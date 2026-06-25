@@ -57,6 +57,10 @@ export default function CampgroundSocialProof({ campgroundId }: { campgroundId: 
   }, [campgroundId]);
 
   if (loading || !data) return null;
+  // Ensure all arrays are safe — API may omit fields
+  if (!data.favoritedBy) data.favoritedBy = [];
+  if (!data.rigVisitors) data.rigVisitors = [];
+  if (!data.friendsWhoFavorited) data.friendsWhoFavorited = [];
   if (data.totalFavorites === 0 && data.totalRigVisitors === 0) return null;
 
   const formatVisitDate = (dateStr: string) => {

@@ -30,8 +30,8 @@ export default function CampgroundBadgeDisplay({ campgroundId, userId }: { campg
           api.get(`/campground-badges/${campgroundId}`),
           userId ? api.get(`/campground-badges/${campgroundId}/my-awards`).catch(() => ({ data: { awards: [] } })) : Promise.resolve({ data: { awards: [] } }),
         ]);
-        setBadges((badgeRes.data.badges || []).filter((b: any) => b.status === 'APPROVED'));
-        setMyAwards(awardRes.data.awards || []);
+        setBadges((badgeRes.data?.badges || []).filter((b: any) => b.status === 'APPROVED'));
+        setMyAwards(awardRes.data?.awards || []);
       } catch (e) {
         console.error('Load badges error:', e);
       } finally {

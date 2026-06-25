@@ -58,7 +58,7 @@ export default function CampgroundSocialRecommendations({ campgroundId, isAdvent
         if (!cancelled) {
           setData(res.data);
           const alreadyFollowing = new Set<string>(
-            (res.data.rigSimilar || []).filter((r: RigSimilar) => r.isFollowing).map((r: RigSimilar) => r.userId)
+            (res.data?.rigSimilar || []).filter((r: RigSimilar) => r.isFollowing).map((r: RigSimilar) => r.userId)
           );
           setFollowingIds(alreadyFollowing);
         }
@@ -88,7 +88,9 @@ export default function CampgroundSocialRecommendations({ campgroundId, isAdvent
   }
 
   if (!data) return null;
-  const { friendStays, wishlistFriends, rigSimilar } = data;
+  const friendStays = data.friendStays || [];
+  const wishlistFriends = data.wishlistFriends || [];
+  const rigSimilar = data.rigSimilar || [];
   const hasContent = friendStays.length > 0 || wishlistFriends.length > 0 || rigSimilar.length > 0;
   if (!hasContent) return null;
 

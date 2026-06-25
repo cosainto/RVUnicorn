@@ -24,7 +24,7 @@ export default function CampgroundTriviaLeaderboard({ campgroundId }: Props) {
       api.get('/campfire-phase4/leaderboard/global'),
       campgroundId ? api.get(`/campfire-phase4/leaderboard/${campgroundId}`) : Promise.resolve(null),
     ]).then(([global, local]) => {
-      setLeaderboard(global.data.leaderboard || []);
+      setLeaderboard(global.data?.leaderboard || []);
       if (local) setMyRank(local.data);
     }).catch(console.error)
       .finally(() => setLoading(false));
