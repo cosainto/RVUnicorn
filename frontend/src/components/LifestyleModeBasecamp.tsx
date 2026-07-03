@@ -74,7 +74,7 @@ export default function LifestyleModeBasecamp({ user }: Props) {
 
   return (
     <div style={{ background: CN.bg, minHeight: '100vh' }}>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-12 pt-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-12 pt-6">
 
         <div className="space-y-4">
 

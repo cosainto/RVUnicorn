@@ -653,7 +653,7 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
   return (
     <>
       <style>{`
-        .bc-dark { background: #0F1C35 !important; color: #F5F0E8 !important; min-height: 100vh; padding-bottom: 2rem; }
+        .bc-dark { background: #0F1C35 !important; color: #F5F0E8 !important; min-height: 100vh; padding-bottom: 2rem; margin: -1px; padding-top: 1px; }
         .bc-dark .bg-white { background: rgba(15,28,53,0.95) !important; color: #F5F0E8 !important; }
         .bc-dark .bg-gray-50, .bc-dark .bg-gray-100 { background: #1B2E50 !important; color: #F5F0E8 !important; }
         .bc-dark .bg-gray-200, .bc-dark .bg-gray-300 { background: rgba(27,46,80,0.6) !important; }
@@ -694,11 +694,13 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       <CheckInInviteBanner />
       {/* Current Status Display */}
       {currentStatus && (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">Current status:</span>
-          <span className="bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 px-3 py-1 rounded-full font-medium">
-            {currentStatus}
-          </span>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center gap-2 text-sm">
+            <span style={{ color: '#8B9BB4' }}>Current status:</span>
+            <span className="px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.15)' }}>
+              {currentStatus}
+            </span>
+          </div>
         </div>
       )}
 
