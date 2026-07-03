@@ -106,7 +106,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             attendees: {
               some: {
                 userId: userId,
-                status: { in: ['going', 'GOING', 'maybe', 'MAYBE'] },
+                status: { in: ['going', 'GOING', 'maybe', 'MAYBE', 'ATTENDING', 'attending'] },
               },
             },
           },
