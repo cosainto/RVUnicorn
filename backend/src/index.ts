@@ -166,6 +166,7 @@ import { registerContributionScoreCron } from './cron/contributionScore.cron';
 import { registerEmailCampaignCrons } from './cron/email-campaigns.cron';
 import { registerEmailDigestCrons } from './cron/email-digest.cron';
 import { registerWishlistNotificationCron } from './cron/wishlist-notification.cron';
+import { runAutoCheckoutCron } from './cron/auto-checkout.cron';
 import { registerBanterScheduler } from './services/banter/banterScheduler';
 import doThisHereRoutes from './routes/doThisHere.routes';
 import emailRoutes from './routes/email.routes';
@@ -473,6 +474,8 @@ setInterval(() => runStaySurveyPromptCron().catch(e => console.error('[StaySurve
 setInterval(() => runPostCheckoutPhotoReminderCron().catch(e => console.error('[PostCheckoutPhotoReminder]', e)), 60 * 60 * 1000);
 setInterval(() => runCheckInInviteExpireCron().catch(e => console.error('[CheckInInviteExpire]', e)), 15 * 60 * 1000);
 setInterval(() => runExperienceReviewNudgeCron().catch(e => console.error('[ExperienceReviewNudge]', e)), 30 * 60 * 1000);
+// Auto-checkout stale check-ins — runs hourly, gates internally to 3 AM CT
+setInterval(() => runAutoCheckoutCron().catch(e => console.error('[AutoCheckout]', e)), 60 * 60 * 1000);
 // Community AI crons — check hourly, fire at specific times
 setInterval(() => {
   const now = new Date();

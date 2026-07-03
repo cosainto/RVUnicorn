@@ -145,7 +145,12 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
     const headers: Record<string,string> = token ? { Authorization: `Bearer ${token}` } : {};
     fetch(`${API_URL}/api/campfire/${campgroundId}/room/status`, { headers })
-      .then(r => r.json()).then(setStatus).catch(console.error);
+      .then(r => r.json()).then(data => setStatus({
+        isActive: data.isActive ?? false,
+        checkedInCount: data.checkedInCount ?? 0,
+        checkedInUsers: data.checkedInUsers ?? [],
+        needsMore: data.needsMore ?? 0,
+      })).catch(console.error);
     fetch(`${API_URL}/api/campfire/${campgroundId}/room/messages`, { headers })
       .then(r => r.json()).then(d => {
         const fetched: ChatMessage[] = d.messages || [];
@@ -410,7 +415,7 @@ export default function CampfireChat({ campgroundId, campgroundName, isUserCheck
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
               <button onClick={() => setShowUsers(v => !v)} className="text-white/70 hover:text-white text-xs transition">
-                {status.checkedInCount} campers here now
+                {(status.checkedInCount ?? 0) === 0 ? 'No campers here yet' : `${status.checkedInCount} camper${status.checkedInCount === 1 ? '' : 's'} here now`}
               </button>
             </div>
           </div>

@@ -2345,6 +2345,10 @@ export default function BasecampPage({ user }: BasecampProps) {
                     {activeCheckIn.siteNumber && (
                       <span>🪧 Site {activeCheckIn.siteNumber}</span>
                     )}
+                    {activeCheckIn.checkInDate && (() => {
+                      const days = Math.floor((Date.now() - new Date(activeCheckIn.checkInDate).getTime()) / (1000 * 60 * 60 * 24));
+                      return days > 0 ? <span>⏱️ {days} day{days === 1 ? '' : 's'}</span> : null;
+                    })()}
                   </div>
                 </div>
               </div>

@@ -21,19 +21,19 @@ export default function CampfireModeSwitcher({ campgroundId, campgroundName, isU
   ];
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
-      {/* Mode switcher tabs */}
-      <div className="flex border-b border-gray-200 bg-gray-50">
+    <div>
+      {/* Sub-tab switcher — nested inside the main Campfire tab */}
+      <div className="flex gap-2 mb-3">
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setMode(tab.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
               mode === tab.key
-                ? tab.key === 'public' ? 'bg-white text-orange-600 border-b-2 border-orange-500 shadow-sm'
-                : tab.key === 'group' ? 'bg-white text-slate-700 border-b-2 border-slate-500 shadow-sm'
-                : 'bg-white text-amber-700 border-b-2 border-amber-500 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                ? tab.key === 'public' ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                : tab.key === 'group' ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                : 'bg-amber-100 text-amber-700 border border-amber-200'
+                : 'bg-gray-50 text-gray-500 border border-gray-100 hover:bg-gray-100 hover:text-gray-700'
             }`}
           >
             <span>{tab.emoji}</span>
