@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Users, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MapPin, Calendar, Users, Plus, X, Edit2, Trash2, Camera, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -17,6 +18,7 @@ interface StateVisit {
   event?: {
     id: string;
     title: string;
+    _count?: { photos?: number };
   };
   attendees: {
     user: {
@@ -26,8 +28,14 @@ interface StateVisit {
       username: string;
     };
   }[];
+  visitType?: string;
+  overnightStopId?: string;
+  overnightStopName?: string;
   createdAt: string;
 }
+
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const fmtRange = (start: string, end?: string) => end ? `${fmtDate(start)} – ${fmtDate(end)}` : fmtDate(start);
 
 const US_STATES = [
   'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
@@ -186,36 +194,73 @@ export default function StateVisitsList() {
               </div>
 
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {new Date(visit.startDate).toLocaleDateString()}
-                    {visit.endDate && ` - ${new Date(visit.endDate).toLocaleDateString()}`}
-                  </span>
-                </div>
+                {/* Trip title or date as primary link */}
+                {visit.event?.id && visit.event?.title ? (
+                  <Link to={`/trips/${visit.event.id}`} className="font-semibold text-base hover:underline block" style={{ color: '#C9A84C' }}>
+                    {visit.event.title} <ChevronRight className="w-3.5 h-3.5 inline" />
+                  </Link>
+                ) : visit.event?.id ? (
+                  <Link to={`/trips/${visit.event.id}`} className="font-semibold hover:underline block" style={{ color: '#C9A84C' }}>
+                    {fmtRange(visit.startDate, visit.endDate)} <ChevronRight className="w-3.5 h-3.5 inline" />
+                  </Link>
+                ) : null}
 
-                {visit.campsite && (
-                  <p className="text-gray-600">
-                    📍 {visit.campsite.name}
-                  </p>
+                {/* Date line (only shown separately if title is the link above) */}
+                {visit.event?.title && (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>{fmtRange(visit.startDate, visit.endDate)}</span>
+                  </div>
                 )}
 
-                {visit.event && (
-                  <p className="text-gray-600">
-                    🎉 {visit.event.title}
+                {/* Date as plain text when no trip link */}
+                {!visit.event?.id && (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>{fmtRange(visit.startDate, visit.endDate)}</span>
+                  </div>
+                )}
+
+                {/* Campground link */}
+                {visit.campsite && (
+                  <Link to={`/campgrounds/${visit.campsite.id}`} className="flex items-center gap-1.5 text-gray-600 hover:text-primary-600 transition">
+                    <MapPin className="w-4 h-4" /> {visit.campsite.name}
+                  </Link>
+                )}
+
+                {/* Overnight stop */}
+                {visit.overnightStopName && (
+                  <p className="text-gray-600 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4" /> {visit.overnightStopName}
                   </p>
                 )}
 
                 {visit.notes && (
-                  <p className="text-gray-600 italic text-xs mt-2">{visit.notes}</p>
+                  <p className="text-gray-600 italic text-xs mt-2 line-clamp-2">"{visit.notes}"</p>
                 )}
 
-                {visit.attendees.length > 1 && (
-                  <div className="flex items-center gap-1 text-gray-600 pt-2 border-t border-gray-200">
-                    <Users className="w-4 h-4" />
-                    <span className="text-xs">{visit.attendees.length} people</span>
-                  </div>
-                )}
+                {/* Photo count + trip actions */}
+                <div className="flex items-center gap-3 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                  {visit.event?.id && (visit.event._count?.photos || 0) > 0 ? (
+                    <Link to={`/trips/${visit.event.id}?tab=photos`} className="flex items-center gap-1 hover:text-primary-600 transition">
+                      <Camera className="w-3.5 h-3.5" /> {visit.event._count?.photos} photos · View Album →
+                    </Link>
+                  ) : visit.event?.id ? (
+                    <Link to={`/trips/${visit.event.id}`} className="flex items-center gap-1 hover:text-primary-600 transition">
+                      <Camera className="w-3.5 h-3.5" /> No photos yet · Add Photos
+                    </Link>
+                  ) : (
+                    <span className="flex items-center gap-1 text-gray-400">
+                      📖 No trip record
+                    </span>
+                  )}
+
+                  {visit.attendees.length > 1 && (
+                    <span className="flex items-center gap-1 ml-auto">
+                      <Users className="w-3.5 h-3.5" /> {visit.attendees.length}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
