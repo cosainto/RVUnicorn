@@ -273,4 +273,188 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
   }
 });
 
+// POST /api/upload/trip/:tripId/media — Upload photos and videos to a trip
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB for videos
+}).array('media', 60); // max 50 photos + 10 videos
+
+router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
+  mediaUpload(req, res, (err: any) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload error' });
+    next();
+  });
+}, async (req: any, res) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    const { tripId } = req.params;
+    const files = req.files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Verify trip and participation
+    const trip = await db.event.findUnique({
+      where: { id: tripId },
+      include: { attendees: true, campground: { select: { id: true, name: true } } },
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    const isParticipant = trip.organizerId === userId || trip.attendees.some((a: any) => a.userId === userId);
+    if (!isParticipant) return res.status(403).json({ error: 'Only trip participants can upload media' });
+
+    // Get user's rig for video records
+    const rig = await db.rig.findFirst({ where: { ownerId: userId }, select: { id: true } });
+
+    const photos: any[] = [];
+    const videos: any[] = [];
+
+    for (const file of files) {
+      const isVideo = file.mimetype.startsWith('video/');
+      const isImage = file.mimetype.startsWith('image/');
+
+      if (!isVideo && !isImage) continue;
+
+      // Parse metadata from form data (sent as JSON string per file index)
+      let meta: any = {};
+      try {
+        const metaKey = `meta_${files.indexOf(file)}`;
+        if (req.body[metaKey]) meta = JSON.parse(req.body[metaKey]);
+      } catch {}
+
+      if (isImage) {
+        // Upload photo to Cloudinary
+        const result = await new Promise<any>((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: `rvunicorn/trip-photos/${tripId}`, resource_type: 'image' },
+            (error, result) => error ? reject(error) : resolve(result)
+          ).end(file.buffer);
+        });
+
+        const photo = await db.photo.create({
+          data: {
+            userId,
+            imageUrl: result.secure_url,
+            caption: meta.caption || null,
+            eventId: tripId,
+          },
+        });
+        photos.push({ id: photo.id, url: result.secure_url, type: 'photo' });
+
+      } else if (isVideo) {
+        // Upload video to Cloudinary
+        const result = await new Promise<any>((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: `rvunicorn/trip-videos/${tripId}`, resource_type: 'video' },
+            (error, result) => error ? reject(error) : resolve(result)
+          ).end(file.buffer);
+        });
+
+        // Cloudinary returns duration and generates thumbnail
+        const thumbnailUrl = result.secure_url.replace(/\.[^.]+$/, '.jpg');
+        const duration = Math.round(result.duration || 0);
+
+        // Create RigVideo record if user has a rig
+        let videoRecord = null;
+        if (rig) {
+          videoRecord = await db.rigVideo.create({
+            data: {
+              rigId: rig.id,
+              tripId,
+              userId,
+              title: meta.title || `Video from ${trip.campground?.name || trip.title}`,
+              videoUrl: result.secure_url,
+              thumbnailUrl,
+              duration,
+              videoType: meta.videoType || 'SHORT_CLIP',
+            },
+          });
+        }
+
+        videos.push({
+          id: videoRecord?.id || result.public_id,
+          url: result.secure_url,
+          thumbnailUrl,
+          duration,
+          type: 'video',
+        });
+      }
+    }
+
+    res.json({
+      photos,
+      videos,
+      totalUploaded: photos.length + videos.length,
+    });
+  } catch (error: any) {
+    console.error('Trip media upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// POST /api/upload/trip/:tripId/attach-to-rig — Attach trip media to rig page
+router.post('/trip/:tripId/attach-to-rig', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    const { tripId } = req.params;
+    const { includePhotos = true, includeVideos = true } = req.body;
+
+    const rig = await db.rig.findFirst({ where: { ownerId: userId }, select: { id: true } });
+    if (!rig) return res.status(404).json({ error: 'No rig found' });
+
+    const trip = await db.event.findUnique({
+      where: { id: tripId },
+      select: { id: true, title: true, startDate: true, campground: { select: { name: true } } },
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    let attached = 0;
+
+    if (includePhotos) {
+      const photos = await db.photo.findMany({
+        where: { eventId: tripId, userId },
+        select: { id: true, imageUrl: true },
+      });
+      for (const photo of photos) {
+        await db.rigTimelineItem.upsert({
+          where: { rigId_refId_refType: { rigId: rig.id, refId: photo.id, refType: 'PHOTO' } },
+          create: {
+            rigId: rig.id, itemType: 'PHOTO', refId: photo.id, refType: 'PHOTO',
+            title: `Photo from ${trip.campground?.name || trip.title}`,
+            previewImageUrl: photo.imageUrl, tripId,
+            occurredAt: trip.startDate || new Date(),
+          },
+          update: {},
+        });
+        attached++;
+      }
+    }
+
+    if (includeVideos) {
+      const videos = await db.rigVideo.findMany({
+        where: { tripId, userId },
+        select: { id: true, thumbnailUrl: true, title: true },
+      });
+      for (const video of videos) {
+        await db.rigTimelineItem.upsert({
+          where: { rigId_refId_refType: { rigId: rig.id, refId: video.id, refType: 'VIDEO' } },
+          create: {
+            rigId: rig.id, itemType: 'VIDEO', refId: video.id, refType: 'VIDEO',
+            title: video.title, previewImageUrl: video.thumbnailUrl, tripId,
+            occurredAt: trip.startDate || new Date(),
+          },
+          update: {},
+        });
+        attached++;
+      }
+    }
+
+    res.json({ attached, rigId: rig.id });
+  } catch (error: any) {
+    console.error('Attach to rig error:', error);
+    res.status(500).json({ error: 'Failed to attach media to rig' });
+  }
+});
+
 export default router;

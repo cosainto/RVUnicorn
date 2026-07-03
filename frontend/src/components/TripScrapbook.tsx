@@ -299,7 +299,7 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
           {(canUpload || canPin) && (
             <button onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition">
-              <Upload className="w-4 h-4" /> Add Photos
+              <Upload className="w-4 h-4" /> Add Photos & Videos
             </button>
           )}
         </div>

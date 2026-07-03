@@ -3122,29 +3122,35 @@ export default function BasecampPage({ user }: BasecampProps) {
           <div className="mb-6">
             {postTripNudge ? (
               // Post-trip nudge — highest conversion moment
-              <div className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-2xl px-4 py-3">
-                <span className="text-2xl flex-shrink-0">📸</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">You just got back from {postTripNudge.tripName}!</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Share a tip or photo — help the next camper who goes there.</p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link
-                    to={`/profile/${user?.username}`}
-                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition"
-                  >
-                    Share →
-                  </Link>
+              <div className="rounded-2xl p-4" style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-2xl flex-shrink-0">📸</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: '#F5F0E8' }}>You just got back from {postTripNudge.tripName}!</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Add photos & videos — help the next camper who goes there.</p>
+                  </div>
                   <button
                     onClick={() => {
                       localStorage.setItem('rvu_nudge_dismissed_until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
                       setNudgeDismissed(true);
                       setPostTripNudge(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600 text-xs transition"
+                    className="text-xs transition flex-shrink-0" style={{ color: '#8B9BB4' }}
                   >
                     Later
                   </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to={`/trips/${(postTripNudge as any).tripId || ''}`}
+                    className="px-3 py-1.5 text-xs font-bold rounded-lg transition hover:brightness-110"
+                    style={{ background: '#E8622A', color: 'white' }}>
+                    📸 Add Photos & Videos
+                  </Link>
+                  <Link to={`/trips/${(postTripNudge as any).tripId || ''}`}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg transition"
+                    style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.15)' }}>
+                    View Trip →
+                  </Link>
                 </div>
               </div>
             ) : userProfile?.isCreator ? (
