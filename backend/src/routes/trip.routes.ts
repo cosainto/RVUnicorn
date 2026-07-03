@@ -440,6 +440,45 @@ router.get('/discover', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/trips/household-unconfirmed — trips from partner user hasn't confirmed
+router.get('/household-unconfirmed', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const user = await db.user.findUnique({ where: { id: userId }, select: { householdId: true } });
+    if (!user?.householdId) return res.json({ trips: [] });
+
+    const partners = await db.user.findMany({
+      where: { householdId: user.householdId, id: { not: userId } },
+      select: { id: true, firstName: true },
+    });
+    if (partners.length === 0) return res.json({ trips: [] });
+
+    const partnerIds = partners.map((p: any) => p.id);
+
+    // Past trips from partner where this user has no attendee record
+    const partnerTrips = await db.event.findMany({
+      where: {
+        organizerId: { in: partnerIds },
+        isWishlist: false,
+        endDate: { lt: new Date() },
+        NOT: { attendees: { some: { userId } } },
+      },
+      select: {
+        id: true, title: true, startDate: true, endDate: true, location: true,
+        campground: { select: { name: true } },
+        organizer: { select: { firstName: true } },
+      },
+      orderBy: { startDate: 'desc' },
+      take: 10,
+    });
+
+    res.json({ trips: partnerTrips, partnerName: partners[0]?.firstName });
+  } catch (error: any) {
+    console.error('Household unconfirmed error:', error);
+    res.status(500).json({ error: 'Failed to fetch' });
+  }
+});
+
 // GET /api/trips/check-overlap — detect conflicting trips before creation
 // Must be defined BEFORE /:id to avoid being caught by the param route
 router.get('/check-overlap', authenticateToken, async (req, res) => {
@@ -1137,6 +1176,45 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/trips/:id/household-confirm — Household partner confirms they were on this trip
+router.post('/:id/household-confirm', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const { confirmed } = req.body; // true = was on trip, false = wasn't
+
+    const event = await db.event.findUnique({ where: { id }, select: { id: true, organizerId: true } });
+    if (!event) return res.status(404).json({ error: 'Trip not found' });
+
+    // Verify household relationship
+    const user = await db.user.findUnique({ where: { id: userId }, select: { householdId: true } });
+    const organizer = await db.user.findUnique({ where: { id: event.organizerId }, select: { householdId: true } });
+    if (!user?.householdId || user.householdId !== organizer?.householdId) {
+      return res.status(403).json({ error: 'Not in the same household' });
+    }
+
+    if (confirmed) {
+      await db.eventAttendee.upsert({
+        where: { eventId_userId: { eventId: id, userId } },
+        create: { eventId: id, userId, status: 'ATTENDING' },
+        update: { status: 'ATTENDING' },
+      });
+    } else {
+      await db.eventAttendee.upsert({
+        where: { eventId_userId: { eventId: id, userId } },
+        create: { eventId: id, userId, status: 'NOT_GOING' },
+        update: { status: 'NOT_GOING' },
+      });
+    }
+
+    res.json({ confirmed, status: confirmed ? 'ATTENDING' : 'NOT_GOING' });
+  } catch (error: any) {
+    console.error('Household confirm error:', error);
+    res.status(500).json({ error: 'Failed to confirm' });
+  }
+});
+
+// GET /api/trips/household-unconfirmed — Get trips from household partner that user hasn't confirmed
 // GET /api/events/:id/attendees - Get event attendees
 router.get('/:id/attendees', async (req, res) => {
   try {

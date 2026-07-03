@@ -88,6 +88,7 @@ import DoThisNowSection from '../components/activity/DoThisNowSection';
 import BasecampTriviaCard from '../components/BasecampTriviaCard';
 import { useToast } from '../components/ToastProvider';
 import CheckInInviteBanner from '../components/CheckInInviteBanner';
+import HouseholdTripConfirm from '../components/HouseholdTripConfirm';
 import InviteFriendsCheckIn from '../components/InviteFriendsCheckIn';
 
 // Inline compact wrapper so we don't need to pass compact prop differently
@@ -692,6 +693,8 @@ function EnhancedStatusBar({ user, profile, onUpdate, onPost }: EnhancedStatusBa
       <NudgeCard />
       {/* Pending check-in invites from friends */}
       <CheckInInviteBanner />
+      {/* Household trip confirmation — ask partner if they were on these trips */}
+      <HouseholdTripConfirm />
       {/* Current Status Display */}
       {currentStatus && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
