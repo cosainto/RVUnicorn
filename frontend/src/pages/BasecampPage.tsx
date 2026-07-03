@@ -2522,13 +2522,6 @@ export default function BasecampPage({ user }: BasecampProps) {
         </div>
       )}
 
-      {/* CampMarket (kept at top, compact) */}
-      {hasFutureTrip && nextEvent?.campground?.id && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <CampMarket campgroundId={nextEvent.campground.id} compact />
-        </div>
-      )}
-
       {/* Do This Now — context-aware activity suggestions when checked in */}
       {isCamping && activeCheckIn?.campground && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -2673,62 +2666,54 @@ export default function BasecampPage({ user }: BasecampProps) {
       {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
       {hasFutureTrip && nextEvent && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-2xl p-5 mb-4">
+          <div className="rounded-2xl p-5 mb-4" style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
 
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{pulse.stateEmoji}</span>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-500">{pulse.stateLabel}</p>
-                  <Link to={`/trips/${nextEvent.id}`} className="font-bold text-gray-900 text-lg leading-tight hover:text-primary-700 transition">
+                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#E8A838' }}>{pulse.stateLabel}</p>
+                  <Link to={`/trips/${nextEvent.id}`} className="font-bold text-lg leading-tight transition hover:underline" style={{ color: '#F5F0E8' }}>
                     {nextEvent.title || nextEvent.name}
                   </Link>
-                  {nextEvent.campground && <p className="text-sm text-gray-500">at {nextEvent.campground.name}</p>}
+                  {nextEvent.campground && <p className="text-sm" style={{ color: '#8B9BB4' }}>at {nextEvent.campground.name}</p>}
                   {nextEvent.startDate && (
-                    <p className="text-xs text-primary-600 font-semibold mt-0.5">
+                    <p className="text-xs font-semibold mt-0.5" style={{ color: '#E8A838' }}>
                       Starts {new Date(nextEvent.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
                   )}
                 </div>
               </div>
-              <Link to={`/trips/${nextEvent.id}`} className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-2 rounded-xl transition">
+              <Link to={`/trips/${nextEvent.id}`} className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl transition hover:brightness-110" style={{ background: '#E8622A', color: 'white' }}>
                 Open Trip →
               </Link>
             </div>
 
-            {/* Stats row — each tile deep-links into the relevant trip phase */}
+            {/* Stats row */}
             <div className="grid grid-cols-4 gap-2 mb-4">
-              <Link to={`/trips/${nextEvent.id}`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
-                <div className="text-2xl font-bold text-primary-700">{countdown.days}</div>
-                <div className="text-xs text-gray-500 font-medium">Days Away</div>
-              </Link>
-              <Link to={`/trips/${nextEvent.id}?openPhase=camp`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
-                <div className="text-2xl font-bold text-primary-700">{planningData?.activityCount ?? '—'}</div>
-                <div className="text-xs text-gray-500 font-medium">Activities</div>
-              </Link>
-              <Link to={`/trips/${nextEvent.id}?openPhase=prepare`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
-                <div className="text-2xl font-bold text-primary-700">{planningData?.mealCount ?? '—'}</div>
-                <div className="text-xs text-gray-500 font-medium">Meals</div>
-              </Link>
-              <Link to={`/trips/${nextEvent.id}?openPhase=plan`} className="bg-white rounded-xl p-3 text-center border border-primary-100 hover:border-primary-400 hover:shadow-sm transition">
-                <div className="text-2xl font-bold text-primary-700">{planningData?.attendees.length ?? '—'}</div>
-                <div className="text-xs text-gray-500 font-medium">Attendees</div>
-              </Link>
+              {[
+                { href: `/trips/${nextEvent.id}`, value: countdown.days, label: 'Days Away' },
+                { href: `/trips/${nextEvent.id}?openPhase=camp`, value: planningData?.activityCount ?? '—', label: 'Activities' },
+                { href: `/trips/${nextEvent.id}?openPhase=prepare`, value: planningData?.mealCount ?? '—', label: 'Meals' },
+                { href: `/trips/${nextEvent.id}?openPhase=plan`, value: planningData?.attendees.length ?? '—', label: 'Attendees' },
+              ].map(s => (
+                <Link key={s.label} to={s.href} className="rounded-xl p-3 text-center transition hover:brightness-110" style={{ background: '#243352' }}>
+                  <div className="text-2xl font-bold" style={{ color: '#C9A84C' }}>{s.value}</div>
+                  <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: '#8B9BB4' }}>{s.label}</div>
+                </Link>
+              ))}
             </div>
 
-            {/* Packing progress — show in load-out and later, not during blueprint */}
+            {/* Packing progress */}
             {pulseState !== 'blueprint' && planningData && planningData.packingTotal > 0 && (
-              <div className="bg-white rounded-xl p-3 border border-primary-100 mb-3">
+              <div className="rounded-xl p-3 mb-3" style={{ background: '#243352' }}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-semibold text-gray-700">🎒 Packing Progress</span>
-                  <span className="text-xs text-gray-500">{planningData.packingDone} / {planningData.packingTotal} packed</span>
+                  <span className="text-xs font-semibold" style={{ color: '#F5F0E8' }}>🎒 Packing Progress</span>
+                  <span className="text-xs" style={{ color: '#8B9BB4' }}>{planningData.packingDone} / {planningData.packingTotal} packed</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="bg-primary-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.round((planningData.packingDone / planningData.packingTotal) * 100)}%` }}
-                  />
+                <div className="w-full rounded-full h-2" style={{ background: '#1B2B4B' }}>
+                  <div className="h-2 rounded-full transition-all" style={{ width: `${Math.round((planningData.packingDone / planningData.packingTotal) * 100)}%`, background: '#1D9E75' }} />
                 </div>
               </div>
             )}
@@ -2741,65 +2726,67 @@ export default function BasecampPage({ user }: BasecampProps) {
               const total = planningData.attendees.length;
               const allReady = pending.length === 0;
               return (
-                <div className="bg-white rounded-xl p-3 border border-primary-100 mb-3">
+                <div className="rounded-xl p-3 mb-3" style={{ background: '#243352' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-700">👥 Who's Going</p>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${allReady ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <p className="text-xs font-semibold" style={{ color: '#F5F0E8' }}>👥 Who's Going</p>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                      background: allReady ? 'rgba(29,158,117,0.2)' : 'rgba(186,117,23,0.2)',
+                      color: allReady ? '#1D9E75' : '#BA7517',
+                    }}>
                       {allReady ? '✓ Everyone confirmed!' : `${pending.length} awaiting response`}
                     </span>
                   </div>
 
                   {/* Progress bar */}
-                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                    <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all"
-                      style={{ width: `${total > 0 ? (confirmed.length / total) * 100 : 0}%` }} />
+                  <div className="w-full h-1.5 rounded-full overflow-hidden mb-2" style={{ background: '#1B2B4B' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${total > 0 ? (confirmed.length / total) * 100 : 0}%`, background: '#1D9E75' }} />
                   </div>
 
                   {/* Confirmed avatars */}
                   <div className="flex items-center gap-1.5 flex-wrap mb-2">
                     {confirmed.map((a) => (
-                      <div key={a.id} className="flex items-center gap-1 bg-green-50 rounded-full px-2 py-0.5 border border-green-200">
+                      <div key={a.id} className="flex items-center gap-1 rounded-full px-2 py-0.5" style={{ background: 'rgba(29,158,117,0.15)', border: '1px solid rgba(29,158,117,0.3)' }}>
                         {a.profilePicture
                           ? <img src={a.profilePicture} alt="" className="w-4 h-4 rounded-full object-cover" />
-                          : <div className="w-4 h-4 rounded-full bg-green-200 flex items-center justify-center text-green-700 text-xs font-bold">{a.firstName?.[0]}</div>
+                          : <div className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#1D9E75', color: '#0F1C35' }}>{a.firstName?.[0]}</div>
                         }
-                        <span className="text-xs text-green-800 font-medium">{a.firstName}</span>
-                        <span className="text-green-500 text-xs">✓</span>
+                        <span className="text-xs font-medium" style={{ color: '#1D9E75' }}>{a.firstName}</span>
+                        <span className="text-xs" style={{ color: '#1D9E75' }}>✓</span>
                       </div>
                     ))}
                     {maybe.map((a) => (
-                      <div key={a.id} className="flex items-center gap-1 bg-yellow-50 rounded-full px-2 py-0.5 border border-yellow-200">
+                      <div key={a.id} className="flex items-center gap-1 rounded-full px-2 py-0.5" style={{ background: 'rgba(186,117,23,0.15)', border: '1px solid rgba(186,117,23,0.3)' }}>
                         {a.profilePicture
                           ? <img src={a.profilePicture} alt="" className="w-4 h-4 rounded-full object-cover" />
-                          : <div className="w-4 h-4 rounded-full bg-yellow-200 flex items-center justify-center text-yellow-700 text-xs font-bold">{a.firstName?.[0]}</div>
+                          : <div className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#BA7517', color: '#0F1C35' }}>{a.firstName?.[0]}</div>
                         }
-                        <span className="text-xs text-yellow-800 font-medium">{a.firstName}</span>
-                        <span className="text-yellow-500 text-xs">?</span>
+                        <span className="text-xs font-medium" style={{ color: '#BA7517' }}>{a.firstName}</span>
+                        <span className="text-xs" style={{ color: '#BA7517' }}>?</span>
                       </div>
                     ))}
                   </div>
 
-                  {/* Pending / no response */}
+                  {/* Pending */}
                   {pending.length > 0 && (
-                    <div className="border-t border-gray-100 pt-2 mt-1">
-                      <p className="text-xs text-gray-500 mb-1.5">⏳ Awaiting response:</p>
+                    <div className="pt-2 mt-1" style={{ borderTop: '1px solid rgba(232,168,56,0.08)' }}>
+                      <p className="text-xs mb-1.5" style={{ color: '#8B9BB4' }}>⏳ Awaiting response:</p>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {pending.map((a) => (
-                          <div key={a.id} className="flex items-center gap-1 bg-gray-50 rounded-full px-2 py-0.5 border border-gray-200">
+                          <div key={a.id} className="flex items-center gap-1 rounded-full px-2 py-0.5" style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)' }}>
                             {a.profilePicture
                               ? <img src={a.profilePicture} alt="" className="w-4 h-4 rounded-full object-cover opacity-60" />
-                              : <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs font-bold">{a.firstName?.[0]}</div>
+                              : <div className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#243352', color: '#8B9BB4' }}>{a.firstName?.[0]}</div>
                             }
-                            <span className="text-xs text-gray-500">{a.firstName}</span>
-                            <span className="text-gray-400 text-xs">—</span>
+                            <span className="text-xs" style={{ color: '#8B9BB4' }}>{a.firstName}</span>
+                            <span className="text-xs" style={{ color: 'rgba(148,163,184,0.4)' }}>—</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Summary line */}
-                  <p className="text-xs text-gray-400 mt-2">
+                  {/* Summary */}
+                  <p className="text-xs mt-2" style={{ color: 'rgba(148,163,184,0.5)' }}>
                     {confirmed.length} confirmed{maybe.length > 0 ? ` · ${maybe.length} maybe` : ''}{pending.length > 0 ? ` · ${pending.length} no response` : ''}
                   </p>
                 </div>
@@ -2808,34 +2795,34 @@ export default function BasecampPage({ user }: BasecampProps) {
 
             {/* Weather preview */}
             {planningData?.weather && (
-              <div className="bg-white rounded-xl p-3 border border-primary-100 mb-3 flex items-center gap-3">
+              <div className="rounded-xl p-3 mb-3 flex items-center gap-3" style={{ background: '#243352' }}>
                 <span className="text-2xl">{planningData.weather.shortForecast?.toLowerCase().includes('rain') ? '🌧️' : planningData.weather.shortForecast?.toLowerCase().includes('snow') ? '❄️' : planningData.weather.shortForecast?.toLowerCase().includes('cloud') ? '☁️' : '☀️'}</span>
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Current weather at {nextEvent.campground?.name}</p>
-                  <p className="text-sm text-gray-600">{planningData.weather.temperature}°{planningData.weather.temperatureUnit} · {planningData.weather.shortForecast}</p>
+                  <p className="text-xs font-semibold" style={{ color: '#F5F0E8' }}>Weather at {nextEvent.campground?.name}</p>
+                  <p className="text-sm" style={{ color: '#8B9BB4' }}>{planningData.weather.temperature}°{planningData.weather.temperatureUnit} · {planningData.weather.shortForecast}</p>
                 </div>
               </div>
             )}
 
-            {/* Supply List compact — show in load-out and later */}
+            {/* Supply List compact */}
             {pulseState !== 'blueprint' && <SupplyListCompact eventId={nextEvent.id} />}
 
             {/* Quick action links */}
             <div className="flex flex-wrap gap-2">
-              <Link to={`/trips/${nextEvent.id}?tab=schedule`} className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition">📅 Schedule</Link>
-              <Link to={`/trips/${nextEvent.id}?tab=pack`} className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition">🎒 Packing</Link>
-              <Link to={`/trips/${nextEvent.id}?tab=meals`} className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition">🍽️ Meals</Link>
-              {nextEvent.campground && (
-                <Link to={`/campgrounds/${nextEvent.campground.id}`} className="flex items-center gap-1.5 bg-white border border-primary-200 text-primary-700 text-sm font-medium px-3 py-2 rounded-xl hover:bg-primary-50 transition">🏕️ Campground</Link>
-              )}
+              {[
+                { href: `/trips/${nextEvent.id}?tab=schedule`, icon: '📅', label: 'Schedule' },
+                { href: `/trips/${nextEvent.id}?tab=pack`, icon: '🎒', label: 'Packing' },
+                { href: `/trips/${nextEvent.id}?tab=meals`, icon: '🍽️', label: 'Meals' },
+                ...(nextEvent.campground ? [{ href: `/campgrounds/${nextEvent.campground.id}`, icon: '🏕️', label: 'Campground' }] : []),
+              ].map(l => (
+                <Link key={l.label} to={l.href} className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition hover:brightness-110"
+                  style={{ background: 'rgba(232,168,56,0.08)', color: '#E8A838', border: '1px solid rgba(232,168,56,0.15)' }}>
+                  {l.icon} {l.label}
+                </Link>
+              ))}
             </div>
 
           </div>
-          {nextEvent.campground?.id && (
-            <div className="mt-4">
-              <CampMarket campgroundId={nextEvent.campground.id} compact />
-            </div>
-          )}
         </div>
       )}
       {/* ── END TRIP PLANNING MODE PANEL ──────────────────────────── */}
