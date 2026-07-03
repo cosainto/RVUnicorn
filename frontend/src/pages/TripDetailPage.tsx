@@ -204,6 +204,7 @@ export default function EventDetailPage() {
     }
   }, [location.search]);
   const [showPackingModal, setShowPackingModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [plannerFrom, setPlannerFrom] = useState<string>('');
   const [plannerTo, setPlannerTo] = useState<string>('');
   const [userAttendee, setUserAttendee] = useState<Attendee | null>(null);
@@ -659,14 +660,27 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleDeleteEvent = async () => {
-    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+  const handleDeleteEvent = () => setShowDeleteModal(true);
+
+  const handleMoveToWishlist = async () => {
+    try {
+      await api.put(`/events/${id}`, { isWishlist: true, startDate: null, endDate: null });
+      addLocalToast('Trip moved to wishlist', 'success');
+      setShowDeleteModal(false);
+      navigate('/trips?tab=wishlist');
+    } catch (error: any) {
+      addLocalToast(error.response?.data?.error || 'Failed to move to wishlist', 'error');
+    }
+  };
+
+  const handlePermanentDelete = async () => {
     try {
       await api.delete(`/events/${id}`);
-      addLocalToast('Event deleted successfully', 'success');
+      addLocalToast('Trip deleted', 'success');
+      setShowDeleteModal(false);
       navigate('/trips');
     } catch (error: any) {
-      addLocalToast(error.response?.data?.error || 'Failed to delete event', 'error');
+      addLocalToast(error.response?.data?.error || 'Failed to delete trip', 'error');
     }
   };
 
@@ -2924,6 +2938,46 @@ export default function EventDetailPage() {
                 {transferring ? 'Transferring...' : 'Transfer Ownership'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete / Wishlist Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteModal(false)}>
+          <div className="rounded-2xl p-6 max-w-md w-full shadow-xl" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1" style={{ color: '#F5F0E8' }}>What would you like to do?</h3>
+            <p className="text-sm mb-5" style={{ color: '#8B9BB4' }}>
+              {event.title}
+            </p>
+
+            <div className="space-y-3">
+              {/* Move to Wishlist */}
+              <button onClick={handleMoveToWishlist} className="w-full rounded-xl p-4 text-left transition hover:brightness-110" style={{ background: '#243352', border: '1px solid rgba(232,168,56,0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⭐</span>
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: '#E8A838' }}>Move to Wishlist</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Keep the destination but clear the dates. You can re-plan it later.</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Delete Permanently */}
+              <button onClick={handlePermanentDelete} className="w-full rounded-xl p-4 text-left transition hover:brightness-110" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🗑️</span>
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: '#EF4444' }}>Delete Permanently</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Remove this trip and all its stops, attendees, and itinerary data. This cannot be undone.</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <button onClick={() => setShowDeleteModal(false)} className="w-full mt-4 py-2 rounded-lg text-sm font-medium transition" style={{ color: '#8B9BB4' }}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
