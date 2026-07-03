@@ -1089,7 +1089,29 @@ export default function EventDetailPage() {
   }); };
 
   return (
-    <div>
+    <div className="trip-dark" style={{ background: '#0F1C35', minHeight: '100vh' }}>
+      <style>{`
+        .trip-dark .bg-white { background: #1B2B4B !important; color: #F5F0E8 !important; }
+        .trip-dark .bg-gray-50, .trip-dark .bg-gray-100 { background: #162236 !important; color: #F5F0E8 !important; }
+        .trip-dark .bg-gray-200 { background: rgba(27,46,80,0.6) !important; }
+        .trip-dark .bg-yellow-50, .trip-dark .bg-blue-50, .trip-dark .bg-green-50, .trip-dark .bg-amber-50, .trip-dark .bg-red-50 { background: rgba(27,46,80,0.4) !important; }
+        .trip-dark .text-gray-900, .trip-dark .text-gray-800 { color: #F5F0E8 !important; }
+        .trip-dark .text-gray-700, .trip-dark .text-gray-600 { color: rgba(245,240,232,0.65) !important; }
+        .trip-dark .text-gray-500, .trip-dark .text-gray-400 { color: rgba(245,240,232,0.4) !important; }
+        .trip-dark .text-gray-300 { color: rgba(245,240,232,0.25) !important; }
+        .trip-dark .text-primary-600, .trip-dark .text-primary-700 { color: #E8A838 !important; }
+        .trip-dark .border-gray-100, .trip-dark .border-gray-200, .trip-dark .border-gray-300 { border-color: rgba(232,168,56,0.08) !important; }
+        .trip-dark .border-yellow-200, .trip-dark .border-yellow-300 { border-color: rgba(232,168,56,0.15) !important; }
+        .trip-dark .shadow-md, .trip-dark .shadow-sm, .trip-dark .shadow { box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important; }
+        .trip-dark .shadow-lg { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+        .trip-dark input, .trip-dark textarea, .trip-dark select { background: #162236 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
+        .trip-dark .hover\\:bg-gray-50:hover, .trip-dark .hover\\:bg-gray-100:hover { background: rgba(27,46,80,0.6) !important; }
+        .trip-dark .btn-primary { background: #E8622A !important; color: white !important; }
+        .trip-dark .btn-secondary { background: transparent !important; border-color: rgba(245,240,232,0.15) !important; color: rgba(245,240,232,0.7) !important; }
+        .trip-dark .bg-primary-600, .trip-dark .bg-primary-500 { background: #E8622A !important; }
+        .trip-dark .bg-gradient-to-r.from-yellow-100 { background: rgba(232,168,56,0.1) !important; }
+        .trip-dark details summary { color: #F5F0E8 !important; }
+      `}</style>
       {/* Pulse NowBar */}
       {event && (
         <NowBar
@@ -1180,7 +1202,7 @@ export default function EventDetailPage() {
           )}
         </div>
       )}
-      <button onClick={() => navigate('/events')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
+      <button onClick={() => navigate('/events')} className="flex items-center mb-4 transition" style={{ color: '#8B9BB4' }}>
         <ArrowLeft className="w-5 h-5 mr-2" />Back to Events
       </button>
 
@@ -1195,8 +1217,8 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="h-64 bg-gradient-to-br from-green-100 to-blue-100 relative group">
+      <div className="rounded-xl overflow-hidden mb-6" style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
+        <div className="h-64 relative group" style={{ background: 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}>
           {(() => {
             const img = (event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : (event.imageUrl && !event.imageUrl.startsWith('/images/')) ? event.imageUrl : event.campground?.imageUrl;
             return img ? (
@@ -1237,7 +1259,7 @@ export default function EventDetailPage() {
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold mb-2" style={{ color: '#F5F0E8' }}>
                 {event.campground?.id ? (
                   <Link to={`/campgrounds/${event.campground.id}`} className="hover:text-primary-600 hover:underline transition">{event.title}</Link>
                 ) : (
@@ -1253,22 +1275,22 @@ export default function EventDetailPage() {
               />
               </div>
               {event.organizer && (
-                <Link to={`/profile/${event.organizer.username}`} className="text-sm text-gray-600 hover:text-primary-600 mb-2 inline-block">
+                <Link to={`/profile/${event.organizer.username}`} className="text-sm mb-2 inline-block transition" style={{ color: '#8B9BB4' }}>
                   Organized by {event.organizer.firstName} {event.organizer.lastName}
                 </Link>
               )}
               {!event.isWishlist && (
-                <div className="flex items-center gap-2 text-gray-600 mb-2">
-                  <Calendar className="w-5 h-5 text-primary-600" />
+                <div className="flex items-center gap-2 mb-2" style={{ color: '#8B9BB4' }}>
+                  <Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} />
                   <span>
                     {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                     {event.endDate && event.endDate !== event.startDate && ` - ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
                   </span>
-                  <span className="text-sm text-gray-500">({calculateDuration()})</span>
+                  <span className="text-sm" style={{ color: 'rgba(245,240,232,0.4)' }}>({calculateDuration()})</span>
                 </div>
               )}
               <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-1 text-gray-600"><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
+                <div className="flex items-center gap-1" style={{ color: '#8B9BB4' }}><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
               </div>
 
               {/* Weather strip */}
@@ -1295,9 +1317,9 @@ export default function EventDetailPage() {
               {event.campground?.id && (
                 <div className="mt-4">
                   <details className="group">
-                    <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-gray-900 mb-2">
+                    <summary className="flex items-center gap-2 cursor-pointer list-none text-sm font-bold mb-2" style={{ color: '#F5F0E8' }}>
                       <span>🏕️ Presence Map</span>
-                      <span className="text-xs text-gray-400 font-normal group-open:hidden">Tap to expand</span>
+                      <span className="text-xs font-normal group-open:hidden" style={{ color: '#8B9BB4' }}>Tap to expand</span>
                     </summary>
                     <EventCampgroundMap eventId={event.id} campgroundName={event.campground.name} />
                   </details>
@@ -1428,32 +1450,33 @@ export default function EventDetailPage() {
 
       <div className="space-y-3 mb-6">
         {[
-          { id: 'plan',     emoji: '🗺️', label: 'Plan',    desc: 'Campground, dates, route, attendees',  bg: '#EAF3DE', color: '#3B6D11' },
-          { id: 'travel',   emoji: '🚐', label: 'Travel',  desc: 'Route, drive time, gas stops',          bg: '#FAEEDA', color: '#854F0B' },
-          { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: '#E6F1FB', color: '#185FA5' },
-          { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: '#E1F5EE', color: '#0F6E56' },
-          { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: '#FBEAF0', color: '#993556' },
+          { id: 'plan',     emoji: '🗺️', label: 'Plan',    desc: 'Campground, dates, route, attendees',  bg: 'rgba(59,109,17,0.15)', color: '#6BBF3A' },
+          { id: 'travel',   emoji: '🚐', label: 'Travel',  desc: 'Route, drive time, gas stops',          bg: 'rgba(133,79,11,0.15)', color: '#E8A838' },
+          { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: 'rgba(24,95,165,0.15)', color: '#5BA3E8' },
+          { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: 'rgba(15,110,86,0.15)', color: '#34D399' },
+          { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: 'rgba(153,53,86,0.15)', color: '#F472B6' },
         ].filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id) || (phase.id === 'travel' && tripPlan)).map(phase => (
-          <div key={phase.id} id={`phase-${phase.id}`} className={`bg-white rounded-xl border overflow-hidden shadow-sm transition scroll-mt-32 ${
-            statePhaseMap[pulse.tripState] === phase.id ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-gray-200'
-          }`}>
-            <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left">
+          <div key={phase.id} id={`phase-${phase.id}`} className="rounded-xl overflow-hidden transition scroll-mt-32" style={{
+            background: '#1B2B4B',
+            border: statePhaseMap[pulse.tripState] === phase.id ? '1px solid #34D399' : '1px solid #243552',
+          }}>
+            <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 transition text-left hover:brightness-110">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 relative" style={{ background: phase.bg }}>
-                  <span style={{ color: phase.color }}>{phase.emoji}</span>
+                  <span>{phase.emoji}</span>
                   {statePhaseMap[pulse.tripState] === phase.id && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 animate-pulse" style={{ borderColor: '#1B2B4B' }} />
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">{phase.label}</p>
-                  <p className="text-xs text-gray-500">{phase.desc}</p>
+                  <p className="font-semibold text-sm" style={{ color: '#F5F0E8' }}>{phase.label}</p>
+                  <p className="text-xs" style={{ color: '#8B9BB4' }}>{phase.desc}</p>
                 </div>
               </div>
-              <span className="text-gray-400 text-xs ml-4">{openPhases.has(phase.id) ? '▲' : '▼'}</span>
+              <span className="text-xs ml-4" style={{ color: '#8B9BB4' }}>{openPhases.has(phase.id) ? '▲' : '▼'}</span>
             </button>
             {openPhases.has(phase.id) && (
-              <div className="border-t border-gray-100 p-5 bg-gray-50/30 space-y-6">
+              <div className="p-5 space-y-6" style={{ borderTop: '1px solid #243552', background: 'rgba(15,28,53,0.3)' }}>
           {openPhases.has(phase.id) && phase.id === 'plan' && (
             <div className="space-y-6">
               {isOrganizer && (
