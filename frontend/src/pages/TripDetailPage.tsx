@@ -47,6 +47,7 @@ import NowBar from '../components/NowBar';
 import TripStaySurveyModal from '../components/TripStaySurveyModal';
 import CampBoard from '../components/CampBoard';
 import { useTripState } from '../hooks/useTripState';
+import TripMissionControl from '../components/TripMissionControl';
 
 interface Event {
   id: string;
@@ -1140,29 +1141,11 @@ export default function EventDetailPage() {
           visitDate={event.endDate || event.startDate}
         />
       )}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* ═══ TRIP OVERVIEW CARD (single source of truth) ═══ */}
+      <div className="max-w-3xl mx-auto px-4 py-6">
+      {/* ═══ MISSION CONTROL ═══ */}
       {event && (
-        <div className="mb-4 rounded-xl overflow-hidden" style={{ background: '#1B2B4B', borderLeft: '3px solid #C9A84C' }}>
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#F5F0E8' }}>
-                <span>🚐</span>
-                <span>{event.location || event.campground?.name ? `${tripPlan?.startLocation || 'Home'} → ${event.campground?.name || event.location || 'Destination'}` : event.title}</span>
-              </div>
-              {isOrganizer && (
-                <button onClick={() => setShowTripModal(true)} className="text-xs px-2 py-0.5 rounded" style={{ color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}>Edit</button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-3 mt-1 text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>
-              {event.startDate && (
-                <span>📅 {new Date(String(event.startDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{event.endDate ? `–${new Date(String(event.endDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</span>
-              )}
-              <span>📍 {tripPlan?.pitStops?.length || 0} stop{(tripPlan?.pitStops?.length || 0) !== 1 ? 's' : ''}</span>
-              {tripPlan?.distanceMiles && <span>🛣 {tripPlan.distanceMiles} mi</span>}
-              {tripPlan?.durationMinutes && <span>⏱ {Math.floor(tripPlan.durationMinutes / 60)}h {tripPlan.durationMinutes % 60}m</span>}
-            </div>
-          </div>
+        <div className="mb-6">
+          <TripMissionControl event={event} isOrganizer={isOrganizer} canEdit={canEdit} tripPlan={tripPlan} />
         </div>
       )}
 
@@ -1305,11 +1288,10 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {/* Camp Market at destination */}
+              {/* Campfire Tips */}
               {event.campground?.id && (
                 <div className="mt-4">
                   <CampfireTips campgroundId={event.campground.id} tripId={event.id} campgroundName={event.campground.name} compact />
-                  <CampMarket campgroundId={event.campground.id} compact />
                 </div>
               )}
 
