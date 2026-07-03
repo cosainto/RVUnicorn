@@ -39,12 +39,9 @@ app.get('/robots.txt', seoProxy);
 const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|Slackbot|Discordbot|Applebot/i;
 
 function shouldProxySSR(req) {
-  // Always proxy for known crawlers
-  if (CRAWLER_UA.test(req.headers['user-agent'] || '')) return true;
-  // Proxy for direct browser/preview fetcher loads (accepts HTML, not an XHR)
-  const acceptsHtml = (req.headers.accept || '').includes('text/html');
-  const isXHR = !!req.headers['x-requested-with'];
-  return acceptsHtml && !isXHR;
+  // Only proxy for known crawlers and link preview fetchers — regular
+  // browsers get the SPA (index.html) so React Router handles the route.
+  return CRAWLER_UA.test(req.headers['user-agent'] || '');
 }
 
 const ssrProxy = createProxyMiddleware({ target: BACKEND_URL, changeOrigin: true });

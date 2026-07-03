@@ -8,9 +8,9 @@ const db = prisma as any;
 const CRAWLER_UA = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot/i;
 
 function shouldSSR(req: Request): boolean {
-  const isCrawler = CRAWLER_UA.test(req.headers['user-agent'] || '');
-  const isDirectLoad = req.headers.accept?.includes('text/html') && !req.headers['x-requested-with'];
-  return isCrawler || !!isDirectLoad;
+  // Only SSR for crawlers and link preview fetchers — regular browsers
+  // get the SPA shell so React Router handles client-side routing.
+  return CRAWLER_UA.test(req.headers['user-agent'] || '');
 }
 
 // SSR for landing page — give crawlers real HTML content
