@@ -1035,7 +1035,7 @@ export default function EventsPage() {
 
               {/* Action Buttons - Top Right (only for organizer) */}
               {user && event.organizerId === user.id && !event.isStateVisit && (
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
                   <Link
                     to={`/trips/${event.id}/edit`}
                     onClick={(e) => e.stopPropagation()}

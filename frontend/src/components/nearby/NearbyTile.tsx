@@ -59,36 +59,36 @@ export default function NearbyTile({ name, imageUrl, distanceMiles, driveTimeMin
   const label = getCategoryLabel(category);
 
   return (
-    <div onClick={onPress} className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition cursor-pointer group flex flex-col">
-      {/* Image — fixed h-48 (192px) */}
-      <div className="relative h-48 w-full bg-gray-100 overflow-hidden rounded-t-xl">
+    <div onClick={onPress} className="rounded-xl overflow-hidden hover:shadow-lg transition cursor-pointer group flex flex-col" style={{ background: '#1B2B4B', border: '1px solid rgba(232,168,56,0.1)', height: 320 }}>
+      {/* Image — fixed 180px */}
+      <div className="relative w-full overflow-hidden flex-shrink-0" style={{ height: 180 }}>
         {imageUrl ? (
           <img src={imageUrl} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}>
             <span className="text-4xl">{emoji}</span>
           </div>
         )}
         {badge && (
-          <div className={`absolute top-2 left-2 ${BADGE_CONFIG[badge].bg} text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm`}>
+          <div className={`absolute top-2 left-2 z-10 ${BADGE_CONFIG[badge].bg} text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm`}>
             {BADGE_CONFIG[badge].label}
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-3 flex-1 flex flex-col justify-between">
+      <div className="px-3 py-2.5 flex-1 flex flex-col justify-between overflow-hidden">
         <div>
-          <h4 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-2">{name}</h4>
-          <span className="text-[11px] text-gray-500 mt-0.5 block">{emoji} {label}</span>
+          <h4 className="font-semibold text-sm leading-tight line-clamp-1" style={{ color: '#F5F0E8' }}>{name}</h4>
+          <span className="text-[11px] mt-0.5 block" style={{ color: '#E8A838' }}>{emoji} {label}</span>
         </div>
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[11px] text-gray-400">{distanceMiles.toFixed(1)} mi · {driveTimeMinutes} min drive</span>
+          <span className="text-[11px]" style={{ color: 'rgba(245,240,232,0.4)' }}>{distanceMiles.toFixed(1)} mi · {driveTimeMinutes} min drive</span>
           {rating !== undefined && rating > 0 && (
-            <span className="flex items-center gap-0.5 text-[11px] text-gray-600">
+            <span className="flex items-center gap-0.5 text-[11px]" style={{ color: '#E8A838' }}>
               <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
               {rating.toFixed(1)}
-              {reviewCount !== undefined && reviewCount > 0 && <span className="text-gray-400 ml-0.5">({reviewCount})</span>}
+              {reviewCount !== undefined && reviewCount > 0 && <span className="ml-0.5" style={{ color: 'rgba(245,240,232,0.3)' }}>({reviewCount})</span>}
             </span>
           )}
         </div>

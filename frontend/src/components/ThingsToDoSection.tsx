@@ -501,7 +501,8 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                     );
                     return (
                     <div key={pick.placeId} onClick={() => goToExperience(pick)}
-                      className={`group rounded-xl overflow-hidden hover:shadow-lg transition block relative cursor-pointer ${matchesInterest ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-300 ring-1 ring-violet-200' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'}`}>
+                      className="group rounded-xl overflow-hidden hover:shadow-lg transition block relative cursor-pointer flex flex-col"
+                      style={{ background: '#1B2B4B', border: matchesInterest ? '2px solid rgba(139,92,246,0.5)' : '1px solid rgba(232,168,56,0.15)', height: 320 }}>
                       {/* Badges */}
                       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-sm">
@@ -513,25 +514,27 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                           </span>
                         )}
                       </div>
-                      {pick.imageUrl
-                        ? <div className="h-[200px] bg-gray-100 overflow-hidden"><img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /></div>
-                        : <div className={`h-16 ${matchesInterest ? 'bg-violet-100' : 'bg-amber-100'}`} />
-                      }
-                      <div className="p-3">
+                      <div className="flex-shrink-0 overflow-hidden" style={{ height: 180 }}>
+                        {pick.imageUrl
+                          ? <img src={pick.imageUrl} alt={pick.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          : <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}><span className="text-3xl">✨</span></div>
+                        }
+                      </div>
+                      <div className="p-3 flex-1 overflow-hidden">
                         <div className="flex items-start justify-between gap-1">
-                          <h4 className={`font-bold text-sm leading-tight ${matchesInterest ? 'text-violet-900' : 'text-gray-900'}`}>{pick.title}</h4>
-                          <span className={`text-xs font-medium whitespace-nowrap ${matchesInterest ? 'text-violet-600' : 'text-amber-600'}`}>{pick.distance} mi</span>
+                          <h4 className="font-bold text-sm leading-tight line-clamp-1" style={{ color: '#F5F0E8' }}>{pick.title}</h4>
+                          <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#E8A838' }}>{pick.distance} mi</span>
                         </div>
-                        {pick.rating && <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /><span className="text-xs text-gray-600">{pick.rating} ({pick.reviewCount})</span></div>}
-                        <p className={`text-xs mt-2 line-clamp-2 italic ${matchesInterest ? 'text-violet-700' : 'text-gray-600'}`}>"{pick.tip}"</p>
+                        {pick.rating && <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /><span className="text-xs" style={{ color: 'rgba(245,240,232,0.6)' }}>{pick.rating} ({pick.reviewCount})</span></div>}
+                        <p className="text-xs mt-2 line-clamp-2 italic" style={{ color: 'rgba(245,240,232,0.5)' }}>"{pick.tip}"</p>
                         {/* Hours toggle */}
                         {pick.openingHours && pick.openingHours.length > 0 && (
                           <div className="mt-1">
-                            <button onClick={(e) => { e.preventDefault(); setShowHours(showHours === pick.placeId ? null : pick.placeId); }} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                            <button onClick={(e) => { e.preventDefault(); setShowHours(showHours === pick.placeId ? null : pick.placeId); }} className="flex items-center gap-1 text-xs transition" style={{ color: 'rgba(245,240,232,0.4)' }}>
                               <Clock className="w-3 h-3" />{showHours === pick.placeId ? 'Hide hours' : 'See hours'}
                             </button>
                             {showHours === pick.placeId && (
-                              <div className="mt-1 bg-white/60 rounded p-2 text-xs text-gray-600 space-y-0.5">
+                              <div className="mt-1 rounded p-2 text-xs space-y-0.5" style={{ background: 'rgba(15,28,53,0.5)', color: 'rgba(245,240,232,0.6)' }}>
                                 {pick.openingHours.map((h, i) => <div key={i}>{h}</div>)}
                               </div>
                             )}
@@ -539,10 +542,11 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                         )}
                         {/* Actions */}
                         {user && (
-                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-100">
+                          <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: '1px solid rgba(232,168,56,0.1)' }}>
                             <button
                               onClick={(e) => { e.preventDefault(); handleSave({ placeId: pick.placeId, sourceUrl: pick.sourceUrl, sourceName: 'Google', title: pick.title, type: pick.type as any, lat: pick.lat, lng: pick.lng, address: pick.address, imageUrl: pick.imageUrl, isSaved: false, distance: pick.distance, rating: pick.rating, reviewCount: pick.reviewCount } as any); }}
-                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition"
+                              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full transition"
+                              style={{ border: '1px solid rgba(232,168,56,0.2)', color: '#E8A838' }}
                               title="Save to RVUnicorn"
                             >
                               <Bookmark className="w-3 h-3" />
@@ -550,7 +554,8 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                             </button>
                             <button
                               onClick={(e) => { e.preventDefault(); handleWishlist({ placeId: pick.placeId, title: pick.title, address: pick.address, sourceUrl: pick.sourceUrl, imageUrl: pick.imageUrl, type: pick.type, rating: pick.rating, isWishlisted: pick.isWishlisted }); }}
-                              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-purple-400 text-white bg-purple-500' : 'border-gray-200 text-gray-500 hover:border-purple-400 hover:text-purple-600'}`}
+                              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition ${pick.isWishlisted ? 'border-purple-400 text-white bg-purple-500' : ''}`}
+                              style={!pick.isWishlisted ? { border: '1px solid rgba(232,168,56,0.2)', color: 'rgba(245,240,232,0.5)' } : {}}
                             >
                               <span className="text-sm">🧞</span>
                               {pick.isWishlisted ? 'Wishlisted' : 'Wishlist'}
@@ -559,7 +564,8 @@ export default function ThingsToDoSection({ campgroundId, campgroundName, onActi
                               <button
                                 onClick={(e) => { e.preventDefault(); saveAndAddToEvent(pick); }}
                                 disabled={addingToEventId === pick.placeId}
-                                className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600 transition"
+                                className="flex items-center gap-1 text-xs px-2 py-1 rounded-full transition"
+                                style={{ border: '1px solid rgba(232,168,56,0.2)', color: 'rgba(245,240,232,0.5)' }}
                                 title="Add to trip schedule"
                               >
                                 {addingToEventId === pick.placeId ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarPlus className="w-3 h-3" />}
