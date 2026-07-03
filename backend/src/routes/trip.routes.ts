@@ -929,7 +929,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    if (event.organizerId !== userId) {
+    // Allow organizer or household partner to edit
+    let canEdit = event.organizerId === userId;
+    if (!canEdit) {
+      const organizer = await db.user.findUnique({ where: { id: event.organizerId }, select: { householdId: true } });
+      const editor = await db.user.findUnique({ where: { id: userId }, select: { householdId: true } });
+      if (organizer?.householdId && organizer.householdId === editor?.householdId) canEdit = true;
+    }
+    if (!canEdit) {
       return res.status(403).json({ error: 'Not authorized to update this event' });
     }
 

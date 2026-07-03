@@ -967,6 +967,10 @@ export default function EventDetailPage() {
   );
 
   const isOrganizer = user?.id === event.organizerId;
+  // Household partners can also edit trips
+  const isHouseholdPartner = !isOrganizer && !!user && !!(event as any).organizer?.householdId &&
+    event.attendees?.some((a: any) => a.userId === user.id && a.user?.householdId === (event as any).organizer.householdId);
+  const canEdit = isOrganizer || isHouseholdPartner;
 
   const handleDuplicate = async () => {
     setDuplicating(true);
@@ -1187,7 +1191,7 @@ export default function EventDetailPage() {
             <p className="font-semibold text-yellow-800">Wishlist Event</p>
             <p className="text-sm text-yellow-700">This trip is on your wishlist - set dates when you're ready!</p>
           </div>
-          {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="ml-auto btn btn-primary btn-sm">Set Dates</Link>}
+          {canEdit && <Link to={`/trips/${event.id}/edit`} className="ml-auto btn btn-primary btn-sm">Set Dates</Link>}
         </div>
       )}
 
@@ -1384,7 +1388,7 @@ export default function EventDetailPage() {
                 </button>
               )}
               {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag People' : 'Invite'}</button>}
-              {isOrganizer && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
+              {canEdit && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
               <button onClick={exportToCalendar} className="btn btn-secondary btn-sm flex items-center gap-2" title="Export to Apple/Google Calendar"><CalendarDays className="w-4 h-4" />Add to Calendar</button>
               {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
               {isOrganizer && <button onClick={() => setShowDuplicateModal(true)} className="btn btn-sm flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"><Copy className="w-4 h-4" />Duplicate</button>}
