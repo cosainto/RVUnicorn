@@ -2307,11 +2307,30 @@ export default function BasecampPage({ user }: BasecampProps) {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
+    <style>{`
+      .bc-dark { background: #0F1C35 !important; color: #F5F0E8 !important; min-height: 100vh; padding-bottom: 2rem; }
+      .bc-dark .bg-white { background: rgba(15,28,53,0.95) !important; color: #F5F0E8 !important; }
+      .bc-dark .bg-gray-50, .bc-dark .bg-gray-100 { background: #1B2E50 !important; color: #F5F0E8 !important; }
+      .bc-dark .bg-gray-200, .bc-dark .bg-gray-300 { background: rgba(27,46,80,0.6) !important; }
+      .bc-dark .bg-green-50, .bc-dark .bg-blue-50, .bc-dark .bg-amber-50, .bc-dark .bg-orange-50, .bc-dark .bg-purple-50, .bc-dark .bg-red-50, .bc-dark .bg-yellow-50, .bc-dark .bg-indigo-50 { background: rgba(27,46,80,0.4) !important; }
+      .bc-dark .bg-primary-50, .bc-dark .bg-primary-100 { background: rgba(232,168,56,0.08) !important; }
+      .bc-dark .text-gray-900, .bc-dark .text-gray-800 { color: #F5F0E8 !important; }
+      .bc-dark .text-gray-700, .bc-dark .text-gray-600 { color: rgba(245,240,232,0.65) !important; }
+      .bc-dark .text-gray-500, .bc-dark .text-gray-400 { color: rgba(245,240,232,0.4) !important; }
+      .bc-dark .text-gray-300 { color: rgba(245,240,232,0.25) !important; }
+      .bc-dark .text-primary-700, .bc-dark .text-primary-600, .bc-dark .text-primary-500 { color: #E8A838 !important; }
+      .bc-dark .border-gray-100, .bc-dark .border-gray-200, .bc-dark .border-gray-300 { border-color: rgba(232,168,56,0.08) !important; }
+      .bc-dark .shadow-lg, .bc-dark .shadow-xl, .bc-dark .shadow-2xl { box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+      .bc-dark .shadow-md, .bc-dark .shadow-sm, .bc-dark .shadow { box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important; }
+      .bc-dark input, .bc-dark textarea, .bc-dark select { background: #1B2E50 !important; border-color: rgba(232,168,56,0.12) !important; color: #F5F0E8 !important; }
+      .bc-dark .btn-primary, .bc-dark .bg-primary-600, .bc-dark .bg-primary-500 { background: #E8622A !important; color: white !important; }
+      .bc-dark .hover\\:bg-gray-50:hover, .bc-dark .hover\\:bg-gray-100:hover { background: rgba(27,46,80,0.6) !important; }
+    `}</style>
+    <div className="min-h-screen bc-dark">
       {/* ── CAMPING MODE HEADER BANNER (Phase 3) ─────────────────────────── */}
       {isCamping && activeCheckIn?.campground && (
         <div className="bg-gradient-to-r from-green-800 via-green-700 to-emerald-700 text-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
               {/* Left: Campground identity */}
@@ -2418,7 +2437,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── Welcome Kit (shown when camping) ────────────────────────── */}
       {isCamping && activeCheckIn?.campground?.id && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
           <WelcomeKit
             campgroundId={activeCheckIn.campground.id}
             campgroundName={activeCheckIn.campground.name}
@@ -2526,7 +2545,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* Do This Now — context-aware activity suggestions when checked in */}
       {isCamping && activeCheckIn?.campground && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
           <DoThisNowSection campgroundName={activeCheckIn.campground.name} />
         </div>
       )}
@@ -2540,7 +2559,7 @@ export default function BasecampPage({ user }: BasecampProps) {
       {/* Legacy: New User Welcome Checklist — hidden when Lifestyle Mode is active */}
       {/* Legacy planning-mode content — hidden, replaced by LifestyleModeBasecamp */}
       {false && !isDefaultMode && isPlanning && !nextEvent && plannedTrips.length === 0 && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-1">Welcome to RVUnicorn!</h3>
             <p className="text-sm text-gray-500 mb-5">Here are 3 things to get you started:</p>
@@ -2574,7 +2593,7 @@ export default function BasecampPage({ user }: BasecampProps) {
       {/* Inspirational Quote — disabled, replaced by LifestyleModeBasecamp */}
       {false && !isDefaultMode && isPlanning && !nextEvent && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-start gap-4 flex-1">
                 <div className="p-3 bg-white/20 rounded-full">
@@ -2610,7 +2629,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── STATE B: DEPARTURE COUNTDOWN BANNER ─────────────────── */}
       {hasFutureTrip && nextEvent && pulse.daysUntilTrip <= 7 && pulse.daysUntilTrip >= 1 && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4">
           <div className="rounded-2xl p-5 mb-4" style={{ background: '#162236', border: '1px solid #243552' }}>
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="text-center sm:text-left flex-1">
@@ -2667,7 +2686,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── TRIP PLANNING MODE PANEL ─────────────────────────────── */}
       {hasFutureTrip && nextEvent && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
           <div className="rounded-2xl p-5 mb-4" style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
 
             {/* Header */}
@@ -2831,7 +2850,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── TRIP PLANNING MODE PANEL — disabled, replaced by LifestyleModeBasecamp ── */}
 
-      {false && isPlanning && !isDefaultMode && (<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {false && isPlanning && !isDefaultMode && (<div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* User Status - Collapsed Composer */}
         {userProfile && (
           <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
@@ -4142,7 +4161,7 @@ export default function BasecampPage({ user }: BasecampProps) {
 
       {/* ── CAMPING MODE LAYOUT ─────────────────────────────────────────── */}
       {isCamping && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
           {/* Weather snapshot above Tonight at Camp */}
           {activeCheckIn?.campground?.latitude && activeCheckIn?.campground?.longitude && (
