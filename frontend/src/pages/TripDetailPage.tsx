@@ -1231,64 +1231,92 @@ export default function EventDetailPage() {
                 className="w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center"><Calendar className="w-24 h-24 text-green-300" /></div>
+              <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1B2B4B, #0F1C35)' }}>
+                <p className="text-xl sm:text-2xl font-bold text-center px-6 opacity-40" style={{ fontFamily: "'Playfair Display', serif", color: '#C9A84C' }}>
+                  {event.campground?.name || event.title}
+                </p>
+              </div>
             );
           })()}
-          {isOrganizer && (
-            <label className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${event.bannerImage ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100' : 'bg-white shadow-lg text-gray-700 hover:bg-gray-50'}`}>
+          {canEdit && (
+            <label className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-xs font-medium" style={{ background: 'rgba(0,0,0,0.5)', color: 'rgba(245,240,232,0.7)' }}>
               {uploadingBanner ? (
-                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Camera className="w-5 h-5" />
+                <Camera className="w-4 h-4" />
               )}
-              <span className="font-medium">{event.bannerImage ? 'Change Banner' : 'Add Banner Image'}</span>
+              <span>{event.bannerImage ? 'Change photo' : 'Add photo'}</span>
               <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" disabled={uploadingBanner} />
             </label>
           )}
           {daysUntil && (
-            <div className={`absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg ${event.isWishlist ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'}`}>
-              <span className={`font-semibold ${daysUntil.color}`}>{daysUntil.text}</span>
+            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full" style={{ background: 'rgba(15,28,53,0.8)', border: '1px solid rgba(201,168,76,0.3)' }}>
+              <span className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{daysUntil.text}</span>
             </div>
           )}
         </div>
 
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold mb-2" style={{ color: '#F5F0E8' }}>
-                {event.campground?.id ? (
-                  <Link to={`/campgrounds/${event.campground.id}`} className="hover:text-primary-600 hover:underline transition">{event.title}</Link>
-                ) : (
-                  event.title
-                )}
-                {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
-              </h1>
-              <ShareButton
-                title={`${event.title} - RVUnicorn`}
-                text={`Check out this trip/event: ${event.title}${event.campground ? ` at ${event.campground.name}` : ""}!`}
-                url={`/events/${event.id}`}
-                variant="icon"
-              />
+        <div className="p-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+            {/* Left: Trip info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ color: '#F5F0E8', fontFamily: "'Playfair Display', serif" }}>
+                  {event.campground?.id ? (
+                    <Link to={`/campgrounds/${event.campground.id}`} className="transition hover:underline" style={{ color: '#C9A84C' }}>
+                      {event.title} <span className="text-lg">→</span>
+                    </Link>
+                  ) : (
+                    event.title
+                  )}
+                  {event.isWishlist && <Star className="w-5 h-5 text-yellow-500 fill-yellow-400 inline ml-2" />}
+                </h1>
+                <ShareButton
+                  title={`${event.title} - RVUnicorn`}
+                  text={`Check out this trip/event: ${event.title}${event.campground ? ` at ${event.campground.name}` : ""}!`}
+                  url={`/events/${event.id}`}
+                  variant="icon"
+                />
               </div>
+
               {event.organizer && (
-                <Link to={`/profile/${event.organizer.username}`} className="text-sm mb-2 inline-block transition" style={{ color: '#8B9BB4' }}>
+                <Link to={`/profile/${event.organizer.username}`} className="text-sm mb-2 inline-block transition hover:underline" style={{ color: '#8B9BB4' }}>
                   Organized by {event.organizer.firstName} {event.organizer.lastName}
                 </Link>
               )}
-              {!event.isWishlist && (
-                <div className="flex items-center gap-2 mb-2" style={{ color: '#8B9BB4' }}>
-                  <Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} />
-                  <span>
-                    {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                    {event.endDate && event.endDate !== event.startDate && ` - ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
-                  </span>
-                  <span className="text-sm" style={{ color: 'rgba(245,240,232,0.4)' }}>({calculateDuration()})</span>
+
+              <div className="space-y-1.5 mt-2">
+                {/* Date */}
+                {!event.isWishlist && event.startDate && (
+                  <div className="flex items-center gap-2 text-sm" style={{ color: '#8B9BB4' }}>
+                    <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                    <span>
+                      {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      {event.endDate && event.endDate !== event.startDate && ` – ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
+                    </span>
+                    <span className="text-xs" style={{ color: 'rgba(245,240,232,0.3)' }}>({calculateDuration()})</span>
+                  </div>
+                )}
+
+                {/* Address */}
+                {(event.location || event.campground?.location) && (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(event.location || event.campground?.location || '')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm transition hover:underline" style={{ color: '#8B9BB4' }}
+                  >
+                    <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                    <span>{event.location || event.campground?.location}</span>
+                  </a>
+                )}
+
+                {/* Attendees */}
+                <div className="flex items-center gap-2 text-sm" style={{ color: '#8B9BB4' }}>
+                  <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                  <span>{event._count?.attendees || 0} attending</span>
                 </div>
-              )}
-              <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-1" style={{ color: '#8B9BB4' }}><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
               </div>
+            </div>
 
               {/* Weather strip */}
               {event.campground?.latitude && event.campground?.longitude && (
