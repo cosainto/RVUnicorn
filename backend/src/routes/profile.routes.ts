@@ -884,74 +884,243 @@ router.get('/:username/trips', optionalAuth, async (req, res) => {
   }
 });
 
-// GET /api/profile/:username/campgrounds-visited - Get campgrounds visited
+// GET /api/profile/:username/campgrounds-visited - Get campgrounds visited (enriched)
 router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
   try {
     const { username } = req.params;
-
     const user = await prisma.user.findFirst({
       where: { username: { equals: username, mode: 'insensitive' } },
-      select: { id: true },
+      select: { id: true, firstName: true, createdAt: true },
     });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Get all check-ins grouped by campground
+    // ── Source 1: Check-ins with campground ──
     const checkIns = await prisma.checkIn.findMany({
       where: { userId: user.id, campgroundId: { not: null } },
       include: {
         campground: {
           select: {
-            id: true,
-            name: true,
-            state: true,
-            imageUrl: true,
-            latitude: true,
-            longitude: true,
+            id: true, name: true, city: true, state: true, imageUrl: true,
+            latitude: true, longitude: true, parkType: true,
           },
         },
       },
       orderBy: { checkInDate: 'desc' },
     });
 
-    // Group by campground, keep only the most recent check-in per campground
+    // ── Source 2: Past trip events at campgrounds ──
+    const tripEvents = await prisma.event.findMany({
+      where: {
+        campgroundId: { not: null },
+        isWishlist: false,
+        endDate: { lt: new Date() },
+        OR: [
+          { organizerId: user.id },
+          { attendees: { some: { userId: user.id, status: { in: ['ATTENDING', 'attending', 'GOING', 'going'] } } } },
+        ],
+      },
+      include: {
+        campground: {
+          select: {
+            id: true, name: true, city: true, state: true, imageUrl: true,
+            latitude: true, longitude: true, parkType: true,
+          },
+        },
+        attendees: { where: { userId: user.id }, select: { siteNumber: true } },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    // ── Source 3: Rig campsite visits ──
+    const rigVisits = await prisma.rigCampsiteVisit.findMany({
+      where: { userId: user.id },
+      orderBy: { visitedAt: 'desc' },
+    });
+
+    // ── Merge into campgroundMap ──
     const campgroundMap = new Map<string, any>();
+
+    const ensure = (cgId: string, cg: any) => {
+      if (!campgroundMap.has(cgId)) {
+        campgroundMap.set(cgId, {
+          campgroundId: cgId,
+          name: cg.name,
+          city: cg.city,
+          state: cg.state,
+          imageUrl: cg.imageUrl,
+          latitude: cg.latitude,
+          longitude: cg.longitude,
+          parkType: cg.parkType,
+          visits: [],
+          siteNumbers: new Set<string>(),
+          totalNights: 0,
+          isFavorite: false,
+        });
+      }
+      return campgroundMap.get(cgId)!;
+    };
+
     for (const ci of checkIns) {
       if (!ci.campgroundId || !ci.campground) continue;
-      if (!campgroundMap.has(ci.campgroundId)) {
-        campgroundMap.set(ci.campgroundId, {
-          campgroundId: ci.campgroundId,
-          name: ci.campground.name,
-          state: ci.campground.state,
-          imageUrl: ci.campground.imageUrl,
-          latitude: ci.campground.latitude,
-          longitude: ci.campground.longitude,
-          visitedAt: ci.checkInDate,
-        });
+      const entry = ensure(ci.campgroundId, ci.campground);
+      const nights = ci.checkOutDate
+        ? Math.max(1, Math.ceil((new Date(ci.checkOutDate).getTime() - new Date(ci.checkInDate).getTime()) / 86400000))
+        : 1;
+      entry.visits.push({ date: ci.checkInDate, endDate: ci.checkOutDate, nights, source: 'checkin' });
+      entry.totalNights += nights;
+      if (ci.siteNumber) entry.siteNumbers.add(ci.siteNumber);
+    }
+
+    for (const ev of tripEvents) {
+      if (!ev.campgroundId || !ev.campground) continue;
+      const entry = ensure(ev.campgroundId, ev.campground);
+      const nights = Math.max(1, Math.ceil((new Date(ev.endDate).getTime() - new Date(ev.startDate).getTime()) / 86400000));
+      // Only add if not already covered by a check-in on similar dates
+      const isDupe = entry.visits.some((v: any) =>
+        Math.abs(new Date(v.date).getTime() - new Date(ev.startDate).getTime()) < 2 * 86400000
+      );
+      if (!isDupe) {
+        entry.visits.push({ date: ev.startDate, endDate: ev.endDate, nights, source: 'trip' });
+        entry.totalNights += nights;
+      }
+      const siteNum = ev.attendees?.[0]?.siteNumber;
+      if (siteNum) entry.siteNumbers.add(siteNum);
+    }
+
+    for (const rv of rigVisits) {
+      if (!rv.campgroundId) continue;
+      const existing = campgroundMap.get(rv.campgroundId);
+      if (existing) {
+        if (rv.isFavorite) existing.isFavorite = true;
+        if (rv.siteNumber) existing.siteNumbers.add(rv.siteNumber);
       }
     }
 
-    // Look up user reviews for each campground
+    // ── Enrich with reviews ──
     const campgroundIds = Array.from(campgroundMap.keys());
     const reviews = campgroundIds.length > 0
       ? await prisma.campgroundReview.findMany({
           where: { userId: user.id, campgroundId: { in: campgroundIds } },
-          select: { campgroundId: true, rating: true },
+          select: { campgroundId: true, rating: true, review: true, visitDate: true, wouldReturn: true },
         })
       : [];
-    const reviewMap = Object.fromEntries(
-      reviews.map((r: any) => [r.campgroundId, r.rating])
-    );
+    const reviewMap = new Map(reviews.map((r: any) => [r.campgroundId, r]));
 
-    const campgrounds = Array.from(campgroundMap.values()).map((cg: any) => ({
-      ...cg,
-      userRating: reviewMap[cg.campgroundId] || null,
-    }));
+    // ── Check favorites ──
+    const favorites = campgroundIds.length > 0
+      ? await prisma.campgroundFavorite?.findMany?.({
+          where: { userId: user.id, campgroundId: { in: campgroundIds } },
+          select: { campgroundId: true },
+        }).catch(() => []) || []
+      : [];
+    for (const f of favorites) {
+      const entry = campgroundMap.get(f.campgroundId);
+      if (entry) entry.isFavorite = true;
+    }
 
-    // Already sorted by visitedAt desc (from the checkIn query order)
-    res.json(campgrounds);
+    // ── Build response ──
+    const campgrounds = Array.from(campgroundMap.values()).map((entry: any) => {
+      const review = reviewMap.get(entry.campgroundId);
+      entry.visits.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return {
+        campgroundId: entry.campgroundId,
+        name: entry.name,
+        city: entry.city,
+        state: entry.state,
+        imageUrl: entry.imageUrl,
+        latitude: entry.latitude,
+        longitude: entry.longitude,
+        parkType: entry.parkType,
+        visitCount: entry.visits.length,
+        totalNights: entry.totalNights,
+        firstVisit: entry.visits[entry.visits.length - 1]?.date,
+        lastVisit: entry.visits[0]?.date,
+        lastVisitEnd: entry.visits[0]?.endDate,
+        siteNumbers: [...entry.siteNumbers],
+        isFavorite: entry.isFavorite,
+        userRating: review?.rating || null,
+        userReview: review?.review || null,
+        wouldReturn: review?.wouldReturn || null,
+      };
+    });
+
+    campgrounds.sort((a: any, b: any) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
+
+    // ── Compute stats ──
+    const states = new Set(campgrounds.map((c: any) => c.state).filter(Boolean));
+    const totalNights = campgrounds.reduce((s: number, c: any) => s + c.totalNights, 0);
+    const ratedCampgrounds = campgrounds.filter((c: any) => c.userRating);
+    const avgRating = ratedCampgrounds.length > 0
+      ? Math.round((ratedCampgrounds.reduce((s: number, c: any) => s + c.userRating, 0) / ratedCampgrounds.length) * 10) / 10
+      : null;
+
+    // Most visited
+    const mostVisited = campgrounds.reduce((best: any, c: any) =>
+      !best || c.visitCount > best.visitCount ? c : best, null);
+
+    // Favorite state
+    const stateCounts: Record<string, number> = {};
+    campgrounds.forEach((c: any) => { if (c.state) stateCounts[c.state] = (stateCounts[c.state] || 0) + 1; });
+    const favoriteState = Object.entries(stateCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    // Peak season
+    const monthCounts = new Array(12).fill(0);
+    campgrounds.forEach((c: any) => { if (c.lastVisit) monthCounts[new Date(c.lastVisit).getMonth()]++; });
+    const peakMonth = monthCounts.indexOf(Math.max(...monthCounts));
+    const seasonNames = ['Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Fall', 'Fall', 'Fall', 'Winter'];
+    const peakSeason = seasonNames[peakMonth];
+
+    // Camping style
+    const parkCampgrounds = campgrounds.filter((c: any) =>
+      c.parkType && /national|state|forest/i.test(c.parkType));
+    const revisited = campgrounds.filter((c: any) => c.visitCount > 1);
+    let campingStyle = 'Mixed Camper';
+    if (parkCampgrounds.length / Math.max(campgrounds.length, 1) > 0.4) campingStyle = 'National Park Traveler';
+    else if (revisited.length / Math.max(campgrounds.length, 1) > 0.3) campingStyle = 'Loyal Returner';
+
+    // Badges
+    const badges = [
+      { id: 'camps_10', emoji: '🏕️', label: '10 Campgrounds', earned: campgrounds.length >= 10, progress: `${campgrounds.length}/10` },
+      { id: 'camps_50', emoji: '🎯', label: '50 Campgrounds', earned: campgrounds.length >= 50, progress: `${campgrounds.length}/50` },
+      { id: 'state_10', emoji: '🗺️', label: '10 States', earned: states.size >= 10, progress: `${states.size}/10` },
+      { id: 'state_25', emoji: '🌎', label: '25 States', earned: states.size >= 25, progress: `${states.size}/25` },
+      { id: 'state_48', emoji: '🏆', label: 'Lower 48', earned: states.size >= 48, progress: `${states.size}/48` },
+      { id: 'nights_50', emoji: '🌙', label: '50 Nights', earned: totalNights >= 50, progress: `${totalNights}/50` },
+      { id: 'nights_100', emoji: '⭐', label: '100 Nights', earned: totalNights >= 100, progress: `${totalNights}/100` },
+      { id: 'nights_365', emoji: '🔥', label: '365 Nights', earned: totalNights >= 365, progress: `${totalNights}/365` },
+      { id: 'repeat', emoji: '🔁', label: 'Loyal Returner', earned: campgrounds.some((c: any) => c.visitCount >= 3), progress: null },
+      { id: 'national_park', emoji: '🌲', label: 'Park Explorer', earned: parkCampgrounds.length >= 5, progress: `${parkCampgrounds.length}/5` },
+      { id: 'streak', emoji: '📅', label: 'Active Camper', earned: campgrounds.filter((c: any) => {
+        const d = new Date(c.lastVisit);
+        return d > new Date(Date.now() - 365 * 86400000);
+      }).length >= 5, progress: null },
+    ];
+
+    // Insights
+    const insights: string[] = [];
+    if (avgRating) insights.push(`⭐ Gives ${avgRating} avg rating`);
+    if (peakSeason) insights.push(`${peakSeason === 'Spring' ? '🌸' : peakSeason === 'Summer' ? '☀️' : peakSeason === 'Fall' ? '🍂' : '❄️'} ${peakSeason} camper`);
+    if (revisited.length > 0) insights.push('🔁 Revisits favorites');
+    if (favoriteState) insights.push(`📍 Loves ${favoriteState}`);
+
+    const sinceYear = user.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
+
+    res.json({
+      campgrounds,
+      stats: {
+        totalCampgrounds: campgrounds.length,
+        totalStates: states.size,
+        totalNights,
+        avgRating,
+        mostVisited: mostVisited ? { name: mostVisited.name, visitCount: mostVisited.visitCount } : null,
+        favoriteState,
+        peakSeason,
+        campingStyle,
+        sinceYear,
+      },
+      badges,
+      insights,
+    });
   } catch (error: any) {
     console.error('Get campgrounds visited error:', error);
     res.status(500).json({ error: 'Failed to get campgrounds visited' });
