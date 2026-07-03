@@ -661,27 +661,21 @@ export default function EventDetailPage() {
   };
 
   const handleDeleteEvent = () => setShowDeleteModal(true);
-
   const handleMoveToWishlist = async () => {
     try {
       await api.put(`/events/${id}`, { isWishlist: true, startDate: null, endDate: null });
       addLocalToast('Trip moved to wishlist', 'success');
       setShowDeleteModal(false);
       navigate('/trips?tab=wishlist');
-    } catch (error: any) {
-      addLocalToast(error.response?.data?.error || 'Failed to move to wishlist', 'error');
-    }
+    } catch (error: any) { addLocalToast(error.response?.data?.error || 'Failed to move to wishlist', 'error'); }
   };
-
   const handlePermanentDelete = async () => {
     try {
       await api.delete(`/events/${id}`);
       addLocalToast('Trip deleted', 'success');
       setShowDeleteModal(false);
       navigate('/trips');
-    } catch (error: any) {
-      addLocalToast(error.response?.data?.error || 'Failed to delete trip', 'error');
-    }
+    } catch (error: any) { addLocalToast(error.response?.data?.error || 'Failed to delete trip', 'error'); }
   };
 
   const handleCompleteTrip = async () => {
@@ -1232,91 +1226,65 @@ export default function EventDetailPage() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1B2B4B, #0F1C35)' }}>
-                <p className="text-xl sm:text-2xl font-bold text-center px-6 opacity-40" style={{ fontFamily: "'Playfair Display', serif", color: '#C9A84C' }}>
-                  {event.campground?.name || event.title}
-                </p>
+                <p className="text-xl sm:text-2xl font-bold text-center px-6 opacity-40" style={{ fontFamily: "'Playfair Display', serif", color: '#C9A84C' }}>{event.campground?.name || event.title}</p>
               </div>
             );
           })()}
-          {canEdit && (
-            <label className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-xs font-medium" style={{ background: 'rgba(0,0,0,0.5)', color: 'rgba(245,240,232,0.7)' }}>
+          {isOrganizer && (
+            <label className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${event.bannerImage ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100' : 'bg-white shadow-lg text-gray-700 hover:bg-gray-50'}`}>
               {uploadingBanner ? (
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Camera className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
               )}
-              <span>{event.bannerImage ? 'Change photo' : 'Add photo'}</span>
+              <span className="font-medium">{event.bannerImage ? 'Change Banner' : 'Add Banner Image'}</span>
               <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" disabled={uploadingBanner} />
             </label>
           )}
           {daysUntil && (
-            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full" style={{ background: 'rgba(15,28,53,0.8)', border: '1px solid rgba(201,168,76,0.3)' }}>
-              <span className="text-sm font-semibold" style={{ color: '#C9A84C' }}>{daysUntil.text}</span>
+            <div className={`absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg ${event.isWishlist ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'}`}>
+              <span className={`font-semibold ${daysUntil.color}`}>{daysUntil.text}</span>
             </div>
           )}
         </div>
 
-        <div className="p-5">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-            {/* Left: Trip info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ color: '#F5F0E8', fontFamily: "'Playfair Display', serif" }}>
-                  {event.campground?.id ? (
-                    <Link to={`/campgrounds/${event.campground.id}`} className="transition hover:underline" style={{ color: '#C9A84C' }}>
-                      {event.title} <span className="text-lg">→</span>
-                    </Link>
-                  ) : (
-                    event.title
-                  )}
-                  {event.isWishlist && <Star className="w-5 h-5 text-yellow-500 fill-yellow-400 inline ml-2" />}
-                </h1>
-                <ShareButton
-                  title={`${event.title} - RVUnicorn`}
-                  text={`Check out this trip/event: ${event.title}${event.campground ? ` at ${event.campground.name}` : ""}!`}
-                  url={`/events/${event.id}`}
-                  variant="icon"
-                />
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold mb-2" style={{ color: '#F5F0E8' }}>
+                {event.campground?.id ? (
+                  <Link to={`/campgrounds/${event.campground.id}`} className="hover:text-primary-600 hover:underline transition">{event.title}</Link>
+                ) : (
+                  event.title
+                )}
+                {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
+              </h1>
+              <ShareButton
+                title={`${event.title} - RVUnicorn`}
+                text={`Check out this trip/event: ${event.title}${event.campground ? ` at ${event.campground.name}` : ""}!`}
+                url={`/events/${event.id}`}
+                variant="icon"
+              />
               </div>
-
               {event.organizer && (
-                <Link to={`/profile/${event.organizer.username}`} className="text-sm mb-2 inline-block transition hover:underline" style={{ color: '#8B9BB4' }}>
+                <Link to={`/profile/${event.organizer.username}`} className="text-sm mb-2 inline-block transition" style={{ color: '#8B9BB4' }}>
                   Organized by {event.organizer.firstName} {event.organizer.lastName}
                 </Link>
               )}
-
-              <div className="space-y-1.5 mt-2">
-                {/* Date */}
-                {!event.isWishlist && event.startDate && (
-                  <div className="flex items-center gap-2 text-sm" style={{ color: '#8B9BB4' }}>
-                    <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
-                    <span>
-                      {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                      {event.endDate && event.endDate !== event.startDate && ` – ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
-                    </span>
-                    <span className="text-xs" style={{ color: 'rgba(245,240,232,0.3)' }}>({calculateDuration()})</span>
-                  </div>
-                )}
-
-                {/* Address */}
-                {(event.location || event.campground?.location) && (
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(event.location || event.campground?.location || '')}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm transition hover:underline" style={{ color: '#8B9BB4' }}
-                  >
-                    <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
-                    <span>{event.location || event.campground?.location}</span>
-                  </a>
-                )}
-
-                {/* Attendees */}
-                <div className="flex items-center gap-2 text-sm" style={{ color: '#8B9BB4' }}>
-                  <Users className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
-                  <span>{event._count?.attendees || 0} attending</span>
+              {!event.isWishlist && (
+                <div className="flex items-center gap-2 mb-2" style={{ color: '#8B9BB4' }}>
+                  <Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                  <span>
+                    {new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {event.endDate && event.endDate !== event.startDate && ` - ${new Date(event.endDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
+                  </span>
+                  <span className="text-sm" style={{ color: 'rgba(245,240,232,0.4)' }}>({calculateDuration()})</span>
                 </div>
+              )}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-1" style={{ color: '#8B9BB4' }}><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
               </div>
-            </div>
 
               {/* Weather strip */}
               {event.campground?.latitude && event.campground?.longitude && (
@@ -2970,42 +2938,20 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Delete / Wishlist Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteModal(false)}>
           <div className="rounded-2xl p-6 max-w-md w-full shadow-xl" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }} onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-1" style={{ color: '#F5F0E8' }}>What would you like to do?</h3>
-            <p className="text-sm mb-5" style={{ color: '#8B9BB4' }}>
-              {event.title}
-            </p>
-
+            <p className="text-sm mb-5" style={{ color: '#8B9BB4' }}>{event.title}</p>
             <div className="space-y-3">
-              {/* Move to Wishlist */}
               <button onClick={handleMoveToWishlist} className="w-full rounded-xl p-4 text-left transition hover:brightness-110" style={{ background: '#243352', border: '1px solid rgba(232,168,56,0.2)' }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">⭐</span>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#E8A838' }}>Move to Wishlist</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Keep the destination but clear the dates. You can re-plan it later.</p>
-                  </div>
-                </div>
+                <div className="flex items-center gap-3"><span className="text-2xl">⭐</span><div><p className="font-semibold text-sm" style={{ color: '#E8A838' }}>Move to Wishlist</p><p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Keep the destination but clear the dates.</p></div></div>
               </button>
-
-              {/* Delete Permanently */}
               <button onClick={handlePermanentDelete} className="w-full rounded-xl p-4 text-left transition hover:brightness-110" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🗑️</span>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#EF4444' }}>Delete Permanently</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Remove this trip and all its stops, attendees, and itinerary data. This cannot be undone.</p>
-                  </div>
-                </div>
+                <div className="flex items-center gap-3"><span className="text-2xl">🗑️</span><div><p className="font-semibold text-sm" style={{ color: '#EF4444' }}>Delete Permanently</p><p className="text-xs mt-0.5" style={{ color: '#8B9BB4' }}>Remove this trip and all its data. Cannot be undone.</p></div></div>
               </button>
             </div>
-
-            <button onClick={() => setShowDeleteModal(false)} className="w-full mt-4 py-2 rounded-lg text-sm font-medium transition" style={{ color: '#8B9BB4' }}>
-              Cancel
-            </button>
+            <button onClick={() => setShowDeleteModal(false)} className="w-full mt-4 py-2 rounded-lg text-sm font-medium" style={{ color: '#8B9BB4' }}>Cancel</button>
           </div>
         </div>
       )}
