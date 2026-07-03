@@ -78,9 +78,13 @@ export function calculateTripHealth(event: any): HealthResult {
   return { score, tier, tierLabel, tierColor, actions: actions.slice(0, 3) };
 }
 
-// ── Hitch Tip (cached per day) ──
-function useHitchTip(mode: TripMode, destination?: string) {
+// ── Hitch Tip (campground-aware, cached per day) ──
+function useHitchTip(mode: TripMode, destination?: string, campground?: any) {
   const [tip, setTip] = useState<string | null>(null);
+
+  // Determine campground capabilities
+  const hasHookups = campground?.hasElectric || campground?.hasFullHookups || campground?.hasPotableWater;
+
   const tips: Record<TripMode, string[]> = {
     PLANNING: [
       'Start with the campground — everything else follows.',
@@ -89,8 +93,13 @@ function useHitchTip(mode: TripMode, destination?: string) {
     ],
     COUNTDOWN: [
       'Time to check tire pressure and slide-outs before the big day!',
-      'Top off propane and fill the fresh water tank the day before.',
-      'Download offline maps for your route — cell service can be spotty.',
+      ...(hasHookups
+        ? ['Download offline maps for your route — cell service can be spotty.',
+           'Confirm your site number and check-in time with the campground.',
+           'Pack extra-long power and water hoses — site hookups vary in distance.']
+        : ['Top off propane and fill the fresh water tank the day before.',
+           'Download offline maps for your route — cell service can be spotty.',
+           'Charge portable batteries and test your generator before departure.']),
     ],
     TOMORROW: [
       'Do a walk-around tonight: tires, lights, hitch, slides retracted.',
@@ -115,7 +124,7 @@ function useHitchTip(mode: TripMode, destination?: string) {
     const pool = tips[mode] || tips.PLANNING;
     const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
     setTip(pool[dayOfYear % pool.length]);
-  }, [mode]);
+  }, [mode, hasHookups]);
   return tip;
 }
 
@@ -130,7 +139,7 @@ interface Props {
 export default function TripMissionControl({ event, isOrganizer, canEdit, tripPlan }: Props) {
   const { mode, daysUntil } = detectTripMode(event.startDate, event.endDate);
   const health = calculateTripHealth(event);
-  const hitchTip = useHitchTip(mode, event.campground?.name);
+  const hitchTip = useHitchTip(mode, event.campground?.name, event.campground);
   const [weather, setWeather] = useState<any>(null);
 
   useEffect(() => {

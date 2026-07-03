@@ -1385,26 +1385,38 @@ export default function EventDetailPage() {
                 );
               })()} 
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2 flex-shrink-0"><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">{isPastTrip ? 'Tag People' : 'Invite'}</span></button>}
+              {canEdit && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2 flex-shrink-0"><Edit className="w-4 h-4" /><span className="hidden sm:inline">Edit Event</span></Link>}
+              <button onClick={exportToCalendar} className="btn btn-secondary btn-sm flex items-center gap-2 flex-shrink-0" title="Add to Calendar"><CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Calendar</span></button>
               {!isOrganizer && user && (
-                <button onClick={() => { setCopyForm({ startDate: '', endDate: '', isWishlist: false, copyMealPlan: true }); setShowCopyModal(true); }} className="btn btn-secondary btn-sm flex items-center gap-2">
-                  <Copy className="w-4 h-4" />Copy Event
+                <button onClick={() => { setCopyForm({ startDate: '', endDate: '', isWishlist: false, copyMealPlan: true }); setShowCopyModal(true); }} className="btn btn-secondary btn-sm flex items-center gap-2 flex-shrink-0" title="Copy Event">
+                  <Copy className="w-4 h-4" /><span className="hidden sm:inline">Copy</span>
                 </button>
               )}
-              {isOrganizer && <button onClick={() => setShowInviteModal(true)} className="btn btn-secondary btn-sm flex items-center gap-2"><UserPlus className="w-4 h-4" />{isPastTrip ? 'Tag People' : 'Invite'}</button>}
-              {canEdit && <Link to={`/trips/${event.id}/edit`} className="btn btn-primary btn-sm flex items-center gap-2"><Edit className="w-4 h-4" />Edit Event</Link>}
-              <button onClick={exportToCalendar} className="btn btn-secondary btn-sm flex items-center gap-2" title="Export to Apple/Google Calendar"><CalendarDays className="w-4 h-4" />Add to Calendar</button>
-              {isOrganizer && <button onClick={handleDeleteEvent} className="btn btn-sm flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white"><Trash2 className="w-4 h-4" />Delete</button>}
-              {isOrganizer && <button onClick={() => setShowDuplicateModal(true)} className="btn btn-sm flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"><Copy className="w-4 h-4" />Duplicate</button>}
+              {isOrganizer && (
+                <div className="relative group flex-shrink-0">
+                  <button className="btn btn-secondary btn-sm flex items-center gap-1 px-2.5">⋯</button>
+                  <div className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden shadow-xl z-20 hidden group-hover:block" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F', minWidth: 180 }}>
+                    <button onClick={() => setShowDuplicateModal(true)} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition hover:brightness-125" style={{ color: '#F5F0E8' }}>
+                      <Copy className="w-4 h-4" /> Duplicate
+                    </button>
+                    <button onClick={handleDeleteEvent} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition hover:brightness-125" style={{ color: '#EF4444' }}>
+                      <Trash2 className="w-4 h-4" /> Delete Trip
+                    </button>
+                  </div>
+                </div>
+              )}
               {isOrganizer && (
                 <select
                   value={(event as any).privacy || 'PUBLIC'}
                   onChange={(e) => handlePrivacyChange(e.target.value)}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="text-sm rounded-lg px-2 py-1.5 focus:outline-none flex-shrink-0"
+                  style={{ background: '#243352', color: '#F5F0E8', border: '1px solid #2A3F5F' }}
                 >
-                  <option value="PUBLIC">🌍 Public</option>
-                  <option value="FRIENDS">👥 Friends Only</option>
-                  <option value="PRIVATE">🔒 Private</option>
+                  <option value="PUBLIC">🌍</option>
+                  <option value="FRIENDS">👥</option>
+                  <option value="PRIVATE">🔒</option>
                 </select>
               )}
             </div>

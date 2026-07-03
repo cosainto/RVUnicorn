@@ -80,7 +80,9 @@ export default function NowBar({
                   {packTotal > 0 ? `${packDone}/${packTotal} packed` : 'Time to prep!'}
                 </p>
                 <p className="text-[10px] text-white/70">
-                  {packTotal - packDone > 0 ? `${packTotal - packDone} items remaining` : 'All packed!'}
+                  {packTotal > 0 && packTotal - packDone > 0 ? `${packTotal - packDone} items left to pack` : ''}
+                  {packTotal > 0 && packDone === packTotal ? 'All packed! ✓' : ''}
+                  {packTotal === 0 ? 'No packing list yet' : ''}
                   {mealCount > 0 ? ` · ${mealCount} meals planned` : ''}
                 </p>
               </div>
