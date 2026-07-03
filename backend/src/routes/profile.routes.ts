@@ -901,7 +901,7 @@ router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
         campground: {
           select: {
             id: true, name: true, city: true, state: true, imageUrl: true,
-            latitude: true, longitude: true, parkType: true,
+            latitude: true, longitude: true,
           },
         },
       },
@@ -923,7 +923,7 @@ router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
         campground: {
           select: {
             id: true, name: true, city: true, state: true, imageUrl: true,
-            latitude: true, longitude: true, parkType: true,
+            latitude: true, longitude: true,
           },
         },
         attendees: { where: { userId: user.id }, select: { siteNumber: true } },
@@ -950,7 +950,7 @@ router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
           imageUrl: cg.imageUrl,
           latitude: cg.latitude,
           longitude: cg.longitude,
-          parkType: cg.parkType,
+          parkType: null,
           visits: [],
           siteNumbers: new Set<string>(),
           totalNights: 0,
@@ -1036,11 +1036,11 @@ router.get('/:username/campgrounds-visited', optionalAuth, async (req, res) => {
         firstVisit: entry.visits[entry.visits.length - 1]?.date,
         lastVisit: entry.visits[0]?.date,
         lastVisitEnd: entry.visits[0]?.endDate,
-        siteNumbers: [...entry.siteNumbers],
+        siteNumbers: Array.from(entry.siteNumbers),
         isFavorite: entry.isFavorite,
-        userRating: review?.rating || null,
-        userReview: review?.review || null,
-        wouldReturn: review?.wouldReturn || null,
+        userRating: (review as any)?.rating || null,
+        userReview: (review as any)?.review || null,
+        wouldReturn: (review as any)?.wouldReturn || null,
       };
     });
 
