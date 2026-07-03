@@ -440,6 +440,100 @@ router.get('/discover', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/trips/check-overlap — detect conflicting trips before creation
+// Must be defined BEFORE /:id to avoid being caught by the param route
+router.get('/check-overlap', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { startDate, endDate, campgroundId } = req.query;
+    if (!startDate) return res.json({ hasConflict: false, conflictingTrips: [], householdDuplicate: null });
+
+    const propStart = new Date(startDate as string);
+    const propEnd = endDate ? new Date(endDate as string) : propStart;
+
+    // Find the user's household members
+    const user = await db.user.findUnique({ where: { id: userId }, select: { householdId: true } });
+    const householdUserIds: string[] = [userId];
+    if (user?.householdId) {
+      const partners = await db.user.findMany({
+        where: { householdId: user.householdId, id: { not: userId } },
+        select: { id: true, firstName: true },
+      });
+      householdUserIds.push(...partners.map((p: any) => p.id));
+    }
+
+    // Find overlapping trips for user + household (as organizer or attendee)
+    const attendeeEventIds = await db.eventAttendee.findMany({
+      where: { userId: { in: householdUserIds }, status: { in: ['ATTENDING', 'GOING', 'going'] } },
+      select: { eventId: true, userId: true },
+    });
+    const attendeeEventIdSet = new Set(attendeeEventIds.map((a: any) => a.eventId));
+
+    const overlapping = await db.event.findMany({
+      where: {
+        isWishlist: false,
+        startDate: { lte: propEnd },
+        endDate: { gte: propStart },
+        OR: [
+          { organizerId: { in: householdUserIds } },
+          { id: { in: [...attendeeEventIdSet] } },
+        ],
+      },
+      select: {
+        id: true, title: true, startDate: true, endDate: true, location: true,
+        campgroundId: true, organizerId: true,
+        organizer: { select: { id: true, firstName: true } },
+      },
+    });
+
+    const conflictingTrips = overlapping.map((trip: any) => {
+      const overlapStart = new Date(Math.max(propStart.getTime(), new Date(trip.startDate).getTime()));
+      const overlapEnd = new Date(Math.min(propEnd.getTime(), new Date(trip.endDate).getTime()));
+      const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const isHousehold = trip.organizerId !== userId;
+      return {
+        id: trip.id,
+        title: trip.title,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        location: trip.location,
+        overlapDays,
+        isHousehold,
+        organizerName: trip.organizer?.firstName || 'Your co-pilot',
+        message: isHousehold
+          ? `${trip.organizer?.firstName || 'Your co-pilot'} already has a trip: ${trip.title}`
+          : `You already have a trip: ${trip.title}`,
+      };
+    }).filter((t: any) => t.overlapDays > 1); // Allow 1-day overlap (relocation day)
+
+    // Check for household duplicate: same campground + similar dates
+    let householdDuplicate = null;
+    if (campgroundId && user?.householdId) {
+      const partnerTrip = overlapping.find((t: any) =>
+        t.organizerId !== userId && t.campgroundId === campgroundId
+      );
+      if (partnerTrip) {
+        householdDuplicate = {
+          id: partnerTrip.id,
+          title: partnerTrip.title,
+          startDate: partnerTrip.startDate,
+          endDate: partnerTrip.endDate,
+          organizerName: (partnerTrip as any).organizer?.firstName || 'Your co-pilot',
+        };
+      }
+    }
+
+    res.json({
+      hasConflict: conflictingTrips.length > 0,
+      conflictingTrips,
+      householdDuplicate,
+    });
+  } catch (error: any) {
+    console.error('Check overlap error:', error);
+    res.status(500).json({ error: 'Failed to check overlap' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;

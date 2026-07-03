@@ -991,59 +991,6 @@ router.post('/invite-friends', authenticateToken, async (req: any, res) => {
   }
 });
 
-// ── Admin: close stale check-ins (temporary, remove after running) ────────
-router.post('/admin/close-stale', authenticateToken, async (req: any, res) => {
-  try {
-    // Only allow specific admin users
-    const adminIds = ['cmlpeyk82005s3qause3sws7y']; // Will
-    if (!adminIds.includes(req.user.id)) return res.status(403).json({ error: 'Forbidden' });
-
-    const now = new Date();
-    const results: any = {};
-
-    // Step 1: Deanna
-    const deannaResult = await prisma.checkIn.updateMany({
-      where: { userId: 'cmm9kukta0006i88masvtz2tp', isActive: true },
-      data: { isActive: false, checkOutDate: now },
-    });
-    results.deanna = deannaResult.count;
-
-    // Step 1b: Will stale check-ins
-    const willResult = await prisma.checkIn.updateMany({
-      where: {
-        userId: 'cmlpeyk82005s3qause3sws7y',
-        isActive: true,
-        checkInDate: { lt: new Date(now.getTime() - 14 * 86400000) },
-      },
-      data: { isActive: false, checkOutDate: now },
-    });
-    results.will = willResult.count;
-
-    // Step 2: All stale > 14 days
-    const cutoff = new Date(now.getTime() - 14 * 86400000);
-    const stale = await prisma.checkIn.findMany({
-      where: { isActive: true, checkOutDate: null, checkInDate: { lt: cutoff } },
-      include: { user: { select: { username: true } }, campground: { select: { name: true } } },
-    });
-    results.staleFound = stale.map((ci: any) => ({
-      username: ci.user?.username,
-      campground: ci.campground?.name,
-      days: Math.floor((now.getTime() - new Date(ci.checkInDate).getTime()) / 86400000),
-    }));
-
-    const closeResult = await prisma.checkIn.updateMany({
-      where: { isActive: true, checkOutDate: null, checkInDate: { lt: cutoff } },
-      data: { isActive: false, checkOutDate: now },
-    });
-    results.staleClosed = closeResult.count;
-
-    res.json(results);
-  } catch (e: any) {
-    console.error('[AdminCloseStale]', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // Confirm active stay — extends check-in date to suppress auto-checkout nudge
 router.post('/confirm-stay', authenticateToken, async (req: any, res) => {
   try {

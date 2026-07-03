@@ -227,6 +227,28 @@ export default function EventsPage() {
     tripType: 'CAMPING',
   });
 
+  // Overlap detection state
+  const [overlapWarning, setOverlapWarning] = useState<{
+    hasConflict: boolean;
+    conflictingTrips: Array<{ id: string; title: string; startDate: string; endDate: string; overlapDays: number; isHousehold: boolean; organizerName: string; message: string }>;
+    householdDuplicate: { id: string; title: string; startDate: string; endDate: string; organizerName: string } | null;
+  } | null>(null);
+
+  // Check for overlapping trips when dates change
+  useEffect(() => {
+    if (!formData.startDate || !showCreateModal) { setOverlapWarning(null); return; }
+    const timer = setTimeout(() => {
+      api.get('/trips/check-overlap', {
+        params: {
+          startDate: formData.startDate,
+          endDate: formData.endDate || formData.startDate,
+          campgroundId: formData.campgroundId || undefined,
+        },
+      }).then(r => setOverlapWarning(r.data)).catch(() => setOverlapWarning(null));
+    }, 300); // debounce
+    return () => clearTimeout(timer);
+  }, [formData.startDate, formData.endDate, formData.campgroundId, showCreateModal]);
+
   // Multi-stop state
   const [multiStops, setMultiStops] = useState<Array<{
     campgroundId: string;
@@ -478,6 +500,27 @@ export default function EventsPage() {
 
     setFilteredEvents(filtered);
   };
+
+  // Compute overlap map for trip cards — detect trips with >1 day overlap
+  const overlapMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (let i = 0; i < events.length; i++) {
+      for (let j = i + 1; j < events.length; j++) {
+        const a = events[i], b = events[j];
+        if (!a.startDate || !b.startDate) continue;
+        const aStart = new Date(a.startDate).getTime(), aEnd = new Date(a.endDate || a.startDate).getTime();
+        const bStart = new Date(b.startDate).getTime(), bEnd = new Date(b.endDate || b.startDate).getTime();
+        if (aStart <= bEnd && aEnd >= bStart) {
+          const overlapDays = Math.ceil((Math.min(aEnd, bEnd) - Math.max(aStart, bStart)) / 86400000) + 1;
+          if (overlapDays > 1) {
+            map[a.id] = b.title;
+            map[b.id] = a.title;
+          }
+        }
+      }
+    }
+    return map;
+  }, [events]);
 
   const handleDeleteEvent = async (eventId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -949,6 +992,12 @@ export default function EventsPage() {
                       </>
                     )}
                   </div>
+                  {overlapMap[event.id] && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mb-2">
+                      <span>⚠️</span>
+                      <span>Date overlap with {overlapMap[event.id]}</span>
+                    </div>
+                  )}
 
                   <div className="space-y-2 text-sm text-gray-600">
                     {(event.campground || event.location) && (
@@ -1440,6 +1489,55 @@ export default function EventsPage() {
                 )}
               </div>
 
+              {/* ━━━ OVERLAP WARNING ━━━ */}
+              {overlapWarning?.householdDuplicate && (
+                <div className="rounded-xl p-3 mt-2" style={{ background: 'rgba(232,168,56,0.1)', border: '1px solid rgba(232,168,56,0.25)' }}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base mt-0.5">👥</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold" style={{ color: '#E8A838' }}>Household Trip Found</p>
+                      <p className="text-xs mt-1" style={{ color: 'rgba(245,240,232,0.7)' }}>
+                        {overlapWarning.householdDuplicate.organizerName} already has a similar trip planned:
+                      </p>
+                      <p className="text-xs font-medium mt-0.5" style={{ color: 'rgba(245,240,232,0.9)' }}>
+                        {overlapWarning.householdDuplicate.title} · {new Date(overlapWarning.householdDuplicate.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(overlapWarning.householdDuplicate.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <a href={`/trips/${overlapWarning.householdDuplicate.id}`}
+                          className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition hover:brightness-110"
+                          style={{ background: '#E8A838', color: '#0F1C35' }}>
+                          Yes — join their trip
+                        </a>
+                        <button type="button" onClick={() => setOverlapWarning(prev => prev ? { ...prev, householdDuplicate: null } : null)}
+                          className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition"
+                          style={{ background: 'rgba(245,240,232,0.1)', color: 'rgba(245,240,232,0.6)' }}>
+                          No — create separate trip
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {overlapWarning?.hasConflict && !overlapWarning.householdDuplicate && (
+                <div className="rounded-xl p-3 mt-2" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base mt-0.5">⚠️</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold" style={{ color: '#ef4444' }}>Date Conflict</p>
+                      {overlapWarning.conflictingTrips.map(ct => (
+                        <div key={ct.id} className="mt-1">
+                          <p className="text-xs" style={{ color: 'rgba(245,240,232,0.7)' }}>{ct.message}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(245,240,232,0.5)' }}>
+                            {new Date(ct.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(ct.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {ct.overlapDays} day overlap
+                          </p>
+                          <a href={`/trips/${ct.id}`} className="text-[10px] font-medium hover:underline" style={{ color: '#E8A838' }}>View existing trip →</a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ━━━ SUBMIT ━━━ */}
               <div className="pt-4 sticky bottom-0" style={{ background: '#1B2B4B' }}>
                 <button
@@ -1448,7 +1546,7 @@ export default function EventsPage() {
                   className="w-full py-3 rounded-xl text-sm font-bold transition hover:brightness-110 disabled:opacity-40"
                   style={{ background: '#E8622A', color: 'white' }}
                 >
-                  Create Trip →
+                  {overlapWarning?.hasConflict ? 'Create Anyway →' : 'Create Trip →'}
                 </button>
               </div>
             </div>
