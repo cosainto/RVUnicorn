@@ -198,6 +198,11 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
           <div className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: C.muted }}>Your campground</p>
             <p className="font-bold" style={{ color: C.cream }}>{event.campground.name}</p>
+            {(event.campground.city || event.campground.state) && (
+              <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+                {[event.campground.city, event.campground.state, event.campground.zipCode].filter(Boolean).join(', ').replace(/, ([0-9])/, ' $1')}
+              </p>
+            )}
             {event.campground.phone && (
               <a href={`tel:${event.campground.phone}`} className="text-sm mt-1 block" style={{ color: C.gold }}>📞 {event.campground.phone}</a>
             )}
@@ -235,8 +240,13 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
             {/* Destination */}
             {(event.campground?.name || event.location) && (
               <p className="text-sm flex items-center gap-1.5" style={{ color: C.muted }}>
-                <MapPin className="w-3.5 h-3.5" style={{ color: C.gold }} />
-                {event.campground?.name || event.location}
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: C.gold }} />
+                <span>
+                  {event.campground?.name || event.location}
+                  {event.campground?.city && event.campground?.state && (
+                    <span style={{ color: 'rgba(148,163,184,0.6)' }}> · {event.campground.city}, {event.campground.state}</span>
+                  )}
+                </span>
               </p>
             )}
 
@@ -372,10 +382,10 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
               <p style={{ color: C.muted }}>Campground</p>
               <p className="font-medium mt-0.5" style={{ color: C.cream }}>{event.campground.name}</p>
             </div>
-            {event.campground.state && (
+            {(event.campground.city || event.campground.state) && (
               <div className="rounded-lg p-2.5" style={{ background: C.cardLight }}>
                 <p style={{ color: C.muted }}>Location</p>
-                <p className="font-medium mt-0.5" style={{ color: C.cream }}>{event.campground.city ? `${event.campground.city}, ${event.campground.state}` : event.campground.state}</p>
+                <p className="font-medium mt-0.5" style={{ color: C.cream }}>{[event.campground.city, event.campground.state, event.campground.zipCode].filter(Boolean).join(', ').replace(/, ([0-9])/, ' $1')}</p>
               </div>
             )}
             {event.campground.phone && (

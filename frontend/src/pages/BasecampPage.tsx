@@ -2701,7 +2701,7 @@ export default function BasecampPage({ user }: BasecampProps) {
                   <Link to={`/trips/${nextEvent.id}`} className="font-bold text-lg leading-tight transition hover:underline" style={{ color: '#F5F0E8' }}>
                     {nextEvent.title || nextEvent.name}
                   </Link>
-                  {nextEvent.campground && <p className="text-sm" style={{ color: '#8B9BB4' }}>at {nextEvent.campground.name}</p>}
+                  {nextEvent.campground && <p className="text-sm" style={{ color: '#8B9BB4' }}>at {nextEvent.campground.name}{nextEvent.campground.city && nextEvent.campground.state ? ` · ${nextEvent.campground.city}, ${nextEvent.campground.state}` : nextEvent.campground.state ? ` · ${nextEvent.campground.state}` : ''}</p>}
                   {nextEvent.startDate && (
                     <p className="text-xs font-semibold mt-0.5" style={{ color: '#E8A838' }}>
                       Starts {new Date(nextEvent.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}

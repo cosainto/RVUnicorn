@@ -12,6 +12,8 @@ interface Props {
   // Data from the trip
   eventTitle: string;
   campgroundName?: string;
+  campgroundCity?: string;
+  campgroundState?: string;
   attendeeCount: number;
   packTotal?: number;
   packDone?: number;
@@ -29,7 +31,7 @@ interface Props {
 export default function NowBar({
   tripState, stateLabel, stateEmoji, stateColor,
   daysUntilTrip, hoursUntilTrip, distanceMiles,
-  eventTitle, campgroundName, attendeeCount,
+  eventTitle, campgroundName, campgroundCity, campgroundState, attendeeCount,
   packTotal = 0, packDone = 0,
   nextScheduleItem, nextScheduleTime,
   photoCount = 0, mealCount = 0,
@@ -57,7 +59,7 @@ export default function NowBar({
                 <p className="text-[9px] text-white/70">days away</p>
               </div>
               <div>
-                <p className="text-sm font-semibold">{campgroundName || 'Planning phase'}</p>
+                <p className="text-sm font-semibold">{campgroundName || 'Planning phase'}{campgroundCity && campgroundState ? <span className="text-white/50 font-normal"> · {campgroundCity}, {campgroundState}</span> : campgroundState ? <span className="text-white/50 font-normal"> · {campgroundState}</span> : ''}</p>
                 <p className="text-[10px] text-white/70">{attendeeCount} camper{attendeeCount !== 1 ? 's' : ''} going</p>
               </div>
             </div>
@@ -101,7 +103,7 @@ export default function NowBar({
                 <p className="text-[9px] text-white/70">miles</p>
               </div>
               <div>
-                <p className="text-sm font-semibold">Heading to {campgroundName || 'camp'}</p>
+                <p className="text-sm font-semibold">Heading to {campgroundName || 'camp'}{campgroundState ? <span className="text-white/50 font-normal">, {campgroundState}</span> : ''}</p>
                 <p className="text-[10px] text-white/70">
                   {distanceMiles && distanceMiles < 50 ? 'Almost there!' : 'Enjoy the drive'}
                 </p>

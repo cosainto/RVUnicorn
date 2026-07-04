@@ -1133,6 +1133,8 @@ export default function EventDetailPage() {
           distanceMiles={pulse.distanceMiles}
           eventTitle={event.title}
           campgroundName={event.campground?.name}
+          campgroundCity={event.campground?.city}
+          campgroundState={event.campground?.state}
           attendeeCount={event.attendees?.length || 0}
           photoCount={tripAlbums.reduce((sum: number, a: any) => sum + (a._count?.photos || 0), 0)}
           mealCount={event._count?.meals || 0}
