@@ -289,7 +289,30 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
       };
     });
 
-    res.json({ stateCode: stateCode.toUpperCase(), visits, isOwnProfile, isFriend });
+    // Group consecutive visits at same campground to avoid duplicate cards
+    const grouped: typeof visits = [];
+    const sorted = visits.sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    for (const visit of sorted) {
+      const prev = grouped[grouped.length - 1];
+      if (prev && prev.campsite?.id && prev.campsite.id === visit.campsite?.id) {
+        const prevEnd = new Date(prev.endDate || prev.startDate);
+        const nextStart = new Date(visit.startDate);
+        const dayGap = (nextStart.getTime() - prevEnd.getTime()) / 86400000;
+        if (dayGap <= 2) {
+          // Merge: extend prev to cover this visit
+          const visitEnd = new Date(visit.endDate || visit.startDate);
+          if (visitEnd > prevEnd) prev.endDate = visit.endDate || visit.startDate;
+          if (!prev.event && visit.event) { prev.event = visit.event; }
+          if (visit.notes && visit.notes !== prev.notes) {
+            prev.notes = [prev.notes, visit.notes].filter(Boolean).join(' · ');
+          }
+          continue;
+        }
+      }
+      grouped.push(visit);
+    }
+
+    res.json({ stateCode: stateCode.toUpperCase(), visits: grouped, isOwnProfile, isFriend });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch state details' });
   }

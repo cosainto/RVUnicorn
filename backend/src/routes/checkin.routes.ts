@@ -511,20 +511,39 @@ router.get('/active', authenticateToken, async (req: any, res) => {
         campground: { select: { id: true, name: true, imageUrl: true, latitude: true, longitude: true, state: true, location: true, campgroundMapUrl: true } },
       }
     });
-    // Auto-create StateVisit if campground has a state
+    // Auto-create StateVisit if campground has a state (dedup: extend existing if same campground within 14 days)
     if (checkIn?.campground?.state) {
       const campState = checkIn.campground.state;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const fourteenDaysAgo = new Date(today.getTime() - 14 * 86400000);
+
+      // Check for existing visit at same state+campground in last 14 days
       const existing = await prisma.stateVisit.findFirst({
-        where: { userId, state: campState, startDate: { gte: today } },
+        where: {
+          userId,
+          state: campState,
+          OR: [
+            { campsiteId: checkIn.campground.id },
+            { startDate: { gte: fourteenDaysAgo } },
+          ],
+        },
+        orderBy: { startDate: 'desc' },
       }).catch(() => null);
-      if (!existing) {
+
+      if (existing) {
+        // Extend the existing visit's endDate to today
+        await prisma.stateVisit.update({
+          where: { id: existing.id },
+          data: { endDate: today },
+        }).catch(() => {});
+      } else {
         await prisma.stateVisit.create({
           data: {
             userId,
             state: campState,
             startDate: today,
+            campsiteId: checkIn.campground.id,
             notes: `Auto-created from check-in at ${checkIn.campground.name}`,
           },
         }).catch(() => {});
