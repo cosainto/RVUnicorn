@@ -279,8 +279,8 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
 // POST /api/upload/trip/:tripId/media — Upload photos and videos to a trip
 const mediaUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB for videos
-}).array('media', 60); // max 50 photos + 10 videos
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2GB — Cloudinary compresses
+}).array('media', 60);
 
 router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
   mediaUpload(req, res, (err: any) => {
@@ -293,9 +293,11 @@ router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
     const { tripId } = req.params;
     const files = req.files as Express.Multer.File[];
 
+    console.log(`[TripMedia] Received ${files?.length || 0} files from user ${userId} for trip ${tripId}`);
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
+    files.forEach((f, i) => console.log(`  [${i}] ${f.originalname} ${f.mimetype} ${(f.size / 1024 / 1024).toFixed(1)}MB`));
 
     // Verify trip and participation
     const trip = await db.event.findUnique({

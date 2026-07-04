@@ -48,25 +48,34 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
-    const newFiles: MediaFile[] = selected.map(file => ({
-      id: Math.random().toString(36).slice(2),
-      file,
-      type: file.type.startsWith('video/') ? 'video' : 'photo',
-      preview: URL.createObjectURL(file),
-      caption: '',
-      title: '',
-      videoType: 'SHORT_CLIP',
-    }));
+    console.log('[TripMedia] Files selected:', selected.length, selected.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    if (!selected.length) return;
 
-    setFiles(prev => {
-      const photoCount = prev.filter(f => f.type === 'photo').length + newFiles.filter(f => f.type === 'photo').length;
-      const videoCount = prev.filter(f => f.type === 'video').length + newFiles.filter(f => f.type === 'video').length;
-      if (photoCount > 50 || videoCount > 10) {
-        alert(`Max 50 photos and 10 videos per upload.`);
-        return prev;
-      }
-      return [...prev, ...newFiles];
+    const newFiles: MediaFile[] = selected.map(file => {
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|m4v)$/i.test(file.name);
+      const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
+
+      // HEIC files can't generate preview on many browsers — use empty string
+      let preview = '';
+      try {
+        if (!isHEIC && !isVideo) {
+          preview = URL.createObjectURL(file);
+        }
+      } catch { /* silent — preview is optional */ }
+
+      return {
+        id: Math.random().toString(36).slice(2),
+        file,
+        type: isVideo ? 'video' as const : 'photo' as const,
+        preview,
+        caption: '',
+        title: '',
+        videoType: 'SHORT_CLIP',
+      };
     });
+
+    setFiles(prev => [...prev, ...newFiles].slice(0, 60)); // hard cap at 60
+    // Reset input so same files can be selected again
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -87,30 +96,46 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     setUploading(true);
     setProgress(0);
 
+    let uploadedPhotos = 0;
+    let uploadedVideos = 0;
+    const batchSize = 3; // upload 3 at a time — prevents timeout on mobile
+
     try {
-      const formData = new FormData();
-      files.forEach((f, i) => {
-        formData.append('media', f.file);
-        formData.append(`meta_${i}`, JSON.stringify({
-          caption: f.caption,
-          title: f.title,
-          videoType: f.videoType,
-        }));
-      });
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const formData = new FormData();
+        batch.forEach((f, idx) => {
+          formData.append('media', f.file, f.file.name || `file_${i + idx}`);
+          formData.append(`meta_${idx}`, JSON.stringify({
+            caption: f.caption,
+            title: f.title,
+            videoType: f.videoType,
+          }));
+        });
 
-      const { data } = await api.post(`/upload/trip/${tripId}/media`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
-        },
-      });
+        console.log(`[TripMedia] Uploading batch ${Math.floor(i / batchSize) + 1}: ${batch.length} files`);
 
-      setResult({ photos: data.photos?.length || 0, videos: data.videos?.length || 0 });
+        const { data } = await api.post(`/upload/trip/${tripId}/media`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120000, // 2 min per batch
+        });
+
+        uploadedPhotos += data.photos?.length || 0;
+        uploadedVideos += data.videos?.length || 0;
+        setProgress(Math.round(((i + batch.length) / files.length) * 100));
+      }
+
+      setResult({ photos: uploadedPhotos, videos: uploadedVideos });
       if (rigName) setShowRigAttach(true);
-      onUploadComplete?.({ photos: data.photos?.length || 0, videos: data.videos?.length || 0 });
-    } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Upload failed. Please try again.');
+      onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
+    } catch (err: any) {
+      console.error('[TripMedia] Upload failed:', err?.message || err);
+      if (uploadedPhotos + uploadedVideos > 0) {
+        setResult({ photos: uploadedPhotos, videos: uploadedVideos });
+        onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
+      } else {
+        alert('Upload failed. Check your connection and try again.');
+      }
     } finally {
       setUploading(false);
     }
@@ -262,8 +287,13 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
               <div key={f.id} className="flex gap-3 rounded-xl p-2.5" style={{ background: C.cardLight }}>
                 {/* Thumbnail */}
                 <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 relative" style={{ background: C.bg }}>
-                  {f.type === 'photo' ? (
+                  {f.type === 'photo' && f.preview ? (
                     <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                  ) : f.type === 'photo' ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Camera className="w-5 h-5" style={{ color: C.muted }} />
+                      <span className="absolute bottom-0.5 left-0.5 text-[8px]" style={{ color: C.muted }}>HEIC</span>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Film className="w-6 h-6" style={{ color: C.muted }} />
