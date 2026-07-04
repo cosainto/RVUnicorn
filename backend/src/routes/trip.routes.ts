@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import Anthropic from '@anthropic-ai/sdk';
 import { logEventCreated, logEventJoined } from '../services/activity.service';
 import { logTripCreated } from '../services/activity.service';
 import { authenticateToken } from '../middleware/auth.middleware';
@@ -526,6 +527,56 @@ router.get('/household-unconfirmed', authenticateToken, async (req: any, res) =>
   }
 });
 
+// POST /api/trips/detect-site-location — AI-powered site detection on campsite map
+router.post('/detect-site-location', authenticateToken, async (req: any, res) => {
+  try {
+    const { tripId, siteNumber, mapUrl } = req.body;
+    if (!siteNumber || !mapUrl) return res.status(400).json({ error: 'siteNumber and mapUrl required' });
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'url', url: mapUrl } },
+          { type: 'text', text: `This is a campground/RV park map. Locate site number "${siteNumber}" on this map. Return ONLY a JSON object: { "found": boolean, "x": number (0-100, percentage from left edge), "y": number (0-100, percentage from top edge), "confidence": number (0-1), "notes": "brief description" }. If you cannot find the site, set found to false. Be precise with coordinates.` },
+        ],
+      }],
+    });
+
+    // Parse response
+    const text = (response.content[0] as any).text || '';
+    let result;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { found: false };
+    } catch { result = { found: false, notes: 'Could not parse AI response' }; }
+
+    // Save to trip if found with decent confidence
+    if (tripId && result.found && result.confidence > 0.5) {
+      await db.event.update({
+        where: { id: tripId },
+        data: { siteMapPinX: result.x, siteMapPinY: result.y, siteMapPinSetBy: 'AI' },
+      }).catch(() => {});
+    }
+
+    res.json({
+      found: result.found,
+      x: result.x,
+      y: result.y,
+      confidence: result.confidence,
+      notes: result.notes,
+      message: result.found ? `Site ${siteNumber} located!` : `Could not find Site ${siteNumber} on this map`,
+    });
+  } catch (error: any) {
+    console.error('Site detection error:', error);
+    res.status(500).json({ error: 'Site detection failed' });
+  }
+});
+
 // GET /api/trips/check-overlap — detect conflicting trips before creation
 // Must be defined BEFORE /:id to avoid being caught by the param route
 router.get('/check-overlap', authenticateToken, async (req, res) => {
@@ -1013,7 +1064,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage, campsiteMapUrl } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage, campsiteMapUrl, siteMapPinX, siteMapPinY, siteMapPinSetBy, siteMapPinConfirmed } = req.body;
 
     const event = await db.event.findUnique({
       where: { id },
@@ -1048,6 +1099,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
         isWishlist: isWishlist !== undefined ? isWishlist : undefined,
         privacy: privacy !== undefined ? privacy : undefined,
         campsiteMapUrl: campsiteMapUrl !== undefined ? campsiteMapUrl : undefined,
+        siteMapPinX: siteMapPinX !== undefined ? siteMapPinX : undefined,
+        siteMapPinY: siteMapPinY !== undefined ? siteMapPinY : undefined,
+        siteMapPinSetBy: siteMapPinSetBy !== undefined ? siteMapPinSetBy : undefined,
+        siteMapPinConfirmed: siteMapPinConfirmed !== undefined ? siteMapPinConfirmed : undefined,
       },
       include: {
         organizer: {

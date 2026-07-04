@@ -1793,6 +1793,10 @@ export default function EventDetailPage() {
                     campgroundName={event.campground.name}
                     campgroundMapUrl={(event.campground as any).campgroundMapUrl}
                     tripMapUrl={(event as any).campsiteMapUrl}
+                    siteNumber={siteForm.siteNumber || (userAttendee as any)?.siteNumber}
+                    pinX={(event as any).siteMapPinX}
+                    pinY={(event as any).siteMapPinY}
+                    pinSetBy={(event as any).siteMapPinSetBy}
                     canEdit={canEdit}
                   />
                 </div>

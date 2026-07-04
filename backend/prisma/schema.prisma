@@ -886,6 +886,10 @@ model Event {
   destinationType   String?
   bannerPosition    String?              @default("50% 50%")
   campsiteMapUrl    String?
+  siteMapPinX       Float?
+  siteMapPinY       Float?
+  siteMapPinSetBy   String?
+  siteMapPinConfirmed Boolean @default(false)
   roadTripId        String?
   stopNumber        Int?
   eventType         String?              @default("OTHER")
