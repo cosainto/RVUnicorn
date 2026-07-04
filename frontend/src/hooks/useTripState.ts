@@ -39,7 +39,7 @@ const STATE_META: Record<TripState, { label: string; emoji: string; color: strin
   'load-out': { label: 'Prep Mode', emoji: '🎒', color: 'from-amber-500 to-orange-600' },
   'in-motion': { label: 'On the Road', emoji: '🚐', color: 'from-blue-600 to-indigo-700' },
   'on-site': { label: 'At Camp', emoji: '🔥', color: 'from-emerald-600 to-green-700' },
-  'echo': { label: 'Trip Memory', emoji: '📸', color: 'from-purple-600 to-pink-700' },
+  'echo': { label: 'Trip Memory', emoji: '📸', color: 'from-orange-700 to-amber-700' },
 };
 
 export function computeTripState(

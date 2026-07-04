@@ -169,7 +169,8 @@ export default function NowBar({
                 <button
                   type="button"
                   onClick={onOpenSurvey}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white text-purple-700 hover:bg-white/90 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                  style={{ background: 'rgba(15,28,53,0.6)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}
                 >
                   <Star className="w-3.5 h-3.5" />
                   <span>How was it?</span>

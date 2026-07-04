@@ -273,19 +273,21 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
           )}
         </div>
 
-        {/* Stats row */}
+        {/* Stats row — clickable */}
         <div className="grid grid-cols-4 gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
           {[
-            { icon: <Calendar className="w-3.5 h-3.5" />, value: daysUntil >= 0 ? daysUntil : '—', label: mode === 'COMPLETED' ? 'Ago' : 'Days Away' },
-            { icon: <Users className="w-3.5 h-3.5" />, value: confirmedCount, label: 'Going' },
-            { icon: <Package className="w-3.5 h-3.5" />, value: event._count?.meals || 0, label: 'Meals' },
-            { icon: <MapPin className="w-3.5 h-3.5" />, value: tripPlan?.pitStops?.length || 0, label: 'Stops' },
+            { icon: <Calendar className="w-3.5 h-3.5" />, value: mode === 'COMPLETED' ? (daysUntil < 0 ? Math.abs(daysUntil) : 0) : daysUntil, label: mode === 'COMPLETED' ? 'Days Ago' : 'Days Away', href: `/trips/${event.id}`, hint: mode === 'COMPLETED' ? `Trip ended ${event.endDate ? new Date(event.endDate).toLocaleDateString() : ''}` : 'View trip' },
+            { icon: <Users className="w-3.5 h-3.5" />, value: confirmedCount, label: 'Going', href: `/trips/${event.id}?openPhase=plan`, hint: 'View attendees' },
+            { icon: <Package className="w-3.5 h-3.5" />, value: event._count?.meals || 0, label: 'Meals', href: `/trips/${event.id}?openPhase=prepare`, hint: 'View or add meals' },
+            { icon: <MapPin className="w-3.5 h-3.5" />, value: tripPlan?.pitStops?.length || 0, label: 'Stops', href: `/trips/${event.id}?openPhase=travel`, hint: 'View itinerary' },
           ].map(s => (
-            <div key={s.label} className="text-center rounded-lg py-2" style={{ background: C.cardLight }}>
+            <a key={s.label} href={s.href} title={s.hint}
+              className="text-center rounded-lg py-2 transition hover:brightness-125 cursor-pointer block"
+              style={{ background: C.cardLight }}>
               <div className="flex justify-center mb-1" style={{ color: C.muted }}>{s.icon}</div>
               <p className="text-lg font-bold" style={{ color: C.gold }}>{s.value}</p>
               <p className="text-[9px] font-medium uppercase tracking-wider" style={{ color: C.muted }}>{s.label}</p>
-            </div>
+            </a>
           ))}
         </div>
       </div>
