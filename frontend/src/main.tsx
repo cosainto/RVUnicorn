@@ -16,6 +16,20 @@ window.addEventListener('error', (e) => {
 // Clear reload flag on successful page load
 sessionStorage.removeItem('chunk_reload');
 
+// Global patch: ensure ALL file inputs support multi-select (iOS fix)
+const patchFileInputs = () => {
+  document.querySelectorAll('input[type="file"]').forEach((input: any) => {
+    if (!input.hasAttribute('multiple')) {
+      input.setAttribute('multiple', '');
+    }
+    if (input.accept && !input.accept.includes('heic')) {
+      input.accept = input.accept + ',image/heic,image/heif';
+    }
+  });
+};
+const mo = new MutationObserver(() => patchFileInputs());
+mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <App />
 );
