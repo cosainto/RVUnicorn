@@ -215,7 +215,93 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
     );
   }
 
-  // ── ALL OTHER MODES ──
+  // ── COMPLETED MODE — Memory-focused banner ──
+  if (mode === 'COMPLETED') {
+    const daysAgo = daysUntil < 0 ? Math.abs(daysUntil) : 0;
+    const dateRange = event.startDate
+      ? `${new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${event.endDate && event.endDate !== event.startDate ? `–${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : `, ${new Date(event.startDate).getFullYear()}`}`
+      : '';
+
+    return (
+      <div className="space-y-4">
+        {/* Top banner — action focused */}
+        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #E8622A, #C9A84C)', border: 'none' }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/70 mb-1">📸 Trip complete — add your memories</p>
+              <p className="font-semibold text-white text-sm">
+                {event.campground?.name || event.title} · {dateRange}
+              </p>
+              {/* Attendee avatars */}
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex -space-x-1.5">
+                  {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).slice(0, 4).map((a: any) => (
+                    <div key={a.userId || a.id} className="w-6 h-6 rounded-full border-2 border-white/30 overflow-hidden flex-shrink-0" style={{ background: C.cardLight }}>
+                      {a.user?.profilePicture ? <img src={a.user.profilePicture} className="w-full h-full object-cover" alt="" /> : <span className="w-full h-full flex items-center justify-center text-[9px] font-bold text-white">{a.user?.firstName?.[0]}</span>}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-xs text-white/70">{confirmedCount} camper{confirmedCount !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-white/60 flex-shrink-0">{daysAgo}d ago</span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <a href={`/trips/${event.id}?tab=photos`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition hover:brightness-110" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
+              📸 Add Photos & Videos
+            </a>
+            {event.campground?.id && (
+              <a href={`/campgrounds/${event.campground.id}#reviews`} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition hover:brightness-110" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                ⭐ Rate Trip
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Event card — single source of truth */}
+        <div className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: C.green }}>
+            ✅ Completed {daysAgo} days ago
+          </p>
+
+          {/* Campground name as link */}
+          {event.campground?.id ? (
+            <a href={`/campgrounds/${event.campground.id}`} className="text-lg font-bold hover:underline block" style={{ color: C.gold, fontFamily: "'Playfair Display', serif" }}>
+              {event.campground.name}
+            </a>
+          ) : (
+            <p className="text-lg font-bold" style={{ color: C.cream, fontFamily: "'Playfair Display', serif" }}>{event.title}</p>
+          )}
+
+          {/* Address */}
+          {(event.campground?.city || event.campground?.state || event.location) && (
+            <p className="text-xs mt-1" style={{ color: C.muted }}>
+              {event.campground?.location || [event.campground?.city, event.campground?.state, event.campground?.zipCode].filter(Boolean).join(', ').replace(/, ([0-9])/, ' $1') || event.location}
+            </p>
+          )}
+
+          {/* Date + attendees */}
+          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs" style={{ color: C.muted }}>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" style={{ color: C.gold }} />
+              {dateRange}{duration ? ` · ${duration} night${duration !== 1 ? 's' : ''}` : ''}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="w-3.5 h-3.5" style={{ color: C.gold }} />
+              {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).map((a: any) => a.user?.firstName).filter(Boolean).join(', ') || `${confirmedCount} going`}
+            </span>
+          </div>
+        </div>
+
+        {/* Hitch tip */}
+        {hitchTip && <HitchTipCard tip={hitchTip} />}
+      </div>
+    );
+  }
+
+  // ── ALL OTHER MODES (PLANNING, COUNTDOWN, TOMORROW, IN_PROGRESS) ──
   return (
     <div className="space-y-4">
       {/* ═══ HEADER — Countdown + Title ═══ */}
@@ -225,10 +311,10 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
             {/* Mode badge */}
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
-                background: mode === 'COMPLETED' ? 'rgba(139,92,246,0.15)' : mode === 'IN_PROGRESS' ? 'rgba(29,158,117,0.15)' : 'rgba(232,168,56,0.15)',
-                color: mode === 'COMPLETED' ? '#A78BFA' : mode === 'IN_PROGRESS' ? C.green : C.gold,
+                background: mode === 'IN_PROGRESS' ? 'rgba(29,158,117,0.15)' : 'rgba(232,168,56,0.15)',
+                color: mode === 'IN_PROGRESS' ? C.green : C.gold,
               }}>
-                {mode === 'PLANNING' ? '🗺️ Planning' : mode === 'COUNTDOWN' ? '🎒 Countdown' : mode === 'TOMORROW' ? '⚡ Tomorrow' : mode === 'IN_PROGRESS' ? '🚐 In Progress' : '📸 Complete'}
+                {mode === 'PLANNING' ? '🗺️ Planning' : mode === 'COUNTDOWN' ? '🎒 Countdown' : mode === 'TOMORROW' ? '⚡ Tomorrow' : '🚐 In Progress'}
               </span>
             </div>
 
@@ -254,14 +340,14 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
             {event.startDate && (
               <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: C.muted }}>
                 <Calendar className="w-3.5 h-3.5" />
-                {mode === 'COMPLETED' ? 'Was' : 'Departing'} {departureStr}
+                Departing {departureStr}
                 {duration && <span style={{ color: 'rgba(245,240,232,0.3)' }}>· {duration} night{duration !== 1 ? 's' : ''}</span>}
               </p>
             )}
           </div>
 
           {/* Countdown number */}
-          {mode !== 'COMPLETED' && mode !== 'IN_PROGRESS' && daysUntil >= 0 && (
+          {daysUntil >= 0 && mode !== 'IN_PROGRESS' && (
             <div className="text-center flex-shrink-0 rounded-xl px-4 py-3" style={{ background: C.cardLight }}>
               <p className="text-3xl font-bold" style={{ color: C.gold, fontFamily: "'Playfair Display', serif" }}>
                 {daysUntil}
@@ -276,7 +362,7 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
         {/* Stats row — clickable */}
         <div className="grid grid-cols-4 gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
           {[
-            { icon: <Calendar className="w-3.5 h-3.5" />, value: mode === 'COMPLETED' ? (daysUntil < 0 ? Math.abs(daysUntil) : 0) : daysUntil, label: mode === 'COMPLETED' ? 'Days Ago' : 'Days Away', href: `/trips/${event.id}`, hint: mode === 'COMPLETED' ? `Trip ended ${event.endDate ? new Date(event.endDate).toLocaleDateString() : ''}` : 'View trip' },
+            { icon: <Calendar className="w-3.5 h-3.5" />, value: daysUntil, label: 'Days Away', href: `/trips/${event.id}`, hint: 'View trip' },
             { icon: <Users className="w-3.5 h-3.5" />, value: confirmedCount, label: 'Going', href: `/trips/${event.id}?openPhase=plan`, hint: 'View attendees' },
             { icon: <Package className="w-3.5 h-3.5" />, value: event._count?.meals || 0, label: 'Meals', href: `/trips/${event.id}?openPhase=prepare`, hint: 'View or add meals' },
             { icon: <MapPin className="w-3.5 h-3.5" />, value: tripPlan?.pitStops?.length || 0, label: 'Stops', href: `/trips/${event.id}?openPhase=travel`, hint: 'View itinerary' },
