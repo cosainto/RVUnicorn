@@ -57,11 +57,11 @@ const DEP_TIMES = [
   '6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM',
 ];
 
-export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation, rvMpg, rvFuelGal, rvLength, rvType: userRvType }: {
+export default function TripPlannerTab({ eventId, eventTitle, homeLocation, campground, arrivalDate, eventStartDate, eventEndDate, tripPlan, tripLoading, onEditTrip, onReload, onAddStop, rvFuelType, tripEventId, plannerFrom, plannerTo, eventLocation, rvMpg, rvFuelGal, rvLength, rvType: userRvType }: {
   eventId: string; eventTitle?: string; homeLocation?: string; arrivalDate?: string;
   eventStartDate?: string; eventEndDate?: string;
   campground?: { id: string; name: string; location?: string; state?: string; latitude?: number; longitude?: number } | null;
-  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string; rvMpg?: number; rvFuelGal?: number; rvLength?: number; rvType?: string;
+  tripPlan?: TripPlan | null; tripLoading?: boolean; onEditTrip: () => void; onReload: () => void; onAddStop?: () => void; rvFuelType?: string; tripEventId?: string; plannerFrom?: string; plannerTo?: string; eventLocation?: string; rvMpg?: number; rvFuelGal?: number; rvLength?: number; rvType?: string;
 }) {
   const { addLocalToast } = useToast();
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -791,10 +791,18 @@ export default function TripPlannerTab({ eventId, eventTitle, homeLocation, camp
       ) : (
         /* No trip yet — lightweight empty state */
         <div className="flex flex-col items-center justify-center py-8 px-6 text-center">
-          <p className="text-gray-500 text-sm mb-4">No route planned yet. Add stops manually or let Hitch plan it.</p>
-          <button onClick={() => { setShowHitch(true); onEditTrip(); }} className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition text-sm flex items-center gap-2 mb-4">
-            🤠 Plan with Hitch
-          </button>
+          <p className="font-semibold text-sm mb-1" style={{ color: '#F5F0E8' }}>Where are you stopping along the way?</p>
+          <p className="text-xs mb-5" style={{ color: '#8B9BB4' }}>Add stops manually or let Hitch plan your route</p>
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            {onAddStop && (
+              <button onClick={onAddStop} className="px-4 py-2 font-semibold rounded-xl transition text-sm flex items-center gap-2" style={{ background: 'transparent', color: '#C9A84C', border: '1px solid #C9A84C' }}>
+                + Add Stop
+              </button>
+            )}
+            <button onClick={() => { setShowHitch(true); onEditTrip(); }} className="px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition text-sm flex items-center gap-2">
+              🤠 Plan with Hitch
+            </button>
+          </div>
 
           {/* Hitch AI form inline when no tripPlan */}
           {showHitch && (

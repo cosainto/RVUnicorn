@@ -1828,6 +1828,7 @@ export default function EventDetailPage() {
                 rvFuelGal={(user as any)?.rvFuelGal}
                 rvLength={(user as any)?.rvLength}
                 rvType={(user as any)?.rvType}
+                onAddStop={() => setShowPitStopModal(true)}
               />
               {/* ═══ TRIP SUMMARY CARD ═══ */}
               {tripPlan && (
