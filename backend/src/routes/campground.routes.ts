@@ -1110,6 +1110,34 @@ router.post('/suggest', authenticateToken, async (req: any, res: Response) => {
   }
 });
 
+// POST /api/campgrounds/:id/campsite-map — share a user-uploaded map with the campground
+router.post('/:id/campsite-map', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.userId;
+    const { mapUrl } = req.body;
+    if (!mapUrl) return res.status(400).json({ error: 'mapUrl required' });
+
+    const campground = await prisma.campground.findUnique({ where: { id }, select: { campgroundMapUrl: true } });
+    if (!campground) return res.status(404).json({ error: 'Campground not found' });
+
+    // Only set if campground has no map yet
+    if (!campground.campgroundMapUrl) {
+      await prisma.campground.update({
+        where: { id },
+        data: { campgroundMapUrl: mapUrl },
+      });
+      res.json({ success: true, appliedToCampground: true });
+    } else {
+      // Campground already has a map — don't overwrite
+      res.json({ success: true, appliedToCampground: false, message: 'Campground already has a map' });
+    }
+  } catch (error: any) {
+    console.error('Campsite map upload error:', error);
+    res.status(500).json({ error: 'Failed to save map' });
+  }
+});
+
 export default router;
 
 

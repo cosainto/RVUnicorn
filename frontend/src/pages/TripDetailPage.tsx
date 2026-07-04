@@ -48,6 +48,7 @@ import TripStaySurveyModal from '../components/TripStaySurveyModal';
 import CampBoard from '../components/CampBoard';
 import { useTripState } from '../hooks/useTripState';
 import TripMissionControl from '../components/TripMissionControl';
+import CampsiteMapSection from '../components/CampsiteMapSection';
 
 interface Event {
   id: string;
@@ -1774,6 +1775,20 @@ export default function EventDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* Campsite Map Section */}
+              {event.campground && (
+                <div className="mb-4">
+                  <CampsiteMapSection
+                    tripId={event.id}
+                    campgroundId={event.campground.id}
+                    campgroundName={event.campground.name}
+                    campgroundMapUrl={(event.campground as any).campgroundMapUrl}
+                    tripMapUrl={(event as any).campsiteMapUrl}
+                    canEdit={canEdit}
+                  />
+                </div>
+              )}
 
               {event.attendees && user && (
                 <EventCommentWall

@@ -658,6 +658,7 @@ router.get('/:id', async (req, res) => {
             hasElectricHookup: true,
             hasFullHookups: true,
             hasWaterHookup: true,
+            campgroundMapUrl: true,
           },
         },
         attendees: {
@@ -1012,7 +1013,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage } = req.body;
+    const { title, description, startDate, endDate, location, campgroundId, notifyAttendees, isWishlist, privacy, bannerImage, campsiteMapUrl } = req.body;
 
     const event = await db.event.findUnique({
       where: { id },
@@ -1046,6 +1047,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         campgroundId: campgroundId !== undefined ? campgroundId : undefined,
         isWishlist: isWishlist !== undefined ? isWishlist : undefined,
         privacy: privacy !== undefined ? privacy : undefined,
+        campsiteMapUrl: campsiteMapUrl !== undefined ? campsiteMapUrl : undefined,
       },
       include: {
         organizer: {

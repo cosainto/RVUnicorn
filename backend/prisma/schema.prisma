@@ -885,6 +885,7 @@ model Event {
   overnightSpotId   String?
   destinationType   String?
   bannerPosition    String?              @default("50% 50%")
+  campsiteMapUrl    String?
   roadTripId        String?
   stopNumber        Int?
   eventType         String?              @default("OTHER")
