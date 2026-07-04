@@ -167,11 +167,12 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
             >
               <ImageIcon size={48} className="mx-auto text-gray-400 mb-3" />
               <p className="text-gray-600 font-medium">Click to select a photo</p>
-              <p className="text-sm text-gray-400 mt-1">JPG, PNG, GIF up to 10MB</p>
+              <p className="text-sm text-gray-400 mt-1">Any format · Any size · Auto-optimized</p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,image/heic,image/heif,video/*"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
               />

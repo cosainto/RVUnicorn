@@ -18,64 +18,74 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   eventId,
   onUploadComplete,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState<'PUBLIC' | 'FRIENDS' | 'PRIVATE'>('PUBLIC');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        console.error('Please select an image file');
-        return;
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        console.error('Image must be less than 10MB');
-        return;
-      }
-      setSelectedFile(file);
-      setPreview(URL.createObjectURL(file));
-    }
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    console.log('[PhotoUpload] Selected:', files.length, 'files');
+
+    setSelectedFiles(files);
+    // Generate previews (skip HEIC which can't preview)
+    const newPreviews = files.map(f => {
+      const isHEIC = /\.(heic|heif)$/i.test(f.name) || f.type === 'image/heic';
+      if (isHEIC || f.type.startsWith('video/')) return '';
+      try { return URL.createObjectURL(f); } catch { return ''; }
+    });
+    setPreviews(newPreviews);
+    // Reset input for re-selection
+    if (e.target) e.target.value = '';
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      console.error('Please select an image');
-      return;
-    }
-
+    if (!selectedFiles.length) return;
     setUploading(true);
+    setUploadProgress(0);
+
+    let uploaded = 0;
     try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      formData.append('caption', caption);
-      formData.append('visibility', visibility);
-      if (albumId) formData.append('albumId', albumId);
-      if (eventId) formData.append('eventId', eventId);
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const formData = new FormData();
+        formData.append('image', file, file.name || 'photo.jpg');
+        formData.append('caption', i === 0 ? caption : '');
+        formData.append('visibility', visibility);
+        if (albumId) formData.append('albumId', albumId);
+        if (eventId) formData.append('eventId', eventId);
 
-      const response = await api.post('/photos', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      console.log('Photo uploaded successfully!');
-      onUploadComplete?.(response.data);
+        const response = await api.post('/photos', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        uploaded++;
+        setUploadProgress(Math.round((uploaded / selectedFiles.length) * 100));
+        if (i === selectedFiles.length - 1) onUploadComplete?.(response.data);
+      }
+      console.log(`[PhotoUpload] ${uploaded} photos uploaded`);
       handleClose();
     } catch (error: any) {
       console.error('Upload error:', error);
-      console.error(error.response?.data?.error || 'Failed to upload photo');
+      if (uploaded > 0) {
+        onUploadComplete?.({ uploaded });
+        handleClose();
+      }
     } finally {
       setUploading(false);
     }
   };
 
   const handleClose = () => {
-    setSelectedFile(null);
-    setPreview(null);
+    previews.forEach(p => { if (p) URL.revokeObjectURL(p); });
+    setSelectedFiles([]);
+    setPreviews([]);
     setCaption('');
     setVisibility('PUBLIC');
+    setUploadProgress(0);
     onClose();
   };
 
@@ -101,42 +111,41 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           <div
             onClick={() => fileInputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
-              preview
+              selectedFiles.length > 0
                 ? 'border-amber-300 bg-amber-50'
                 : 'border-gray-300 hover:border-amber-400 bg-gray-50'
             }`}
           >
-            {preview ? (
-              <div className="relative aspect-video">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-full h-full object-contain rounded-lg"
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedFile(null);
-                    setPreview(null);
-                  }}
-                  className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            {selectedFiles.length > 0 ? (
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-900">{selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected</p>
+                  <button onClick={(e) => { e.stopPropagation(); setSelectedFiles([]); setPreviews([]); }} className="text-xs text-red-500 hover:text-red-700">Clear</button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {previews.slice(0, 8).map((p, i) => (
+                    <div key={i} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                      {p ? <img src={p} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">{selectedFiles[i]?.name?.split('.').pop()?.toUpperCase() || '📷'}</div>}
+                    </div>
+                  ))}
+                  {selectedFiles.length > 8 && <div className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center text-xs text-gray-500">+{selectedFiles.length - 8}</div>}
+                </div>
+                {uploading && <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} /></div>}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="p-3 bg-amber-100 rounded-full mb-3">
                   <Image className="w-8 h-8 text-amber-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-700">Click to upload a photo</p>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+                <p className="text-sm font-medium text-gray-700">Tap to select photos & videos</p>
+                <p className="text-xs text-gray-500 mt-1">Any format · Any size · Auto-optimized</p>
               </div>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,image/heic,image/heif,video/*"
+              multiple
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -170,7 +179,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           </button>
           <button
             onClick={handleUpload}
-            disabled={!selectedFile || uploading}
+            disabled={!selectedFiles.length || uploading}
             className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {uploading ? (
