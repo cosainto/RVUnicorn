@@ -62,7 +62,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     }
 
     // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 100 * 1024 * 1024) {
       setError('Image must be less than 10MB');
       return;
     }

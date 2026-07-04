@@ -6,10 +6,10 @@ import { prisma } from '../lib/prisma';
 
 const router = Router();
 const db = prisma as any;
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB — Cloudinary handles compression
   },
 });
 
@@ -20,13 +20,16 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Helper to upload to Cloudinary
+// Helper to upload to Cloudinary with automatic compression/resize
 const uploadToCloudinary = (buffer: Buffer, folder: string = 'rvunicorn'): Promise<any> => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { 
+      {
         folder,
         resource_type: 'image',
+        transformation: [
+          { width: 2048, height: 2048, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+        ],
       },
       (error, result) => {
         if (error) reject(error);
@@ -324,10 +327,11 @@ router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
       } catch {}
 
       if (isImage) {
-        // Upload photo to Cloudinary
+        // Upload photo to Cloudinary with auto-compression
         const result = await new Promise<any>((resolve, reject) => {
           cloudinary.uploader.upload_stream(
-            { folder: `rvunicorn/trip-photos/${tripId}`, resource_type: 'image' },
+            { folder: `rvunicorn/trip-photos/${tripId}`, resource_type: 'image',
+              transformation: [{ width: 2048, height: 2048, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }] },
             (error, result) => error ? reject(error) : resolve(result)
           ).end(file.buffer);
         });

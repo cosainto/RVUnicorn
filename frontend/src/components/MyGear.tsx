@@ -218,7 +218,7 @@ export default function MyGear() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { alert('Image must be smaller than 10MB'); return; }
+      if (file.size > 100 * 1024 * 1024) { alert('Image must be smaller than 10MB'); return; }
       setSelectedImage(file);
       setImagePreview(URL.createObjectURL(file));
     }

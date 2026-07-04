@@ -247,7 +247,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
             {tab === 'photos' ? 'Drop photos or tap to select' : 'Drop videos or tap to select'}
           </p>
           <p className="text-xs mt-1" style={{ color: C.muted }}>
-            {tab === 'photos' ? 'JPG, PNG, HEIC · Max 20MB each' : 'MP4, MOV · Max 500MB each'}
+            {tab === 'photos' ? 'Any format · Any size · Auto-optimized' : 'MP4, MOV · Max 500MB each'}
           </p>
           <input ref={fileInputRef} type="file" multiple
             accept={tab === 'photos' ? 'image/*' : 'video/*'}

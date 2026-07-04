@@ -305,7 +305,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       return;
     }
     
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 100 * 1024 * 1024) {
       alert("Image must be less than 10MB");
       return;
     }
