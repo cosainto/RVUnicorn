@@ -347,10 +347,16 @@ router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
         photos.push({ id: photo.id, url: result.secure_url, type: 'photo' });
 
       } else if (isVideo) {
-        // Upload video to Cloudinary
+        // Upload video to Cloudinary with auto-compression
         const result = await new Promise<any>((resolve, reject) => {
           cloudinary.uploader.upload_stream(
-            { folder: `rvunicorn/trip-videos/${tripId}`, resource_type: 'video' },
+            {
+              folder: `rvunicorn/trip-videos/${tripId}`,
+              resource_type: 'video',
+              transformation: [
+                { quality: 'auto:good', width: 1920, height: 1080, crop: 'limit', video_codec: 'h264', audio_codec: 'aac' }
+              ],
+            },
             (error, result) => error ? reject(error) : resolve(result)
           ).end(file.buffer);
         });

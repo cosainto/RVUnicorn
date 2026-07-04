@@ -252,7 +252,7 @@ export default function QuickCaptureModal({ isOpen, onClose, onUploadComplete }:
       return;
     }
 
-    const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSize = isVideo ? 2000 * 1024 * 1024 : 100 * 1024 * 1024; // 2GB video, 100MB photo — Cloudinary compresses
     if (file.size > maxSize) {
       setError(`File must be less than ${isVideo ? '50MB' : '10MB'}`);
       return;

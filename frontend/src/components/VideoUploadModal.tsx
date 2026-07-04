@@ -36,7 +36,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         console.error('Please select a video file');
         return;
       }
-      if (file.size > 100 * 1024 * 1024) {
+      if (file.size > 2000 * 1024 * 1024) {
         console.error('Video must be less than 100MB');
         return;
       }

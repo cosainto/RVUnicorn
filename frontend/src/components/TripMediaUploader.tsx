@@ -244,13 +244,14 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
           style={{ background: C.cardLight, border: `2px dashed ${C.border}` }}>
           <Upload className="w-6 h-6 mx-auto mb-2" style={{ color: C.gold }} />
           <p className="text-sm font-medium" style={{ color: C.cream }}>
-            {tab === 'photos' ? 'Drop photos or tap to select' : 'Drop videos or tap to select'}
+            {tab === 'photos' ? 'Drop photos & videos or tap to select' : 'Drop videos or tap to select'}
           </p>
           <p className="text-xs mt-1" style={{ color: C.muted }}>
-            {tab === 'photos' ? 'Any format · Any size · Auto-optimized' : 'MP4, MOV · Max 500MB each'}
+            {tab === 'photos' ? 'Any format · Any size · Auto-optimized' : 'MP4, MOV, AVI · Any size · Auto-compressed'}
           </p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(148,163,184,0.4)' }}>iPhone, Android, drone footage — all welcome</p>
           <input ref={fileInputRef} type="file" multiple
-            accept={tab === 'photos' ? 'image/*' : 'video/*'}
+            accept={tab === 'photos' ? 'image/*,.heic,.heif,video/*,.mp4,.mov' : 'video/*,.mp4,.mov,.avi,.mkv'}
             onChange={handleFileSelect} className="hidden" />
         </label>
 
