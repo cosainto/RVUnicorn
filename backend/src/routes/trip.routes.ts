@@ -440,6 +440,53 @@ router.get('/discover', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/trips/admin/create-wi-trip — one-time: create Jellystone WI retrospective trip
+router.post('/admin/create-wi-trip', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    if (userId !== 'cmlpeyk82005s3qause3sws7y' && userId !== 'cmm9kukta0006i88masvtz2tp') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const deannaId = 'cmm9kukta0006i88masvtz2tp';
+    const willId = 'cmlpeyk82005s3qause3sws7y';
+
+    // Check if already created
+    const existing = await db.event.findFirst({
+      where: { organizerId: deannaId, campgroundId: 'cmlp0wjpr0c5tnalscyuh7agw', startDate: new Date('2025-04-15') },
+    });
+    if (existing) return res.json({ message: 'Already exists', tripId: existing.id });
+
+    const trip = await db.event.create({
+      data: {
+        organizerId: deannaId,
+        title: 'Seasonal Stay at Jellystone Caledonia',
+        description: 'Seasonal spot - great location, tons of fun!',
+        startDate: new Date('2025-04-15'),
+        endDate: new Date('2025-10-10'),
+        location: 'Caledonia, WI',
+        campgroundId: 'cmlp0wjpr0c5tnalscyuh7agw',
+        privacy: 'PUBLIC',
+        isWishlist: false,
+        destinationType: 'CAMPGROUND',
+      },
+    });
+
+    await db.eventAttendee.create({ data: { eventId: trip.id, userId: deannaId, status: 'ATTENDING' } }).catch(() => {});
+    await db.eventAttendee.create({ data: { eventId: trip.id, userId: willId, status: 'ATTENDING' } }).catch(() => {});
+
+    // Link state visit
+    await db.stateVisit.updateMany({
+      where: { id: 'cmm9lieq7001gi88mts73abrs' },
+      data: { eventId: trip.id },
+    });
+
+    res.json({ created: true, tripId: trip.id });
+  } catch (error: any) {
+    console.error('Create WI trip error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/trips/household-unconfirmed — trips from partner user hasn't confirmed
 router.get('/household-unconfirmed', authenticateToken, async (req: any, res) => {
   try {
