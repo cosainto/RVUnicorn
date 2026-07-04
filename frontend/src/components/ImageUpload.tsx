@@ -30,67 +30,56 @@ export default function ImageUpload({
   const [urlInput, setUrlInput] = useState('');
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    // Reset input so same files can be re-selected
+    if (e.target) e.target.value = '';
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
-      return;
+    console.log('[ImageUpload] Selected:', files.length, 'files');
+
+    // Upload all files sequentially
+    setUploading(true);
+    let lastUrl = '';
+
+    for (const file of files) {
+      // Skip non-image/video (allow HEIC which may report as '')
+      const isValid = file.type.startsWith('image/') || file.type.startsWith('video/') ||
+        /\.(heic|heif|jpg|jpeg|png|gif|webp|mp4|mov)$/i.test(file.name);
+      if (!isValid) continue;
+
+      // Show preview for first file only
+      if (!lastUrl) {
+        try {
+          const isHEIC = /\.(heic|heif)$/i.test(file.name) || file.type === 'image/heic';
+          if (!isHEIC && file.type.startsWith('image/')) {
+            setPreview(URL.createObjectURL(file));
+          }
+        } catch {}
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file, file.name || 'photo.jpg');
+        if (eventId) formData.append('eventId', eventId);
+        if (albumId) formData.append('albumId', albumId);
+        if (caption && !lastUrl) formData.append('caption', caption); // caption on first only
+
+        const { data } = await api.post('/upload/image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const imageUrl = data.url || data.imageUrl;
+        lastUrl = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`;
+        onImageUploaded(lastUrl);
+      } catch (error) {
+        console.error('[ImageUpload] Failed:', file.name, error);
+      }
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Image must be less than 10MB');
-      return;
-    }
-
-    // Show preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // Upload to server
-    try {
-      setUploading(true);
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      // Add eventId/albumId/caption if provided - this links the photo!
-      if (eventId) {
-        formData.append('eventId', eventId);
-      }
-      if (albumId) {
-        formData.append('albumId', albumId);
-      }
-      if (caption) {
-        formData.append('caption', caption);
-      }
-
-      const { data } = await api.post('/upload/image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // Cloudinary returns full URL in data.url, local uploads use data.imageUrl
-      const imageUrl = data.url || data.imageUrl;
-      
-      // If it's a local path (starts with /), prepend the server URL
-      const fullImageUrl = imageUrl.startsWith('http') 
-        ? imageUrl 
-        : `http://localhost:3001${imageUrl}`;
-      
-      onImageUploaded(fullImageUrl);
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload image');
+    if (!lastUrl) {
+      alert('Failed to upload. Please try again.');
       setPreview(currentImage || '');
-    } finally {
-      setUploading(false);
     }
+    setUploading(false);
   };
 
   const handleUrlSubmit = () => {
@@ -190,7 +179,8 @@ export default function ImageUpload({
               <input
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept="image/*,image/heic,image/heif,video/*"
+                multiple
                 onChange={handleFileSelect}
                 disabled={uploading}
               />
