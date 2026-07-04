@@ -1578,17 +1578,25 @@ export default function EventDetailPage() {
 
               {/* My Campsite Details */}
               {(userAttendee || isOrganizer) && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
+                  {/* Stars atmosphere */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {[{t:8,l:15,d:0},{t:12,l:72,d:1.2},{t:6,l:88,d:2.5},{t:18,l:42,d:0.8},{t:4,l:55,d:3.1},{t:14,l:28,d:1.7}].map((s,i) => (
+                      <span key={i} className="absolute w-[2px] h-[2px] rounded-full bg-white" style={{ top:`${s.t}px`, left:`${s.l}%`, animation: `twinkle ${3+i*0.4}s ease-in-out ${s.d}s infinite` }} />
+                    ))}
+                  </div>
+                  <style>{`@keyframes twinkle { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }`}</style>
+
+                  <div className="flex items-center justify-between mb-3 relative">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">⛺</span>
-                      <h3 className="text-base font-bold text-gray-900">My Campsite Details</h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      <span className="text-lg relative">🏕️<span className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, rgba(232,98,42,0.2) 0%, transparent 70%)', transform: 'scale(2.5)' }} /></span>
+                      <h3 className="text-base font-bold" style={{ color: '#F5F0E8' }}>My Campsite Details ✦</h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: '#243352', color: '#8B9BB4' }}>
                         {siteForm.siteVisibility === 'PRIVATE' ? '🔒 Only me' : siteForm.siteVisibility === 'EVENT' ? '👥 Event members' : '👫 Friends'}
                       </span>
                     </div>
                     <button onClick={() => setShowSiteForm(!showSiteForm)}
-                      className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                      className="text-sm font-medium transition hover:brightness-125" style={{ color: '#C9A84C' }}>
                       {showSiteForm ? 'Cancel' : (siteForm.siteNumber || siteForm.confirmationNumber) ? 'Edit' : '+ Add Details'}
                     </button>
                   </div>
@@ -1722,25 +1730,25 @@ export default function EventDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5 text-blue-600" /><h4 className="font-semibold text-gray-900">Event Dates</h4></div>
+                  <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
                   {event.isWishlist ? (
-                    <div className="text-center py-4"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p className="text-gray-600">Dates not set yet</p></div>
+                    <div className="text-center py-4"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p style={{ color: '#8B9BB4' }}>Dates not set yet</p></div>
                   ) : (
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-gray-600">Start:</span><span className="font-medium">{new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-600">End:</span><span className="font-medium">{new Date(event.endDate || event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
-                      <div className="flex justify-between pt-2 border-t border-blue-200"><span className="text-gray-600">Duration:</span><span className="font-semibold text-blue-700">{calculateDuration()}</span></div>
+                      <div className="flex justify-between"><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>Start</span><span className="font-medium" style={{ color: '#F5F0E8' }}>{new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+                      <div className="flex justify-between"><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>End</span><span className="font-medium" style={{ color: '#F5F0E8' }}>{new Date(event.endDate || event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
+                      <div className="flex justify-between pt-2" style={{ borderTop: '1px solid #2A3F5F' }}><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>Duration</span><span className="font-bold text-lg" style={{ color: '#C9A84C' }}>{calculateDuration()}</span></div>
                     </div>
                   )}
                 </div>
 
-                <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3"><MapPin className="w-5 h-5 text-green-600" /><h4 className="font-semibold text-gray-900">Location</h4></div>
+                <div className="rounded-xl p-4" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
+                  <div className="flex items-center gap-2 mb-3"><MapPin className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Location</h4></div>
                   {event.campground ? (
                     <div className="space-y-3">
-                      <div>{event.campground.id ? <Link to={`/campgrounds/${event.campground.id}`} className="font-semibold text-primary-600 hover:underline">{event.campground.name}</Link> : <p className="font-semibold text-gray-900">{event.campground.name}</p>}<p className="text-sm text-gray-600">{event.campground.location}{event.campground.state ? `, ${event.campground.state}` : ''}</p></div>
+                      <div>{event.campground.id ? <Link to={`/campgrounds/${event.campground.id}`} className="font-semibold hover:underline" style={{ color: '#C9A84C' }}>{event.campground.name}</Link> : <p className="font-semibold" style={{ color: '#F5F0E8' }}>{event.campground.name}</p>}<p className="text-sm mt-0.5" style={{ color: '#8B9BB4' }}>{event.campground.city && event.campground.state ? `${event.campground.city}, ${event.campground.state}${event.campground.zipCode ? ' ' + event.campground.zipCode : ''}` : event.campground.location || ''}</p></div>
                       <div className="flex flex-wrap gap-2">
-                        <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><ExternalLink className="w-4 h-4" />View Campground</Link>
+                        <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition hover:brightness-110" style={{ background: '#E8622A', color: 'white' }}><ExternalLink className="w-4 h-4" />View Campground</Link>
                         {user && event.campground && (() => {
                           const now = new Date();
                           const start = new Date(event.startDate);
@@ -1755,7 +1763,7 @@ export default function EventDetailPage() {
                             </button>
                           );
                         })()}
-                        {!event.isWishlist && <button onClick={handleAddToTravelMap} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Map className="w-4 h-4" />Add to Map</button>}
+                        {!event.isWishlist && <button onClick={handleAddToTravelMap} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition hover:brightness-110" style={{ background: 'transparent', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}><Map className="w-4 h-4" />Add to Map</button>}
                         {event.campground.latitude && event.campground.longitude && (
                           <NavigationButtons lat={event.campground.latitude} lng={event.campground.longitude} name={event.campground.name} />
                         )}
@@ -1789,6 +1797,36 @@ export default function EventDetailPage() {
                   />
                 </div>
               )}
+
+              {/* Campfire Tip from character */}
+              {event.campground && (() => {
+                const chars = [
+                  { name: 'Scout', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png' },
+                  { name: 'Hitch', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png' },
+                  { name: 'Walter', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261024/rvunicorn/characters/walter.png' },
+                  { name: 'Ranger Rick', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261025/rvunicorn/characters/ranger_rick.jpg' },
+                ];
+                const tips = [
+                  `Sites near the lake fill up fast — book early for waterfront spots!`,
+                  `Check in early if you want a pull-through site — they go first.`,
+                  `The camp store closes at 8pm — stock up on firewood before dinner.`,
+                  `Walk the loop before you set up — pick the shadiest spot you can find.`,
+                ];
+                const dayIdx = Math.floor(Date.now() / 86400000) % chars.length;
+                const char = chars[dayIdx];
+                const tip = tips[dayIdx];
+                return (
+                  <div className="rounded-2xl p-4 mb-4" style={{ background: '#1B2B4B', borderLeft: '3px solid #E8622A', border: '1px solid #2A3F5F', borderLeftWidth: 3, borderLeftColor: '#E8622A' }}>
+                    <div className="flex items-start gap-3">
+                      <img src={char.img} alt={char.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2" style={{ borderColor: '#C9A84C' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#C9A84C' }}>🔥 Tip from {char.name}</p>
+                        <p className="text-sm italic leading-relaxed" style={{ color: '#F5F0E8' }}>"{tip}"</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {event.attendees && user && (
                 <EventCommentWall
