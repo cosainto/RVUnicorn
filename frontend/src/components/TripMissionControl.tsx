@@ -83,7 +83,7 @@ function useHitchTip(mode: TripMode, destination?: string, campground?: any) {
   const [tip, setTip] = useState<string | null>(null);
 
   // Determine campground capabilities
-  const hasHookups = campground?.hasElectric || campground?.hasFullHookups || campground?.hasPotableWater;
+  const hasHookups = campground?.hasElectricHookup || campground?.hasFullHookups || campground?.hasWaterHookup;
 
   const tips: Record<TripMode, string[]> = {
     PLANNING: [

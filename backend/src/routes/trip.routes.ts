@@ -655,9 +655,9 @@ router.get('/:id', async (req, res) => {
             phone: true,
             imageUrl: true,
             googleRating: true,
-            hasElectric: true,
+            hasElectricHookup: true,
             hasFullHookups: true,
-            hasPotableWater: true,
+            hasWaterHookup: true,
           },
         },
         attendees: {
