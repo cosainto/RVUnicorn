@@ -1760,7 +1760,7 @@ export default function EventDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
-                  <TravelMapBackground userId={user?.id} />
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212647/rvunicorn/characters/campfire-scene.png" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15, pointerEvents: 'none' }} />
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,43,75,0.7) 0%, rgba(27,43,75,0.3) 100%)', pointerEvents: 'none' }} />
                   <div className="flex items-center gap-2 mb-3 relative z-10"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
                   {event.isWishlist ? (
@@ -1774,10 +1774,12 @@ export default function EventDetailPage() {
                   )}
                 </div>
 
-                <div className="rounded-xl p-4" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
-                  <div className="flex items-center gap-2 mb-3"><MapPin className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Location</h4></div>
+                <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
+                  <TravelMapBackground userId={user?.id} />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,43,75,0.6) 0%, rgba(27,43,75,0.3) 100%)', pointerEvents: 'none' }} />
+                  <div className="flex items-center gap-2 mb-3 relative z-10"><MapPin className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Location</h4></div>
                   {event.campground ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 relative z-10">
                       <div>{event.campground.id ? <Link to={`/campgrounds/${event.campground.id}`} className="font-semibold hover:underline" style={{ color: '#C9A84C' }}>{event.campground.name}</Link> : <p className="font-semibold" style={{ color: '#F5F0E8' }}>{event.campground.name}</p>}<p className="text-sm mt-0.5" style={{ color: '#8B9BB4' }}>{event.campground.city && event.campground.state ? `${event.campground.city}, ${event.campground.state}${event.campground.zipCode ? ' ' + event.campground.zipCode : ''}` : event.campground.location || ''}</p></div>
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/campgrounds/${event.campground.id}`} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition hover:brightness-110" style={{ background: '#E8622A', color: 'white' }}><ExternalLink className="w-4 h-4" />View Campground</Link>
