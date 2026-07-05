@@ -42,6 +42,11 @@ function TravelMapBackground({ username, userId, className = '', style = {} }: P
     );
   }
 
+  // Map full state names to abbreviations for matching
+  const NAME_TO_ABBR: Record<string, string> = {
+    'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA','Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA','Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY',
+  };
+
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`} style={{ opacity: 0.18, ...style }}>
       <ComposableMap
@@ -53,11 +58,9 @@ function TravelMapBackground({ username, userId, className = '', style = {} }: P
         <Geographies geography={GEO_URL}>
           {({ geographies }: any) =>
             geographies.map((geo: any) => {
-              const stateId = geo.properties?.name;
-              // Match by state name or abbreviation
-              const isVisited = visitedStates.has(geo.id) ||
-                visitedStates.has(stateId) ||
-                visitedStates.has(geo.properties?.STUSPS);
+              const fullName = geo.properties?.name || '';
+              const abbr = NAME_TO_ABBR[fullName] || '';
+              const isVisited = visitedStates.has(abbr) || visitedStates.has(fullName);
               return (
                 <Geography
                   key={geo.rsmKey}
