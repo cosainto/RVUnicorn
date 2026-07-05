@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,13 +52,21 @@ function HeroPhotoViewer({ photos, pinnedIds, startIndex, canPin, onPin, onUnpin
     } catch {}
   };
 
+  const heroSubmitRef = useRef(false);
   const submitComment = async () => {
-    if (!commentText.trim() || !photo?.id) return;
+    if (!commentText.trim() || !photo?.id || heroSubmitRef.current) return;
+    heroSubmitRef.current = true;
+    const text = commentText.trim();
+    const tempId = 'temp-' + Date.now();
+    setComments(prev => [...prev, { id: tempId, content: text, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } }]);
+    setCommentText('');
     try {
-      const { data } = await api.post(`/comments`, { photoId: photo.id, content: commentText.trim() });
-      setComments(prev => [...prev, { ...data, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } }]);
-      setCommentText('');
-    } catch {}
+      const { data } = await api.post('/comments', { photoId: photo.id, content: text });
+      setComments(prev => prev.map(c => c.id === tempId ? { ...data, user: data.user || { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } } : c));
+    } catch {
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setCommentText(text);
+    } finally { heroSubmitRef.current = false; }
   };
 
   const isPinned = pinnedIds.has(photo.id);
@@ -229,9 +237,9 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
   const [touchStart, setTouchStart] = useState(0);
   const [reactions, setReactions] = useState<Record<string, number>>({});
   const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
-  const [showCommentSheet, setShowCommentSheet] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState('');
+  const submittingRef = useRef(false);
   const photo = photos[idx];
 
   const goNext = useCallback(() => setIdx(i => (i + 1) % photos.length), [photos.length]);
@@ -268,12 +276,23 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
   };
 
   const submitComment = async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || submittingRef.current) return;
+    submittingRef.current = true;
+    const text = commentText.trim();
+    const tempId = 'temp-' + Date.now();
+    // Optimistic add
+    setComments(prev => [...prev, { id: tempId, content: text, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id }, createdAt: new Date().toISOString() }]);
+    setCommentText('');
     try {
-      const { data } = await api.post('/comments', { photoId: photo.id, content: commentText.trim() });
-      setComments(prev => [...prev, { ...data, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } }]);
-      setCommentText('');
-    } catch {}
+      const { data } = await api.post('/comments', { photoId: photo.id, content: text });
+      // Replace temp with real
+      setComments(prev => prev.map(c => c.id === tempId ? { ...data, user: data.user || { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } } : c));
+    } catch {
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setCommentText(text);
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   if (!photo) return null;
@@ -318,40 +337,35 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
         </div>
 
         {/* Info row */}
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             {photo.user?.profilePicture ? <img src={photo.user.profilePicture} className="w-7 h-7 rounded-full object-cover" alt="" /> : <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#243352', color: '#8B9BB4' }}>{photo.user?.firstName?.[0]}</div>}
             <span className="text-xs text-white/70">{photo.user?.firstName}</span>
           </div>
           <span className="text-xs text-white/50">{idx + 1} of {photos.length}</span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowCommentSheet(!showCommentSheet)} className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
-              💬 {comments.length || ''}
+          {canPin && (
+            <button onClick={() => isPinned ? onUnpin(photo.id) : onPin(photo.id)} className="text-xs px-2.5 py-1 rounded-full" style={{ background: isPinned ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)', color: isPinned ? '#C9A84C' : 'white', border: isPinned ? '1px solid rgba(201,168,76,0.3)' : 'none' }}>
+              {isPinned ? '⭐ Featured' : '☆ Feature'}
             </button>
-            {canPin && (
-              <button onClick={() => isPinned ? onUnpin(photo.id) : onPin(photo.id)} className="text-xs px-2 py-1 rounded-full" style={{ background: isPinned ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)', color: isPinned ? '#C9A84C' : 'white', border: isPinned ? '1px solid rgba(201,168,76,0.3)' : 'none' }}>
-                {isPinned ? '⭐' : '☆'}
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Comment sheet */}
-        {showCommentSheet && (
-          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(27,43,75,0.9)', maxHeight: '30vh', overflowY: 'auto' }}>
-            {comments.map((c: any) => (
-              <div key={c.id} className="flex gap-2 text-xs">
-                <span className="font-semibold" style={{ color: '#C9A84C' }}>{c.user?.firstName}</span>
-                <span className="text-white/80">{c.content}</span>
-              </div>
-            ))}
-            <div className="flex gap-2">
-              <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitComment()} placeholder="Comment..."
-                className="flex-1 text-xs rounded-full px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white' }} />
-              <button onClick={submitComment} disabled={!commentText.trim()} className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-30" style={{ background: '#E8622A', color: 'white' }}>Post</button>
+        {/* Comments — always visible */}
+        <div className="rounded-xl px-4 py-2 space-y-1.5" style={{ maxHeight: '20vh', overflowY: 'auto' }}>
+          {comments.map((c: any) => (
+            <div key={c.id} className="flex gap-2 text-xs">
+              <span className="font-semibold flex-shrink-0" style={{ color: '#C9A84C' }}>{c.user?.firstName}</span>
+              <span className="text-white/80">{c.content}</span>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
+        <div className="flex gap-2 px-4 pb-1 items-center">
+          <input value={commentText} onChange={e => setCommentText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitComment(); } }}
+            placeholder="Add a comment..."
+            className="flex-1 min-w-0 text-xs rounded-full px-3 py-2" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white' }} />
+          <button onClick={submitComment} disabled={!commentText.trim()} className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full disabled:opacity-30 whitespace-nowrap" style={{ background: '#E8622A', color: 'white' }}>Post</button>
+        </div>
       </div>
     </div>
   );
