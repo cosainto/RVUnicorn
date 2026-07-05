@@ -7,9 +7,9 @@ import { v2 as cloudinary } from "cloudinary";
 
 const router = express.Router();
 const prisma = new PrismaClient() as any;
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB — Cloudinary compresses automatically
 });
 
 // Reaction types
@@ -89,10 +89,16 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary with auto-compression
     const result = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: "rvunicorn/photos" },
+        {
+          folder: eventId ? `rvunicorn/events/${eventId}` : "rvunicorn/photos",
+          resource_type: 'image',
+          transformation: [
+            { width: 2048, height: 2048, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+          ],
+        },
         (error, result) => {
           if (error) reject(error);
           else resolve(result);

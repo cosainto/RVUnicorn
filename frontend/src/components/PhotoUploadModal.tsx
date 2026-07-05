@@ -49,34 +49,40 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     setUploadProgress(0);
 
     let uploaded = 0;
-    try {
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        const formData = new FormData();
-        formData.append('image', file, file.name || 'photo.jpg');
-        formData.append('caption', i === 0 ? caption : '');
-        formData.append('visibility', visibility);
-        if (albumId) formData.append('albumId', albumId);
-        if (eventId) formData.append('eventId', eventId);
+    let failed = 0;
+    let lastResponse: any = null;
 
-        const response = await api.post('/photos', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        uploaded++;
-        setUploadProgress(Math.round((uploaded / selectedFiles.length) * 100));
-        if (i === selectedFiles.length - 1) onUploadComplete?.(response.data);
-      }
-      console.log(`[PhotoUpload] ${uploaded} photos uploaded`);
-      handleClose();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      if (uploaded > 0) {
-        onUploadComplete?.({ uploaded });
-        handleClose();
-      }
-    } finally {
-      setUploading(false);
+    // Upload in batches of 3 for speed + reliability
+    const BATCH = 3;
+    for (let i = 0; i < selectedFiles.length; i += BATCH) {
+      const batch = selectedFiles.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map(async (file, idx) => {
+          const formData = new FormData();
+          formData.append('image', file, file.name || `photo_${i + idx}.jpg`);
+          if (i + idx === 0) formData.append('caption', caption);
+          formData.append('visibility', visibility);
+          if (albumId) formData.append('albumId', albumId);
+          if (eventId) formData.append('eventId', eventId);
+          return api.post('/photos', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 120000,
+          });
+        })
+      );
+      results.forEach(r => {
+        if (r.status === 'fulfilled') { uploaded++; lastResponse = r.value.data; }
+        else { failed++; console.error('[PhotoUpload] Failed:', r.reason?.message); }
+      });
+      setUploadProgress(Math.round(((i + batch.length) / selectedFiles.length) * 100));
     }
+
+    console.log(`[PhotoUpload] ${uploaded} uploaded, ${failed} failed`);
+    if (uploaded > 0) {
+      onUploadComplete?.(lastResponse || { uploaded });
+    }
+    setUploading(false);
+    handleClose();
   };
 
   const handleClose = () => {
