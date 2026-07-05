@@ -30,7 +30,7 @@ function TravelMapBackground({ username, userId, className = '', style = {} }: P
         setVisitedStates(new Set(states));
       })
       .catch(() => {});
-  }, [username]);
+  }, [userId, username]);
 
   if (visitedStates.size === 0) {
     // Fallback: show campfire scene as subtle background
