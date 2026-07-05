@@ -5,14 +5,61 @@ import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from './ImageUpload';
 
 /* ── Hero Photo Viewer — featured tab ── */
+const REACTION_EMOJIS = ['❤️', '🔥', '😂', '😍', '🏕️', '🚐', '⭐'];
+
 function HeroPhotoViewer({ photos, pinnedIds, startIndex, canPin, onPin, onUnpin, onTapPhoto, user }: {
   photos: any[]; pinnedIds: Set<string>; startIndex: number; canPin: boolean;
   onPin: (id: string) => void; onUnpin: (id: string) => void; onTapPhoto: (p: any) => void; user: any;
 }) {
   const [idx, setIdx] = useState(startIndex);
   const [touchStart, setTouchStart] = useState(0);
+  const [reactions, setReactions] = useState<Record<string, number>>({});
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState<any[]>([]);
+  const [showComments, setShowComments] = useState(false);
   const photo = photos[idx];
   if (!photo) return null;
+
+  // Load reactions & comments when photo changes
+  useEffect(() => {
+    setReactions({});
+    setMyReactions(new Set());
+    setComments([]);
+    if (!photo?.id) return;
+    api.get(`/photos/${photo.id}/reactions`).then(r => {
+      const counts: Record<string, number> = {};
+      const mine = new Set<string>();
+      (r.data || []).forEach((rx: any) => {
+        counts[rx.emoji] = (counts[rx.emoji] || 0) + 1;
+        if (rx.userId === user?.id) mine.add(rx.emoji);
+      });
+      setReactions(counts);
+      setMyReactions(mine);
+    }).catch(() => {});
+    api.get(`/comments?photoId=${photo.id}`).then(r => setComments(r.data || [])).catch(() => {});
+  }, [idx, photo?.id]);
+
+  const toggleReaction = async (emoji: string) => {
+    if (!photo?.id) return;
+    const had = myReactions.has(emoji);
+    // Optimistic update
+    setMyReactions(prev => { const next = new Set(prev); had ? next.delete(emoji) : next.add(emoji); return next; });
+    setReactions(prev => ({ ...prev, [emoji]: Math.max(0, (prev[emoji] || 0) + (had ? -1 : 1)) }));
+    try {
+      if (had) await api.delete(`/photos/${photo.id}/reactions/${encodeURIComponent(emoji)}`);
+      else await api.post(`/photos/${photo.id}/reactions`, { emoji });
+    } catch {}
+  };
+
+  const submitComment = async () => {
+    if (!commentText.trim() || !photo?.id) return;
+    try {
+      const { data } = await api.post(`/comments`, { photoId: photo.id, content: commentText.trim() });
+      setComments(prev => [...prev, { ...data, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } }]);
+      setCommentText('');
+    } catch {}
+  };
 
   const isPinned = pinnedIds.has(photo.id);
   const goNext = () => setIdx(i => (i + 1) % photos.length);
@@ -28,10 +75,10 @@ function HeroPhotoViewer({ photos, pinnedIds, startIndex, canPin, onPin, onUnpin
   return (
     <div>
       {/* Photo with arrows */}
-      <div className="relative rounded-2xl overflow-hidden" style={{ height: 280 }}
+      <div className="relative rounded-2xl overflow-hidden flex items-center justify-center" style={{ maxHeight: 500, minHeight: 200, background: '#0F1C35' }}
         onTouchStart={e => setTouchStart(e.touches[0].clientX)}
         onTouchEnd={e => { const d = e.changedTouches[0].clientX - touchStart; if (d > 50) goPrev(); if (d < -50) goNext(); }}>
-        <img src={photo.imageUrl} alt="" className="w-full h-full object-cover cursor-pointer" onClick={() => onTapPhoto(photo)} style={{ transition: 'opacity 0.2s' }} />
+        <img src={photo.imageUrl} alt="" className="cursor-pointer" onClick={() => onTapPhoto(photo)} style={{ maxWidth: '100%', maxHeight: 500, objectFit: 'contain', transition: 'opacity 0.2s' }} />
 
         {/* Badge */}
         <div className="absolute top-3 left-3">
@@ -69,6 +116,54 @@ function HeroPhotoViewer({ photos, pinnedIds, startIndex, canPin, onPin, onUnpin
             }}>
             {isPinned ? '⭐ Featured' : '☆ Feature this'}
           </button>
+        )}
+      </div>
+
+      {/* Emoji reactions */}
+      <div className="flex gap-1.5 flex-wrap mt-3">
+        {REACTION_EMOJIS.map(emoji => {
+          const count = reactions[emoji] || 0;
+          const mine = myReactions.has(emoji);
+          return (
+            <button key={emoji} onClick={() => toggleReaction(emoji)}
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition"
+              style={{
+                background: mine ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.05)',
+                border: mine ? '1px solid #C9A84C' : '1px solid rgba(255,255,255,0.1)',
+              }}>
+              {emoji}{count > 0 && <span className="text-[10px]" style={{ color: mine ? '#C9A84C' : '#8B9BB4' }}>{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Comments */}
+      <div className="mt-3">
+        <button onClick={() => setShowComments(!showComments)} className="text-xs flex items-center gap-1 mb-2" style={{ color: '#8B9BB4' }}>
+          💬 {comments.length > 0 ? `${comments.length} comment${comments.length !== 1 ? 's' : ''}` : 'Add a comment'}
+        </button>
+        {showComments && (
+          <div className="space-y-2">
+            {comments.slice(0, 5).map((c: any) => (
+              <div key={c.id} className="flex gap-2">
+                <div className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden" style={{ background: '#243352' }}>
+                  {c.user?.profilePicture ? <img src={c.user.profilePicture} className="w-full h-full object-cover" alt="" /> : <span className="w-full h-full flex items-center justify-center text-[9px] font-bold" style={{ color: '#8B9BB4' }}>{c.user?.firstName?.[0]}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold" style={{ color: '#C9A84C' }}>{c.user?.firstName || 'User'}</span>
+                  <span className="text-xs ml-1.5" style={{ color: '#F5F0E8' }}>{c.content}</span>
+                  {c.user?.id === user?.id && <button onClick={async () => { await api.delete(`/comments/${c.id}`).catch(() => {}); setComments(prev => prev.filter(x => x.id !== c.id)); }} className="text-[10px] ml-2" style={{ color: '#EF4444' }}>Delete</button>}
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-1">
+              <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && submitComment()}
+                placeholder="Add a comment..." className="flex-1 text-xs rounded-full px-3 py-1.5"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F5F0E8' }} />
+              <button onClick={submitComment} disabled={!commentText.trim()} className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-30" style={{ background: '#E8622A', color: 'white' }}>Post</button>
+            </div>
+          </div>
         )}
       </div>
 
