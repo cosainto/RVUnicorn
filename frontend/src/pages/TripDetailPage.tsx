@@ -1730,15 +1730,16 @@ export default function EventDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
-                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212647/rvunicorn/characters/campfire-scene.png" alt="" className="absolute right-0 bottom-0 w-32 h-20 object-cover object-top opacity-20 rounded-br-xl" />
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212647/rvunicorn/characters/campfire-scene.png" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15, pointerEvents: 'none' }} />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,43,75,0.7) 0%, rgba(27,43,75,0.3) 100%)', pointerEvents: 'none' }} />
                   <div className="flex items-center gap-2 mb-3 relative z-10"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
                   {event.isWishlist ? (
-                    <div className="text-center py-4"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p style={{ color: '#8B9BB4' }}>Dates not set yet</p></div>
+                    <div className="text-center py-4 relative z-10"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p style={{ color: '#8B9BB4' }}>Dates not set yet</p></div>
                   ) : (
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-2 text-sm relative z-10">
                       <div className="flex justify-between"><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>Start</span><span className="font-medium" style={{ color: '#F5F0E8' }}>{new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
                       <div className="flex justify-between"><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>End</span><span className="font-medium" style={{ color: '#F5F0E8' }}>{new Date(event.endDate || event.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
-                      <div className="flex justify-between pt-2" style={{ borderTop: '1px solid #2A3F5F' }}><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>Duration</span><span className="font-bold text-lg" style={{ color: '#C9A84C' }}>{calculateDuration()}</span></div>
+                      <div className="flex justify-between pt-2" style={{ borderTop: '1px solid rgba(201,168,76,0.15)' }}><span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#C9A84C' }}>Duration</span><span className="font-bold text-lg" style={{ color: '#C9A84C' }}>{calculateDuration()}</span></div>
                     </div>
                   )}
                 </div>
