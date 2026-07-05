@@ -1,8 +1,92 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageUpload from './ImageUpload';
+
+/* ── Hero Photo Viewer — featured tab ── */
+function HeroPhotoViewer({ photos, pinnedIds, startIndex, canPin, onPin, onUnpin, onTapPhoto, user }: {
+  photos: any[]; pinnedIds: Set<string>; startIndex: number; canPin: boolean;
+  onPin: (id: string) => void; onUnpin: (id: string) => void; onTapPhoto: (p: any) => void; user: any;
+}) {
+  const [idx, setIdx] = useState(startIndex);
+  const [touchStart, setTouchStart] = useState(0);
+  const photo = photos[idx];
+  if (!photo) return null;
+
+  const isPinned = pinnedIds.has(photo.id);
+  const goNext = () => setIdx(i => (i + 1) % photos.length);
+  const goPrev = () => setIdx(i => (i - 1 + photos.length) % photos.length);
+
+  // Keyboard nav
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') goNext(); if (e.key === 'ArrowLeft') goPrev(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  return (
+    <div>
+      {/* Photo with arrows */}
+      <div className="relative rounded-2xl overflow-hidden" style={{ height: 280 }}
+        onTouchStart={e => setTouchStart(e.touches[0].clientX)}
+        onTouchEnd={e => { const d = e.changedTouches[0].clientX - touchStart; if (d > 50) goPrev(); if (d < -50) goNext(); }}>
+        <img src={photo.imageUrl} alt="" className="w-full h-full object-cover cursor-pointer" onClick={() => onTapPhoto(photo)} style={{ transition: 'opacity 0.2s' }} />
+
+        {/* Badge */}
+        <div className="absolute top-3 left-3">
+          {isPinned
+            ? <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: 'rgba(201,168,76,0.2)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.4)' }}>⭐ Featured</span>
+            : <span className="px-2.5 py-1 rounded-full text-[10px] font-medium" style={{ background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.7)' }}>Photo {idx + 1} of {photos.length}</span>
+          }
+        </div>
+
+        {/* Arrows */}
+        {photos.length > 1 && (<>
+          <button onClick={goPrev} className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition hover:bg-black/60" style={{ background: 'rgba(0,0,0,0.4)' }}>
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+          <button onClick={goNext} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition hover:bg-black/60" style={{ background: 'rgba(0,0,0,0.4)' }}>
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
+        </>)}
+      </div>
+
+      {/* Info + actions */}
+      <div className="mt-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs" style={{ color: '#8B9BB4' }}>
+            {photo.caption || <span className="italic opacity-60">No caption</span>}
+          </p>
+          {photo.user && <p className="text-[10px] mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>📷 {photo.user.firstName || 'Unknown'}</p>}
+        </div>
+        {canPin && (
+          <button onClick={() => isPinned ? onUnpin(photo.id) : onPin(photo.id)}
+            className="text-xs px-2.5 py-1 rounded-full transition" style={{
+              background: isPinned ? 'rgba(201,168,76,0.15)' : 'rgba(148,163,184,0.1)',
+              color: isPinned ? '#C9A84C' : '#8B9BB4',
+              border: isPinned ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(148,163,184,0.15)',
+            }}>
+            {isPinned ? '⭐ Featured' : '☆ Feature this'}
+          </button>
+        )}
+      </div>
+
+      {/* Dot indicators (max 10) */}
+      {photos.length <= 10 ? (
+        <div className="flex justify-center gap-1.5 mt-3">
+          {photos.map((p, i) => (
+            <button key={p.id} onClick={() => setIdx(i)} className="w-2 h-2 rounded-full transition" style={{
+              background: i === idx ? '#C9A84C' : pinnedIds.has(p.id) ? 'rgba(201,168,76,0.4)' : 'rgba(148,163,184,0.3)',
+            }} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-[10px] mt-3" style={{ color: 'rgba(148,163,184,0.4)' }}>{idx + 1} of {photos.length}</p>
+      )}
+    </div>
+  );
+}
 import HitchPhotoCaptions from './HitchPhotoCaptions';
 import EventPhotoTagger from './EventPhotoTagger';
 
@@ -412,99 +496,27 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
         </div>
       )}
 
-      {/* Pinned Grid */}
-      {pins.length === 0 ? (
+      {/* Hero Photo Viewer — browse all photos, starting from featured */}
+      {photos.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No photos pinned yet</p>
-          {canPin && <p className="text-sm mt-1">Click "Pin Photos" to start building your scrapbook</p>}
+          <p className="font-medium">No photos yet</p>
+          {canUpload && <p className="text-sm mt-1">Add your first photo to create a featured memory</p>}
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {pins.map(pin => (
-            <div key={pin.id} className="group relative rounded-2xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-md transition">
-              {/* Photo */}
-              <div
-                className="aspect-square cursor-pointer"
-                onClick={() => setLightbox(pin)}
-              >
-                <img src={pin.photo.imageUrl} alt="" className="w-full h-full object-cover" />
-              </div>
-
-              {/* Pin badge */}
-              <div className="absolute top-2 left-2">
-                <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center shadow">
-                  <Pin className="w-3 h-3 text-white" />
-                </div>
-              </div>
-
-              {/* Unpin button (owner or organizer) */}
-              {canPin && (
-                <button
-                  onClick={() => unpinPhoto(pin.photoId)}
-                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Caption area */}
-              <div className="p-2 bg-white">
-                {editingPin === pin.photoId ? (
-                  <div className="flex gap-1">
-                    <input
-                      autoFocus
-                      value={editCaption}
-                      onChange={e => setEditCaption(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') saveCaption(pin.photoId); if (e.key === 'Escape') setEditingPin(null); }}
-                      className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                      placeholder="Add a caption..."
-                    />
-                    <button onClick={() => saveCaption(pin.photoId)} className="text-primary-600">
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between gap-1">
-                    <p className="text-xs text-gray-600 leading-snug flex-1">
-                      {pin.caption || <span className="text-gray-300 italic">No caption</span>}
-                    </p>
-                    {canPin && pin.pinnedBy.id === user?.id && (
-                      <button
-                        onClick={() => { setEditingPin(pin.photoId); setEditCaption(pin.caption || ''); }}
-                        className="text-gray-300 hover:text-gray-500 flex-shrink-0"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                )}
-                <p className="text-[10px] text-gray-400 mt-0.5">📌 {pin.pinnedBy.firstName}</p>
-                {/* Moment tag pills */}
-                {canPin && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {MOMENT_TAGS.map(t => (
-                      <button key={t.key} onClick={() => setMomentTag(pin.photoId, (pin as any).momentTag === t.key ? null : t.key)}
-                        className={`text-[9px] px-1.5 py-0.5 rounded-full border transition ${
-                          (pin as any).momentTag === t.key
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
-                            : 'bg-transparent text-gray-400 border-gray-200 hover:border-amber-200'
-                        }`}>
-                        {t.icon}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!canPin && (pin as any).momentTag && (
-                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 mt-1">
-                    {MOMENT_TAGS.find(t => t.key === (pin as any).momentTag)?.icon} {MOMENT_TAGS.find(t => t.key === (pin as any).momentTag)?.label}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const featuredIdx = photos.findIndex(p => pinnedIds.has(p.id));
+        const startIdx = featuredIdx >= 0 ? featuredIdx : 0;
+        return <HeroPhotoViewer
+          photos={photos}
+          pinnedIds={pinnedIds}
+          startIndex={startIdx}
+          canPin={!!canPin}
+          onPin={pinPhoto}
+          onUnpin={unpinPhoto}
+          onTapPhoto={(p: any) => setLightbox(p)}
+          user={user}
+        />;
+      })()}
 
       {/* Trip Story CTA — when pins exist but no story yet */}
       {canPin && pins.length >= 3 && !story && (
