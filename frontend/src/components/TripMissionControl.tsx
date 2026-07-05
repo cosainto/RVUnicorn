@@ -224,42 +224,6 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
 
     return (
       <div className="space-y-4">
-        {/* Top banner — action focused */}
-        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #E8622A, #C9A84C)', border: 'none' }}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/70 mb-1">📸 Trip complete — add your memories</p>
-              <p className="font-semibold text-white text-sm">
-                {event.campground?.name || event.title} · {dateRange}
-              </p>
-              {/* Attendee avatars */}
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex -space-x-1.5">
-                  {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).slice(0, 4).map((a: any) => (
-                    <div key={a.userId || a.id} className="w-6 h-6 rounded-full border-2 border-white/30 overflow-hidden flex-shrink-0" style={{ background: C.cardLight }}>
-                      {a.user?.profilePicture ? <img src={a.user.profilePicture} className="w-full h-full object-cover" alt="" /> : <span className="w-full h-full flex items-center justify-center text-[9px] font-bold text-white">{a.user?.firstName?.[0]}</span>}
-                    </div>
-                  ))}
-                </div>
-                <span className="text-xs text-white/70">{confirmedCount} camper{confirmedCount !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-white/60 flex-shrink-0">{daysAgo}d ago</span>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            <a href={`/trips/${event.id}?tab=photos`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition hover:brightness-110" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-              📸 Add Photos & Videos
-            </a>
-            {event.campground?.id && (
-              <a href={`/campgrounds/${event.campground.id}#reviews`} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition hover:brightness-110" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
-                ⭐ Rate Trip
-              </a>
-            )}
-          </div>
-        </div>
-
         {/* Event card — single source of truth */}
         <div className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: C.green }}>
@@ -288,9 +252,15 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
               <Calendar className="w-3.5 h-3.5" style={{ color: C.gold }} />
               {dateRange}{duration ? ` · ${duration} night${duration !== 1 ? 's' : ''}` : ''}
             </span>
-            <span className="flex items-center gap-1">
-              <Users className="w-3.5 h-3.5" style={{ color: C.gold }} />
-              {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).map((a: any) => a.user?.firstName).filter(Boolean).join(', ') || `${confirmedCount} going`}
+            <span className="flex items-center gap-1.5">
+              <div className="flex -space-x-1">
+                {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).slice(0, 4).map((a: any) => (
+                  <div key={a.userId || a.id} className="w-5 h-5 rounded-full border border-[#2A3F5F] overflow-hidden flex-shrink-0" style={{ background: C.cardLight }}>
+                    {a.user?.profilePicture ? <img src={a.user.profilePicture} className="w-full h-full object-cover" alt="" /> : <span className="w-full h-full flex items-center justify-center text-[8px] font-bold" style={{ color: C.muted }}>{a.user?.firstName?.[0]}</span>}
+                  </div>
+                ))}
+              </div>
+              <span>{confirmedCount} going</span>
             </span>
           </div>
         </div>
