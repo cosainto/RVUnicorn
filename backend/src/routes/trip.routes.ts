@@ -442,6 +442,46 @@ router.get('/discover', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/trips/admin/merge-trips — merge two trips into one
+router.post('/admin/merge-trips', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = (req as any).userId;
+    if (userId !== 'cmlpeyk82005s3qause3sws7y' && userId !== 'cmm9kukta0006i88masvtz2tp') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const { keepId, deleteId } = req.body;
+    if (!keepId || !deleteId) return res.status(400).json({ error: 'keepId and deleteId required' });
+
+    // Move state visits
+    const sv = await db.stateVisit.updateMany({ where: { eventId: deleteId }, data: { eventId: keepId } });
+
+    // Move photos
+    const ph = await db.photo.updateMany({ where: { eventId: deleteId }, data: { eventId: keepId } });
+
+    // Add attendees from delete trip to keep trip
+    const deleteAttendees = await db.eventAttendee.findMany({ where: { eventId: deleteId } });
+    for (const a of deleteAttendees) {
+      await db.eventAttendee.upsert({
+        where: { eventId_userId: { eventId: keepId, userId: a.userId } },
+        create: { eventId: keepId, userId: a.userId, status: a.status, role: a.role || 'CO_HOST' },
+        update: {},
+      }).catch(() => {});
+    }
+
+    // Mark as shared
+    await db.event.update({ where: { id: keepId }, data: { isShared: true } });
+
+    // Delete attendees then event
+    await db.eventAttendee.deleteMany({ where: { eventId: deleteId } });
+    await db.event.delete({ where: { id: deleteId } }).catch(() => {});
+
+    res.json({ merged: true, stateVisitsMoved: sv.count, photosMoved: ph.count });
+  } catch (error: any) {
+    console.error('Merge error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/trips/admin/create-wi-trip — one-time: create Jellystone WI retrospective trip
 router.post('/admin/create-wi-trip', authenticateToken, async (req: any, res) => {
   try {
