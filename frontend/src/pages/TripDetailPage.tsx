@@ -1802,8 +1802,8 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {/* Campfire Tip from character */}
-              {event.campground && (() => {
+              {/* Campfire Tip from character — only show for active/upcoming trips */}
+              {event.campground && event.endDate && new Date(event.endDate) > new Date() && (() => {
                 const chars = [
                   { name: 'Scout', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261023/rvunicorn/characters/scout.png' },
                   { name: 'Hitch', img: 'https://res.cloudinary.com/dy6eetmh7/image/upload/v1775261116/rvunicorn/characters/hitch.png' },

@@ -146,25 +146,31 @@ export default function NowBar({
               <div className="min-w-0">
                 <p className="text-sm font-semibold">Trip complete!</p>
                 <p className="text-[10px] text-white/70">
-                  {photoCount > 0 ? `${photoCount} photos` : 'Share your photos & how it went'}
+                  {photoCount > 0 ? `✓ ${photoCount} photos shared` : 'Add your photos & memories'}
                   {attendeeCount > 0 ? ` · ${attendeeCount} campers went` : ''}
                 </p>
               </div>
             </div>
-            {/* Real action buttons — these used to be inert spans, which is
-                why the banner links never did anything. Both buttons are
-                wired by TripDetailPage. */}
             <div className="flex items-center gap-2">
-              {onOpenScrapbook && (
+              {photoCount > 0 ? (
                 <button
                   type="button"
                   onClick={onOpenScrapbook}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  <span>Scrapbook</span>
+                  <span>View Album</span>
                 </button>
-              )}
+              ) : onOpenScrapbook ? (
+                <button
+                  type="button"
+                  onClick={onOpenScrapbook}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Add Photos</span>
+                </button>
+              ) : null}
               {onOpenSurvey && (
                 <button
                   type="button"

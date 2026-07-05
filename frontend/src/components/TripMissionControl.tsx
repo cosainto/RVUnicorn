@@ -226,9 +226,6 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
       <div className="space-y-4">
         {/* Event card — single source of truth */}
         <div className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-          <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: C.green }}>
-            ✅ Completed {daysAgo} days ago
-          </p>
 
           {/* Campground name as link */}
           {event.campground?.id ? (
@@ -264,9 +261,6 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
             </span>
           </div>
         </div>
-
-        {/* Hitch tip */}
-        {hitchTip && <HitchTipCard tip={hitchTip} />}
       </div>
     );
   }
