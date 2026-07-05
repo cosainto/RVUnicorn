@@ -1589,7 +1589,7 @@ export default function EventDetailPage() {
 
                   <div className="flex items-center justify-between mb-3 relative">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg relative">🏕️<span className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, rgba(232,98,42,0.2) 0%, transparent 70%)', transform: 'scale(2.5)' }} /></span>
+                      <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212648/rvunicorn/characters/walter-profile-v1.png" alt="Walter" className="w-8 h-8 rounded-full object-cover" style={{ border: '2px solid #C9A84C' }} />
                       <h3 className="text-base font-bold" style={{ color: '#F5F0E8' }}>My Campsite Details ✦</h3>
                       <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: '#243352', color: '#8B9BB4' }}>
                         {siteForm.siteVisibility === 'PRIVATE' ? '🔒 Only me' : siteForm.siteVisibility === 'EVENT' ? '👥 Event members' : '👫 Friends'}
@@ -1729,8 +1729,9 @@ export default function EventDetailPage() {
               })()}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
+                <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
+                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212647/rvunicorn/characters/campfire-scene.png" alt="" className="absolute right-0 bottom-0 w-32 h-20 object-cover object-top opacity-20 rounded-br-xl" />
+                  <div className="flex items-center gap-2 mb-3 relative z-10"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
                   {event.isWishlist ? (
                     <div className="text-center py-4"><Star className="w-8 h-8 text-yellow-500 fill-yellow-400 mx-auto mb-2" /><p style={{ color: '#8B9BB4' }}>Dates not set yet</p></div>
                   ) : (
