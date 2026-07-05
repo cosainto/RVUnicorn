@@ -890,6 +890,8 @@ model Event {
   siteMapPinY       Float?
   siteMapPinSetBy   String?
   siteMapPinConfirmed Boolean @default(false)
+  isShared          Boolean  @default(false)
+  rigId             String?
   roadTripId        String?
   stopNumber        Int?
   eventType         String?              @default("OTHER")
@@ -988,6 +990,8 @@ model EventAttendee {
   participationMode  String    @default("FULL")
   socialBattery      String?
   autoCheckedIn      Boolean   @default(false)
+  role               String    @default("PARTICIPANT")
+  invitedBy          String?
   event              Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1117,6 +1121,7 @@ model Photo {
   updatedAt      DateTime             @updatedAt
   eventId        String?
   visibility     String               @default("PUBLIC")
+  isPrivate      Boolean              @default(false)
   moments        MomentPhoto[]
   album          PhotoAlbum?          @relation(fields: [albumId], references: [id])
   event          Event?               @relation(fields: [eventId], references: [id])

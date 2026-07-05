@@ -10,6 +10,7 @@ import { triggerTipPromptsForTrip } from './campfire-tips.routes';
 import { buildEventInviteEmail, inviteResend, INVITE_SITE_URL } from './invite.routes';
 import { generateHitchTipsForEvent } from '../services/hitch-tips.service';
 import { recordCampgroundVisit, fanOutVisitsToAttendees } from '../services/visit-stats.service';
+import { autoInviteRigCopilots, userCanEditTrip } from '../utils/tripAccess';
 
 const router = Router();
 const db = prisma as any;
@@ -847,14 +848,17 @@ router.post('/', authenticateToken, async (req, res) => {
       },
     });
 
-    // Auto-add organizer as ATTENDING
+    // Auto-add organizer as HOST
     await db.eventAttendee.upsert({
       where: { eventId_userId: { eventId: event.id, userId } },
-      create: { eventId: event.id, userId, status: 'ATTENDING' },
-      update: { status: 'ATTENDING' },
+      create: { eventId: event.id, userId, status: 'ATTENDING', role: 'HOST' },
+      update: { status: 'ATTENDING', role: 'HOST' },
     }).catch(() => {});
 
-    // Auto-handle household partner
+    // Auto-invite rig co-pilots and household partners as CO_HOST
+    autoInviteRigCopilots(event.id, userId).catch(() => {});
+
+    // Auto-handle household partner (legacy — kept for non-rig users)
     const organizer = await db.user.findUnique({
       where: { id: userId },
       select: { householdId: true },
