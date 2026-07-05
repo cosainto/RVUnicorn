@@ -21,9 +21,8 @@ interface Props {
   nextScheduleTime?: string;
   photoCount?: number;
   mealCount?: number;
-  // Echo-state actions — wired by the parent so this component stays
-  // presentational. Both are optional so callers that don't care about
-  // the post-trip survey/scrapbook flow can leave them out.
+  hasReview?: boolean;
+  // Echo-state actions
   onOpenScrapbook?: () => void;
   onOpenSurvey?: () => void;
 }
@@ -34,7 +33,7 @@ export default function NowBar({
   eventTitle, campgroundName, campgroundCity, campgroundState, attendeeCount,
   packTotal = 0, packDone = 0,
   nextScheduleItem, nextScheduleTime,
-  photoCount = 0, mealCount = 0,
+  photoCount = 0, mealCount = 0, hasReview = false,
   onOpenScrapbook, onOpenSurvey,
 }: Props) {
 
@@ -146,40 +145,30 @@ export default function NowBar({
               <div className="min-w-0">
                 <p className="text-sm font-semibold">Trip complete!</p>
                 <p className="text-[10px] text-white/70">
-                  {photoCount > 0 ? `✓ ${photoCount} photos shared` : 'Add your photos & memories'}
+                  {photoCount > 0 && hasReview ? `✓ ${photoCount} photos · ✓ Reviewed` : photoCount > 0 ? `✓ ${photoCount} photos shared` : hasReview ? '✓ Review left · Add your photos!' : 'Add your photos & memories'}
                   {attendeeCount > 0 ? ` · ${attendeeCount} campers went` : ''}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Photo button: View Album if has photos, Add Photos if not */}
               {photoCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={onOpenScrapbook}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>View Album</span>
+                <button type="button" onClick={onOpenScrapbook}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold">
+                  <Camera className="w-3.5 h-3.5" /><span>View Album</span>
                 </button>
               ) : onOpenScrapbook ? (
-                <button
-                  type="button"
-                  onClick={onOpenScrapbook}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Add Photos</span>
+                <button type="button" onClick={onOpenScrapbook}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 transition rounded-lg px-3 py-1.5 text-[11px] font-bold">
+                  <Camera className="w-3.5 h-3.5" /><span>Add Photos</span>
                 </button>
               ) : null}
-              {onOpenSurvey && (
-                <button
-                  type="button"
-                  onClick={onOpenSurvey}
+              {/* Review button: only show if no review yet */}
+              {onOpenSurvey && !hasReview && (
+                <button type="button" onClick={onOpenSurvey}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 transition rounded-lg px-3 py-1.5 text-[11px] font-bold"
-                  style={{ background: 'rgba(15,28,53,0.6)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}
-                >
-                  <Star className="w-3.5 h-3.5" />
-                  <span>How was it?</span>
+                  style={{ background: 'rgba(15,28,53,0.6)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}>
+                  <Star className="w-3.5 h-3.5" /><span>How was it?</span>
                 </button>
               )}
             </div>

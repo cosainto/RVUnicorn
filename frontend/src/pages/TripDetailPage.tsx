@@ -903,6 +903,19 @@ export default function EventDetailPage() {
   // button, and auto-opened when the URL has ?survey=open (Hitch's 24h
   // follow-up notification deep-links here).
   const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [hasReview, setHasReview] = useState(false);
+
+  // Check if user has reviewed this campground
+  useEffect(() => {
+    if (event?.campground?.id && user?.id) {
+      api.get(`/campground-features/${event.campground.id}/reviews`)
+        .then(r => {
+          const reviews = r.data?.reviews || r.data || [];
+          setHasReview(reviews.some((rev: any) => rev.userId === user.id || rev.user?.id === user.id));
+        })
+        .catch(() => {});
+    }
+  }, [event?.campground?.id, user?.id]);
 
   // Pulse: state-aware trip lifecycle
   const pulse = useTripState({
@@ -1139,6 +1152,7 @@ export default function EventDetailPage() {
           campgroundState={event.campground?.state}
           attendeeCount={event.attendees?.length || 0}
           photoCount={tripAlbums.reduce((sum: number, a: any) => sum + (a._count?.photos || 0), 0)}
+          hasReview={hasReview}
           mealCount={event._count?.meals || 0}
           onOpenScrapbook={handleOpenScrapbook}
           onOpenSurvey={event.campground?.id ? handleOpenSurvey : undefined}
