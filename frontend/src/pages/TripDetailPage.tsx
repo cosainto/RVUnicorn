@@ -1599,12 +1599,16 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {event.description && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 About This Event</h3>
-                  <p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>
-                </div>
-              )}
+              {(() => {
+                // Strip standalone site number lines — that info lives in My Campsite Details
+                const desc = (event.description || '').replace(/^\s*Site:\s*\S+\s*$/gm, '').trim();
+                return desc ? (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 About This Event</h3>
+                    <p className="text-gray-700 whitespace-pre-wrap">{desc}</p>
+                  </div>
+                ) : null;
+              })()}
 
               {/* My Campsite Details */}
               {(userAttendee || isOrganizer) && (
