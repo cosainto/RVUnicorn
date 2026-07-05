@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Users, Package, MapPin, CheckCircle, Clock, AlertCircle, ChevronRight, Star, Flame, Navigation, Camera, RefreshCw } from 'lucide-react';
 import api from '../services/api';
+import DestinationSnapshotCard from './trips/DestinationSnapshotCard';
 
 // ── Colors ──
 const C = {
@@ -223,45 +224,7 @@ export default function TripMissionControl({ event, isOrganizer, canEdit, tripPl
       : '';
 
     return (
-      <div className="space-y-4">
-        {/* Event card — single source of truth */}
-        <div className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-
-          {/* Campground name as link */}
-          {event.campground?.id ? (
-            <a href={`/campgrounds/${event.campground.id}`} className="text-lg font-bold hover:underline block" style={{ color: C.gold, fontFamily: "'Playfair Display', serif" }}>
-              {event.campground.name}
-            </a>
-          ) : (
-            <p className="text-lg font-bold" style={{ color: C.cream, fontFamily: "'Playfair Display', serif" }}>{event.title}</p>
-          )}
-
-          {/* Address */}
-          {(event.campground?.city || event.campground?.state || event.location) && (
-            <p className="text-xs mt-1" style={{ color: C.muted }}>
-              {event.campground?.location || [event.campground?.city, event.campground?.state, event.campground?.zipCode].filter(Boolean).join(', ').replace(/, ([0-9])/, ' $1') || event.location}
-            </p>
-          )}
-
-          {/* Date + attendees */}
-          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs" style={{ color: C.muted }}>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" style={{ color: C.gold }} />
-              {dateRange}{duration ? ` · ${duration} night${duration !== 1 ? 's' : ''}` : ''}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <div className="flex -space-x-1">
-                {(event.attendees || []).filter((a: any) => ['ATTENDING', 'attending', 'GOING', 'going'].includes(a.status)).slice(0, 4).map((a: any) => (
-                  <div key={a.userId || a.id} className="w-5 h-5 rounded-full border border-[#2A3F5F] overflow-hidden flex-shrink-0" style={{ background: C.cardLight }}>
-                    {a.user?.profilePicture ? <img src={a.user.profilePicture} className="w-full h-full object-cover" alt="" /> : <span className="w-full h-full flex items-center justify-center text-[8px] font-bold" style={{ color: C.muted }}>{a.user?.firstName?.[0]}</span>}
-                  </div>
-                ))}
-              </div>
-              <span>{confirmedCount} going</span>
-            </span>
-          </div>
-        </div>
-      </div>
+      <DestinationSnapshotCard event={event} />
     );
   }
 
