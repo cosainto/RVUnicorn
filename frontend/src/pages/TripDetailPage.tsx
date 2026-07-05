@@ -1211,7 +1211,7 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      <div className="rounded-xl overflow-hidden mb-6" style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
+      <div className={`rounded-xl overflow-hidden mb-6 ${isPastTrip ? 'hidden' : ''}`} style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
         <div className="h-64 relative group" style={{ background: 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}>
           {(() => {
             const img = (event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : (event.imageUrl && !event.imageUrl.startsWith('/images/')) ? event.imageUrl : event.campground?.imageUrl;

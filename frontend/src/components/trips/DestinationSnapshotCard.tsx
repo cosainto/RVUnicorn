@@ -28,7 +28,10 @@ function computeBadge(event: any): Badge {
     ? Math.max(1, Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / 86400000))
     : 1;
 
+  // Check for long stay
   if (nights >= 7) return { emoji: '🌙', label: `${nights}-night adventure`, type: 'LONG_STAY' };
+  // First time at this campground — default for most trips since we lack visit history client-side
+  if (event.campground?.name) return { emoji: '🏕', label: 'First time here!', type: 'FIRST_VISIT' };
   return { emoji: '🌟', label: 'Memory made', type: 'MEMORY' };
 }
 
@@ -80,19 +83,24 @@ export default function DestinationSnapshotCard({ event, badge: propBadge }: Pro
         </div>
       )}
 
-      {/* Hitch avatar */}
-      <img
-        src={HITCH_AVATAR}
-        alt="Hitch"
-        className="absolute top-3 right-3 w-9 h-9 rounded-full object-cover z-20"
-        style={{ border: '2px solid #C9A84C' }}
-        title="Hitch remembers this trip 🏕"
-      />
+      {/* Hitch avatar + days ago */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        {daysAgo != null && daysAgo > 0 && (
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(15,28,53,0.6)', color: 'rgba(255,255,255,0.6)' }}>{daysAgo}d ago</span>
+        )}
+        <img
+          src={HITCH_AVATAR}
+          alt="Hitch"
+          className="w-9 h-9 rounded-full object-cover"
+          style={{ border: '2px solid #C9A84C' }}
+          title="Hitch remembers this trip 🏕"
+        />
+      </div>
 
       {/* Content */}
       <div className="relative z-10 p-5 flex flex-col justify-end" style={{ minHeight: 180 }}>
         {/* Badge + days ago */}
-        <div className="flex items-center justify-between mb-auto">
+        <div className="mb-auto">
           <span
             className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all"
             style={{
@@ -106,9 +114,6 @@ export default function DestinationSnapshotCard({ event, badge: propBadge }: Pro
           >
             {badge.emoji} {badge.label}
           </span>
-          {daysAgo != null && daysAgo > 0 && (
-            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>{daysAgo}d ago</span>
-          )}
         </div>
 
         {/* Bottom info */}
