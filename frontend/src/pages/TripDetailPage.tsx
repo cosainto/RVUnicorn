@@ -1746,7 +1746,7 @@ export default function EventDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-xl p-4 relative overflow-hidden" style={{ background: '#1B2B4B', border: '1px solid #2A3F5F' }}>
-                  <TravelMapBackground username={user?.username} />
+                  <TravelMapBackground userId={user?.id} />
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,43,75,0.7) 0%, rgba(27,43,75,0.3) 100%)', pointerEvents: 'none' }} />
                   <div className="flex items-center gap-2 mb-3 relative z-10"><Calendar className="w-5 h-5" style={{ color: '#C9A84C' }} /><h4 className="font-semibold" style={{ color: '#F5F0E8' }}>Event Dates</h4></div>
                   {event.isWishlist ? (

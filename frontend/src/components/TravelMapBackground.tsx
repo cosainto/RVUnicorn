@@ -6,6 +6,7 @@ const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
 
 interface Props {
   username?: string;
+  userId?: string;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -15,12 +16,13 @@ interface Props {
  * Visited states in campfire orange, unvisited in dark navy.
  * Designed to be used as a card background at low opacity.
  */
-function TravelMapBackground({ username, className = '', style = {} }: Props) {
+function TravelMapBackground({ username, userId, className = '', style = {} }: Props) {
   const [visitedStates, setVisitedStates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!username) return;
-    api.get(`/travel-map/${username}`)
+    const id = userId || username;
+    if (!id) return;
+    api.get(`/travel-map/${id}`)
       .then(r => {
         const states = (r.data?.visitedStates || r.data?.states || []).map((s: any) =>
           typeof s === 'string' ? s : s.stateCode || s.state
@@ -30,7 +32,15 @@ function TravelMapBackground({ username, className = '', style = {} }: Props) {
       .catch(() => {});
   }, [username]);
 
-  if (visitedStates.size === 0) return null;
+  if (visitedStates.size === 0) {
+    // Fallback: show campfire scene as subtle background
+    return (
+      <div className={`absolute inset-0 pointer-events-none ${className}`} style={{ opacity: 0.15, ...style }}>
+        <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/v1783212647/rvunicorn/characters/campfire-scene.png"
+          alt="" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
 
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`} style={{ opacity: 0.18, ...style }}>
