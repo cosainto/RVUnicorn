@@ -220,6 +220,143 @@ interface EventPhoto {
   scrapbookPins: { id: string }[];
 }
 
+/* ── Fullscreen Photo Viewer ── */
+function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, onUnpin, user, onClose }: {
+  photos: any[]; startIndex: number; pinnedIds: Set<string>; canPin: boolean;
+  onPin: (id: string) => void; onUnpin: (id: string) => void; user: any; onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(startIndex);
+  const [touchStart, setTouchStart] = useState(0);
+  const [reactions, setReactions] = useState<Record<string, number>>({});
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
+  const [showCommentSheet, setShowCommentSheet] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const photo = photos[idx];
+
+  const goNext = useCallback(() => setIdx(i => (i + 1) % photos.length), [photos.length]);
+  const goPrev = useCallback(() => setIdx(i => (i - 1 + photos.length) % photos.length), [photos.length]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') goNext();
+      if (e.key === 'ArrowLeft') goPrev();
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [goNext, goPrev, onClose]);
+
+  // Load reactions + comments per photo
+  useEffect(() => {
+    if (!photo?.id) return;
+    setReactions({}); setMyReactions(new Set()); setComments([]);
+    api.get(`/photos/${photo.id}/reactions`).then(r => {
+      const counts: Record<string, number> = {};
+      const mine = new Set<string>();
+      (r.data || []).forEach((rx: any) => { counts[rx.emoji] = (counts[rx.emoji] || 0) + 1; if (rx.userId === user?.id) mine.add(rx.emoji); });
+      setReactions(counts); setMyReactions(mine);
+    }).catch(() => {});
+    api.get(`/comments?photoId=${photo.id}`).then(r => setComments(r.data || [])).catch(() => {});
+  }, [idx, photo?.id]);
+
+  const toggleReaction = async (emoji: string) => {
+    const had = myReactions.has(emoji);
+    setMyReactions(prev => { const n = new Set(prev); had ? n.delete(emoji) : n.add(emoji); return n; });
+    setReactions(prev => ({ ...prev, [emoji]: Math.max(0, (prev[emoji] || 0) + (had ? -1 : 1)) }));
+    try { had ? await api.delete(`/photos/${photo.id}/reactions/${encodeURIComponent(emoji)}`) : await api.post(`/photos/${photo.id}/reactions`, { emoji }); } catch {}
+  };
+
+  const submitComment = async () => {
+    if (!commentText.trim()) return;
+    try {
+      const { data } = await api.post('/comments', { photoId: photo.id, content: commentText.trim() });
+      setComments(prev => [...prev, { ...data, user: { firstName: user?.firstName, profilePicture: user?.profilePicture, id: user?.id } }]);
+      setCommentText('');
+    } catch {}
+  };
+
+  if (!photo) return null;
+  const isPinned = pinnedIds.has(photo.id);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: 'rgba(0,0,0,0.95)' }}
+      onTouchStart={e => setTouchStart(e.touches[0].clientX)}
+      onTouchEnd={e => { const d = e.changedTouches[0].clientX - touchStart; if (d > 50) goPrev(); if (d < -50) goNext(); }}>
+
+      {/* Close */}
+      <button onClick={onClose} className="absolute top-4 right-4 z-50 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
+        <X className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Photo */}
+      <div className="flex-1 flex items-center justify-center relative px-16">
+        <img src={photo.imageUrl} alt="" className="max-w-[90vw] max-h-[75vh] object-contain rounded-lg" />
+
+        {/* Arrows */}
+        {photos.length > 1 && (<>
+          <button onClick={goPrev} className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full flex items-center justify-center transition hover:bg-white/20" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            <ChevronLeft className="w-7 h-7 text-white" />
+          </button>
+          <button onClick={goNext} className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full flex items-center justify-center transition hover:bg-white/20" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            <ChevronRight className="w-7 h-7 text-white" />
+          </button>
+        </>)}
+      </div>
+
+      {/* Bottom bar */}
+      <div className="px-4 pb-4 pt-2 space-y-2" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
+        {/* Reactions */}
+        <div className="flex gap-1.5 flex-wrap justify-center">
+          {REACTION_EMOJIS.map(emoji => (
+            <button key={emoji} onClick={() => toggleReaction(emoji)}
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-sm transition"
+              style={{ background: myReactions.has(emoji) ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)', border: myReactions.has(emoji) ? '1px solid #C9A84C' : '1px solid rgba(255,255,255,0.15)' }}>
+              {emoji}{(reactions[emoji] || 0) > 0 && <span className="text-[10px] text-white/70">{reactions[emoji]}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Info row */}
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            {photo.user?.profilePicture ? <img src={photo.user.profilePicture} className="w-7 h-7 rounded-full object-cover" alt="" /> : <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#243352', color: '#8B9BB4' }}>{photo.user?.firstName?.[0]}</div>}
+            <span className="text-xs text-white/70">{photo.user?.firstName}</span>
+          </div>
+          <span className="text-xs text-white/50">{idx + 1} of {photos.length}</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowCommentSheet(!showCommentSheet)} className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+              💬 {comments.length || ''}
+            </button>
+            {canPin && (
+              <button onClick={() => isPinned ? onUnpin(photo.id) : onPin(photo.id)} className="text-xs px-2 py-1 rounded-full" style={{ background: isPinned ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)', color: isPinned ? '#C9A84C' : 'white', border: isPinned ? '1px solid rgba(201,168,76,0.3)' : 'none' }}>
+                {isPinned ? '⭐' : '☆'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Comment sheet */}
+        {showCommentSheet && (
+          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(27,43,75,0.9)', maxHeight: '30vh', overflowY: 'auto' }}>
+            {comments.map((c: any) => (
+              <div key={c.id} className="flex gap-2 text-xs">
+                <span className="font-semibold" style={{ color: '#C9A84C' }}>{c.user?.firstName}</span>
+                <span className="text-white/80">{c.content}</span>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitComment()} placeholder="Comment..."
+                className="flex-1 text-xs rounded-full px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white' }} />
+              <button onClick={submitComment} disabled={!commentText.trim()} className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-30" style={{ background: '#E8622A', color: 'white' }}>Post</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TripScrapbook({ eventId, canPin, canUpload, campgroundName, eventTitle }: {
   eventId: string;
   canPin: boolean;
@@ -829,24 +966,24 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
       )}
 
       {/* Photo Lightbox with Tagging (for All Photos view) */}
-      {selectedPhoto && (
-        <EventPhotoTagger
-          photoId={selectedPhoto.id}
-          photoUrl={selectedPhoto.imageUrl}
-          canTag={canPin}
-          onClose={() => setSelectedPhoto(null)}
-        />
-      )}
-
-      {/* Lightbox with Tagging (for Featured/Pinned view) */}
-      {lightbox && (
-        <EventPhotoTagger
-          photoId={lightbox.photoId}
-          photoUrl={lightbox.photo.imageUrl}
-          canTag={canPin}
-          onClose={() => setLightbox(null)}
-        />
-      )}
+      {/* Fullscreen Photo Viewer */}
+      {(selectedPhoto || lightbox) && (() => {
+        const startPhoto = selectedPhoto || (lightbox?.photo ? { ...lightbox.photo, id: lightbox.photoId } : null);
+        if (!startPhoto) return null;
+        const startIdx = photos.findIndex(p => p.id === startPhoto.id);
+        return (
+          <FullscreenPhotoViewer
+            photos={photos}
+            startIndex={startIdx >= 0 ? startIdx : 0}
+            pinnedIds={pinnedIds}
+            canPin={!!canPin}
+            onPin={pinPhoto}
+            onUnpin={unpinPhoto}
+            user={user}
+            onClose={() => { setSelectedPhoto(null); setLightbox(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }
