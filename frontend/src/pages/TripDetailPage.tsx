@@ -1456,16 +1456,31 @@ export default function EventDetailPage() {
       </div>
 
       <div className="space-y-3 mb-6">
-        {[
-          { id: 'plan',     emoji: '🗺️', label: 'Plan',    desc: 'Campground, dates, route, attendees',  bg: 'rgba(59,109,17,0.15)', color: '#6BBF3A' },
-          { id: 'travel',   emoji: '🚐', label: 'Travel',  desc: 'Route, drive time, gas stops',          bg: 'rgba(133,79,11,0.15)', color: '#E8A838' },
-          { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: 'rgba(24,95,165,0.15)', color: '#5BA3E8' },
-          { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: 'rgba(15,110,86,0.15)', color: '#34D399' },
-          { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: 'rgba(153,53,86,0.15)', color: '#F472B6' },
-        ].filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id) || (phase.id === 'travel' && tripPlan)).map(phase => (
+        {(() => {
+          const phases = [
+            { id: 'plan',     emoji: '🗺️', label: 'Plan',    desc: 'Campground, dates, route, attendees',  bg: 'rgba(59,109,17,0.15)', color: '#6BBF3A' },
+            { id: 'travel',   emoji: '🚐', label: 'Travel',  desc: 'Route, drive time, gas stops',          bg: 'rgba(133,79,11,0.15)', color: '#E8A838' },
+            { id: 'prepare',  emoji: '🎒', label: 'Prepare', desc: 'Pack list, supply list, meals',         bg: 'rgba(24,95,165,0.15)', color: '#5BA3E8' },
+            { id: 'camp',     emoji: '🔥', label: 'Camp',    desc: 'Schedule, activities, pack up',         bg: 'rgba(15,110,86,0.15)', color: '#34D399' },
+            { id: 'remember', emoji: '📸', label: 'Remember',desc: 'Photos, scrapbook, trip story',         bg: 'rgba(153,53,86,0.15)', color: '#F472B6' },
+          ];
+          // Dynamic ordering based on trip state
+          const orderMap: Record<string, string[]> = {
+            'blueprint': ['plan', 'travel', 'prepare', 'camp', 'remember'],
+            'load-out':  ['prepare', 'plan', 'travel', 'camp', 'remember'],
+            'in-motion': ['travel', 'plan', 'prepare', 'camp', 'remember'],
+            'on-site':   ['camp', 'plan', 'travel', 'prepare', 'remember'],
+            'echo':      ['remember', 'plan', 'travel', 'prepare', 'camp'],
+          };
+          const order = orderMap[pulse.tripState] || orderMap['blueprint'];
+          const sorted = [...phases].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+          return sorted;
+        })().filter(phase => showAllPhases || (VISIBLE_PHASES[pulse.tripState] || VISIBLE_PHASES['echo']).includes(phase.id) || (phase.id === 'travel' && tripPlan)).map(phase => (
           <div key={phase.id} id={`phase-${phase.id}`} className="rounded-xl overflow-hidden transition scroll-mt-32" style={{
             background: '#1B2B4B',
-            border: statePhaseMap[pulse.tripState] === phase.id ? '1px solid #34D399' : '1px solid #243552',
+            border: statePhaseMap[pulse.tripState] === phase.id ? '1px solid #34D399'
+              : (phase.id === 'remember' && pulse.tripState === 'echo') ? '1px solid rgba(201,168,76,0.4)'
+              : '1px solid #243552',
           }}>
             <button onClick={() => togglePhase(phase.id)} className="w-full flex items-center justify-between px-5 py-4 transition text-left hover:brightness-110">
               <div className="flex items-center gap-3">
