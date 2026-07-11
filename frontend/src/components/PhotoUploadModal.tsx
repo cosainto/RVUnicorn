@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image, Loader2 } from 'lucide-react';
-import { VisibilitySelector } from './VisibilitySelector';
+import { VisibilitySelector, SurfaceSelector, type VisibilityValue, type Surface } from './VisibilitySelector';
 import api from '../services/api';
 
 interface PhotoUploadModalProps {
@@ -21,7 +21,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
-  const [visibility, setVisibility] = useState<'PUBLIC' | 'FRIENDS' | 'PRIVATE'>('PUBLIC');
+  const [visibility, setVisibility] = useState<VisibilityValue>('PUBLIC');
+  const [surfaces, setSurfaces] = useState<Surface[]>(['PROFILE', 'RIG', 'TRIP', 'CAMPGROUND']);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +63,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           formData.append('image', file, file.name || `photo_${i + idx}.jpg`);
           if (i + idx === 0) formData.append('caption', caption);
           formData.append('visibility', visibility);
+          formData.append('surfaces', JSON.stringify(surfaces));
           if (albumId) formData.append('albumId', albumId);
           if (eventId) formData.append('eventId', eventId);
           return api.post('/photos', formData, {
@@ -91,6 +93,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     setPreviews([]);
     setCaption('');
     setVisibility('PUBLIC');
+    setSurfaces(['PROFILE', 'RIG', 'TRIP', 'CAMPGROUND']);
     setUploadProgress(0);
     onClose();
   };
@@ -173,6 +176,11 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
 
           {/* Visibility Selector */}
           <VisibilitySelector value={visibility} onChange={setVisibility} />
+
+          {/* Surface Selector — where it appears */}
+          {visibility !== 'PRIVATE' && (
+            <SurfaceSelector value={surfaces} onChange={setSurfaces} />
+          )}
         </div>
 
         {/* Footer */}

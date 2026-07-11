@@ -1123,6 +1123,8 @@ model Photo {
   eventId        String?
   visibility     String               @default("PUBLIC")
   isPrivate      Boolean              @default(false)
+  surfaces       String[]             @default(["PROFILE", "RIG", "TRIP", "CAMPGROUND"])
+  sharedWithIds  String[]             @default([])
   moments        MomentPhoto[]
   album          PhotoAlbum?          @relation(fields: [albumId], references: [id])
   event          Event?               @relation(fields: [eventId], references: [id])

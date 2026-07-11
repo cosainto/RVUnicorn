@@ -76,14 +76,28 @@ async function canTagUser(taggerId: string, targetId: string): Promise<boolean> 
 router.post("/", authenticateToken, upload.single("image"), async (req: any, res) => {
   try {
     const userId = (req as any).user.id;
-    const { 
-      albumId, 
-      eventId, 
-      caption, 
+    const {
+      albumId,
+      eventId,
+      caption,
       visibility = "PUBLIC",
       allowDownload = true,
-      scheduledFor
+      scheduledFor,
+      surfaces: surfacesRaw,
+      sharedWithIds: sharedWithIdsRaw,
     } = req.body;
+
+    // Parse surfaces (comes as JSON string or comma-separated from form data)
+    let surfaces: string[] = ['PROFILE', 'RIG', 'TRIP', 'CAMPGROUND'];
+    if (surfacesRaw) {
+      try { surfaces = typeof surfacesRaw === 'string' ? JSON.parse(surfacesRaw) : surfacesRaw; } catch { surfaces = surfacesRaw.split(','); }
+    }
+
+    // Parse sharedWithIds for SELECT_PEOPLE visibility
+    let sharedWithIds: string[] = [];
+    if (sharedWithIdsRaw) {
+      try { sharedWithIds = typeof sharedWithIdsRaw === 'string' ? JSON.parse(sharedWithIdsRaw) : sharedWithIdsRaw; } catch { sharedWithIds = sharedWithIdsRaw.split(','); }
+    }
 
     if (!req.file) {
       return res.status(400).json({ error: "No image provided" });
@@ -130,6 +144,9 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
         imageUrl: result.secure_url,
         caption: caption || null,
         visibility,
+        surfaces,
+        sharedWithIds,
+        isPrivate: visibility === 'PRIVATE',
       },
       include: {
         user: {
@@ -162,6 +179,21 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
           })),
         });
       }
+    }
+
+    // Auto-tag to campground if user has an active check-in and CAMPGROUND surface is on
+    if (surfaces.includes('CAMPGROUND')) {
+      try {
+        const activeCheckIn = await prisma.checkIn.findFirst({
+          where: { userId, isActive: true },
+          select: { campgroundId: true },
+        });
+        if (activeCheckIn?.campgroundId) {
+          await prisma.photoCampgroundTag.create({
+            data: { photoId: photo.id, campgroundId: activeCheckIn.campgroundId, taggedBy: userId },
+          }).catch(() => {}); // ignore duplicate
+        }
+      } catch { /* non-critical */ }
     }
 
     res.status(201).json(photo);

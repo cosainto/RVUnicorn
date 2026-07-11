@@ -701,12 +701,16 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
     });
 
     // Query 2: Photo table (trip album photos uploaded via /photos endpoint)
+    // Include photos with RIG surface, or older photos without surfaces field (default all)
     const eventPhotos = await prisma.photo.findMany({
       where: {
         userId: { in: rigUserIds },
-        eventId: { not: null },
-        visibility: { in: ['PUBLIC', null] },
         isPrivate: false,
+        visibility: { in: ['PUBLIC', null] },
+        OR: [
+          { eventId: { not: null } },
+          { surfaces: { has: 'RIG' } },
+        ],
       },
       select: { id: true, imageUrl: true, caption: true, createdAt: true, eventId: true, userId: true,
         user: { select: safeUserSelect },
