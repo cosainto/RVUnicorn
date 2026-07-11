@@ -113,10 +113,43 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
 
   const loadInitial = async () => {
     try {
-      const { data } = await api.get(`/rigs/${slug}/timeline?limit=20`);
-      setItems(data.items || []);
-      setCursor(data.nextCursor);
-      setHasMore(!!data.nextCursor);
+      // Fetch timeline + photo posts in parallel
+      const [timelineRes, postsRes] = await Promise.all([
+        api.get(`/rigs/${slug}/timeline?limit=20`).catch(() => ({ data: { items: [] } })),
+        api.get(`/rigs/${slug}/posts`).catch(() => ({ data: [] })),
+      ]);
+
+      const timelineItems = timelineRes.data?.items || [];
+      const photoPosts = (postsRes.data || []).filter((p: any) => p.photos?.length > 0);
+
+      // Convert photo posts into timeline-shaped items
+      const photoTimelineItems = photoPosts.map((post: any) => ({
+        id: post.id,
+        rigId: post.rigId,
+        itemType: 'PHOTO_ALBUM',
+        refId: post.id,
+        refType: 'RigPost',
+        title: post.title || `Shared ${post.photos.length} photos`,
+        previewImageUrl: post.photos[0],
+        previewText: null,
+        occurredAt: post.createdAt,
+        createdAt: post.createdAt,
+        _photos: post.photos,
+        _photoCount: post.photos.length,
+        _user: post.author,
+        _source: post._source || 'photo_post',
+      }));
+
+      // Merge, deduplicate by id, sort by date
+      const existingIds = new Set(timelineItems.map((i: any) => i.id));
+      const newPhotoItems = photoTimelineItems.filter((p: any) => !existingIds.has(p.id));
+      const allItems = [...timelineItems, ...newPhotoItems].sort(
+        (a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+      );
+
+      setItems(allItems);
+      setCursor(timelineRes.data?.nextCursor);
+      setHasMore(!!timelineRes.data?.nextCursor);
     } catch {}
     setLoading(false);
   };
