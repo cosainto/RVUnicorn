@@ -460,89 +460,189 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
           SECTION 1 — RIG IDENTITY / INFLUENCER HUB
           Title = rig's actual name. Condensed public rig page.
           ════════════════════════════════════════════════════════════════ */}
-      <div style={{ background: CN.card, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(160deg, #1B2B4B 0%, #0F1C35 60%, #1A2A3E 100%)', borderRadius: 16, overflow: 'hidden', borderTop: '3px solid #E8622A' }}>
 
-        {/* Header — rig name as title, spec as subtitle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${CN.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{data.rigEmoji || '\u{1F690}'}</span>
-            <div style={{ minWidth: 0 }}>
-              {hasNoRig ? (
-                <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0 }}>Set Up Your Rig</p>
-              ) : (
-                <Link to={rigPageUrl} style={{ textDecoration: 'none', display: 'block', minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: CN.cream, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {displayTitle}
-                  </p>
-                  {data.rigName && data.rigSpec && (
-                    <p style={{ fontSize: 10, color: CN.muted, margin: 0 }}>{data.rigSpec}</p>
-                  )}
-                </Link>
+        {/* ── Hero photo with overlay ── */}
+        <div style={{ position: 'relative', height: 200 }}
+          className="group"
+        >
+          {coverImg ? (
+            <>
+              <div style={{
+                width: '100%', height: '100%',
+                background: 'linear-gradient(135deg, #0F1C35 0%, #1B2B4B 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                <img
+                  src={coverImg}
+                  alt={displayTitle}
+                  style={{
+                    maxWidth: '100%', maxHeight: '100%',
+                    objectFit: 'contain', objectPosition: 'center',
+                  }}
+                  onError={(e) => {
+                    // Fall back to cover mode if contain looks wrong
+                    const img = e.target as HTMLImageElement;
+                    img.style.objectFit = 'cover';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.maxWidth = 'none';
+                    img.style.maxHeight = 'none';
+                    (img as any).style.objectPosition = 'left center';
+                  }}
+                />
+              </div>
+              {/* Vignette gradient */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
+                background: 'linear-gradient(to bottom, transparent, rgba(15,28,53,0.95))',
+                pointerEvents: 'none',
+              }} />
+            </>
+          ) : (
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #1A2A45 0%, #0F1C35 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: 48, opacity: 0.3 }}>{data.rigEmoji || '\u{1F690}'}</span>
+                <p style={{ fontSize: 11, color: CN.muted, marginTop: 6 }}>
+                  {'\u{1F4F8}'}{' '}
+                  <Link to={editUrl} style={{ color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>
+                    Add a cover photo
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* View button — top right */}
+          {!hasNoRig && (
+            <Link
+              to={rigPageUrl}
+              style={{
+                position: 'absolute', top: 10, right: 12,
+                fontSize: 10, fontWeight: 700, color: CN.gold,
+                textDecoration: 'none',
+                background: 'rgba(15,28,53,0.7)', backdropFilter: 'blur(4px)',
+                padding: '4px 10px', borderRadius: 99,
+              }}
+            >
+              View &rarr;
+            </Link>
+          )}
+
+          {/* Edit button — bottom right, hover-visible on desktop */}
+          {!hasNoRig && (
+            <Link
+              to={editUrl}
+              className="md:opacity-0 md:group-hover:opacity-100"
+              style={{
+                position: 'absolute', bottom: 36, right: 12,
+                fontSize: 10, fontWeight: 600, color: '#fff',
+                textDecoration: 'none',
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                padding: '4px 10px', borderRadius: 99,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              {'\u{270F}\uFE0F'} Edit Rig
+            </Link>
+          )}
+
+          {/* Rig name + spec overlaid on photo bottom */}
+          {!hasNoRig && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              padding: '0 16px 12px',
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+            }}>
+              <Link to={rigPageUrl} style={{ textDecoration: 'none', minWidth: 0 }}>
+                <p style={{
+                  fontSize: 18, fontWeight: 800, color: '#fff', margin: 0,
+                  textShadow: '0 1px 8px rgba(0,0,0,0.5)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {displayTitle}
+                </p>
+                {data.rigName && data.rigSpec && (
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', margin: 0 }}>{data.rigSpec}</p>
+                )}
+              </Link>
+              {data.rigClass && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, color: CN.gold,
+                  background: 'rgba(232,163,56,0.15)',
+                  border: '1px solid rgba(232,163,56,0.3)',
+                  padding: '2px 8px', borderRadius: 99,
+                  textTransform: 'uppercase', letterSpacing: 0.5,
+                  flexShrink: 0, marginLeft: 8,
+                }}>
+                  {humanizeClass(data.rigClass)}
+                </span>
               )}
             </div>
-          </div>
-          {!hasNoRig && (
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              <Link to={editUrl} style={{ fontSize: 10, color: CN.muted, textDecoration: 'none', fontWeight: 600 }}>Edit</Link>
-              <Link to={rigPageUrl} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>View &rarr;</Link>
+          )}
+
+          {hasNoRig && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              padding: '0 16px 12px',
+            }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: CN.cream, margin: 0 }}>Set Up Your Rig</p>
             </div>
           )}
         </div>
 
-        {/* Cover photo */}
-        {coverImg ? (
-          <img src={coverImg} alt={displayTitle} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
-        ) : (
-          <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: CN.cardAlt }}>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: 36 }}>{data.rigEmoji || '\u{1F690}'}</span>
-              <p style={{ fontSize: 10, color: CN.muted, marginTop: 4 }}>
-                <Link to={editUrl} style={{ color: CN.gold, textDecoration: 'none' }}>Add a cover photo &rarr;</Link>
-              </p>
-            </div>
-          </div>
-        )}
-
         <div style={{ padding: 16 }}>
-          {/* Identity subtitle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            {data.rigClass && <span style={{ fontSize: 11, color: CN.muted }}>{humanizeClass(data.rigClass)}</span>}
-            {(data.followerCount ?? 0) > 0 && (
-              <Link to={rigPageUrl} style={{ fontSize: 11, color: CN.gold, textDecoration: 'none', fontWeight: 500 }}>
-                {data.followerCount} follower{data.followerCount !== 1 ? 's' : ''}
-              </Link>
-            )}
-          </div>
-
           {/* Recent photos strip */}
-          {data.recentPhotos && data.recentPhotos.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Recent Photos</p>
-              <div style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
-                {data.recentPhotos.map((url, i) => (
-                  <Link key={i} to={rigPageUrl} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
-                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Memory Wall peek */}
-          {data.pinnedMemories && data.pinnedMemories.length > 0 && !data.recentPhotos?.length && (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: CN.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Memory Wall</p>
-              <div style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
-                {data.pinnedMemories.map(m => (
-                  <Link key={m.id} to={rigPageUrl} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
-                      {m.photoUrl ? <img src={m.photoUrl} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{'\u{1F4F8}'}</div>}
-                    </div>
-                  </Link>
-                ))}
-              </div>
+          {!hasNoRig && (
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {data.recentPhotos && data.recentPhotos.length > 0 ? (
+                <>
+                  {data.recentPhotos.slice(0, 4).map((url, i) => (
+                    <Link key={i} to={rigPageUrl} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                      <div style={{ width: 60, height: 60, borderRadius: 10, overflow: 'hidden', background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                        <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      </div>
+                    </Link>
+                  ))}
+                  {data.recentPhotos.length < 4 && (
+                    <Link to={`${rigPageUrl}?tab=photos`} style={{
+                      textDecoration: 'none', flexShrink: 0,
+                      width: 60, height: 60, borderRadius: 10,
+                      background: CN.cardAlt, border: `1px dashed ${CN.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 18, color: CN.muted,
+                    }}>
+                      +
+                    </Link>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  {(data.followerCount ?? 0) > 0 && (
+                    <Link to={rigPageUrl} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>
+                      {data.followerCount} follower{data.followerCount !== 1 ? 's' : ''}
+                    </Link>
+                  )}
+                </>
+              ) : data.pinnedMemories && data.pinnedMemories.length > 0 ? (
+                <>
+                  {data.pinnedMemories.slice(0, 4).map(m => (
+                    <Link key={m.id} to={rigPageUrl} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                      <div style={{ width: 60, height: 60, borderRadius: 10, overflow: 'hidden', background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                        {m.photoUrl ? <img src={m.photoUrl} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{'\u{1F4F8}'}</div>}
+                      </div>
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <span style={{ fontSize: 10, color: CN.muted }}>No photos yet</span>
+                  <Link to={`${rigPageUrl}?tab=photos`} style={{ fontSize: 10, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>Add Photos</Link>
+                </div>
+              )}
             </div>
           )}
 
