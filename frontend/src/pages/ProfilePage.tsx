@@ -487,12 +487,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           <div className="support-glass overflow-hidden">
             {rvShowcase && (rvShowcase.photos?.length > 0 || rvShowcase.videoUrl) ? (
               <div className="grid md:grid-cols-[40%_60%]">
-                <div className="aspect-[4/3] md:aspect-auto" style={{ background: 'var(--navy)', minHeight: '180px' }}>
+                <Link to={rvShowcase.rigSlug ? `/rig/${rvShowcase.rigSlug}` : `/profile/${username}/rig`} className="aspect-[4/3] md:aspect-auto block" style={{ background: 'var(--navy)', minHeight: '180px' }}>
                   {rvShowcase.photos?.[0] ? <img src={rvShowcase.photos[0]} alt="RV" className="w-full h-full object-cover" /> : rvShowcase.videoUrl ? <video src={rvShowcase.videoUrl} className="w-full h-full object-cover" muted /> : null}
-                </div>
+                </Link>
                 <div className="p-5 lg:p-6 flex flex-col justify-center">
-                  <p className="text-[11px] font-semibold uppercase mb-2" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>THEIR RIG</p>
-                  {rvShowcase.title && <h3 className="font-playfair text-xl font-bold italic mb-1" style={{ color: 'var(--cream)' }}>{rvShowcase.title}</h3>}
+                  <p className="text-[11px] font-semibold uppercase mb-2" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>{isOwnProfile ? 'MY' : 'THEIR'} RIG</p>
+                  {rvShowcase.title && <Link to={rvShowcase.rigSlug ? `/rig/${rvShowcase.rigSlug}` : `/profile/${username}/rig`} className="font-playfair text-xl font-bold italic mb-1 hover:underline" style={{ color: 'var(--cream)', textDecoration: 'none' }}>{rvShowcase.title}</Link>}
                   {(() => {
                     const rvMake = rvShowcase.user?.rvMake || profile.rvMake;
                     const rvModel = rvShowcase.user?.rvModel || profile.rvModel;
@@ -504,7 +504,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   {rvShowcase.photos && rvShowcase.photos.length > 1 && (
                     <div className="flex gap-1.5 mb-3">{rvShowcase.photos.slice(0, 3).map((p: string, i: number) => <img key={i} src={p} alt="" className="w-10 h-10 rounded-lg object-cover" />)}</div>
                   )}
-                  <Link to={rvShowcase.rigSlug ? `/rig/${rvShowcase.rigSlug}` : `/profile/${username}/rig`} className="text-[12px] font-semibold mt-1" style={{ color: 'var(--campfire)' }}>Explore {isOwnProfile ? 'My' : 'Their'} Rig & Memories →</Link>
                 </div>
               </div>
             ) : (
