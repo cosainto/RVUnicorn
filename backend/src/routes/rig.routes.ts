@@ -689,20 +689,23 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
     ])];
 
     // Query 1: RigPost photos (direct rig uploads + trip posts)
-    const posts = await prisma.rigPost.findMany({
-      where: {
-        photos: { isEmpty: false },
-        OR: [
-          { rigId: rig.id },
-          { userId: { in: rigUserIds }, tripId: { not: null } },
-          { userId: { in: rigUserIds }, rigId: null, tripId: null },
-        ],
-        visibility: { in: ['PUBLIC', 'BOTH', null] },
-      },
-      include: { author: { select: safeUserSelect } },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
+    // Note: rigId is required on RigPost, so we query by rigId OR by userId for rig users
+    let posts: any[] = [];
+    try {
+      posts = await prisma.rigPost.findMany({
+        where: {
+          photos: { isEmpty: false },
+          OR: [
+            { rigId: rig.id },
+            { userId: { in: rigUserIds } },
+          ],
+          visibility: { in: ['PUBLIC', 'BOTH', null] },
+        },
+        include: { author: { select: safeUserSelect } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      });
+    } catch (e: any) { console.error('[RigPosts] rigPost query failed:', e.message); }
 
     // Query 2: Photo table + PhotoAlbum (wrapped in try/catch — schema may not be pushed yet)
     let directPhotos: any[] = [];
