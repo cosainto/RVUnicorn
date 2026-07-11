@@ -446,14 +446,51 @@ router.get('/:slug/showcase', async (req: any, res) => {
   try {
     const rig = await getRig(req.params.slug);
     if (!rig) return res.status(404).json({ error: 'Rig not found' });
-    const { publicVisibilityFilter } = require('../services/rigVisibility');
-    const where: any = { rigId: rig.id, isRigPhoto: true, ...publicVisibilityFilter };
-    if (req.query.category) where.photoCategory = req.query.category;
-    const photos = await prisma.rigPost.findMany({
-      where, orderBy: { createdAt: 'desc' },
-      select: { id: true, photos: true, photoCategory: true, title: true, createdAt: true },
+
+    // Get all rig user IDs (owner + co-pilots)
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+
+    // Get RigPost photos (rig showcase + travel)
+    const rigPosts = await prisma.rigPost.findMany({
+      where: {
+        photos: { isEmpty: false },
+        OR: [{ rigId: rig.id }, { userId: { in: rigUserIds } }],
+        visibility: { in: ['PUBLIC', 'BOTH', null] },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, photos: true, photoCategory: true, title: true, createdAt: true, isRigPhoto: true },
+      take: 50,
     });
-    res.json(photos);
+
+    // Also get photos from user albums
+    let albumPhotoUrls: string[] = [];
+    try {
+      const albums = await prisma.photoAlbum.findMany({
+        where: { userId: { in: rigUserIds }, NOT: { privacy: 'PRIVATE' } },
+        select: { photos: { select: { imageUrl: true }, orderBy: { createdAt: 'desc' as any }, take: 20 } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+      albumPhotoUrls = albums.flatMap((a: any) => a.photos.map((p: any) => p.imageUrl));
+    } catch {}
+
+    // If RigPost photos are sparse, add album photos as synthetic entries
+    if (rigPosts.length === 0 && albumPhotoUrls.length > 0) {
+      rigPosts.push({
+        id: 'album-showcase',
+        photos: albumPhotoUrls.slice(0, 30),
+        photoCategory: 'TRAVEL',
+        title: 'Trip Photos',
+        createdAt: new Date(),
+        isRigPhoto: false,
+      } as any);
+    }
+
+    res.json(rigPosts);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

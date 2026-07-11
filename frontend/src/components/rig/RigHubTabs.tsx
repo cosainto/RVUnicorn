@@ -25,7 +25,7 @@ export function PhotosTab({ slug, isOwner }: { slug: string; isOwner: boolean })
   const [posts, setPosts] = useState<any[]>([]);
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
-  useEffect(() => { api.get(`/rigs/${slug}/posts`).then(r => setPosts(r.data || [])).catch(() => {}).finally(() => setLoading(false)); }, [slug]);
+  useEffect(() => { api.get(`/rigs/${slug}/posts`).then(r => { console.log('[PhotosTab] loaded', (r.data || []).length, 'posts'); setPosts(r.data || []); }).catch(e => { console.error('[PhotosTab] fetch failed:', e?.response?.status, e?.message); }).finally(() => setLoading(false)); }, [slug]);
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-400" /></div>;
   const rigPhotos = posts.filter((p: any) => p.isRigPhoto).flatMap((p: any) => p.photos || []);
   const travelPhotos = posts.filter((p: any) => !p.isRigPhoto).flatMap((p: any) => p.photos || []);
