@@ -695,11 +695,10 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       posts = await prisma.rigPost.findMany({
         where: {
           photos: { isEmpty: false },
-          OR: [
-            { rigId: rig.id },
-            { userId: { in: rigUserIds } },
+          AND: [
+            { OR: [{ rigId: rig.id }, { userId: { in: rigUserIds } }] },
+            { NOT: { visibility: { in: ['PRIVATE', 'FRIENDS_ONLY'] } } },
           ],
-          visibility: { in: ['PUBLIC', 'BOTH', null] },
         },
         include: { author: { select: safeUserSelect } },
         orderBy: { createdAt: 'desc' },
@@ -791,7 +790,7 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         where: {
           userId: { in: rigUserIds },
           photoUrls: { isEmpty: false },
-          visibility: { in: ['PUBLIC', 'FRIENDS', null] },
+          NOT: { visibility: 'PRIVATE' },
         },
         select: { id: true, state: true, photoUrls: true, userId: true, startDate: true, createdAt: true,
           campsite: { select: { name: true, id: true } },

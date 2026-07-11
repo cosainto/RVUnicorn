@@ -419,11 +419,10 @@ router.get('/:slug/posts', async (req: any, res) => {
     const posts = await prisma.rigPost.findMany({
       where: {
         photos: { isEmpty: false },
-        OR: [
-          { rigId: rig.id },
-          { userId: { in: rigUserIds } },
+        AND: [
+          { OR: [{ rigId: rig.id }, { userId: { in: rigUserIds } }] },
+          { NOT: { visibility: { in: ['PRIVATE', 'FRIENDS_ONLY'] } } },
         ],
-        visibility: { in: ['PUBLIC', 'BOTH', null] },
       },
       include: {
         author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
@@ -457,8 +456,10 @@ router.get('/:slug/showcase', async (req: any, res) => {
     const rigPosts = await prisma.rigPost.findMany({
       where: {
         photos: { isEmpty: false },
-        OR: [{ rigId: rig.id }, { userId: { in: rigUserIds } }],
-        visibility: { in: ['PUBLIC', 'BOTH', null] },
+        AND: [
+          { OR: [{ rigId: rig.id }, { userId: { in: rigUserIds } }] },
+          { NOT: { visibility: { in: ['PRIVATE', 'FRIENDS_ONLY'] } } },
+        ],
       },
       orderBy: { createdAt: 'desc' },
       select: { id: true, photos: true, photoCategory: true, title: true, createdAt: true, isRigPhoto: true },
