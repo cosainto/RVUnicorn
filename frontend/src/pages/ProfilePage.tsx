@@ -16,6 +16,7 @@ import {
   Play, Calendar, MoreHorizontal, ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
+import { formatRigClass } from '../utils/formatRigClass';
 import TripCalendarWidget from '../components/TripCalendarWidget';
 import CalendarCampgroundCard from '../components/CalendarCampgroundCard';
 import { User as UserType } from '../services/auth.service';
@@ -357,7 +358,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       </div>
 
                       {/* RV line */}
-                      {(profile.rvMake || profile.rvType) && <p className="text-[12px] mt-2 flex items-center gap-1.5" style={{ color: 'var(--cream)' }}><Tent className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${profile.rvType}`}</p>}
+                      {(profile.rvMake || profile.rvType) && <p className="text-[12px] mt-2 flex items-center gap-1.5" style={{ color: 'var(--cream)' }}><Tent className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${formatRigClass(profile.rvType)}`}</p>}
 
                       {/* Action row */}
                       <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -492,7 +493,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 <div className="p-5 lg:p-6 flex flex-col justify-center">
                   <p className="text-[11px] font-semibold uppercase mb-2" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>THEIR RIG</p>
                   {rvShowcase.title && <h3 className="font-playfair text-xl font-bold italic mb-1" style={{ color: 'var(--cream)' }}>{rvShowcase.title}</h3>}
-                  {(profile.rvMake || profile.rvType) && <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${profile.rvType}`}</p>}
+                  {(profile.rvMake || profile.rvType) && <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${formatRigClass(profile.rvType)}`}</p>}
                   {rvShowcase.photos && rvShowcase.photos.length > 1 && (
                     <div className="flex gap-1.5 mb-3">{rvShowcase.photos.slice(0, 3).map((p: string, i: number) => <img key={i} src={p} alt="" className="w-10 h-10 rounded-lg object-cover" />)}</div>
                   )}

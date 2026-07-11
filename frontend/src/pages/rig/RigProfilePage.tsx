@@ -136,7 +136,8 @@ export default function RigProfilePage() {
 
   const owner = rig.owner || {};
   const rigTitle = rig.rigName || `${rig.year || ''} ${rig.make || ''} ${rig.model || ''}`.trim() || 'My Rig';
-  const rigSubtitle = [rig.year, rig.make, rig.model].filter(Boolean).join(' ');
+  // Deduplicate consecutive words (fixes "Coachmen Pursuit Pursuit 31bh" → "Coachmen Pursuit 31bh")
+  const rigSubtitle = [rig.year, rig.make, rig.model].filter(Boolean).join(' ').replace(/\b(\w+)\s+\1\b/gi, '$1');
   const TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'trips', label: 'Trips' },

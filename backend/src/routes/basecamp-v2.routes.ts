@@ -366,7 +366,7 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       followerCount: userRig?.followerCount || userRig?._count?.followers || 0,
       postCount: userRig?._count?.posts || 0,
       rigName: userRig?.rigName || null,
-      rigSpec: [userRig?.year, userRig?.make || userWithPrefs?.rvMake, userRig?.model || userWithPrefs?.rvModel].filter(Boolean).join(' ') || null,
+      rigSpec: ([userRig?.year, userRig?.make || userWithPrefs?.rvMake, userRig?.model || userWithPrefs?.rvModel].filter(Boolean).join(' ') || '').replace(/\b(\w+)\s+\1\b/gi, '$1') || null,
       rigEmoji: userRig?.rigEmoji || '',
       rigPhoto: userRig?.heroPhoto || null,
       rigSlug: userRig?.slug || null,

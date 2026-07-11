@@ -37,7 +37,7 @@ export default function RigCard({ rig, onSkip, onPostToFeed, showActions = true 
 
   const specs = [
     rig.rvLength && `${rig.rvLength}ft`,
-    rig.rvType,
+    rig.rvType && (rig.rvType.includes('_') ? rig.rvType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : rig.rvType),
     rig.rvSleeps && `Sleeps ${rig.rvSleeps}`,
     rig.rvSlideouts && rig.rvSlideouts > 0 && `${rig.rvSlideouts} Slide-out${rig.rvSlideouts > 1 ? 's' : ''}`,
   ].filter(Boolean);
