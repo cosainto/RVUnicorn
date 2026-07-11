@@ -701,29 +701,25 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
     });
 
     // Query 2: Photo table (trip album photos uploaded via /photos endpoint)
-    // Include photos with RIG surface, or older photos without surfaces field (default all)
+    // Include ALL photos from rig users — older photos won't have surfaces field
     const eventPhotos = await prisma.photo.findMany({
       where: {
         userId: { in: rigUserIds },
         isPrivate: false,
-        visibility: { in: ['PUBLIC', null] },
-        OR: [
-          { eventId: { not: null } },
-          { surfaces: { has: 'RIG' } },
-        ],
+        NOT: { visibility: 'PRIVATE' },
       },
       select: { id: true, imageUrl: true, caption: true, createdAt: true, eventId: true, userId: true,
         user: { select: safeUserSelect },
       },
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: 300,
     });
 
     // Convert Photo records into the same shape as RigPost for the frontend
-    // Group by eventId to create synthetic "posts"
+    // Group by eventId (or 'standalone' for photos without a trip)
     const eventPhotoMap = new Map<string, any[]>();
     for (const p of eventPhotos) {
-      const key = p.eventId!;
+      const key = p.eventId || `standalone-${p.userId}`;
       if (!eventPhotoMap.has(key)) eventPhotoMap.set(key, []);
       eventPhotoMap.get(key)!.push(p);
     }

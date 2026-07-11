@@ -485,18 +485,16 @@ export default function RigProfilePage() {
                   </div>
                 )}
 
-                {/* Travel Map (compact) */}
+                {/* Travel Map */}
                 {rig.totalStatesVisited?.length > 0 && (
                   <div className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                    <div className="p-4 pb-0">
+                    <div className="p-4 pb-2">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>Travel Map</h3>
                         <button onClick={() => setActiveTab('map')} className="text-[10px] font-semibold" style={{ color: CN.gold }}>View Full Map →</button>
                       </div>
                     </div>
-                    <div style={{ maxHeight: 280, overflow: 'hidden' }}>
-                      <RigStatesMap visitedStates={rig.totalStatesVisited} />
-                    </div>
+                    <RigStatesMap visitedStates={rig.totalStatesVisited} />
                   </div>
                 )}
 
