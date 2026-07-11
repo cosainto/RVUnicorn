@@ -734,11 +734,11 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         orderBy: { createdAt: 'desc' },
         take: 300,
       }),
-      // Photos inside albums owned by rig users
+      // Photos inside albums owned by rig users (include FRIENDS since rig co-pilots are friends)
       prisma.photoAlbum.findMany({
         where: {
           userId: { in: rigUserIds },
-          privacy: { in: ['PUBLIC', null] },
+          NOT: { privacy: 'PRIVATE' },
         },
         select: {
           id: true, title: true, eventId: true, userId: true, createdAt: true,
