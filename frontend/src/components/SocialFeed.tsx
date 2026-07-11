@@ -615,13 +615,19 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
       }
       case 'CAMPSITE_UPDATE':
       case 'CHECKIN':
-        return `${actorName} checked in at ${item.targetName}`;
+        return `${actorName} checked in at ${item.targetName || item.campground?.name || 'a campground'}${item.campground?.state ? `, ${item.campground.state}` : ''}`;
       case 'RECIPE':
         return `${actorName} shared a recipe`;
       case 'MEAL':
         return `${actorName} planned a meal`;
       case 'PHOTO':
-        return `${actorName} added a photo`;
+      case 'PHOTO_UPLOADED': {
+        let photoDesc = `${actorName} shared a photo`;
+        if (item.campground?.name) photoDesc += ` at ${item.campground.name}`;
+        else if (item.targetName) photoDesc += ` at ${item.targetName}`;
+        if (item.campground?.state) photoDesc += `, ${item.campground.state}`;
+        return photoDesc;
+      }
       case 'GEAR':
         return `${actorName} added gear`;
       case 'PACKING_FOR_TRIP':
@@ -1760,10 +1766,14 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {(() => {
             const SYSTEM_TYPES = new Set(['STARGAZING', 'WALLET_CHAOS', 'WALLET_APOLOGY']);
-            const grouped: Array<{ type: 'item'; item: any } | { type: 'group'; key: string; items: any[] }> = [];
+            const PHOTO_TYPES = new Set(['PHOTO', 'PHOTO_UPLOADED', 'POST']);
+            const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
+            // Phase 1: Group consecutive system items (stargazing etc)
+            const step1: Array<{ type: 'item'; item: any } | { type: 'system_group'; key: string; items: any[] }> = [];
             let i = 0;
             while (i < feedItems.length) {
               const item = feedItems[i];
@@ -1775,19 +1785,66 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   j++;
                 }
                 if (group.length === 1) {
-                  grouped.push({ type: 'item', item });
+                  step1.push({ type: 'item', item });
                 } else {
-                  grouped.push({ type: 'group', key: `grp-${item.id}`, items: group });
+                  step1.push({ type: 'system_group', key: `grp-${item.id}`, items: group });
                 }
                 i = j;
               } else {
-                grouped.push({ type: 'item', item });
+                step1.push({ type: 'item', item });
                 i++;
               }
             }
 
+            // Phase 2: Group photo/post items from same actor within 6hr window
+            const grouped: Array<
+              | { type: 'item'; item: any }
+              | { type: 'system_group'; key: string; items: any[] }
+              | { type: 'photo_group'; key: string; actor: any; items: any[]; photos: string[]; campground: any; newestDate: string }
+            > = [];
+
+            for (const entry of step1) {
+              if (entry.type !== 'item') {
+                grouped.push(entry);
+                continue;
+              }
+              const item = entry.item;
+              const hasPhoto = !!(item.imageUrl && !item.videoUrl);
+              const isPhotoType = PHOTO_TYPES.has(item.type) || PHOTO_TYPES.has(item.activityType || '');
+
+              if (hasPhoto && isPhotoType && item.actor?.id) {
+                // Try to merge with the last group if same actor within 6hr
+                const last = grouped[grouped.length - 1];
+                if (
+                  last?.type === 'photo_group' &&
+                  last.actor.id === item.actor.id &&
+                  Math.abs(new Date(last.newestDate).getTime() - new Date(item.createdAt).getTime()) < SIX_HOURS_MS
+                ) {
+                  last.items.push(item);
+                  if (item.imageUrl) last.photos.push(item.imageUrl);
+                  if (!last.campground && item.campground) last.campground = item.campground;
+                  if (item.targetName && !last.campground) {
+                    last.campground = { name: item.targetName, id: '' };
+                  }
+                } else {
+                  grouped.push({
+                    type: 'photo_group',
+                    key: `pg-${item.actor.id}-${item.id}`,
+                    actor: item.actor,
+                    items: [item],
+                    photos: item.imageUrl ? [item.imageUrl] : [],
+                    campground: item.campground || (item.targetName ? { name: item.targetName, id: '' } : null),
+                    newestDate: item.createdAt,
+                  });
+                }
+              } else {
+                grouped.push(entry);
+              }
+            }
+
             return grouped.map(entry => {
-              if (entry.type === 'group') {
+              // System groups (stargazing, wallet, etc)
+              if (entry.type === 'system_group') {
                 const { key, items } = entry;
                 const isExpanded = expandedGroups.has(key);
                 const hasStargazing = items.some((i: any) => i.type === 'STARGAZING' || i.activityType === 'STARGAZING');
@@ -1822,6 +1879,111 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
                   </div>
                 );
               }
+
+              // Photo groups — collapsed multi-photo card
+              if (entry.type === 'photo_group') {
+                const { key, actor, items: groupItems, photos, campground } = entry;
+                const photoCount = photos.length;
+                const totalLikes = groupItems.reduce((s: number, i: any) => s + (i.likeCount || i._count?.likes || i.sourceLikeCount || 0), 0);
+                const totalComments = groupItems.reduce((s: number, i: any) => s + (i._count?.comments || i.mediaCommentCount || 0), 0);
+                const firstItem = groupItems[0];
+                const targetLink = firstItem.targetLink || (campground?.id ? `/campgrounds/${campground.id}` : `/profile/${actor.username}`);
+
+                // Build description
+                let desc = '';
+                if (photoCount > 1) {
+                  desc = `Shared ${photoCount} photos`;
+                  if (campground?.name) desc += ` from ${campground.name}`;
+                  if (campground?.state) desc += `, ${campground.state}`;
+                } else {
+                  desc = 'Shared a photo';
+                  if (campground?.name) desc += ` at ${campground.name}`;
+                  if (campground?.state) desc += `, ${campground.state}`;
+                }
+
+                // Display photos: max 4 in grid, with overflow count
+                const displayPhotos = photos.slice(0, 4);
+                const overflowCount = photoCount - 4;
+                const gridCols = photoCount === 1 ? 1 : photoCount === 2 ? 2 : photoCount === 3 ? 3 : 4;
+
+                return (
+                  <div key={key} className="border border-gray-200 rounded-2xl p-4 hover:shadow-md transition bg-white">
+                    {/* Header: avatar + name + time */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <Link to={`/profile/${actor.username}`} className="flex-shrink-0">
+                        {actor.profilePicture ? (
+                          <img src={actor.profilePicture} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link to={`/profile/${actor.username}`} className="font-semibold text-sm text-gray-900 hover:underline">
+                            {actor.firstName} {actor.lastName}
+                          </Link>
+                          <span className="text-xs text-gray-400">·</span>
+                          <span className="text-xs text-gray-400">{formatDate(firstItem.createdAt)}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                      </div>
+                    </div>
+
+                    {/* Photo grid */}
+                    {photoCount === 1 ? (
+                      <Link to={targetLink} className="block mb-3">
+                        <img
+                          src={displayPhotos[0]}
+                          alt=""
+                          className="w-full rounded-xl object-cover"
+                          style={{ maxHeight: 220 }}
+                        />
+                      </Link>
+                    ) : (
+                      <Link to={targetLink} className="block mb-3">
+                        <div
+                          className="grid gap-1 rounded-xl overflow-hidden"
+                          style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}
+                        >
+                          {displayPhotos.map((url, idx) => (
+                            <div key={idx} className="relative" style={{ aspectRatio: '1' }}>
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              {/* +N more overlay on last tile */}
+                              {idx === displayPhotos.length - 1 && overflowCount > 0 && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                  <span className="text-white font-bold text-lg">+{overflowCount}</span>
+                                  <span className="text-white/70 text-xs ml-1">more</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* Engagement row */}
+                    <div className="flex items-center gap-5 text-xs text-gray-500">
+                      {totalLikes > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3.5 h-3.5" /> {totalLikes}
+                        </span>
+                      )}
+                      {totalComments > 0 && (
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-3.5 h-3.5" /> {totalComments}
+                        </span>
+                      )}
+                      <Link to={targetLink} className="ml-auto text-primary-600 font-medium hover:underline">
+                        {photoCount > 1 ? 'View All Photos →' : 'View →'}
+                      </Link>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Single items
               const { item } = entry;
               return item.type === 'CAMPGROUND_POST'
                 ? renderCampgroundPost(item)

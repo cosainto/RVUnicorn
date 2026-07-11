@@ -3220,9 +3220,9 @@ export default function BasecampPage({ user }: BasecampProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Content - Left 2 Columns */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             {/* What's New — Activity Feeds (hidden during load-out to reduce noise) */}
             {pulseState !== 'load-out' && <CreatorFeed limit={6} showHeader={true} />}
             {/* Hitch ambient nudge — only when no trip planned */}

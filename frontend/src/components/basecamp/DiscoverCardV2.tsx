@@ -8,7 +8,7 @@ export interface DiscoverData {
   cardType: string;
   title: string;
   subtitle: string;
-  items: { id: string; name: string; imageUrl: string | null; type: string; distance?: number; friendCount?: number; rating?: number }[];
+  items: { id: string; name: string; imageUrl: string | null; type: string; distance?: number; friendCount?: number; rating?: number; reviewCount?: number }[];
   reason: string;
 }
 
@@ -22,7 +22,11 @@ function itemLink(type: string, id: string): string {
 }
 
 function contextLabel(item: DiscoverData['items'][number]): string {
-  if (item.rating != null) return `${item.rating} \u2B50`;
+  if (item.rating != null) {
+    const ratingStr = typeof item.rating === 'number' ? item.rating.toFixed(1) : item.rating;
+    if (item.reviewCount) return `${ratingStr} \u2B50 (${item.reviewCount})`;
+    return `${ratingStr} \u2B50`;
+  }
   if (item.friendCount != null) return `${item.friendCount} friends saved`;
   if (item.distance != null) return `${item.distance} mi away`;
   return '';

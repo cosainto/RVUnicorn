@@ -90,11 +90,10 @@ export default function DreamingSection({ data }: Props) {
 
   if (allEmpty) {
     return (
-      <div style={{ background: CN.card, borderRadius: 16, padding: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 28, marginBottom: 6 }}>{'\u{1F4AD}'}</div>
-        <p style={{ fontSize: 13, fontWeight: 600, color: CN.cream, marginBottom: 4 }}>Start dreaming</p>
-        <p style={{ fontSize: 11, color: CN.muted, marginBottom: 10 }}>Save campgrounds you'd love to visit and they'll appear here with trip planning tools.</p>
-        <Link to="/campgrounds" style={{ fontSize: 12, color: CN.gold, textDecoration: 'none', fontWeight: 600 }}>Explore Campgrounds &rarr;</Link>
+      <div style={{ background: CN.card, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 14 }}>{'\u{1F4AD}'}</span>
+        <span style={{ fontSize: 12, color: CN.muted }}>Save campgrounds to build your dream list</span>
+        <Link to="/campgrounds" style={{ fontSize: 12, color: CN.gold, textDecoration: 'none', fontWeight: 600, marginLeft: 'auto', whiteSpace: 'nowrap' }}>Explore &rarr;</Link>
       </div>
     );
   }

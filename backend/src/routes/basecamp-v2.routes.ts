@@ -169,6 +169,29 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
     const followedRigIdList = followedRigs.map((r: any) => r.id);
     const friendIds = followedUserIds.map((f: any) => f.creatorId);
 
+    // Also include rigs owned by friends/co-pilots so RV Circle shows their activity
+    let friendRigIds: string[] = [];
+    try {
+      const friendships = await prisma.friendship.findMany({
+        where: { OR: [{ initiatorId: userId, status: 'ACCEPTED' }, { receiverId: userId, status: 'ACCEPTED' }] },
+        select: { initiatorId: true, receiverId: true },
+      });
+      const friendUserIds = friendships.map((f: any) => f.initiatorId === userId ? f.receiverId : f.initiatorId);
+      if (friendUserIds.length > 0) {
+        const friendRigs = await prisma.rig.findMany({
+          where: { ownerId: { in: friendUserIds } },
+          select: { id: true, rigName: true, slug: true, heroPhoto: true, owner: { select: { id: true, username: true, profilePicture: true } } },
+        });
+        for (const r of friendRigs) {
+          if (!followedRigIdList.includes(r.id)) {
+            followedRigIdList.push(r.id);
+            followedRigs.push(r);
+          }
+        }
+        friendRigIds = friendRigs.map((r: any) => r.id);
+      }
+    } catch (e) { /* non-critical — proceed without friend rigs */ }
+
     // ─── Second wave of parallel queries ───
     const [
       activeTrip,
@@ -222,19 +245,19 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         select: { user: { select: { id: true, username: true, profilePicture: true, firstName: true } } },
       }) : Promise.resolve([]), []),
       safe(followedRigIdList.length > 0 ? prisma.rigTimelineItem.findMany({
-        where: { rigId: { in: followedRigIdList }, occurredAt: { gte: yesterday } },
+        where: { rigId: { in: followedRigIdList }, occurredAt: { gte: oneWeekAgo } },
         orderBy: { occurredAt: 'desc' },
         take: 20,
         select: { id: true, rigId: true, itemType: true, title: true, previewImageUrl: true, previewText: true, occurredAt: true, refId: true, refType: true },
       }) : Promise.resolve([]), []),
       safe(followedRigIdList.length > 0 ? prisma.rigPost.findMany({
-        where: { rigId: { in: followedRigIdList }, createdAt: { gte: yesterday }, NOT: { photos: { equals: [] } }, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
+        where: { rigId: { in: followedRigIdList }, createdAt: { gte: oneWeekAgo }, NOT: { photos: { equals: [] } }, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: { id: true, rigId: true, photos: true, createdAt: true, title: true, body: true, stopId: true },
       }) : Promise.resolve([]), []),
       safe(followedRigIdList.length > 0 ? prisma.rigTripStop.findMany({
-        where: { rigId: { in: followedRigIdList }, arrivedAt: { gte: yesterday } },
+        where: { rigId: { in: followedRigIdList }, arrivedAt: { gte: oneWeekAgo } },
         orderBy: { arrivedAt: 'desc' },
         take: 10,
         select: { id: true, rigId: true, name: true, state: true, arrivedAt: true, coverImageUrl: true, campgroundId: true, tripId: true },
@@ -508,15 +531,20 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
         friendCount: 1,
       }));
     } else {
-      // Default: trending campgrounds
+      // Default: trending campgrounds — require real review count to avoid fake-looking entries
       const trending = await prisma.campground.findMany({
-        where: { googleRating: { gte: 4.0 } },
-        orderBy: { googleRating: 'desc' },
+        where: {
+          googleRating: { gte: 3.5 },
+          googleReviewCount: { gte: 10 },
+          imageUrl: { not: null },
+        },
+        orderBy: [{ googleReviewCount: 'desc' }, { googleRating: 'desc' }],
         take: 5,
-        select: { id: true, name: true, imageUrl: true, state: true, googleRating: true },
+        select: { id: true, name: true, imageUrl: true, state: true, googleRating: true, googleReviewCount: true },
       });
       discoverItems = trending.map((c: any) => ({
-        id: c.id, name: c.name, imageUrl: c.imageUrl, type: 'campground', rating: c.googleRating,
+        id: c.id, name: c.name, imageUrl: c.imageUrl, type: 'campground',
+        rating: c.googleRating, reviewCount: c.googleReviewCount,
       }));
     }
 
