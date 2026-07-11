@@ -684,6 +684,7 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
     ]);
     const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
 
+    // Query 1: RigPost photos (direct rig uploads + trip posts)
     const posts = await prisma.rigPost.findMany({
       where: {
         photos: { isEmpty: false },
@@ -699,7 +700,54 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       take: 200,
     });
 
-    res.json(posts);
+    // Query 2: Photo table (trip album photos uploaded via /photos endpoint)
+    const eventPhotos = await prisma.photo.findMany({
+      where: {
+        userId: { in: rigUserIds },
+        eventId: { not: null },
+        visibility: { in: ['PUBLIC', null] },
+        isPrivate: false,
+      },
+      select: { id: true, imageUrl: true, caption: true, createdAt: true, eventId: true, userId: true,
+        user: { select: safeUserSelect },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    // Convert Photo records into the same shape as RigPost for the frontend
+    // Group by eventId to create synthetic "posts"
+    const eventPhotoMap = new Map<string, any[]>();
+    for (const p of eventPhotos) {
+      const key = p.eventId!;
+      if (!eventPhotoMap.has(key)) eventPhotoMap.set(key, []);
+      eventPhotoMap.get(key)!.push(p);
+    }
+
+    const syntheticPosts = Array.from(eventPhotoMap.entries()).map(([eventId, photos]) => ({
+      id: `event-${eventId}`,
+      rigId: rig.id,
+      userId: photos[0].userId,
+      photos: photos.map((p: any) => p.imageUrl),
+      isRigPhoto: false,
+      photoCategory: 'TRAVEL',
+      createdAt: photos[0].createdAt,
+      author: photos[0].user,
+      _source: 'trip_album',
+    }));
+
+    // Merge and deduplicate (avoid showing same photo twice)
+    const existingPhotoUrls = new Set(posts.flatMap((p: any) => p.photos || []));
+    const dedupedSynthetic = syntheticPosts.map(sp => ({
+      ...sp,
+      photos: sp.photos.filter((url: string) => !existingPhotoUrls.has(url)),
+    })).filter(sp => sp.photos.length > 0);
+
+    const allPosts = [...posts, ...dedupedSynthetic].sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    res.json(allPosts);
   } catch (error: any) {
     console.error('[Rig] get posts error:', error.message);
     res.status(500).json({ error: 'Failed to get rig posts' });
