@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Award, Calendar, X, Plus, Trash2, Users, Image, Edit2, Heart, Navigation, Tent,
@@ -9,6 +9,7 @@ import {
 import api from '../services/api';
 import USMapSVG from './USMapSVG';
 import interstateRoutes, { InterstateRoute } from '../data/interstateRoutes';
+import ActivityRail, { ActivityPreviewCard, type ActivityRailItem } from './ActivityRail';
 
 interface TravelMapProps {
   compact?: boolean;
@@ -240,6 +241,24 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [upcomingTrips, setUpcomingTrips] = useState<any[]>([]);
   const [activeRoute, setActiveRoute] = useState<any>(null);
   const [friendsCheckins, setFriendsCheckins] = useState<any[]>([]);
+
+  // Activity Rail state
+  const [selectedRailItem, setSelectedRailItem] = useState<ActivityRailItem | null>(null);
+  const [showPreviewCard, setShowPreviewCard] = useState(false);
+
+  const handleRailItemClick = useCallback((item: ActivityRailItem) => {
+    if (item.campgroundLat && item.campgroundLng) {
+      setSelectedRailItem(item);
+      setShowPreviewCard(true);
+    } else {
+      navigate(item.navigateTo);
+    }
+  }, [navigate]);
+
+  const handleClosePreviewCard = useCallback(() => {
+    setShowPreviewCard(false);
+    setSelectedRailItem(null);
+  }, []);
   
   // Home location state
   const [homeLocation, setHomeLocation] = useState<{
@@ -1176,8 +1195,18 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         </div>
       )}
 
-      {/* US Map */}
-      <div className={`rounded-lg p-4 relative ${socialMode ? '' : 'bg-gradient-to-br from-blue-50 to-green-50'}`} style={socialMode ? { background: '#16284a' } : undefined}>
+      {/* US Map + Activity Rail */}
+      <div className="flex flex-col md:flex-row rounded-lg overflow-hidden" style={{ minHeight: 400 }}>
+        {/* Activity Rail — desktop: vertical left rail, mobile: horizontal strip below map */}
+        {isOwnProfile && (
+          <ActivityRail
+            onItemClick={handleRailItemClick}
+            selectedItemId={selectedRailItem?.id || null}
+          />
+        )}
+
+        {/* Map container */}
+        <div className={`flex-1 p-4 relative ${socialMode ? '' : 'bg-gradient-to-br from-blue-50 to-green-50'}`} style={socialMode ? { background: '#16284a' } : undefined} onClick={() => { if (showPreviewCard) handleClosePreviewCard(); }}>
         <USMapSVG
           markers={finalMarkers}
           visitedStates={activeLayers.includes('visits') ? visitedStates : []}
@@ -1273,6 +1302,38 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
             )}
           </div>
         )}
+
+        {/* Activity Rail — Preview Card overlay */}
+        {showPreviewCard && selectedRailItem && (
+          <ActivityPreviewCard
+            item={selectedRailItem}
+            onClose={handleClosePreviewCard}
+            onNavigate={(path) => { handleClosePreviewCard(); navigate(path); }}
+          />
+        )}
+
+        {/* Highlighted pin for selected rail item */}
+        {showPreviewCard && selectedRailItem?.campgroundLat && selectedRailItem?.campgroundLng && (
+          <div
+            className="absolute pointer-events-none z-20"
+            style={{
+              top: '40%',
+              left: '50%',
+              transform: 'translate(-50%, -100%)',
+              animation: 'railPulsePin 2s ease-in-out infinite',
+            }}
+          >
+            <div style={{
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              background: selectedRailItem.ringColor,
+              border: '3px solid #fff',
+              boxShadow: `0 0 12px ${selectedRailItem.ringColor}`,
+            }} />
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Shoutout Popover */}
