@@ -46,6 +46,7 @@ export default function ActivityRail({ onItemClick, selectedItemId }: ActivityRa
   const [items, setItems] = useState<ActivityRailItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [hasNetwork, setHasNetwork] = useState(false);
 
   // Auto-scroll refs
   const railRef = useRef<HTMLDivElement>(null);
@@ -67,6 +68,7 @@ export default function ActivityRail({ onItemClick, selectedItemId }: ActivityRa
         if (!cancelled) {
           setItems(data.items || []);
           setHasData((data.items || []).length > 0);
+          setHasNetwork(data.hasNetwork !== false);
           setLoading(false);
         }
       } catch {
@@ -144,12 +146,49 @@ export default function ActivityRail({ onItemClick, selectedItemId }: ActivityRa
     setTimeout(() => { isPausedRef.current = false; }, 1000);
   }, []);
 
-  // ── Don't render if no data ───────────────────────────────────────────────
+  // ── Don't render if no network (no friends/follows) ────────────────────────
 
-  if (loading || !hasData) {
-    // Empty state — return nothing, map takes full width
-    if (!loading && !hasData) return null;
-    return null;
+  if (loading) return null;
+  if (!hasData && !hasNetwork) return null; // No friends at all — hide rail entirely
+
+  // Has friends but no recent activity — show "quiet" prompt
+  if (!hasData && hasNetwork) {
+    return (
+      <>
+        <div
+          className="hidden md:flex flex-shrink-0 flex-col items-center justify-center"
+          style={{
+            width: 120,
+            background: 'rgba(15, 28, 53, 0.95)',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            padding: '20px 10px',
+            textAlign: 'center',
+          }}
+        >
+          <span style={{ fontSize: 24, marginBottom: 8 }}>🌲</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+            Quiet out there
+          </span>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 4, lineHeight: 1.3 }}>
+            Your friends' adventures will appear here
+          </span>
+        </div>
+        {/* Mobile quiet state */}
+        <div
+          className="md:hidden flex items-center justify-center gap-2"
+          style={{
+            height: 48,
+            width: '100%',
+            background: 'rgba(15, 28, 53, 0.95)',
+          }}
+        >
+          <span style={{ fontSize: 14 }}>🌲</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
+            Quiet out there — your friends' adventures will appear here
+          </span>
+        </div>
+      </>
+    );
   }
 
   // Duplicate items for seamless loop

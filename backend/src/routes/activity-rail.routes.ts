@@ -99,7 +99,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     const followedCampgroundIds = campgroundFollows.map((f: any) => f.campgroundId);
 
     if (friendIds.length === 0 && followedCampgroundIds.length === 0) {
-      return res.json({ items: [], hasMore: false });
+      return res.json({ items: [], hasMore: false, hasNetwork: false });
     }
 
     // Step 2: Query activity sources (all in parallel)
@@ -360,7 +360,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
     }
 
     const sliced = deduped.slice(0, limit);
-    res.json({ items: sliced, hasMore: deduped.length > limit });
+    res.json({ items: sliced, hasMore: deduped.length > limit, hasNetwork: true });
   } catch (error: any) {
     console.error('Activity rail error:', error);
     res.status(500).json({ error: 'Failed to fetch activity rail' });
