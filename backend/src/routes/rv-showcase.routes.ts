@@ -28,8 +28,8 @@ router.get('/:username', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get showcase
-    const showcase = await prisma.rVShowcase.findUnique({
+    // Get showcase — first check user's own, then fall back to co-pilot's shared rig
+    let showcase = await prisma.rVShowcase.findUnique({
       where: { userId: user.id },
       include: {
         user: {
@@ -47,6 +47,62 @@ router.get('/:username', optionalAuth, async (req, res) => {
         },
       },
     });
+
+    // If user has a showcase but it's for a deleted/empty rig, check if they're a co-pilot
+    // on someone else's rig and use that instead
+    if (!showcase || (showcase.title === 'Our Bus' && (!showcase.photos || (showcase.photos as string[]).length === 0))) {
+      // Check if user is a co-pilot on a rig that has a showcase
+      const coPilotRig = await prisma.rigCoPilot.findFirst({
+        where: { userId: user.id },
+        select: { rig: { select: { ownerId: true, rigName: true, heroPhoto: true, slug: true, year: true, make: true, model: true, rigClass: true } } },
+      });
+      const pilotRig = !coPilotRig ? await prisma.rigPilot.findFirst({
+        where: { userId: user.id },
+        select: { rig: { select: { ownerId: true, rigName: true, heroPhoto: true, slug: true, year: true, make: true, model: true, rigClass: true } } },
+      }) : null;
+
+      const sharedRig = coPilotRig?.rig || pilotRig?.rig;
+      if (sharedRig) {
+        // Return a synthetic showcase from the shared rig
+        const ownerShowcase = await prisma.rVShowcase.findUnique({
+          where: { userId: sharedRig.ownerId },
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, rvType: true, rvYear: true, rvMake: true, rvModel: true },
+            },
+          },
+        });
+        if (ownerShowcase) {
+          // Use the owner's showcase but keep the rig name from the shared rig
+          showcase = {
+            ...ownerShowcase,
+            title: sharedRig.rigName || ownerShowcase.title,
+            rigSlug: sharedRig.slug,
+          } as any;
+        } else {
+          // No owner showcase — build a minimal one from the rig data
+          showcase = {
+            id: 'synthetic',
+            userId: sharedRig.ownerId,
+            title: sharedRig.rigName || `${sharedRig.year || ''} ${sharedRig.make || ''} ${sharedRig.model || ''}`.trim(),
+            description: null,
+            privacy: 'PUBLIC',
+            photos: sharedRig.heroPhoto ? [sharedRig.heroPhoto] : [],
+            videoUrl: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            rigSlug: sharedRig.slug,
+            user: {
+              id: user.id,
+              rvType: sharedRig.rigClass,
+              rvYear: sharedRig.year,
+              rvMake: sharedRig.make,
+              rvModel: sharedRig.model,
+            },
+          } as any;
+        }
+      }
+    }
 
     if (!showcase) {
       return res.status(404).json({ error: 'No RV showcase found' });

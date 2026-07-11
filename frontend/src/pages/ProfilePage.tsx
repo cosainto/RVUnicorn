@@ -493,11 +493,18 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                 <div className="p-5 lg:p-6 flex flex-col justify-center">
                   <p className="text-[11px] font-semibold uppercase mb-2" style={{ color: 'var(--gold)', letterSpacing: '0.1em' }}>THEIR RIG</p>
                   {rvShowcase.title && <h3 className="font-playfair text-xl font-bold italic mb-1" style={{ color: 'var(--cream)' }}>{rvShowcase.title}</h3>}
-                  {(profile.rvMake || profile.rvType) && <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{profile.rvYear && `${profile.rvYear} `}{profile.rvMake} {profile.rvModel}{profile.rvType && ` · ${formatRigClass(profile.rvType)}`}</p>}
+                  {(() => {
+                    const rvMake = rvShowcase.user?.rvMake || profile.rvMake;
+                    const rvModel = rvShowcase.user?.rvModel || profile.rvModel;
+                    const rvYear = rvShowcase.user?.rvYear || profile.rvYear;
+                    const rvType = rvShowcase.user?.rvType || profile.rvType;
+                    const subtitle = [rvYear, rvMake, rvModel].filter(Boolean).join(' ').replace(/\b(\w+)\s+\1\b/gi, '$1');
+                    return (rvMake || rvType) ? <p className="text-[13px] mb-2" style={{ color: 'var(--muted)' }}>{subtitle}{rvType && ` · ${formatRigClass(rvType)}`}</p> : null;
+                  })()}
                   {rvShowcase.photos && rvShowcase.photos.length > 1 && (
                     <div className="flex gap-1.5 mb-3">{rvShowcase.photos.slice(0, 3).map((p: string, i: number) => <img key={i} src={p} alt="" className="w-10 h-10 rounded-lg object-cover" />)}</div>
                   )}
-                  <Link to={`/profile/${username}/rig`} className="text-[12px] font-semibold mt-1" style={{ color: 'var(--campfire)' }}>Explore {isOwnProfile ? 'My' : 'Their'} Rig & Memories →</Link>
+                  <Link to={rvShowcase.rigSlug ? `/rig/${rvShowcase.rigSlug}` : `/profile/${username}/rig`} className="text-[12px] font-semibold mt-1" style={{ color: 'var(--campfire)' }}>Explore {isOwnProfile ? 'My' : 'Their'} Rig & Memories →</Link>
                 </div>
               </div>
             ) : (

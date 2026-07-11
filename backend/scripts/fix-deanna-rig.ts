@@ -90,6 +90,17 @@ async function main() {
     console.log('No separate rig found for Deanna — already deleted');
   }
 
+  // Step 3b: Delete or update Deanna's RVShowcase so it doesn't show "Our Bus"
+  try {
+    const deannaShowcase = await (prisma as any).rVShowcase.findUnique({ where: { userId: deannaId } });
+    if (deannaShowcase) {
+      await (prisma as any).rVShowcase.delete({ where: { userId: deannaId } });
+      console.log('Deleted Deanna RVShowcase ("Our Bus")');
+    }
+  } catch (e: any) {
+    console.log('RVShowcase cleanup note:', e.message);
+  }
+
   // Step 4: Ensure Deanna is a co-pilot on Will's rig
   try {
     await (prisma.rigCoPilot as any).upsert({
