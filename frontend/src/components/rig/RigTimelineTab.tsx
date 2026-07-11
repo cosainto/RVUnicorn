@@ -368,21 +368,60 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
           );
         }
 
-        // ── PHOTO CARD (default for PHOTO_ALBUM + anything else) ──
+        // ── PHOTO ALBUM CARD (with grid) ──
+        const feedPhotos: string[] = (item as any)._photos || (item as any)._stayPhotos || [];
+        const feedPhotoCount: number = (item as any)._photoCount || (item as any)._stayPhotoCount || feedPhotos.length;
+        const hasPhotoGrid = feedPhotos.length > 0;
+
         return (
           <div key={item.id} className="rounded-2xl shadow-md overflow-hidden" style={{ background: CN.card, border: `1px solid rgba(255,255,255,0.08)` }}>
             <PostHeader item={item} rigName={rigName} ownerAvatar={ownerAvatar} ownerName={ownerName} actionLabel={actionLabel} />
-            {item.previewImageUrl && (
-              <div className="px-4 py-1">
-                <img src={item.previewImageUrl} alt="" className="w-full rounded-xl object-cover" style={{ maxHeight: 400 }} />
+
+            {/* Photo grid */}
+            {hasPhotoGrid ? (
+              <div className="px-3 pt-1 pb-2">
+                {title && <h4 className="text-sm font-bold mb-2 px-1" style={{ color: CN.cream }}>{title}</h4>}
+                <div
+                  className="grid gap-1 rounded-xl overflow-hidden"
+                  style={{ gridTemplateColumns: feedPhotos.length === 1 ? '1fr' : feedPhotos.length === 2 ? '1fr 1fr' : feedPhotos.length === 3 ? '2fr 1fr' : '1fr 1fr' }}
+                >
+                  {feedPhotos.slice(0, feedPhotos.length === 3 ? 3 : 4).map((url: string, i: number) => (
+                    <div
+                      key={i}
+                      className="relative overflow-hidden"
+                      style={{
+                        aspectRatio: feedPhotos.length === 1 ? '16/9' : (feedPhotos.length === 3 && i === 0) ? '1' : '1',
+                        gridRow: (feedPhotos.length === 3 && i === 0) ? 'span 2' : undefined,
+                      }}
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      {i === (feedPhotos.length >= 4 ? 3 : -1) && feedPhotoCount > 4 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-white font-bold text-xl">+{feedPhotoCount - 4}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] mt-1.5 px-1" style={{ color: CN.muted }}>
+                  📸 {feedPhotoCount} photo{feedPhotoCount !== 1 ? 's' : ''}
+                </p>
               </div>
+            ) : (
+              <>
+                {item.previewImageUrl && (
+                  <div className="px-4 py-1">
+                    <img src={item.previewImageUrl} alt="" className="w-full rounded-xl object-cover" style={{ maxHeight: 400 }} />
+                  </div>
+                )}
+                <div className="px-4 pb-2">
+                  {title && <h4 className="text-sm font-bold mt-1" style={{ color: CN.cream }}>{title}</h4>}
+                  {item.previewText && !item.previewText.startsWith('{') && (
+                    <p className="text-xs mt-1 line-clamp-2" style={{ color: CN.muted }}>{item.previewText}</p>
+                  )}
+                </div>
+              </>
             )}
-            <div className="px-4 pb-2">
-              {title && <h4 className="text-sm font-bold mt-1" style={{ color: CN.cream }}>{title}</h4>}
-              {item.previewText && !item.previewText.startsWith('{') && (
-                <p className="text-xs mt-1 line-clamp-2" style={{ color: CN.muted }}>{item.previewText}</p>
-              )}
-            </div>
             <ActionBar />
           </div>
         );

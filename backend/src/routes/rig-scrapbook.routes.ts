@@ -56,7 +56,7 @@ router.get('/:slug/timeline', async (req: any, res) => {
           ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
         },
         select: { id: true, title: true, userId: true, createdAt: true, coverPhotoUrl: true,
-          photos: { select: { imageUrl: true }, take: 4, orderBy: { createdAt: 'desc' } },
+          photos: { select: { imageUrl: true }, take: 12, orderBy: { createdAt: 'desc' } },
           _count: { select: { photos: true } },
           user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
         },
