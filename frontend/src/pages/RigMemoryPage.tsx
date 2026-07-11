@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Camera, Tent, MapPin, Plus, ChevronDown, MessageSquare, GitCompare, Wrench, Users, Send, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -45,6 +45,7 @@ interface PhotoData { id: string; imageUrl: string; caption?: string; createdAt:
 
 export default function RigMemoryPage() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [rig, setRig] = useState<RigData | null>(null);
   const [trips, setTrips] = useState<TripData[]>([]);
@@ -124,9 +125,10 @@ export default function RigMemoryPage() {
       ]);
       setRig(rigRes.data);
 
-      // If the showcase has a rigSlug (co-pilot's shared rig), fetch that rig's stats
+      // If the showcase has a rigSlug (co-pilot's shared rig), redirect to the actual rig page
       if (rigRes.data?.rigSlug) {
-        api.get(`/rigs/${rigRes.data.rigSlug}`).then(rr => setRigStats(rr.data)).catch(() => {});
+        navigate(`/rig/${rigRes.data.rigSlug}`, { replace: true });
+        return;
       } else {
         // Fall back to finding owned rigs
         const profileUserId = rigRes.data?.user?.id;

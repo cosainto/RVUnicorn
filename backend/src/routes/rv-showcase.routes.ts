@@ -48,9 +48,10 @@ router.get('/:username', optionalAuth, async (req, res) => {
       },
     });
 
-    // If user has a showcase but it's for a deleted/empty rig, check if they're a co-pilot
-    // on someone else's rig and use that instead
-    if (!showcase || (showcase.title === 'Our Bus' && (!showcase.photos || (showcase.photos as string[]).length === 0))) {
+    // Check if user doesn't own a rig — if they're a co-pilot on someone else's rig,
+    // use that rig's data instead of their own (possibly stale/empty) showcase
+    const userOwnsRig = await prisma.rig.findFirst({ where: { ownerId: user.id }, select: { id: true } });
+    if (!userOwnsRig) {
       // Check if user is a co-pilot on a rig that has a showcase
       const coPilotRig = await prisma.rigCoPilot.findFirst({
         where: { userId: user.id },
