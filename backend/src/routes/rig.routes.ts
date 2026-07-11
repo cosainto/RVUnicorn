@@ -677,30 +677,15 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       return res.json([]); // graceful empty for missing rig
     }
 
-    // Get all user IDs associated with this rig (owner + co-pilots + rig connections + household)
-    const [pilots, coPilots, rigConnections, household] = await Promise.all([
+    // Get all user IDs associated with this rig (owner + co-pilots)
+    const [pilots, coPilots] = await Promise.all([
       prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
       prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
-      // Also include approved rig connections (co-pilot invites)
-      prisma.rigConnection.findMany({
-        where: { OR: [{ requesterId: rig.ownerId, status: 'APPROVED' }, { receiverId: rig.ownerId, status: 'APPROVED' }] },
-        select: { requesterId: true, receiverId: true },
-      }).catch(() => []),
-      // Also include household members
-      prisma.user.findUnique({ where: { id: rig.ownerId }, select: { householdId: true } })
-        .then(async (u: any) => u?.householdId
-          ? prisma.user.findMany({ where: { householdId: u.householdId, id: { not: rig.ownerId } }, select: { id: true } })
-          : []
-        ).catch(() => []),
     ]);
-    const connectionUserIds = rigConnections.flatMap((rc: any) => [rc.requesterId, rc.receiverId]);
-    const householdUserIds = (household as any[]).map((h: any) => h.id);
     const rigUserIds = [...new Set([
       rig.ownerId,
       ...pilots.map((p: any) => p.userId),
       ...coPilots.map((c: any) => c.userId),
-      ...connectionUserIds,
-      ...householdUserIds,
     ])];
 
     // Query 1: RigPost photos (direct rig uploads + trip posts)
@@ -719,10 +704,11 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       take: 200,
     });
 
-    // Query 2: Photo table — direct uploads AND photos inside albums owned by rig users
-    const [directPhotos, albumPhotos] = await Promise.all([
-      // Direct photo uploads by rig users
-      prisma.photo.findMany({
+    // Query 2: Photo table + PhotoAlbum (wrapped in try/catch — schema may not be pushed yet)
+    let directPhotos: any[] = [];
+    let albumPhotos: any[] = [];
+    try {
+      directPhotos = await prisma.photo.findMany({
         where: {
           userId: { in: rigUserIds },
           isPrivate: false,
@@ -733,9 +719,11 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         },
         orderBy: { createdAt: 'desc' },
         take: 300,
-      }),
-      // Photos inside albums owned by rig users (include FRIENDS since rig co-pilots are friends)
-      prisma.photoAlbum.findMany({
+      });
+    } catch (e: any) { console.error('[RigPosts] directPhotos query failed:', e.message); }
+
+    try {
+      albumPhotos = await prisma.photoAlbum.findMany({
         where: {
           userId: { in: rigUserIds },
           NOT: { privacy: 'PRIVATE' },
@@ -751,8 +739,8 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         },
         orderBy: { createdAt: 'desc' },
         take: 50,
-      }),
-    ]);
+      });
+    } catch (e: any) { console.error('[RigPosts] albumPhotos query failed:', e.message); }
 
     // Merge album photos into a flat list, dedup by photo ID
     const seenPhotoIds = new Set(directPhotos.map((p: any) => p.id));
@@ -793,20 +781,23 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       _source: 'trip_album',
     }));
 
-    // Query 3: StateVisit photos (travel map uploads stored as photoUrls arrays)
-    const stateVisitPhotos = await prisma.stateVisit.findMany({
-      where: {
-        userId: { in: rigUserIds },
-        photoUrls: { isEmpty: false },
-        visibility: { in: ['PUBLIC', 'FRIENDS', null] },
-      },
-      select: { id: true, state: true, photoUrls: true, userId: true, startDate: true, createdAt: true,
-        campsite: { select: { name: true, id: true } },
-        user: { select: safeUserSelect },
-      },
-      orderBy: { startDate: 'desc' },
-      take: 50,
-    });
+    // Query 3: StateVisit photos (wrapped in try/catch)
+    let stateVisitPhotos: any[] = [];
+    try {
+      stateVisitPhotos = await prisma.stateVisit.findMany({
+        where: {
+          userId: { in: rigUserIds },
+          photoUrls: { isEmpty: false },
+          visibility: { in: ['PUBLIC', 'FRIENDS', null] },
+        },
+        select: { id: true, state: true, photoUrls: true, userId: true, startDate: true, createdAt: true,
+          campsite: { select: { name: true, id: true } },
+          user: { select: safeUserSelect },
+        },
+        orderBy: { startDate: 'desc' },
+        take: 50,
+      });
+    } catch (e: any) { console.error('[RigPosts] stateVisit query failed:', e.message); }
 
     const stateVisitPosts = stateVisitPhotos.map((sv: any) => ({
       id: `sv-${sv.id}`,
