@@ -677,12 +677,31 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       return res.json([]); // graceful empty for missing rig
     }
 
-    // Get all user IDs associated with this rig (owner + co-pilots)
-    const [pilots, coPilots] = await Promise.all([
+    // Get all user IDs associated with this rig (owner + co-pilots + rig connections + household)
+    const [pilots, coPilots, rigConnections, household] = await Promise.all([
       prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
       prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      // Also include approved rig connections (co-pilot invites)
+      prisma.rigConnection.findMany({
+        where: { OR: [{ requesterId: rig.ownerId, status: 'APPROVED' }, { receiverId: rig.ownerId, status: 'APPROVED' }] },
+        select: { requesterId: true, receiverId: true },
+      }).catch(() => []),
+      // Also include household members
+      prisma.user.findUnique({ where: { id: rig.ownerId }, select: { householdId: true } })
+        .then(async (u: any) => u?.householdId
+          ? prisma.user.findMany({ where: { householdId: u.householdId, id: { not: rig.ownerId } }, select: { id: true } })
+          : []
+        ).catch(() => []),
     ]);
-    const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+    const connectionUserIds = rigConnections.flatMap((rc: any) => [rc.requesterId, rc.receiverId]);
+    const householdUserIds = (household as any[]).map((h: any) => h.id);
+    const rigUserIds = [...new Set([
+      rig.ownerId,
+      ...pilots.map((p: any) => p.userId),
+      ...coPilots.map((c: any) => c.userId),
+      ...connectionUserIds,
+      ...householdUserIds,
+    ])];
 
     // Query 1: RigPost photos (direct rig uploads + trip posts)
     const posts = await prisma.rigPost.findMany({
@@ -715,7 +734,7 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         orderBy: { createdAt: 'desc' },
         take: 300,
       }),
-      // Photos inside albums owned by rig users (albums linked to trips/events)
+      // Photos inside albums owned by rig users
       prisma.photoAlbum.findMany({
         where: {
           userId: { in: rigUserIds },
@@ -726,12 +745,12 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
           photos: {
             select: { id: true, imageUrl: true, caption: true, createdAt: true, userId: true },
             orderBy: { createdAt: 'desc' },
-            take: 50,
+            take: 100,
           },
           user: { select: safeUserSelect },
         },
         orderBy: { createdAt: 'desc' },
-        take: 30,
+        take: 50,
       }),
     ]);
 
