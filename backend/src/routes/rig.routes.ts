@@ -700,20 +700,58 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       take: 200,
     });
 
-    // Query 2: Photo table (trip album photos uploaded via /photos endpoint)
-    // Include ALL photos from rig users — older photos won't have surfaces field
-    const eventPhotos = await prisma.photo.findMany({
-      where: {
-        userId: { in: rigUserIds },
-        isPrivate: false,
-        NOT: { visibility: 'PRIVATE' },
-      },
-      select: { id: true, imageUrl: true, caption: true, createdAt: true, eventId: true, userId: true,
-        user: { select: safeUserSelect },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 300,
-    });
+    // Query 2: Photo table — direct uploads AND photos inside albums owned by rig users
+    const [directPhotos, albumPhotos] = await Promise.all([
+      // Direct photo uploads by rig users
+      prisma.photo.findMany({
+        where: {
+          userId: { in: rigUserIds },
+          isPrivate: false,
+          NOT: { visibility: 'PRIVATE' },
+        },
+        select: { id: true, imageUrl: true, caption: true, createdAt: true, eventId: true, albumId: true, userId: true,
+          user: { select: safeUserSelect },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 300,
+      }),
+      // Photos inside albums owned by rig users (albums linked to trips/events)
+      prisma.photoAlbum.findMany({
+        where: {
+          userId: { in: rigUserIds },
+          privacy: { in: ['PUBLIC', null] },
+        },
+        select: {
+          id: true, title: true, eventId: true, userId: true, createdAt: true,
+          photos: {
+            select: { id: true, imageUrl: true, caption: true, createdAt: true, userId: true },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+          },
+          user: { select: safeUserSelect },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+    ]);
+
+    // Merge album photos into a flat list, dedup by photo ID
+    const seenPhotoIds = new Set(directPhotos.map((p: any) => p.id));
+    const extraAlbumPhotos: any[] = [];
+    for (const album of albumPhotos) {
+      for (const photo of album.photos) {
+        if (!seenPhotoIds.has(photo.id)) {
+          seenPhotoIds.add(photo.id);
+          extraAlbumPhotos.push({
+            ...photo,
+            eventId: album.eventId,
+            albumId: album.id,
+            user: album.user,
+          });
+        }
+      }
+    }
+    const eventPhotos = [...directPhotos, ...extraAlbumPhotos];
 
     // Convert Photo records into the same shape as RigPost for the frontend
     // Group by eventId (or 'standalone' for photos without a trip)
