@@ -27,7 +27,16 @@ router.get('/:slug/timeline', async (req: any, res) => {
     else if (filter === 'build') where.itemType = { in: ['MOD', 'MAINTENANCE'] };
     else if (filter === 'trips') where.tripId = { not: null };
 
-    const [items, activeTrip, upcomingTrip] = await Promise.all([
+    // Get all rig user IDs for co-pilot activity
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+
+    const cursorDate = req.query.cursor ? new Date(req.query.cursor) : undefined;
+
+    const [items, activeTrip, upcomingTrip, userAlbums, userCheckins] = await Promise.all([
       prisma.rigTimelineItem.findMany({ where, orderBy: { occurredAt: 'desc' }, take: limit }),
       prisma.rigTrip.findFirst({
         where: { rigId: rig.id, status: 'ACTIVE' },
@@ -39,15 +48,90 @@ router.get('/:slug/timeline', async (req: any, res) => {
         orderBy: { startDate: 'asc' },
         select: { id: true, name: true, startDate: true, coverImageUrl: true },
       }),
+      // Co-pilot photo albums as feed items
+      prisma.photoAlbum.findMany({
+        where: {
+          userId: { in: rigUserIds },
+          NOT: { privacy: 'PRIVATE' },
+          ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
+        },
+        select: { id: true, title: true, userId: true, createdAt: true, coverPhotoUrl: true,
+          photos: { select: { imageUrl: true }, take: 4, orderBy: { createdAt: 'desc' } },
+          _count: { select: { photos: true } },
+          user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }).catch(() => []),
+      // Recent check-ins by rig users
+      prisma.checkIn.findMany({
+        where: {
+          userId: { in: rigUserIds },
+          ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
+        },
+        select: { id: true, userId: true, checkInDate: true, createdAt: true, notes: true,
+          campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true } },
+          user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        },
+        orderBy: { checkInDate: 'desc' },
+        take: 10,
+      }).catch(() => []),
     ]);
 
+    // Convert albums + checkins to timeline-compatible items
+    const albumItems = (userAlbums || []).filter((a: any) => a._count.photos > 0).map((a: any) => ({
+      id: `album-${a.id}`,
+      rigId: rig.id,
+      itemType: 'PHOTO_ALBUM',
+      refId: a.id,
+      refType: 'PhotoAlbum',
+      title: `${a.user?.firstName || 'Someone'} shared ${a._count.photos} photos: ${a.title}`,
+      previewImageUrl: a.photos?.[0]?.imageUrl || a.coverPhotoUrl,
+      previewText: null,
+      tripId: null,
+      stopId: null,
+      occurredAt: a.createdAt,
+      createdAt: a.createdAt,
+      _user: a.user,
+      _photoCount: a._count.photos,
+      _photos: a.photos?.map((p: any) => p.imageUrl) || [],
+      _source: 'copilot_album',
+    }));
+
+    const checkinItems = (userCheckins || []).filter((c: any) => c.campground).map((c: any) => ({
+      id: `checkin-${c.id}`,
+      rigId: rig.id,
+      itemType: 'CHECKIN',
+      refId: c.id,
+      refType: 'CheckIn',
+      title: `${c.user?.firstName || 'Someone'} checked in at ${c.campground?.name}`,
+      previewImageUrl: c.campground?.imageUrl,
+      previewText: c.notes || `${c.campground?.city || ''}, ${c.campground?.state || ''}`.trim(),
+      tripId: null,
+      stopId: null,
+      occurredAt: c.checkInDate || c.createdAt,
+      createdAt: c.createdAt,
+      _user: c.user,
+      _source: 'copilot_checkin',
+    }));
+
+    // Merge and deduplicate by refId+refType
+    const existingRefs = new Set(items.map((i: any) => `${i.refId}-${i.refType}`));
+    const extraItems = [...albumItems, ...checkinItems].filter(
+      (i: any) => !existingRefs.has(`${i.refId}-${i.refType}`)
+    );
+
+    const allItems = [...items, ...extraItems].sort(
+      (a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+    ).slice(0, limit);
+
     res.json({
-      items,
-      nextCursor: items.length === limit ? items[items.length - 1].occurredAt.toISOString() : null,
+      items: allItems,
+      nextCursor: allItems.length === limit ? allItems[allItems.length - 1].occurredAt.toISOString() : null,
       activeTrip: activeTrip || null,
       upcomingTrip: upcomingTrip || null,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { console.error('[RigTimeline] error:', e.message); res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:slug/timeline/sync', authenticateToken, async (req: any, res) => {
