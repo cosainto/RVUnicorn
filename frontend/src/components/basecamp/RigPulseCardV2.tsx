@@ -84,6 +84,17 @@ interface RigPulseData {
   pinnedMemories?: { id: string; title: string; photoUrl: string | null; date: string | null }[];
   maintenance?: MaintenanceData;
   ownerDetails?: OwnerDetails;
+  socialStats?: {
+    followerCount: number;
+    followerCountChange30d: number;
+    viewsThisWeek: number;
+    viewsLastWeek: number;
+    avgEngagementPerPost: number;
+    totalPosts: number;
+    lastPostDaysAgo: number;
+    activityStatus: 'ACTIVE' | 'QUIET' | 'INACTIVE';
+    topPostThisMonth: { id: string; preview: string | null; likeCount: number; commentCount: number } | null;
+  } | null;
 }
 
 function humanizeClass(raw: string | null | undefined): string {
@@ -545,6 +556,99 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
               {(data.postCount ?? 0) > 0 && <><div style={{ width: 1, background: CN.border, margin: '4px 4px' }} /><div style={{ flex: 1, textAlign: 'center' }}><p style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>{data.postCount}</p><p style={{ fontSize: 9, color: CN.muted, textTransform: 'uppercase' }}>Posts</p></div></>}
             </div>
           )}
+
+          {/* ═══ Rig Page Social Stats ═══ */}
+          {data.socialStats && data.rigSlug && (() => {
+            const ss = data.socialStats;
+            const statusDot = ss.activityStatus === 'ACTIVE' ? '#22c55e' : ss.activityStatus === 'QUIET' ? '#eab308' : '#6b7280';
+            const statusLabel = ss.activityStatus === 'ACTIVE' ? 'Active' : ss.activityStatus === 'QUIET' ? 'Quiet' : 'Inactive';
+            const viewsTrend = ss.viewsLastWeek > 0 ? Math.round(((ss.viewsThisWeek - ss.viewsLastWeek) / ss.viewsLastWeek) * 100) : 0;
+
+            return (
+              <div style={{ marginBottom: 12 }}>
+                {/* Divider + header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>Rig Page</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusDot }} />
+                    <span style={{ fontSize: 9, color: CN.muted }}>{statusLabel}</span>
+                  </div>
+                </div>
+
+                {/* Social stats grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+                  {/* Followers */}
+                  <Link to={`/rig/${data.rigSlug}?tab=followers`} style={{ textDecoration: 'none', textAlign: 'center', padding: '8px 4px', background: CN.cardAlt, borderRadius: 8, position: 'relative' }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: CN.gold }}>{ss.followerCount}</p>
+                    <p style={{ fontSize: 8, color: CN.muted, textTransform: 'uppercase', marginTop: 1 }}>Followers</p>
+                    {ss.followerCountChange30d > 0 && (
+                      <p style={{ fontSize: 8, color: '#22c55e', marginTop: 2 }}>+{ss.followerCountChange30d} mo</p>
+                    )}
+                    {/* Notification badge for new followers */}
+                    {ss.followerCountChange30d > 0 && (
+                      <div style={{
+                        position: 'absolute', top: -3, right: -3,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: CN.orange, color: '#fff',
+                        fontSize: 8, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: `2px solid ${CN.card}`,
+                      }}>
+                        +{ss.followerCountChange30d}
+                      </div>
+                    )}
+                  </Link>
+
+                  {/* Views */}
+                  <Link to={`/rig/${data.rigSlug}`} style={{ textDecoration: 'none', textAlign: 'center', padding: '8px 4px', background: CN.cardAlt, borderRadius: 8 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: CN.gold }}>{ss.viewsThisWeek}</p>
+                    <p style={{ fontSize: 8, color: CN.muted, textTransform: 'uppercase', marginTop: 1 }}>Views/wk</p>
+                    {viewsTrend !== 0 && (
+                      <p style={{ fontSize: 8, color: viewsTrend > 0 ? '#22c55e' : '#ef4444', marginTop: 2 }}>
+                        {viewsTrend > 0 ? '+' : ''}{viewsTrend}%
+                      </p>
+                    )}
+                  </Link>
+
+                  {/* Avg Engagement */}
+                  <Link to={`/rig/${data.rigSlug}?tab=photos`} style={{ textDecoration: 'none', textAlign: 'center', padding: '8px 4px', background: CN.cardAlt, borderRadius: 8 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: CN.gold }}>{ss.avgEngagementPerPost}</p>
+                    <p style={{ fontSize: 8, color: CN.muted, textTransform: 'uppercase', marginTop: 1 }}>Avg Engage</p>
+                    <p style={{ fontSize: 8, color: CN.muted, marginTop: 2 }}>per post</p>
+                  </Link>
+
+                  {/* Posts */}
+                  <Link to={`/rig/${data.rigSlug}?tab=photos`} style={{ textDecoration: 'none', textAlign: 'center', padding: '8px 4px', background: CN.cardAlt, borderRadius: 8 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: CN.gold }}>{ss.totalPosts}</p>
+                    <p style={{ fontSize: 8, color: CN.muted, textTransform: 'uppercase', marginTop: 1 }}>Posts</p>
+                    {ss.lastPostDaysAgo <= 7 && (
+                      <p style={{ fontSize: 8, color: '#22c55e', marginTop: 2 }}>recent</p>
+                    )}
+                  </Link>
+                </div>
+
+                {/* Top post highlight */}
+                {ss.topPostThisMonth && (ss.topPostThisMonth.likeCount + ss.topPostThisMonth.commentCount) > 2 && (
+                  <Link
+                    to={`/rig/${data.rigSlug}?tab=photos`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      marginTop: 6, padding: '6px 10px',
+                      background: CN.cardAlt, borderRadius: 8,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {ss.topPostThisMonth.preview && (
+                      <img src={ss.topPostThisMonth.preview} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontSize: 11, color: CN.muted }}>
+                      {'\u{1F3C6}'} Top post: {ss.topPostThisMonth.likeCount + ss.topPostThisMonth.commentCount} reactions
+                    </span>
+                  </Link>
+                )}
+              </div>
+            );
+          })()}
 
           {/* New followers (influencer metric — live data) */}
           {data.newFollowers?.length > 0 && (

@@ -63,6 +63,7 @@ export default function RigProfilePage() {
         // Track profile visit (fires once per page load, skips own profile)
         if (r.data?.ownerId && r.data.ownerId !== user?.id) {
           api.post(`/analytics/profile-visit/${r.data.ownerId}`, { source: 'RIG_PAGE' }).catch(() => {});
+          api.post(`/rigs/${slug}/view`).catch(() => {});
         }
       })
       .catch(() => {})

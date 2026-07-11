@@ -429,6 +429,71 @@ router.get('/dashboard', authenticateToken, async (req: any, res: Response) => {
       },
     };
 
+    // ─── Social stats for rig page ───
+    const rigSocialStats = rigId ? await (async () => {
+      try {
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+        const [
+          followerCount,
+          newFollowers30d,
+          viewsThisWeek,
+          viewsLastWeek,
+          recentPostsList,
+          lastPostDate,
+        ] = await Promise.all([
+          safe(prisma.rigFollow.count({ where: { rigId } }), 0),
+          safe(prisma.rigFollow.count({ where: { rigId, followedAt: { gte: thirtyDaysAgo } } }), 0),
+          safe(prisma.rigPageView.count({ where: { rigId, createdAt: { gte: sevenDaysAgo } } }), 0),
+          safe(prisma.rigPageView.count({ where: { rigId, createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }), 0),
+          safe(prisma.rigPost.findMany({
+            where: { rigId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: {
+              id: true,
+              photos: true,
+              title: true,
+              createdAt: true,
+            },
+          }), []),
+          safe(prisma.rigPost.findFirst({
+            where: { rigId },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+          }), null),
+        ]);
+
+        // Activity status
+        const lastPostDaysAgo = lastPostDate
+          ? Math.floor((now.getTime() - new Date(lastPostDate.createdAt).getTime()) / (24 * 60 * 60 * 1000))
+          : 999;
+
+        const activityStatus = lastPostDaysAgo <= 7 ? 'ACTIVE' : lastPostDaysAgo <= 21 ? 'QUIET' : 'INACTIVE';
+
+        return {
+          followerCount,
+          followerCountChange30d: newFollowers30d,
+          viewsThisWeek,
+          viewsLastWeek,
+          avgEngagementPerPost: 0,
+          totalPosts: recentPostsList.length,
+          lastPostDaysAgo,
+          activityStatus,
+          topPostThisMonth: null,
+        };
+      } catch (e: any) {
+        console.error('[BasecampV2] socialStats error:', e.message);
+        return null;
+      }
+    })() : null;
+
+    if (rigSocialStats) {
+      (rigPulse as any).socialStats = rigSocialStats;
+    }
+
     // ─── Build rvCircle ───
     const circleItems: any[] = [];
 

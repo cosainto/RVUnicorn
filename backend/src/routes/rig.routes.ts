@@ -340,6 +340,39 @@ router.get('/user/:userId/following', optionalAuth, async (req: Request, res: Re
   }
 });
 
+// POST /rigs/:slug/view — record a page view (fire-and-forget from frontend)
+router.post('/:slug/view', authenticateToken, async (req: any, res) => {
+  try {
+    const viewerId = req.userId;
+
+    // Find rig by slug or id
+    const rig = await prisma.rig.findFirst({
+      where: { OR: [{ slug: req.params.slug }, { id: req.params.slug }] },
+      select: { id: true, ownerId: true },
+    });
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    // Don't record own views
+    if (rig.ownerId === viewerId) return res.json({ ok: true });
+
+    // Rate limit: max 1 view per user per rig per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recent = await prisma.rigPageView.findFirst({
+      where: { rigId: rig.id, viewerId, createdAt: { gte: oneHourAgo } },
+    });
+    if (recent) return res.json({ ok: true });
+
+    await prisma.rigPageView.create({
+      data: { rigId: rig.id, viewerId },
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Record rig view error:', error);
+    res.json({ ok: true }); // Don't fail the frontend
+  }
+});
+
 // ============== PUBLIC RIG PROFILE ==============
 
 router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {

@@ -423,6 +423,7 @@ model User {
   rigPilotOf                                       RigPilot[]
   rigFollows                                       RigFollow[]                   @relation("RigFollows")
   rigPosts                                         RigPost[]                     @relation("RigPostAuthor")
+  rigPageViews                                     RigPageView[]                 @relation("RigPageViews")
   checkInInvitesSent                               CheckInInvite[]               @relation("CheckInInviteSent")
   checkInInvitesReceived                           CheckInInvite[]               @relation("CheckInInviteReceived")
   nearbyExperiencesAdded                           NearbyExperience[]            @relation("ExperienceAddedBy")
@@ -6433,6 +6434,7 @@ model Rig {
   totalMilesAllTime     Float     @default(0)
   totalNightsAllTime    Int       @default(0)
   totalCampgroundsAllTime Int     @default(0)
+  pageViews             RigPageView[]
   qrCodes               RigQRCode[]
   qrScans               RigQRScan[]
   journeys              RigJourney[]
@@ -6545,6 +6547,18 @@ model RigPost {
   @@index([rigId, isRigPhoto])
   @@index([bundleId])
   @@index([rigId, createdAt])
+}
+
+model RigPageView {
+  id        String   @id @default(cuid())
+  rigId     String
+  viewerId  String?
+  createdAt DateTime @default(now())
+  rig       Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  viewer    User?    @relation("RigPageViews", fields: [viewerId], references: [id], onDelete: SetNull)
+
+  @@index([rigId, createdAt])
+  @@index([viewerId, rigId])
 }
 
 model RigMilestone {
