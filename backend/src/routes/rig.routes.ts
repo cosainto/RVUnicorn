@@ -842,6 +842,8 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
+    console.log(`[RigPosts] slug=${rigId} | rigUserIds=${rigUserIds.length} | rigPosts=${posts.length} | directPhotos=${directPhotos.length} | albumPhotos=${albumPhotos.length} | albums total photos=${albumPhotos.reduce((s: number, a: any) => s + a.photos.length, 0)} | extraAlbum=${extraAlbumPhotos.length} | eventPhotos=${eventPhotos.length} | syntheticPosts=${syntheticPosts.length} | stateVisit=${stateVisitPhotos.length} | final=${allPosts.length} | totalPhotoUrls=${allPosts.reduce((s: number, p: any) => s + (p.photos?.length || 0), 0)}`);
+
     res.json(allPosts);
   } catch (error: any) {
     console.error('[Rig] get posts error:', error.message);
