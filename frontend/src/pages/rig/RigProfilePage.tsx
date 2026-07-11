@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Heart, Edit, Truck } from 'lucide-react';
+import { Heart, Edit, Truck, MapPin } from 'lucide-react';
 import RigPostComposer from '../../components/rig/RigPostComposer';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGate } from '../../hooks/useGate';
@@ -17,33 +17,19 @@ import RigStatesMap from '../../components/rig/RigStatesMap';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
 import api from '../../services/api';
+import { formatRigClass } from '../../utils/formatRigClass';
 
 const CN = { bg: '#0F1C35', body: '#1E2D42', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552', success: '#4CAF82' };
-
-function StatPill({ icon, value, label, href, onClick }: { icon: string; value: number | string; label: string; href?: string; onClick?: () => void }) {
-  const content = (
-    <div className="text-center p-3 rounded-xl transition-all duration-200" style={{
-      background: 'rgba(232,168,56,0.12)', border: '1px solid rgba(232,168,56,0.3)', cursor: (href || onClick) ? 'pointer' : 'default',
-    }}>
-      <span className="text-sm block mb-0.5">{icon}</span>
-      <span className="text-2xl font-bold block" style={{ fontFamily: "'Playfair Display', serif", color: CN.gold }}>{typeof value === 'number' ? value.toLocaleString() : value}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-wider block" style={{ color: CN.muted }}>{label}</span>
-    </div>
-  );
-  if (onClick) return <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, width: '100%' }}>{content}</button>;
-  return href ? <Link to={href}>{content}</Link> : content;
-}
 
 export default function RigProfilePage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { requireAuth, gateModalProps } = useGate();
   const [rig, setRig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState('pulse');
+  const [activeTab, setActiveTab] = useState('overview');
   const [mods, setMods] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
   const [heroComposerOpen, setHeroComposerOpen] = useState(false);
@@ -151,14 +137,13 @@ export default function RigProfilePage() {
   const owner = rig.owner || {};
   const rigTitle = rig.rigName || `${rig.year || ''} ${rig.make || ''} ${rig.model || ''}`.trim() || 'My Rig';
   const rigSubtitle = [rig.year, rig.make, rig.model].filter(Boolean).join(' ');
-  const rigMeta = [rig.rigClass?.replace('_', ' '), rig.lengthFeet ? `${rig.lengthFeet}ft` : null, rig.fuelType].filter(Boolean).join(' · ');
-
   const TABS = [
-    { id: 'pulse', label: 'Pulse' },
+    { id: 'overview', label: 'Overview' },
     { id: 'trips', label: 'Trips' },
-    { id: 'media', label: 'Media' },
-    { id: 'build', label: 'Build' },
+    { id: 'photos', label: 'Photos' },
     { id: 'map', label: 'Map' },
+    { id: 'build', label: 'Mods & Gear' },
+    { id: 'about', label: 'About' },
   ];
 
   return (
@@ -257,215 +242,176 @@ export default function RigProfilePage() {
       </Helmet>
 
       <div style={{ background: CN.bg, minHeight: '100vh', color: CN.cream }}>
-        {/* ═══ ZONE 1: HERO ═══ */}
-        <div className="relative" style={{ background: CN.bg }}>
-          {/* Hero photo */}
-          <div className="h-64 sm:h-80 relative">
+
+        {/* ═══ HERO SECTION ═══ */}
+        <div className="relative group">
+          {/* Cover photo — full width, tall */}
+          <div className="relative" style={{ height: 380 }}>
             {rig.heroPhoto ? (
               <img src={rig.heroPhoto} alt={rigTitle} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${CN.card}, ${CN.body})` }}>
-                <Truck className="w-20 h-20" style={{ color: CN.border }} />
+              <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, #1A2A45, #0F1C35, #1E2D42)` }}>
+                <Truck className="w-24 h-24" style={{ color: CN.border, opacity: 0.3 }} />
               </div>
             )}
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0F1C35, transparent 50%)' }} />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(15,28,53,0.95) 0%, rgba(15,28,53,0.4) 40%, transparent 70%)' }} />
 
-            {/* Action buttons (top right) */}
-            <div className="absolute top-4 right-4 flex gap-2">
+            {/* Action buttons — top right */}
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
               {(isOwner || isPilot) && (
-                <Link to={`/rig/${slug}/edit`} className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1" style={{ background: 'rgba(0,0,0,0.5)', color: CN.cream, backdropFilter: 'blur(8px)' }}>
-                  <Edit className="w-3 h-3" /> Edit
+                <Link to={`/rig/${slug}/edit`} className="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition hover:brightness-125" style={{ background: 'rgba(0,0,0,0.5)', color: CN.cream, backdropFilter: 'blur(8px)' }}>
+                  <Edit className="w-3 h-3" /> Edit Rig
                 </Link>
               )}
-              <button onClick={handleFollow} className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition hover:brightness-110" style={{
-                background: following ? CN.gold : `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
-                color: CN.bg, backdropFilter: 'blur(8px)',
-                border: following ? `1.5px solid ${CN.gold}` : 'none',
-              }}>
-                <Heart className={`w-3 h-3 ${following ? 'fill-current' : ''}`} />
-                {following ? 'Following' : 'Follow This Journey'}
-              </button>
-            </div>
-          </div>
-
-          {/* Rig identity (overlaid on gradient) */}
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-20 relative z-10">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>{rigTitle}</h1>
-            {rig.tagline && <p className="text-sm mb-1" style={{ color: CN.gold }}>{rig.tagline}</p>}
-            <p className="text-sm mb-1" style={{ color: CN.muted }}>{rigSubtitle}</p>
-            {rigMeta && <p className="text-xs mb-3" style={{ color: CN.muted }}>{rigMeta}</p>}
-
-            {/* Pilot chips removed — Crew section below handles this */}
-
-            {/* Follower count + Follow button + Community Score badge */}
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={() => setActiveTab('followers')}
-                className="flex items-center gap-1.5 transition hover:brightness-125 cursor-pointer"
-                style={{ background: 'none', border: 'none', padding: 0 }}
-              >
-                <span className="text-sm font-bold" style={{ color: CN.cream }}>{rig.followerCount || 0}</span>
-                <span className="text-xs" style={{ color: CN.muted }}>Follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</span>
-              </button>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold" style={{ color: CN.cream }}>{(rig.pilots?.length || 0) + 1}</span>
-                <span className="text-xs" style={{ color: CN.muted }}>Contributor{(rig.pilots?.length || 0) !== 0 ? 's' : ''}</span>
-              </div>
               {!isOwner && !isPilot && (
-                <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold transition hover:brightness-110 flex items-center gap-1.5" style={{
+                <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition hover:brightness-110" style={{
                   background: following ? 'transparent' : `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
                   color: following ? CN.gold : CN.bg,
                   border: `1.5px solid ${CN.gold}`,
+                  backdropFilter: 'blur(8px)',
                 }}>
                   <Heart className={`w-3 h-3 ${following ? 'fill-current' : ''}`} />
-                  {following ? 'Following' : 'Follow This Journey'}
+                  {following ? 'Following' : 'Follow'}
                 </button>
               )}
-              {rig.contributionScore > 0 && (
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold cursor-default"
-                  style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#FFF' }}
-                  title={rig.scoreBreakdown ? `Top components: ${Object.entries(rig.scoreBreakdown as Record<string, number>).sort(([,a],[,b]) => b - a).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(', ')}` : undefined}
-                >
-                  Community Score: {Math.round(rig.contributionScore)}
-                </span>
-              )}
             </div>
 
-            {/* Live Now banner */}
-            {rig.isLiveNow && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" style={{ background: 'rgba(76,175,130,0.15)', border: '1px solid rgba(76,175,130,0.3)' }}>
-                <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
-                <span className="text-sm font-semibold text-green-400">LIVE</span>
-                <span className="text-xs text-green-300/70">
-                  {rig.currentCampgroundId ? 'Currently at a campground' : rig.onTheRoadEta ? `On the road · ETA ${new Date(rig.onTheRoadEta).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'On the road'}
-                </span>
-                {rig.lastLocationUpdate && <span className="text-[10px] text-green-300/40 ml-auto">Updated {Math.round((Date.now() - new Date(rig.lastLocationUpdate).getTime()) / 60000)} min ago</span>}
-              </div>
-            )}
-
-            {/* Vibe tags */}
-            {rig.vibeTags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {rig.vibeTags.map((tag: string) => (
-                  <span key={tag} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(232,168,56,0.12)', color: CN.gold, border: '1px solid rgba(232,168,56,0.25)' }}>
-                    {tag.replace(/_/g, ' ')}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Rig emoji */}
-            {rig.rigEmoji && <span className="text-2xl mb-2 block">{rig.rigEmoji}</span>}
-
-            {/* The Crew */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 mb-5">
-              <Link to={`/profile/${owner.username || owner.id}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                {owner.profilePicture ? (
-                  <img src={owner.profilePicture} alt={owner.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
-                ) : (
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
-                )}
-                <div className="text-center">
-                  <p className="text-xs font-bold" style={{ color: CN.cream }}>{owner.firstName} {owner.lastName?.[0] ? owner.lastName[0] + '.' : ''}</p>
-                  <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`, color: CN.bg }}>Owner</span>
-                </div>
+            {/* Change cover — owner only, hover */}
+            {(isOwner || isPilot) && (
+              <Link to={`/rig/${slug}/edit`} className="absolute bottom-20 left-4 z-10 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition" style={{ background: 'rgba(0,0,0,0.6)', color: CN.cream, backdropFilter: 'blur(4px)' }}>
+                📷 Change Cover
               </Link>
-              {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
-                <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-                  {p.user?.profilePicture ? (
-                    <img src={p.user.profilePicture} alt={p.user.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: '#4CAF82' }} />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.user?.firstName?.[0] || '?'}</div>
-                  )}
-                  <div className="text-center">
-                    <p className="text-xs font-bold" style={{ color: CN.cream }}>{p.user?.firstName} {p.user?.lastName?.[0] ? p.user.lastName[0] + '.' : ''}</p>
-                    <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(76,175,130,0.2)', color: '#4CAF82' }}>{p.role === 'COPILOT' ? 'Co-Pilot' : p.role === 'CREW' ? 'Crew' : p.role || 'Co-Pilot'}</span>
+            )}
+
+            {/* Rig identity — overlaid on gradient */}
+            <div className="absolute bottom-0 left-0 right-0 z-10">
+              <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-5">
+                <div className="flex items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <h1 className="text-3xl sm:text-4xl font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+                      {rigTitle}
+                    </h1>
+                    {rig.tagline && <p className="text-sm mb-1" style={{ color: CN.gold }}>{rig.tagline}</p>}
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>{rigSubtitle}</p>
+                    {rig.owner?.location && (
+                      <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <MapPin className="w-3 h-3" /> {rig.owner.location}
+                      </p>
+                    )}
                   </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Stat bar */}
-            <div className="grid grid-cols-4 gap-2 mb-6">
-              <StatPill icon="🌙" value={rig.totalNightsCamped || 0} label="Nights" href={`/rig/${slug}/trips`} />
-              <StatPill icon="🗺️" value={rig.totalTripCount || 0} label="Trips" href={`/rig/${slug}/trips`} />
-              <StatPill icon="🏕️" value={rig.totalStatesCount || 0} label="States" />
-              <StatPill icon="🛣️" value={rig.totalMilesDriven ? `${rig.milesEstimated !== false ? '~' : ''}${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0'} label={rig.milesEstimated !== false && rig.totalMilesDriven ? 'Est. Miles' : 'Miles'} onClick={(isOwner || isPilot) ? () => { setEditMiles(String(Math.round(rig.totalMilesDriven || 0))); setEditMpg(String(rig.avgMPG || '')); setMilesModalOpen(true); } : undefined} href={!(isOwner || isPilot) ? `/rig/${slug}/stats` : undefined} />
+                  {rig.rigClass && (
+                    <span className="flex-shrink-0 text-[10px] font-bold px-3 py-1 rounded-full" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold, border: '1px solid rgba(232,168,56,0.35)', backdropFilter: 'blur(4px)' }}>
+                      {formatRigClass(rig.rigClass)}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ═══ RIG STATES MAP ═══ */}
-        {rig.totalStatesVisited?.length > 0 && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2">
-            <RigStatesMap visitedStates={rig.totalStatesVisited} />
-          </div>
-        )}
-
-        {/* ═══ SHARE YOUR EXPERIENCE — one row of six buttons (owner/pilot only) ═══ */}
-        {(isOwner || isPilot) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 pb-2">
-            <div className="rounded-2xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {/* Stats strip — dark bar below hero */}
+          <div style={{ background: CN.card, borderBottom: `1px solid ${CN.border}` }}>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6">
+              <div className="flex items-center gap-1 overflow-x-auto py-3" style={{ scrollbarWidth: 'none' }}>
                 {[
-                  { id: 'photo', icon: '📸', label: 'Photos', hint: 'From the road', route: '/albums' },
-                  { id: 'recipe', icon: '🍳', label: 'Cooking', hint: "What's cooking?", route: '/recipes' },
-                  { id: 'video', icon: '🎥', label: 'Video', hint: 'Record or upload' },
-                  { id: 'blog', icon: '✍️', label: 'Blog', hint: 'Write a story' },
-                  { id: 'milestone', icon: '🏆', label: 'Milestones', hint: 'Achievements', route: '/badges' },
-                  { id: 'followers', icon: '👥', label: 'Followers', hint: `${rig.followerCount || 0} following`, action: 'followers' },
-                ].map(c => (
-                  <button key={c.id} onClick={() => {
-                    if ((c as any).action === 'followers') setActiveTab('followers');
-                    else if ((c as any).route) navigate((c as any).route);
-                    else { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }
-                  }}
-                    className="flex flex-col items-center py-5 px-2 rounded-xl text-center transition-all duration-150 hover:scale-[1.03] active:scale-[0.97]"
-                    style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${CN.gold}60`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}>
-                    <span className="text-2xl mb-2">{c.icon}</span>
-                    <span className="text-xs font-bold" style={{ color: CN.cream }}>{c.label}</span>
+                  { icon: '🛣', value: rig.totalMilesDriven ? `${rig.milesEstimated !== false ? '~' : ''}${Math.round(rig.totalMilesDriven).toLocaleString()}` : '0', label: 'mi', tab: null, click: (isOwner || isPilot) ? () => { setEditMiles(String(Math.round(rig.totalMilesDriven || 0))); setEditMpg(String(rig.avgMPG || '')); setMilesModalOpen(true); } : undefined },
+                  { icon: '🗺', value: rig.totalStatesCount || 0, label: 'states', tab: 'map' },
+                  { icon: '🏕', value: rig.totalCampgroundsAllTime || rig._count?.campsites || 0, label: 'camps', tab: 'map' },
+                  { icon: '🌙', value: rig.totalNightsCamped || 0, label: 'nights', tab: 'trips' },
+                  { icon: '✈️', value: rig.totalTripCount || 0, label: 'trips', tab: 'trips' },
+                ].map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => s.click ? s.click() : s.tab ? setActiveTab(s.tab) : null}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap transition hover:brightness-125"
+                    style={{ background: CN.cardAlt, border: `1px solid ${CN.border}`, cursor: (s.click || s.tab) ? 'pointer' : 'default' }}
+                  >
+                    <span>{s.icon}</span>
+                    <span className="font-bold" style={{ color: CN.cream }}>{typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</span>
+                    <span style={{ color: CN.muted }}>{s.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-            <RigPostComposer
-              rigId={rig.id}
-              slug={slug!}
-              isOpen={heroComposerOpen}
-              initialFormat={heroComposerFormat}
-              onClose={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
-              onPublished={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
-            />
           </div>
-        )}
 
-        {/* ═══ RIG SHOWCASE ═══ */}
-        <RigShowcase slug={slug!} rigName={rigTitle} rigSubtitle={rigSubtitle} isOwner={isOwner} galleryPhotoUrls={rig.galleryPhotoUrls} />
+          {/* Social row — followers + crew + follow/edit */}
+          <div style={{ background: CN.bg }}>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Follower info */}
+                <button onClick={() => setActiveTab('followers')} className="flex items-center gap-2 transition hover:brightness-125" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                  {/* Stacked avatars placeholder */}
+                  <span className="text-sm font-bold" style={{ color: CN.cream }}>{rig.followerCount || 0}</span>
+                  <span className="text-xs" style={{ color: CN.muted }}>follower{(rig.followerCount || 0) !== 1 ? 's' : ''}</span>
+                </button>
 
-        {/* ═══ OUR STORY SECTION ═══ */}
-        {(rig.story || isOwner) && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4" style={{ background: CN.body }}>
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.gold }}>Our Story</h3>
-            {rig.story ? (
-              <p className="text-sm leading-relaxed line-clamp-3" style={{ color: CN.cream }}>{rig.story}</p>
-            ) : isOwner ? (
-              <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family, where has it taken you?</p>
-            ) : null}
-            {rig.purchaseDate && <p className="text-[10px] mt-1" style={{ color: CN.muted }}>Traveling since {new Date(rig.purchaseDate).getFullYear()}</p>}
+                <div className="w-px h-4" style={{ background: CN.border }} />
+
+                {/* Crew avatars */}
+                <div className="flex items-center gap-1">
+                  <Link to={`/profile/${owner.username || owner.id}`} className="flex-shrink-0">
+                    {owner.profilePicture ? (
+                      <img src={owner.profilePicture} alt="" className="w-7 h-7 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
+                    )}
+                  </Link>
+                  {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).slice(0, 3).map((p: any) => (
+                    <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex-shrink-0 -ml-1">
+                      {p.user?.profilePicture ? (
+                        <img src={p.user.profilePicture} alt="" className="w-7 h-7 rounded-full object-cover border-2" style={{ borderColor: CN.success }} />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold -ml-1" style={{ background: 'rgba(76,175,130,0.2)', color: CN.success }}>{p.user?.firstName?.[0]}</div>
+                      )}
+                    </Link>
+                  ))}
+                  <span className="text-xs ml-1" style={{ color: CN.muted }}>
+                    {owner.firstName}{rig.pilots?.length > 0 ? ` +${rig.pilots.length}` : ''}
+                  </span>
+                </div>
+
+                <div className="flex-1" />
+
+                {/* Right side actions */}
+                {(isOwner || isPilot) && (
+                  <div className="flex gap-2">
+                    <Link to={`/rig/${slug}/edit`} className="px-3 py-1 rounded-full text-[10px] font-semibold" style={{ color: CN.gold, border: `1px solid ${CN.gold}33` }}>
+                      Edit Rig
+                    </Link>
+                  </div>
+                )}
+                {!isOwner && !isPilot && (
+                  <button onClick={handleFollow} className="px-4 py-1.5 rounded-full text-xs font-bold transition hover:brightness-110 flex items-center gap-1.5" style={{
+                    background: following ? 'transparent' : `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`,
+                    color: following ? CN.gold : CN.bg,
+                    border: `1.5px solid ${CN.gold}`,
+                  }}>
+                    <Heart className={`w-3 h-3 ${following ? 'fill-current' : ''}`} />
+                    {following ? 'Following' : 'Follow'}
+                  </button>
+                )}
+              </div>
+
+              {/* Live Now banner */}
+              {rig.isLiveNow && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl mt-3" style={{ background: 'rgba(76,175,130,0.15)', border: '1px solid rgba(76,175,130,0.3)' }}>
+                  <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+                  <span className="text-sm font-semibold text-green-400">LIVE</span>
+                  <span className="text-xs text-green-300/70">
+                    {rig.currentCampgroundId ? 'Currently at a campground' : rig.onTheRoadEta ? `On the road · ETA ${new Date(rig.onTheRoadEta).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'On the road'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Crew moved above stats */}
-
-        {/* ═══ ZONE 2: BODY ═══ */}
-        <div style={{ background: CN.body }}>
-          {/* Tab bar */}
+        {/* ═══ STICKY TAB BAR ═══ */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 40, background: CN.bg, borderBottom: `1px solid ${CN.border}` }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="flex gap-1 overflow-x-auto pb-px" style={{ borderBottom: `1px solid ${CN.border}` }}>
+            <div className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {TABS.map(t => (
                 <button key={t.id} onClick={() => setActiveTab(t.id)}
                   className="px-4 py-3 text-sm font-semibold whitespace-nowrap transition"
@@ -478,13 +424,92 @@ export default function RigProfilePage() {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Tab content */}
+        {/* ═══ TAB CONTENT ═══ */}
+        <div style={{ background: CN.body }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-            {/* ═══ PULSE TAB (default — the canonical feed) ═══ */}
-            {activeTab === 'pulse' && (
+            {/* ═══ OVERVIEW TAB ═══ */}
+            {activeTab === 'overview' && (
               <>
+                {/* Share Your Experience — owner only */}
+                {(isOwner || isPilot) && (
+                  <div className="rounded-2xl p-4" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: CN.gold }}>Share Your Experience</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                      {[
+                        { id: 'photo', icon: '📸', label: 'Photos' },
+                        { id: 'recipe', icon: '🍳', label: 'Cooking' },
+                        { id: 'video', icon: '🎥', label: 'Video' },
+                        { id: 'blog', icon: '✍️', label: 'Blog' },
+                        { id: 'milestone', icon: '🏆', label: 'Milestones' },
+                        { id: 'followers', icon: '👥', label: 'Followers', action: 'followers' },
+                      ].map(c => (
+                        <button key={c.id} onClick={() => {
+                          if ((c as any).action === 'followers') setActiveTab('followers');
+                          else { setHeroComposerFormat(c.id); setHeroComposerOpen(true); }
+                        }}
+                          className="flex flex-col items-center py-4 px-2 rounded-xl text-center transition-all duration-150 hover:scale-[1.03]"
+                          style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                          <span className="text-xl mb-1">{c.icon}</span>
+                          <span className="text-[10px] font-bold" style={{ color: CN.cream }}>{c.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Post Composer Modal */}
+                <RigPostComposer
+                  rigId={rig.id} slug={slug!} isOpen={heroComposerOpen} initialFormat={heroComposerFormat}
+                  onClose={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
+                  onPublished={() => { setHeroComposerOpen(false); setHeroComposerFormat(null); }}
+                />
+
+                {/* Our Story */}
+                {(rig.story || isOwner) && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: CN.gold }}>Our Story</h3>
+                    {rig.story ? (
+                      <p className="text-sm leading-relaxed" style={{ color: CN.cream }}>{rig.story}</p>
+                    ) : isOwner ? (
+                      <p className="text-xs italic" style={{ color: CN.muted }}>Every rig has a story. Share yours — where did you get it, what does it mean to your family?</p>
+                    ) : null}
+                    {rig.purchaseDate && <p className="text-[10px] mt-2" style={{ color: CN.muted }}>On the road since {new Date(rig.purchaseDate).getFullYear()}</p>}
+                  </div>
+                )}
+
+                {/* Travel Map (compact) */}
+                {rig.totalStatesVisited?.length > 0 && (
+                  <div className="rounded-2xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <div className="p-4 pb-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>Travel Map</h3>
+                        <button onClick={() => setActiveTab('map')} className="text-[10px] font-semibold" style={{ color: CN.gold }}>View Full Map →</button>
+                      </div>
+                    </div>
+                    <div style={{ maxHeight: 280, overflow: 'hidden' }}>
+                      <RigStatesMap visitedStates={rig.totalStatesVisited} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Rig Showcase (recent photos) */}
+                <RigShowcase slug={slug!} rigName={rigTitle} rigSubtitle={rigSubtitle} isOwner={isOwner} galleryPhotoUrls={rig.galleryPhotoUrls} />
+
+                {/* Vibe Tags */}
+                {rig.vibeTags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {rig.vibeTags.map((tag: string) => (
+                      <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(232,168,56,0.12)', color: CN.gold, border: '1px solid rgba(232,168,56,0.25)' }}>
+                        {tag.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Timeline feed */}
                 <RigTimelineTab slug={slug!} isOwner={isOwner || isPilot} rigName={rigTitle} ownerAvatar={owner.profilePicture} ownerName={owner.firstName} rigId={rig.id} />
                 <RigFeedbackSection pageType="RIG" pageId={rig.id} />
               </>
@@ -495,15 +520,24 @@ export default function RigProfilePage() {
               <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
             )}
 
-            {/* ═══ MEDIA TAB (photos + videos as filtered views) ═══ */}
-            {activeTab === 'media' && (
+            {/* ═══ PHOTOS TAB ═══ */}
+            {activeTab === 'photos' && (
               <>
                 <PhotosTab slug={slug!} isOwner={isOwner} />
                 <VideosTab slug={slug!} isOwner={isOwner} />
               </>
             )}
 
-            {/* ═══ BUILD TAB (mods + gear + maintenance) ═══ */}
+            {/* ═══ MAP TAB ═══ */}
+            {activeTab === 'map' && (
+              <>
+                {rig.totalStatesVisited?.length > 0 && <RigStatesMap visitedStates={rig.totalStatesVisited} />}
+                <RigMapWithPhotos slug={slug!} />
+                <CampsitesTab slug={slug!} isOwner={isOwner} />
+              </>
+            )}
+
+            {/* ═══ MODS & GEAR TAB ═══ */}
             {activeTab === 'build' && (
               <>
                 <ModsTab slug={slug!} isOwner={isOwner} />
@@ -516,19 +550,146 @@ export default function RigProfilePage() {
               </>
             )}
 
-            {/* ═══ MAP TAB ═══ */}
-            {activeTab === 'map' && (
-              <>
-                <RigMapWithPhotos slug={slug!} />
-                <CampsitesTab slug={slug!} isOwner={isOwner} />
-              </>
+            {/* ═══ ABOUT TAB (specs + details) ═══ */}
+            {activeTab === 'about' && (
+              <div className="space-y-4">
+                {/* Rig Overview */}
+                <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>Rig Overview</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Year', value: rig.year },
+                      { label: 'Make', value: rig.make },
+                      { label: 'Model', value: rig.model },
+                      { label: 'Class', value: formatRigClass(rig.rigClass) },
+                      { label: 'Length', value: rig.lengthFeet ? `${rig.lengthFeet} ft` : null },
+                      { label: 'Weight', value: rig.grossWeight ? `${rig.grossWeight.toLocaleString()} lbs` : null },
+                      { label: 'Slideouts', value: rig.slideoutCount },
+                      { label: 'Towing Capacity', value: rig.towingCapacity ? `${rig.towingCapacity.toLocaleString()} lbs` : null },
+                    ].filter(s => s.value).map(s => (
+                      <div key={s.label}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
+                        <p className="text-sm font-semibold" style={{ color: CN.cream }}>{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {(isOwner || isPilot) && (
+                    <Link to={`/rig/${slug}/edit`} className="inline-block mt-4 text-[10px] font-semibold" style={{ color: CN.gold }}>Edit Specs →</Link>
+                  )}
+                </div>
+
+                {/* Engine & Performance */}
+                {(rig.fuelType || rig.avgMPG || rig.solarWatts || rig.generatorWatts) && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>Engine & Performance</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {[
+                        { label: 'Fuel Type', value: rig.fuelType },
+                        { label: 'Avg MPG', value: rig.avgMPG },
+                        { label: 'Solar', value: rig.solarWatts ? `${rig.solarWatts}W` : null },
+                        { label: 'Generator', value: rig.generatorWatts ? `${rig.generatorWatts}W` : null },
+                        { label: 'Engine', value: rig.engineSize },
+                        { label: 'Chassis', value: rig.chassisMake },
+                      ].filter(s => s.value).map(s => (
+                        <div key={s.label}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
+                          <p className="text-sm font-semibold" style={{ color: CN.cream }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tanks & Systems */}
+                {(rig.freshWaterGal || rig.grayWaterGal || rig.blackWaterGal) && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>Tanks & Systems</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { label: 'Fresh Water', value: rig.freshWaterGal ? `${rig.freshWaterGal} gal` : null },
+                        { label: 'Gray Water', value: rig.grayWaterGal ? `${rig.grayWaterGal} gal` : null },
+                        { label: 'Black Water', value: rig.blackWaterGal ? `${rig.blackWaterGal} gal` : null },
+                      ].filter(s => s.value).map(s => (
+                        <div key={s.label}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
+                          <p className="text-sm font-semibold" style={{ color: CN.cream }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tires */}
+                {(rig.tireSizeFront || rig.tireSizeRear) && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>Tires</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { label: 'Front', value: rig.tireSizeFront },
+                        { label: 'Rear', value: rig.tireSizeRear },
+                        { label: 'Installed', value: rig.tireInstallDate ? new Date(rig.tireInstallDate).toLocaleDateString() : null },
+                      ].filter(s => s.value).map(s => (
+                        <div key={s.label}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
+                          <p className="text-sm font-semibold" style={{ color: CN.cream }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ownership */}
+                {(rig.purchaseDate || rig.currentOdometer) && (
+                  <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                    <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>Ownership</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { label: 'Purchase Date', value: rig.purchaseDate ? new Date(rig.purchaseDate).toLocaleDateString() : null },
+                        { label: 'Odometer', value: rig.currentOdometer ? `${rig.currentOdometer.toLocaleString()} mi` : null },
+                      ].filter(s => s.value).map(s => (
+                        <div key={s.label}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CN.muted }}>{s.label}</p>
+                          <p className="text-sm font-semibold" style={{ color: CN.cream }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* The Crew */}
+                <div className="rounded-2xl p-5" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: CN.gold }}>The Crew</h3>
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    <Link to={`/profile/${owner.username || owner.id}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                      {owner.profilePicture ? (
+                        <img src={owner.profilePicture} alt={owner.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: CN.gold }} />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(232,168,56,0.2)', color: CN.gold }}>{owner.firstName?.[0]}</div>
+                      )}
+                      <p className="text-xs font-bold" style={{ color: CN.cream }}>{owner.firstName}</p>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `linear-gradient(135deg, ${CN.gold}, ${CN.orange})`, color: CN.bg }}>Owner</span>
+                    </Link>
+                    {rig.pilots?.filter((p: any) => p.userId !== rig.ownerId).map((p: any) => (
+                      <Link key={p.id} to={`/profile/${p.user?.username || p.userId}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl min-w-[100px] transition hover:brightness-110" style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+                        {p.user?.profilePicture ? (
+                          <img src={p.user.profilePicture} alt={p.user.firstName} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: CN.success }} />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(76,175,130,0.2)', color: CN.success }}>{p.user?.firstName?.[0]}</div>
+                        )}
+                        <p className="text-xs font-bold" style={{ color: CN.cream }}>{p.user?.firstName}</p>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(76,175,130,0.2)', color: CN.success }}>{p.role === 'COPILOT' ? 'Co-Pilot' : 'Crew'}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* ═══ FOLLOWERS (accessed via header count click, not a visible tab) ═══ */}
+            {/* ═══ FOLLOWERS ═══ */}
             {activeTab === 'followers' && rig && (
               <>
-                <button onClick={() => setActiveTab('pulse')} className="text-xs mb-4 flex items-center gap-1" style={{ color: CN.gold }}>
-                  &larr; Back to Pulse
+                <button onClick={() => setActiveTab('overview')} className="text-xs mb-4 flex items-center gap-1" style={{ color: CN.gold }}>
+                  &larr; Back to Overview
                 </button>
                 <RigFollowersTab rigId={rig.id} rigName={rigTitle} />
               </>
