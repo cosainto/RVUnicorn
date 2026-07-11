@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Camera, Tent, MapPin, Plus, ChevronDown, Mes
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { Helmet } from 'react-helmet-async';
+import { formatRigClass } from '../utils/formatRigClass';
 
 interface RigData { id: string; title?: string; description?: string; photos: string[]; videoUrl?: string; coPilots?: any[];
   user: { id: string; firstName: string; lastName: string; username: string; profilePicture?: string; rvType?: string; rvYear?: number; rvMake?: string; rvModel?: string }; }
@@ -122,15 +123,21 @@ export default function RigMemoryPage() {
         api.get(`/profile/${username}`).catch(() => ({ data: null })),
       ]);
       setRig(rigRes.data);
-      // Fetch the shared rig stats (uses the rig owner's userId to find their rig)
-      const profileUserId = rigRes.data?.user?.id;
-      if (profileUserId) {
-        api.get(`/rigs/user/${profileUserId}/owned`).then(r => {
-          const rigs = r.data || [];
-          if (rigs[0]?.slug) {
-            api.get(`/rigs/${rigs[0].slug}`).then(rr => setRigStats(rr.data)).catch(() => {});
-          }
-        }).catch(() => {});
+
+      // If the showcase has a rigSlug (co-pilot's shared rig), fetch that rig's stats
+      if (rigRes.data?.rigSlug) {
+        api.get(`/rigs/${rigRes.data.rigSlug}`).then(rr => setRigStats(rr.data)).catch(() => {});
+      } else {
+        // Fall back to finding owned rigs
+        const profileUserId = rigRes.data?.user?.id;
+        if (profileUserId) {
+          api.get(`/rigs/user/${profileUserId}/owned`).then(r => {
+            const rigs = r.data || [];
+            if (rigs[0]?.slug) {
+              api.get(`/rigs/${rigs[0].slug}`).then(rr => setRigStats(rr.data)).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       }
 
       // Load trips — /trips/my returns the AUTHENTICATED user's events, so
@@ -186,7 +193,7 @@ export default function RigMemoryPage() {
   const tripAlbums = trips.map(trip => ({ trip, photos: photos.filter(p => p.eventId === trip.id) }));
   const untaggedPhotos = photos.filter(p => !p.eventId);
   const capTags: string[] = [];
-  if (rv.rvType) capTags.push(rv.rvType);
+  if (rv.rvType) capTags.push(formatRigClass(rv.rvType));
   if (rv.rvMake) capTags.push(`\u{1F699} ${rv.rvMake}`);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const daysBetween = (a: string, b?: string) => b ? Math.max(1, Math.ceil((new Date(b).getTime() - new Date(a).getTime()) / 86400000)) : 0;
@@ -234,7 +241,7 @@ export default function RigMemoryPage() {
                     {rigName ? <h1 className="font-playfair text-[32px] font-bold italic leading-tight" style={{ color: '#FDF6E9' }}>{rigName}</h1>
                     : isOwnProfile ? <Link to="/my-rv" className="font-playfair text-[24px] font-bold italic" style={{ color: '#E8A838' }}>Name your rig →</Link>
                     : <h1 className="font-playfair text-[28px] font-bold" style={{ color: '#FDF6E9' }}>{rv.firstName}'s Rig</h1>}
-                    {modelLine && <p className="text-[15px] mt-1" style={{ color: 'var(--muted)' }}>{modelLine}{rv.rvType && ` · ${rv.rvType}`}</p>}
+                    {modelLine && <p className="text-[15px] mt-1" style={{ color: 'var(--muted)' }}>{modelLine.replace(/\b(\w+)\s+\1\b/gi, '$1')}{rv.rvType && ` · ${formatRigClass(rv.rvType)}`}</p>}
                   </div>
                   <div className="flex gap-2">
                     {!isOwnProfile && <button onClick={loadComparison} className="text-[11px] font-medium px-3 py-1.5 rounded-full flex items-center gap-1" style={{ border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)' }}><GitCompare className="w-3 h-3" />Compare</button>}
