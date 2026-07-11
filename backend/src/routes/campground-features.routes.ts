@@ -194,20 +194,129 @@ router.delete('/:campgroundId/reviews/:reviewId', authenticateToken, async (req:
 
 // ============== PHOTOS ==============
 
-// Get approved photos for a campground
+// Get approved photos for a campground (official + user trip photos)
 router.get('/:campgroundId/photos', async (req: Request, res: Response) => {
   try {
     const { campgroundId } = req.params;
-    const photos = await prisma.campgroundPhoto.findMany({
+
+    // Source 1: Official campground photos (admin-approved)
+    const officialPhotos = await prisma.campgroundPhoto.findMany({
       where: { campgroundId, status: 'APPROVED' },
       include: {
-        user: {
-          select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true },
-        },
+        user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(photos);
+
+    // Source 2: User photos tagged to this campground via PhotoCampgroundTag
+    let taggedPhotos: any[] = [];
+    try {
+      const tags = await prisma.photoCampgroundTag.findMany({
+        where: { campgroundId },
+        include: {
+          photo: {
+            select: { id: true, imageUrl: true, caption: true, createdAt: true, visibility: true, isPrivate: true,
+              user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+      taggedPhotos = tags
+        .filter((t: any) => t.photo && !t.photo.isPrivate && t.photo.visibility !== 'PRIVATE')
+        .map((t: any) => ({
+          id: `user-${t.photo.id}`,
+          imageUrl: t.photo.imageUrl,
+          caption: t.photo.caption,
+          createdAt: t.photo.createdAt,
+          status: 'APPROVED',
+          campgroundId,
+          user: t.photo.user,
+          _source: 'user_tagged',
+        }));
+    } catch {}
+
+    // Source 3: Photos from users who have a StateVisit at this campground
+    let visitPhotos: any[] = [];
+    try {
+      const visits = await prisma.stateVisit.findMany({
+        where: { campsiteId: campgroundId, photoUrls: { isEmpty: false }, visibility: { in: ['PUBLIC', 'FRIENDS', null] } },
+        select: { photoUrls: true, userId: true, startDate: true,
+          user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        },
+        orderBy: { startDate: 'desc' },
+        take: 20,
+      });
+      visitPhotos = visits.flatMap((v: any) =>
+        (v.photoUrls || []).map((url: string, i: number) => ({
+          id: `visit-${v.userId}-${i}`,
+          imageUrl: url,
+          caption: null,
+          createdAt: v.startDate,
+          status: 'APPROVED',
+          campgroundId,
+          user: v.user,
+          _source: 'state_visit',
+        }))
+      );
+    } catch {}
+
+    // Source 4: Photos from CheckIn users' albums uploaded around check-in dates
+    let checkinPhotos: any[] = [];
+    try {
+      const checkins = await prisma.checkIn.findMany({
+        where: { campgroundId },
+        select: { userId: true, checkInDate: true, checkOutDate: true },
+        orderBy: { checkInDate: 'desc' },
+        take: 20,
+      });
+      if (checkins.length > 0) {
+        const checkinUserIds = [...new Set(checkins.map((c: any) => c.userId))];
+        const userPhotos = await prisma.photo.findMany({
+          where: {
+            userId: { in: checkinUserIds },
+            isPrivate: false,
+            NOT: { visibility: 'PRIVATE' },
+          },
+          select: { id: true, imageUrl: true, caption: true, createdAt: true,
+            user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
+        // Filter to photos taken during a check-in period at this campground
+        checkinPhotos = userPhotos.filter((p: any) => {
+          return checkins.some((c: any) => {
+            if (c.userId !== p.user?.id) return false;
+            const photoDate = new Date(p.createdAt).getTime();
+            const checkIn = new Date(c.checkInDate).getTime();
+            const checkOut = c.checkOutDate ? new Date(c.checkOutDate).getTime() : checkIn + 7 * 24 * 60 * 60 * 1000;
+            return photoDate >= checkIn - 24 * 60 * 60 * 1000 && photoDate <= checkOut + 24 * 60 * 60 * 1000;
+          });
+        }).map((p: any) => ({
+          id: `checkin-${p.id}`,
+          imageUrl: p.imageUrl,
+          caption: p.caption,
+          createdAt: p.createdAt,
+          status: 'APPROVED',
+          campgroundId,
+          user: p.user,
+          _source: 'checkin_period',
+        }));
+      }
+    } catch {}
+
+    // Merge all sources, deduplicate by imageUrl
+    const seen = new Set<string>();
+    const allPhotos = [...officialPhotos, ...taggedPhotos, ...visitPhotos, ...checkinPhotos].filter((p: any) => {
+      const url = p.imageUrl || p.photoUrl;
+      if (!url || seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
+
+    res.json(allPhotos);
   } catch (error: any) {
     console.error('Get photos error:', error);
     res.status(500).json({ error: 'Failed to get photos' });
