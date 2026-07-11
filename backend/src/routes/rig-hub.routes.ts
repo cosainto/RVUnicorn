@@ -98,6 +98,162 @@ router.post('/:slug/campsites/:id/favorite', authenticateToken, async (req: any,
   try { const v = await prisma.rigCampsiteVisit.findUnique({ where: { id: req.params.id } }); const updated = await prisma.rigCampsiteVisit.update({ where: { id: req.params.id }, data: { isFavorite: !v?.isFavorite } }); res.json(updated); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /rigs/:slug/favorite-campgrounds — aggregated from all rig users (owner + co-pilots)
+router.get('/:slug/favorite-campgrounds', async (req: any, res) => {
+  try {
+    const rig = await getRig(req.params.slug);
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    // Get all user IDs associated with this rig
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const rigUserIds = [rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)];
+    const uniqueUserIds = [...new Set(rigUserIds)];
+
+    // Get favorite campsite visits from all rig users
+    const visits = await prisma.rigCampsiteVisit.findMany({
+      where: { rigId: rig.id, isPrivate: false },
+      orderBy: { visitedAt: 'desc' },
+    });
+
+    // Also get CampgroundReview entries from all rig users
+    const reviews = await prisma.campgroundReview.findMany({
+      where: { userId: { in: uniqueUserIds } },
+      include: {
+        campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, googleRating: true, slug: true } },
+        user: { select: { id: true, firstName: true, profilePicture: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Aggregate by campground
+    const campMap = new Map<string, any>();
+
+    for (const v of visits) {
+      const key = v.campgroundId;
+      if (!campMap.has(key)) {
+        campMap.set(key, {
+          campgroundId: key,
+          campgroundName: key,
+          visits: [],
+          totalVisits: 0,
+          isFavorite: false,
+          highestRating: 0,
+          reviewSnippet: null,
+          reviewerName: null,
+          siteNumbers: [],
+        });
+      }
+      const entry = campMap.get(key);
+      entry.totalVisits++;
+      if (v.isFavorite) entry.isFavorite = true;
+      if (v.rating && v.rating > entry.highestRating) entry.highestRating = v.rating;
+      if (v.review && !entry.reviewSnippet) { entry.reviewSnippet = v.review; }
+      if (v.siteNumber && !entry.siteNumbers.includes(v.siteNumber)) entry.siteNumbers.push(v.siteNumber);
+    }
+
+    // Merge in review data for campground details
+    for (const r of reviews) {
+      if (!r.campground) continue;
+      const key = r.campgroundId;
+      if (!campMap.has(key)) {
+        campMap.set(key, {
+          campgroundId: key,
+          campgroundName: r.campground.name,
+          campground: r.campground,
+          visits: [],
+          totalVisits: 0,
+          isFavorite: false,
+          highestRating: r.rating,
+          reviewSnippet: r.review,
+          reviewerName: r.user.firstName,
+          reviewerAvatar: r.user.profilePicture,
+          siteNumbers: [],
+        });
+      }
+      const entry = campMap.get(key);
+      if (!entry.campground) entry.campground = r.campground;
+      if (entry.campgroundName === key && r.campground.name) entry.campgroundName = r.campground.name;
+      if (r.rating > entry.highestRating) entry.highestRating = r.rating;
+      if (!entry.reviewSnippet && r.review) {
+        entry.reviewSnippet = r.review;
+        entry.reviewerName = r.user.firstName;
+        entry.reviewerAvatar = r.user.profilePicture;
+      }
+    }
+
+    // Sort: favorites first, then by visit count, then by rating
+    const results = Array.from(campMap.values())
+      .sort((a, b) => {
+        if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+        if (a.totalVisits !== b.totalVisits) return b.totalVisits - a.totalVisits;
+        return b.highestRating - a.highestRating;
+      });
+
+    res.json(results);
+  } catch (e: any) {
+    console.error('[RigHub] favorite-campgrounds error:', e.message);
+    res.status(500).json({ error: 'Failed to fetch favorite campgrounds' });
+  }
+});
+
+// GET /rigs/:slug/reviews — all campground reviews from rig users
+router.get('/:slug/reviews', async (req: any, res) => {
+  try {
+    const rig = await getRig(req.params.slug);
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = 10;
+
+    // Get all user IDs
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const uniqueUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+
+    const where = { userId: { in: uniqueUserIds } };
+
+    const [reviews, total] = await Promise.all([
+      prisma.campgroundReview.findMany({
+        where,
+        include: {
+          campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true, slug: true, googleRating: true } },
+          user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      prisma.campgroundReview.count({ where }),
+    ]);
+
+    // Compute stats
+    const allRatings = await prisma.campgroundReview.findMany({
+      where,
+      select: { rating: true, campgroundId: true },
+    });
+    const avgRating = allRatings.length > 0
+      ? Math.round((allRatings.reduce((s: number, r: any) => s + r.rating, 0) / allRatings.length) * 10) / 10
+      : 0;
+    const uniqueCampgrounds = new Set(allRatings.map((r: any) => r.campgroundId)).size;
+
+    res.json({
+      reviews,
+      total,
+      avgRating,
+      uniqueCampgrounds,
+      page,
+      hasMore: page * limit < total,
+    });
+  } catch (e: any) {
+    console.error('[RigHub] reviews error:', e.message);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
 // ═══ RECOMMENDATIONS ═══
 router.get('/:slug/recommendations', async (req: any, res) => {
   try { const rig = await getRig(req.params.slug); if (!rig) return res.status(404).json({ error: 'Rig not found' }); const where: any = { rigId: rig.id, isPublic: true }; if (req.query.type) where.type = req.query.type; const recs = await prisma.rigRecommendation.findMany({ where, orderBy: { saves: 'desc' }, include: { user: { select: { id: true, firstName: true, profilePicture: true } } } }); res.json(recs); } catch (e: any) { res.status(500).json({ error: e.message }); }

@@ -16,6 +16,8 @@ import RigFuelHistory from '../../components/rig/RigFuelHistory';
 import RigStatesMap from '../../components/rig/RigStatesMap';
 import RigFollowersTab from '../../components/rig/RigFollowersTab';
 import RigMapWithPhotos from '../../components/rig/RigMapWithPhotos';
+import RigCampgroundsTab from '../../components/rig/RigCampgroundsTab';
+import RigReviewsTab from '../../components/rig/RigReviewsTab';
 import api from '../../services/api';
 import { formatRigClass } from '../../utils/formatRigClass';
 
@@ -141,8 +143,10 @@ export default function RigProfilePage() {
   const TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'trips', label: 'Trips' },
+    { id: 'campgrounds', label: 'Campgrounds' },
     { id: 'photos', label: 'Photos' },
-    { id: 'map', label: 'Map' },
+    { id: 'videos', label: 'Videos' },
+    { id: 'reviews', label: 'Reviews' },
     { id: 'build', label: 'Mods & Gear' },
     { id: 'about', label: 'About' },
   ];
@@ -521,12 +525,24 @@ export default function RigProfilePage() {
               <RigTripMode slug={slug!} isOwner={isOwner} rigName={rigTitle} />
             )}
 
+            {/* ═══ CAMPGROUNDS TAB ═══ */}
+            {activeTab === 'campgrounds' && (
+              <RigCampgroundsTab slug={slug!} isOwner={isOwner} />
+            )}
+
             {/* ═══ PHOTOS TAB ═══ */}
             {activeTab === 'photos' && (
-              <>
-                <PhotosTab slug={slug!} isOwner={isOwner} />
-                <VideosTab slug={slug!} isOwner={isOwner} />
-              </>
+              <PhotosTab slug={slug!} isOwner={isOwner} />
+            )}
+
+            {/* ═══ VIDEOS TAB ═══ */}
+            {activeTab === 'videos' && (
+              <VideosTab slug={slug!} isOwner={isOwner} />
+            )}
+
+            {/* ═══ REVIEWS TAB ═══ */}
+            {activeTab === 'reviews' && (
+              <RigReviewsTab slug={slug!} isOwner={isOwner} />
             )}
 
             {/* ═══ MAP TAB ═══ */}

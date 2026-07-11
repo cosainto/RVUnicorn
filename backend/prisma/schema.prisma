@@ -7165,6 +7165,9 @@ model RigVideo {
   views        Int      @default(0)
   likes        Int      @default(0)
   createdAt    DateTime @default(now())
+  category       String?                // RECIPE | WALKTHROUGH | CAMPSITE_TOUR | TRAVEL_DAY | REPAIR | SETUP | COOKING | REVIEW | DRONE | OTHER
+  recipeTitle    String?                // dish name for RECIPE category
+  linkedRecipeId String?                // links to Recipe model if exists
   updatedAt    DateTime @updatedAt
   rig          Rig      @relation(fields: [rigId], references: [id], onDelete: Cascade)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
