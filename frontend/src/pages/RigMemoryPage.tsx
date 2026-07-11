@@ -125,21 +125,22 @@ export default function RigMemoryPage() {
       ]);
       setRig(rigRes.data);
 
-      // If the showcase has a rigSlug (co-pilot's shared rig), redirect to the actual rig page
+      // Redirect to the actual rig page if user has one (owned or co-pilot)
       if (rigRes.data?.rigSlug) {
         navigate(`/rig/${rigRes.data.rigSlug}`, { replace: true });
         return;
-      } else {
-        // Fall back to finding owned rigs
-        const profileUserId = rigRes.data?.user?.id;
-        if (profileUserId) {
-          api.get(`/rigs/user/${profileUserId}/owned`).then(r => {
-            const rigs = r.data || [];
-            if (rigs[0]?.slug) {
-              api.get(`/rigs/${rigs[0].slug}`).then(rr => setRigStats(rr.data)).catch(() => {});
-            }
-          }).catch(() => {});
-        }
+      }
+      // Check if user owns a rig — redirect to it
+      const profileUserId = rigRes.data?.user?.id;
+      if (profileUserId) {
+        try {
+          const r = await api.get(`/rigs/user/${profileUserId}/owned`);
+          const rigs = r.data || [];
+          if (rigs[0]?.slug) {
+            navigate(`/rig/${rigs[0].slug}`, { replace: true });
+            return;
+          }
+        } catch {}
       }
 
       // Load trips — /trips/my returns the AUTHENTICATED user's events, so
