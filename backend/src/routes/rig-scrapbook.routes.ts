@@ -125,6 +125,80 @@ router.get('/:slug/timeline', async (req: any, res) => {
       (a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     ).slice(0, limit);
 
+    // Enrich check-in items with photos from the campground stay
+    try {
+      const checkinItemsToEnrich = allItems.filter((i: any) => i.itemType === 'CHECKIN');
+      for (const item of checkinItemsToEnrich) {
+        // Parse campgroundId from previewText or refId
+        let campgroundId: string | null = null;
+        try {
+          const d = JSON.parse(item.previewText || '{}');
+          campgroundId = d.campgroundId || null;
+        } catch {}
+
+        // For synthetic checkins, get campgroundId from the original CheckIn record
+        if (!campgroundId && item._source === 'copilot_checkin' && item.refId) {
+          try {
+            const ci = await prisma.checkIn.findUnique({ where: { id: item.refId }, select: { campgroundId: true } });
+            campgroundId = ci?.campgroundId || null;
+          } catch {}
+        }
+
+        if (!campgroundId) continue;
+
+        const stayDate = new Date(item.occurredAt);
+        const stayStart = new Date(stayDate.getTime() - 24 * 60 * 60 * 1000);
+        const stayEnd = new Date(stayDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+        // Get photos from: StateVisit at this campground + user albums around this date + tagged photos
+        const [stateVisitPhotos, userPhotos, albumPhotos] = await Promise.all([
+          prisma.stateVisit.findMany({
+            where: { userId: { in: rigUserIds }, campsiteId: campgroundId, photoUrls: { isEmpty: false } },
+            select: { photoUrls: true },
+            take: 5,
+          }).catch(() => []),
+          prisma.photo.findMany({
+            where: {
+              userId: { in: rigUserIds },
+              createdAt: { gte: stayStart, lte: stayEnd },
+              isPrivate: false,
+              NOT: { visibility: 'PRIVATE' },
+            },
+            select: { imageUrl: true },
+            orderBy: { createdAt: 'desc' },
+            take: 12,
+          }).catch(() => []),
+          prisma.photoAlbum.findMany({
+            where: {
+              userId: { in: rigUserIds },
+              NOT: { privacy: 'PRIVATE' },
+              createdAt: { gte: stayStart, lte: stayEnd },
+            },
+            select: { photos: { select: { imageUrl: true }, take: 12, orderBy: { createdAt: 'desc' } } },
+            take: 3,
+          }).catch(() => []),
+        ]);
+
+        const stayPhotos: string[] = [];
+        const seen = new Set<string>();
+        // Add stateVisit photos
+        for (const sv of stateVisitPhotos) {
+          for (const url of (sv.photoUrls || [])) { if (!seen.has(url)) { seen.add(url); stayPhotos.push(url); } }
+        }
+        // Add direct photos
+        for (const p of userPhotos) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
+        // Add album photos
+        for (const a of albumPhotos) {
+          for (const p of (a.photos || [])) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
+        }
+
+        if (stayPhotos.length > 0) {
+          (item as any)._stayPhotos = stayPhotos.slice(0, 12);
+          (item as any)._stayPhotoCount = stayPhotos.length;
+        }
+      }
+    } catch (e: any) { console.error('[RigTimeline] photo enrichment error:', e.message); }
+
     res.json({
       items: allItems,
       nextCursor: allItems.length === limit ? allItems[allItems.length - 1].occurredAt.toISOString() : null,

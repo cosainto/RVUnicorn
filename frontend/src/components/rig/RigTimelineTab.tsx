@@ -226,15 +226,43 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
             </div>
           );
 
+          const stayPhotos: string[] = (item as any)._stayPhotos || [];
+          const stayPhotoCount: number = (item as any)._stayPhotoCount || 0;
+
           return (
             <div key={item.id} className="rounded-2xl shadow-lg overflow-hidden" style={{ background: CN.card }}>
               {d.campgroundId ? (
                 <Link to={`/campgrounds/${d.campgroundId}`} className="block transition hover:brightness-110">{bannerContent}</Link>
               ) : bannerContent}
+
+              {/* Stay photos grid */}
+              {stayPhotos.length > 0 && (
+                <div className="px-3 pt-3">
+                  <div className="grid gap-1 rounded-xl overflow-hidden" style={{ gridTemplateColumns: stayPhotos.length === 1 ? '1fr' : stayPhotos.length === 2 ? '1fr 1fr' : stayPhotos.length === 3 ? '1fr 1fr 1fr' : 'repeat(4, 1fr)' }}>
+                    {stayPhotos.slice(0, 4).map((url: string, i: number) => (
+                      <div key={i} className="relative" style={{ aspectRatio: stayPhotos.length === 1 ? '16/9' : '1' }}>
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        {i === 3 && stayPhotoCount > 4 && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">+{stayPhotoCount - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] mt-1.5 mb-0.5" style={{ color: CN.muted }}>
+                    📸 {stayPhotoCount} photo{stayPhotoCount !== 1 ? 's' : ''} from this stay
+                  </p>
+                </div>
+              )}
+
               <div className="px-4 py-2">
                 <div className="flex items-center gap-3 text-[10px] mb-1" style={{ color: CN.muted }}>
                   <span>📅 {new Date(item.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   {d.state && <span>🗺️ {d.state}</span>}
+                  {d.campgroundId && (
+                    <Link to={`/campgrounds/${d.campgroundId}`} className="ml-auto font-semibold" style={{ color: CN.gold, textDecoration: 'none' }}>View Campground →</Link>
+                  )}
                 </div>
                 {d.campgroundId && <CampsiteSocialProofInline campgroundId={d.campgroundId} compact />}
               </div>
