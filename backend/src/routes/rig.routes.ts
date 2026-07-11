@@ -736,14 +736,52 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
       _source: 'trip_album',
     }));
 
+    // Query 3: StateVisit photos (travel map uploads stored as photoUrls arrays)
+    const stateVisitPhotos = await prisma.stateVisit.findMany({
+      where: {
+        userId: { in: rigUserIds },
+        photoUrls: { isEmpty: false },
+        visibility: { in: ['PUBLIC', 'FRIENDS', null] },
+      },
+      select: { id: true, state: true, photoUrls: true, userId: true, startDate: true, createdAt: true,
+        campsite: { select: { name: true, id: true } },
+        user: { select: safeUserSelect },
+      },
+      orderBy: { startDate: 'desc' },
+      take: 50,
+    });
+
+    const stateVisitPosts = stateVisitPhotos.map((sv: any) => ({
+      id: `sv-${sv.id}`,
+      rigId: rig.id,
+      userId: sv.userId,
+      photos: sv.photoUrls,
+      isRigPhoto: false,
+      photoCategory: 'TRAVEL',
+      createdAt: sv.startDate || sv.createdAt,
+      author: sv.user,
+      _source: 'state_visit',
+    }));
+
     // Merge and deduplicate (avoid showing same photo twice)
     const existingPhotoUrls = new Set(posts.flatMap((p: any) => p.photos || []));
-    const dedupedSynthetic = syntheticPosts.map(sp => ({
+    const allSynthetic = [...syntheticPosts, ...stateVisitPosts];
+    const dedupedSynthetic = allSynthetic.map(sp => ({
       ...sp,
       photos: sp.photos.filter((url: string) => !existingPhotoUrls.has(url)),
     })).filter(sp => sp.photos.length > 0);
 
-    const allPosts = [...posts, ...dedupedSynthetic].sort(
+    // Also dedup across synthetic sources
+    const seenUrls = new Set<string>();
+    for (const sp of dedupedSynthetic) {
+      sp.photos = sp.photos.filter((url: string) => {
+        if (seenUrls.has(url)) return false;
+        seenUrls.add(url);
+        return true;
+      });
+    }
+
+    const allPosts = [...posts, ...dedupedSynthetic.filter(sp => sp.photos.length > 0)].sort(
       (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
