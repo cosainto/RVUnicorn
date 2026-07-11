@@ -665,10 +665,38 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
   try {
     const { rigId } = req.params;
 
+    // Support both rigId (CUID) and slug
+    let rig: any = null;
+    if (rigId.startsWith('c') && rigId.length > 20) {
+      rig = await prisma.rig.findUnique({ where: { id: rigId }, select: { id: true, ownerId: true } });
+    }
+    if (!rig) {
+      rig = await prisma.rig.findUnique({ where: { slug: rigId }, select: { id: true, ownerId: true } });
+    }
+    if (!rig) {
+      return res.json([]); // graceful empty for missing rig
+    }
+
+    // Get all user IDs associated with this rig (owner + co-pilots)
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+
     const posts = await prisma.rigPost.findMany({
-      where: { rigId, isPublic: true, OR: [{ visibility: 'PUBLIC' }, { visibility: 'BOTH' }, { visibility: null }] },
+      where: {
+        photos: { isEmpty: false },
+        OR: [
+          { rigId: rig.id },
+          { userId: { in: rigUserIds }, tripId: { not: null } },
+          { userId: { in: rigUserIds }, rigId: null, tripId: null },
+        ],
+        visibility: { in: ['PUBLIC', 'BOTH', null] },
+      },
       include: { author: { select: safeUserSelect } },
       orderBy: { createdAt: 'desc' },
+      take: 200,
     });
 
     res.json(posts);

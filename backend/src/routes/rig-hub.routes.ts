@@ -402,6 +402,44 @@ router.delete('/:slug/contributions/:id', authenticateToken, async (req: any, re
   try { const rig = await getRig(req.params.slug); if (!rig || rig.ownerId !== req.userId) return res.status(403).json({ error: 'Not authorized' }); await prisma.rigCommunityContribution.delete({ where: { id: req.params.id } }); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══ RIG POSTS (photos from all rig users — owner + co-pilots) ═══
+
+router.get('/:slug/posts', async (req: any, res) => {
+  try {
+    const rig = await getRig(req.params.slug);
+    if (!rig) return res.status(404).json({ error: 'Rig not found' });
+
+    // Get all user IDs associated with this rig
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+      prisma.rigCoPilot.findMany({ where: { rigId: rig.id }, select: { userId: true } }),
+    ]);
+    const rigUserIds = [...new Set([rig.ownerId, ...pilots.map((p: any) => p.userId), ...coPilots.map((c: any) => c.userId)])];
+
+    const posts = await prisma.rigPost.findMany({
+      where: {
+        photos: { isEmpty: false },
+        OR: [
+          { rigId: rig.id },
+          { userId: { in: rigUserIds }, tripId: { not: null } },
+          { userId: { in: rigUserIds }, rigId: null, tripId: null },
+        ],
+        visibility: { in: ['PUBLIC', 'BOTH', null] },
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    res.json(posts);
+  } catch (e: any) {
+    console.error('[RigHub] posts error:', e.message);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
+});
+
 // ═══ RIG SHOWCASE ═══
 
 router.get('/:slug/showcase', async (req: any, res) => {
