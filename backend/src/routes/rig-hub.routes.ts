@@ -421,8 +421,7 @@ router.get('/:slug/posts', async (req: any, res) => {
         photos: { isEmpty: false },
         OR: [
           { rigId: rig.id },
-          { userId: { in: rigUserIds }, tripId: { not: null } },
-          { userId: { in: rigUserIds }, rigId: null, tripId: null },
+          { userId: { in: rigUserIds } },
         ],
         visibility: { in: ['PUBLIC', 'BOTH', null] },
       },
@@ -471,12 +470,12 @@ router.get('/:slug/showcase', async (req: any, res) => {
     try {
       const albums = await prisma.photoAlbum.findMany({
         where: { userId: { in: rigUserIds }, NOT: { privacy: 'PRIVATE' } },
-        select: { photos: { select: { imageUrl: true }, orderBy: { createdAt: 'desc' as any }, take: 20 } },
+        select: { photos: { select: { imageUrl: true }, take: 20 } },
         orderBy: { createdAt: 'desc' },
         take: 10,
       });
       albumPhotoUrls = albums.flatMap((a: any) => a.photos.map((p: any) => p.imageUrl));
-    } catch {}
+    } catch (e: any) { console.error('[Showcase] album query error:', e.message); }
 
     // If RigPost photos are sparse, add album photos as synthetic entries
     if (rigPosts.length === 0 && albumPhotoUrls.length > 0) {
@@ -491,7 +490,7 @@ router.get('/:slug/showcase', async (req: any, res) => {
     }
 
     res.json(rigPosts);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { console.error('[Showcase] error:', e.message); res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:slug/photos/categorize', authenticateToken, async (req: any, res) => {
