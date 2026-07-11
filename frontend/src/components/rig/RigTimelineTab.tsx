@@ -122,56 +122,66 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
       const timelineItems: any[] = timelineRes.data?.items || [];
       const photoPosts = (postsRes.data || []).filter((p: any) => p.photos?.length > 0);
 
-      // Flatten all photo URLs from posts
-      const allPhotoUrls: string[] = photoPosts.flatMap((p: any) => p.photos || []);
+      // Build a flat list of { url, date } from all photo posts
+      const allPhotos = photoPosts.flatMap((p: any) =>
+        (p.photos || []).map((url: string) => ({ url, date: new Date(p.createdAt).getTime() }))
+      );
 
-      // Attach photos to CHECKIN items by date proximity
-      const checkinItems = timelineItems.filter((i: any) => i.itemType === 'CHECKIN');
-      const usedPhotoUrls = new Set<string>();
+      // Sort check-ins oldest to newest so we can assign date ranges
+      const checkinItems = timelineItems
+        .filter((i: any) => i.itemType === 'CHECKIN')
+        .sort((a: any, b: any) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
 
-      for (const checkin of checkinItems) {
-        const checkinDate = new Date(checkin.occurredAt).getTime();
-        const matchingPhotos: string[] = [];
+      // Assign each photo to the check-in whose window it falls into
+      const claimedUrls = new Set<string>();
 
-        for (const post of photoPosts) {
-          const postDate = new Date(post.createdAt).getTime();
-          const daysDiff = Math.abs(checkinDate - postDate) / (1000 * 60 * 60 * 24);
+      for (let ci = 0; ci < checkinItems.length; ci++) {
+        const checkin = checkinItems[ci];
+        const ciDate = new Date(checkin.occurredAt).getTime();
+        const nextCiDate = ci < checkinItems.length - 1
+          ? new Date(checkinItems[ci + 1].occurredAt).getTime()
+          : ciDate + 365 * 24 * 60 * 60 * 1000; // no next → claim far future
 
-          if (daysDiff <= 14) {
-            for (const url of (post.photos || [])) {
-              if (!usedPhotoUrls.has(url)) {
-                usedPhotoUrls.add(url);
-                matchingPhotos.push(url);
-              }
-            }
+        // Window: from 7 days before this check-in to the next check-in date
+        const windowStart = ciDate - 7 * 24 * 60 * 60 * 1000;
+        const windowEnd = nextCiDate;
+
+        const matched: string[] = [];
+        for (const photo of allPhotos) {
+          if (!claimedUrls.has(photo.url) && photo.date >= windowStart && photo.date < windowEnd) {
+            claimedUrls.add(photo.url);
+            matched.push(photo.url);
           }
         }
 
-        if (matchingPhotos.length > 0) {
-          checkin._stayPhotos = matchingPhotos;
-          checkin._stayPhotoCount = matchingPhotos.length;
+        if (matched.length > 0) {
+          checkin._stayPhotos = matched;
+          checkin._stayPhotoCount = matched.length;
         }
       }
 
-      // Any photos not matched to a check-in: create ONE album card for them
-      const unmatchedPhotos = allPhotoUrls.filter(url => !usedPhotoUrls.has(url));
-      const nonCheckinItems = timelineItems.filter((i: any) => i.itemType !== 'CHECKIN');
+      // Any remaining unclaimed photos: assign to nearest check-in
+      for (const photo of allPhotos) {
+        if (claimedUrls.has(photo.url)) continue;
 
-      const finalItems = [...timelineItems];
+        let nearestIdx = 0;
+        let nearestDist = Infinity;
+        for (let ci = 0; ci < checkinItems.length; ci++) {
+          const dist = Math.abs(new Date(checkinItems[ci].occurredAt).getTime() - photo.date);
+          if (dist < nearestDist) { nearestDist = dist; nearestIdx = ci; }
+        }
 
-      if (unmatchedPhotos.length > 0) {
-        finalItems.push({
-          id: 'unmatched-photos',
-          itemType: 'PHOTO_ALBUM',
-          title: `${unmatchedPhotos.length} trip photos`,
-          previewImageUrl: unmatchedPhotos[0],
-          occurredAt: photoPosts[photoPosts.length - 1]?.createdAt || new Date().toISOString(),
-          _photos: unmatchedPhotos.slice(0, 12),
-          _photoCount: unmatchedPhotos.length,
-          _source: 'unmatched',
-        });
+        if (checkinItems.length > 0) {
+          const target = checkinItems[nearestIdx];
+          if (!target._stayPhotos) { target._stayPhotos = []; target._stayPhotoCount = 0; }
+          target._stayPhotos.push(photo.url);
+          target._stayPhotoCount++;
+          claimedUrls.add(photo.url);
+        }
       }
 
+      // No standalone photo card — all photos are inside check-in cards
+      const finalItems = [...timelineItems];
       finalItems.sort((a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
       setItems(finalItems);
