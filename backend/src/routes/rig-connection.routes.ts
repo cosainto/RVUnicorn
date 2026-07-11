@@ -116,7 +116,25 @@ router.post('/:id/approve', authenticateToken, async (req: any, res: Response) =
       } as any,
     });
 
-    res.json({ connection: updated });
+    // Check if either user has a separate rig — warn about potential duplicate
+    let duplicateWarning = null;
+    try {
+      const [requesterRig, receiverRig] = await Promise.all([
+        prisma.rig.findFirst({ where: { ownerId: connection.requesterId }, select: { id: true, slug: true, rigName: true } }),
+        prisma.rig.findFirst({ where: { ownerId: connection.receiverId }, select: { id: true, slug: true, rigName: true } }),
+      ]);
+      if (requesterRig && receiverRig && requesterRig.id !== receiverRig.id) {
+        duplicateWarning = {
+          message: 'Both of you have separate rig pages. If you share the same RV, consider merging them from Rig Settings.',
+          rigs: [
+            { owner: updated.requester.firstName, rig: requesterRig },
+            { owner: updated.receiver.firstName, rig: receiverRig },
+          ],
+        };
+      }
+    } catch { /* non-critical */ }
+
+    res.json({ connection: updated, duplicateWarning });
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to approve' });
   }

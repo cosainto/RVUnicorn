@@ -152,6 +152,7 @@ import campfireThreadAdminRoutes from './routes/campfireThreadAdmin.routes';
 import { registerCampfireThreadCrons } from './cron/campfire-thread.cron';
 import organizerDashboardRoutes from './routes/organizerDashboard.routes';
 import { registerBroadcastCron } from './cron/broadcast.cron';
+import { runDuplicateRigDetection } from './cron/duplicate-rig-detection.cron';
 import tripKitRoutes from './routes/tripKit.routes';
 import creatorEventsRoutes from './routes/creatorEvents.routes';
 import { registerCreatorNetworkCrons } from './cron/creatorNetwork.cron';
@@ -478,6 +479,8 @@ setInterval(() => runCheckInInviteExpireCron().catch(e => console.error('[CheckI
 setInterval(() => runExperienceReviewNudgeCron().catch(e => console.error('[ExperienceReviewNudge]', e)), 30 * 60 * 1000);
 // Auto-checkout stale check-ins — runs hourly, gates internally to 3 AM CT
 setInterval(() => runAutoCheckoutCron().catch(e => console.error('[AutoCheckout]', e)), 60 * 60 * 1000);
+// Duplicate rig detection — runs hourly, gates internally to 2 AM CT
+setInterval(() => runDuplicateRigDetection().catch(e => console.error('[DuplicateRig]', e)), 60 * 60 * 1000);
 // Community AI crons — check hourly, fire at specific times
 setInterval(() => {
   const now = new Date();

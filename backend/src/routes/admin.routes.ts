@@ -132,6 +132,57 @@ router.delete('/campgrounds/:id', authenticateToken, requireWill, async (req: Re
   }
 });
 
+// GET /api/admin/duplicate-rigs — find co-pilots who also own separate rigs
+router.get('/duplicate-rigs', authenticateToken, requireWill, async (req: Request, res: Response) => {
+  try {
+    // Find all co-pilot relationships
+    const [pilots, coPilots] = await Promise.all([
+      prisma.rigPilot.findMany({
+        select: {
+          userId: true,
+          rigId: true,
+          rig: { select: { id: true, slug: true, rigName: true, ownerId: true, owner: { select: { firstName: true, username: true } } } },
+          user: { select: { id: true, firstName: true, username: true } },
+        },
+      }),
+      prisma.rigCoPilot.findMany({
+        select: {
+          userId: true,
+          rigId: true,
+          rig: { select: { id: true, slug: true, rigName: true, ownerId: true, owner: { select: { firstName: true, username: true } } } },
+          user: { select: { id: true, firstName: true, username: true } },
+        },
+      }),
+    ]);
+
+    const duplicates: any[] = [];
+    const seen = new Set<string>();
+
+    for (const cp of [...pilots, ...coPilots]) {
+      if (seen.has(cp.userId)) continue;
+      seen.add(cp.userId);
+
+      const ownRig = await prisma.rig.findFirst({
+        where: { ownerId: cp.userId, id: { not: cp.rigId } },
+        select: { id: true, slug: true, rigName: true, _count: { select: { posts: true, followers: true } } },
+      });
+
+      if (ownRig) {
+        duplicates.push({
+          coPilot: cp.user,
+          sharedRig: { id: cp.rig.id, slug: cp.rig.slug, name: cp.rig.rigName, owner: cp.rig.owner },
+          ownRig: { id: ownRig.id, slug: ownRig.slug, name: ownRig.rigName, postCount: ownRig._count.posts, followerCount: ownRig._count.followers },
+        });
+      }
+    }
+
+    res.json({ duplicates, count: duplicates.length });
+  } catch (error: any) {
+    console.error('[Admin] duplicate-rigs error:', error.message);
+    res.status(500).json({ error: 'Failed to check duplicates' });
+  }
+});
+
 export default router;
 
 // ===== HOST LISTINGS ADMIN =====

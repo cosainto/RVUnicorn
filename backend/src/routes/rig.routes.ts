@@ -106,16 +106,32 @@ async function isOwner(rigId: string, userId: string): Promise<boolean> {
 router.post('/migrate-from-user', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
+    const forceCreate = req.body?.forceCreate === true;
 
     // Guard: don't create a duplicate if the user already has a rig (owned or co-pilot)
     const [existingOwned, existingPilot, existingCoPilot] = await Promise.all([
-      prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true, slug: true } }),
-      prisma.rigPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true } } } }),
-      prisma.rigCoPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true } } } }),
+      prisma.rig.findFirst({ where: { ownerId: userId }, select: { id: true, slug: true, rigName: true } }),
+      prisma.rigPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true, rigName: true } } } }),
+      prisma.rigCoPilot.findFirst({ where: { userId }, select: { rig: { select: { id: true, slug: true, rigName: true } } } }),
     ]);
-    const existingRig = existingOwned || existingPilot?.rig || existingCoPilot?.rig;
-    if (existingRig) {
-      return res.json({ ...existingRig, alreadyExists: true });
+
+    // Already owns a rig — block (unless admin/forceCreate)
+    if (existingOwned && !forceCreate) {
+      return res.json({
+        ...existingOwned,
+        alreadyExists: true,
+        message: 'You already have a rig page. Go to your existing rig page or contact support if you need multiple rig pages.',
+      });
+    }
+
+    // Is a co-pilot on someone else's rig — offer choice
+    const coPilotRig = existingPilot?.rig || existingCoPilot?.rig;
+    if (coPilotRig && !forceCreate) {
+      return res.json({
+        alreadyCoPilot: true,
+        existingRig: coPilotRig,
+        message: `You are already a co-pilot on ${coPilotRig.rigName || 'a rig'}. Would you like to use that rig page instead of creating a new one?`,
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -1640,8 +1656,28 @@ router.post('/:rigId/pilots', authenticateToken, async (req: Request, res: Respo
     const ownerCheck = await isOwner(rigId, userId);
     if (!ownerCheck) return res.status(403).json({ error: 'Only the rig owner can invite pilots' });
 
-    const { userId: pilotUserId, role, canEdit } = req.body;
+    const { userId: pilotUserId, role, canEdit, acknowledgeDuplicate } = req.body;
     if (!pilotUserId) return res.status(400).json({ error: 'userId is required' });
+
+    // Check if invited user has their own rig — warn about duplicate
+    if (!acknowledgeDuplicate) {
+      const pilotOwnRig = await prisma.rig.findFirst({
+        where: { ownerId: pilotUserId, id: { not: rigId } },
+        select: { id: true, slug: true, rigName: true },
+      });
+      if (pilotOwnRig) {
+        const pilotUser = await prisma.user.findUnique({
+          where: { id: pilotUserId },
+          select: { firstName: true, username: true },
+        });
+        return res.json({
+          duplicateWarning: true,
+          pilotUser,
+          pilotOwnRig,
+          message: `${pilotUser?.firstName || 'This user'} already has their own rig page (${pilotOwnRig.rigName || pilotOwnRig.slug}). Adding them as a co-pilot will create a duplicate. You can merge their rig into yours later.`,
+        });
+      }
+    }
 
     const pilot = await prisma.rigPilot.create({
       data: {
