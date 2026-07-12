@@ -107,6 +107,30 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
     setLightbox({ open: true, photos, index: startIndex });
   };
 
+  // Global click handler for feed photos (capture phase to intercept before React)
+  useEffect(() => {
+    const handlePhotoClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const photoEl = target.closest('[data-feed-photo]') as HTMLElement | null;
+      if (!photoEl) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      try {
+        const allPhotosJson = photoEl.getAttribute('data-all-photos');
+        const index = parseInt(photoEl.getAttribute('data-photo-index') || '0');
+        const photos = allPhotosJson ? JSON.parse(allPhotosJson) : [];
+        if (photos.length > 0) {
+          setLightbox({ open: true, photos, index: Math.min(index, photos.length - 1) });
+        }
+      } catch {}
+    };
+
+    document.addEventListener('click', handlePhotoClick, true);
+    return () => document.removeEventListener('click', handlePhotoClick, true);
+  }, []);
+
   // Keyboard navigation for lightbox
   useEffect(() => {
     if (!lightbox.open) return;
@@ -349,13 +373,15 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               {/* Stay photos grid */}
               {stayPhotos.length > 0 && (
                 <div className="px-3 pt-3">
-                  <div className="grid gap-1 rounded-xl overflow-hidden cursor-pointer" style={{ gridTemplateColumns: stayPhotos.length === 1 ? '1fr' : stayPhotos.length === 2 ? '1fr 1fr' : stayPhotos.length === 3 ? '1fr 1fr 1fr' : 'repeat(4, 1fr)' }}>
+                  <div className="grid gap-1 rounded-xl overflow-hidden" style={{ gridTemplateColumns: stayPhotos.length === 1 ? '1fr' : stayPhotos.length === 2 ? '1fr 1fr' : stayPhotos.length === 3 ? '1fr 1fr 1fr' : 'repeat(4, 1fr)' }}>
                     {stayPhotos.slice(0, 4).map((url: string, i: number) => (
-                      <div key={i} className="relative" style={{ aspectRatio: stayPhotos.length === 1 ? '16/9' : '1' }} onClick={(e) => { e.stopPropagation(); openLightbox(stayPhotos, i); }}>
-                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      <div key={i} className="relative" style={{ aspectRatio: stayPhotos.length === 1 ? '16/9' : '1', cursor: 'pointer' }}>
+                        <img src={url} alt="" className="w-full h-full object-cover" style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                          data-feed-photo="true" data-photo-index={i} data-all-photos={JSON.stringify(stayPhotos)} />
                         {i === 3 && stayPhotoCount > 4 && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); openLightbox(stayPhotos, 3); }}>
-                            <span className="text-white font-bold text-lg">+{stayPhotoCount - 4}</span>
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center" style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                            data-feed-photo="true" data-photo-index={3} data-all-photos={JSON.stringify(stayPhotos)}>
+                            <span className="text-white font-bold text-lg pointer-events-none">+{stayPhotoCount - 4}</span>
                           </div>
                         )}
                       </div>
@@ -493,7 +519,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               <div className="px-3 pt-1 pb-2">
                 {title && <h4 className="text-sm font-bold mb-2 px-1" style={{ color: CN.cream }}>{title}</h4>}
                 <div
-                  className="grid gap-1 rounded-xl overflow-hidden cursor-pointer"
+                  className="grid gap-1 rounded-xl overflow-hidden"
                   style={{ gridTemplateColumns: feedPhotos.length === 1 ? '1fr' : feedPhotos.length === 2 ? '1fr 1fr' : feedPhotos.length === 3 ? '2fr 1fr' : '1fr 1fr' }}
                 >
                   {feedPhotos.slice(0, feedPhotos.length === 3 ? 3 : 4).map((url: string, i: number) => (
@@ -503,13 +529,15 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
                       style={{
                         aspectRatio: feedPhotos.length === 1 ? '16/9' : (feedPhotos.length === 3 && i === 0) ? '1' : '1',
                         gridRow: (feedPhotos.length === 3 && i === 0) ? 'span 2' : undefined,
+                        cursor: 'pointer',
                       }}
-                      onClick={(e) => { e.stopPropagation(); openLightbox(feedPhotos, i); }}
                     >
-                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <img src={url} alt="" className="w-full h-full object-cover" style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                        data-feed-photo="true" data-photo-index={i} data-all-photos={JSON.stringify(feedPhotos)} />
                       {i === (feedPhotos.length >= 4 ? 3 : -1) && feedPhotoCount > 4 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="text-white font-bold text-xl">+{feedPhotoCount - 4}</span>
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center" style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                          data-feed-photo="true" data-photo-index={3} data-all-photos={JSON.stringify(feedPhotos)}>
+                          <span className="text-white font-bold text-xl pointer-events-none">+{feedPhotoCount - 4}</span>
                         </div>
                       )}
                     </div>
