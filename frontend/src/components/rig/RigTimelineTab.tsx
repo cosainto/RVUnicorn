@@ -124,31 +124,47 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
 
       // Build a flat list of { url, date } from all photo posts
       const allPhotos = photoPosts.flatMap((p: any) =>
-        (p.photos || []).map((url: string) => ({ url, date: new Date(p.createdAt).getTime() }))
+        (p.photos || []).map((url: string) => ({ url, date: new Date(p.createdAt).getTime(), tripId: p.tripId || null }))
       );
 
-      // Sort check-ins oldest to newest so we can assign date ranges
-      const checkinItems = timelineItems
-        .filter((i: any) => i.itemType === 'CHECKIN')
-        .sort((a: any, b: any) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
-
-      // Assign each photo to the check-in whose window it falls into
+      // Get check-in items and sort newest first for greedy claiming
+      const checkinItems = timelineItems.filter((i: any) => i.itemType === 'CHECKIN');
       const claimedUrls = new Set<string>();
 
-      for (let ci = 0; ci < checkinItems.length; ci++) {
-        const checkin = checkinItems[ci];
+      // Match photos to each check-in using tight date windows
+      for (const checkin of checkinItems) {
         const ciDate = new Date(checkin.occurredAt).getTime();
-        const nextCiDate = ci < checkinItems.length - 1
-          ? new Date(checkinItems[ci + 1].occurredAt).getTime()
-          : ciDate + 365 * 24 * 60 * 60 * 1000; // no next → claim far future
+        const DAY = 24 * 60 * 60 * 1000;
 
-        // Window: from 7 days before this check-in to the next check-in date
-        const windowStart = ciDate - 7 * 24 * 60 * 60 * 1000;
-        const windowEnd = nextCiDate;
+        // Parse checkout date or campground info from previewText
+        let checkoutDate: number | null = null;
+        try {
+          const d = JSON.parse(checkin.previewText || '{}');
+          if (d.checkOutDate) checkoutDate = new Date(d.checkOutDate).getTime();
+        } catch {}
+
+        // Window: check-in date (- 1 day buffer) to checkout date (+ 1 day buffer)
+        // If no checkout: use 7 days max (conservative for short stays)
+        const windowStart = ciDate - 1 * DAY;
+        const windowEnd = checkoutDate ? checkoutDate + 1 * DAY : ciDate + 7 * DAY;
+
+        // Parse tripId from previewText if available
+        let ciTripId: string | null = null;
+        try { ciTripId = JSON.parse(checkin.previewText || '{}').tripId || null; } catch {}
 
         const matched: string[] = [];
         for (const photo of allPhotos) {
-          if (!claimedUrls.has(photo.url) && photo.date >= windowStart && photo.date < windowEnd) {
+          if (claimedUrls.has(photo.url)) continue;
+
+          // Match 1: Same tripId (exact)
+          if (ciTripId && photo.tripId && ciTripId === photo.tripId) {
+            claimedUrls.add(photo.url);
+            matched.push(photo.url);
+            continue;
+          }
+
+          // Match 2: Photo date within check-in/checkout window
+          if (photo.date >= windowStart && photo.date <= windowEnd) {
             claimedUrls.add(photo.url);
             matched.push(photo.url);
           }
@@ -160,28 +176,21 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
         }
       }
 
-      // Any remaining unclaimed photos: assign to nearest check-in
-      for (const photo of allPhotos) {
-        if (claimedUrls.has(photo.url)) continue;
-
-        let nearestIdx = 0;
-        let nearestDist = Infinity;
-        for (let ci = 0; ci < checkinItems.length; ci++) {
-          const dist = Math.abs(new Date(checkinItems[ci].occurredAt).getTime() - photo.date);
-          if (dist < nearestDist) { nearestDist = dist; nearestIdx = ci; }
-        }
-
-        if (checkinItems.length > 0) {
-          const target = checkinItems[nearestIdx];
-          if (!target._stayPhotos) { target._stayPhotos = []; target._stayPhotoCount = 0; }
-          target._stayPhotos.push(photo.url);
-          target._stayPhotoCount++;
-          claimedUrls.add(photo.url);
-        }
-      }
-
-      // No standalone photo card — all photos are inside check-in cards
+      // Unclaimed photos: one album card if any remain
+      const unclaimed = allPhotos.filter(p => !claimedUrls.has(p.url));
       const finalItems = [...timelineItems];
+      if (unclaimed.length > 0) {
+        finalItems.push({
+          id: 'unclaimed-photos',
+          itemType: 'PHOTO_ALBUM',
+          title: `${unclaimed.length} more trip photos`,
+          previewImageUrl: unclaimed[0].url,
+          occurredAt: new Date(unclaimed[0].date).toISOString(),
+          _photos: unclaimed.slice(0, 12).map((p: any) => p.url),
+          _photoCount: unclaimed.length,
+          _source: 'unclaimed',
+        });
+      }
       finalItems.sort((a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
       setItems(finalItems);
