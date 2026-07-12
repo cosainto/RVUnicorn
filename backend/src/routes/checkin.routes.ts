@@ -510,21 +510,24 @@ router.get('/active', authenticateToken, async (req: any, res) => {
         campground: { select: { id: true, name: true, imageUrl: true, latitude: true, longitude: true, state: true, location: true, campgroundMapUrl: true } },
       }
     });
-    // Auto-create StateVisit if campground has a state (dedup: extend existing if same campground within 14 days)
+    // Auto-create StateVisit if campground has a state
+    // Dedup: if the user already has a visit at the SAME campground whose date
+    // range covers today (or is within 1 day), extend it instead of creating a new row.
     if (checkIn?.campground?.state) {
       const campState = checkIn.campground.state;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const fourteenDaysAgo = new Date(today.getTime() - 14 * 86400000);
+      const tomorrow = new Date(today.getTime() + 86400000);
 
-      // Check for existing visit at same state+campground in last 14 days
+      // Find existing visit at same campground that overlaps or is adjacent to today
       const existing = await prisma.stateVisit.findFirst({
         where: {
           userId,
-          state: campState,
+          campsiteId: checkIn.campground.id,
+          startDate: { lte: tomorrow },
           OR: [
-            { campsiteId: checkIn.campground.id },
-            { startDate: { gte: fourteenDaysAgo } },
+            { endDate: { gte: new Date(today.getTime() - 86400000) } }, // endDate within 1 day of today
+            { endDate: null }, // open-ended visit
           ],
         },
         orderBy: { startDate: 'desc' },

@@ -289,27 +289,49 @@ router.get('/:userId/state/:stateCode', async (req: Request, res: Response) => {
       };
     });
 
-    // Group consecutive visits at same campground to avoid duplicate cards
+    // Group overlapping/adjacent visits at same campground into one card per trip.
+    // Two visits merge when they share a campground AND their date ranges overlap
+    // or are within 3 days of each other (covers check-in timing gaps).
     const grouped: typeof visits = [];
     const sorted = visits.sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     for (const visit of sorted) {
-      const prev = grouped[grouped.length - 1];
-      if (prev && prev.campsite?.id && prev.campsite.id === visit.campsite?.id) {
-        const prevEnd = new Date(prev.endDate || prev.startDate);
-        const nextStart = new Date(visit.startDate);
-        const dayGap = (nextStart.getTime() - prevEnd.getTime()) / 86400000;
-        if (dayGap <= 2) {
-          // Merge: extend prev to cover this visit
-          const visitEnd = new Date(visit.endDate || visit.startDate);
-          if (visitEnd > prevEnd) prev.endDate = visit.endDate || visit.startDate;
-          if (!prev.event && visit.event) { prev.event = visit.event; }
-          if (visit.notes && visit.notes !== prev.notes) {
-            prev.notes = [prev.notes, visit.notes].filter(Boolean).join(' · ');
-          }
-          continue;
+      // Try to find an existing grouped visit at the same campground that overlaps
+      const match = visit.campsite?.id
+        ? grouped.find((g: any) => {
+            if (g.campsite?.id !== visit.campsite?.id) return false;
+            const gEnd = new Date(g.endDate || g.startDate);
+            const vStart = new Date(visit.startDate);
+            const dayGap = (vStart.getTime() - gEnd.getTime()) / 86400000;
+            return dayGap <= 3; // merge if within 3 days
+          })
+        : null;
+
+      if (match) {
+        // Merge: extend date range, prefer event-linked data
+        const visitEnd = new Date(visit.endDate || visit.startDate);
+        const matchEnd = new Date(match.endDate || match.startDate);
+        if (visitEnd > matchEnd) match.endDate = visit.endDate || visit.startDate;
+        if (!match.event && visit.event) match.event = visit.event;
+        if (!match.eventId && visit.eventId) match.eventId = visit.eventId;
+        // Merge albums and attendees
+        for (const album of (visit.albums || [])) {
+          if (!match.albums.find((a: any) => a.id === album.id)) match.albums.push(album);
         }
+        for (const attendee of (visit.attendees || [])) {
+          const id = attendee.id || attendee.user?.id;
+          if (id && !match.attendees.find((a: any) => (a.id || a.user?.id) === id)) match.attendees.push(attendee);
+        }
+        // Merge photoUrls
+        for (const url of (visit.photoUrls || [])) {
+          if (!match.photoUrls.includes(url)) match.photoUrls.push(url);
+        }
+        // Don't duplicate auto-created notes — prefer event-linked notes
+        if (visit.notes && !visit.notes.startsWith('Auto-created') && visit.notes !== match.notes) {
+          match.notes = visit.notes;
+        }
+      } else {
+        grouped.push(visit);
       }
-      grouped.push(visit);
     }
 
     res.json({ stateCode: stateCode.toUpperCase(), visits: grouped, isOwnProfile, isFriend });

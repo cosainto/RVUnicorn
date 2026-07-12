@@ -1815,9 +1815,18 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
                           )}
                         </div>
                       )}
-                      {!isOvernight && visit.notes && (
-                        <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{visit.notes}</p>
-                      )}
+                      {!isOvernight && visit.notes && !visit.notes.startsWith('Auto-created from check-in') && (() => {
+                        // Clean up "X at X" — when the trip title equals the campground name, show it once
+                        const campName = visit.campsite?.name;
+                        let displayNotes = visit.notes;
+                        if (campName && displayNotes === `${campName} at ${campName}`) displayNotes = campName;
+                        if (campName && displayNotes === `Staying at ${campName} at ${campName}`) displayNotes = campName;
+                        if (campName && displayNotes === `Staying at ${campName}`) displayNotes = null; // redundant with campsite link
+                        if (campName && displayNotes === campName) displayNotes = null; // same as campsite link below
+                        return displayNotes ? (
+                          <p className="text-[12px] mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>{displayNotes}</p>
+                        ) : null;
+                      })()}
 
                       {/* ── PHOTO ALBUM ROW ── */}
                       {(() => {

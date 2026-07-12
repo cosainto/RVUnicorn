@@ -78,7 +78,10 @@ export async function recordCampgroundVisit(
         endDate: event.endDate ? new Date(event.endDate) : null,
         campsiteId: campground.id,
         eventId: event.id,
-        notes: `${event.title} at ${campground.name}`,
+        // Avoid "Alamogordo KOA at Alamogordo KOA" when event title equals campground name
+        notes: event.title === campground.name || event.title === `Staying at ${campground.name}`
+          ? campground.name
+          : `${event.title} at ${campground.name}`,
         visibility: 'PUBLIC',
       },
     });
