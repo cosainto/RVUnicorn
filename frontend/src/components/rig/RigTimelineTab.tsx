@@ -100,48 +100,6 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [lightbox, setLightbox] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
-
-  const openLightbox = (photos: string[], startIndex = 0) => {
-    if (!photos || photos.length === 0) return;
-    setLightbox({ open: true, photos, index: startIndex });
-  };
-
-  // Global click handler for feed photos (capture phase to intercept before React)
-  useEffect(() => {
-    const handlePhotoClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const photoEl = target.closest('[data-feed-photo]') as HTMLElement | null;
-      if (!photoEl) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      try {
-        const allPhotosJson = photoEl.getAttribute('data-all-photos');
-        const index = parseInt(photoEl.getAttribute('data-photo-index') || '0');
-        const photos = allPhotosJson ? JSON.parse(allPhotosJson) : [];
-        if (photos.length > 0) {
-          setLightbox({ open: true, photos, index: Math.min(index, photos.length - 1) });
-        }
-      } catch {}
-    };
-
-    document.addEventListener('click', handlePhotoClick, true);
-    return () => document.removeEventListener('click', handlePhotoClick, true);
-  }, []);
-
-  // Keyboard navigation for lightbox
-  useEffect(() => {
-    if (!lightbox.open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') setLightbox(p => ({ ...p, index: Math.min(p.photos.length - 1, p.index + 1) }));
-      if (e.key === 'ArrowLeft') setLightbox(p => ({ ...p, index: Math.max(0, p.index - 1) }));
-      if (e.key === 'Escape') setLightbox(p => ({ ...p, open: false }));
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [lightbox.open]);
   const [activeSession, setActiveSession] = useState<any>(null);
 
   useEffect(() => { loadInitial(); loadSession(); }, [slug]);
@@ -277,7 +235,6 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   }
 
   return (
-    <>
     <div className="max-w-2xl mx-auto space-y-4">
 
       {/* Active Camp Session — pinned at top */}
@@ -575,24 +532,5 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
       )}
 
     </div>
-
-    {/* Fullscreen photo lightbox */}
-    {lightbox.open && (
-      <div
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onClick={() => setLightbox(p => ({ ...p, open: false }))}
-      >
-        <button onClick={() => setLightbox(p => ({ ...p, open: false }))} style={{ position: 'fixed', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 44, height: 44, borderRadius: '50%', fontSize: 22, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-        {lightbox.index > 0 && (
-          <button onClick={(e) => { e.stopPropagation(); setLightbox(p => ({ ...p, index: p.index - 1 })); }} style={{ position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 52, height: 52, borderRadius: '50%', fontSize: 28, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-        )}
-        <img src={lightbox.photos[lightbox.index]} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 8 }} alt="" />
-        {lightbox.index < lightbox.photos.length - 1 && (
-          <button onClick={(e) => { e.stopPropagation(); setLightbox(p => ({ ...p, index: p.index + 1 })); }} style={{ position: 'fixed', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 52, height: 52, borderRadius: '50%', fontSize: 28, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-        )}
-        <div style={{ position: 'fixed', bottom: 20, color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>{lightbox.index + 1} / {lightbox.photos.length}</div>
-      </div>
-    )}
-    </>
   );
 }

@@ -10,6 +10,7 @@ import GuideUnlockToast from './components/GuideUnlockToast';
 import HitchFloatingChat from './components/HitchFloatingChat';
 import ErrorBoundary from './components/ErrorBoundary';
 import MobileBottomNav from './components/MobileBottomNav';
+import GlobalPhotoLightbox from './components/GlobalPhotoLightbox';
 
 // Retry lazy imports — handles stale chunks after deploys
 function lazyRetry(importFn: () => Promise<any>) {
@@ -597,6 +598,7 @@ function App() {
             <HitchFloatingChat />
             <MobileBottomNav />
             <DriveCompanionWidget />
+            <GlobalPhotoLightbox />
             <OnboardingTrigger />
           </Router>
         </DrivingSessionProvider>
