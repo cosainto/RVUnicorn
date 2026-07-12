@@ -147,9 +147,12 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
 
         setCompleted(prev => prev + 1);
       } catch (err: any) {
-        console.error(`[TripMedia] Failed: ${displayName}`, err?.message || err);
+        const errMsg = err?.response?.data?.error || err?.message || String(err);
+        console.error(`[TripMedia] Failed: ${displayName}`, errMsg);
         setFailed(prev => prev + 1);
         setFailedFiles(prev => [...prev, mediaFile]);
+        // Show the first real error so the user (or a screenshot) reveals the cause
+        setUploadError(prev => prev || errMsg);
       }
     }
 

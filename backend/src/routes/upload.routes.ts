@@ -20,6 +20,35 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// GET /api/upload/sign — Generate a signed upload for direct browser→Cloudinary uploads.
+// The frontend sends { folder } and gets back { signature, timestamp, apiKey, cloudName, folder }
+// to include in the Cloudinary POST. This replaces the missing unsigned upload preset.
+router.get('/sign', authenticateToken, (req: any, res) => {
+  try {
+    const folder = (req.query.folder as string) || 'rvunicorn/uploads';
+    const timestamp = Math.round(Date.now() / 1000);
+
+    // Cloudinary signs the alphabetically-sorted params string with the API secret.
+    // The frontend MUST send exactly these params (and nothing else) alongside the file.
+    const paramsToSign = { folder, timestamp };
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUDINARY_API_SECRET!,
+    );
+
+    res.json({
+      signature,
+      timestamp,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      folder,
+    });
+  } catch (error: any) {
+    console.error('Sign upload error:', error);
+    res.status(500).json({ error: 'Failed to generate upload signature' });
+  }
+});
+
 // Helper to upload to Cloudinary with automatic compression/resize
 const uploadToCloudinary = (buffer: Buffer, folder: string = 'rvunicorn'): Promise<any> => {
   return new Promise((resolve, reject) => {
