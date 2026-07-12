@@ -486,7 +486,7 @@ router.post('/trip/:tripId/save-photo', authenticateToken, async (req: any, res)
     res.json({ success: true, photoId: photo.id, url });
   } catch (error: any) {
     console.error('Save photo error:', error);
-    res.status(500).json({ error: 'Failed to save photo' });
+    res.status(500).json({ error: error.message || 'Failed to save photo' });
   }
 });
 
