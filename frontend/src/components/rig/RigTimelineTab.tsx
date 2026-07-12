@@ -273,7 +273,20 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.15) 100%)' }} />
               <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
                 <div className="flex items-center gap-2">
-                  {ownerAvatar ? <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" /> : null}
+                  {/* Show attendee avatars if multiple, otherwise rig owner avatar */}
+                  {(item._attendees?.length > 1) ? (
+                    <div className="flex -space-x-2">
+                      {item._attendees.slice(0, 3).map((a: any, i: number) => (
+                        a.profilePicture ? (
+                          <img key={a.id || i} src={a.profilePicture} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-black/30" style={{ zIndex: 3 - i }} />
+                        ) : (
+                          <div key={a.id || i} className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-black/30" style={{ background: '#1A2A45', color: '#E8A838', zIndex: 3 - i }}>{a.firstName?.[0]}</div>
+                        )
+                      ))}
+                    </div>
+                  ) : ownerAvatar ? (
+                    <img src={ownerAvatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" />
+                  ) : null}
                   <span className="text-xs text-white/80 font-semibold">{rigName} <span className="text-white/50 font-normal">checked in</span></span>
                 </div>
                 <span className="text-[10px] text-white/40">{timeAgo(item.occurredAt)}</span>

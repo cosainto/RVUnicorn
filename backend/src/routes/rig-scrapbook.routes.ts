@@ -67,14 +67,15 @@ router.get('/:slug/timeline', async (req: any, res) => {
       prisma.checkIn.findMany({
         where: {
           userId: { in: rigUserIds },
+          campgroundId: { not: null },
           ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
         },
-        select: { id: true, userId: true, checkInDate: true, createdAt: true, notes: true,
+        select: { id: true, userId: true, campgroundId: true, checkInDate: true, createdAt: true, notes: true,
           campground: { select: { id: true, name: true, city: true, state: true, imageUrl: true } },
           user: { select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true } },
         },
         orderBy: { checkInDate: 'desc' },
-        take: 10,
+        take: 30,
       }).catch(() => []),
     ]);
 
@@ -98,28 +99,62 @@ router.get('/:slug/timeline', async (req: any, res) => {
       _source: 'copilot_album',
     }));
 
-    const checkinItems = (userCheckins || []).filter((c: any) => c.campground).map((c: any) => ({
+    // Deduplicate check-ins: same campground + same day = one card
+    const checkinsByKey = new Map<string, any>();
+    for (const c of (userCheckins || []).filter((c: any) => c.campground)) {
+      const dateKey = new Date(c.checkInDate || c.createdAt).toISOString().split('T')[0];
+      const key = `${c.campgroundId}_${dateKey}`;
+      if (!checkinsByKey.has(key)) {
+        checkinsByKey.set(key, { ...c, _attendees: [c.user] });
+      } else {
+        // Merge: add this user as attendee
+        const existing = checkinsByKey.get(key)!;
+        if (c.user && !existing._attendees.some((a: any) => a.id === c.user.id)) {
+          existing._attendees.push(c.user);
+        }
+      }
+    }
+
+    const checkinItems = Array.from(checkinsByKey.values()).map((c: any) => ({
       id: `checkin-${c.id}`,
       rigId: rig.id,
       itemType: 'CHECKIN',
       refId: c.id,
       refType: 'CheckIn',
-      title: `${c.user?.firstName || 'Someone'} checked in at ${c.campground?.name}`,
+      title: `Checked in at ${c.campground?.name}`,
       previewImageUrl: c.campground?.imageUrl,
-      previewText: c.notes || `${c.campground?.city || ''}, ${c.campground?.state || ''}`.trim(),
+      previewText: JSON.stringify({ campgroundId: c.campgroundId, city: c.campground?.city, state: c.campground?.state }),
       tripId: null,
       stopId: null,
       occurredAt: c.checkInDate || c.createdAt,
       createdAt: c.createdAt,
       _user: c.user,
+      _attendees: c._attendees,
       _source: 'copilot_checkin',
     }));
 
-    // Merge and deduplicate by refId+refType
+    // Merge and deduplicate
+    // First: existing timeline CHECKIN items by date key to avoid duplicates with synthetic ones
+    const existingCheckinDates = new Set<string>();
+    for (const item of items) {
+      if (item.itemType === 'CHECKIN') {
+        const dateKey = new Date(item.occurredAt).toISOString().split('T')[0];
+        const title = (item.title || '').toLowerCase();
+        existingCheckinDates.add(`${dateKey}_${title}`);
+      }
+    }
+
     const existingRefs = new Set(items.map((i: any) => `${i.refId}-${i.refType}`));
-    const extraItems = [...albumItems, ...checkinItems].filter(
-      (i: any) => !existingRefs.has(`${i.refId}-${i.refType}`)
-    );
+    const extraItems = [...albumItems, ...checkinItems].filter((i: any) => {
+      if (existingRefs.has(`${i.refId}-${i.refType}`)) return false;
+      // Also skip if a CHECKIN exists on the same date with same campground name
+      if (i.itemType === 'CHECKIN') {
+        const dateKey = new Date(i.occurredAt).toISOString().split('T')[0];
+        const title = (i.title || '').toLowerCase();
+        if (existingCheckinDates.has(`${dateKey}_${title}`)) return false;
+      }
+      return true;
+    });
 
     const allItems = [...items, ...extraItems].sort(
       (a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
