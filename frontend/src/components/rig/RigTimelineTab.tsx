@@ -100,6 +100,24 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [lightbox, setLightbox] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
+
+  const openLightbox = (photos: string[], startIndex = 0) => {
+    if (!photos || photos.length === 0) return;
+    setLightbox({ open: true, photos, index: startIndex });
+  };
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightbox.open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setLightbox(p => ({ ...p, index: Math.min(p.photos.length - 1, p.index + 1) }));
+      if (e.key === 'ArrowLeft') setLightbox(p => ({ ...p, index: Math.max(0, p.index - 1) }));
+      if (e.key === 'Escape') setLightbox(p => ({ ...p, open: false }));
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightbox.open]);
   const [activeSession, setActiveSession] = useState<any>(null);
 
   useEffect(() => { loadInitial(); loadSession(); }, [slug]);
@@ -177,7 +195,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
       }
 
       // Unclaimed photos: one album card if any remain
-      const unclaimed = allPhotos.filter(p => !claimedUrls.has(p.url));
+      const unclaimed = allPhotos.filter((p: any) => !claimedUrls.has(p.url));
       const finalItems = [...timelineItems];
       if (unclaimed.length > 0) {
         finalItems.push({
@@ -235,6 +253,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
   }
 
   return (
+    <>
     <div className="max-w-2xl mx-auto space-y-4">
 
       {/* Active Camp Session — pinned at top */}
@@ -330,12 +349,12 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               {/* Stay photos grid */}
               {stayPhotos.length > 0 && (
                 <div className="px-3 pt-3">
-                  <div className="grid gap-1 rounded-xl overflow-hidden" style={{ gridTemplateColumns: stayPhotos.length === 1 ? '1fr' : stayPhotos.length === 2 ? '1fr 1fr' : stayPhotos.length === 3 ? '1fr 1fr 1fr' : 'repeat(4, 1fr)' }}>
+                  <div className="grid gap-1 rounded-xl overflow-hidden cursor-pointer" style={{ gridTemplateColumns: stayPhotos.length === 1 ? '1fr' : stayPhotos.length === 2 ? '1fr 1fr' : stayPhotos.length === 3 ? '1fr 1fr 1fr' : 'repeat(4, 1fr)' }}>
                     {stayPhotos.slice(0, 4).map((url: string, i: number) => (
-                      <div key={i} className="relative" style={{ aspectRatio: stayPhotos.length === 1 ? '16/9' : '1' }}>
+                      <div key={i} className="relative" style={{ aspectRatio: stayPhotos.length === 1 ? '16/9' : '1' }} onClick={(e) => { e.stopPropagation(); openLightbox(stayPhotos, i); }}>
                         <img src={url} alt="" className="w-full h-full object-cover" />
                         {i === 3 && stayPhotoCount > 4 && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); openLightbox(stayPhotos, 3); }}>
                             <span className="text-white font-bold text-lg">+{stayPhotoCount - 4}</span>
                           </div>
                         )}
@@ -474,7 +493,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
               <div className="px-3 pt-1 pb-2">
                 {title && <h4 className="text-sm font-bold mb-2 px-1" style={{ color: CN.cream }}>{title}</h4>}
                 <div
-                  className="grid gap-1 rounded-xl overflow-hidden"
+                  className="grid gap-1 rounded-xl overflow-hidden cursor-pointer"
                   style={{ gridTemplateColumns: feedPhotos.length === 1 ? '1fr' : feedPhotos.length === 2 ? '1fr 1fr' : feedPhotos.length === 3 ? '2fr 1fr' : '1fr 1fr' }}
                 >
                   {feedPhotos.slice(0, feedPhotos.length === 3 ? 3 : 4).map((url: string, i: number) => (
@@ -485,6 +504,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
                         aspectRatio: feedPhotos.length === 1 ? '16/9' : (feedPhotos.length === 3 && i === 0) ? '1' : '1',
                         gridRow: (feedPhotos.length === 3 && i === 0) ? 'span 2' : undefined,
                       }}
+                      onClick={(e) => { e.stopPropagation(); openLightbox(feedPhotos, i); }}
                     >
                       <img src={url} alt="" className="w-full h-full object-cover" />
                       {i === (feedPhotos.length >= 4 ? 3 : -1) && feedPhotoCount > 4 && (
@@ -527,5 +547,24 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
       )}
 
     </div>
+
+    {/* Fullscreen photo lightbox */}
+    {lightbox.open && (
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onClick={() => setLightbox(p => ({ ...p, open: false }))}
+      >
+        <button onClick={() => setLightbox(p => ({ ...p, open: false }))} style={{ position: 'fixed', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 44, height: 44, borderRadius: '50%', fontSize: 22, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+        {lightbox.index > 0 && (
+          <button onClick={(e) => { e.stopPropagation(); setLightbox(p => ({ ...p, index: p.index - 1 })); }} style={{ position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 52, height: 52, borderRadius: '50%', fontSize: 28, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+        )}
+        <img src={lightbox.photos[lightbox.index]} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 8 }} alt="" />
+        {lightbox.index < lightbox.photos.length - 1 && (
+          <button onClick={(e) => { e.stopPropagation(); setLightbox(p => ({ ...p, index: p.index + 1 })); }} style={{ position: 'fixed', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: 52, height: 52, borderRadius: '50%', fontSize: 28, cursor: 'pointer', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+        )}
+        <div style={{ position: 'fixed', bottom: 20, color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>{lightbox.index + 1} / {lightbox.photos.length}</div>
+      </div>
+    )}
+    </>
   );
 }
