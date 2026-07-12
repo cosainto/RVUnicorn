@@ -1,11 +1,9 @@
 import { useState, useRef } from 'react';
 import { Upload, Camera, Film, X, CheckCircle, Loader2 } from 'lucide-react';
 import api from '../services/api';
+import { uploadFile } from '../utils/uploadMedia';
 
 const C = { bg: '#0F1C35', card: '#1B2B4B', cardLight: '#243352', border: '#2A3F5F', gold: '#C9A84C', orange: '#E8622A', cream: '#F5F0E8', muted: '#94A3B8', green: '#1D9E75' };
-
-const CLOUD_NAME = 'dy6eetmh7';
-const UPLOAD_PRESET = 'rvunicorn_unsigned';
 
 const VIDEO_TYPES = [
   { value: 'CAMPSITE', emoji: '🏕', label: 'Campsite' },
@@ -33,39 +31,6 @@ interface Props {
   rigName?: string;
   onUploadComplete?: (result: { photos: number; videos: number }) => void;
   onClose?: () => void;
-}
-
-// Upload a file directly to Cloudinary with XHR progress
-function uploadToCloudinary(file: File, folder: string, onProgress: (pct: number) => void): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', UPLOAD_PRESET);
-    formData.append('folder', folder);
-
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    });
-
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { reject(new Error('Bad response from Cloudinary')); }
-      } else {
-        reject(new Error(`Cloudinary ${xhr.status}: ${xhr.responseText?.slice(0, 200)}`));
-      }
-    };
-
-    xhr.onerror = () => reject(new Error('Network error — check your connection'));
-    xhr.ontimeout = () => reject(new Error('Upload timed out — try a smaller file'));
-    xhr.timeout = 300000; // 5 minutes
-
-    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`);
-    xhr.send(formData);
-  });
 }
 
 export default function TripMediaUploader({ tripId, tripTitle, rigName, onUploadComplete, onClose }: Props) {
@@ -153,31 +118,28 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
         const isVideo = mediaFile.type === 'video';
         const folder = isVideo ? `rvunicorn/trip-videos/${tripId}` : `rvunicorn/trip-photos/${tripId}`;
 
-        // Upload directly to Cloudinary
-        const cloudResult = await uploadToCloudinary(
-          mediaFile.file,
+        // Upload directly to Cloudinary via shared utility
+        const cloudResult = await uploadFile(mediaFile.file, {
           folder,
-          (pct) => setCurrentFilePct(pct)
-        );
+          onProgress: (pct) => setCurrentFilePct(pct),
+        });
 
-        console.log(`[TripMedia] Cloudinary OK: ${displayName} -> ${cloudResult.secure_url}`);
+        console.log(`[TripMedia] Cloudinary OK: ${displayName} -> ${cloudResult.url}`);
 
         // Save the URL to our backend
         if (isVideo) {
-          await api.post(`/upload/trip/${tripId}/media`, (() => {
-            const fd = new FormData();
-            fd.append('media', mediaFile.file, mediaFile.file.name);
-            fd.append('meta_0', JSON.stringify({
-              title: mediaFile.title,
-              videoType: mediaFile.videoType,
-            }));
-            return fd;
-          })(), { timeout: 120000 });
+          await api.post(`/upload/trip/${tripId}/save-video`, {
+            url: cloudResult.url,
+            publicId: cloudResult.publicId,
+            title: mediaFile.title,
+            videoType: mediaFile.videoType,
+            duration: cloudResult.duration || null,
+          });
           uploadedVideos++;
         } else {
           await api.post(`/upload/trip/${tripId}/save-photo`, {
-            url: cloudResult.secure_url,
-            publicId: cloudResult.public_id,
+            url: cloudResult.url,
+            publicId: cloudResult.publicId,
             caption: mediaFile.caption || null,
           });
           uploadedPhotos++;

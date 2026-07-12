@@ -79,7 +79,10 @@ router.post(
         warrantyExpires: warrantyExpires ? new Date(warrantyExpires) : undefined,
     };
 
-      if (req.file) {
+      // Accept either a pre-uploaded URL or a multer file for receipt image
+      if (req.body.imageUrl) {
+        data.receiptImage = req.body.imageUrl;
+      } else if (req.file) {
         data.receiptImage = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/maintenance');
       }
 
@@ -258,7 +261,10 @@ const updateData: any = {
 };
 
 
-    if (req.file) {
+    // Accept either a pre-uploaded URL or a multer file for receipt image
+    if (req.body.imageUrl) {
+      updateData.receiptImage = req.body.imageUrl;
+    } else if (req.file) {
       updateData.receiptImage = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/maintenance');
     }
 

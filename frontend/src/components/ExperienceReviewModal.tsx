@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Star, X, Camera, Loader2 } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface Props {
   experienceId: string;
@@ -36,10 +37,8 @@ export default function ReviewModal({ experienceId, experienceName, onClose, onS
     setUploading(true);
     for (let i = 0; i < Math.min(files.length, 4 - photoUrls.length); i++) {
       try {
-        const formData = new FormData();
-        formData.append('file', files[i]);
-        const { data } = await api.post('/upload/image', formData);
-        setPhotoUrls(prev => [...prev, data.url || data.imageUrl]);
+        const url = await uploadAndGetUrl(files[i], 'rvunicorn/reviews');
+        setPhotoUrls(prev => [...prev, url]);
       } catch {}
     }
     setUploading(false);

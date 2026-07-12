@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Map, Upload, Download, X, Maximize2, Crosshair, Loader2, Check } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 const C = { bg: '#0F1C35', card: '#1B2B4B', cardLight: '#243352', border: '#2A3F5F', gold: '#C9A84C', orange: '#E8622A', cream: '#F5F0E8', muted: '#94A3B8', green: '#1D9E75' };
 
@@ -40,12 +41,10 @@ export default function CampsiteMapSection({ tripId, campgroundId, campgroundNam
     if (file.size > 20 * 1024 * 1024) { alert('Max 20MB'); return; }
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      const { data } = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      await api.put(`/events/${tripId}`, { campsiteMapUrl: data.url });
-      setLocalMapUrl(data.url);
-      onMapUploaded?.(data.url);
+      const url = await uploadAndGetUrl(file, 'rvunicorn/campsite-maps');
+      await api.put(`/events/${tripId}`, { campsiteMapUrl: url });
+      setLocalMapUrl(url);
+      onMapUploaded?.(url);
       if (campgroundId && !campgroundMapUrl) setShowSharePrompt(true);
     } catch { alert('Upload failed'); }
     finally { setUploading(false); }

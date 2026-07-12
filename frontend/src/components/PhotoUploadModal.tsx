@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Image, Loader2 } from 'lucide-react';
 import { VisibilitySelector, SurfaceSelector, type VisibilityValue, type Surface } from './VisibilitySelector';
 import api from '../services/api';
+import { uploadFile } from '../utils/uploadMedia';
 
 interface PhotoUploadModalProps {
   isOpen: boolean;
@@ -53,30 +54,30 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     let failed = 0;
     let lastResponse: any = null;
 
-    // Upload in batches of 3 for speed + reliability
-    const BATCH = 3;
-    for (let i = 0; i < selectedFiles.length; i += BATCH) {
-      const batch = selectedFiles.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
-        batch.map(async (file, idx) => {
-          const formData = new FormData();
-          formData.append('image', file, file.name || `photo_${i + idx}.jpg`);
-          if (i + idx === 0) formData.append('caption', caption);
-          formData.append('visibility', visibility);
-          formData.append('surfaces', JSON.stringify(surfaces));
-          if (albumId) formData.append('albumId', albumId);
-          if (eventId) formData.append('eventId', eventId);
-          return api.post('/photos', formData, {
-            // Do NOT set Content-Type — axios must auto-set it with the multipart boundary
-            timeout: 120000,
-          });
-        })
-      );
-      results.forEach(r => {
-        if (r.status === 'fulfilled') { uploaded++; lastResponse = r.value.data; }
-        else { failed++; console.error('[PhotoUpload] Failed:', r.reason?.message); }
-      });
-      setUploadProgress(Math.round(((i + batch.length) / selectedFiles.length) * 100));
+    // Upload files directly to Cloudinary, then save metadata to backend
+    const folder = albumId ? `rvunicorn/albums/${albumId}` : 'rvunicorn/photos';
+    for (let i = 0; i < selectedFiles.length; i++) {
+      try {
+        const result = await uploadFile(selectedFiles[i], {
+          folder,
+          onProgress: () => {},
+        });
+        const savePayload: any = {
+          imageUrl: result.url,
+          visibility,
+          surfaces: JSON.stringify(surfaces),
+        };
+        if (i === 0) savePayload.caption = caption;
+        if (albumId) savePayload.albumId = albumId;
+        if (eventId) savePayload.eventId = eventId;
+        const { data } = await api.post('/photos', savePayload);
+        uploaded++;
+        lastResponse = data;
+      } catch (err: any) {
+        failed++;
+        console.error('[PhotoUpload] Failed:', err?.message);
+      }
+      setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
     }
 
     console.log(`[PhotoUpload] ${uploaded} uploaded, ${failed} failed`);

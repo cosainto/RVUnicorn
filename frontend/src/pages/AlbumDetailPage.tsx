@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface PhotoPreview {
   file: File;
@@ -288,12 +289,10 @@ export default function AlbumDetailPage() {
       setUploading(true);
       
       for (const preview of photoPreviews) {
-        const formData = new FormData();
-        formData.append('photo', preview.file);
-        formData.append('caption', preview.caption);
-        
-        await api.post(`/photo-albums/${id}/photos`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        const url = await uploadAndGetUrl(preview.file, `rvunicorn/albums/${id}`);
+        await api.post(`/photo-albums/${id}/photos`, {
+          imageUrl: url,
+          caption: preview.caption,
         });
       }
 

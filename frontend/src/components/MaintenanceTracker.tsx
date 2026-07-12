@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wrench, Plus, Calendar, DollarSign, AlertCircle, CheckCircle, Clock, Bell, Trash2, Edit, Save, X, Building } from 'lucide-react';
 import api from '../services/api';
 import ServiceItemsEditor from './rig/ServiceItemsEditor';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import { useAuth } from '../contexts/AuthContext';
 
 interface MaintenanceRecord {
@@ -224,41 +225,40 @@ export default function MaintenanceTracker() {
     e.preventDefault();
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', title);
-      formDataToSend.append('category', category);
-      if (description) formDataToSend.append('description', description);
-      if (cost) formDataToSend.append('cost', cost);
-      if (mileage) formDataToSend.append('mileage', mileage);
-      if (location) formDataToSend.append('location', location);
-      formDataToSend.append('serviceDate', serviceDate);
-      if (notes) formDataToSend.append('notes', notes);
-      if (providerName) formDataToSend.append('providerName', providerName);
-      if (providerAddress) formDataToSend.append('providerAddress', providerAddress);
-      formDataToSend.append('createReminder', createReminder.toString());
-      if (createReminder) {
-        formDataToSend.append('reminderFrequency', reminderFrequency);
-        if (customMiles) formDataToSend.append('customMiles', customMiles);
-        if (customMonths) formDataToSend.append('customMonths', customMonths);
-      }
+      let receiptImageUrl: string | undefined;
       if (receiptImage) {
-        formDataToSend.append('receiptImage', receiptImage);
+        receiptImageUrl = await uploadAndGetUrl(receiptImage, 'rvunicorn/maintenance');
       }
-      if (Object.keys(metadata).length > 0) {
-        formDataToSend.append('metadata', JSON.stringify(metadata));
-      }
-      // New fields
-      if (serviceItems.length > 0) formDataToSend.append('serviceItems', JSON.stringify(serviceItems));
-      if (laborCost != null) formDataToSend.append('laborCost', String(laborCost));
-      if (shopName) formDataToSend.append('shopName', shopName);
-      if (technicianName) formDataToSend.append('technicianName', technicianName);
-      if (workOrderNumber) formDataToSend.append('workOrderNumber', workOrderNumber);
-      formDataToSend.append('isBodyWork', String(isBodyWork));
-      if (warrantyExpires) formDataToSend.append('warrantyExpires', warrantyExpires);
 
-      await api.post('/maintenance/records', formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const payload: any = {
+        title,
+        category,
+        serviceDate,
+        createReminder,
+        isBodyWork,
+      };
+      if (description) payload.description = description;
+      if (cost) payload.cost = cost;
+      if (mileage) payload.mileage = mileage;
+      if (location) payload.location = location;
+      if (notes) payload.notes = notes;
+      if (providerName) payload.providerName = providerName;
+      if (providerAddress) payload.providerAddress = providerAddress;
+      if (createReminder) {
+        payload.reminderFrequency = reminderFrequency;
+        if (customMiles) payload.customMiles = customMiles;
+        if (customMonths) payload.customMonths = customMonths;
+      }
+      if (receiptImageUrl) payload.receiptImageUrl = receiptImageUrl;
+      if (Object.keys(metadata).length > 0) payload.metadata = metadata;
+      if (serviceItems.length > 0) payload.serviceItems = serviceItems;
+      if (laborCost != null) payload.laborCost = laborCost;
+      if (shopName) payload.shopName = shopName;
+      if (technicianName) payload.technicianName = technicianName;
+      if (workOrderNumber) payload.workOrderNumber = workOrderNumber;
+      if (warrantyExpires) payload.warrantyExpires = warrantyExpires;
+
+      await api.post('/maintenance/records', payload);
 
       setShowAddModal(false);
       resetForm();
@@ -299,24 +299,23 @@ export default function MaintenanceTracker() {
     if (!editingRecord) return;
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', title);
-      formDataToSend.append('category', category);
-      formDataToSend.append('description', description || '');
-      formDataToSend.append('cost', cost || '');
-      formDataToSend.append('mileage', mileage || '');
-      formDataToSend.append('location', location || '');
-      formDataToSend.append('serviceDate', serviceDate);
-      formDataToSend.append('notes', notes || '');
-      formDataToSend.append('providerName', providerName || '');
-      formDataToSend.append('providerAddress', providerAddress || '');
-      
+      let receiptImageUrl: string | undefined;
       if (receiptImage) {
-        formDataToSend.append('receiptImage', receiptImage);
+        receiptImageUrl = await uploadAndGetUrl(receiptImage, 'rvunicorn/maintenance');
       }
 
-      await api.put(`/maintenance/records/${editingRecord.id}`, formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      await api.put(`/maintenance/records/${editingRecord.id}`, {
+        title,
+        category,
+        description: description || '',
+        cost: cost || '',
+        mileage: mileage || '',
+        location: location || '',
+        serviceDate,
+        notes: notes || '',
+        providerName: providerName || '',
+        providerAddress: providerAddress || '',
+        ...(receiptImageUrl ? { receiptImageUrl } : {}),
       });
 
       setShowEditModal(false);

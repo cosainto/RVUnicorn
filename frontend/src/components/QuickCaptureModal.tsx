@@ -18,6 +18,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
+import { uploadFile } from '../utils/uploadMedia';
 
 interface QuickCaptureModalProps {
   isOpen: boolean;
@@ -286,66 +287,37 @@ export default function QuickCaptureModal({ isOpen, onClose, onUploadComplete }:
         albumId = await createMobileUploadsAlbum() || '';
       }
 
-      const formData = new FormData();
-      
+      // Upload file directly to Cloudinary
+      const folder = mediaType === 'video' ? 'rvunicorn/videos' : 'rvunicorn/photos';
+      const result = await uploadFile(selectedFile, { folder });
+
       if (postAsCreator) {
-        formData.append(mediaType === 'video' ? 'video' : 'thumbnail', selectedFile);
-        formData.append('contentType', mediaType === 'video' ? 'VIDEO' : 'PHOTO');
-        formData.append('title', creatorTitle || caption || 'Quick capture');
-        formData.append('description', caption);
-        formData.append('status', 'PUBLISHED');
-        
-        await api.post('/creator-content', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        await api.post('/creator-content', {
+          contentType: mediaType === 'video' ? 'VIDEO' : 'PHOTO',
+          title: creatorTitle || caption || 'Quick capture',
+          description: caption,
+          status: 'PUBLISHED',
+          ...(mediaType === 'video' ? { videoUrl: result.url } : { thumbnailUrl: result.url }),
         });
       } else {
-        if (mediaType === 'photo') {
-          // Use media-albums endpoint for proper album integration
-          formData.append('files', selectedFile);
-          formData.append('visibility', visibility);
-          if (caption) formData.append('caption', caption);
-          
-          if (albumId) {
-            // Upload to media album
-            await api.post(`/media-albums/${albumId}/media`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-          } else {
-            // Create default album first, then upload
-            const albumResponse = await api.post('/media-albums', {
-              title: 'Mobile Uploads',
-              description: 'Quick captures from mobile',
-              defaultVisibility: visibility
-            });
-            const newAlbumId = albumResponse.data.id;
-            await api.post(`/media-albums/${newAlbumId}/media`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-          }
-        } else {
-          // Use media-albums endpoint for video too (same as photos)
-          formData.append('files', selectedFile);
-          formData.append('visibility', visibility);
-          if (caption) formData.append('caption', caption);
-          
-          if (albumId) {
-            // Upload to media album
-            await api.post(`/media-albums/${albumId}/media`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-          } else {
-            // Create default album first, then upload
-            const albumResponse = await api.post('/media-albums', {
-              title: 'Mobile Uploads',
-              description: 'Quick captures from mobile',
-              defaultVisibility: visibility
-            });
-            const newAlbumId = albumResponse.data.id;
-            await api.post(`/media-albums/${newAlbumId}/media`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-          }
+        // Determine album
+        let targetAlbumId = albumId;
+        if (!targetAlbumId) {
+          const albumResponse = await api.post('/media-albums', {
+            title: 'Mobile Uploads',
+            description: 'Quick captures from mobile',
+            defaultVisibility: visibility
+          });
+          targetAlbumId = albumResponse.data.id;
         }
+
+        // Save metadata via JSON
+        await api.post(`/media-albums/${targetAlbumId}/media`, {
+          mediaUrl: result.url,
+          type: mediaType === 'video' ? 'VIDEO' : 'PHOTO',
+          visibility,
+          caption: caption || undefined,
+        });
       }
 
       onUploadComplete?.();

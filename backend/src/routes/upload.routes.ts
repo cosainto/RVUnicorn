@@ -43,8 +43,17 @@ const uploadToCloudinary = (buffer: Buffer, folder: string = 'rvunicorn'): Promi
 // POST /api/upload - Upload single image (legacy endpoint)
 router.post('/', authenticateToken, upload.single('image'), async (req: any, res) => {
   try {
+    // Accept either a pre-uploaded URL or a multer file
+    if (req.body.imageUrl) {
+      return res.json({
+        url: req.body.imageUrl,
+        imageUrl: req.body.imageUrl,
+        publicId: null,
+      });
+    }
+
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'Image required' });
     }
 
     if (!req.file.mimetype.startsWith('image/')) {
@@ -69,17 +78,22 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
     const userId = req.userId || (req as any).user?.id;
     const { eventId, albumId, caption } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    let publicId: string | null = null;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      if (!req.file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: 'File must be an image' });
+      }
+      // Legacy multer path — upload to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer);
+      imageUrl = result.secure_url;
+      publicId = result.public_id;
+    } else {
+      return res.status(400).json({ error: 'Image required' });
     }
-
-    if (!req.file.mimetype.startsWith('image/')) {
-      return res.status(400).json({ error: 'File must be an image' });
-    }
-
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file.buffer);
-    const imageUrl = result.secure_url;
 
     // If eventId or albumId provided, create a Photo record to link it
     if (eventId || albumId) {
@@ -141,7 +155,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
       return res.json({
         url: imageUrl,
         imageUrl,
-        publicId: result.public_id,
+        publicId,
         photo,
       });
     }
@@ -150,7 +164,7 @@ router.post('/image', authenticateToken, upload.single('image'), async (req: any
     res.json({
       url: imageUrl,
       imageUrl,
-      publicId: result.public_id,
+      publicId,
     });
   } catch (error: any) {
     console.error('Upload image error:', error);
@@ -213,8 +227,18 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
     const { eventId } = req.params;
     const { caption } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    let publicId: string | null = null;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary
+      const result = await uploadToCloudinary(req.file.buffer, `kindletribe/events/${eventId}`);
+      imageUrl = result.secure_url;
+      publicId = result.public_id;
+    } else {
+      return res.status(400).json({ error: 'Image required' });
     }
 
     // Verify event exists and user is participant
@@ -234,14 +258,11 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
       return res.status(403).json({ error: 'Only event participants can upload photos' });
     }
 
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file.buffer, `kindletribe/events/${eventId}`);
-
     // Create Photo record
     const photo = await db.photo.create({
       data: {
         userId,
-        imageUrl: result.secure_url,
+        imageUrl,
         caption: caption || null,
         eventId,
       },
@@ -265,9 +286,9 @@ router.post('/event/:eventId', authenticateToken, upload.single('image'), async 
     });
 
     res.json({
-      url: result.secure_url,
-      imageUrl: result.secure_url,
-      publicId: result.public_id,
+      url: imageUrl,
+      imageUrl,
+      publicId,
       photo,
     });
   } catch (error: any) {
@@ -437,6 +458,49 @@ router.post('/trip/:tripId/save-photo', authenticateToken, async (req: any, res)
   } catch (error: any) {
     console.error('Save photo error:', error);
     res.status(500).json({ error: 'Failed to save photo' });
+  }
+});
+
+// POST /api/upload/trip/:tripId/save-video — Save a video URL uploaded directly to Cloudinary
+router.post('/trip/:tripId/save-video', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    const { tripId } = req.params;
+    const { url, publicId, title, videoType, duration } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL required' });
+
+    const trip = await db.event.findUnique({
+      where: { id: tripId },
+      include: { attendees: true, campground: { select: { name: true } } },
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    const isParticipant = trip.organizerId === userId || trip.attendees.some((a: any) => a.userId === userId);
+    if (!isParticipant) return res.status(403).json({ error: 'Only trip participants can upload media' });
+
+    const rig = await db.rig.findFirst({ where: { ownerId: userId }, select: { id: true } });
+    const thumbnailUrl = url.replace(/\.[^.]+$/, '.jpg');
+
+    let videoRecord = null;
+    if (rig) {
+      videoRecord = await db.rigVideo.create({
+        data: {
+          rigId: rig.id,
+          tripId,
+          userId,
+          title: title || `Video from ${trip.campground?.name || trip.title}`,
+          videoUrl: url,
+          thumbnailUrl,
+          duration: duration || 0,
+          videoType: videoType || 'SHORT_CLIP',
+        },
+      });
+    }
+
+    console.log(`[TripMedia] Saved direct-upload video ${videoRecord?.id} for trip ${tripId}`);
+    res.json({ success: true, videoId: videoRecord?.id, url });
+  } catch (error: any) {
+    console.error('Save video error:', error);
+    res.status(500).json({ error: 'Failed to save video' });
   }
 });
 

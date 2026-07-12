@@ -169,7 +169,7 @@ router.post(
           visibility: visibility || 'PRIVATE',
           borrowable: borrowable === 'true',
           rulesText,
-          imageUrl: req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear') : null,
+          imageUrl: req.body.imageUrl ? req.body.imageUrl : (req.file ? await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear') : null),
           forSale: forSale === 'true',
           price: price ? parseFloat(price) : null,
           saleDescription,
@@ -215,8 +215,10 @@ router.put('/:id', authenticateToken, upload.single('image'), async (req: any, r
       saleDescription,
     };
 
-    // Add image if uploaded
-    if (req.file) {
+    // Accept either a pre-uploaded URL or a multer file
+    if (req.body.imageUrl) {
+      updateData.imageUrl = req.body.imageUrl;
+    } else if (req.file) {
       updateData.imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/gear');
 
       // Delete old image if exists

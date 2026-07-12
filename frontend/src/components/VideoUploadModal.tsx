@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Video, Loader2, Link } from 'lucide-react';
 import { VisibilitySelector } from './VisibilitySelector';
 import api from '../services/api';
+import { uploadFile } from '../utils/uploadMedia';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
@@ -62,21 +63,17 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
       let response;
 
       if (uploadMode === 'file' && selectedFile) {
-        const formData = new FormData();
-        formData.append('video', selectedFile);
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('visibility', visibility);
-        if (albumId) formData.append('albumId', albumId);
-
-        response = await api.post('/videos', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (progressEvent) => {
-            const progress = progressEvent.total
-              ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
-              : 0;
-            setUploadProgress(progress);
-          },
+        const result = await uploadFile(selectedFile, {
+          folder: 'rvunicorn/videos',
+          onProgress: (pct) => setUploadProgress(pct),
+        });
+        response = await api.post('/videos', {
+          videoUrl: result.url,
+          thumbnailUrl: undefined,
+          title,
+          description,
+          visibility,
+          albumId: albumId || undefined,
         });
       } else {
         response = await api.post('/videos/url', {

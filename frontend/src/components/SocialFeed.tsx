@@ -32,6 +32,7 @@ import { X, ThumbsUp, ThumbsDown,
   Megaphone,
 } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import StargazingCard from './StargazingCard';
 import CampfireWinnerCard from './CampfireWinnerCard';
 
@@ -312,14 +313,7 @@ export default function SocialFeed({ username, isOwnProfile = false, includePack
     
     try {
       setUploadingImage(true);
-      const formData = new FormData();
-      formData.append("image", file);
-      
-      const { data } = await api.post("/upload/image", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      
-      const imageUrl = data.url || data.imageUrl;
+      const imageUrl = await uploadAndGetUrl(file, 'rvunicorn/posts');
       setNewPostImage(imageUrl);
     } catch (error) {
       console.error("Upload error:", error);

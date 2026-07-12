@@ -43,11 +43,13 @@ router.post('/', authenticateToken, upload.fields([{ name: 'image', maxCount: 1 
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-    let imageUrl: string | undefined;
-    let finalVideoUrl: string | undefined = videoUrl || undefined;
 
-    if (files?.image?.[0]) imageUrl = await uploadBufferToCloudinary(files.image[0].buffer, 'rv-enhancements/images');
-    if (files?.video?.[0]) finalVideoUrl = await uploadBufferToCloudinary(files.video[0].buffer, 'rv-enhancements/videos');
+    // Accept either pre-uploaded URLs or multer files
+    let imageUrl: string | undefined = req.body.imageUrl || undefined;
+    let finalVideoUrl: string | undefined = videoUrl || req.body.videoUrl || undefined;
+
+    if (!imageUrl && files?.image?.[0]) imageUrl = await uploadBufferToCloudinary(files.image[0].buffer, 'rv-enhancements/images');
+    if (!finalVideoUrl && files?.video?.[0]) finalVideoUrl = await uploadBufferToCloudinary(files.video[0].buffer, 'rv-enhancements/videos');
 
     const enhancement = await prisma.rvEnhancement.create({
       data: {
@@ -78,6 +80,9 @@ router.patch('/:id', authenticateToken, upload.fields([{ name: 'image', maxCount
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     let { imageUrl, videoUrl } = existing;
     const { title, description, category, purchaseUrl, cost, isPublic } = req.body;
+
+    // Accept either pre-uploaded URLs or multer files
+    if (req.body.imageUrl !== undefined) imageUrl = req.body.imageUrl?.trim() || null;
     if (req.body.videoUrl !== undefined) videoUrl = req.body.videoUrl?.trim() || null;
     if (files?.image?.[0]) imageUrl = await uploadBufferToCloudinary(files.image[0].buffer, 'rv-enhancements/images');
     if (files?.video?.[0]) videoUrl = await uploadBufferToCloudinary(files.video[0].buffer, 'rv-enhancements/videos');

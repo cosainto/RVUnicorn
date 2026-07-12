@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { CampMarketRepBadge } from './CampMarketProfile';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import CampMarketFeedbackModal from './CampMarketFeedbackModal';
 
 interface Listing {
@@ -90,15 +91,17 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
     if (!title.trim()) return;
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('title', title.trim());
-      if (description.trim()) formData.append('description', description.trim());
-      if (price) formData.append('price', price);
-      if (siteNumber.trim()) formData.append('siteNumber', siteNumber.trim());
-      if (imageFile) formData.append('image', imageFile);
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await uploadAndGetUrl(imageFile, 'rvunicorn/marketplace');
+      }
 
-      const { data } = await api.post(`/camp-market/${campgroundId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const { data } = await api.post(`/camp-market/${campgroundId}`, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        price: price || undefined,
+        siteNumber: siteNumber.trim() || undefined,
+        imageUrl,
       });
       setListings(prev => [data.listing, ...prev]);
       setShowForm(false);
@@ -161,15 +164,17 @@ export default function CampMarket({ campgroundId, compact = false }: Props) {
     if (!editingId || !title.trim()) return;
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('title', title.trim());
-      formData.append('description', description.trim());
-      if (price) formData.append('price', price);
-      formData.append('siteNumber', siteNumber.trim());
-      if (imageFile) formData.append('image', imageFile);
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await uploadAndGetUrl(imageFile, 'rvunicorn/marketplace');
+      }
 
-      const { data } = await api.put(`/camp-market/listing/${editingId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const { data } = await api.put(`/camp-market/listing/${editingId}`, {
+        title: title.trim(),
+        description: description.trim(),
+        price: price || undefined,
+        siteNumber: siteNumber.trim(),
+        imageUrl,
       });
       setListings(prev => prev.map(l => l.id === editingId ? { ...l, ...data } : l));
       setShowForm(false); setEditingId(null);

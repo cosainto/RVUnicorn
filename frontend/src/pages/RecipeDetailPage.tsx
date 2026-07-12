@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import RecipeTakeoverBanner from '../components/RecipeTakeoverBanner';
 import AddRecipeToEventModal from '../components/AddRecipeToEventModal';
 import { useToast } from '../components/ToastProvider';
@@ -525,18 +526,13 @@ export default function RecipeDetailPage() {
 
     setUploadingQuickImage(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const { data: uploadData } = await api.post('/upload/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const imageUrl = await uploadAndGetUrl(file, 'rvunicorn/recipes');
 
       // Update recipe with new image
-      await api.put(`/recipes/${recipe.id}`, { imageUrl: uploadData.url });
-      
+      await api.put(`/recipes/${recipe.id}`, { imageUrl });
+
       // Update local state
-      setRecipe({ ...recipe, imageUrl: uploadData.url });
+      setRecipe({ ...recipe, imageUrl });
     } catch (error) {
       console.error('Quick image upload error:', error);
       addLocalToast('Failed to upload image', 'error');
@@ -602,13 +598,7 @@ export default function RecipeDetailPage() {
 
       // Upload new image if selected
       if (recipeImage) {
-        const uploadData = new FormData();
-        uploadData.append('image', recipeImage);
-        
-        const uploadRes = await api.post('/upload', uploadData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        imageUrl = uploadRes.data.url;
+        imageUrl = await uploadAndGetUrl(recipeImage, 'rvunicorn/recipes');
       }
 
       await api.put(`/recipes/${recipeId}`, {
@@ -722,13 +712,7 @@ export default function RecipeDetailPage() {
       let imageUrl = '';
 
       if (commentImage) {
-        const formData = new FormData();
-        formData.append('image', commentImage);
-
-        const uploadRes = await api.post('/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        imageUrl = uploadRes.data.url;
+        imageUrl = await uploadAndGetUrl(commentImage, 'rvunicorn/recipes');
       }
 
       // Extract mentions from content

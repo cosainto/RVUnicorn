@@ -7,6 +7,7 @@ import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { Calendar, ShoppingCart, MapPin, Users, Edit, ArrowLeft, UserPlus, X, Car, Check, XCircle, Image, Clock, Navigation, ExternalLink, ChefHat, Package, Map, Copy, Star, Plus, Trash2, Coffee, Fuel, Wrench, Moon, Utensils, Dog, Play, Footprints, Camera, Upload, DollarSign, CalendarDays} from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 // @ts-ignore
 import TripCopilot from '../components/TripCopilot'; // eslint-disable-line
 // @ts-ignore
@@ -1025,14 +1026,7 @@ export default function EventDetailPage() {
 
     setUploadingBanner(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const uploadRes = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      const bannerImage = uploadRes.data.url;
+      const bannerImage = await uploadAndGetUrl(file, 'rvunicorn/trip-banners');
       await api.put(`/events/${id}`, { bannerImage });
       setEvent({ ...event, bannerImage });
     } catch (error) {

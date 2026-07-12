@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, Lock, Users, MapPin, Upload, Calendar, Clock, History, Package, ChevronDown, ChevronUp, CheckCircle, ShoppingCart, ExternalLink, MessageCircle, Store, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import { Link } from 'react-router-dom';
 
 interface GearItem {
@@ -229,17 +230,22 @@ export default function MyGear() {
     if (!formData.name.trim()) { alert('Please enter an item name'); return; }
 
     try {
-      const submitData = new FormData();
+      let imageUrl: string | undefined;
+      if (selectedImage) {
+        imageUrl = await uploadAndGetUrl(selectedImage, 'rvunicorn/gear');
+      }
+
+      const payload: any = {};
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== '' && value !== null) submitData.append(key, String(value));
+        if (value !== '' && value !== null) payload[key] = value;
       });
-      if (selectedImage) submitData.append('image', selectedImage);
+      if (imageUrl) payload.imageUrl = imageUrl;
 
       if (editingItem) {
-        await api.put(`/gear/${editingItem.id}`, submitData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.put(`/gear/${editingItem.id}`, payload);
         alert('Item updated! ✅');
       } else {
-        await api.post('/gear', submitData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/gear', payload);
         alert('Item added! 🎒');
       }
       closeModal();

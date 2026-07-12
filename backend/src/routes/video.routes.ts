@@ -94,8 +94,12 @@ router.post("/", authenticateToken, upload.single("video"), async (req: any, res
     let finalVideoUrl = videoUrl;
     let finalThumbnailUrl = thumbnailUrl;
 
-    // Upload file if provided
-    if (req.file) {
+    // If pre-uploaded URL provided, use it directly; otherwise fall back to multer file upload
+    if (videoUrl) {
+      // Pre-uploaded Cloudinary URL — skip upload
+      finalVideoUrl = videoUrl;
+      finalThumbnailUrl = thumbnailUrl || videoUrl.replace(/\.[^.]+$/, '.jpg');
+    } else if (req.file) {
       // Validate duration if provided
       if (duration && parseInt(duration) > VIDEO_CONSTRAINTS.maxDuration) {
         return res.status(400).json({ 

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { X, Camera } from 'lucide-react';
 import { useToast } from '../ToastProvider';
 import api from '../../services/api';
+import { uploadAndGetUrl } from '../../utils/uploadMedia';
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
@@ -58,13 +59,9 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
     setUploading(true);
     const urls: string[] = [];
     for (const file of Array.from(files).slice(0, 8)) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'rvunicorn_unsigned');
       try {
-        const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/image/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.secure_url) urls.push(data.secure_url);
+        const url = await uploadAndGetUrl(file, 'rvunicorn/rig-posts');
+        urls.push(url);
       } catch {}
     }
     setPhotoUrls(prev => [...prev, ...urls]);
@@ -258,14 +255,9 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
                   const file = e.target.files?.[0];
                   if (!file) return;
                   setUploading(true);
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  formData.append('upload_preset', 'rvunicorn_unsigned');
-                  formData.append('resource_type', 'video');
                   try {
-                    const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/video/upload', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if (data.secure_url) setVideoUrl(data.secure_url);
+                    const url = await uploadAndGetUrl(file, 'rvunicorn/rig-posts');
+                    setVideoUrl(url);
                   } catch {}
                   setUploading(false);
                 }} className="hidden" />
@@ -277,14 +269,9 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
                   const file = e.target.files?.[0];
                   if (!file) return;
                   setUploading(true);
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  formData.append('upload_preset', 'rvunicorn_unsigned');
-                  formData.append('resource_type', 'video');
                   try {
-                    const res = await fetch('https://api.cloudinary.com/v1_1/dy6eetmh7/video/upload', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if (data.secure_url) setVideoUrl(data.secure_url);
+                    const url = await uploadAndGetUrl(file, 'rvunicorn/rig-posts');
+                    setVideoUrl(url);
                   } catch {}
                   setUploading(false);
                 }} className="hidden" />

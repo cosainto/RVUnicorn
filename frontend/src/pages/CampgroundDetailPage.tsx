@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import LocationEventsCalendar from '../components/LocationEventsCalendar';
 import DraggableBanner from '../components/DraggableBanner'; // keep
 import CheckInButton from '../components/CheckInButton';
@@ -402,7 +403,7 @@ export default function CampgroundDetailPage() {
 
   const handleSubmitPhoto = async () => {
     if (!user || !campground || !photoFile) return;
-    try { const fd = new FormData(); fd.append('photo', photoFile); fd.append('caption', photoCaption); await api.post(`/campground-features/${campground.id}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }); alert('✅ Photo submitted!'); setShowPhotoModal(false); setPhotoFile(null); setPhotoCaption(''); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
+    try { const url = await uploadAndGetUrl(photoFile, `rvunicorn/campgrounds/${campground.id}`); await api.post(`/campground-features/${campground.id}/photos`, { imageUrl: url, caption: photoCaption }); alert('✅ Photo submitted!'); setShowPhotoModal(false); setPhotoFile(null); setPhotoCaption(''); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); }
   };
 
   const handleReviewPhoto = async (photoId: string, status: string) => { if (!campground) return; try { await api.put(`/campground-features/${campground.id}/photos/${photoId}/review`, { status }); loadTabData(); } catch {} };
@@ -425,7 +426,7 @@ export default function CampgroundDetailPage() {
 
   const handleUploadMap = async () => {
     if (!user || !campground || !mapFile) return;
-    try { setUploadingMap(true); const fd = new FormData(); fd.append('map', mapFile); const { data } = await api.post(`/campground-features/${campground.id}/map`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }); setCampgroundMapUrl(data.mapUrl); setMapFile(null); alert('✅ Map uploaded!'); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); } finally { setUploadingMap(false); }
+    try { setUploadingMap(true); const url = await uploadAndGetUrl(mapFile, `rvunicorn/campgrounds/${campground.id}/maps`); const { data } = await api.post(`/campground-features/${campground.id}/map`, { mapUrl: url }); setCampgroundMapUrl(data.mapUrl || url); setMapFile(null); alert('✅ Map uploaded!'); } catch (e: any) { alert(e.response?.data?.error || 'Failed'); } finally { setUploadingMap(false); }
   };
 
   const handleDeleteCampground = async () => {
@@ -481,20 +482,18 @@ export default function CampgroundDetailPage() {
   const handleUploadEditPhoto = async (file: File) => {
     if (!campground) return;
     try {
-      const fd = new FormData();
-      fd.append('photo', file);
-      const { data } = await api.post(`/campground-features/${campground.id}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setEditForm((f: any) => ({ ...f, imageUrl: data.imageUrl }));
+      const url = await uploadAndGetUrl(file, `rvunicorn/campgrounds/${campground.id}`);
+      await api.post(`/campground-features/${campground.id}/photos`, { imageUrl: url });
+      setEditForm((f: any) => ({ ...f, imageUrl: url }));
     } catch (e: any) { alert(e.response?.data?.error || 'Upload failed'); }
   };
 
   const handleUploadEditMap = async (file: File) => {
     if (!campground) return;
     try {
-      const fd = new FormData();
-      fd.append('map', file);
-      const { data } = await api.post(`/campground-features/${campground.id}/map`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setCampgroundMapUrl(data.mapUrl);
+      const url = await uploadAndGetUrl(file, `rvunicorn/campgrounds/${campground.id}/maps`);
+      const { data } = await api.post(`/campground-features/${campground.id}/map`, { mapUrl: url });
+      setCampgroundMapUrl(data.mapUrl || url);
       alert('✅ Map uploaded!');
     } catch (e: any) { alert(e.response?.data?.error || 'Upload failed'); }
   };

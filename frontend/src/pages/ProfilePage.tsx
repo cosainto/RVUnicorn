@@ -16,6 +16,7 @@ import {
   Play, Calendar, MoreHorizontal, ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 import { formatRigClass } from '../utils/formatRigClass';
 import TripCalendarWidget from '../components/TripCalendarWidget';
 import CalendarCampgroundCard from '../components/CalendarCampgroundCard';
@@ -659,7 +660,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
 
         {/* ══ RIG CARD ══ */}
         {showRigCard && profile && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowRigCard(false)}><div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}><div className="flex justify-center"><RigCard rig={{ firstName: profile.firstName, username: profile.username, rvYear: profile.rvYear, rvMake: profile.rvMake, rvModel: profile.rvModel, rvType: profile.rvType, rvLength: profile.rvLength, rvSleeps: profile.rvSleeps, rvSlideouts: profile.rvSlideouts, homeCity: profile.homeCity, homeState: profile.homeState, profilePicture: profile.profilePicture }} onSkip={() => setShowRigCard(false)} onPostToFeed={async (blob) => { try { const fd = new FormData(); fd.append('image', blob, 'rig-card.png'); fd.append('content', `Check out my rig! ${profile.rvYear || ''} ${profile.rvMake || ''} ${profile.rvModel || ''}`); await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); setShowRigCard(false); } catch {} }} /></div></div></div>
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowRigCard(false)}><div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}><div className="flex justify-center"><RigCard rig={{ firstName: profile.firstName, username: profile.username, rvYear: profile.rvYear, rvMake: profile.rvMake, rvModel: profile.rvModel, rvType: profile.rvType, rvLength: profile.rvLength, rvSleeps: profile.rvSleeps, rvSlideouts: profile.rvSlideouts, homeCity: profile.homeCity, homeState: profile.homeState, profilePicture: profile.profilePicture }} onSkip={() => setShowRigCard(false)} onPostToFeed={async (blob) => { try { const file = new File([blob], 'rig-card.png', { type: 'image/png' }); const imageUrl = await uploadAndGetUrl(file, 'rvunicorn/rig-cards'); await api.post('/posts', { imageUrl, content: `Check out my rig! ${profile.rvYear || ''} ${profile.rvMake || ''} ${profile.rvModel || ''}` }); setShowRigCard(false); } catch {} }} /></div></div></div>
         )}
 
       </div>

@@ -24,13 +24,17 @@ const upload = multer({
 router.post('/picture', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
     const userId = (req as any).userId;
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
 
-    // Upload to Cloudinary
-    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/profiles');
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary
+      imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/profiles');
+    } else {
+      return res.status(400).json({ error: 'Image required' });
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -49,13 +53,17 @@ router.post('/picture', authenticateToken, upload.single('photo'), async (req, r
 router.post('/cover', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
     const userId = (req as any).userId;
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
 
-    // Upload to Cloudinary
-    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/covers');
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary
+      imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/covers');
+    } else {
+      return res.status(400).json({ error: 'Image required' });
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

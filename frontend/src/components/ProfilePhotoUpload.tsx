@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, X, User } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface ProfilePhotoUploadProps {
   currentPhoto?: string;
@@ -32,17 +33,13 @@ export default function ProfilePhotoUpload({ currentPhoto, type, onUploadSuccess
 
     try {
       setUploading(true);
-      
-      const formData = new FormData();
-      formData.append('photo', file);
+
+      const folder = type === 'profile' ? 'rvunicorn/profile-photos' : 'rvunicorn/cover-photos';
+      const url = await uploadAndGetUrl(file, folder);
 
       const endpoint = type === 'profile' ? '/profile-upload/picture' : '/profile-upload/cover';
-      
-      await api.post(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+
+      await api.post(endpoint, { imageUrl: url });
 
       setShowModal(false);
       setPreview(null);

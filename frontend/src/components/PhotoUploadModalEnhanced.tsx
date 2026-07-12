@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { 
-  X, 
-  Upload, 
-  Image as ImageIcon, 
-  Globe, 
-  Users, 
+import {
+  X,
+  Upload,
+  Image as ImageIcon,
+  Globe,
+  Users,
   Lock,
   Calendar,
   Download,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { CrossPostToggle } from "./CrossPostToggle";
 import { MentionInput } from './MentionInput';
+import { uploadFile } from '../utils/uploadMedia';
+import api from '../services/api';
 
 interface PhotoUploadModalProps {
   isOpen: boolean;
@@ -88,36 +90,25 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      formData.append('caption', caption);
-      formData.append('visibility', visibility);
-      formData.append('allowDownload', String(allowDownload));
-      
-      if (albumId) formData.append('albumId', albumId);
-      formData.append('shareToBasecamp', String(shareToBasecamp));
-      if (basecampMessage) formData.append('basecampMessage', basecampMessage);
-      if (eventId) formData.append('eventId', eventId);
-      
+      const folder = albumId ? `rvunicorn/albums/${albumId}` : 'rvunicorn/photos';
+      const result = await uploadFile(selectedFile, { folder });
+
+      const payload: any = {
+        imageUrl: result.url,
+        caption,
+        visibility,
+        allowDownload,
+        shareToBasecamp,
+      };
+      if (albumId) payload.albumId = albumId;
+      if (basecampMessage) payload.basecampMessage = basecampMessage;
+      if (eventId) payload.eventId = eventId;
+
       if (scheduleEnabled && scheduledDate && scheduledTime) {
-        const scheduledFor = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
-        formData.append('scheduledFor', scheduledFor);
+        payload.scheduledFor = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
       }
 
-      const response = await fetch('/api/photos', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Upload failed');
-      }
-
-      const photo = await response.json();
+      const { data: photo } = await api.post('/photos', payload);
       onUploadComplete?.(photo);
       handleClose();
     } catch (err: any) {

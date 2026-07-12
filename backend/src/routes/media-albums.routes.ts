@@ -235,58 +235,106 @@ router.post('/:albumId/media', authenticateToken, upload.array('files', 50), asy
     const album = await prisma.album.findUnique({ where: { id: albumId } });
     if (!album) return res.status(404).json({ error: 'Album not found' });
     if (album.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
-    if (!files || files.length === 0) return res.status(400).json({ error: 'No files provided' });
 
     const parsedCaptions = captions ? JSON.parse(captions) : [];
     const createdMedia = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const isVideoFile = isVideo(file.mimetype, file.originalname);
+    // Path 1: Accept pre-uploaded URLs from JSON body
+    const urls = req.body.urls ? (typeof req.body.urls === 'string' ? JSON.parse(req.body.urls) : req.body.urls) : null;
+    const singleImageUrl = req.body.imageUrl;
 
-      const uploadOptions: any = {
-        folder: `rvunicorn/albums/${albumId}`,
-        resource_type: isVideoFile ? 'video' : 'image',
-      };
-
-      if (isVideoFile) {
-        uploadOptions.eager = [
-          { streaming_profile: 'hd', format: 'm3u8' },
-          { width: 1280, height: 720, crop: 'limit', format: 'mp4' },
-          { width: 640, height: 360, crop: 'limit', format: 'mp4' },
-          { width: 480, height: 270, crop: 'fill', format: 'jpg', start_offset: '2' },
-        ];
-        uploadOptions.eager_async = true;
-      }
-
-      const result = await new Promise<any>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+    if (urls && Array.isArray(urls) && urls.length > 0) {
+      // Multiple pre-uploaded URLs: [{ url, type, thumbnailUrl?, duration? }]
+      for (let i = 0; i < urls.length; i++) {
+        const item = urls[i];
+        const itemUrl = typeof item === 'string' ? item : item.url;
+        const itemType = (typeof item === 'object' && item.type === 'VIDEO') ? 'VIDEO' : 'PHOTO';
+        const media = await prisma.media.create({
+          data: {
+            id: createId(),
+            albumId,
+            uploaderId: userId,
+            type: itemType,
+            cloudinaryId: (typeof item === 'object' && item.publicId) || '',
+            url: itemUrl,
+            visibility: visibility || album.defaultVisibility,
+            caption: parsedCaptions[i] || null,
+            duration: itemType === 'VIDEO' ? (item.duration || 0) : null,
+            thumbnailUrl: itemType === 'VIDEO' ? (item.thumbnailUrl || itemUrl.replace(/\.[^.]+$/, '.jpg')) : null,
+            processingStatus: null,
+            updatedAt: new Date(),
+          },
         });
-        uploadStream.end(file.buffer);
-      });
-
+        createdMedia.push(media);
+      }
+    } else if (singleImageUrl) {
+      // Single pre-uploaded URL
       const media = await prisma.media.create({
         data: {
           id: createId(),
           albumId,
           uploaderId: userId,
-          type: isVideoFile ? 'VIDEO' : 'PHOTO',
-          cloudinaryId: result.public_id,
-          url: result.secure_url,
-          width: result.width,
-          height: result.height,
+          type: 'PHOTO',
+          cloudinaryId: '',
+          url: singleImageUrl,
           visibility: visibility || album.defaultVisibility,
-          caption: parsedCaptions[i] || null,
-          duration: isVideoFile ? Math.round(result.duration || 0) : null,
-          thumbnailUrl: isVideoFile ? result.eager?.[3]?.secure_url : null,
-          processingStatus: isVideoFile ? 'PROCESSING' : null,
+          caption: parsedCaptions[0] || null,
           updatedAt: new Date(),
         },
       });
-
       createdMedia.push(media);
+    } else if (files && files.length > 0) {
+      // Path 2: Legacy multer file upload
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isVideoFile = isVideo(file.mimetype, file.originalname);
+
+        const uploadOptions: any = {
+          folder: `rvunicorn/albums/${albumId}`,
+          resource_type: isVideoFile ? 'video' : 'image',
+        };
+
+        if (isVideoFile) {
+          uploadOptions.eager = [
+            { streaming_profile: 'hd', format: 'm3u8' },
+            { width: 1280, height: 720, crop: 'limit', format: 'mp4' },
+            { width: 640, height: 360, crop: 'limit', format: 'mp4' },
+            { width: 480, height: 270, crop: 'fill', format: 'jpg', start_offset: '2' },
+          ];
+          uploadOptions.eager_async = true;
+        }
+
+        const result = await new Promise<any>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+          uploadStream.end(file.buffer);
+        });
+
+        const media = await prisma.media.create({
+          data: {
+            id: createId(),
+            albumId,
+            uploaderId: userId,
+            type: isVideoFile ? 'VIDEO' : 'PHOTO',
+            cloudinaryId: result.public_id,
+            url: result.secure_url,
+            width: result.width,
+            height: result.height,
+            visibility: visibility || album.defaultVisibility,
+            caption: parsedCaptions[i] || null,
+            duration: isVideoFile ? Math.round(result.duration || 0) : null,
+            thumbnailUrl: isVideoFile ? result.eager?.[3]?.secure_url : null,
+            processingStatus: isVideoFile ? 'PROCESSING' : null,
+            updatedAt: new Date(),
+          },
+        });
+
+        createdMedia.push(media);
+      }
+    } else {
+      return res.status(400).json({ error: 'No media provided' });
     }
 
     if (!album.coverMediaId && createdMedia.length > 0) {

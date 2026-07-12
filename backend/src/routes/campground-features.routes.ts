@@ -359,8 +359,15 @@ router.post('/:campgroundId/photos', authenticateToken, upload.single('photo'), 
     const userId = (req as any).userId;
     const { caption } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Photo is required' });
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — will upload to Cloudinary below after tier checks
+      imageUrl = ''; // placeholder, set after tier checks
+    } else {
+      return res.status(400).json({ error: 'Image required' });
     }
 
     // Check if user is admin
@@ -406,8 +413,10 @@ router.post('/:campgroundId/photos', authenticateToken, upload.single('photo'), 
     // Auto-approve if uploaded by admin, otherwise pending
     const status = isAdmin ? 'APPROVED' : 'PENDING';
 
-    // Upload to Cloudinary
-    const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-photos');
+    // Upload to Cloudinary if using multer file (after tier checks pass)
+    if (!imageUrl && req.file) {
+      imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-photos');
+    }
 
     const photo = await prisma.campgroundPhoto.create({
       data: {
@@ -967,12 +976,16 @@ router.post('/:campgroundId/map', authenticateToken, upload.single('map'), async
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    if (!req.file) {
+    // Accept either a pre-uploaded URL or a multer file
+    let mapUrl: string;
+    if (req.body.imageUrl) {
+      mapUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary
+      mapUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-maps');
+    } else {
       return res.status(400).json({ error: 'Map image is required' });
     }
-
-    // Upload to Cloudinary
-    const mapUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/campground-maps');
 
     await prisma.campground.update({
       where: { id: campgroundId },

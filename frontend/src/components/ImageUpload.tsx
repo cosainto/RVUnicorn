@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
-import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface ImageUploadProps {
   onImageUploaded: (imageUrl: string) => void;
@@ -58,17 +58,9 @@ export default function ImageUpload({
       }
 
       try {
-        const formData = new FormData();
-        formData.append('image', file, file.name || 'photo.jpg');
-        if (eventId) formData.append('eventId', eventId);
-        if (albumId) formData.append('albumId', albumId);
-        if (caption && !lastUrl) formData.append('caption', caption); // caption on first only
-
-        const { data } = await api.post('/upload/image', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        const imageUrl = data.url || data.imageUrl;
-        lastUrl = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`;
+        const folder = albumId ? `rvunicorn/albums/${albumId}` : 'rvunicorn/photos';
+        const imageUrl = await uploadAndGetUrl(file, folder);
+        lastUrl = imageUrl;
         onImageUploaded(lastUrl);
       } catch (error) {
         console.error('[ImageUpload] Failed:', file.name, error);

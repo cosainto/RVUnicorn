@@ -502,14 +502,28 @@ router.post('/visits/:visitId/photos', authenticateToken, upload.array('photos',
     const visit = await db.stateVisit.findUnique({ where: { id: visitId } });
     if (!visit || visit.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
 
-    const files = req.files as Express.Multer.File[];
-    if (!files || files.length === 0) return res.status(400).json({ error: 'No files' });
-
     const urls: string[] = [];
-    for (const file of files) {
-      const url = await uploadBufferToCloudinary(file.buffer, 'rvunicorn/visits');
-      urls.push(url);
+
+    // Accept either pre-uploaded URLs from JSON body or multer files
+    if (req.body.photoUrls) {
+      const photoUrls = typeof req.body.photoUrls === 'string' ? JSON.parse(req.body.photoUrls) : req.body.photoUrls;
+      if (Array.isArray(photoUrls)) {
+        urls.push(...photoUrls);
+      }
+    } else if (req.body.imageUrl) {
+      urls.push(req.body.imageUrl);
     }
+
+    // Also process any multer files (legacy path)
+    const files = req.files as Express.Multer.File[];
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const url = await uploadBufferToCloudinary(file.buffer, 'rvunicorn/visits');
+        urls.push(url);
+      }
+    }
+
+    if (urls.length === 0) return res.status(400).json({ error: 'No photos provided' });
 
     const updated = await db.stateVisit.update({
       where: { id: visitId },

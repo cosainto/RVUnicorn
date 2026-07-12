@@ -4,6 +4,7 @@ import {
   Upload, Video, Globe, DollarSign, Eye, EyeOff, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface Enhancement {
   id: string;
@@ -140,26 +141,31 @@ export default function RvEnhancements() {
     if (!form.title.trim()) return;
     setSaving(true);
     try {
-      const fd = new FormData();
-      fd.append('title', form.title.trim());
-      fd.append('description', form.description);
-      fd.append('category', form.category);
-      fd.append('purchaseUrl', form.purchaseUrl);
-      fd.append('videoUrl', form.videoUrl);
-      fd.append('cost', form.cost);
-      fd.append('isPublic', String(form.isPublic));
-      if (imageFile) fd.append('image', imageFile);
-      if (videoFile) fd.append('video', videoFile);
+      let imageUrl: string | undefined;
+      let videoUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await uploadAndGetUrl(imageFile, 'rvunicorn/rv-enhancements');
+      }
+      if (videoFile) {
+        videoUrl = await uploadAndGetUrl(videoFile, 'rvunicorn/rv-enhancements');
+      }
+
+      const payload: any = {
+        title: form.title.trim(),
+        description: form.description,
+        category: form.category,
+        purchaseUrl: form.purchaseUrl,
+        videoUrl: videoUrl || form.videoUrl,
+        cost: form.cost,
+        isPublic: form.isPublic,
+      };
+      if (imageUrl) payload.imageUrl = imageUrl;
 
       if (editingId) {
-        const { data } = await api.patch(`/rv-enhancements/${editingId}`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const { data } = await api.patch(`/rv-enhancements/${editingId}`, payload);
         setEnhancements(prev => prev.map(e => (e.id === editingId ? data : e)));
       } else {
-        const { data } = await api.post('/rv-enhancements', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const { data } = await api.post('/rv-enhancements', payload);
         setEnhancements(prev => [data, ...prev]);
       }
       setShowForm(false);

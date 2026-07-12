@@ -191,8 +191,15 @@ router.post('/:id/photos', authenticateToken, upload.single('photo'), async (req
     if (!access.exists) return res.status(404).json({ error: 'Album not found' });
     if (!access.canWrite) return res.status(403).json({ error: 'Not authorized' });
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    // Accept either a pre-uploaded URL or a multer file
+    let imageUrl: string;
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary
+      imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'rvunicorn/albums');
+    } else {
+      return res.status(400).json({ error: 'Image required' });
     }
 
     const photo = await prisma.photo.create({
@@ -203,8 +210,7 @@ router.post('/:id/photos', authenticateToken, upload.single('photo'), async (req
         user: {
           connect: { id: userId }
         },
-        // @ts-ignore - cloudinaryUrl may not exist
-        imageUrl: cloudinaryUrl,
+        imageUrl,
         caption: caption || '',
       },
     });

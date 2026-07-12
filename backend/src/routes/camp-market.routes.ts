@@ -85,8 +85,11 @@ router.post('/:campgroundId', authenticateToken, upload.single('image'), async (
     });
     if (!checkIn) return res.status(403).json({ error: 'Must be checked in to post a listing' });
 
+    // Accept either a pre-uploaded URL or a multer file
     let imageUrl: string | null = null;
-    if (req.file) {
+    if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       imageUrl = result.secure_url;
     }
@@ -153,8 +156,10 @@ router.put('/listing/:id', authenticateToken, upload.single('image'), async (req
     if (siteNumber !== undefined) updateData.siteNumber = siteNumber || null;
     if (isFree !== undefined) updateData.isFree = isFree === 'true' || isFree === true;
 
-    // Handle new image upload
-    if (req.file) {
+    // Accept either a pre-uploaded URL or a multer file
+    if (req.body.imageUrl) {
+      updateData.imageUrl = req.body.imageUrl;
+    } else if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       updateData.imageUrl = result.secure_url;
     }

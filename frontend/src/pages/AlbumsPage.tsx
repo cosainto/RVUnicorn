@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Image, X, Globe, Users, Lock, Upload, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface Album {
   id: string;
@@ -114,35 +115,20 @@ export default function AlbumsPage() {
     try {
       setCreating(true);
 
-      // Server accepts up to 100 photos per multipart request, so chunk
-      // larger uploads: first chunk creates the album, subsequent chunks
-      // append to it via /albums/:id/photos.
-      const CHUNK_SIZE = 100;
-      const chunks: File[][] = [];
-      for (let i = 0; i < selectedFiles.length; i += CHUNK_SIZE) {
-        chunks.push(selectedFiles.slice(i, i + CHUNK_SIZE));
+      // Upload all photos directly to Cloudinary first
+      const photoUrls: string[] = [];
+      for (const file of selectedFiles) {
+        const url = await uploadAndGetUrl(file, 'rvunicorn/albums');
+        photoUrls.push(url);
       }
 
-      // First chunk — create the album
-      const firstChunk = chunks.shift()!;
-      const submitData = new FormData();
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('privacy', formData.privacy);
-      firstChunk.forEach(file => submitData.append('photos', file));
-
-      const { data: createdAlbum } = await api.post('/albums', submitData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Create the album with uploaded photo URLs
+      await api.post('/albums', {
+        title: formData.title,
+        description: formData.description,
+        privacy: formData.privacy,
+        photoUrls,
       });
-
-      // Remaining chunks — append to the new album
-      for (let i = 0; i < chunks.length; i++) {
-        const chunkData = new FormData();
-        chunks[i].forEach(file => chunkData.append('photos', file));
-        await api.post(`/albums/${createdAlbum.id}/photos`, chunkData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      }
 
       setShowCreateModal(false);
       resetForm();

@@ -98,27 +98,32 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
       try { sharedWithIds = typeof sharedWithIdsRaw === 'string' ? JSON.parse(sharedWithIdsRaw) : sharedWithIdsRaw; } catch { sharedWithIds = sharedWithIdsRaw.split(','); }
     }
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No image provided" });
+    // Accept either a pre-uploaded URL or a multer file
+    let uploadedImageUrl: string;
+    if (req.body.imageUrl) {
+      uploadedImageUrl = req.body.imageUrl;
+    } else if (req.file) {
+      // Legacy multer path — upload to Cloudinary with auto-compression
+      const result = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: eventId ? `rvunicorn/events/${eventId}` : "rvunicorn/photos",
+            resource_type: 'image',
+            transformation: [
+              { width: 2048, height: 2048, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+            ],
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+      uploadedImageUrl = result.secure_url;
+    } else {
+      return res.status(400).json({ error: "Image required" });
     }
-
-    // Upload to Cloudinary with auto-compression
-    const result = await new Promise<any>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: eventId ? `rvunicorn/events/${eventId}` : "rvunicorn/photos",
-          resource_type: 'image',
-          transformation: [
-            { width: 2048, height: 2048, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
-          ],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      uploadStream.end(req.file.buffer);
-    });
 
     // Parse mentions from caption
     const mentionUsernames = parseMentions(caption);
@@ -140,7 +145,7 @@ router.post("/", authenticateToken, upload.single("image"), async (req: any, res
         userId,
         albumId: albumId || null,
         eventId: eventId || null,
-        imageUrl: result.secure_url,
+        imageUrl: uploadedImageUrl,
         caption: caption || null,
         visibility,
         surfaces,

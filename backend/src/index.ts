@@ -230,13 +230,13 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({
-  limit: '50mb',
+  limit: '2mb',
   // Stash raw bytes so the Stripe webhook handler can verify signatures.
   // Stripe's constructEvent() requires the original payload, but the global
   // json parser would otherwise replace req.body with a parsed object.
   verify: (req: any, _res, buf) => { req.rawBody = buf; },
 }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // Serve uploaded files with caching headers
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {

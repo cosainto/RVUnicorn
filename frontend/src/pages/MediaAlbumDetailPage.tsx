@@ -8,6 +8,7 @@ import {
 import api from '../services/api';
 import PhotoTagger from '../components/PhotoTagger';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadFiles } from '../utils/uploadMedia';
 
 interface Media {
   id: string;
@@ -96,26 +97,40 @@ export default function MediaAlbumDetailPage() {
   const handleUpload = async (files: FileList) => {
     if (!album || files.length === 0) return;
 
-    const formData = new FormData();
-    Array.from(files).forEach(file => formData.append('files', file));
-
     try {
       setUploading(true);
       setUploadProgress(0);
-      
-      const { data } = await api.post(`/media-albums/${album.id}/media`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+
+      const fileArr = Array.from(files);
+      const batch = await uploadFiles(fileArr, {
+        folder: `rvunicorn/albums/${album.id}`,
+        onFileProgress: (_idx, _pct) => {
+          // Overall progress approximation
+        },
+        onFileComplete: (idx) => {
+          setUploadProgress(Math.round(((idx + 1) / fileArr.length) * 100));
         },
       });
 
+      // Save each uploaded file to backend
+      const savedMedia: any[] = [];
+      for (const result of batch.results) {
+        if (!result) continue;
+        try {
+          const { data } = await api.post(`/media-albums/${album.id}/media`, {
+            mediaUrl: result.url,
+            type: result.resourceType === 'video' ? 'VIDEO' : 'PHOTO',
+          });
+          if (data.media) savedMedia.push(...data.media);
+        } catch {}
+      }
+
       setAlbum(prev => prev ? {
         ...prev,
-        media: [...data.media, ...prev.media],
-        mediaCount: prev.mediaCount + data.uploaded,
+        media: [...savedMedia, ...prev.media],
+        mediaCount: prev.mediaCount + batch.succeeded,
       } : null);
-      
+
       setShowUploadModal(false);
     } catch (error) {
       console.error('Error uploading:', error);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, MapPin, Calendar, Edit2, Trash2, Navigation, DollarSign, Star, Users, MessageSquare, CheckCircle, Image as ImageIcon, Send, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface Trip {
   id: string;
@@ -296,16 +297,16 @@ export default function TripPlanner() {
     if (!selectedTrip || !selectedStopForCheckIn) return;
 
     try {
-      const formData = new FormData();
-      formData.append('type', 'CHECK_IN');
-      formData.append('content', checkInData.content);
-      formData.append('stopId', selectedStopForCheckIn.id);
+      let imageUrl: string | undefined;
       if (checkInData.image) {
-        formData.append('image', checkInData.image);
+        imageUrl = await uploadAndGetUrl(checkInData.image, 'rvunicorn/trip-updates');
       }
 
-      await api.post(`/trips/${selectedTrip.id}/updates`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      await api.post(`/trips/${selectedTrip.id}/updates`, {
+        type: 'CHECK_IN',
+        content: checkInData.content,
+        stopId: selectedStopForCheckIn.id,
+        imageUrl,
       });
 
       setShowCheckInModal(false);

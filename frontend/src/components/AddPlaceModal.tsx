@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Camera, Loader2, MapPin } from 'lucide-react';
 import api from '../services/api';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface Props {
   onClose: () => void;
@@ -39,10 +40,8 @@ export default function AddPlaceModal({ onClose, onSubmit, defaultLat, defaultLn
     setUploading(true);
     for (let i = 0; i < Math.min(files.length, 3 - photoUrls.length); i++) {
       try {
-        const formData = new FormData();
-        formData.append('file', files[i]);
-        const { data } = await api.post('/upload/image', formData);
-        setPhotoUrls(prev => [...prev, data.url || data.imageUrl]);
+        const url = await uploadAndGetUrl(files[i], 'rvunicorn/places');
+        setPhotoUrls(prev => [...prev, url]);
       } catch {}
     }
     setUploading(false);

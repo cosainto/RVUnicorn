@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Tent, Upload, X, Trash2, Video, Edit, Save, Truck, Ruler, Users, Weight, Image as ImageIcon, Play } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface CampingSetupProps {
   username: string;
@@ -301,42 +302,32 @@ export default function CampingSetup({ username, isOwnProfile }: CampingSetupPro
 
   const handleSave = async () => {
     try {
-      const formData = new FormData();
-      
-      // Add text fields
-      if (rvData.rvType) formData.append('rvType', rvData.rvType);
-      if (rvData.rvMake) formData.append('rvMake', rvData.rvMake);
-      if (rvData.rvModel) formData.append('rvModel', rvData.rvModel);
-      if (rvData.rvYear) formData.append('rvYear', rvData.rvYear);
-      if (rvData.rvLength) formData.append('rvLength', rvData.rvLength);
-      if (rvData.rvMpg) formData.append('rvMpg', rvData.rvMpg);
-      if (rvData.rvSlideouts) formData.append('rvSlideouts', rvData.rvSlideouts);
-      if (rvData.rvSleeps) formData.append('rvSleeps', rvData.rvSleeps);
-      if (rvData.rvWeight) formData.append('rvWeight', rvData.rvWeight);
-      if (rvData.rvDescription) formData.append('rvDescription', rvData.rvDescription);
-      if (rvData.rvFeatures.length > 0) {
-        formData.append('rvFeatures', JSON.stringify(rvData.rvFeatures));
-      }
-      formData.append('campingInterests', JSON.stringify(rvData.campingInterests));
-
-      // Add existing images
-      if (existingImages.length > 0) {
-        formData.append('existingRvImages', JSON.stringify(existingImages));
+      // Upload new images directly to Cloudinary
+      const newImageUrls: string[] = [];
+      for (const image of rvImages) {
+        const url = await uploadAndGetUrl(image, 'rvunicorn/rv-photos');
+        newImageUrls.push(url);
       }
 
-      // Add new images
-      rvImages.forEach(image => {
-        formData.append('rvImages', image);
-      });
-
-      // Add video
+      // Upload video if present
+      let setupVideoUrl: string | undefined;
       if (rvVideo) {
-        formData.append('rvVideo', rvVideo);
+        setupVideoUrl = await uploadAndGetUrl(rvVideo, 'rvunicorn/rv-videos');
       }
 
-      await api.put('/profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const payload: any = {
+        ...rvData,
+        rvYear: rvData.rvYear || undefined,
+        rvLength: rvData.rvLength || undefined,
+        rvMpg: rvData.rvMpg || undefined,
+        rvSlideouts: rvData.rvSlideouts || undefined,
+        rvSleeps: rvData.rvSleeps || undefined,
+        rvWeight: rvData.rvWeight || undefined,
+        rvImages: [...existingImages, ...newImageUrls],
+      };
+      if (setupVideoUrl) payload.setupVideoUrl = setupVideoUrl;
+
+      await api.put('/profile', payload);
 
       setEditing(false);
       setRvImages([]);

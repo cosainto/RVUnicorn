@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import CampgroundMessaging from '../components/CampgroundMessaging';
+import { uploadAndGetUrl } from '../utils/uploadMedia';
 
 interface DashboardData {
   campground: any;
@@ -362,11 +363,10 @@ export default function BusinessBasecampPage() {
     if (!photoFile) return;
     setUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append("photo", photoFile);
-      if (photoCaption) formData.append("caption", photoCaption);
-      await api.post(`/campground-features/${campgroundId}/photos`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+      const url = await uploadAndGetUrl(photoFile, `rvunicorn/campgrounds/${campgroundId}`);
+      await api.post(`/campground-features/${campgroundId}/photos`, {
+        imageUrl: url,
+        caption: photoCaption || undefined,
       });
       setPhotoFile(null);
       setPhotoCaption("");
