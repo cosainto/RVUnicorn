@@ -4,6 +4,9 @@ import api from '../services/api';
 
 const C = { bg: '#0F1C35', card: '#1B2B4B', cardLight: '#243352', border: '#2A3F5F', gold: '#C9A84C', orange: '#E8622A', cream: '#F5F0E8', muted: '#94A3B8', green: '#1D9E75' };
 
+const CLOUD_NAME = 'dy6eetmh7';
+const UPLOAD_PRESET = 'rvunicorn_unsigned';
+
 const VIDEO_TYPES = [
   { value: 'CAMPSITE', emoji: '🏕', label: 'Campsite' },
   { value: 'WILDLIFE', emoji: '🦌', label: 'Wildlife' },
@@ -32,16 +35,56 @@ interface Props {
   onClose?: () => void;
 }
 
+// Upload a file directly to Cloudinary with XHR progress
+function uploadToCloudinary(file: File, folder: string, onProgress: (pct: number) => void): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    formData.append('folder', folder);
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    });
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('Bad response from Cloudinary')); }
+      } else {
+        reject(new Error(`Cloudinary ${xhr.status}: ${xhr.responseText?.slice(0, 200)}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error — check your connection'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out — try a smaller file'));
+    xhr.timeout = 300000; // 5 minutes
+
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`);
+    xhr.send(formData);
+  });
+}
+
 export default function TripMediaUploader({ tripId, tripTitle, rigName, onUploadComplete, onClose }: Props) {
   const [tab, setTab] = useState<'photos' | 'videos'>('photos');
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Progress state
+  const [completed, setCompleted] = useState(0);
+  const [failed, setFailed] = useState(0);
+  const [currentFileName, setCurrentFileName] = useState('');
+  const [currentFilePct, setCurrentFilePct] = useState(0);
+  const [failedFiles, setFailedFiles] = useState<MediaFile[]>([]);
+
   const [result, setResult] = useState<{ photos: number; videos: number } | null>(null);
   const [showRigAttach, setShowRigAttach] = useState(false);
   const [attachOptions, setAttachOptions] = useState({ photos: true, videos: true, recap: true });
   const [attaching, setAttaching] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const photos = files.filter(f => f.type === 'photo');
@@ -56,13 +99,10 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
       const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|m4v)$/i.test(file.name);
       const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
 
-      // HEIC files can't generate preview on many browsers — use empty string
       let preview = '';
       try {
-        if (!isHEIC && !isVideo) {
-          preview = URL.createObjectURL(file);
-        }
-      } catch { /* silent — preview is optional */ }
+        if (!isHEIC && !isVideo) preview = URL.createObjectURL(file);
+      } catch { /* silent */ }
 
       return {
         id: Math.random().toString(36).slice(2),
@@ -75,8 +115,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
       };
     });
 
-    setFiles(prev => [...prev, ...newFiles].slice(0, 60)); // hard cap at 60
-    // Reset input so same files can be selected again
+    setFiles(prev => [...prev, ...newFiles].slice(0, 60));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -92,67 +131,88 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     setFiles(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
   };
 
-  const handleUpload = async () => {
-    if (files.length === 0) return;
+  const uploadFiles = async (filesToUpload: MediaFile[]) => {
+    if (filesToUpload.length === 0) return;
     setUploading(true);
-    setProgress(0);
     setUploadError(null);
+    setCompleted(0);
+    setFailed(0);
+    setFailedFiles([]);
+    setCurrentFileName('');
+    setCurrentFilePct(0);
 
     let uploadedPhotos = 0;
     let uploadedVideos = 0;
-    const batchSize = 3; // upload 3 at a time — prevents timeout on mobile
 
-    try {
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
-        const formData = new FormData();
-        batch.forEach((f, idx) => {
-          formData.append('media', f.file, f.file.name || `file_${i + idx}`);
-          formData.append(`meta_${idx}`, JSON.stringify({
-            caption: f.caption,
-            title: f.title,
-            videoType: f.videoType,
-          }));
-        });
+    for (const mediaFile of filesToUpload) {
+      const displayName = mediaFile.file.name || `file_${mediaFile.id}`;
+      setCurrentFileName(displayName.length > 25 ? displayName.slice(0, 22) + '...' : displayName);
+      setCurrentFilePct(0);
 
-        console.log(`[TripMedia] Uploading batch ${Math.floor(i / batchSize) + 1}: ${batch.length} files`);
+      try {
+        const isVideo = mediaFile.type === 'video';
+        const folder = isVideo ? `rvunicorn/trip-videos/${tripId}` : `rvunicorn/trip-photos/${tripId}`;
 
-        const { data } = await api.post(`/upload/trip/${tripId}/media`, formData, {
-          // Do NOT set Content-Type — axios must auto-set it with the multipart boundary
-          timeout: 120000, // 2 min per batch
-        });
+        // Upload directly to Cloudinary
+        const cloudResult = await uploadToCloudinary(
+          mediaFile.file,
+          folder,
+          (pct) => setCurrentFilePct(pct)
+        );
 
-        uploadedPhotos += data.photos?.length || 0;
-        uploadedVideos += data.videos?.length || 0;
-        setProgress(Math.round(((i + batch.length) / files.length) * 100));
+        console.log(`[TripMedia] Cloudinary OK: ${displayName} -> ${cloudResult.secure_url}`);
+
+        // Save the URL to our backend
+        if (isVideo) {
+          await api.post(`/upload/trip/${tripId}/media`, (() => {
+            const fd = new FormData();
+            fd.append('media', mediaFile.file, mediaFile.file.name);
+            fd.append('meta_0', JSON.stringify({
+              title: mediaFile.title,
+              videoType: mediaFile.videoType,
+            }));
+            return fd;
+          })(), { timeout: 120000 });
+          uploadedVideos++;
+        } else {
+          await api.post(`/upload/trip/${tripId}/save-photo`, {
+            url: cloudResult.secure_url,
+            publicId: cloudResult.public_id,
+            caption: mediaFile.caption || null,
+          });
+          uploadedPhotos++;
+        }
+
+        setCompleted(prev => prev + 1);
+      } catch (err: any) {
+        console.error(`[TripMedia] Failed: ${displayName}`, err?.message || err);
+        setFailed(prev => prev + 1);
+        setFailedFiles(prev => [...prev, mediaFile]);
       }
+    }
 
+    setCurrentFileName('');
+    setCurrentFilePct(0);
+    setUploading(false);
+
+    if (uploadedPhotos + uploadedVideos > 0) {
       setResult({ photos: uploadedPhotos, videos: uploadedVideos });
       if (rigName) setShowRigAttach(true);
       onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
-    } catch (err: any) {
-      console.error('[TripMedia] Upload failed:', err?.response?.status, err?.response?.data || err?.message || err);
-      if (uploadedPhotos + uploadedVideos > 0) {
-        setResult({ photos: uploadedPhotos, videos: uploadedVideos });
-        onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
+    } else if (filesToUpload.length > 0) {
+      if (!navigator.onLine) {
+        setUploadError('No internet connection — check your signal and retry');
       } else {
-        const status = err?.response?.status;
-        const serverMsg = err?.response?.data?.error;
-        if (status === 401) {
-          setUploadError('Session expired — please log out and log back in');
-        } else if (status === 413) {
-          setUploadError('Photos too large — try uploading fewer at a time');
-        } else if (status === 403) {
-          setUploadError(serverMsg || 'Only trip participants can upload photos');
-        } else if (!navigator.onLine) {
-          setUploadError('No internet connection — check your signal and retry');
-        } else {
-          setUploadError(serverMsg || 'Upload failed — check your connection and try again');
-        }
+        setUploadError('All uploads failed — check your connection and try again');
       }
-    } finally {
-      setUploading(false);
     }
+  };
+
+  const handleUpload = () => uploadFiles(files);
+
+  const retryFailed = () => {
+    const toRetry = [...failedFiles];
+    uploadFiles(toRetry);
   };
 
   const handleAttachToRig = async () => {
@@ -194,7 +254,6 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
                 <p className="text-xs" style={{ color: C.muted }}>Share with your rig followers</p>
               </div>
             </div>
-
             <div className="space-y-2 mb-3">
               {result.photos > 0 && (
                 <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: C.cream }}>
@@ -211,12 +270,11 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
                 </label>
               )}
             </div>
-
             <div className="flex gap-2">
               <button onClick={handleAttachToRig} disabled={attaching}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold transition hover:brightness-110 disabled:opacity-50"
                 style={{ background: C.gold, color: C.bg }}>
-                {attaching ? 'Adding...' : 'Add to Rig Page ✓'}
+                {attaching ? 'Adding...' : 'Add to Rig Page'}
               </button>
               <button onClick={() => setShowRigAttach(false)}
                 className="px-4 py-2 rounded-lg text-sm font-medium"
@@ -238,18 +296,101 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     );
   }
 
-  // ── Upload in progress ──
-  if (uploading) {
+  const totalFiles = files.length;
+  const isDone = !uploading && (completed + failed > 0) && (completed + failed >= totalFiles);
+
+  // ── Upload in progress or just finished with failures ──
+  if (uploading || (isDone && failed > 0)) {
+    const overallPct = totalFiles > 0 ? Math.round(((completed + failed) / totalFiles) * 100) : 0;
+
     return (
-      <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-        <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" style={{ color: C.gold }} />
-        <p className="text-sm font-semibold mb-2" style={{ color: C.cream }}>
-          Uploading {files.length} file{files.length !== 1 ? 's' : ''}...
-        </p>
-        <div className="h-2 rounded-full overflow-hidden mx-auto max-w-xs" style={{ background: C.cardLight }}>
-          <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: C.gold }} />
+      <div className="rounded-2xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <div className="p-5">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: C.cardLight }}>
+              {isDone
+                ? (failed === 0
+                    ? <CheckCircle className="w-6 h-6" style={{ color: C.green }} />
+                    : <span className="text-xl">⚠️</span>)
+                : <Loader2 className="w-6 h-6 animate-spin" style={{ color: C.gold }} />
+              }
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold" style={{ color: C.cream }}>
+                {isDone
+                  ? failed === 0 ? 'All photos uploaded!' : `${completed} of ${totalFiles} uploaded`
+                  : 'Uploading photos...'
+                }
+              </p>
+              <p className="text-xs" style={{ color: C.muted }}>
+                {isDone
+                  ? failed > 0 ? `${failed} failed — tap Retry` : 'Your photos are saved'
+                  : `${completed} of ${totalFiles} done`
+                }
+              </p>
+            </div>
+          </div>
+
+          {/* Overall progress bar */}
+          <div className="h-2.5 rounded-full overflow-hidden mb-2" style={{ background: C.cardLight }}>
+            <div className="h-full rounded-full transition-all duration-300" style={{
+              width: `${overallPct}%`,
+              background: isDone && failed > 0 ? C.orange : C.gold,
+            }} />
+          </div>
+
+          {/* Stats row */}
+          <div className="flex gap-4 mb-3">
+            <span className="text-xs font-semibold" style={{ color: C.green }}>
+              {completed} uploaded
+            </span>
+            {failed > 0 && (
+              <span className="text-xs font-semibold" style={{ color: '#EF4444' }}>
+                {failed} failed
+              </span>
+            )}
+            {uploading && (
+              <span className="text-xs" style={{ color: C.muted }}>
+                {totalFiles - completed - failed} remaining
+              </span>
+            )}
+          </div>
+
+          {/* Current file progress */}
+          {uploading && currentFileName && (
+            <div className="rounded-lg p-3" style={{ background: C.cardLight }}>
+              <div className="flex justify-between mb-1.5">
+                <span className="text-[11px] truncate pr-2" style={{ color: C.muted }}>{currentFileName}</span>
+                <span className="text-[11px] font-semibold shrink-0" style={{ color: C.gold }}>{currentFilePct}%</span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: C.bg }}>
+                <div className="h-full rounded-full transition-all duration-150" style={{
+                  width: `${currentFilePct}%`,
+                  background: C.orange,
+                }} />
+              </div>
+            </div>
+          )}
+
+          {/* Retry button */}
+          {isDone && failed > 0 && (
+            <button onClick={retryFailed}
+              className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold transition hover:brightness-110"
+              style={{ background: 'transparent', border: `1px solid #EF4444`, color: '#EF4444' }}>
+              Retry {failed} failed photo{failed !== 1 ? 's' : ''}
+            </button>
+          )}
+
+          {/* Done button (when all succeeded or user wants to dismiss) */}
+          {isDone && onClose && (
+            <button onClick={onClose}
+              className="w-full mt-2 py-2.5 rounded-xl text-sm font-semibold transition hover:brightness-110"
+              style={{ background: C.gold, color: C.bg }}>
+              Done
+            </button>
+          )}
         </div>
-        <p className="text-xs mt-2" style={{ color: C.muted }}>{progress}%</p>
       </div>
     );
   }
@@ -259,7 +400,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     <div className="rounded-2xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <h3 className="text-sm font-semibold" style={{ color: C.cream }}>📸 Add Photos & Videos</h3>
+        <h3 className="text-sm font-semibold" style={{ color: C.cream }}>Add Photos & Videos</h3>
         {onClose && <button onClick={onClose} style={{ color: C.muted }}><X className="w-4 h-4" /></button>}
       </div>
 
@@ -283,19 +424,18 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
           style={{ background: C.cardLight, border: `2px dashed ${C.border}` }}>
           <Upload className="w-6 h-6 mx-auto mb-2" style={{ color: C.gold }} />
           <p className="text-sm font-medium" style={{ color: C.cream }}>
-            {tab === 'photos' ? 'Drop photos & videos or tap to select' : 'Drop videos or tap to select'}
+            {tab === 'photos' ? 'Tap to select photos' : 'Tap to select videos'}
           </p>
           <p className="text-xs mt-1" style={{ color: C.muted }}>
-            {tab === 'photos' ? 'Any format · Any size · Auto-optimized' : 'MP4, MOV, AVI · Any size · Auto-compressed'}
+            {tab === 'photos' ? 'Any format, any size — auto-optimized' : 'MP4, MOV — auto-compressed'}
           </p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(148,163,184,0.4)' }}>iPhone, Android, drone footage — all welcome</p>
           <input ref={fileInputRef} type="file" multiple
             accept={tab === 'photos' ? 'image/*,.heic,.heif,video/*,.mp4,.mov' : 'video/*,.mp4,.mov,.avi,.mkv'}
             onChange={handleFileSelect} className="hidden" />
         </label>
 
         {/* File previews */}
-        {files.filter(f => f.type === tab.slice(0, -1) as any || (tab === 'photos' && f.type === 'photo') || (tab === 'videos' && f.type === 'video')).length > 0 && (
+        {files.filter(f => (tab === 'photos' && f.type === 'photo') || (tab === 'videos' && f.type === 'video')).length > 0 && (
           <div className="mt-4 space-y-3">
             {files.filter(f => (tab === 'photos' && f.type === 'photo') || (tab === 'videos' && f.type === 'video')).map(f => (
               <div key={f.id} className="flex gap-3 rounded-xl p-2.5" style={{ background: C.cardLight }}>
@@ -353,7 +493,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
 
       {/* Error banner */}
       {uploadError && (
-        <div className="mx-4 mt-3 rounded-xl p-3 flex items-center gap-2" style={{ background: '#2D1515', border: '1px solid #EF4444' }}>
+        <div className="mx-4 mb-3 rounded-xl p-3 flex items-center gap-2" style={{ background: '#2D1515', border: '1px solid #EF4444' }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>Upload failed</p>
@@ -376,7 +516,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
           <button onClick={handleUpload}
             className="px-5 py-2 rounded-lg text-sm font-bold transition hover:brightness-110"
             style={{ background: C.orange, color: 'white' }}>
-            Upload All →
+            Upload All
           </button>
         </div>
       )}

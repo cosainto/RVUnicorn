@@ -405,6 +405,41 @@ router.post('/trip/:tripId/media', authenticateToken, (req: any, res, next) => {
   }
 });
 
+// POST /api/upload/trip/:tripId/save-photo — Save a photo URL uploaded directly to Cloudinary
+router.post('/trip/:tripId/save-photo', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    const { tripId } = req.params;
+    const { url, publicId, caption } = req.body;
+
+    if (!url) return res.status(400).json({ error: 'URL required' });
+
+    // Verify trip exists and user is participant
+    const trip = await db.event.findUnique({
+      where: { id: tripId },
+      include: { attendees: true },
+    });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    const isParticipant = trip.organizerId === userId || trip.attendees.some((a: any) => a.userId === userId);
+    if (!isParticipant) return res.status(403).json({ error: 'Only trip participants can upload media' });
+
+    const photo = await db.photo.create({
+      data: {
+        userId,
+        imageUrl: url,
+        caption: caption || null,
+        eventId: tripId,
+      },
+    });
+
+    console.log(`[TripMedia] Saved direct-upload photo ${photo.id} for trip ${tripId}`);
+    res.json({ success: true, photoId: photo.id, url });
+  } catch (error: any) {
+    console.error('Save photo error:', error);
+    res.status(500).json({ error: 'Failed to save photo' });
+  }
+});
+
 // POST /api/upload/trip/:tripId/attach-to-rig — Attach trip media to rig page
 router.post('/trip/:tripId/attach-to-rig', authenticateToken, async (req: any, res) => {
   try {
