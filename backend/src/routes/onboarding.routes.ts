@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/onboarding/status - Check onboarding status
 router.get('/status', authenticateToken, async (req, res) => {

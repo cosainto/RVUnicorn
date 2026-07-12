@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const DEFAULT_CATEGORIES = [
   'Kitchen', 'Sleeping', 'Clothing', 'Safety', 'Recreation', 'Hygiene', 'Electronics', 'General'

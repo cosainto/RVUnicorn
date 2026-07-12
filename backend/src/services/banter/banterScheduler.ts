@@ -5,12 +5,11 @@
  * a banter beat and posts it with staggered delays into the public campfire.
  */
 
-import { PrismaClient } from '@prisma/client';
 import { Server } from 'socket.io';
 import { pickFact } from './factPicker';
 import { generateBanter, BanterBeat } from './generateBanter';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 // ── Constants (named, tunable) ─────────────────────────────────────────
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000;         // 5 minutes

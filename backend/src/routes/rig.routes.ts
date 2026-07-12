@@ -1,12 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { optionalAuth } from '../middleware/auth.middleware';
 import QRCode from 'qrcode';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Safe user fields to include in public responses
 const safeUserSelect = {

@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/mods/marketplace — aggregated mod data across all public rigs
 router.get('/marketplace', optionalAuth, async (req: Request, res: Response) => {

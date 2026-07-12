@@ -10,9 +10,8 @@
  *   - Sticky correction: total = baseline + legs after baselineAt.
  *   - No home bookends: only count legs between actual check-ins.
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const CHAIN_BREAK_DAYS = 30;
 const HERE_API_KEY = process.env.HERE_API_KEY || '15BglBtc7-1HzjsdvTvzscQGOYwrpZPvJWZRqkyOrLE';

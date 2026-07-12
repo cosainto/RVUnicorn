@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import authRoutes from './auth.routes';
 import postRoutes from './post.routes';
 // @ts-ignore - module may not exist yet
@@ -31,7 +30,6 @@ import driveSessionsRoutes from './drive-sessions.routes';
 
 dotenv.config();
 
-export const prisma = new PrismaClient();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -2,10 +2,9 @@
  * Feed Source: Followed Campground Updates
  * Community tab — posts and announcements from followed campgrounds.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'campground-updates',

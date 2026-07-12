@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // POST /api/quiz/recommendations

@@ -1,5 +1,4 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { requireAdmin } from '../middleware/admin.middleware';
 import { sendWebPush } from '../utils/webPush';
@@ -7,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const JWT_SECRET = process.env.JWT_SECRET || 'rvunicorn-secret';
 const VALID_EMOJIS = ['❤️', '🔥', '😂', '😮', '🏕️'];
 const PROFANITY_LIST = ['fuck', 'shit', 'ass', 'damn', 'bitch', 'dick', 'cunt', 'cock'];

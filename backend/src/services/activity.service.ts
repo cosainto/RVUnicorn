@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 export type ActivityType = 
   | 'POST_CREATED'

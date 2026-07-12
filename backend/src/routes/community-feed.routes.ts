@@ -1,10 +1,9 @@
 import { Router, Response } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 import { buildForYouFeed, buildFollowingFeed, buildTrendingFeed, getHotStrip } from '../services/feedEngine';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ─── FEED ───────────────────────────────────────────────────
 

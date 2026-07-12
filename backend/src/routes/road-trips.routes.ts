@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import axios from 'axios';
 import Anthropic from '@anthropic-ai/sdk';
@@ -10,7 +9,7 @@ const REALISTIC_DAILY_MILES = 400; // Max comfortable RV driving per day
 const CHECKIN_HOUR = 15; // 3 PM typical campground check-in
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // In-memory drive time cache — keyed by "lat,lng->lat,lng"
 // Survives for the lifetime of the backend process (cleared on restart)

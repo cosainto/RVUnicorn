@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const HERE_API_KEY = process.env.HERE_API_KEY;
 const HERE_ROUTING_URL = 'https://router.hereapi.com/v8/routes';

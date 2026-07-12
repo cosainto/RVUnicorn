@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const TIER_LEVELS: Record<string, number> = { TRAILHEAD: 0, FREE: 0, BASECAMP: 1, SUMMIT: 2, FOUNDING: 2 };
 
 export function requireTier(minimumTier: string) {

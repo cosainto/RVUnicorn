@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const STATE_NAMES: Record<string, string> = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',

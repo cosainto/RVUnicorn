@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export async function recalculateCampgroundRatings(campgroundId: string): Promise<void> {
   const result = await prisma.campgroundReview.aggregate({

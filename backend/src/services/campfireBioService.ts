@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 
-const db = new PrismaClient() as any;
+import { prisma as db } from '../lib/prisma';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 /**

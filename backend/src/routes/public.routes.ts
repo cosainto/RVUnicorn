@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ══ GET /api/public/trips/:tripId — public trip card ══
 router.get('/trips/:tripId', async (req: Request, res: Response) => {

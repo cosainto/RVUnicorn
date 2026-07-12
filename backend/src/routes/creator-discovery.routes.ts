@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const CONTENT_CATEGORIES = [
   { id: 'GEAR_REVIEWS', label: 'Gear Reviews', emoji: '\u{1F527}' },

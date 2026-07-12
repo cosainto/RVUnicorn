@@ -1,9 +1,8 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = express.Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const ADMIN_IDS = ['cmlpeyk82005s3qause3sws7y', 'cmm9kukta0006i88masvtz2tp'];
 

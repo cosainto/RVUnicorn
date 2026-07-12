@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logCheckIn } from '../services/activity.service';
 import { sendWebPush } from '../utils/webPush';
@@ -11,7 +10,7 @@ import { sendSMS } from '../services/email-sms.service';
 function getIO() { return require('../index').io; }
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // POST /api/checkins - Check in to a location
 router.post('/', authenticateToken, async (req: any, res) => {

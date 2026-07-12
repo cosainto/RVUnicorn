@@ -2,10 +2,9 @@
  * Feed Source: Friend Wishlist Adds
  * Network tab — friends who added campgrounds to their wishlist.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'friend-wishlists',

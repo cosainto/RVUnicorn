@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 /**
  * Check if a user can view a trip (owner OR participant)

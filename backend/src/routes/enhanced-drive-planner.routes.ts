@@ -2,11 +2,10 @@
 // Backend routes for Drive Planner with Google + HERE integration
 
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const HERE_API_KEY = process.env.HERE_API_KEY;

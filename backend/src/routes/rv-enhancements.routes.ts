@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import multer from 'multer';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /api/rv-enhancements

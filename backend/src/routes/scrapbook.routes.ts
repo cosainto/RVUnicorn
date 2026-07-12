@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { sendWebPush } from '../utils/webPush';
 import Anthropic from '@anthropic-ai/sdk';
 import { nanoid } from 'nanoid';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // GET /api/scrapbook/:eventId - Get all pinned photos for a trip

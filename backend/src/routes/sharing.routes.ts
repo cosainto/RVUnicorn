@@ -1,11 +1,10 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import Anthropic from '@anthropic-ai/sdk';
 import { sendWebPush } from '../utils/webPush';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const anthropic = new Anthropic();
 
 // ══ POST /api/sharing/generate-tagline ══

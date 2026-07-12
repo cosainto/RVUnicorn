@@ -7,9 +7,8 @@
  *   De-dup: an item authored by a friend is Network — even if it's about a
  *   followed rig or campground. No item appears in both tabs.
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ─── Types ─────────────────────────────────────────────────
 

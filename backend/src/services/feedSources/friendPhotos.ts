@@ -2,10 +2,9 @@
  * Feed Source: Friend Photos
  * Network tab — public photos posted by friends.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'friend-photos',

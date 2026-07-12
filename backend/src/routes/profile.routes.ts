@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { getProfileVisitStats } from '../services/visit-stats.service';
 import { checkAndRefreshBio } from '../services/campfireBioService';
@@ -33,7 +32,7 @@ async function autoJoinRvGroup(prisma: any, userId: string, rvMake: string, rvMo
 }
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Helper function to geocode address
 async function geocodeAddress(city: string, state: string, zipCode?: string): Promise<{ lat: number; lon: number } | null> {

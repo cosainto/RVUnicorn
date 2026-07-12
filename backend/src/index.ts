@@ -6,7 +6,7 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './lib/prisma';
 import photoRoutes from "./routes/photo.routes";
 import videoRoutes from "./routes/video.routes";
 import authRoutes from './routes/auth.routes';
@@ -198,7 +198,7 @@ import passport from 'passport';
 
 
 
-export const prisma = new PrismaClient();
+export { prisma };
 
 const app = express();
 const httpServer = createServer(app);
@@ -494,3 +494,14 @@ setInterval(() => {
     boardRevivalCron().catch(e => console.error('[CommunityAI Revival]', e));
   }
 }, 60 * 60 * 1000);
+
+// Graceful shutdown — release Prisma connection pool
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});

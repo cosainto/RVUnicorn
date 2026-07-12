@@ -3,10 +3,9 @@
  * Community tab — posts and mods from rigs the user follows (where owner is NOT a friend).
  * If the rig owner IS a friend, the routing rule sends it to Network automatically.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'rig-updates',

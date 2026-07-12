@@ -1,8 +1,7 @@
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { sendEmail, sendSMS, maintenanceReminderEmail, maintenanceReminderSMS, maintenanceOverdueEmail } from './email-sms.service';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 
 

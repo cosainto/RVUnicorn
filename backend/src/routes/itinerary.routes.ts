@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { FRONTEND_URL } from '../utils/frontendUrl';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/itinerary - Get all trips for current user (optionally filtered by eventId)
 router.get('/', authenticateToken, async (req, res) => {

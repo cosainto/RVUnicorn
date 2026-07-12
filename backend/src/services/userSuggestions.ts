@@ -9,9 +9,8 @@
  *   Same campgrounds visited: overlap * 15 (up to +45)
  *   Both follow same rigs: +15
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 export async function generateSuggestions(userId: string): Promise<void> {
   try {

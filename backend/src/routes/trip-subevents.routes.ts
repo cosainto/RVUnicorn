@@ -1,10 +1,9 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router({ mergeParams: true });
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/events/:eventId/subevents - Get all sub-events for an event
 router.get('/', authenticateToken, async (req: any, res) => {

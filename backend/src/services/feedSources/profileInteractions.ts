@@ -2,10 +2,9 @@
  * Feed Source: Profile Interactions
  * Network tab — friend activity like new friendships, profile updates, wall posts.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const PROFILE_ACTIVITY_TYPES = [
   'FRIEND_ADDED',

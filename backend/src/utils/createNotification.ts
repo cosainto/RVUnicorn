@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { pushNotification } from '../routes/notification.routes';
 import { sendWebPush } from './webPush';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 interface NotifyOptions {
   userId: string;

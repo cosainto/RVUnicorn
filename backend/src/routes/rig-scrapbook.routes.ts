@@ -1,10 +1,9 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { syncTimelineItem, buildTimeline } from '../services/rigTimeline';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 async function getRig(slug: string) {
   return prisma.rig.findUnique({ where: { slug }, select: { id: true, ownerId: true } });

@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { sendEmail, newMessageEmail } from '../services/email-sms.service';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Hydrate participantIds into compact user summaries so the UI can render
 // "Reply All to Stefanie, Mark, +2" without doing N round trips.

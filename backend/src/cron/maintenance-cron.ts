@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { runAIAnalysis } from "../routes/ai-maintenance";
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 export async function runMaintenanceCron() {
   try {

@@ -1,9 +1,8 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Create comment on photo or album
 router.post("/", authenticateToken, async (req: any, res) => {

@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 const WILDLIFE_EMOJIS: Record<string, string> = {
   deer: '🦌', bear: '🐻', turkey: '🦃', eagle: '🦅', hawk: '🦅',

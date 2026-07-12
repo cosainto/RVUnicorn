@@ -3,7 +3,7 @@ import { PrismaClient, ThingType, ThingStatus } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Auth middleware
 const authenticateToken = async (req: Request, res: Response, next: Function) => {

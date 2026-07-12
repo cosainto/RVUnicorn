@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { computeEventLifecycle, computePresenceStatus } from '../helpers/event-status';
 import { sendWebPush } from '../utils/webPush';
 import { recordCampgroundVisit } from '../services/visit-stats.service';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ── Events CRUD ─────────────────────────────────────────────────
 

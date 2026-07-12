@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // POST /api/feed/hide/:activityId — hide a post
 router.post('/hide/:activityId', authenticateToken, async (req: any, res: Response) => {

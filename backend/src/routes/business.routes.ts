@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 // Stubs until email service is wired up
@@ -7,7 +6,7 @@ const campgroundWelcomeEmail: any = (_opts: any) => ({ subject: '', html: '', te
 const sendEmail: any = async (_opts: any) => {};
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Helper to check tier access
 const tierLevel = (tier: string): number => {

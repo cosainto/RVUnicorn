@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Configure multer to use memory storage for Cloudinary
 const upload = multer({ 

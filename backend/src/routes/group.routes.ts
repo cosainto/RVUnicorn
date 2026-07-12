@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 import { checkAndAwardBadges, BadgeTrigger } from '../services/badge.service';
 import { recordCampgroundVisit } from '../services/visit-stats.service';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const router = Router();
 
 // Helper function to generate slug

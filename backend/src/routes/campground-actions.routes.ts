@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const db = new PrismaClient() as any;
+import { prisma as db } from '../lib/prisma';
 
 // GET /api/campground-actions/:campgroundId/status - Get all action statuses
 router.get('/:campgroundId/status', authenticateToken, async (req, res) => {

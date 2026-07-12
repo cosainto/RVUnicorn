@@ -9,9 +9,8 @@
  *   const rig = await resolveUserRig(userId);                    // minimal select
  *   const rig = await resolveUserRig(userId, { id: true, ... }); // custom select
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 /** Minimal select for quick lookups (id + slug + key fields) */
 const defaultSelect = {

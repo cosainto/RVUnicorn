@@ -1,12 +1,11 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 import { getAlbumAccess } from "../services/album-access.service";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 
 const router = express.Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 } // 100MB — Cloudinary compresses automatically

@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // AAA Gas Prices URL (we'll scrape or use cached data)
 // Note: In production, you'd want to use an official API or scrape responsibly

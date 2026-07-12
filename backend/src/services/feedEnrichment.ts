@@ -7,10 +7,9 @@
  *   - NEVER render "0 people in your network…" — fall back silently to plain card.
  *   - Enrichment is progressive enhancement, not the default.
  */
-import { PrismaClient } from '@prisma/client';
 import { RawFeedItem } from './feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 /** Minimum count to show enrichment. Below this, silently fall back to plain card. */
 export const MIN_ENRICHMENT_COUNT = 2;

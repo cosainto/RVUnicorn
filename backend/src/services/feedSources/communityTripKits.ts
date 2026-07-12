@@ -2,10 +2,9 @@
  * Feed Source: Community TripKits
  * Community tab — recently published TripKit itineraries.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'community-tripkits',

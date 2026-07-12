@@ -1,11 +1,10 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 
 const router = express.Router();
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const db = prisma as any;
 const upload = multer({
   storage: multer.memoryStorage(),

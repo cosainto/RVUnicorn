@@ -1,10 +1,9 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 type AuthRequest = any;
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/campground-posts/my-feed - Get posts from followed campgrounds
 router.get('/my-feed', authenticateToken, async (req: any, res: Response) => {

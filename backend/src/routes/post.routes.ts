@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { parseMentions } from './mention.routes';
 import { parseAndCreateHashtags } from './social.routes';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Get all posts
 router.get('/', optionalAuth, async (req: Request, res: Response) => {

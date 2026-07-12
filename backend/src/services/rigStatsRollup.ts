@@ -10,9 +10,8 @@
  *   - Miles = ONLY from real distance data (fuel log odometer deltas). Stays 0 if none.
  *   - Gated by RigPilot.shareActivityWithRig.
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 interface Stay {
   campgroundId: string;

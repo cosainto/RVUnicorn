@@ -9,9 +9,8 @@
  * - publicVisibilityFilter: Prisma WHERE clause for public-only queries
  * - isFriend: check if two users are friends
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 /**
  * Prisma WHERE clause to filter to only publicly visible content.

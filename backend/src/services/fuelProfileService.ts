@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 export async function detectManufacturerSpecs(make?: string | null, model?: string | null, year?: number | null) {
   if (!make) return null;

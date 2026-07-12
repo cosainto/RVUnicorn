@@ -4,10 +4,9 @@
 // ============================================
 
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Auth middleware helper
 const getAuthUserId = (req: any): string | null => {

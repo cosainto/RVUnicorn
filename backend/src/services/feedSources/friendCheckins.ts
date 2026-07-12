@@ -2,10 +2,9 @@
  * Feed Source: Friend Check-ins
  * Network tab — friends who checked in at campgrounds.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'friend-checkins',

@@ -1,3 +1,2 @@
-import { PrismaClient } from '@prisma/client';
-
-export const prisma = new PrismaClient();
+// Re-export the singleton — all new code should import from './lib/prisma' directly
+export { prisma } from './lib/prisma';

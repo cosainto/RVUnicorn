@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 import '../services/feedSources';  // register all feed sources on startup
 import { getBothFeeds, RawFeedItem } from '../services/feedRegistry';
 import { enrichFeedItems, EnrichmentData } from '../services/feedEnrichment';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ─── In-memory cache (userId → { data, expiresAt }) ───
 const dashboardCache = new Map<string, { data: any; expiresAt: number }>();

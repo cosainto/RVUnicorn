@@ -4,12 +4,11 @@ import multer from 'multer';
 import { uploadBufferToCloudinary } from '../utils/cloudinary';
 import path from 'path';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 import { getAlbumAccess } from '../services/album-access.service';
 
 const router = express.Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => { const ok = /jpeg|jpg|png|gif|webp/.test(file.mimetype); if (ok) { cb(null, true); } else { cb(new Error('Images only')); } } });
 

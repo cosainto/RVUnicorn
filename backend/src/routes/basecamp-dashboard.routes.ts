@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 // ─── Helper: get today as date-only ─────────────────────────

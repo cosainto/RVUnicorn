@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { computeActivityHash, generateCampfireBio } from '../services/campfireBioService';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Character persona definitions (mirrors frontend config) ───

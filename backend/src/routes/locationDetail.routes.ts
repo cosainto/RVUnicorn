@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
-import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // ─── Helper: get location record by type + id ───────────────
 

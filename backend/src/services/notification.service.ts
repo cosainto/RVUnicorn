@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { sendEmail, notificationEmail, friendRequestEmail, mentionEmail } from './email-sms.service';
 import { canSendEmail, queueForDigest, EMAIL_PRIORITY } from './emailThrottle';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 interface NotificationData {
   userId: string;

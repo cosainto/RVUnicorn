@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { logThreadCreated, logThreadPost } from '../services/activity.service';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const createSlug = (title: string): string => {
   return title

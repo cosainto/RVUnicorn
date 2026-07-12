@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { notificationService } from '../services/notification.service';
 
 const router = Router({ mergeParams: true });
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // GET /api/events/:eventId/notes - Get event notes
 router.get('/', authenticateToken, async (req: any, res) => {

@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 const WAITLIST_FILE = path.join(process.cwd(), 'waitlist-emails.json');

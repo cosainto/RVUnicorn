@@ -7,7 +7,7 @@ const { randomUUID } = require('crypto');
 const createId = () => randomUUID().replace(/-/g, '').slice(0, 25);
 
 const router = express.Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 const upload = multer({
   storage: multer.memoryStorage(),

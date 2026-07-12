@@ -3,10 +3,9 @@
  * Routed by actor — friend's posts go to Network, others to Community.
  * This preserves the existing boardPost content that was in both tabs.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'board-posts',

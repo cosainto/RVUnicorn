@@ -1,10 +1,9 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
-import { PrismaClient } from "@prisma/client";
 import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = Router();
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Trivia sessions in Central Time (hours, minutes)
 const TRIVIA_SESSIONS = [

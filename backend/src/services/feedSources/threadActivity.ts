@@ -2,10 +2,9 @@
  * Feed Source: Thread Activity
  * Community tab — activity in subscribed threads + trending community threads.
  */
-import { PrismaClient } from '@prisma/client';
 import { FeedSource, FeedContext, RawFeedItem, registerSource } from '../feedRegistry';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../../lib/prisma';
 
 const source: FeedSource = {
   key: 'thread-activity',

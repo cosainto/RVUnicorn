@@ -7,9 +7,8 @@
  *   20% RELEVANCE — rig match, state/campground overlap
  *   10% TRENDING — high comment velocity
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient() as any;
+import { prisma } from '../lib/prisma';
 
 // Simple in-memory cache with TTL
 const feedCache = new Map<string, { data: any; expires: number }>();
