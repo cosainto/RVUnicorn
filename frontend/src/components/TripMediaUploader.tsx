@@ -41,6 +41,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
   const [showRigAttach, setShowRigAttach] = useState(false);
   const [attachOptions, setAttachOptions] = useState({ photos: true, videos: true, recap: true });
   const [attaching, setAttaching] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const photos = files.filter(f => f.type === 'photo');
@@ -95,6 +96,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     if (files.length === 0) return;
     setUploading(true);
     setProgress(0);
+    setUploadError(null);
 
     let uploadedPhotos = 0;
     let uploadedVideos = 0;
@@ -116,7 +118,7 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
         console.log(`[TripMedia] Uploading batch ${Math.floor(i / batchSize) + 1}: ${batch.length} files`);
 
         const { data } = await api.post(`/upload/trip/${tripId}/media`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          // Do NOT set Content-Type — axios must auto-set it with the multipart boundary
           timeout: 120000, // 2 min per batch
         });
 
@@ -129,12 +131,24 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
       if (rigName) setShowRigAttach(true);
       onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
     } catch (err: any) {
-      console.error('[TripMedia] Upload failed:', err?.message || err);
+      console.error('[TripMedia] Upload failed:', err?.response?.status, err?.response?.data || err?.message || err);
       if (uploadedPhotos + uploadedVideos > 0) {
         setResult({ photos: uploadedPhotos, videos: uploadedVideos });
         onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
       } else {
-        alert('Upload failed. Check your connection and try again.');
+        const status = err?.response?.status;
+        const serverMsg = err?.response?.data?.error;
+        if (status === 401) {
+          setUploadError('Session expired — please log out and log back in');
+        } else if (status === 413) {
+          setUploadError('Photos too large — try uploading fewer at a time');
+        } else if (status === 403) {
+          setUploadError(serverMsg || 'Only trip participants can upload photos');
+        } else if (!navigator.onLine) {
+          setUploadError('No internet connection — check your signal and retry');
+        } else {
+          setUploadError(serverMsg || 'Upload failed — check your connection and try again');
+        }
       }
     } finally {
       setUploading(false);
@@ -336,6 +350,22 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
           </div>
         )}
       </div>
+
+      {/* Error banner */}
+      {uploadError && (
+        <div className="mx-4 mt-3 rounded-xl p-3 flex items-center gap-2" style={{ background: '#2D1515', border: '1px solid #EF4444' }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>Upload failed</p>
+            <p className="text-xs mt-0.5" style={{ color: '#FCA5A5' }}>{uploadError}</p>
+          </div>
+          <button onClick={() => { setUploadError(null); handleUpload(); }}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold"
+            style={{ background: '#EF4444', color: 'white' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
       {files.length > 0 && (

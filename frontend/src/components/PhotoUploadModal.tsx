@@ -67,7 +67,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           if (albumId) formData.append('albumId', albumId);
           if (eventId) formData.append('eventId', eventId);
           return api.post('/photos', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            // Do NOT set Content-Type — axios must auto-set it with the multipart boundary
             timeout: 120000,
           });
         })
