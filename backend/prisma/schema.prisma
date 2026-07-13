@@ -423,6 +423,7 @@ model User {
   rigPilotOf                                       RigPilot[]
   rigFollows                                       RigFollow[]                   @relation("RigFollows")
   rigPosts                                         RigPost[]                     @relation("RigPostAuthor")
+  placesCreated                                    Place[]                       @relation("PlaceCreator")
   rigPageViews                                     RigPageView[]                 @relation("RigPageViews")
   checkInInvitesSent                               CheckInInvite[]               @relation("CheckInInviteSent")
   checkInInvitesReceived                           CheckInInvite[]               @relation("CheckInInviteReceived")
@@ -1121,6 +1122,7 @@ model Photo {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   eventId        String?
+  placeId        String?
   visibility     String               @default("PUBLIC")
   isPrivate      Boolean              @default(false)
   surfaces       String[]             @default(["PROFILE", "RIG", "TRIP", "CAMPGROUND"])
@@ -1128,6 +1130,7 @@ model Photo {
   moments        MomentPhoto[]
   album          PhotoAlbum?          @relation(fields: [albumId], references: [id])
   event          Event?               @relation(fields: [eventId], references: [id])
+  place          Place?               @relation("PhotoPlace", fields: [placeId], references: [id])
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   campgroundTags PhotoCampgroundTag[]
   photoComments  PhotoComment[]
@@ -1141,6 +1144,7 @@ model Photo {
   @@index([userId])
   @@index([albumId])
   @@index([eventId])
+  @@index([placeId])
   @@index([visibility])
 }
 
@@ -6522,30 +6526,35 @@ model RigFollow {
 }
 
 model RigPost {
-  id            String          @id @default(cuid())
-  rigId         String
-  userId        String
-  title         String?
-  body          String?
-  photos        String[]
-  postType      String          @default("road_report")
-  tripId        String?
-  episodeId     String?
-  stopId        String?
-  bundleId      String?
-  mediaHash     String?
-  activityType  String?         // PHOTO_MOMENT | CHECKIN | STORY | etc
-  photoCategory String?         // RIG_EXTERIOR | RIG_INTERIOR | RIG_FLOORPLAN | RIG_DETAIL | RIG_SETUP | TRAVEL | CAMPSITE | NATURE | FOOD | PEOPLE | OTHER
-  isRigPhoto    Boolean         @default(false)
-  isPublic      Boolean         @default(true)
-  visibility    String          @default("PUBLIC")  // PUBLIC | FRIENDS_ONLY | BOTH
-  createdAt     DateTime        @default(now())
-  rig           Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
-  author        User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
-  episode       JourneyEpisode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  id             String          @id @default(cuid())
+  rigId          String
+  userId         String
+  title          String?
+  body           String?
+  photos         String[]
+  postType       String          @default("road_report")
+  tripId         String?
+  episodeId      String?
+  stopId         String?
+  bundleId       String?
+  placeId        String?
+  mediaHash      String?
+  activityType   String?         // PHOTO_MOMENT | CHECKIN | STORY | etc
+  photoCategory  String?         // RIG_EXTERIOR | RIG_INTERIOR | RIG_FLOORPLAN | RIG_DETAIL | RIG_SETUP | TRAVEL | CAMPSITE | NATURE | FOOD | PEOPLE | OTHER
+  isRigPhoto     Boolean         @default(false)
+  isPublic       Boolean         @default(true)
+  visibility     String          @default("PUBLIC")  // PUBLIC | FRIENDS_ONLY | BOTH
+  showOnProfile  Boolean         @default(true)
+  showOnRigFeed  Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  rig            Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
+  author         User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  episode        JourneyEpisode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  place          Place?          @relation("RigPostPlace", fields: [placeId], references: [id])
 
   @@index([episodeId])
   @@index([stopId])
+  @@index([placeId])
   @@index([rigId, isRigPhoto])
   @@index([bundleId])
   @@index([rigId, createdAt])
@@ -8197,4 +8206,31 @@ model RigManufacturerSpecs {
   createdAt            DateTime @default(now())
 
   @@unique([make, model, year])
+}
+
+// Universal location — any place a post can be tagged to
+model Place {
+  id              String     @id @default(cuid())
+  name            String
+  category        String     @default("OTHER") // CAMPGROUND, OVERNIGHT_STOP, RESTAURANT, HIKING_TRAIL, ATTRACTION, SCENIC_OVERLOOK, MUSEUM, VISITOR_CENTER, OUTFITTER, CAMP_STORE, RV_SERVICE, LANDMARK, OTHER
+  address         String?
+  city            String?
+  state           String?
+  latitude        Float?
+  longitude       Float?
+  website         String?
+  description     String?
+  googlePlaceId   String?    @unique
+  createdByUserId String?
+  status          String     @default("ACTIVE") // ACTIVE, PENDING_REVIEW
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  createdBy       User?      @relation("PlaceCreator", fields: [createdByUserId], references: [id])
+  rigPosts        RigPost[]  @relation("RigPostPlace")
+  photos          Photo[]    @relation("PhotoPlace")
+
+  @@index([category])
+  @@index([state])
+  @@index([name])
+  @@index([latitude, longitude])
 }

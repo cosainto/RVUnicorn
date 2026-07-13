@@ -194,6 +194,7 @@ import oauthRoutes from './routes/oauth.routes';
 import localBusinessRoutes from './routes/local-business.routes';
 import dealerRoutes from './routes/dealer.routes';
 import smartTripAssistantRoutes from './routes/smart-trip-assistant.routes';
+import placeRoutes from './routes/place.routes';
 import passport from 'passport';
 
 
@@ -409,6 +410,7 @@ app.use("/api/experiences", experiencesRoutes);
 app.use("/api/rigs", rigHubRoutes);
 app.use("/api/rigs", rigScrapbookRoutes);
 app.use("/api/smart-trip", smartTripAssistantRoutes);
+app.use('/api/places', placeRoutes);
 app.use("/api", emailRoutes);
 
 

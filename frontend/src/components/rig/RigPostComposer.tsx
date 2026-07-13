@@ -3,10 +3,17 @@
  * Posts into the Pulse feed via existing create endpoints.
  */
 import { useState } from 'react';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, MapPin } from 'lucide-react';
 import { useToast } from '../ToastProvider';
 import api from '../../services/api';
 import { uploadAndGetUrl } from '../../utils/uploadMedia';
+import LocationPicker from '../LocationPicker';
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  CAMPGROUND: '🏕', OVERNIGHT_STOP: '🛏', RESTAURANT: '🍽', HIKING_TRAIL: '🥾',
+  ATTRACTION: '🎡', SCENIC_OVERLOOK: '🌄', MUSEUM: '🏛', VISITOR_CENTER: 'ℹ️',
+  OUTFITTER: '🎒', CAMP_STORE: '🏪', RV_SERVICE: '🔧', LANDMARK: '📍', OTHER: '📌',
+};
 
 const CN = { bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45', gold: '#E8A838', orange: '#D4621A', cream: '#F5F0E8', muted: '#8B9BB4', border: '#243552' };
 
@@ -48,10 +55,14 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
   const [videoUrl, setVideoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<{ id: string; name: string; category: string; city?: string; state?: string; type: 'place' | 'campground' } | null>(null);
+  const [showOnProfile, setShowOnProfile] = useState(true);
+  const [showOnRigFeed, setShowOnRigFeed] = useState(true);
 
   if (!isOpen) return null;
 
-  const reset = () => { setFormat(null); setTitle(''); setBody(''); setPhotoUrls([]); setVideoUrl(''); };
+  const reset = () => { setFormat(null); setTitle(''); setBody(''); setPhotoUrls([]); setVideoUrl(''); setSelectedPlace(null); setShowOnProfile(true); setShowOnRigFeed(true); };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -126,6 +137,9 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
           body: body.trim(),
           photos: photoUrls,
           tripId: activeSessionId || undefined,
+          placeId: selectedPlace?.type === 'place' ? selectedPlace.id : undefined,
+          showOnProfile,
+          showOnRigFeed,
         });
       }
 
@@ -281,6 +295,44 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
           </div>
         )}
 
+        {/* Location tagging */}
+        <div className="mt-3">
+          {selectedPlace ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+              <span className="text-sm">{CATEGORY_EMOJI[selectedPlace.category] || '📌'}</span>
+              <span className="text-xs font-semibold flex-1 truncate" style={{ color: CN.cream }}>{selectedPlace.name}</span>
+              <button onClick={() => setSelectedPlace(null)} className="w-4 h-4 flex items-center justify-center rounded-full text-[8px]" style={{ background: '#ef4444', color: 'white' }}>×</button>
+            </div>
+          ) : (
+            <button onClick={() => setLocationPickerOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg transition hover:brightness-110"
+              style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
+              <MapPin className="w-4 h-4" style={{ color: CN.gold }} />
+              <span className="text-xs font-semibold" style={{ color: CN.gold }}>Where was this?</span>
+            </button>
+          )}
+        </div>
+
+        {/* Visibility toggles */}
+        <div className="mt-3 flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative w-8 h-4 rounded-full transition-colors" style={{ background: showOnProfile ? CN.gold : CN.border }}
+              onClick={() => setShowOnProfile(!showOnProfile)}>
+              <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform"
+                style={{ left: showOnProfile ? '18px' : '2px' }} />
+            </div>
+            <span className="text-[10px]" style={{ color: CN.muted }}>Show on Profile</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative w-8 h-4 rounded-full transition-colors" style={{ background: showOnRigFeed ? CN.gold : CN.border }}
+              onClick={() => setShowOnRigFeed(!showOnRigFeed)}>
+              <div className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform"
+                style={{ left: showOnRigFeed ? '18px' : '2px' }} />
+            </div>
+            <span className="text-[10px]" style={{ color: CN.muted }}>Show on Rig Feed</span>
+          </label>
+        </div>
+
         {/* Publish */}
         <button onClick={handlePublish} disabled={publishing || uploading}
           className="w-full mt-4 py-2.5 rounded-xl text-sm font-bold transition hover:brightness-110 disabled:opacity-50"
@@ -288,6 +340,13 @@ export default function RigPostComposer({ rigId, slug, isOpen, initialFormat, ac
           {publishing ? 'Publishing...' : 'Share'}
         </button>
       </div>
+
+      {/* LocationPicker modal */}
+      <LocationPicker
+        isOpen={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        onSelect={(place) => { setSelectedPlace(place); setLocationPickerOpen(false); }}
+      />
     </div>
   );
 }

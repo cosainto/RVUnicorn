@@ -699,7 +699,10 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
             { NOT: { visibility: { in: ['PRIVATE', 'FRIENDS_ONLY'] } } },
           ],
         },
-        include: { author: { select: safeUserSelect } },
+        include: {
+          author: { select: safeUserSelect },
+          place: { select: { id: true, name: true, category: true, city: true, state: true } },
+        },
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
@@ -850,7 +853,7 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
     const { authorized } = await isOwnerOrEditor(rigId, userId);
     if (!authorized) return res.status(403).json({ error: 'Not authorized' });
 
-    const { title, body, photos, postType, tripId, isPublic, visibility } = req.body;
+    const { title, body, photos, postType, tripId, placeId, isPublic, visibility, showOnProfile, showOnRigFeed } = req.body;
 
     const rig = await prisma.rig.findUnique({
       where: { id: rigId },
@@ -866,8 +869,11 @@ router.post('/:rigId/posts', authenticateToken, async (req: Request, res: Respon
         photos: photos || [],
         postType: postType || 'road_report',
         tripId,
+        placeId: placeId || null,
         isPublic: isPublic !== false,
         visibility: visibility || 'PUBLIC',
+        showOnProfile: showOnProfile !== false,
+        showOnRigFeed: showOnRigFeed !== false,
       },
       include: { author: { select: safeUserSelect } },
     });

@@ -176,6 +176,33 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
         }
       }
 
+      // Place-tagged posts: show as their own feed cards (not absorbed into stay cards)
+      const placeTaggedPosts = photoPosts.filter((p: any) => p.place && p.placeId);
+      for (const post of placeTaggedPosts) {
+        timelineItems.push({
+          id: `place-post-${post.id}`,
+          itemType: 'PLACE_POST',
+          title: post.place?.name || post.title || 'Post',
+          previewImageUrl: post.photos?.[0] || null,
+          previewText: JSON.stringify({
+            placeId: post.placeId,
+            category: post.place?.category,
+            city: post.place?.city,
+            state: post.place?.state,
+            caption: post.body || post.title,
+          }),
+          tripId: post.tripId,
+          occurredAt: post.createdAt,
+          createdAt: post.createdAt,
+          _photos: post.photos,
+          _photoCount: post.photos?.length || 0,
+          _user: post.author,
+          _source: 'place_post',
+        });
+        // Mark these photos as claimed so they don't get absorbed into check-in cards
+        for (const url of (post.photos || [])) claimedUrls.add(url);
+      }
+
       // Unclaimed photos: one album card if any remain
       const unclaimed = allPhotos.filter((p: any) => !claimedUrls.has(p.url));
       const finalItems = [...timelineItems];
@@ -359,6 +386,63 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
                   )}
                 </div>
                 {d.campgroundId && <CampsiteSocialProofInline campgroundId={d.campgroundId} compact />}
+              </div>
+              <ActionBar />
+            </div>
+          );
+        }
+
+        // ── PLACE POST CARD (tagged to a place — restaurant, trail, overnight stop, etc.) ──
+        if (item.itemType === 'PLACE_POST') {
+          let pd: any = {};
+          try { pd = JSON.parse(item.previewText || '{}'); } catch {}
+          const placeName = item.title || 'A Place';
+          const location = [pd.city, pd.state].filter(Boolean).join(', ');
+          const categoryEmoji: Record<string, string> = {
+            CAMPGROUND: '🏕', OVERNIGHT_STOP: '🛏', RESTAURANT: '🍽', HIKING_TRAIL: '🥾',
+            ATTRACTION: '🎡', SCENIC_OVERLOOK: '🌄', MUSEUM: '🏛', VISITOR_CENTER: 'ℹ️',
+            OUTFITTER: '🎒', CAMP_STORE: '🏪', RV_SERVICE: '🔧', LANDMARK: '📍', OTHER: '📌',
+          };
+          const emoji = categoryEmoji[pd.category] || '📌';
+          const categoryLabel = (pd.category || 'OTHER').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase());
+          const placePhotos: string[] = (item as any)._photos || [];
+
+          return (
+            <div key={item.id} className="rounded-2xl shadow-md overflow-hidden" style={{ background: CN.card, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <PostHeader item={item} rigName={rigName} ownerAvatar={ownerAvatar} ownerName={ownerName} actionLabel={`visited ${placeName}`} />
+
+              {/* Photo grid */}
+              {placePhotos.length > 0 && (
+                <div className="px-3 pt-1 pb-2">
+                  <div className="grid gap-1 rounded-xl overflow-hidden"
+                    style={{ gridTemplateColumns: placePhotos.length === 1 ? '1fr' : placePhotos.length === 2 ? '1fr 1fr' : '1fr 1fr' }}>
+                    {placePhotos.slice(0, 4).map((url: string, i: number) => (
+                      <div key={i} className="relative" style={{ aspectRatio: placePhotos.length === 1 ? '16/9' : '1', cursor: 'pointer' }}>
+                        <img src={url} alt="" className="w-full h-full object-cover"
+                          data-feed-photo="true" data-photo-index={i} data-all-photos={JSON.stringify(placePhotos)} />
+                        {i === 3 && placePhotos.length > 4 && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center"
+                            data-feed-photo="true" data-photo-index={3} data-all-photos={JSON.stringify(placePhotos)}>
+                            <span className="text-white font-bold text-lg pointer-events-none">+{placePhotos.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Place info */}
+              <div className="px-4 pb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{emoji}</span>
+                  <div>
+                    <h4 className="text-sm font-bold" style={{ color: CN.cream }}>{placeName}</h4>
+                    {location && <p className="text-[11px]" style={{ color: CN.muted }}>{location}</p>}
+                  </div>
+                  <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${CN.gold}20`, color: CN.gold }}>{emoji} {categoryLabel}</span>
+                </div>
+                {pd.caption && <p className="text-xs mt-1 line-clamp-3" style={{ color: CN.muted }}>{pd.caption}</p>}
               </div>
               <ActionBar />
             </div>
