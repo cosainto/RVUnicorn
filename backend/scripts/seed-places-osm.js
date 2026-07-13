@@ -22,17 +22,18 @@ const CELL_SIZE = 0.36; // ~25 miles
 const RADIUS_METERS = 40234; // 25 miles in meters
 // Primary and fallback Overpass API servers
 const OVERPASS_URLS = [
-  'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://z.overpass-api.de/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
 ];
 const TEST_CELLS = parseInt(process.env.TEST_CELLS || '0');
 
 // ── Category mapping: OSM tags → RVUnicorn category ──
+const RADIUS_RESTAURANT = 16093; // 10 miles for high-density categories
 const CATEGORY_QUERIES = [
   {
     category: 'RESTAURANT',
-    query: `node["amenity"~"restaurant|cafe|fast_food"](around:${RADIUS_METERS},{LAT},{LNG});`,
+    query: `node["amenity"~"restaurant|cafe|fast_food"](around:${RADIUS_RESTAURANT},{LAT},{LNG});`,
   },
   {
     category: 'HIKING_TRAIL',
@@ -60,7 +61,7 @@ const CATEGORY_QUERIES = [
   },
   {
     category: 'CAMP_STORE',
-    query: `node["shop"~"convenience|general"](around:${RADIUS_METERS},{LAT},{LNG});`,
+    query: `node["shop"~"convenience|general"](around:${RADIUS_RESTAURANT},{LAT},{LNG});`,
   },
   {
     category: 'RV_SERVICE',
@@ -84,13 +85,21 @@ function normalize(name) {
   return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function fetch(url, body) {
+function httpFetch(url, postData) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const mod = parsed.protocol === 'https:' ? https : http;
+    const body = postData ? `data=${encodeURIComponent(postData)}` : null;
     const opts = {
       method: body ? 'POST' : 'GET',
-      headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
+      headers: {
+        'User-Agent': 'RVUnicorn/1.0 (https://www.rvunicorn.com; contact@rvunicorn.com)',
+        'Accept': 'application/json',
+        ...(body ? {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body),
+        } : {}),
+      },
     };
     const req = mod.request(parsed, opts, (res) => {
       let data = '';
@@ -108,11 +117,9 @@ async function overpassQuery(query, retries = 3) {
   const fullQuery = `[out:json][timeout:60];(${query});out body center 200;`;
 
   for (let attempt = 0; attempt < retries; attempt++) {
-    // Try each Overpass server in rotation
     const baseUrl = OVERPASS_URLS[attempt % OVERPASS_URLS.length];
-    const url = `${baseUrl}?data=${encodeURIComponent(fullQuery)}`;
     try {
-      const res = await fetch(url);
+      const res = await httpFetch(baseUrl, fullQuery);
       if (res.status === 200) {
         return JSON.parse(res.data);
       }
