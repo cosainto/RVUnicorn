@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshCw, Trash2, Globe, Lock, ExternalLink, Copy, Share2, Link2, Zap, Upload, Camera, Star, ChevronLeft, ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import ImageUpload from './ImageUpload';
+import { uploadFile, type FileStatus } from '../utils/uploadMedia';
 
 /* ── Hero Photo Viewer — featured tab ── */
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '😍', '🏕️', '🚐', '⭐'];
@@ -407,7 +407,9 @@ export default function TripScrapbook({ eventId, canPin, canUpload, campgroundNa
   // Photo upload (merged from EventAlbum)
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadCaption, setUploadCaption] = useState('');
-  const [uploadedUrl, setUploadedUrl] = useState('');
+  const [uploadFiles, setUploadFiles] = useState<{ id: string; file: File; preview: string; status: FileStatus; pct: number; error?: string }[]>([]);
+  const [uploadingActive, setUploadingActive] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [viewMode, setViewMode] = useState<'featured' | 'all'>('featured');
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
 
@@ -508,11 +510,72 @@ export default function TripScrapbook({ eventId, canPin, canUpload, campgroundNa
   };
 
   // Upload handlers (merged from EventAlbum)
-  const handleImageUploaded = (url: string) => setUploadedUrl(url);
-  const handleSavePhoto = async () => {
-    setShowUploadModal(false);
+  const handleUploadFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (e.target) e.target.value = '';
+    if (!selected.length) return;
+
+    const newFiles = selected.map(file => {
+      const isHEIC = /\.(heic|heif)$/i.test(file.name) || file.type === 'image/heic';
+      let preview = '';
+      try { if (!isHEIC && file.type.startsWith('image/')) preview = URL.createObjectURL(file); } catch {}
+      return { id: Math.random().toString(36).slice(2), file, preview, status: 'queued' as FileStatus, pct: 0 };
+    });
+
+    setUploadFiles(prev => [...prev, ...newFiles].slice(0, 60));
+  };
+
+  const runPhotoUploads = useCallback(async (filesToUpload: typeof uploadFiles) => {
+    if (!filesToUpload.length) return;
+    setUploadingActive(true);
+
+    const CONCURRENCY = 3;
+    let nextIdx = 0;
+
+    const updateFP = (id: string, update: Partial<typeof uploadFiles[0]>) => {
+      setUploadFiles(prev => prev.map(f => f.id === id ? { ...f, ...update } : f));
+    };
+
+    const uploadOne = async (item: typeof filesToUpload[0]) => {
+      updateFP(item.id, { status: 'uploading', pct: 0 });
+      try {
+        const result = await uploadFile(item.file, {
+          folder: `rvunicorn/trip-photos/${eventId}`,
+          onProgress: (pct) => updateFP(item.id, { pct }),
+        });
+        updateFP(item.id, { status: 'saving', pct: 100 });
+        await api.post(`/upload/trip/${eventId}/save-photo`, {
+          url: result.url, publicId: result.publicId, caption: uploadCaption || null,
+        });
+        updateFP(item.id, { status: 'done', pct: 100 });
+      } catch (err: any) {
+        const msg = err?.response?.data?.error || err?.message || 'Upload failed';
+        updateFP(item.id, { status: 'failed', pct: 0, error: msg });
+      }
+    };
+
+    const worker = async () => {
+      while (nextIdx < filesToUpload.length) {
+        const i = nextIdx++;
+        await uploadOne(filesToUpload[i]);
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, filesToUpload.length) }, () => worker()));
+    setUploadingActive(false);
+  }, [eventId, uploadCaption]);
+
+  const handleStartUpload = () => {
+    const queued = uploadFiles.filter(f => f.status === 'queued');
+    if (queued.length) runPhotoUploads(queued);
+  };
+
+  const handleUploadDone = async () => {
+    // Revoke object URLs
+    uploadFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
+    setUploadFiles([]);
     setUploadCaption('');
-    setUploadedUrl('');
+    setShowUploadModal(false);
     await loadScrapbook();
   };
   const handleDeletePhoto = async (photoId: string) => {
@@ -943,41 +1006,171 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
       )}
 
       {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }}>
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
-              <h3 className="text-lg font-bold">Upload Photo</h3>
-              <button onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }} className="text-white/80 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <ImageUpload onImageUploaded={handleImageUploaded} currentImage={uploadedUrl} label="Select Photo" eventId={eventId} caption={uploadCaption} />
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption (Optional)</label>
-                <textarea value={uploadCaption} onChange={e => setUploadCaption(e.target.value)} rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400" placeholder="What's the story behind this photo?" />
-                {campgroundName && (
-                  <div className="mt-2">
-                    <HitchPhotoCaptions campgroundName={campgroundName} tripTitle={eventTitle} onSelect={(c: string) => setUploadCaption(c)} />
+      {showUploadModal && (() => {
+        const doneCount = uploadFiles.filter(f => f.status === 'done').length;
+        const failedCount = uploadFiles.filter(f => f.status === 'failed').length;
+        const totalCount = uploadFiles.length;
+        const allFinished = !uploadingActive && totalCount > 0 && (doneCount + failedCount >= totalCount);
+        const hasFiles = totalCount > 0;
+
+        // Bytes-weighted overall progress
+        const totalBytes = uploadFiles.reduce((s, f) => s + (f.file.size || 1), 0);
+        const uploadedBytes = uploadFiles.reduce((s, f) => {
+          if (f.status === 'done' || f.status === 'saving') return s + (f.file.size || 1);
+          if (f.status === 'uploading') return s + (f.file.size || 1) * (f.pct / 100);
+          return s;
+        }, 0);
+        const overallPct = totalBytes > 0 ? Math.round((uploadedBytes / totalBytes) * 100) : 0;
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50" onClick={() => { if (!uploadingActive) { uploadFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); }); setUploadFiles([]); setUploadCaption(''); setShowUploadModal(false); } }}>
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4 rounded-t-2xl flex items-center justify-between shrink-0">
+                <h3 className="text-lg font-bold">
+                  {uploadingActive ? `Uploading ${doneCount + failedCount} of ${totalCount} — ${overallPct}%`
+                    : allFinished ? `${doneCount} of ${totalCount} uploaded`
+                    : 'Upload Photos'}
+                </h3>
+                {!uploadingActive && (
+                  <button onClick={() => { uploadFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); }); setUploadFiles([]); setUploadCaption(''); setShowUploadModal(false); }} className="text-white/80 hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Overall progress bar (during upload) */}
+              {(uploadingActive || allFinished) && (
+                <div className="h-1.5 bg-gray-100 shrink-0">
+                  <div className="h-full transition-all duration-300" style={{ width: `${overallPct}%`, background: allFinished && failedCount > 0 ? '#EF4444' : '#E8622A' }} />
+                </div>
+              )}
+
+              <div className="p-4 space-y-4 overflow-y-auto flex-1">
+                {/* File selector (before upload starts) */}
+                {!uploadingActive && !allFinished && (
+                  <>
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-gray-50 transition">
+                      <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium">Tap to select photos</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{hasFiles ? `${totalCount} selected — tap to add more` : 'Select multiple photos at once'}</p>
+                      <input ref={uploadInputRef} type="file" className="hidden" accept="image/*,.heic,.heif" multiple onChange={handleUploadFileSelect} />
+                    </label>
+
+                    {/* Caption */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption (Optional)</label>
+                      <textarea value={uploadCaption} onChange={e => setUploadCaption(e.target.value)} rows={2}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400" placeholder="What's the story behind this photo?" />
+                      {campgroundName && (
+                        <div className="mt-2">
+                          <HitchPhotoCaptions campgroundName={campgroundName} tripTitle={eventTitle} onSelect={(c: string) => setUploadCaption(c)} />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Thumbnail grid with progress overlays */}
+                {hasFiles && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {uploadFiles.map(f => (
+                      <div key={f.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                        {f.preview ? (
+                          <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Camera className="w-6 h-6 text-gray-300" />
+                          </div>
+                        )}
+
+                        {/* Progress overlay */}
+                        {f.status === 'uploading' && (
+                          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                            <span className="text-white text-sm font-bold">{f.pct}%</span>
+                            <div className="w-3/4 h-1 rounded-full bg-white/30 mt-1">
+                              <div className="h-full rounded-full bg-[#E8622A] transition-all duration-150" style={{ width: `${f.pct}%` }} />
+                            </div>
+                          </div>
+                        )}
+                        {f.status === 'saving' && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          </div>
+                        )}
+                        {f.status === 'done' && (
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <div className="w-7 h-7 rounded-full bg-[#C9A84C] flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                        )}
+                        {f.status === 'failed' && (
+                          <div className="absolute inset-0 bg-red-900/50 flex flex-col items-center justify-center cursor-pointer"
+                            onClick={() => runPhotoUploads([f])}>
+                            <RotateCcw className="w-5 h-5 text-white" />
+                            <span className="text-white text-[10px] mt-0.5">Retry</span>
+                          </div>
+                        )}
+                        {f.status === 'queued' && !uploadingActive && (
+                          <button onClick={() => { setUploadFiles(prev => prev.filter(x => x.id !== f.id)); if (f.preview) URL.revokeObjectURL(f.preview); }}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center">
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Completion summary */}
+                {allFinished && doneCount > 0 && (
+                  <div className="text-center py-2">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {failedCount === 0 ? `All ${doneCount} photos uploaded!` : `${doneCount} uploaded, ${failedCount} failed`}
+                    </p>
                   </div>
                 )}
               </div>
-              <div className="flex gap-3">
-                <button onClick={handleSavePhoto} disabled={!uploadedUrl}
-                  className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition disabled:opacity-50">
-                  {uploadedUrl ? 'Done' : 'Upload a Photo First'}
-                </button>
-                <button onClick={() => { setShowUploadModal(false); setUploadCaption(''); setUploadedUrl(''); }}
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
-                  Cancel
-                </button>
+
+              {/* Footer buttons */}
+              <div className="p-4 border-t border-gray-100 flex gap-3 shrink-0">
+                {!uploadingActive && !allFinished && (
+                  <>
+                    <button onClick={handleStartUpload} disabled={!hasFiles}
+                      className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition disabled:opacity-50">
+                      {hasFiles ? `Upload ${totalCount} Photo${totalCount !== 1 ? 's' : ''}` : 'Select Photos First'}
+                    </button>
+                    <button onClick={() => { uploadFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); }); setUploadFiles([]); setUploadCaption(''); setShowUploadModal(false); }}
+                      className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {uploadingActive && (
+                  <div className="flex-1 py-2.5 bg-gray-100 text-gray-500 rounded-xl font-semibold text-sm text-center flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading {doneCount + failedCount}/{totalCount}...
+                  </div>
+                )}
+                {allFinished && (
+                  <>
+                    <button onClick={handleUploadDone}
+                      className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition">
+                      Done
+                    </button>
+                    {failedCount > 0 && (
+                      <button onClick={() => { const failed = uploadFiles.filter(f => f.status === 'failed'); runPhotoUploads(failed); }}
+                        className="px-4 py-2.5 border border-red-300 rounded-xl text-sm text-red-600 hover:bg-red-50 transition">
+                        Retry {failedCount}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Photo Lightbox with Tagging (for All Photos view) */}
       {/* Fullscreen Photo Viewer */}
