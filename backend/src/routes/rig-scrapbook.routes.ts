@@ -239,17 +239,47 @@ router.get('/:slug/timeline', async (req: any, res) => {
 
         if (!campgroundId) continue;
 
+        // Parse tripId/eventId and checkout date from previewText
+        let tripId: string | null = null;
+        let checkOutDate: Date | null = null;
+        try {
+          const d = JSON.parse(item.previewText || '{}');
+          tripId = d.tripId || null;
+          if (d.checkOutDate) checkOutDate = new Date(d.checkOutDate);
+        } catch {}
+
+        // Also check the Event linked to this campground for this user
+        let eventIds: string[] = [];
+        if (tripId) eventIds.push(tripId);
+        try {
+          const events = await prisma.event.findMany({
+            where: { campgroundId, OR: [{ organizerId: { in: rigUserIds } }, { attendees: { some: { userId: { in: rigUserIds } } } }] },
+            select: { id: true },
+          });
+          for (const e of events) { if (!eventIds.includes(e.id)) eventIds.push(e.id); }
+        } catch {}
+
         const stayDate = new Date(item.occurredAt);
         const stayStart = new Date(stayDate.getTime() - 24 * 60 * 60 * 1000);
-        const stayEnd = new Date(stayDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const stayEnd = checkOutDate
+          ? new Date(checkOutDate.getTime() + 3 * 24 * 60 * 60 * 1000)
+          : new Date(stayDate.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-        // Get photos from: StateVisit at this campground + user albums around this date + tagged photos
-        const [stateVisitPhotos, userPhotos, albumPhotos] = await Promise.all([
+        // Get photos from: trip/event linkage (most reliable), StateVisit, date-range fallback, albums
+        const [tripPhotos, stateVisitPhotos, datePhotos, albumPhotos] = await Promise.all([
+          // Photos linked to the trip event (works regardless of upload date)
+          eventIds.length > 0 ? prisma.photo.findMany({
+            where: { eventId: { in: eventIds }, isPrivate: false, NOT: { visibility: 'PRIVATE' } },
+            select: { imageUrl: true },
+            orderBy: { createdAt: 'desc' },
+            take: 12,
+          }).catch(() => []) : Promise.resolve([]),
           prisma.stateVisit.findMany({
             where: { userId: { in: rigUserIds }, campsiteId: campgroundId, photoUrls: { isEmpty: false } },
             select: { photoUrls: true },
             take: 5,
           }).catch(() => []),
+          // Date-range fallback (catches photos uploaded during the stay)
           prisma.photo.findMany({
             where: {
               userId: { in: rigUserIds },
@@ -274,12 +304,14 @@ router.get('/:slug/timeline', async (req: any, res) => {
 
         const stayPhotos: string[] = [];
         const seen = new Set<string>();
+        // Add trip-linked photos first (most reliable — works regardless of upload date)
+        for (const p of tripPhotos) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
         // Add stateVisit photos
         for (const sv of stateVisitPhotos) {
           for (const url of (sv.photoUrls || [])) { if (!seen.has(url)) { seen.add(url); stayPhotos.push(url); } }
         }
-        // Add direct photos
-        for (const p of userPhotos) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
+        // Add date-range photos
+        for (const p of datePhotos) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
         // Add album photos
         for (const a of albumPhotos) {
           for (const p of (a.photos || [])) { if (!seen.has(p.imageUrl)) { seen.add(p.imageUrl); stayPhotos.push(p.imageUrl); } }
