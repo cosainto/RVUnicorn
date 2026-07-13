@@ -50,7 +50,6 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
   const [uploadBatch, setUploadBatch] = useState<MediaFile[]>([]);
   const [batchDone, setBatchDone] = useState(false);
 
-  const [result, setResult] = useState<{ photos: number; videos: number } | null>(null);
   const [showRigAttach, setShowRigAttach] = useState(false);
   const [attachOptions] = useState({ photos: true, videos: true, recap: true });
   const [attaching, setAttaching] = useState(false);
@@ -178,7 +177,6 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     setBatchDone(true);
 
     if (uploadedPhotos + uploadedVideos > 0) {
-      setResult({ photos: uploadedPhotos, videos: uploadedVideos });
       if (rigName) setShowRigAttach(true);
       onUploadComplete?.({ photos: uploadedPhotos, videos: uploadedVideos });
     }
@@ -209,58 +207,14 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
     finally { setAttaching(false); }
   };
 
-  // ── Upload complete + rig attachment ──
-  if (result && !uploading) {
-    const failedCount = Array.from(fileProgress.values()).filter(fp => fp.status === 'failed').length;
-    if (failedCount === 0) {
-      return (
-        <div className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-          <div className="text-center mb-4">
-            <CheckCircle className="w-10 h-10 mx-auto mb-2" style={{ color: C.green }} />
-            <p className="font-semibold" style={{ color: C.cream }}>
-              {result.photos > 0 && `${result.photos} photo${result.photos !== 1 ? 's' : ''}`}
-              {result.photos > 0 && result.videos > 0 && ' and '}
-              {result.videos > 0 && `${result.videos} video${result.videos !== 1 ? 's' : ''}`}
-              {' '}uploaded
-            </p>
-            <p className="text-xs mt-1" style={{ color: C.muted }}>Added to {tripTitle}</p>
-          </div>
-          {showRigAttach && rigName && (
-            <div className="rounded-xl p-4 mb-4" style={{ background: C.cardLight, border: `1px solid ${C.border}` }}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">🚐</span>
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: C.cream }}>Add to {rigName} rig page?</p>
-                  <p className="text-xs" style={{ color: C.muted }}>Share with your rig followers</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleAttachToRig} disabled={attaching}
-                  className="flex-1 py-2 rounded-lg text-sm font-semibold transition hover:brightness-110 disabled:opacity-50"
-                  style={{ background: C.gold, color: C.bg }}>
-                  {attaching ? 'Adding...' : 'Add to Rig Page'}
-                </button>
-                <button onClick={() => setShowRigAttach(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: C.muted }}>
-                  Keep Private
-                </button>
-              </div>
-            </div>
-          )}
-          {onClose && (
-            <button onClick={onClose} className="w-full py-2 rounded-lg text-sm font-medium" style={{ background: C.cardLight, color: C.cream }}>Done</button>
-          )}
-        </div>
-      );
-    }
-  }
-
   // ── Upload in progress or done with per-file rows ──
+  // This view handles BOTH "uploading" and "just finished" states in one place.
   if (uploading || (batchDone && uploadBatch.length > 0)) {
     const entries = uploadBatch.map(f => ({ file: f, progress: fileProgress.get(f.id) || { status: 'queued' as FileStatus, pct: 0 } }));
     const doneCount = entries.filter(e => e.progress.status === 'done').length;
     const failedCount = entries.filter(e => e.progress.status === 'failed').length;
     const totalCount = entries.length;
-    const allFinished = doneCount + failedCount >= totalCount;
+    const allFinished = !uploading && (doneCount + failedCount >= totalCount);
 
     // Bytes-weighted overall progress
     const totalBytes = entries.reduce((s, e) => s + (e.file.file.size || 1), 0);
@@ -363,13 +317,46 @@ export default function TripMediaUploader({ tripId, tripTitle, rigName, onUpload
             ))}
           </div>
 
-          {/* Done button */}
-          {allFinished && onClose && (
-            <button onClick={onClose}
-              className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold transition hover:brightness-110"
-              style={{ background: doneCount > 0 ? C.gold : C.cardLight, color: doneCount > 0 ? C.bg : C.cream }}>
-              {doneCount > 0 ? 'Done' : 'Close'}
-            </button>
+          {/* Completion section */}
+          {allFinished && (
+            <div className="mt-4 space-y-3">
+              {/* Success summary */}
+              {doneCount > 0 && (
+                <div className="text-center py-2">
+                  <p className="text-sm font-semibold" style={{ color: C.cream }}>
+                    {doneCount} {doneCount === 1 ? 'file' : 'files'} uploaded to {tripTitle}
+                  </p>
+                </div>
+              )}
+
+              {/* Rig attach offer */}
+              {doneCount > 0 && showRigAttach && rigName && (
+                <div className="rounded-xl p-3" style={{ background: C.cardLight, border: `1px solid ${C.border}` }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span>🚐</span>
+                    <p className="text-xs font-semibold" style={{ color: C.cream }}>Add to {rigName} rig page?</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleAttachToRig} disabled={attaching}
+                      className="flex-1 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
+                      style={{ background: C.gold, color: C.bg }}>
+                      {attaching ? 'Adding...' : 'Add to Rig Page'}
+                    </button>
+                    <button onClick={() => setShowRigAttach(false)} className="px-3 py-2 rounded-lg text-xs" style={{ color: C.muted }}>Skip</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Done / Close button */}
+              <button onClick={() => {
+                if (onClose) onClose();
+                else { setBatchDone(false); setUploadBatch([]); setFiles([]); }
+              }}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold transition hover:brightness-110"
+                style={{ background: doneCount > 0 ? C.gold : C.cardLight, color: doneCount > 0 ? C.bg : C.cream }}>
+                {doneCount > 0 ? 'Done' : 'Close'}
+              </button>
+            </div>
           )}
         </div>
       </div>
