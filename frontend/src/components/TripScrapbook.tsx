@@ -576,6 +576,7 @@ export default function TripScrapbook({ eventId, canPin, canUpload, campgroundNa
     setUploadFiles([]);
     setUploadCaption('');
     setShowUploadModal(false);
+    setViewMode('all'); // Switch to All tab so newly uploaded photos are visible
     await loadScrapbook();
   };
   const handleDeletePhoto = async (photoId: string) => {
