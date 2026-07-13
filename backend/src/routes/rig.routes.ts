@@ -701,7 +701,7 @@ router.get('/:rigId/posts', optionalAuth, async (req: Request, res: Response) =>
         },
         include: {
           author: { select: safeUserSelect },
-          place: { select: { id: true, name: true, category: true, city: true, state: true } },
+          place: { select: { id: true, name: true, category: true, address: true, city: true, state: true, zip: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: 200,

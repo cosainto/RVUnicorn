@@ -182,6 +182,50 @@ router.get('/:slug/timeline', async (req: any, res) => {
       };
     });
 
+    // Reviews by rig crew → feed cards
+    let reviewItems: any[] = [];
+    try {
+      const reviews = await prisma.campgroundReview.findMany({
+        where: { userId: { in: rigUserIds } },
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, profilePicture: true, username: true } },
+          campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true } },
+          place: { select: { id: true, name: true, category: true, city: true, state: true, address: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+      reviewItems = reviews.map((r: any) => {
+        const target = r.place || r.campground;
+        const targetName = target?.name || 'a place';
+        const location = [target?.city, target?.state].filter(Boolean).join(', ');
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+        return {
+          id: `review-${r.id}`,
+          rigId: rig.id,
+          itemType: 'REVIEW',
+          refId: r.id,
+          refType: 'CampgroundReview',
+          title: `${r.user?.firstName || 'Someone'} rated ${targetName} ${stars}`,
+          previewImageUrl: target?.imageUrl || null,
+          previewText: JSON.stringify({
+            rating: r.rating,
+            review: r.review?.slice(0, 200),
+            campgroundId: r.campgroundId,
+            placeId: r.placeId,
+            targetName,
+            location,
+          }),
+          tripId: null,
+          stopId: null,
+          occurredAt: r.createdAt,
+          createdAt: r.createdAt,
+          _user: r.user,
+          _source: 'copilot_review',
+        };
+      });
+    } catch (e: any) { console.error('[RigTimeline] review fetch error:', e.message); }
+
     // Merge and deduplicate: prefer the merged checkin items over per-day timeline items
     // Build a set of campground IDs covered by our merged checkin items
     const mergedCampgroundIds = new Set<string>();
@@ -209,7 +253,7 @@ router.get('/:slug/timeline', async (req: any, res) => {
     });
 
     const existingRefs = new Set(filteredItems.map((i: any) => `${i.refId}-${i.refType}`));
-    const extraItems = [...albumItems, ...checkinItems].filter((i: any) => {
+    const extraItems = [...albumItems, ...checkinItems, ...reviewItems].filter((i: any) => {
       if (existingRefs.has(`${i.refId}-${i.refType}`)) return false;
       return true;
     });

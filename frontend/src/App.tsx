@@ -105,6 +105,7 @@ const CampgroundDetailPage = lazy(() => import('./pages/CampgroundDetailPage'));
 const HostDetailPage = lazy(() => import('./pages/HostDetailPage'));
 const OvernightSpotDetailPage = lazy(() => import('./pages/OvernightSpotDetailPage'));
 const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'));
+const PlaceDetailPage = lazy(() => import('./pages/PlaceDetailPage'));
 const PassengerModePage = lazy(() => import('./pages/PassengerModePage'));
 const CreateHostPage = lazy(() => import('./pages/CreateHostPage'));
 const HitchAIPage = lazy(() => import('./pages/HitchAIPage'));
@@ -334,6 +335,7 @@ function AppContent() {
             <Route path="/hosts/:id" element={<HostDetailPage />} />
             <Route path="/overnight-spots/:id" element={<OvernightSpotDetailPage />} />
             <Route path="/locations/:type/:id" element={<LocationDetailPage />} />
+            <Route path="/place/:id" element={<PlaceDetailPage />} />
             <Route path="/passenger" element={<PassengerModePage />} />
             <Route path="/driving" element={<PassengerModePage />} />
 

@@ -1357,16 +1357,19 @@ model CheckIn {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   harvestHostId   String?
-  overnightSpotId String?
-  campground      Campground?  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  harvestHost     HarvestHost? @relation("CheckInHarvestHost", fields: [harvestHostId], references: [id])
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invites         CheckInInvite[]
+  overnightSpotId          String?
+  placeId                  String?
+  reviewPromptDismissedAt  DateTime?
+  campground               Campground?  @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  harvestHost              HarvestHost? @relation("CheckInHarvestHost", fields: [harvestHostId], references: [id])
+  user                     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invites                  CheckInInvite[]
 
   @@index([userId])
   @@index([campgroundId])
   @@index([harvestHostId])
   @@index([overnightSpotId])
+  @@index([placeId])
   @@index([isActive])
   @@index([tripId])
 }
@@ -1497,7 +1500,8 @@ model CampgroundPostComment {
 
 model CampgroundReview {
   id               String     @id @default(cuid())
-  campgroundId     String
+  campgroundId     String?
+  placeId          String?
   userId           String
   rating           Int
   title            String?
@@ -1513,10 +1517,13 @@ model CampgroundReview {
   petFriendly      String?
   bestSiteNumber   String?
   wouldReturn      String?
-  campground       Campground @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campground       Campground? @relation(fields: [campgroundId], references: [id], onDelete: Cascade)
+  place            Place?      @relation("PlaceReviews", fields: [placeId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([campgroundId, userId])
+  @@unique([placeId, userId])
+  @@index([placeId])
 }
 
 model CampgroundPhoto {
@@ -8220,6 +8227,7 @@ model Place {
   latitude        Float?
   longitude       Float?
   website         String?
+  websiteImageUrl String?
   description     String?
   googlePlaceId   String?    @unique
   createdByUserId String?
@@ -8229,6 +8237,7 @@ model Place {
   createdBy       User?      @relation("PlaceCreator", fields: [createdByUserId], references: [id])
   rigPosts        RigPost[]  @relation("RigPostPlace")
   photos          Photo[]    @relation("PhotoPlace")
+  reviews         CampgroundReview[] @relation("PlaceReviews")
 
   @@index([category])
   @@index([state])

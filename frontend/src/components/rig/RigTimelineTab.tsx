@@ -187,8 +187,10 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
           previewText: JSON.stringify({
             placeId: post.placeId,
             category: post.place?.category,
+            address: post.place?.address,
             city: post.place?.city,
             state: post.place?.state,
+            zip: post.place?.zip,
             caption: post.body || post.title,
           }),
           tripId: post.tripId,
@@ -397,7 +399,9 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
           let pd: any = {};
           try { pd = JSON.parse(item.previewText || '{}'); } catch {}
           const placeName = item.title || 'A Place';
-          const location = [pd.city, pd.state].filter(Boolean).join(', ');
+          const cityState = [pd.city, pd.state].filter(Boolean).join(', ');
+          const fullAddress = pd.address ? `${pd.address}${cityState ? ', ' + cityState : ''}${pd.zip ? ' ' + pd.zip : ''}` : cityState;
+          const location = fullAddress;
           const categoryEmoji: Record<string, string> = {
             CAMPGROUND: '🏕', OVERNIGHT_STOP: '🛏', RESTAURANT: '🍽', HIKING_TRAIL: '🥾',
             ATTRACTION: '🎡', SCENIC_OVERLOOK: '🌄', MUSEUM: '🏛', VISITOR_CENTER: 'ℹ️',
@@ -443,6 +447,36 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
                   <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${CN.gold}20`, color: CN.gold }}>{emoji} {categoryLabel}</span>
                 </div>
                 {pd.caption && <p className="text-xs mt-1 line-clamp-3" style={{ color: CN.muted }}>{pd.caption}</p>}
+              </div>
+              <ActionBar />
+            </div>
+          );
+        }
+
+        // ── REVIEW CARD ──
+        if (item.itemType === 'REVIEW') {
+          let rd: any = {};
+          try { rd = JSON.parse(item.previewText || '{}'); } catch {}
+          const stars = '★'.repeat(rd.rating || 0) + '☆'.repeat(5 - (rd.rating || 0));
+          const targetLink = rd.placeId ? `/place/${rd.placeId}` : rd.campgroundId ? `/campgrounds/${rd.campgroundId}` : null;
+
+          return (
+            <div key={item.id} className="rounded-2xl shadow-md overflow-hidden" style={{ background: CN.card, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <PostHeader item={item} rigName={rigName} ownerAvatar={ownerAvatar} ownerName={ownerName} actionLabel="reviewed a place" />
+              <div className="px-4 pb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">⭐</span>
+                  <div className="flex-1">
+                    {targetLink ? (
+                      <Link to={targetLink} className="text-sm font-bold hover:underline" style={{ color: CN.cream }}>{rd.targetName}</Link>
+                    ) : (
+                      <span className="text-sm font-bold" style={{ color: CN.cream }}>{rd.targetName}</span>
+                    )}
+                    {rd.location && <p className="text-[11px]" style={{ color: CN.muted }}>{rd.location}</p>}
+                  </div>
+                </div>
+                <p className="text-sm mb-1" style={{ color: CN.gold }}>{stars}</p>
+                {rd.review && <p className="text-xs line-clamp-3" style={{ color: CN.muted }}>{rd.review}</p>}
               </div>
               <ActionBar />
             </div>
