@@ -286,7 +286,7 @@ router.patch("/:photoId", authenticateToken, async (req: any, res) => {
   try {
     const { photoId } = req.params;
     const userId = (req as any).user.id;
-    const { caption, visibility, allowDownload, isPinned } = req.body;
+    const { caption, visibility, allowDownload, isPinned, placeId } = req.body;
 
     const photo = await prisma.photo.findUnique({ where: { id: photoId } });
 
@@ -317,6 +317,7 @@ router.patch("/:photoId", authenticateToken, async (req: any, res) => {
     
     if (visibility !== undefined) updateData.visibility = visibility;
     if (allowDownload !== undefined) updateData.allowDownload = allowDownload;
+    if (placeId !== undefined) updateData.placeId = placeId;
     
     // Handle pinning - only one photo can be pinned at a time
     if (isPinned === true) {

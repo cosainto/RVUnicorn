@@ -3,6 +3,7 @@ import { BookOpen, Pin, PinOff, Plus, X, Edit2, Check, Image, Sparkles, RefreshC
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { uploadFile, type FileStatus } from '../utils/uploadMedia';
+import LocationPicker from './LocationPicker';
 
 /* ── Hero Photo Viewer — featured tab ── */
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '😍', '🏕️', '🚐', '⭐'];
@@ -229,9 +230,9 @@ interface EventPhoto {
 }
 
 /* ── Fullscreen Photo Viewer ── */
-function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, onUnpin, user, onClose }: {
+function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, onUnpin, user, onClose, campgroundId }: {
   photos: any[]; startIndex: number; pinnedIds: Set<string>; canPin: boolean;
-  onPin: (id: string) => void; onUnpin: (id: string) => void; user: any; onClose: () => void;
+  onPin: (id: string) => void; onUnpin: (id: string) => void; user: any; onClose: () => void; campgroundId?: string;
 }) {
   const [idx, setIdx] = useState(startIndex);
   const [touchStart, setTouchStart] = useState(0);
@@ -240,6 +241,8 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
   const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState('');
   const submittingRef = useRef(false);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [photoPlaces, setPhotoPlaces] = useState<Record<string, { id: string; name: string; category: string }>>({});
   const photo = photos[idx];
 
   const goNext = useCallback(() => setIdx(i => (i + 1) % photos.length), [photos.length]);
@@ -342,6 +345,18 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
             {photo.user?.profilePicture ? <img src={photo.user.profilePicture} className="w-7 h-7 rounded-full object-cover" alt="" /> : <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#243352', color: '#8B9BB4' }}>{photo.user?.firstName?.[0]}</div>}
             <span className="text-xs text-white/70">{photo.user?.firstName}</span>
           </div>
+          {/* Location tag */}
+          {canPin && (
+            photoPlaces[photo.id] ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(201,168,76,0.2)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}>
+                📍 {photoPlaces[photo.id].name}
+              </span>
+            ) : (
+              <button onClick={() => setLocationPickerOpen(true)} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: 'white/70', border: '1px solid rgba(255,255,255,0.15)' }}>
+                📍 Add location
+              </button>
+            )
+          )}
           <span className="text-xs text-white/50">{idx + 1} of {photos.length}</span>
           {canPin && (
             <button onClick={() => isPinned ? onUnpin(photo.id) : onPin(photo.id)} className="text-xs px-2.5 py-1 rounded-full" style={{ background: isPinned ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)', color: isPinned ? '#C9A84C' : 'white', border: isPinned ? '1px solid rgba(201,168,76,0.3)' : 'none' }}>
@@ -367,15 +382,32 @@ function FullscreenPhotoViewer({ photos, startIndex, pinnedIds, canPin, onPin, o
           <button onClick={submitComment} disabled={!commentText.trim()} className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full disabled:opacity-30 whitespace-nowrap" style={{ background: '#E8622A', color: 'white' }}>Post</button>
         </div>
       </div>
+
+      {/* Location Picker for tagging */}
+      <LocationPicker
+        isOpen={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        campgroundId={campgroundId}
+        onSelect={async (place) => {
+          setLocationPickerOpen(false);
+          if (photo?.id && place.type === 'place') {
+            try {
+              await api.patch(`/photos/${photo.id}`, { placeId: place.id });
+              setPhotoPlaces(prev => ({ ...prev, [photo.id]: { id: place.id, name: place.name, category: place.category } }));
+            } catch (e) { console.error('Failed to tag photo:', e); }
+          }
+        }}
+      />
     </div>
   );
 }
 
-export default function TripScrapbook({ eventId, canPin, canUpload, campgroundName, eventTitle }: {
+export default function TripScrapbook({ eventId, canPin, canUpload, campgroundName, campgroundId, eventTitle }: {
   eventId: string;
   canPin: boolean;
   canUpload?: boolean;
   campgroundName?: string;
+  campgroundId?: string;
   eventTitle?: string;
 }) {
   const { user } = useAuth();
@@ -1188,6 +1220,7 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
             onPin={pinPhoto}
             onUnpin={unpinPhoto}
             user={user}
+            campgroundId={campgroundId}
             onClose={() => { setSelectedPhoto(null); setLightbox(null); }}
           />
         );

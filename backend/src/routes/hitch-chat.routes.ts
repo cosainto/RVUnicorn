@@ -578,23 +578,20 @@ router.post('/photo-caption', async (req: any, res) => {
   try {
     const { campgroundName, location, tripTitle, context } = req.body;
 
-    const prompt = `Generate 3 fun, creative photo captions for an RV camping trip photo.
-Context:
-- Campground: ${campgroundName || 'a beautiful campground'}
-- Location: ${location || 'somewhere amazing'}
-- Trip: ${tripTitle || 'camping adventure'}
-- Additional context: ${context || 'general camping photo'}
+    const prompt = `Write 4 short photo captions for a camping trip photo. Sound like a real person posting on social media — casual, warm, not corporate. No stock-photo language ("showcases", "amenities", "resort-style"). Each caption should feel different.
+
+Location: ${campgroundName || 'campground'}, ${location || ''}
+Trip: ${tripTitle || 'camping trip'}
+${context ? `Scene: ${context}` : ''}
+
+Rules:
+- Max 8 words each (shorter is better)
+- One emoji per caption, placed naturally
+- No hashtags
+- Sound like you'd actually say it, e.g. "Golden hour at the firepit 🔥" not "Resort amenities showcase evening ambiance"
 
 Return ONLY valid JSON, no markdown:
-{
-  "captions": [
-    "Life is better around a campfire 🔥",
-    "Found our happy place 🏕️",
-    "Home is wherever we park it 🚐"
-  ]
-}
-
-Make captions fun, shareable, and RV/camping themed. Mix emojis naturally. Vary the tone - one heartfelt, one funny, one adventurous.`;
+{"captions":["caption1","caption2","caption3","caption4"]}`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',

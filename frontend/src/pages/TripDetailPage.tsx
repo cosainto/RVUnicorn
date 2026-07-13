@@ -2549,6 +2549,7 @@ export default function EventDetailPage() {
               canPin={isOrganizer || !!userAttendee || isPastTrip}
               canUpload={isOrganizer || !!userAttendee || isPastTrip}
               campgroundName={event.campground?.name}
+              campgroundId={event.campground?.id}
               eventTitle={event.title}
             />
           )}

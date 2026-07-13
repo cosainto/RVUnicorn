@@ -344,6 +344,16 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     const unpinned = photos.filter((p: any) => p.scrapbookPins.length === 0);
     if (unpinned.length === 0) return res.json({ suggestions: [] });
 
+    // Filter out likely screenshots: PNG from phone cameras are almost always screenshots,
+    // and Cloudinary URLs contain the format (e.g. .png vs .jpg)
+    const candidates = unpinned.filter((p: any) => {
+      const url = (p.imageUrl || '').toLowerCase();
+      // Exclude PNG uploads (screenshots from phones are PNG; real photos are JPEG/HEIC)
+      if (url.endsWith('.png') || url.includes('/f_png/')) return false;
+      return true;
+    });
+    const pool = candidates.length >= 4 ? candidates : unpinned; // fall back if too few after filter
+
     // Score photos
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -353,7 +363,7 @@ router.post('/:eventId/suggest', authenticateToken, async (req, res) => {
     const tripEnd = event?.endDate ? new Date(event.endDate).getTime() : Date.now();
     const tripDuration = tripEnd - tripStart || 1;
 
-    const scored = unpinned.map((p: any) => {
+    const scored = pool.map((p: any) => {
       let score = 0;
       // Engagement
       score += Math.min(3, (p.likes?.length || 0));
