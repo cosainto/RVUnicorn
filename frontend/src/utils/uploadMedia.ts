@@ -4,13 +4,6 @@
  * Flow: frontend gets a signature from our backend, then uploads
  * directly to Cloudinary with that signature. No file bytes pass
  * through Railway.
- *
- * Usage:
- *   const result = await uploadFile(file, {
- *     folder: 'rvunicorn/trip-photos/abc123',
- *     onProgress: (pct) => setProgress(pct),
- *   });
- *   // result.url, result.publicId, result.width, result.height
  */
 
 import api from '../services/api';
@@ -26,6 +19,8 @@ export interface UploadResult {
   bytes?: number;
 }
 
+export type FileStatus = 'queued' | 'uploading' | 'saving' | 'done' | 'failed';
+
 export interface UploadOptions {
   folder?: string;
   onProgress?: (pct: number) => void;
@@ -35,7 +30,7 @@ export interface UploadOptions {
 export interface BatchUploadOptions {
   folder?: string;
   concurrency?: number;
-  onFileProgress?: (index: number, pct: number) => void;
+  onFileStatus?: (index: number, status: FileStatus, pct: number) => void;
   onFileComplete?: (index: number, result: UploadResult) => void;
   onFileFailed?: (index: number, error: Error) => void;
   timeoutMs?: number;
@@ -49,13 +44,13 @@ export interface BatchUploadResult {
 
 /**
  * Upload a single file directly to Cloudinary with progress tracking.
- * Step 1: Get signature from backend (GET /api/upload/sign?folder=...)
+ * Step 1: Get signature from backend
  * Step 2: POST file + signed params to Cloudinary
  */
 export async function uploadFile(file: File, opts: UploadOptions = {}): Promise<UploadResult> {
   const folder = opts.folder || 'rvunicorn/uploads';
 
-  // Step 1: Get signature from our backend
+  // Step 1: Get signature
   let signData: { signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string };
   try {
     const { data } = await api.get('/upload/sign', { params: { folder } });
@@ -65,7 +60,7 @@ export async function uploadFile(file: File, opts: UploadOptions = {}): Promise<
     throw new Error(`[sign] ${msg}`);
   }
 
-  // Step 2: Upload directly to Cloudinary with the signature
+  // Step 2: Upload to Cloudinary with XHR for progress
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -73,7 +68,6 @@ export async function uploadFile(file: File, opts: UploadOptions = {}): Promise<
     formData.append('timestamp', String(signData.timestamp));
     formData.append('signature', signData.signature);
     formData.append('folder', signData.folder);
-    // Only these params are signed — do NOT add upload_preset, tags, or anything else
 
     const xhr = new XMLHttpRequest();
 
@@ -110,7 +104,7 @@ export async function uploadFile(file: File, opts: UploadOptions = {}): Promise<
 
     xhr.onerror = () => reject(new Error('[cloudinary] Network error — check your connection'));
     xhr.ontimeout = () => reject(new Error('[cloudinary] Upload timed out'));
-    xhr.timeout = opts.timeoutMs ?? 300000; // 5 min default
+    xhr.timeout = opts.timeoutMs ?? 300000;
 
     const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|m4v|webm)$/i.test(file.name);
     const resourceType = isVideo ? 'video' : 'image';
@@ -120,36 +114,56 @@ export async function uploadFile(file: File, opts: UploadOptions = {}): Promise<
 }
 
 /**
- * Upload multiple files with per-file progress and error isolation.
- * Files are uploaded sequentially to avoid saturating mobile connections.
+ * Upload multiple files with a concurrency pool.
+ * At most `concurrency` files upload simultaneously (default 3).
+ * Per-file error isolation: one failure never stops the pool.
  */
 export async function uploadFiles(files: File[], opts: BatchUploadOptions = {}): Promise<BatchUploadResult> {
+  const concurrency = opts.concurrency ?? 3;
   const results: (UploadResult | null)[] = new Array(files.length).fill(null);
   let succeeded = 0;
   let failed = 0;
 
+  // Index queue — workers pull from this
+  let nextIndex = 0;
+
+  // Mark all as queued initially
   for (let i = 0; i < files.length; i++) {
-    try {
-      const result = await uploadFile(files[i], {
-        folder: opts.folder,
-        onProgress: (pct) => opts.onFileProgress?.(i, pct),
-        timeoutMs: opts.timeoutMs,
-      });
-      results[i] = result;
-      succeeded++;
-      opts.onFileComplete?.(i, result);
-    } catch (err: any) {
-      failed++;
-      opts.onFileFailed?.(i, err);
-    }
+    opts.onFileStatus?.(i, 'queued', 0);
   }
+
+  const worker = async () => {
+    while (nextIndex < files.length) {
+      const i = nextIndex++;
+      opts.onFileStatus?.(i, 'uploading', 0);
+      try {
+        const result = await uploadFile(files[i], {
+          folder: opts.folder,
+          onProgress: (pct) => opts.onFileStatus?.(i, 'uploading', pct),
+          timeoutMs: opts.timeoutMs,
+        });
+        opts.onFileStatus?.(i, 'saving', 100);
+        results[i] = result;
+        succeeded++;
+        opts.onFileStatus?.(i, 'done', 100);
+        opts.onFileComplete?.(i, result);
+      } catch (err: any) {
+        failed++;
+        opts.onFileStatus?.(i, 'failed', 0);
+        opts.onFileFailed?.(i, err);
+      }
+    }
+  };
+
+  // Spawn pool workers
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, () => worker());
+  await Promise.all(workers);
 
   return { results, succeeded, failed };
 }
 
 /**
- * Upload a single file and return just the URL. Convenience wrapper
- * for simple cases where you don't need progress or metadata.
+ * Upload a single file and return just the URL.
  */
 export async function uploadAndGetUrl(file: File, folder?: string): Promise<string> {
   const result = await uploadFile(file, { folder });
