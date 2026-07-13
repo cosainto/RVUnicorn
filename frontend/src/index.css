@@ -1,4 +1,4 @@
-/* Import Google Font for brand */
+/* Display font — preloaded in index.html, swap to avoid CLS */
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -46,6 +46,11 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+  }
+
+  /* Display font on ALL headings sitewide */
+  h1, h2, h3 {
+    font-family: var(--font-display);
   }
   
   /* Custom scrollbar */

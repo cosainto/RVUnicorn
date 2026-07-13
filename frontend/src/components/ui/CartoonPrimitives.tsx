@@ -277,7 +277,6 @@ export function CSectionHeader({ children, subtitle, intensity = 'subtle', class
   return (
     <div className={`text-center mb-8 ${className}`}>
       <h2 className="text-2xl md:text-3xl font-bold" style={{
-        fontFamily: intensity === 'full' ? 'var(--font-display)' : undefined,
         color: 'white',
       }}>
         {children}
