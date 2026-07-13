@@ -98,60 +98,119 @@ router.get('/:slug/timeline', async (req: any, res) => {
       _source: 'copilot_album',
     }));
 
-    // Deduplicate check-ins: same campground + same day = one card
-    const checkinsByKey = new Map<string, any>();
-    for (const c of (userCheckins || []).filter((c: any) => c.campground)) {
-      const dateKey = new Date(c.checkInDate || c.createdAt).toISOString().split('T')[0];
-      const key = `${c.campgroundId}_${dateKey}`;
-      if (!checkinsByKey.has(key)) {
-        checkinsByKey.set(key, { ...c, _attendees: [c.user] });
-      } else {
-        // Merge: add this user as attendee
-        const existing = checkinsByKey.get(key)!;
-        if (c.user && !existing._attendees.some((a: any) => a.id === c.user.id)) {
-          existing._attendees.push(c.user);
+    // Deduplicate check-ins: merge all check-ins at the SAME campground whose dates
+    // are adjacent or overlapping into ONE card per stay (not one card per day).
+    const checkinsByCampground = new Map<string, any[]>();
+    for (const c of (userCheckins || []).filter((c: any) => c.campground && c.campgroundId)) {
+      const key = c.campgroundId as string;
+      const list = checkinsByCampground.get(key) || [];
+      list.push(c);
+      checkinsByCampground.set(key, list);
+    }
+
+    const mergedCheckins: any[] = [];
+    for (const [campgroundId, group] of checkinsByCampground) {
+      // Sort by check-in date ascending
+      group.sort((a: any, b: any) => new Date(a.checkInDate || a.createdAt).getTime() - new Date(b.checkInDate || b.createdAt).getTime());
+
+      // Merge adjacent stays (within 3 days)
+      const stays: any[] = [];
+      for (const c of group) {
+        const ciDate = new Date(c.checkInDate || c.createdAt).getTime();
+        const coDate = c.checkOutDate ? new Date(c.checkOutDate).getTime() : ciDate;
+        const last = stays[stays.length - 1];
+
+        if (last && ciDate <= last._endDate + 3 * 86400000) {
+          // Merge into existing stay: extend end date
+          if (coDate > last._endDate) last._endDate = coDate;
+          if (c.checkOutDate && (!last.checkOutDate || new Date(c.checkOutDate) > new Date(last.checkOutDate))) {
+            last.checkOutDate = c.checkOutDate;
+          }
+          // Add attendee
+          if (c.user && !last._attendees.some((a: any) => a.id === c.user.id)) {
+            last._attendees.push(c.user);
+          }
+          // Keep the earliest tripId
+          if (!last.tripId && c.tripId) last.tripId = c.tripId;
+        } else {
+          // New stay
+          stays.push({
+            ...c,
+            _startDate: ciDate,
+            _endDate: coDate,
+            _attendees: [c.user],
+          });
         }
       }
+
+      mergedCheckins.push(...stays);
     }
 
-    const checkinItems = Array.from(checkinsByKey.values()).map((c: any) => ({
-      id: `checkin-${c.id}`,
-      rigId: rig.id,
-      itemType: 'CHECKIN',
-      refId: c.id,
-      refType: 'CheckIn',
-      title: `Checked in at ${c.campground?.name}`,
-      previewImageUrl: c.campground?.imageUrl,
-      previewText: JSON.stringify({ campgroundId: c.campgroundId, city: c.campground?.city, state: c.campground?.state, checkOutDate: c.checkOutDate, tripId: c.tripId }),
-      tripId: c.tripId || null,
-      stopId: null,
-      occurredAt: c.checkInDate || c.createdAt,
-      createdAt: c.createdAt,
-      _user: c.user,
-      _attendees: c._attendees,
-      _source: 'copilot_checkin',
-    }));
+    const checkinItems = mergedCheckins.map((c: any) => {
+      const startDate = new Date(c._startDate);
+      const endDate = new Date(c._endDate);
+      const nights = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 86400000));
+      const dateRange = startDate.getTime() === endDate.getTime()
+        ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
-    // Merge and deduplicate
-    // First: existing timeline CHECKIN items by date key to avoid duplicates with synthetic ones
-    const existingCheckinDates = new Set<string>();
-    for (const item of items) {
-      if (item.itemType === 'CHECKIN') {
-        const dateKey = new Date(item.occurredAt).toISOString().split('T')[0];
-        const title = (item.title || '').toLowerCase();
-        existingCheckinDates.add(`${dateKey}_${title}`);
+      return {
+        id: `checkin-${c.id}`,
+        rigId: rig.id,
+        itemType: 'CHECKIN',
+        refId: c.id,
+        refType: 'CheckIn',
+        title: c.campground?.name || 'Campground',
+        previewImageUrl: c.campground?.imageUrl,
+        // Read city/state from the campground record (source of truth), not a snapshot
+        previewText: JSON.stringify({
+          campgroundId: c.campgroundId,
+          city: c.campground?.city,
+          state: c.campground?.state,
+          checkOutDate: c.checkOutDate,
+          tripId: c.tripId,
+          nights,
+          dateRange,
+        }),
+        tripId: c.tripId || null,
+        stopId: null,
+        occurredAt: c.checkInDate || c.createdAt,
+        createdAt: c.createdAt,
+        _user: c.user,
+        _attendees: c._attendees,
+        _source: 'copilot_checkin',
+      };
+    });
+
+    // Merge and deduplicate: prefer the merged checkin items over per-day timeline items
+    // Build a set of campground IDs covered by our merged checkin items
+    const mergedCampgroundIds = new Set<string>();
+    for (const ci of checkinItems) {
+      try {
+        const d = JSON.parse(ci.previewText || '{}');
+        if (d.campgroundId) mergedCampgroundIds.add(d.campgroundId);
+      } catch {}
+    }
+
+    // Filter out existing timeline CHECKIN items that are now covered by merged cards
+    const filteredItems = items.filter((item: any) => {
+      if (item.itemType !== 'CHECKIN') return true;
+      // Check if this timeline CHECKIN is at a campground we already merged
+      try {
+        const d = JSON.parse(item.previewText || '{}');
+        if (d.campgroundId && mergedCampgroundIds.has(d.campgroundId)) return false;
+      } catch {}
+      // Also check by title match
+      const title = (item.title || '').toLowerCase();
+      for (const ci of checkinItems) {
+        if ((ci.title || '').toLowerCase() === title.replace('checked in at ', '').replace('checked into ', '')) return false;
       }
-    }
+      return true;
+    });
 
-    const existingRefs = new Set(items.map((i: any) => `${i.refId}-${i.refType}`));
+    const existingRefs = new Set(filteredItems.map((i: any) => `${i.refId}-${i.refType}`));
     const extraItems = [...albumItems, ...checkinItems].filter((i: any) => {
       if (existingRefs.has(`${i.refId}-${i.refType}`)) return false;
-      // Also skip if a CHECKIN exists on the same date with same campground name
-      if (i.itemType === 'CHECKIN') {
-        const dateKey = new Date(i.occurredAt).toISOString().split('T')[0];
-        const title = (i.title || '').toLowerCase();
-        if (existingCheckinDates.has(`${dateKey}_${title}`)) return false;
-      }
       return true;
     });
 

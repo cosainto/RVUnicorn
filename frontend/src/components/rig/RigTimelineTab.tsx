@@ -265,7 +265,7 @@ export default function RigTimelineTab({ slug, isOwner, rigName, ownerAvatar, ow
         if (item.itemType === 'CHECKIN') {
           let d: any = {};
           try { d = JSON.parse(item.previewText || '{}'); } catch { d = { state: item.previewText }; }
-          const campName = (title || '').replace('Checked into ', '');
+          const campName = (title || '').replace('Checked into ', '').replace('Checked in at ', '');
           const location = d.location || d.city || d.state || '';
           const hitchLine = d.hitchLine || 'Another adventure begins!';
           const hasPhoto = !!item.previewImageUrl;
