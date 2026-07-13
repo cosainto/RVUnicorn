@@ -8216,6 +8216,7 @@ model Place {
   address         String?
   city            String?
   state           String?
+  zip             String?
   latitude        Float?
   longitude       Float?
   website         String?

@@ -72,8 +72,10 @@ export default function LocationPicker({ isOpen, onClose, onSelect, campgroundId
   // Add-place form state
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState('OTHER');
+  const [newAddress, setNewAddress] = useState('');
   const [newCity, setNewCity] = useState('');
   const [newState, setNewState] = useState('');
+  const [newZip, setNewZip] = useState('');
   const [newLat, setNewLat] = useState('');
   const [newLng, setNewLng] = useState('');
   const [newWebsite, setNewWebsite] = useState('');
@@ -118,8 +120,10 @@ export default function LocationPicker({ isOpen, onClose, onSelect, campgroundId
       const res = await api.post('/places', {
         name: newName.trim(),
         category: newCategory,
+        address: newAddress.trim() || undefined,
         city: newCity.trim() || undefined,
         state: newState.trim() || undefined,
+        zip: newZip.trim() || undefined,
         latitude: newLat ? parseFloat(newLat) : undefined,
         longitude: newLng ? parseFloat(newLng) : undefined,
         website: newWebsite.trim() || undefined,
@@ -147,8 +151,10 @@ export default function LocationPicker({ isOpen, onClose, onSelect, campgroundId
     setShowAddForm(false);
     setNewName('');
     setNewCategory('OTHER');
+    setNewAddress('');
     setNewCity('');
     setNewState('');
+    setNewZip('');
     setNewLat('');
     setNewLng('');
     setNewWebsite('');
@@ -304,7 +310,17 @@ export default function LocationPicker({ isOpen, onClose, onSelect, campgroundId
                 </div>
               </div>
 
-              {/* City + State row */}
+              {/* Street address */}
+              <input
+                type="text"
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                placeholder="Street address (opt)"
+                className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
+                style={{ background: TH.bg, border: `1px solid ${TH.border}`, color: TH.cream }}
+              />
+
+              {/* City + State + Zip row */}
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -319,6 +335,14 @@ export default function LocationPicker({ isOpen, onClose, onSelect, campgroundId
                   value={newState}
                   onChange={(e) => setNewState(e.target.value)}
                   placeholder="State"
+                  className="w-16 px-3 py-2 rounded-lg text-xs focus:outline-none"
+                  style={{ background: TH.bg, border: `1px solid ${TH.border}`, color: TH.cream }}
+                />
+                <input
+                  type="text"
+                  value={newZip}
+                  onChange={(e) => setNewZip(e.target.value)}
+                  placeholder="Zip"
                   className="w-20 px-3 py-2 rounded-lg text-xs focus:outline-none"
                   style={{ background: TH.bg, border: `1px solid ${TH.border}`, color: TH.cream }}
                 />
