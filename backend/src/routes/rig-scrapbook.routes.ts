@@ -214,7 +214,7 @@ router.get('/:slug/timeline', async (req: any, res) => {
       return true;
     });
 
-    const allItems = [...items, ...extraItems].sort(
+    const allItems = [...filteredItems, ...extraItems].sort(
       (a: any, b: any) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     ).slice(0, limit);
 
