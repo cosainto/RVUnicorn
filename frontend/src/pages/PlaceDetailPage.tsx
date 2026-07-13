@@ -372,6 +372,13 @@ export default function PlaceDetailPage() {
           </div>
         )}
 
+        {/* OSM attribution */}
+        {place.googlePlaceId?.startsWith('osm-') && (
+          <p className="text-[10px] text-center mt-6" style={{ color: 'rgba(139,155,180,0.4)' }}>
+            Place data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> contributors
+          </p>
+        )}
+
         {/* Bottom spacer for mobile nav */}
         <div className="h-24" />
       </div>
