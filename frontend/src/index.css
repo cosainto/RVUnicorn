@@ -5,6 +5,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════════════════════════════════
+   CARTOON THEME TOKENS — Campfire Night palette, cel-shaded style
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Campfire Night palette (canonical) */
+  --cn-deep: #0F1C35;
+  --cn-navy: #1B2B4B;
+  --cn-navy-light: #243352;
+  --cn-border: #2A3F5F;
+  --cn-gold: #C9A84C;
+  --cn-orange: #E8622A;
+  --cn-cream: #F5F0E8;
+  --cn-muted: #8B9BB4;
+  --cn-green: #1D9E75;
+
+  /* Cartoon treatment tokens */
+  --cartoon-outline: 3px;
+  --cartoon-outline-thick: 4px;
+  --cartoon-shadow-x: 4px;
+  --cartoon-shadow-y: 4px;
+  --cartoon-shadow-color: rgba(0,0,0,0.25);
+  --cartoon-radius: 16px;
+  --cartoon-radius-lg: 20px;
+  --cartoon-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Display font */
+  --font-display: 'Fredoka', 'Comic Sans MS', cursive;
+}
+
+/* Reduced motion: kill wobble/bounce globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
@@ -147,6 +185,124 @@
 }
 
 @layer utilities {
+  /* ── Cartoon utilities ─────────────────────────────────────── */
+
+  /* Cel shadow — hard edge, no blur */
+  .cel-shadow {
+    box-shadow: var(--cartoon-shadow-x) var(--cartoon-shadow-y) 0px var(--cartoon-shadow-color);
+  }
+  .cel-shadow-gold {
+    box-shadow: var(--cartoon-shadow-x) var(--cartoon-shadow-y) 0px rgba(201,168,76,0.3);
+  }
+
+  /* Thick cartoon outlines */
+  .cartoon-outline {
+    border: var(--cartoon-outline) solid var(--cn-cream);
+  }
+  .cartoon-outline-gold {
+    border: var(--cartoon-outline) solid var(--cn-gold);
+  }
+  .cartoon-outline-border {
+    border: var(--cartoon-outline) solid var(--cn-border);
+  }
+
+  /* Cartoon border radius */
+  .cartoon-rounded {
+    border-radius: var(--cartoon-radius);
+  }
+  .cartoon-rounded-lg {
+    border-radius: var(--cartoon-radius-lg);
+  }
+
+  /* Sticker card: outline + shadow + slight rotation */
+  .sticker {
+    border: var(--cartoon-outline) solid var(--cn-cream);
+    border-radius: var(--cartoon-radius-lg);
+    box-shadow: 5px 5px 0px var(--cn-deep);
+    transition: transform 0.3s var(--cartoon-bounce), box-shadow 0.3s ease;
+  }
+  .sticker:hover {
+    transform: rotate(0deg) scale(1.03);
+    box-shadow: 6px 6px 0px var(--cn-deep);
+  }
+
+  /* Cartoon button (full intensity) */
+  .cartoon-btn {
+    border: var(--cartoon-outline) solid var(--cn-gold);
+    border-radius: var(--cartoon-radius);
+    box-shadow: var(--cartoon-shadow-x) var(--cartoon-shadow-y) 0px rgba(0,0,0,0.3);
+    font-family: var(--font-display);
+    font-weight: 700;
+    transition: transform 0.2s var(--cartoon-bounce), box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .cartoon-btn:hover {
+    transform: scale(1.05) rotate(-1deg);
+  }
+  .cartoon-btn:active {
+    transform: scale(0.97);
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+  }
+
+  /* Subtle variant: same weight, no rotation */
+  .cartoon-btn-subtle {
+    border: var(--cartoon-outline) solid var(--cn-border);
+    border-radius: var(--cartoon-radius);
+    box-shadow: 3px 3px 0px var(--cartoon-shadow-color);
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  .cartoon-btn-subtle:hover {
+    transform: translateY(-1px);
+    box-shadow: 4px 5px 0px var(--cartoon-shadow-color);
+  }
+  .cartoon-btn-subtle:active {
+    transform: translateY(0);
+    box-shadow: 2px 2px 0px var(--cartoon-shadow-color);
+  }
+
+  /* Cartoon input */
+  .cartoon-input {
+    border: var(--cartoon-outline) solid var(--cn-border);
+    border-radius: 12px;
+    background: var(--cn-deep);
+    color: var(--cn-cream);
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .cartoon-input:focus {
+    border-color: var(--cn-gold);
+  }
+  .cartoon-input::placeholder {
+    color: var(--cn-muted);
+  }
+
+  /* Cartoon card (subtle intensity) */
+  .cartoon-card {
+    background: var(--cn-navy);
+    border: var(--cartoon-outline) solid var(--cn-border);
+    border-radius: var(--cartoon-radius);
+    box-shadow: var(--cartoon-shadow-x) var(--cartoon-shadow-y) 0px var(--cartoon-shadow-color);
+  }
+
+  /* Cartoon badge */
+  .cartoon-badge {
+    border: 2px solid var(--cn-gold);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--cn-gold);
+    background: rgba(201,168,76,0.1);
+  }
+
+  /* Display font utility */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
   /* Animation utilities */
   .animate-float {
     animation: float 3s ease-in-out infinite;
