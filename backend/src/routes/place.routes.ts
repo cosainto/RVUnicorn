@@ -5,6 +5,18 @@ import { prisma } from '../lib/prisma';
 const router = Router();
 const db = prisma as any;
 
+// Geocode an address string to lat/lng using Nominatim (OpenStreetMap)
+async function geocodeAddress(parts: { address?: string; city?: string; state?: string; zip?: string }): Promise<{ lat: number; lng: number } | null> {
+  const query = [parts.address, parts.city, parts.state, parts.zip].filter(Boolean).join(', ') + ', USA';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'RVUnicorn/1.0' } });
+    const data: any = await res.json();
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch (e: any) { console.error('[Place] geocode error:', e.message); }
+  return null;
+}
+
 // Helper: compute distance in miles between two lat/lng points (Haversine)
 function distanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (v: number) => (v * Math.PI) / 180;
@@ -214,6 +226,14 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'name and category are required' });
     }
 
+    // Geocode if lat/lng missing but we have address info
+    let lat = latitude ? parseFloat(latitude) : undefined;
+    let lng = longitude ? parseFloat(longitude) : undefined;
+    if (!lat && !lng && (address || city || state || zip)) {
+      const coords = await geocodeAddress({ address, city, state, zip });
+      if (coords) { lat = coords.lat; lng = coords.lng; }
+    }
+
     const place = await db.place.create({
       data: {
         name,
@@ -222,8 +242,8 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
         city,
         state,
         zip,
-        latitude: latitude ? parseFloat(latitude) : undefined,
-        longitude: longitude ? parseFloat(longitude) : undefined,
+        latitude: lat,
+        longitude: lng,
         website,
         description,
         googlePlaceId,
