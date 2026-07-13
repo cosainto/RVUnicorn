@@ -1208,7 +1208,8 @@ ${story.content.slice(0, 200)}...`, eventId, type: 'TRIP_STORY' });
       {/* Photo Lightbox with Tagging (for All Photos view) */}
       {/* Fullscreen Photo Viewer */}
       {(selectedPhoto || lightbox) && (() => {
-        const startPhoto = selectedPhoto || (lightbox?.photo ? { ...lightbox.photo, id: lightbox.photoId } : null);
+        // lightbox can be either a Pin (with .photo and .photoId) or a direct photo object (from HeroPhotoViewer)
+        const startPhoto = selectedPhoto || (lightbox?.photo ? { ...lightbox.photo, id: lightbox.photoId } : lightbox?.id ? lightbox : null);
         if (!startPhoto) return null;
         const startIdx = photos.findIndex(p => p.id === startPhoto.id);
         return (
