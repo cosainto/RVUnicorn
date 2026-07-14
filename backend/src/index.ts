@@ -195,6 +195,7 @@ import localBusinessRoutes from './routes/local-business.routes';
 import dealerRoutes from './routes/dealer.routes';
 import smartTripAssistantRoutes from './routes/smart-trip-assistant.routes';
 import placeRoutes from './routes/place.routes';
+import dreamTripRoutes from './routes/dream-trips.routes';
 import passport from 'passport';
 
 
@@ -411,6 +412,7 @@ app.use("/api/rigs", rigHubRoutes);
 app.use("/api/rigs", rigScrapbookRoutes);
 app.use("/api/smart-trip", smartTripAssistantRoutes);
 app.use('/api/places', placeRoutes);
+app.use('/api/dream-trips', dreamTripRoutes);
 app.use("/api", emailRoutes);
 
 
