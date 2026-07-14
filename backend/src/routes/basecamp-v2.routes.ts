@@ -902,4 +902,131 @@ router.post('/feed-tab-seen', authenticateToken, async (req: any, res: Response)
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════
+// DISCOVERY HUB — trending nearby campgrounds and places
+// ══════════════════════════════════════════════════════════════════════
+
+router.get('/discovery', authenticateToken, async (req: any, res) => {
+  try {
+    const db = prisma as any;
+    const userId = req.userId;
+    const lat = parseFloat(req.query.lat as string) || null;
+    const lng = parseFloat(req.query.lng as string) || null;
+
+    // If no lat/lng provided, try user's home location
+    let userLat = lat;
+    let userLng = lng;
+    if (!userLat || !userLng) {
+      // Geocode from user's homeCity/homeState
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { homeCity: true, homeState: true, homeZipCode: true },
+      });
+      if (user?.homeCity && user?.homeState) {
+        // Simple geocode lookup - use Nominatim
+        try {
+          const query = [user.homeCity, user.homeState, user.homeZipCode].filter(Boolean).join(', ') + ', USA';
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+            headers: { 'User-Agent': 'RVUnicorn/1.0' },
+          });
+          const geoData = await geoRes.json();
+          if (geoData?.[0]) {
+            userLat = parseFloat(geoData[0].lat);
+            userLng = parseFloat(geoData[0].lon);
+          }
+        } catch {}
+      }
+    }
+
+    // Fallback to center of US if still no location
+    if (!userLat || !userLng) { userLat = 39.8; userLng = -98.5; }
+
+    // Haversine distance helper
+    const distMiles = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+      const R = 3959;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    };
+
+    // Bounding box for ~150 miles
+    const delta = 2.2; // ~150 miles in degrees
+    const bbox = {
+      latMin: userLat - delta, latMax: userLat + delta,
+      lngMin: userLng - delta, lngMax: userLng + delta,
+    };
+
+    // Query campgrounds in range
+    const campgrounds = await db.campground.findMany({
+      where: {
+        latitude: { gte: bbox.latMin, lte: bbox.latMax },
+        longitude: { gte: bbox.lngMin, lte: bbox.lngMax },
+      },
+      select: {
+        id: true, name: true, imageUrl: true, state: true, city: true,
+        latitude: true, longitude: true,
+        googleRating: true, googleReviewCount: true,
+      },
+      take: 200,
+    });
+
+    // Query places in range
+    const places = await db.place.findMany({
+      where: {
+        latitude: { gte: bbox.latMin, lte: bbox.latMax },
+        longitude: { gte: bbox.lngMin, lte: bbox.lngMax },
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true, name: true, category: true, city: true, state: true,
+        latitude: true, longitude: true, websiteImageUrl: true,
+      },
+      take: 200,
+    });
+
+    // Compute distances, score, merge, sort
+    const results: any[] = [];
+
+    for (const c of campgrounds) {
+      if (!c.latitude || !c.longitude) continue;
+      const dist = Math.round(distMiles(userLat, userLng, c.latitude, c.longitude));
+      if (dist > 150) continue;
+      const score = ((c.googleRating || 0) * Math.log2((c.googleReviewCount || 0) + 1)) / (dist + 1);
+      results.push({
+        id: c.id, name: c.name, type: 'campground',
+        imageUrl: c.imageUrl, city: c.city, state: c.state,
+        latitude: c.latitude, longitude: c.longitude,
+        rating: c.googleRating, reviewCount: c.googleReviewCount,
+        distance: dist, score,
+      });
+    }
+
+    for (const p of places) {
+      if (!p.latitude || !p.longitude) continue;
+      const dist = Math.round(distMiles(userLat, userLng, p.latitude, p.longitude));
+      if (dist > 150) continue;
+      results.push({
+        id: p.id, name: p.name, type: 'place',
+        category: p.category, imageUrl: p.websiteImageUrl,
+        city: p.city, state: p.state,
+        latitude: p.latitude, longitude: p.longitude,
+        rating: null, reviewCount: null,
+        distance: dist, score: 1 / (dist + 1),
+      });
+    }
+
+    // Sort by score descending, take top 10
+    results.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    res.json({
+      trending: results.slice(0, 10),
+      userLocation: { lat: userLat, lng: userLng },
+    });
+  } catch (e: any) {
+    console.error('[Discovery] error:', e.message);
+    res.status(500).json({ error: 'Failed to load discovery' });
+  }
+});
+
 export default router;

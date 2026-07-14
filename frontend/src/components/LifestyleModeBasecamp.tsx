@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MessageCircle, ChevronRight, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import RigPulseCardV2 from './basecamp/RigPulseCardV2';
+import DiscoveryHub from './basecamp/DiscoveryHub';
 import RVCircleCard from './basecamp/RVCircleCard';
 import DiscoverCardV2 from './basecamp/DiscoverCardV2';
 import DreamingSection from './basecamp/DreamingSection';
@@ -124,6 +125,9 @@ export default function LifestyleModeBasecamp({ user }: Props) {
           {/* ═══ TIER 3 — RECENT REAL ACTIVITY ═══ */}
           {/* Rig Pulse (active trip or idle rig status — rich, personal) */}
           <RigPulseCardV2 data={data?.rigPulse || null} />
+
+          {/* Discovery Hub (trending nearby, recommendations) */}
+          <DiscoveryHub />
 
           {/* RV Circle (followed rig activity — social, rich cards) */}
           <RVCircleCard data={data?.rvCircle || null} />
