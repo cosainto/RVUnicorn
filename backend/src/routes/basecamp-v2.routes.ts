@@ -1175,7 +1175,7 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
       try {
         const recipes = await db.recipe.findMany({
           where: { source: 'editorial' },
-          select: { id: true, title: true, imageUrl: true, cookTime: true, tags: true, rating: true },
+          select: { id: true, title: true, imageUrl: true, cookTime: true, category: true, difficulty: true },
           take: 20,
         });
         if (recipes.length > 0) {
