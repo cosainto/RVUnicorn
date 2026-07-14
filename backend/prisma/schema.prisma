@@ -1271,6 +1271,7 @@ model Recipe {
   privacy               String                  @default("PUBLIC")
   dietaryPreferences    String[]                @default([])
   imageType             String                  @default("user")
+  source                String?
   hitchMessage          String?
   aiImageUrl            String?
   officialImageUrl      String?
