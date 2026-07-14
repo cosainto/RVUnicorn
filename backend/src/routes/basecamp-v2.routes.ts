@@ -1178,10 +1178,13 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
           select: { id: true, title: true, imageUrl: true, cookTime: true, category: true, difficulty: true },
           take: 20,
         });
+        console.log('[Discovery] editorial recipes found:', recipes.length);
         if (recipes.length > 0) {
           featuredRecipe = recipes[dayOfYear % recipes.length];
         }
-      } catch {}
+      } catch (recipeErr: any) {
+        console.error('[Discovery] recipe query error:', recipeErr.message?.slice(0, 200));
+      }
 
       campKitchen = featuredRecipe ? {
         featured: featuredRecipe,
