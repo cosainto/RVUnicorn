@@ -962,10 +962,13 @@ model Event {
   highlights          EventHighlight[]
   connections         EventConnection[]
   tripMemory          TripMemoryRecord?
+  placeId             String?
+  place               Place?            @relation("EventPlace", fields: [placeId], references: [id])
   invites             Invite[]          @relation("EventInvites")
 
   @@index([organizerId])
   @@index([campgroundId])
+  @@index([placeId])
   @@index([overnightSpotId])
   @@index([roadTripId])
   @@index([startDate])
@@ -4100,6 +4103,7 @@ model RoadTrip {
   startDate   DateTime?
   endDate     DateTime?
   privacy     String    @default("PUBLIC")
+  isDream     Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -4114,6 +4118,7 @@ model RoadTrip {
   stops Event[] @relation("RoadTripStops")
 
   @@index([userId])
+  @@index([isDream])
 }
 
 enum ThingType {
@@ -8239,6 +8244,7 @@ model Place {
   rigPosts        RigPost[]  @relation("RigPostPlace")
   photos          Photo[]    @relation("PhotoPlace")
   reviews         CampgroundReview[] @relation("PlaceReviews")
+  events          Event[]    @relation("EventPlace")
 
   @@index([category])
   @@index([state])
