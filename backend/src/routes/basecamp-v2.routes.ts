@@ -1060,6 +1060,16 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
             longitude: { gte: nearLng - nearDelta, lte: nearLng + nearDelta },
             id: { not: ci.campgroundId },
             googleRating: { gte: 3.5 },
+            // Exclude non-campground records that leaked into the campground table
+            NOT: {
+              OR: [
+                { name: { contains: 'Picnic Area', mode: 'insensitive' } },
+                { name: { contains: 'Scenic Corridor', mode: 'insensitive' } },
+                { name: { contains: 'Trailhead', mode: 'insensitive' } },
+                { name: { contains: 'Hwy ', mode: 'insensitive' } },
+                { name: { contains: 'Highway ', mode: 'insensitive' } },
+              ],
+            },
           },
           select: { id: true, name: true, imageUrl: true, city: true, state: true, latitude: true, longitude: true, googleRating: true, googleReviewCount: true },
           orderBy: [{ googleRating: 'desc' }, { googleReviewCount: 'desc' }],

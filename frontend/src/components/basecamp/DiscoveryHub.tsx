@@ -266,7 +266,7 @@ export default function DiscoveryHub() {
                     ) : (
                       <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 60%, ${CN.deep} 100%)`, position: 'relative' }}>
                         {/* Genie mascot — bottom-right, subtle */}
-                        <img src="/images/genie-full.png" alt="" style={{
+                        <img src="/images/genie-full-v2.png" alt="" style={{
                           position: 'absolute', bottom: 4, right: 4,
                           width: 48, height: 48, objectFit: 'contain', opacity: 0.4,
                         }} />
@@ -305,7 +305,7 @@ export default function DiscoveryHub() {
             boxShadow: `5px 5px 0px ${CN.deep}`, background: CN.navy,
             transform: 'rotate(-0.5deg)',
           }}>
-            <img src="/images/genie-full.png" alt="Genie mascot" style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
+            <img src="/images/genie-full-v2.png" alt="Genie mascot" style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
             <h4 style={{ fontSize: 15, fontWeight: 700, color: CN.cream, marginBottom: 4 }}>
               Make a wish — save campgrounds and experiences you dream of visiting
             </h4>

@@ -1169,7 +1169,7 @@ export default function RoadTripDetailPage() {
             <div className="h-2" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)' }} />
             <div className="p-5">
               <div className="flex items-center gap-3 mb-4">
-                <img src="/images/genie-full.png" alt="" className="w-10 h-10 object-contain" />
+                <img src="/images/genie-full-v2.png" alt="" className="w-10 h-10 object-contain" />
                 <div>
                   <h2 className="text-base font-bold text-gray-900">Promote to Real Trip</h2>
                   <p className="text-sm text-gray-500">Set dates to turn this dream into reality</p>

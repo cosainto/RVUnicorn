@@ -205,14 +205,14 @@ function FavoritesSidebar() {
     <div className="cartoon-card" style={{ background: CN.card }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: `1px solid ${CN.border}` }}>
         <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>
-          <img src="/images/genie-icon.png" alt="" className="w-4 h-4 inline mr-1" style={{ objectFit: 'contain' }} /> Favorite Campsites
+          <img src="/images/genie-icon-v2.png" alt="" className="w-4 h-4 inline mr-1" style={{ objectFit: 'contain' }} /> Favorite Campsites
         </h3>
       </div>
       <div className="p-2">
         {loading && <div className="h-16 animate-pulse rounded-lg" style={{ background: CN.border }} />}
         {!loading && items.length === 0 && (
           <div className="text-center py-4 px-2">
-            <img src="/images/genie-full.png" alt="Genie" className="w-12 h-12 mx-auto mb-2 object-contain" />
+            <img src="/images/genie-full-v2.png" alt="Genie" className="w-12 h-12 mx-auto mb-2 object-contain" />
             <p className="text-xs font-semibold mb-1" style={{ color: CN.cream }}>Make a wish</p>
             <p className="text-[10px] mb-2" style={{ color: CN.muted }}>Save places you dream of visiting</p>
             <Link to="/campgrounds" className="text-[10px] font-semibold" style={{ color: CN.gold }}>Explore →</Link>
