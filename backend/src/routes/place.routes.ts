@@ -618,4 +618,35 @@ router.post('/:id/reviews', authenticateToken, async (req: Request, res: Respons
   }
 });
 
+// ──────────────────────────────────────────────
+// POST /wishlist — Add a place to wishlist
+// ──────────────────────────────────────────────
+router.post('/wishlist', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { placeId, name } = req.body;
+    if (!placeId) return res.status(400).json({ error: 'placeId required' });
+
+    const item = await db.placeWishlist.upsert({
+      where: { userId_placeId: { userId, placeId } },
+      create: { userId, placeId, name: name || '' },
+      update: {},
+    });
+    res.json(item);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to add to wishlist' });
+  }
+});
+
+// DELETE /wishlist/:placeId — Remove from wishlist
+router.delete('/wishlist/:placeId', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    await db.placeWishlist.deleteMany({ where: { userId, placeId: req.params.placeId } });
+    res.json({ removed: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to remove from wishlist' });
+  }
+});
+
 export default router;

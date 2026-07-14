@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star } from 'lucide-react';
+import GenieWishlistButton from '../ui/GenieWishlistButton';
 import api from '../../services/api';
 import { CBadge, CN, SquiggleUnderline } from '../ui/CartoonPrimitives';
 
@@ -83,6 +84,10 @@ function DiscoveryCard({ item, rotation = 0, size = 'large' }: { item: Discovery
             {item.distance} mi
           </span>
         )}
+        {/* Genie wishlist button */}
+        <div style={{ position: 'absolute', bottom: 8, right: 8 }}>
+          <GenieWishlistButton itemId={item.id} itemType={item.type} itemName={item.name} size="sm" scrim />
+        </div>
       </div>
       <div style={{ padding: '10px 12px' }}>
         <h3 style={{ fontSize: size === 'large' ? 14 : 12, fontWeight: 700, color: CN.cream, lineHeight: 1.3, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -252,9 +257,9 @@ export default function DiscoveryHub() {
             boxShadow: `5px 5px 0px ${CN.deep}`, background: CN.navy,
             transform: 'rotate(-0.5deg)',
           }}>
-            <span style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>🌄</span>
+            <img src="/images/genie-full.png" alt="Genie mascot" style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
             <h4 style={{ fontSize: 15, fontWeight: 700, color: CN.cream, marginBottom: 4 }}>
-              Your adventure bucket list starts here
+              Make a wish — save campgrounds and experiences you dream of visiting
             </h4>
             <p style={{ fontSize: 11, color: CN.muted, marginBottom: 12 }}>
               Save campgrounds you dream about visiting — we'll help you plan the trip.
