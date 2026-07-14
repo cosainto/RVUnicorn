@@ -6,6 +6,7 @@ import {
   Heart, Star, Camera, Award, Megaphone, Clock, X, Check, Plus, Upload, Map, Trash2, MessageSquare, Settings, Bell, BellOff, ExternalLink, UserPlus, MapPinned, Edit
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import GenieWishlistButton from '../components/ui/GenieWishlistButton';
 import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
 import { uploadAndGetUrl } from '../utils/uploadMedia';
@@ -672,10 +673,7 @@ export default function CampgroundDetailPage() {
                 <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} /></div>
                 <span className="text-white/70 text-xs">{campground._count?.followers || 0}</span>
               </button>
-              <button onClick={toggleWishlist} className="flex flex-col items-center gap-0.5" title={inWishlist ? "On Wishlist" : "Add to Wishlist"}>
-                <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><span className="text-sm">🧞</span></div>
-                <span className="text-white/70 text-xs">{campground._count?.checkIns || 0}</span>
-              </button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" onToggle={v => setInWishlist(v)} />
               {inWishlist && (
                 <div className="relative">
                   <button onClick={() => setShowNotifPrefs(!showNotifPrefs)} className="flex flex-col items-center gap-0.5" title="Notification preferences">
@@ -850,10 +848,7 @@ export default function CampgroundDetailPage() {
                 <div className={`w-8 h-8 rounded-full shadow flex items-center justify-center transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} /></div>
                 <span className="text-amber-900/70 text-xs font-medium">{campground._count?.followers || 0}</span>
               </button>
-              <button onClick={toggleWishlist} className="flex flex-col items-center gap-0.5" title={inWishlist ? "On Wishlist" : "Add to Wishlist"}>
-                <div className={`w-8 h-8 rounded-full shadow flex items-center justify-center transition ${inWishlist ? 'bg-purple-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}><span className="text-sm">🧞</span></div>
-                <span className="text-amber-900/70 text-xs font-medium">{campground._count?.checkIns || 0}</span>
-              </button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className="flex flex-col items-center gap-0.5" title={isMuted ? "Unmute" : "Mute"}>
                 <div className={`w-8 h-8 rounded-full shadow flex items-center justify-center transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</div>
                 <span className="text-amber-900/70 text-xs font-medium">{isMuted ? 'muted' : 'follow'}</span>
@@ -936,10 +931,7 @@ export default function CampgroundDetailPage() {
                 <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} /></div>
                 <span className="text-white/70 text-xs">{campground._count?.followers || 0}</span>
               </button>
-              <button onClick={toggleWishlist} className="flex flex-col items-center gap-0.5" title={inWishlist ? "On Wishlist" : "Add to Wishlist"}>
-                <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}><span className="text-sm">🧞</span></div>
-                <span className="text-white/70 text-xs">{campground._count?.checkIns || 0}</span>
-              </button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className="flex flex-col items-center gap-0.5" title={isMuted ? "Unmute" : "Mute"}>
                 <div className={`w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</div>
                 <span className="text-white/70 text-xs">{isMuted ? 'muted' : 'follow'}</span>
@@ -1042,10 +1034,7 @@ export default function CampgroundDetailPage() {
                 <div className={`w-8 h-8 rounded flex items-center justify-center transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-gray-800/80 text-white hover:bg-orange-500'}`}><Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} /></div>
                 <span className="text-gray-400 text-xs">{campground._count?.followers || 0}</span>
               </button>
-              <button onClick={toggleWishlist} className="flex flex-col items-center gap-0.5" title={inWishlist ? "On Wishlist" : "Add to Wishlist"}>
-                <div className={`w-8 h-8 rounded flex items-center justify-center transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-gray-800/80 text-white hover:bg-purple-500'}`}><span className="text-sm">🧞</span></div>
-                <span className="text-gray-400 text-xs">{campground._count?.checkIns || 0}</span>
-              </button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className="flex flex-col items-center gap-0.5" title={isMuted ? "Unmute" : "Mute"}>
                 <div className={`w-8 h-8 rounded flex items-center justify-center transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-gray-800/80 text-white hover:bg-gray-600'}`}>{isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}</div>
                 <span className="text-gray-400 text-xs">{isMuted ? 'muted' : 'follow'}</span>
@@ -1129,10 +1118,7 @@ export default function CampgroundDetailPage() {
                 <Heart className={`w-5 h-5 transition ${isFavorited ? 'text-red-500 fill-current' : 'text-white/70 hover:text-white'}`} />
                 <span className="text-white/60 text-xs">{campground._count?.followers || 0}</span>
               </button>
-              <button onClick={toggleWishlist} className="flex flex-col items-center gap-0.5" title={inWishlist ? "On Wishlist" : "Add to Wishlist"}>
-                <span className={`text-base transition ${inWishlist ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>🧞</span>
-                <span className="text-white/60 text-xs">{campground._count?.checkIns || 0}</span>
-              </button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className="flex flex-col items-center gap-0.5" title={isMuted ? "Unmute" : "Mute"}>
                 {isMuted ? <BellOff className="w-5 h-5 text-gray-400" /> : <Bell className="w-5 h-5 text-white/70 hover:text-white" />}
                 <span className="text-white/60 text-xs">{isMuted ? 'off' : 'on'}</span>
@@ -1192,7 +1178,7 @@ export default function CampgroundDetailPage() {
               )}
               {user && <div className="absolute top-4 right-4 flex gap-2">
               <button onClick={handleToggleFavorite} className={`p-3 rounded-full transition ${isFavorited ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:text-red-500'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
-              <button onClick={toggleWishlist} className={`p-3 rounded-full transition ${inWishlist ? 'bg-purple-500 text-white' : 'bg-white/90 text-gray-600 hover:text-purple-500'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="lg" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className={`p-3 rounded-full transition ${isMuted ? 'bg-gray-500 text-white' : 'bg-white/90 text-gray-600 hover:text-gray-700'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
             </div>}
             </div>
@@ -1283,7 +1269,7 @@ export default function CampgroundDetailPage() {
                   </div>
                   {user && <div className="absolute top-4 right-4 flex gap-2">
               <button onClick={handleToggleFavorite} className={`p-3 rounded-full shadow-lg transition ${isFavorited ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} /></button>
-              <button onClick={toggleWishlist} className={`p-3 rounded-full shadow-lg transition ${inWishlist ? 'bg-purple-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span className="text-xl">🧞</span></button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="lg" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className={`p-3 rounded-full shadow-lg transition ${isMuted ? 'bg-gray-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}</button>
             </div>}
                 </div>
@@ -1386,7 +1372,7 @@ export default function CampgroundDetailPage() {
               {isAdmin && <span className="px-3 py-1 bg-pink-500/20 border border-pink-500 text-pink-400 text-xs font-bold tracking-wider rounded">ADMIN</span>}
               {user && <div className="flex gap-2">
               <button onClick={handleToggleFavorite} className={`p-3 rounded border transition ${isFavorited ? 'bg-red-500 border-red-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isFavorited ? "Unfavorite" : "Favorite"}><Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} /></button>
-              <button onClick={toggleWishlist} className={`p-3 rounded border transition ${inWishlist ? 'bg-purple-500 border-purple-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={inWishlist ? "On Wishlist" : "Add to Wishlist"}><span>🧞</span></button>
+              <GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="lg" onToggle={v => setInWishlist(v)} />
               <button onClick={toggleMute} className={`p-3 rounded border transition ${isMuted ? 'bg-gray-500 border-gray-500 text-white' : 'bg-gray-900/50 border-cyan-500/50 text-cyan-400 hover:border-cyan-400'}`} title={isMuted ? "Unmute" : "Mute"}>{isMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}</button>
             </div>}
             </div>
@@ -1494,7 +1480,7 @@ export default function CampgroundDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {user && <><ActionButton variant={isFavorited ? "primary" : "tertiary"} onClick={handleToggleFavorite} icon={<Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />} style={isFavorited ? { backgroundColor: '#dc2626' } : {}}>{isFavorited ? "Favorited" : "Favorite"}</ActionButton><ActionButton variant={inWishlist ? "primary" : "tertiary"} onClick={toggleWishlist} icon={<span>🧞</span>} style={inWishlist ? { backgroundColor: '#7c3aed' } : {}}>{inWishlist ? "Wishlisted" : "Wishlist"}</ActionButton><ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }}>Check In</ActionButton><ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#16a34a' }}>Plan a Trip</ActionButton><ActionButton variant="ghost" onClick={toggleMute} icon={isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />} className="text-gray-600" /></>}
+              {user && <><ActionButton variant={isFavorited ? "primary" : "tertiary"} onClick={handleToggleFavorite} icon={<Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />} style={isFavorited ? { backgroundColor: '#dc2626' } : {}}>{isFavorited ? "Favorited" : "Favorite"}</ActionButton><GenieWishlistButton itemId={campground.id} itemType="campground" saved={inWishlist} size="md" showLabel onToggle={v => setInWishlist(v)} /><ActionButton variant="primary" onClick={() => setShowCheckInModal(true)} icon={<Calendar className="w-4 h-4" />} style={{ backgroundColor: accentColor }}>Check In</ActionButton><ActionButton variant="primary" onClick={() => navigate(getTripUrl())} icon={<MapPinned className="w-4 h-4" />} style={{ backgroundColor: '#16a34a' }}>Plan a Trip</ActionButton><ActionButton variant="ghost" onClick={toggleMute} icon={isMuted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />} className="text-gray-600" /></>}
               {<CampspotBookButton campgroundId={campground.id} campspotSlug={campground.name} variant="classic" />}
               {!campground.campspotSlug && campground.bookingUrl && <a href={campground.bookingUrl} target="_blank" rel="noopener noreferrer" className="btn flex items-center gap-2 bg-green-600 text-white hover:bg-green-700">Book Now<ExternalLink className="w-4 h-4" /></a>}
 

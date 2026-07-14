@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Star, Globe, ChevronLeft, Camera } from 'lucide-react';
+import GenieWishlistButton from '../components/ui/GenieWishlistButton';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Helmet } from 'react-helmet-async';
@@ -197,6 +198,10 @@ export default function PlaceDetailPage() {
           >
             <ChevronLeft className="w-5 h-5" style={{ color: theme.cream }} />
           </button>
+          {/* Wishlist button */}
+          <div className="absolute top-4 right-4 z-10">
+            <GenieWishlistButton itemId={place.id} itemType="place" itemName={place.name} size="md" scrim />
+          </div>
           {/* Name + category badge */}
           <div className="absolute bottom-4 left-4 right-4">
             <span
