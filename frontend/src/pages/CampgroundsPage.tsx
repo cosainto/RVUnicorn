@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Search, MapPin, Star, Plus, Phone, Globe, Navigation, SlidersHorizontal, X, Grid3X3, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SuggestCampground from '../components/SuggestCampground';
+import GenieWishlistButton from '../components/ui/GenieWishlistButton';
 import HarvestHostsTab from '../components/HarvestHostsTab';
 import HitchCampgroundFinder from '../components/HitchCampgroundFinder';
 import HiddenGemFinder from '../components/HiddenGemFinder';
@@ -60,6 +61,19 @@ export default function CampgroundsPage() {
   const [pageTab, setPageTab] = useState<'campgrounds' | 'rv-networks' | 'find-similar' | 'hidden-gems' | 'for-you' | 'overnight'>('campgrounds');
   const [overnightStops, setOvernightStops] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
+  const [wishlistFilter, setWishlistFilter] = useState(false);
+
+  // Fetch wishlist on mount
+  useEffect(() => {
+    if (!user) return;
+    api.get('/basecamp/v2/discovery').then(res => {
+      const items = res.data?.wishlist || [];
+      setWishlistItems(items);
+      setWishlistIds(new Set(items.map((w: any) => w.id)));
+    }).catch(() => {});
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -294,6 +308,13 @@ export default function CampgroundsPage() {
             <SlidersHorizontal className="w-4 h-4" /> Filters
             {activeFilterCount > 0 && <span className="bg-white text-primary-600 rounded-full w-5 h-5 text-xs flex items-center justify-center font-bold">{activeFilterCount}</span>}
           </button>
+          {user && wishlistIds.size > 0 && (
+            <button className={`btn px-4 flex items-center gap-2 ${wishlistFilter ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => { setWishlistFilter(f => !f); setCurrentPage(1); }}
+              style={wishlistFilter ? { background: '#C9A84C', color: '#0F1C35' } : {}}>
+              ⭐ My Wishlist
+            </button>
+          )}
           <button className="btn btn-secondary flex items-center gap-2" onClick={() => setShowSuggestModal(true)}><Plus className="w-4 h-4" /> Suggest</button>
         </div>
 
@@ -405,12 +426,16 @@ export default function CampgroundsPage() {
                 ))
               }
             </Geographies>
-            {campgrounds.filter(c => c.latitude && c.longitude).map(c => (
-              <Marker key={c.id} coordinates={[c.longitude!, c.latitude!]}>
-                <circle r={4} fill="#E8A838" stroke="#0F1C35" strokeWidth={1.5} />
-                <title>{c.name}</title>
-              </Marker>
-            ))}
+            {campgrounds.filter(c => c.latitude && c.longitude).map(c => {
+              const isWished = wishlistIds.has(c.id);
+              return (
+                <Marker key={c.id} coordinates={[c.longitude!, c.latitude!]}>
+                  <circle r={isWished ? 6 : 4} fill={isWished ? '#C9A84C' : '#E8A838'} stroke={isWished ? '#FFD700' : '#0F1C35'} strokeWidth={isWished ? 2 : 1.5} />
+                  {isWished && <circle r={9} fill="none" stroke="#C9A84C" strokeWidth={1} opacity={0.4} />}
+                  <title>{c.name}{isWished ? ' ⭐' : ''}</title>
+                </Marker>
+              );
+            })}
           </ComposableMap>
           {/* Mini cards below map for campgrounds with coordinates */}
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
@@ -427,14 +452,46 @@ export default function CampgroundsPage() {
         </div>
       )}
 
+      {/* Wishlist Row — compact horizontal scroll */}
+      {!wishlistFilter && wishlistItems.length > 0 && viewMode === 'grid' && (
+        <div className="mb-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider mb-2 px-1" style={{ color: '#E8A838' }}>
+            ⭐ From your wishlist
+          </h3>
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            {wishlistItems.slice(0, 6).map((w: any) => (
+              <Link key={w.id} to={`/campgrounds/${w.id}`} className="flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition hover:brightness-110"
+                style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', minWidth: 200 }}>
+                {w.imageUrl ? (
+                  <img src={w.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#1B2E50' }}>🏕</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate" style={{ color: '#F5F0E8' }}>{w.name}</p>
+                  <p className="text-[10px]" style={{ color: 'rgba(245,240,232,0.5)' }}>{w.city}, {w.state}</p>
+                </div>
+                <span style={{ color: '#C9A84C', fontSize: 14 }}>⭐</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Grid View */}
       {viewMode === 'grid' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campgrounds.map(c => (
+        {(wishlistFilter ? campgrounds.filter(c => wishlistIds.has(c.id)) : campgrounds).map(c => (
           <Link key={c.id} to={`/campgrounds/${c.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden block">
             <div className="relative aspect-[16/10] bg-gradient-to-br from-primary-100 to-secondary-100">
               {c.imageUrl ? <img src={c.imageUrl.startsWith("http") ? c.imageUrl : c.imageUrl} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
                 : <div className="flex items-center justify-center h-full"><MapPin className="w-16 h-16 text-primary-300" /></div>}
               {c.state && <span className="absolute top-2 right-2 bg-white/90 px-2 py-0.5 rounded-full text-xs font-medium text-gray-700">{c.state}</span>}
+              {user && (
+                <div className="absolute bottom-2 right-2">
+                  <GenieWishlistButton itemId={c.id} itemType="campground" saved={wishlistIds.has(c.id)} size="sm" scrim
+                    onToggle={saved => { setWishlistIds(prev => { const next = new Set(prev); saved ? next.add(c.id) : next.delete(c.id); return next; }); }} />
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">{c.name}</h3>
