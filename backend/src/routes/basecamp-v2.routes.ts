@@ -1016,11 +1016,29 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
       });
     }
 
-    // Sort by score descending, take top 10
+    // Sort by score descending
     results.sort((a, b) => (b.score || 0) - (a.score || 0));
 
+    // Dedup: collapse name-similar results within 500m, prefer campground (has reviews)
+    const normalize = (n: string) => (n || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const deduped: any[] = [];
+    for (const r of results) {
+      const normName = normalize(r.name);
+      const isDupe = deduped.some(d => {
+        const normD = normalize(d.name);
+        if (normD !== normName && !normD.includes(normName) && !normName.includes(normD)) return false;
+        // Check distance between them
+        const dLat = (r.latitude - d.latitude) * Math.PI / 180;
+        const dLng = (r.longitude - d.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(r.latitude*Math.PI/180)*Math.cos(d.latitude*Math.PI/180)*Math.sin(dLng/2)**2;
+        const meters = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return meters < 500;
+      });
+      if (!isDupe) deduped.push(r);
+    }
+
     res.json({
-      trending: results.slice(0, 10),
+      trending: deduped.slice(0, 10),
       userLocation: { lat: userLat, lng: userLng },
     });
   } catch (e: any) {

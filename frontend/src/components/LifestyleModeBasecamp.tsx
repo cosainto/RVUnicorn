@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronRight, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import RigPulseCardV2 from './basecamp/RigPulseCardV2';
 import DiscoveryHub from './basecamp/DiscoveryHub';
-import RVCircleCard from './basecamp/RVCircleCard';
-import DiscoverCardV2 from './basecamp/DiscoverCardV2';
-import DreamingSection from './basecamp/DreamingSection';
-import CampKitchenSection from './basecamp/CampKitchenSection';
 import BasecampFeed from './basecamp/BasecampFeed';
 import TravelMap from './TravelMap';
 import TripIntelligenceHeader from './basecamp/TripIntelligenceHeader';
@@ -126,51 +122,8 @@ export default function LifestyleModeBasecamp({ user }: Props) {
           {/* Rig Pulse (active trip or idle rig status — rich, personal) */}
           <RigPulseCardV2 data={data?.rigPulse || null} />
 
-          {/* Discovery Hub (trending nearby, recommendations) */}
+          {/* ═══ DISCOVERY HUB (replaces legacy discover/dreaming/kitchen) ═══ */}
           <DiscoveryHub />
-
-          {/* RV Circle (followed rig activity — social, rich cards) */}
-          <RVCircleCard data={data?.rvCircle || null} />
-
-          {/* ═══ TIER 4 — HITCH HOST CARDS (grounded, capped) ═══ */}
-          {hostCards.length > 0 && (
-            <div className="space-y-2">
-              {hostCards.slice(0, isSocialRich ? 2 : 3).map((card, i) => (
-                <Link key={i} to={card.link} className="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:brightness-110" style={{ background: CN.cardAlt, border: `1px solid ${CN.border}` }}>
-                  <img src="https://res.cloudinary.com/dy6eetmh7/image/upload/w_32,h_32,c_fill/v1775261116/rvunicorn/characters/hitch.png" className="w-8 h-8 rounded-full flex-shrink-0" alt="Hitch" />
-                  <p className="text-xs flex-1 min-w-0" style={{ color: CN.cream }}>{card.text}</p>
-                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: CN.muted }} />
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* ═══ TIER 5 — COMMUNITY HIGHLIGHTS (compact) ═══ */}
-          {hotStrip.length > 0 && (
-            <div className="rounded-xl p-3" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: CN.cream }}>
-                  <MessageCircle className="w-3.5 h-3.5" style={{ color: CN.gold }} /> Trending in Community
-                </h4>
-                <button onClick={() => setActiveTab('community')} className="text-[10px] font-medium" style={{ color: CN.gold }}>See all</button>
-              </div>
-              <div className="space-y-1.5">
-                {hotStrip.slice(0, isSocialRich ? 2 : 3).map((post: any, i: number) => (
-                  <Link key={post.id || i} to="/community" className="flex items-center gap-2 px-2.5 py-2 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-                    <p className="text-[11px] flex-1 truncate" style={{ color: CN.muted }}>{(post.content || post.preview || '').slice(0, 70)}</p>
-                    <span className="flex items-center gap-0.5 text-[10px] flex-shrink-0" style={{ color: CN.muted }}>
-                      <MessageCircle className="w-3 h-3" /> {post.commentCount || 0}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ═══ TIER 6 — DISCOVER / DREAMING / KITCHEN (secondary) ═══ */}
-          <DiscoverCardV2 data={data?.discover || null} />
-          <DreamingSection data={data?.dreaming || null} />
-          <CampKitchenSection data={data?.campKitchen || null} />
 
           {/* ═══ NETWORK FEED (from your community) ═══ */}
           <BasecampFeed />
