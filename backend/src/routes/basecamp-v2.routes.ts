@@ -1037,8 +1037,166 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
       if (!isDupe) deduped.push(r);
     }
 
+    // ── Section: becauseYouVisited ──────────────────────────────────
+    let becauseYouVisited: any = null;
+    try {
+      const userCheckins = await db.checkIn.findMany({
+        where: { userId, campgroundId: { not: null } },
+        include: { campground: { select: { id: true, name: true, state: true, latitude: true, longitude: true } } },
+        orderBy: { checkInDate: 'desc' },
+        take: 5,
+        distinct: ['campgroundId'],
+      });
+
+      for (const ci of userCheckins) {
+        if (!ci.campground?.latitude) continue;
+        const nearLat = ci.campground.latitude;
+        const nearLng = ci.campground.longitude;
+        const nearDelta = 1.5; // ~100 miles
+
+        const similar = await db.campground.findMany({
+          where: {
+            latitude: { gte: nearLat - nearDelta, lte: nearLat + nearDelta },
+            longitude: { gte: nearLng - nearDelta, lte: nearLng + nearDelta },
+            id: { not: ci.campgroundId },
+            googleRating: { gte: 3.5 },
+          },
+          select: { id: true, name: true, imageUrl: true, city: true, state: true, latitude: true, longitude: true, googleRating: true, googleReviewCount: true },
+          orderBy: [{ googleRating: 'desc' }, { googleReviewCount: 'desc' }],
+          take: 8,
+        });
+
+        if (similar.length >= 3) {
+          const visitedIds = new Set(userCheckins.map((c: any) => c.campgroundId));
+          const filtered = similar.filter((s: any) => !visitedIds.has(s.id));
+
+          if (filtered.length >= 2) {
+            becauseYouVisited = {
+              basedOn: ci.campground.name,
+              items: filtered.slice(0, 6).map((s: any) => ({
+                id: s.id, name: s.name, type: 'campground',
+                imageUrl: s.imageUrl, city: s.city, state: s.state,
+                rating: s.googleRating, reviewCount: s.googleReviewCount,
+                distance: Math.round(distMiles(nearLat, nearLng, s.latitude, s.longitude)),
+              })),
+            };
+            break;
+          }
+        }
+      }
+    } catch (e: any) {
+      console.error('[Discovery] becauseYouVisited error:', e.message);
+    }
+
+    // ── Section: wishlist ─────────────────────────────────────────
+    let wishlist: any[] = [];
+    try {
+      const wishlistItems = await db.campgroundWishlist.findMany({
+        where: { userId },
+        include: { campground: { select: { id: true, name: true, imageUrl: true, city: true, state: true, googleRating: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      }).catch(() => []);
+
+      wishlist = (wishlistItems || [])
+        .filter((w: any) => w.campground)
+        .map((w: any) => ({
+          id: w.campground.id, name: w.campground.name, type: 'campground',
+          imageUrl: w.campground.imageUrl, city: w.campground.city, state: w.campground.state,
+          rating: w.campground.googleRating, savedAt: w.createdAt,
+        }));
+    } catch (e: any) {
+      console.error('[Discovery] wishlist error:', e.message);
+    }
+
+    // ── Section: seasonal ─────────────────────────────────────────
+    let seasonal: any = null;
+    try {
+      const month = new Date().getMonth(); // 0-11
+      const seasonConfigs = [
+        { // Winter: Dec-Feb
+          title: 'Winter Warmth',
+          blurb: 'Escape the cold at these sun-soaked spots',
+          categories: ['CAMPGROUND'],
+          states: ['FL', 'AZ', 'TX', 'CA', 'NM'],
+        },
+        { // Spring: Mar-May
+          title: 'Spring Into Adventure',
+          blurb: 'Wildflowers, mild weather, and open campsites',
+          categories: ['HIKING_TRAIL', 'SCENIC_OVERLOOK', 'CAMPGROUND'],
+          states: ['TN', 'NC', 'VA', 'GA', 'AR'],
+        },
+        { // Summer: Jun-Aug
+          title: 'Summer Adventures',
+          blurb: 'Lakeside camping, swimming holes, and ice cream stops',
+          categories: ['CAMPGROUND', 'ATTRACTION', 'RESTAURANT'],
+          states: ['CO', 'MT', 'WY', 'MN', 'WI', 'MI', 'OR', 'WA'],
+        },
+        { // Fall: Sep-Nov
+          title: 'Fall Foliage & Harvest',
+          blurb: 'Peak colors, apple orchards, and cozy campfires',
+          categories: ['SCENIC_OVERLOOK', 'CAMPGROUND', 'ATTRACTION'],
+          states: ['VT', 'NH', 'ME', 'NY', 'PA', 'WV', 'VA'],
+        },
+      ];
+      const seasonIdx = month <= 1 || month === 11 ? 0 : month <= 4 ? 1 : month <= 7 ? 2 : 3;
+      const season = seasonConfigs[seasonIdx];
+
+      const seasonalCampgrounds = await db.campground.findMany({
+        where: {
+          state: { in: season.states },
+          googleRating: { gte: 4.0 },
+          googleReviewCount: { gte: 20 },
+          imageUrl: { not: null },
+        },
+        select: { id: true, name: true, imageUrl: true, city: true, state: true, googleRating: true, googleReviewCount: true },
+        orderBy: [{ googleReviewCount: 'desc' }],
+        take: 8,
+      });
+
+      seasonal = {
+        title: season.title,
+        blurb: season.blurb,
+        items: seasonalCampgrounds.map((c: any) => ({
+          id: c.id, name: c.name, type: 'campground',
+          imageUrl: c.imageUrl, city: c.city, state: c.state,
+          rating: c.googleRating, reviewCount: c.googleReviewCount,
+        })),
+      };
+    } catch (e: any) {
+      console.error('[Discovery] seasonal error:', e.message);
+    }
+
+    // ── Section: campKitchen ──────────────────────────────────────
+    let campKitchen: any = null;
+    try {
+      const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+      let featuredRecipe = null;
+      try {
+        const recipes = await db.recipe.findMany({
+          where: { source: 'editorial' },
+          select: { id: true, title: true, imageUrl: true, cookTime: true, tags: true, rating: true },
+          take: 20,
+        });
+        if (recipes.length > 0) {
+          featuredRecipe = recipes[dayOfYear % recipes.length];
+        }
+      } catch {}
+
+      campKitchen = featuredRecipe ? {
+        featured: featuredRecipe,
+        categories: ['Dutch Oven', 'Blackstone', 'Quick Meals', 'Kids\' Favorites'],
+      } : null;
+    } catch (e: any) {
+      console.error('[Discovery] campKitchen error:', e.message);
+    }
+
     res.json({
       trending: deduped.slice(0, 10),
+      becauseYouVisited,
+      wishlist,
+      seasonal,
+      campKitchen,
       userLocation: { lat: userLat, lng: userLng },
     });
   } catch (e: any) {
