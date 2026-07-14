@@ -1,13 +1,13 @@
 /**
- * BasecampFeed — Network / Community tabbed feed for Basecamp home.
- * Network: real circle activity (friends, followed). No system posts.
- * Community: all public posts including system campfire questions.
- * Unseen badges + freshness-driven default tab on load.
+ * BasecampFeed — restructured feed with desktop sidebar.
+ * Desktop: two-column layout (sidebar + network feed)
+ * Mobile: tabbed Network / Community
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ThumbsUp, Users, Sparkles } from 'lucide-react';
+import { MessageCircle, ThumbsUp, Users, Sparkles, MapPin } from 'lucide-react';
 import api from '../../services/api';
+// GenieWishlistButton available for future feed card actions
 
 const CN = {
   bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45',
@@ -15,19 +15,9 @@ const CN = {
   muted: '#8B9BB4', border: '#243552',
 };
 
-interface EnrichmentData {
-  friendsVisitedCount?: number;
-  friendsVisitedAvatars?: string[];
-  friendsWishlistedCount?: number;
-  travelersCompletedCount?: number;
-  rigFollowerCount?: number;
-}
-
 interface FeedItem {
   postId: string;
   type: string;
-  sourceKey?: string;
-  authorId?: string;
   authorUsername: string;
   authorFirstName?: string;
   authorAvatar: string | null;
@@ -35,411 +25,311 @@ interface FeedItem {
   preview: string;
   body?: string;
   imageUrl?: string | null;
-  tags?: string[];
   likeCount: number;
   commentCount: number;
-  createdAt: string;
-  campgroundId?: string | null;
-  campgroundName?: string | null;
-  campgroundState?: string | null;
-  rigId?: string | null;
-  rigSlug?: string | null;
-  rigName?: string | null;
-  tripKitId?: string | null;
-  isActive?: boolean | null;
+  createdAt?: string;
   isTrending?: boolean;
-  isSubscribed?: boolean;
-  enrichment?: EnrichmentData | null;
+  campgroundId?: string;
+  campgroundName?: string;
+  placeId?: string;
+  placeName?: string;
+  rigSlug?: string;
 }
 
-type FeedTab = 'network' | 'community';
-
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
   if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function BasecampFeed() {
-  const [activeTab, setActiveTab] = useState<FeedTab>('network');
-  const [networkItems, setNetworkItems] = useState<FeedItem[]>([]);
-  const [communityItems, setCommunityItems] = useState<FeedItem[]>([]);
-  const [networkUnseen, setNetworkUnseen] = useState(false);
-  const [communityUnseen, setCommunityUnseen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(8);
-  const defaultResolved = useRef(false);
-
-  // ── Fetch both feeds + tab state in parallel ──
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [netRes, comRes, stateRes] = await Promise.all([
-          api.get('/basecamp/v2/network-feed'),
-          api.get('/basecamp/v2/community-feed'),
-          api.get('/basecamp/v2/feed-tab-state'),
-        ]);
-
-        const netItems: FeedItem[] = netRes.data?.items || [];
-        const comItems: FeedItem[] = comRes.data?.items || [];
-        setNetworkItems(netItems);
-        setCommunityItems(comItems);
-
-        // Compute unseen state
-        const state = stateRes.data || {};
-        const netNewest = netRes.data?.newestAt;
-        const comNewest = comRes.data?.newestAt;
-        const netSeen = state.network?.lastSeenAt;
-        const comSeen = state.community?.lastSeenAt;
-
-        const netHasUnseen = netNewest && (!netSeen || new Date(netNewest) > new Date(netSeen));
-        const comHasUnseen = comNewest && (!comSeen || new Date(comNewest) > new Date(comSeen));
-        setNetworkUnseen(!!netHasUnseen);
-        setCommunityUnseen(!!comHasUnseen);
-
-        // Freshness-driven default tab (only on first load)
-        if (!defaultResolved.current) {
-          defaultResolved.current = true;
-          const lastTab = localStorage.getItem('rvu_feed_tab') as FeedTab | null;
-          if (netHasUnseen) {
-            setActiveTab('network');
-          } else if (comHasUnseen) {
-            setActiveTab('community');
-          } else if (lastTab === 'network' || lastTab === 'community') {
-            setActiveTab(lastTab);
-          }
-          // else default stays 'network'
-        }
-      } catch (e) {
-        console.error('[BasecampFeed] load error:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  // ── Mark tab as seen when switched ──
-  const switchTab = (tab: FeedTab) => {
-    setActiveTab(tab);
-    setVisibleCount(8);
-    localStorage.setItem('rvu_feed_tab', tab);
-    // Mark seen
-    api.post('/basecamp/v2/feed-tab-seen', { tab }).catch(() => {});
-    if (tab === 'network') setNetworkUnseen(false);
-    else setCommunityUnseen(false);
-  };
-
-  // Mark initial tab as seen on mount
-  useEffect(() => {
-    if (!loading) {
-      api.post('/basecamp/v2/feed-tab-seen', { tab: activeTab }).catch(() => {});
-      if (activeTab === 'network') setNetworkUnseen(false);
-      else setCommunityUnseen(false);
-    }
-  }, [loading]);
-
-  const items = activeTab === 'network' ? networkItems : communityItems;
-  const visible = items.slice(0, visibleCount);
-
-  return (
-    <div className="rounded-xl overflow-hidden" style={{ background: CN.card, border: `1px solid ${CN.border}` }}>
-      {/* ── Tab bar ── */}
-      <div className="flex border-b" style={{ borderColor: CN.border }}>
-        <button
-          onClick={() => switchTab('network')}
-          className="flex-1 py-2.5 text-xs font-semibold text-center transition relative"
-          style={{
-            color: activeTab === 'network' ? CN.gold : CN.muted,
-            borderBottom: activeTab === 'network' ? `2px solid ${CN.gold}` : '2px solid transparent',
-          }}
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            Network
-            {networkUnseen && activeTab !== 'network' && (
-              <span className="w-2 h-2 rounded-full inline-block" style={{ background: CN.orange }} />
-            )}
-          </span>
-        </button>
-        <button
-          onClick={() => switchTab('community')}
-          className="flex-1 py-2.5 text-xs font-semibold text-center transition relative"
-          style={{
-            color: activeTab === 'community' ? CN.gold : CN.muted,
-            borderBottom: activeTab === 'community' ? `2px solid ${CN.gold}` : '2px solid transparent',
-          }}
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <MessageCircle className="w-3.5 h-3.5" />
-            Community
-            {communityUnseen && activeTab !== 'community' && (
-              <span className="w-2 h-2 rounded-full inline-block" style={{ background: CN.orange }} />
-            )}
-          </span>
-        </button>
-      </div>
-
-      {/* ── Feed content ── */}
-      <div className="px-3 py-3">
-        {loading && (
-          <div className="space-y-2">
-            {[0, 1, 2].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: CN.border }} />)}
-          </div>
-        )}
-
-        {!loading && visible.length === 0 && activeTab === 'network' && (
-          <div className="py-6 text-center">
-            <Users className="w-6 h-6 mx-auto mb-2" style={{ color: CN.muted }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: CN.cream }}>Your network is quiet right now</p>
-            <p className="text-xs mb-3" style={{ color: CN.muted }}>Add camping buddies to see their check-ins, photos, wishlist picks, and travel updates here.</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Link to="/community" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.gold, color: CN.bg }}>Find Campers</Link>
-              <Link to="/campgrounds" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.border}` }}>Explore Campgrounds</Link>
-            </div>
-          </div>
-        )}
-
-        {!loading && visible.length === 0 && activeTab === 'community' && (
-          <div className="py-6 text-center">
-            <MessageCircle className="w-6 h-6 mx-auto mb-2" style={{ color: CN.muted }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: CN.cream }}>No community updates yet</p>
-            <p className="text-xs mb-3" style={{ color: CN.muted }}>Follow rigs, campgrounds, and discussion threads to see their updates here.</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Link to="/community" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.gold, color: CN.bg }}>Browse Discussions</Link>
-              <Link to="/campgrounds" className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: CN.cardAlt, color: CN.cream, border: `1px solid ${CN.border}` }}>Explore Campgrounds</Link>
-            </div>
-          </div>
-        )}
-
-        {!loading && visible.length > 0 && (
-          <div className="space-y-1.5">
-            {visible.map((item) => (
-              <FeedCard key={item.postId} item={item} />
-            ))}
-          </div>
-        )}
-
-        {!loading && items.length > visibleCount && (
-          <button
-            onClick={() => setVisibleCount(c => c + 8)}
-            className="w-full mt-3 py-2 rounded-lg text-xs font-semibold transition hover:brightness-110"
-            style={{ background: CN.cardAlt, color: CN.gold, border: `1px solid ${CN.border}` }}
-          >
-            Load more
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Avatar helper ──
 function Avatar({ src, name, size = 6 }: { src?: string | null; name?: string; size?: number }) {
   const letter = name?.[0]?.toUpperCase() || '?';
   const px = size * 4;
-  if (src) return <img src={src} className={`w-${size} h-${size} rounded-full object-cover`} alt="" style={{ width: px, height: px }} />;
+  if (src) return <img src={src} className="rounded-full object-cover" alt="" style={{ width: px, height: px }} />;
   return (
-    <div className={`w-${size} h-${size} rounded-full flex items-center justify-center font-bold`}
+    <div className="rounded-full flex items-center justify-center font-bold"
       style={{ width: px, height: px, background: CN.border, color: CN.gold, fontSize: px * 0.4 }}>
       {letter}
     </div>
   );
 }
 
-// ── Enrichment badge (only renders when enrichment data exists) ──
-function EnrichmentBadge({ enrichment }: { enrichment: EnrichmentData }) {
-  // Pick the best enrichment to display (priority order)
-  if (enrichment.friendsVisitedCount) {
-    return (
-      <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1 rounded-lg" style={{ background: CN.bg, border: `1px solid ${CN.border}` }}>
-        <div className="flex -space-x-1.5">
-          {enrichment.friendsVisitedAvatars?.slice(0, 3).map((av, i) => (
-            <img key={i} src={av} className="w-4 h-4 rounded-full object-cover" style={{ border: `1px solid ${CN.bg}` }} alt="" />
-          ))}
-        </div>
-        <span className="text-[10px] font-medium" style={{ color: CN.gold }}>
-          {enrichment.friendsVisitedCount} in your network visited
-        </span>
-      </div>
-    );
-  }
-
-  if (enrichment.friendsWishlistedCount) {
-    return (
-      <div className="flex items-center gap-1 mt-1.5 px-2 py-1 rounded-lg" style={{ background: CN.bg, border: `1px solid ${CN.border}` }}>
-        <Sparkles className="w-3 h-3" style={{ color: CN.gold }} />
-        <span className="text-[10px] font-medium" style={{ color: CN.gold }}>
-          {enrichment.friendsWishlistedCount} in your network wishlisted this
-        </span>
-      </div>
-    );
-  }
-
-  if (enrichment.travelersCompletedCount) {
-    return (
-      <div className="flex items-center gap-1 mt-1.5 px-2 py-1 rounded-lg" style={{ background: CN.bg, border: `1px solid ${CN.border}` }}>
-        <Users className="w-3 h-3" style={{ color: CN.gold }} />
-        <span className="text-[10px] font-medium" style={{ color: CN.gold }}>
-          {enrichment.travelersCompletedCount} travelers completed this route
-        </span>
-      </div>
-    );
-  }
-
-  if (enrichment.rigFollowerCount) {
-    return (
-      <div className="flex items-center gap-1 mt-1.5 px-2 py-1 rounded-lg" style={{ background: CN.bg, border: `1px solid ${CN.border}` }}>
-        <Users className="w-3 h-3" style={{ color: CN.gold }} />
-        <span className="text-[10px] font-medium" style={{ color: CN.gold }}>
-          Followed by {enrichment.rigFollowerCount} RVUnicorn travelers
-        </span>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// ── Source type label ──
-function sourceLabel(item: FeedItem): string | null {
-  const labels: Record<string, string> = {
-    'checkin': 'Check-in',
-    'photo': 'Photo',
-    'wishlist-add': 'Wishlist',
-    'activity': 'Activity',
-    'rig-post': 'Rig Update',
-    'rig-mod': 'Rig Mod',
-    'campground-post': 'Campground',
-    'campground-announcement': 'Announcement',
-    'thread': 'Discussion',
-    'tripkit': 'TripKit',
-    'board-post': 'Post',
-  };
-  return labels[item.type] || null;
-}
-
-// ── Resolve the best link target per item type ──
 function resolveLink(item: FeedItem): string {
-  switch (item.type) {
-    case 'checkin':
-    case 'wishlist-add':
-    case 'campground-post':
-    case 'campground-announcement':
-      return item.campgroundId ? `/campgrounds/${item.campgroundId}` : '/community';
-    case 'rig-post':
-    case 'rig-mod':
-      return item.rigSlug ? `/rig/${item.rigSlug}` : '/community';
-    case 'tripkit':
-      return item.tripKitId ? `/creator/trip-kits/${item.tripKitId}/edit` : '/community';
-    case 'thread':
-      return '/community';
-    case 'board-post':
-      return '/community';
-    case 'activity':
-      return '/community';
-    default:
-      return '/community';
-  }
+  if (item.campgroundId) return `/campgrounds/${item.campgroundId}`;
+  if (item.placeId) return `/place/${item.placeId}`;
+  if (item.rigSlug) return `/rig/${item.rigSlug}`;
+  return '/community';
 }
 
-// ── Differentiated feed card ──
+/* ══════════════════════════════════════════════════════════════════
+   FEED CARD — fixed photo aspect ratio (max 4:3)
+   ══════════════════════════════════════════════════════════════════ */
 function FeedCard({ item }: { item: FeedItem }) {
   const hasImage = !!item.imageUrl;
-  const hasEnrichment = !!item.enrichment;
-  const isEnrichedCard = hasImage || hasEnrichment;
-  const label = sourceLabel(item);
   const href = resolveLink(item);
+  const locationName = item.placeName || item.campgroundName;
+  const locationLink = item.placeId ? `/place/${item.placeId}` : item.campgroundId ? `/campgrounds/${item.campgroundId}` : null;
 
-  // Enriched / rich card (has image or enrichment data)
-  if (isEnrichedCard) {
-    return (
-      <Link to={href} className="block rounded-xl overflow-hidden transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-        {hasImage && (
-          <div className="relative">
-            <img src={item.imageUrl!} alt="" className="w-full h-28 object-cover" />
-            {label && (
-              <span className="absolute top-2 left-2 text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(15,28,53,0.75)', color: CN.gold }}>
-                {label}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="px-3 py-2.5">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Avatar src={item.authorAvatar} name={item.authorFirstName || item.authorUsername} />
-            <span className="text-[11px] font-semibold" style={{ color: CN.cream }}>
-              {item.authorFirstName || item.authorUsername}
-            </span>
-            {item.createdAt && <span className="text-[10px]" style={{ color: CN.muted }}>{timeAgo(item.createdAt)}</span>}
-            {!hasImage && label && (
-              <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: CN.border, color: CN.muted }}>
-                {label}
-              </span>
-            )}
-          </div>
-          <p className="text-xs font-medium line-clamp-2" style={{ color: CN.cream }}>{item.preview}</p>
-          {hasEnrichment && <EnrichmentBadge enrichment={item.enrichment!} />}
-          <div className="flex items-center gap-3 mt-1.5">
-            {item.likeCount > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px]" style={{ color: CN.muted }}>
-                <ThumbsUp className="w-2.5 h-2.5" /> {item.likeCount}
-              </span>
-            )}
-            {item.commentCount > 0 && (
-              <span className="flex items-center gap-0.5 text-[10px]" style={{ color: CN.muted }}>
-                <MessageCircle className="w-2.5 h-2.5" /> {item.commentCount}
-              </span>
-            )}
-            {item.isTrending && (
-              <span className="flex items-center gap-0.5 text-[10px]" style={{ color: CN.orange }}>
-                <Sparkles className="w-2.5 h-2.5" /> Trending
-              </span>
-            )}
-          </div>
-        </div>
-      </Link>
-    );
-  }
-
-  // Plain compact row (no image, no enrichment)
   return (
-    <Link to={href} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
-      <div className="flex-shrink-0">
-        <Avatar src={item.authorAvatar} name={item.authorFirstName || item.authorUsername} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-semibold" style={{ color: CN.cream }}>
+    <div className="cartoon-card" style={{ background: CN.card, maxWidth: 680 }}>
+      {/* Author row */}
+      <div className="flex items-center gap-2.5 px-4 pt-3 pb-2">
+        <Avatar src={item.authorAvatar} name={item.authorFirstName || item.authorUsername} size={8} />
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-semibold" style={{ color: CN.cream }}>
             {item.authorFirstName || item.authorUsername}
           </span>
-          {item.createdAt && <span className="text-[10px]" style={{ color: CN.muted }}>{timeAgo(item.createdAt)}</span>}
-          {label && (
-            <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: CN.border, color: CN.muted }}>
-              {label}
+          {locationName ? (
+            <span className="text-xs" style={{ color: CN.muted }}>
+              {' '}shared a photo at{' '}
+              {locationLink ? (
+                <Link to={locationLink} className="font-semibold hover:underline" style={{ color: CN.gold }}>{locationName}</Link>
+              ) : locationName}
             </span>
-          )}
+          ) : item.type === 'photo' ? (
+            <span className="text-xs" style={{ color: CN.muted }}> shared a photo</span>
+          ) : null}
         </div>
-        <p className="text-[11px] truncate" style={{ color: CN.muted }}>{item.preview}</p>
+        {item.createdAt && <span className="text-[10px] flex-shrink-0" style={{ color: CN.muted }}>{timeAgo(item.createdAt)}</span>}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+
+      {/* Photo — max 4:3 aspect, no letterbox strips */}
+      {hasImage && (
+        <Link to={href} className="block">
+          <div style={{ maxHeight: 510, overflow: 'hidden' }}>
+            <img
+              src={item.imageUrl!}
+              alt=""
+              loading="lazy"
+              className="w-full"
+              style={{ objectFit: 'cover', maxHeight: 510, width: '100%', aspectRatio: '4/3' }}
+              data-feed-photo="true"
+              data-photo-index="0"
+              data-all-photos={JSON.stringify([item.imageUrl])}
+            />
+          </div>
+        </Link>
+      )}
+
+      {/* Location line */}
+      {locationName && !hasImage && locationLink && (
+        <div className="px-4 pb-1">
+          <Link to={locationLink} className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: CN.gold }}>
+            <MapPin style={{ width: 12, height: 12 }} /> {locationName}
+          </Link>
+        </div>
+      )}
+
+      {/* Preview text */}
+      {item.preview && (
+        <div className="px-4 py-2">
+          <p className="text-sm line-clamp-3" style={{ color: CN.cream }}>{item.preview}</p>
+        </div>
+      )}
+
+      {/* Engagement row */}
+      <div className="flex items-center gap-4 px-4 pb-3 pt-1" style={{ borderTop: `1px solid ${CN.border}` }}>
         {item.likeCount > 0 && (
-          <span className="flex items-center gap-0.5 text-[10px]" style={{ color: CN.muted }}>
-            <ThumbsUp className="w-2.5 h-2.5" /> {item.likeCount}
+          <span className="flex items-center gap-1 text-xs" style={{ color: CN.muted }}>
+            <ThumbsUp className="w-3.5 h-3.5" /> {item.likeCount}
           </span>
         )}
         {item.commentCount > 0 && (
-          <span className="flex items-center gap-0.5 text-[10px]" style={{ color: CN.muted }}>
-            <MessageCircle className="w-2.5 h-2.5" /> {item.commentCount}
+          <span className="flex items-center gap-1 text-xs" style={{ color: CN.muted }}>
+            <MessageCircle className="w-3.5 h-3.5" /> {item.commentCount}
+          </span>
+        )}
+        {item.isTrending && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: CN.orange }}>
+            <Sparkles className="w-3.5 h-3.5" /> Trending
           </span>
         )}
       </div>
-    </Link>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COMMUNITY SIDEBAR (desktop only)
+   ══════════════════════════════════════════════════════════════════ */
+function CommunitySidebar({ items }: { items: FeedItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="cartoon-card mb-4" style={{ background: CN.card }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: `1px solid ${CN.border}` }}>
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>
+          <MessageCircle className="w-3.5 h-3.5 inline mr-1" /> Community
+        </h3>
+        <Link to="/community" className="text-[10px] font-semibold" style={{ color: CN.gold }}>See all</Link>
+      </div>
+      <div className="p-2 space-y-0.5">
+        {items.slice(0, 8).map(item => (
+          <Link key={item.postId} to={resolveLink(item)}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
+            <Avatar src={item.authorAvatar} name={item.authorFirstName} size={5} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] truncate" style={{ color: CN.cream }}>
+                <span className="font-semibold">{item.authorFirstName || item.authorUsername}</span>{' '}
+                <span style={{ color: CN.muted }}>{item.preview?.slice(0, 50)}</span>
+              </p>
+            </div>
+            {item.createdAt && <span className="text-[9px] flex-shrink-0" style={{ color: CN.muted }}>{timeAgo(item.createdAt)}</span>}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FAVORITES SIDEBAR (wishlist)
+   ══════════════════════════════════════════════════════════════════ */
+function FavoritesSidebar() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/basecamp/v2/discovery')
+      .then(res => setItems(res.data?.wishlist || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="cartoon-card" style={{ background: CN.card }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: `1px solid ${CN.border}` }}>
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>
+          <img src="/images/genie-icon.png" alt="" className="w-4 h-4 inline mr-1 rounded-full" /> Favorite Campsites
+        </h3>
+      </div>
+      <div className="p-2">
+        {loading && <div className="h-16 animate-pulse rounded-lg" style={{ background: CN.border }} />}
+        {!loading && items.length === 0 && (
+          <div className="text-center py-4 px-2">
+            <img src="/images/genie-full.png" alt="Genie" className="w-12 h-12 mx-auto mb-2 object-contain" />
+            <p className="text-xs font-semibold mb-1" style={{ color: CN.cream }}>Make a wish</p>
+            <p className="text-[10px] mb-2" style={{ color: CN.muted }}>Save places you dream of visiting</p>
+            <Link to="/campgrounds" className="text-[10px] font-semibold" style={{ color: CN.gold }}>Explore →</Link>
+          </div>
+        )}
+        {!loading && items.slice(0, 5).map((item: any) => (
+          <Link key={item.id} to={item.type === 'campground' ? `/campgrounds/${item.id}` : `/place/${item.id}`}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition hover:brightness-110" style={{ background: CN.cardAlt }}>
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: CN.border }}>🏕</div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold truncate" style={{ color: CN.cream }}>{item.name}</p>
+              {item.city && <p className="text-[9px]" style={{ color: CN.muted }}>{item.city}, {item.state}</p>}
+            </div>
+          </Link>
+        ))}
+        {!loading && items.length > 5 && (
+          <Link to="/campgrounds?tab=wishlist" className="block text-center text-[10px] font-semibold mt-2 py-1" style={{ color: CN.gold }}>
+            View all {items.length} →
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ══════════════════════════════════════════════════════════════════ */
+export default function BasecampFeed() {
+  const [networkItems, setNetworkItems] = useState<FeedItem[]>([]);
+  const [communityItems, setCommunityItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'network' | 'community'>('network');
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/basecamp/v2/feed?tab=network').catch(() => ({ data: [] })),
+      api.get('/basecamp/v2/feed?tab=community').catch(() => ({ data: [] })),
+    ]).then(([netRes, comRes]) => {
+      setNetworkItems(Array.isArray(netRes.data) ? netRes.data : netRes.data?.items || []);
+      setCommunityItems(Array.isArray(comRes.data) ? comRes.data : comRes.data?.items || []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const feedItems = activeTab === 'network' ? networkItems : communityItems;
+  const visible = feedItems.slice(0, visibleCount);
+
+  return (
+    <div>
+      {/* ── DESKTOP: two-column layout ── */}
+      <div className="hidden lg:grid gap-6" style={{ gridTemplateColumns: '320px 1fr' }}>
+        {/* Sidebar — sticky */}
+        <div className="space-y-4" style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
+          <CommunitySidebar items={communityItems} />
+          <FavoritesSidebar />
+        </div>
+
+        {/* Feed column */}
+        <div className="space-y-4" style={{ maxWidth: 680 }}>
+          <h3 className="text-sm font-bold" style={{ color: CN.cream }}>
+            <Users className="w-4 h-4 inline mr-1.5" style={{ color: CN.gold }} /> Your Network
+          </h3>
+          {loading && [0, 1, 2].map(i => <div key={i} className="h-48 rounded-xl animate-pulse" style={{ background: CN.border }} />)}
+          {!loading && networkItems.length === 0 && (
+            <p className="text-xs py-8 text-center" style={{ color: CN.muted }}>Follow campers and rigs to see their updates here.</p>
+          )}
+          {!loading && networkItems.slice(0, visibleCount).map(item => (
+            <FeedCard key={item.postId} item={item} />
+          ))}
+          {!loading && networkItems.length > visibleCount && (
+            <button onClick={() => setVisibleCount(v => v + 10)}
+              className="w-full py-2 text-xs font-semibold rounded-xl" style={{ background: CN.cardAlt, color: CN.gold, border: `1px solid ${CN.border}` }}>
+              Show more
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── MOBILE: tabbed layout ── */}
+      <div className="lg:hidden">
+        <div className="cartoon-card overflow-hidden" style={{ background: CN.card }}>
+          {/* Tab bar */}
+          <div className="flex" style={{ borderBottom: `1px solid ${CN.border}` }}>
+            {(['network', 'community'] as const).map(tab => (
+              <button key={tab} onClick={() => { setActiveTab(tab); setVisibleCount(10); }}
+                className="flex-1 py-2.5 text-xs font-semibold text-center transition"
+                style={{
+                  color: activeTab === tab ? CN.gold : CN.muted,
+                  borderBottom: activeTab === tab ? `2px solid ${CN.gold}` : '2px solid transparent',
+                }}>
+                {tab === 'network' ? '👥 Network' : '🏕 Community'}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-3 space-y-3">
+            {loading && [0, 1, 2].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: CN.border }} />)}
+            {!loading && visible.length === 0 && (
+              <p className="text-xs py-6 text-center" style={{ color: CN.muted }}>
+                {activeTab === 'network' ? 'Follow campers to see their updates here.' : 'No community updates yet.'}
+              </p>
+            )}
+            {!loading && visible.map(item => <FeedCard key={item.postId} item={item} />)}
+            {!loading && feedItems.length > visibleCount && (
+              <button onClick={() => setVisibleCount(v => v + 10)}
+                className="w-full py-2 text-xs font-semibold rounded-lg" style={{ background: CN.cardAlt, color: CN.gold }}>
+                Show more
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
