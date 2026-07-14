@@ -281,9 +281,7 @@ export default function BasecampFeed() {
             <Users className="w-4 h-4 inline mr-1.5" style={{ color: CN.gold }} /> Your Network
           </h3>
           {loading && [0, 1, 2].map(i => <div key={i} className="h-48 rounded-xl animate-pulse" style={{ background: CN.border }} />)}
-          {!loading && networkItems.length === 0 && (
-            <p className="text-xs py-8 text-center" style={{ color: CN.muted }}>Follow campers and rigs to see their updates here.</p>
-          )}
+          {/* Empty network: hide entirely per degradation rule */}
           {!loading && networkItems.slice(0, visibleCount).map(item => (
             <FeedCard key={item.postId} item={item} />
           ))}
@@ -315,11 +313,7 @@ export default function BasecampFeed() {
 
           <div className="p-3 space-y-3">
             {loading && [0, 1, 2].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: CN.border }} />)}
-            {!loading && visible.length === 0 && (
-              <p className="text-xs py-6 text-center" style={{ color: CN.muted }}>
-                {activeTab === 'network' ? 'Follow campers to see their updates here.' : 'No community updates yet.'}
-              </p>
-            )}
+            {/* Empty tabs: hide content entirely per degradation rule */}
             {!loading && visible.map(item => <FeedCard key={item.postId} item={item} />)}
             {!loading && feedItems.length > visibleCount && (
               <button onClick={() => setVisibleCount(v => v + 10)}

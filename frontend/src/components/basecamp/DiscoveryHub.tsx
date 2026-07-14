@@ -295,25 +295,35 @@ export default function DiscoveryHub() {
             onMouseLeave={e => { e.currentTarget.style.transform = 'rotate(0.5deg)'; }}>
             {campKitchen.featured.imageUrl ? (
               <img src={campKitchen.featured.imageUrl} alt="" loading="lazy"
-                style={{ width: 80, height: 80, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                style={{ width: 90, height: 90, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
             ) : (
-              <div style={{ width: 80, height: 80, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg, ${CN.navyLight}, ${CN.deep})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 32 }}>🍳</span>
+              /* Themed no-image variant: category-specific icon on gradient */
+              <div style={{
+                width: 90, height: 90, borderRadius: 12, flexShrink: 0,
+                background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 100%)`,
+                border: `2px solid ${CN.border}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 32 }}>
+                  {(campKitchen.featured.category || '').includes('Dutch') ? '🏺' :
+                   (campKitchen.featured.category || '').includes('Blackstone') ? '🥩' :
+                   (campKitchen.featured.category || '').includes('Kids') ? '🧒' : '🔥'}
+                </span>
+                <span style={{ fontSize: 8, color: CN.muted, marginTop: 2 }}>{campKitchen.featured.category || 'Campfire'}</span>
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: CN.cream, marginBottom: 3 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 4, lineHeight: 1.3 }}>
                 {campKitchen.featured.title}
               </h4>
-              {campKitchen.featured.cookTime && (
-                <span style={{ fontSize: 10, color: CN.muted }}>⏱ {campKitchen.featured.cookTime}</span>
-              )}
-              {campKitchen.featured.rating && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
-                  <Star style={{ width: 11, height: 11, color: CN.gold, fill: CN.gold }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: CN.gold }}>{campKitchen.featured.rating}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                {campKitchen.featured.cookTime && (
+                  <span style={{ fontSize: 11, color: CN.muted }}>⏱ {campKitchen.featured.cookTime} min</span>
+                )}
+                {campKitchen.featured.difficulty && (
+                  <span style={{ fontSize: 11, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
+                )}
+              </div>
               <CBadge color="orange">🔥 Perfect for campfires</CBadge>
             </div>
           </Link>
