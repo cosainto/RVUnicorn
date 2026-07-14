@@ -251,37 +251,42 @@ export default function DiscoveryHub() {
         <SectionHeader icon="✨" title="Dream Campgrounds" subtitle="Your adventure bucket list" />
         {dreamTrips.length > 0 ? (
           <ScrollRow>
-            {dreamTrips.map((trip: any, i: number) => (
-              <Link key={trip.id} to={`/trips/${trip.stops?.[0]?.id || trip.id}`} className="block flex-shrink-0" style={{
-                width: 220, border: `3px solid ${CN.cream}`, borderRadius: 20,
-                boxShadow: `5px 5px 0px ${CN.deep}`, overflow: 'hidden', background: CN.navy,
-                textDecoration: 'none', transform: `rotate(${rotations[(i + 5) % rotations.length]}deg)`,
-                transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'rotate(0deg) scale(1.03)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = `rotate(${rotations[(i + 5) % rotations.length]}deg)`; }}>
-                <div style={{ height: 100, overflow: 'hidden', position: 'relative' }}>
-                  {trip.coverImage ? (
-                    <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy}, #2D1B4E)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src="/images/genie-full.png" alt="" style={{ width: 50, height: 50, objectFit: 'contain', opacity: 0.6 }} />
-                    </div>
-                  )}
-                  <span style={{ position: 'absolute', bottom: 6, right: 6, fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.6)', color: 'white' }}>
-                    {trip.stopCount} stop{trip.stopCount !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div style={{ padding: '10px 12px' }}>
-                  <h4 style={{ fontSize: 12, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.title}</h4>
-                  {trip.stops?.[0] && (
-                    <p style={{ fontSize: 10, color: CN.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {trip.stops[0].campground?.name || trip.stops[0].place?.name || trip.stops[0].name}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            ))}
+            {dreamTrips.map((trip: any, i: number) => {
+              const firstStopName = trip.stops?.[0]?.campground?.name || trip.stops?.[0]?.place?.name || trip.stops?.[0]?.name || '';
+              const subtitle = trip.stopCount > 1 ? `${firstStopName} + ${trip.stopCount - 1} more` : firstStopName;
+              const rot = rotations[(i + 5) % rotations.length];
+              return (
+                <Link key={trip.id} to={`/road-trips/${trip.id}`} className="sticker block flex-shrink-0" style={{
+                  width: 220, overflow: 'hidden', background: CN.navy,
+                  textDecoration: 'none', transform: `rotate(${rot}deg)`,
+                }}>
+                  <div style={{ height: 110, overflow: 'hidden', position: 'relative' }}>
+                    {trip.coverImage ? (
+                      <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 60%, ${CN.deep} 100%)`, position: 'relative' }}>
+                        {/* Genie mascot — bottom-right, subtle */}
+                        <img src="/images/genie-full.png" alt="" style={{
+                          position: 'absolute', bottom: 4, right: 4,
+                          width: 48, height: 48, objectFit: 'contain', opacity: 0.4,
+                        }} />
+                      </div>
+                    )}
+                    <span style={{ position: 'absolute', top: 6, left: 6, fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(201,168,76,0.9)', color: CN.deep }}>
+                      ✨ {trip.stopCount} stop{trip.stopCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.title}</h4>
+                    {subtitle && (
+                      <p style={{ fontSize: 10, color: CN.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {subtitle}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </ScrollRow>
         ) : wishlist.length > 0 ? (
           /* Fallback: flat wishlist items if no dream trips but old saves exist */

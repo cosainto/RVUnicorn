@@ -205,7 +205,7 @@ function FavoritesSidebar() {
     <div className="cartoon-card" style={{ background: CN.card }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2" style={{ borderBottom: `1px solid ${CN.border}` }}>
         <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: CN.gold }}>
-          <img src="/images/genie-icon.png" alt="" className="w-4 h-4 inline mr-1 rounded-full" /> Favorite Campsites
+          <img src="/images/genie-icon.png" alt="" className="w-4 h-4 inline mr-1" style={{ objectFit: 'contain' }} /> Favorite Campsites
         </h3>
       </div>
       <div className="p-2">
