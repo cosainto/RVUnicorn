@@ -403,7 +403,18 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
   const rigPageUrl = data.rigSlug ? `/rig/${data.rigSlug}` : '/my-rv';
   const editUrl = data.rigSlug ? `/rig/${data.rigSlug}/edit` : '/my-rv';
   const hasStats = data.totalMilesAllTime > 0 || (data.totalStatesVisited ?? 0) > 0 || (data.totalCampgroundsAllTime ?? 0) > 0 || (data.postCount ?? 0) > 0;
-  const [rigInfoOpen, setRigInfoOpen] = useState(true);
+  // Persist rig info expand/collapse — default collapsed, no flash
+  const rigInfoKey = `rvunicorn-riginfo-${data.rigSlug || 'default'}`;
+  const [rigInfoOpen, setRigInfoOpen] = useState(() => {
+    try { return localStorage.getItem(rigInfoKey) === 'open'; } catch { return false; }
+  });
+  const toggleRigInfo = () => {
+    setRigInfoOpen(prev => {
+      const next = !prev;
+      try { localStorage.setItem(rigInfoKey, next ? 'open' : 'closed'); } catch {}
+      return next;
+    });
+  };
   const [localDetails, setLocalDetails] = useState(data.ownerDetails || {} as any);
   const [localClass, setLocalClass] = useState(data.rigClass);
   const [hitchLoading, setHitchLoading] = useState(false);
@@ -664,6 +675,32 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
             const statusLabel = ss.activityStatus === 'ACTIVE' ? 'Active' : ss.activityStatus === 'QUIET' ? 'Quiet' : 'Inactive';
             const viewsTrend = ss.viewsLastWeek > 0 ? Math.round(((ss.viewsThisWeek - ss.viewsLastWeek) / ss.viewsLastWeek) * 100) : 0;
 
+            // Inactive rig page: show activation card instead of zeroed stats
+            if (ss.activityStatus === 'INACTIVE' || (!ss.followerCount && !ss.viewsThisWeek && !ss.totalPosts)) {
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>Rig Page</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6b7280' }} />
+                      <span style={{ fontSize: 9, color: CN.muted }}>Inactive</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '12px 14px', background: CN.cardAlt, borderRadius: 10, border: `1px solid ${CN.border}` }}>
+                    <p style={{ fontSize: 12, color: CN.cream, fontWeight: 600, marginBottom: 4 }}>
+                      Your rig page is inactive
+                    </p>
+                    <p style={{ fontSize: 10, color: CN.muted, marginBottom: 8 }}>
+                      Activate it to start tracking followers and views.
+                    </p>
+                    <Link to={editUrl} style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '6px 14px', background: CN.gold, color: CN.bg, borderRadius: 8, textDecoration: 'none' }}>
+                      Activate Rig Page →
+                    </Link>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div style={{ marginBottom: 12 }}>
                 {/* Divider + header */}
@@ -810,7 +847,7 @@ export default function RigPulseCardV2({ data }: { data: RigPulseData | null }) 
 
         {/* Header — clickable to expand/collapse */}
         <button
-          onClick={() => setRigInfoOpen(o => !o)}
+          onClick={toggleRigInfo}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', width: '100%', background: 'none', border: 'none', borderBottom: rigInfoOpen ? `1px solid ${CN.border}` : 'none', cursor: 'pointer' }}
         >
           <span style={{ fontSize: 14, fontWeight: 700, color: CN.cream }}>My Rig Info</span>
