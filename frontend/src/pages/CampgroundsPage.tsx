@@ -65,11 +65,11 @@ export default function CampgroundsPage() {
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [wishlistFilter, setWishlistFilter] = useState(false);
 
-  // Fetch wishlist on mount
+  // Fetch wishlist from dream trips
   useEffect(() => {
     if (!user) return;
-    api.get('/basecamp/v2/discovery').then(res => {
-      const items = res.data?.wishlist || [];
+    api.get('/dream-trips/stops').then(res => {
+      const items = Array.isArray(res.data) ? res.data : [];
       setWishlistItems(items);
       setWishlistIds(new Set(items.map((w: any) => w.id)));
     }).catch(() => {});

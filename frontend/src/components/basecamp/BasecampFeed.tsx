@@ -195,8 +195,8 @@ function FavoritesSidebar() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/basecamp/v2/discovery')
-      .then(res => setItems(res.data?.wishlist || []))
+    api.get('/dream-trips/stops')
+      .then(res => setItems(Array.isArray(res.data) ? res.data : []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

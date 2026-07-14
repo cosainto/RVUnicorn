@@ -85,18 +85,13 @@ export default function GenieWishlistButton({
     }
 
     try {
-      if (itemType === 'campground') {
-        if (newState) {
-          await api.post('/campgrounds/wishlist', { campgroundId: itemId });
-        } else {
-          await api.delete(`/campgrounds/wishlist/${itemId}`);
-        }
+      if (newState) {
+        await api.post('/dream-trips/save', {
+          ...(itemType === 'campground' ? { campgroundId: itemId } : { placeId: itemId }),
+          name: itemName || '',
+        });
       } else {
-        if (newState) {
-          await api.post('/places/wishlist', { placeId: itemId, name: itemName || '' });
-        } else {
-          await api.delete(`/places/wishlist/${itemId}`);
-        }
+        await api.delete(`/dream-trips/unsave?${itemType === 'campground' ? 'campgroundId' : 'placeId'}=${itemId}`);
       }
       onToggle?.(newState);
     } catch {
