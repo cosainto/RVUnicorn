@@ -70,6 +70,10 @@ export default function RoadTripDetailPage() {
   };
   const [removeModalLoading, setRemoveModalLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteStartDate, setPromoteStartDate] = useState('');
+  const [promoteEndDate, setPromoteEndDate] = useState('');
+  const [promoting, setPromoting] = useState(false);
   const [homeLocation, setHomeLocation] = useState<string>('');
   const [showHomeEditModal, setShowHomeEditModal] = useState(false);
   const [homeEditValue, setHomeEditValue] = useState('');
@@ -116,6 +120,21 @@ export default function RoadTripDetailPage() {
       if (data.fuelPrices) setFuelPrices(data.fuelPrices);
     } catch { navigate('/road-trips'); }
     finally { setLoading(false); }
+  };
+
+  const handlePromote = async () => {
+    if (!id) return;
+    setPromoting(true);
+    try {
+      await api.post(`/dream-trips/${id}/promote`, {
+        startDate: promoteStartDate || null,
+        endDate: promoteEndDate || null,
+      });
+      showToast('Dream trip promoted to a real trip!');
+      setShowPromoteModal(false);
+      loadRoadTrip();
+    } catch { showToast('Failed to promote trip', 'error'); }
+    finally { setPromoting(false); }
   };
 
   // Fallback client-side drive time calculation (used after drag-reorder)
@@ -424,6 +443,16 @@ export default function RoadTripDetailPage() {
         </div>
       )}
 
+      {/* ═══ DREAM TRIP BANNER ═══ */}
+      {roadTrip.isDream && (
+        <div className="text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)', color: '#0F1C35' }}>
+          <p className="text-xs font-bold">
+            ✨ Dream Trip — save places you want to visit, then promote to a real trip when you're ready.
+            <button onClick={() => setShowPromoteModal(true)} className="ml-2 underline font-bold">Promote to Real Trip →</button>
+          </p>
+        </div>
+      )}
+
       {/* ═══ PART A: THIN TRIP HEADER ═══ */}
       <div className={`bg-gradient-to-r ${gradient} text-white`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
@@ -450,6 +479,11 @@ export default function RoadTripDetailPage() {
             <button onClick={() => setShowAddStop(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
               <Plus className="w-3 h-3" /> Add Stop
             </button>
+            {roadTrip.isDream && (
+              <button onClick={() => setShowPromoteModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: '#C9A84C', color: '#0F1C35' }}>
+                <Sparkles className="w-3 h-3" /> Promote
+              </button>
+            )}
             <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1 px-2 py-1.5 text-white/60 hover:text-red-300 text-xs rounded-lg transition" title="Delete trip">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -1121,6 +1155,42 @@ export default function RoadTripDetailPage() {
                 <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                 <button onClick={handleDeleteTrip} disabled={deleting} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition disabled:opacity-50">
                   {deleting ? 'Deleting...' : 'Delete Trip'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promote Dream Trip Modal */}
+      {showPromoteModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="h-2" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)' }} />
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="/images/genie-full.png" alt="" className="w-10 h-10 object-contain" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Promote to Real Trip</h2>
+                  <p className="text-sm text-gray-500">Set dates to turn this dream into reality</p>
+                </div>
+              </div>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Start Date (optional)</label>
+                  <input type="date" value={promoteStartDate} onChange={e => setPromoteStartDate(e.target.value)} className="input w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">End Date (optional)</label>
+                  <input type="date" value={promoteEndDate} onChange={e => setPromoteEndDate(e.target.value)} className="input w-full" />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowPromoteModal(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancel</button>
+                <button onClick={handlePromote} disabled={promoting}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                  style={{ background: '#C9A84C' }}>
+                  {promoting ? 'Promoting...' : '✨ Make It Real'}
                 </button>
               </div>
             </div>
