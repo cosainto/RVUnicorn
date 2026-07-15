@@ -250,44 +250,64 @@ export default function DiscoveryHub() {
       <div style={{ marginBottom: 20 }}>
         <SectionHeader icon="✨" title="Dream Campgrounds" subtitle="Your adventure bucket list" />
         {dreamTrips.length > 0 ? (
-          <ScrollRow>
-            {dreamTrips.map((trip: any, i: number) => {
+          <div className="space-y-3" style={{ margin: '0 4px' }}>
+            {dreamTrips.map((trip: any) => {
               const firstStopName = trip.stops?.[0]?.campground?.name || trip.stops?.[0]?.place?.name || trip.stops?.[0]?.name || '';
               const subtitle = trip.stopCount > 1 ? `${firstStopName} + ${trip.stopCount - 1} more` : firstStopName;
-              const rot = rotations[(i + 5) % rotations.length];
               return (
-                <Link key={trip.id} to={`/road-trips/${trip.id}`} className="sticker block flex-shrink-0" style={{
-                  width: 220, overflow: 'hidden', background: CN.navy,
-                  textDecoration: 'none', transform: `rotate(${rot}deg)`,
+                <div key={trip.id} style={{
+                  display: 'flex', gap: 12,
+                  border: `3px solid ${CN.cream}`, borderRadius: 16,
+                  boxShadow: `4px 4px 0px ${CN.deep}`, background: CN.navy,
+                  overflow: 'hidden', textDecoration: 'none',
+                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}>
-                  <div style={{ height: 110, overflow: 'hidden', position: 'relative' }}>
-                    {trip.coverImage ? (
-                      <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 60%, ${CN.deep} 100%)`, position: 'relative' }}>
-                        {/* Genie mascot — bottom-right, subtle */}
-                        <img src="/images/genie-full-v2.png" alt="" style={{
-                          position: 'absolute', bottom: 4, right: 4,
-                          width: 48, height: 48, objectFit: 'contain', opacity: 0.4,
-                        }} />
-                      </div>
-                    )}
-                    <span style={{ position: 'absolute', top: 6, left: 6, fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(201,168,76,0.9)', color: CN.deep }}>
-                      ✨ {trip.stopCount} stop{trip.stopCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div style={{ padding: '10px 12px' }}>
-                    <h4 style={{ fontSize: 13, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.title}</h4>
+                  {/* Square cover tile — left */}
+                  <Link to={`/road-trips/${trip.id}`} style={{ flexShrink: 0 }}>
+                    <div style={{ width: 90, height: 90, overflow: 'hidden', position: 'relative', borderRadius: '13px 0 0 13px' }}>
+                      {trip.coverImage ? (
+                        <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 60%, ${CN.deep} 100%)`, position: 'relative' }}>
+                          <img src="/images/genie-full-v2.png" alt="" style={{
+                            position: 'absolute', bottom: 4, right: 4,
+                            width: 40, height: 40, objectFit: 'contain', opacity: 0.4,
+                          }} />
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* Info — right */}
+                  <div style={{ flex: 1, minWidth: 0, padding: '10px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Link to={`/road-trips/${trip.id}`} style={{ textDecoration: 'none' }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {trip.title}
+                      </h4>
+                    </Link>
                     {subtitle && (
-                      <p style={{ fontSize: 10, color: CN.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: 11, color: CN.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {subtitle}
                       </p>
                     )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(201,168,76,0.15)', color: CN.gold, border: `1px solid rgba(201,168,76,0.3)` }}>
+                        ✨ {trip.stopCount} stop{trip.stopCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
                   </div>
-                </Link>
+
+                  {/* Actions — right edge */}
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '8px 12px 8px 0', flexShrink: 0 }}>
+                    <Link to={`/road-trips/${trip.id}`}
+                      style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: CN.gold, color: CN.deep, textDecoration: 'none', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      Open
+                    </Link>
+                  </div>
+                </div>
               );
             })}
-          </ScrollRow>
+          </div>
         ) : wishlist.length > 0 ? (
           /* Fallback: flat wishlist items if no dream trips but old saves exist */
           <ScrollRow>
