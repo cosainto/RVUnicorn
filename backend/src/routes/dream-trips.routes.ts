@@ -296,14 +296,51 @@ router.post('/:id/merge', authenticateToken, async (req: Request, res: Response)
 // ──────────────────────────────────────────────
 // POST /:id/promote — Promote dream trip to real planned trip
 // ──────────────────────────────────────────────
+// GET /:id/promote-info — Get member list for promote confirmation
+router.get('/:id/promote-info', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const trip = await db.roadTrip.findUnique({
+      where: { id },
+      select: { title: true, userId: true, isDream: true, user: { select: { id: true, firstName: true, profilePicture: true } } },
+    });
+    if (!trip?.isDream) return res.status(400).json({ error: 'Not a dream trip' });
+
+    // Get all contributors (attendees on any stop)
+    const stops = await db.event.findMany({
+      where: { roadTripId: id },
+      include: { attendees: { where: { status: 'ATTENDING' }, include: { user: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } } } },
+    });
+    const memberMap = new Map<string, any>();
+    memberMap.set(trip.user.id, trip.user);
+    for (const stop of stops) {
+      for (const att of stop.attendees) {
+        if (att.user && !memberMap.has(att.user.id)) memberMap.set(att.user.id, att.user);
+      }
+    }
+
+    res.json({ title: trip.title, members: Array.from(memberMap.values()), stopCount: stops.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to load promote info' });
+  }
+});
+
+// POST /:id/promote — Promote dream trip to real trip (any contributor can do this)
 router.post('/:id/promote', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params;
-    const { startDate, endDate } = req.body;
+    const { startDate, endDate, confirmed } = req.body;
 
-    const trip = await db.roadTrip.findUnique({ where: { id }, select: { userId: true, isDream: true } });
-    if (!trip?.isDream || trip.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+    const trip = await db.roadTrip.findUnique({ where: { id }, select: { userId: true, isDream: true, title: true } });
+    if (!trip?.isDream) return res.status(400).json({ error: 'Not a dream trip' });
+
+    // Any contributor or owner can promote
+    const isOwner = trip.userId === userId;
+    const isContributor = !isOwner && await db.event.findFirst({
+      where: { roadTripId: id, attendees: { some: { userId, status: 'ATTENDING' } } },
+    });
+    if (!isOwner && !isContributor) return res.status(403).json({ error: 'Not authorized' });
 
     // Flip to real trip
     await db.roadTrip.update({
@@ -315,11 +352,52 @@ router.post('/:id/promote', authenticateToken, async (req: Request, res: Respons
       },
     });
 
-    // Update stops: clear isWishlist flag
+    // Update stops: clear isWishlist flag, set real dates
+    const realStart = startDate ? new Date(startDate) : new Date();
+    const realEnd = endDate ? new Date(endDate) : realStart;
     await db.event.updateMany({
       where: { roadTripId: id },
-      data: { isWishlist: false },
+      data: { isWishlist: false, startDate: realStart, endDate: realEnd },
     });
+
+    // Notify other members
+    const { createNotification } = require('../utils/createNotification');
+    const promoter = await db.user.findUnique({ where: { id: userId }, select: { firstName: true, profilePicture: true } });
+    const stops = await db.event.findMany({
+      where: { roadTripId: id },
+      include: { attendees: { where: { status: 'ATTENDING' }, select: { userId: true } } },
+    });
+    const notifiedIds = new Set<string>();
+    for (const stop of stops) {
+      for (const att of stop.attendees) {
+        if (att.userId !== userId && !notifiedIds.has(att.userId)) {
+          notifiedIds.add(att.userId);
+          await createNotification({
+            userId: att.userId,
+            type: 'DREAM_TRIP_PROMOTED',
+            category: 'SYSTEM',
+            content: `promoted "${trip.title}" from dream to real trip!`,
+            link: `/trips/${stops[0]?.id || id}`,
+            actorId: userId,
+            actorName: promoter?.firstName || 'Someone',
+            actorAvatar: promoter?.profilePicture,
+          });
+        }
+      }
+    }
+    // Also notify the owner if promoter is a contributor
+    if (!isOwner && !notifiedIds.has(trip.userId)) {
+      await createNotification({
+        userId: trip.userId,
+        type: 'DREAM_TRIP_PROMOTED',
+        category: 'SYSTEM',
+        content: `promoted "${trip.title}" from dream to real trip!`,
+        link: `/trips/${stops[0]?.id || id}`,
+        actorId: userId,
+        actorName: promoter?.firstName || 'Someone',
+        actorAvatar: promoter?.profilePicture,
+      });
+    }
 
     res.json({ promoted: true });
   } catch (e: any) {
@@ -329,7 +407,7 @@ router.post('/:id/promote', authenticateToken, async (req: Request, res: Respons
 });
 
 // ──────────────────────────────────────────────
-// POST /:id/invite — Invite a contributor
+// POST /:id/invite — Send an invitation (notification-based)
 // ──────────────────────────────────────────────
 router.post('/:id/invite', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -337,26 +415,102 @@ router.post('/:id/invite', authenticateToken, async (req: Request, res: Response
     const { id } = req.params;
     const { inviteeId } = req.body;
 
+    if (!inviteeId) return res.status(400).json({ error: 'inviteeId required' });
+
     const trip = await db.roadTrip.findUnique({
       where: { id },
-      select: { userId: true, isDream: true },
+      select: { userId: true, isDream: true, title: true },
     });
-    if (!trip?.isDream || trip.userId !== userId) return res.status(403).json({ error: 'Not authorized' });
+    if (!trip?.isDream) return res.status(400).json({ error: 'Not a dream trip' });
 
-    // Add invitee as attendee to all stops with CONTRIBUTOR role
-    const stops = await db.event.findMany({ where: { roadTripId: id }, select: { id: true } });
-    for (const stop of stops) {
-      await db.eventAttendee.upsert({
-        where: { eventId_userId: { eventId: stop.id, userId: inviteeId } },
-        create: { eventId: stop.id, userId: inviteeId, status: 'ATTENDING', role: 'CONTRIBUTOR' },
-        update: { role: 'CONTRIBUTOR' },
-      });
-    }
+    // Any contributor or owner can invite
+    const isOwner = trip.userId === userId;
+    const isContributor = !isOwner && await db.event.findFirst({
+      where: { roadTripId: id, attendees: { some: { userId, status: 'ATTENDING' } } },
+    });
+    if (!isOwner && !isContributor) return res.status(403).json({ error: 'Not authorized' });
 
-    res.json({ invited: true, stopsCount: stops.length });
+    const inviter = await db.user.findUnique({ where: { id: userId }, select: { firstName: true, profilePicture: true } });
+    const stopCount = await db.event.count({ where: { roadTripId: id } });
+
+    // Send notification
+    const { createNotification } = require('../utils/createNotification');
+    await createNotification({
+      userId: inviteeId,
+      type: 'DREAM_TRIP_INVITE',
+      category: 'SYSTEM',
+      content: `invited you to dream trip "${trip.title}" (${stopCount} stops)`,
+      link: `/dream-trips/${id}/accept`,
+      actorId: userId,
+      actorName: inviter?.firstName || 'Someone',
+      actorAvatar: inviter?.profilePicture,
+      metadata: { dreamTripId: id, tripTitle: trip.title },
+    });
+
+    res.json({ invited: true, tripTitle: trip.title });
   } catch (e: any) {
     console.error('[DreamTrips] invite error:', e.message);
     res.status(500).json({ error: 'Failed to invite' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /:id/accept — Accept a dream trip invite
+// ──────────────────────────────────────────────
+router.post('/:id/accept', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+
+    const trip = await db.roadTrip.findUnique({ where: { id }, select: { isDream: true, title: true, userId: true } });
+    if (!trip?.isDream) return res.status(400).json({ error: 'Not a dream trip' });
+
+    // Add as contributor to all stops
+    const stops = await db.event.findMany({ where: { roadTripId: id }, select: { id: true } });
+    for (const stop of stops) {
+      await db.eventAttendee.upsert({
+        where: { eventId_userId: { eventId: stop.id, userId } },
+        create: { eventId: stop.id, userId, status: 'ATTENDING', role: 'CONTRIBUTOR' },
+        update: { status: 'ATTENDING', role: 'CONTRIBUTOR' },
+      });
+    }
+
+    res.json({ accepted: true, tripTitle: trip.title, stopCount: stops.length });
+  } catch (e: any) {
+    console.error('[DreamTrips] accept error:', e.message);
+    res.status(500).json({ error: 'Failed to accept invite' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /:id/decline — Decline a dream trip invite (no-op, quiet)
+// ──────────────────────────────────────────────
+router.post('/:id/decline', authenticateToken, async (_req: Request, res: Response) => {
+  res.json({ declined: true });
+});
+
+// ──────────────────────────────────────────────
+// POST /:id/leave — Leave a dream trip (contributor removes self)
+// ──────────────────────────────────────────────
+router.post('/:id/leave', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+
+    const trip = await db.roadTrip.findUnique({ where: { id }, select: { userId: true, isDream: true, title: true } });
+    if (!trip?.isDream) return res.status(400).json({ error: 'Not a dream trip' });
+    if (trip.userId === userId) return res.status(400).json({ error: 'Owner cannot leave — delete the trip instead' });
+
+    // Remove from all stops
+    const stops = await db.event.findMany({ where: { roadTripId: id }, select: { id: true } });
+    for (const stop of stops) {
+      await db.eventAttendee.deleteMany({ where: { eventId: stop.id, userId } });
+    }
+
+    res.json({ left: true });
+  } catch (e: any) {
+    console.error('[DreamTrips] leave error:', e.message);
+    res.status(500).json({ error: 'Failed to leave trip' });
   }
 });
 

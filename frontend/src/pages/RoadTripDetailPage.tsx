@@ -75,6 +75,7 @@ export default function RoadTripDetailPage() {
   const [promoteStartDate, setPromoteStartDate] = useState('');
   const [promoteEndDate, setPromoteEndDate] = useState('');
   const [promoting, setPromoting] = useState(false);
+  const [promoteMembers, setPromoteMembers] = useState<any[]>([]);
   const [homeLocation, setHomeLocation] = useState<string>('');
   const [showHomeEditModal, setShowHomeEditModal] = useState(false);
   const [homeEditValue, setHomeEditValue] = useState('');
@@ -123,6 +124,14 @@ export default function RoadTripDetailPage() {
     finally { setLoading(false); }
   };
 
+  const openPromoteModal = async () => {
+    openPromoteModal();
+    try {
+      const { data } = await api.get(`/dream-trips/${id}/promote-info`);
+      setPromoteMembers(data.members || []);
+    } catch { setPromoteMembers([]); }
+  };
+
   const handlePromote = async () => {
     if (!id) return;
     setPromoting(true);
@@ -130,6 +139,7 @@ export default function RoadTripDetailPage() {
       await api.post(`/dream-trips/${id}/promote`, {
         startDate: promoteStartDate || null,
         endDate: promoteEndDate || null,
+        confirmed: true,
       });
       showToast('Dream trip promoted to a real trip!');
       setShowPromoteModal(false);
@@ -449,7 +459,7 @@ export default function RoadTripDetailPage() {
         <div className="text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)', color: '#0F1C35' }}>
           <p className="text-xs font-bold">
             ✨ Dream Trip — plan your route, then set dates when you're ready.
-            <button onClick={() => setShowPromoteModal(true)} className="ml-2 underline font-bold">Set Dates & Promote →</button>
+            <button onClick={() => openPromoteModal()} className="ml-2 underline font-bold">Set Dates & Promote →</button>
           </p>
         </div>
       )}
@@ -481,7 +491,7 @@ export default function RoadTripDetailPage() {
               <Plus className="w-3 h-3" /> Add Stop
             </button>
             {roadTrip.isDream && (
-              <button onClick={() => setShowPromoteModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: '#C9A84C', color: '#0F1C35' }}>
+              <button onClick={() => openPromoteModal()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: '#C9A84C', color: '#0F1C35' }}>
                 <Sparkles className="w-3 h-3" /> Promote
               </button>
             )}
@@ -1186,6 +1196,25 @@ export default function RoadTripDetailPage() {
                   <p className="text-sm text-gray-500">Set dates to turn this dream into reality</p>
                 </div>
               </div>
+              {/* Members affected */}
+              {promoteMembers.length > 1 && (
+                <div className="mb-3 p-3 rounded-lg" style={{ background: '#F5F0E8', border: '1px solid #E2E0D8' }}>
+                  <p className="text-xs text-gray-600 mb-2">This will set dates for:</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {promoteMembers.map((m: any) => (
+                      <div key={m.id} className="flex items-center gap-1.5">
+                        {m.profilePicture ? (
+                          <img src={m.profilePicture} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[9px] font-bold">{m.firstName?.[0]}</div>
+                        )}
+                        <span className="text-xs font-medium text-gray-700">{m.firstName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3 mb-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Start Date (optional)</label>
