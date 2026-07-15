@@ -247,63 +247,73 @@ export default function DiscoveryHub() {
       {/* ═══════════════════════════════════════════════════════════
           SECTION 4: Dream Campgrounds (wishlist)
           ═══════════════════════════════════════════════════════════ */}
+        {/* Motion styles — gated on prefers-reduced-motion */}
+      <style>{`
+        @keyframes genie-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+        @keyframes steam-rise { 0%{opacity:0.6;transform:translateY(0)} 100%{opacity:0;transform:translateY(-12px)} }
+        @media (prefers-reduced-motion: reduce) {
+          .genie-float-anim, .steam-anim { animation: none !important; }
+        }
+      `}</style>
+
       <div style={{ marginBottom: 20 }}>
-        <SectionHeader icon="✨" title="Dream Campgrounds" subtitle="Your adventure bucket list" />
+        <SectionHeader icon="✨" title="Dream Campgrounds"
+          subtitle={dreamTrips.length > 0
+            ? `${wishlist.length} place${wishlist.length !== 1 ? 's are' : ' is'} waiting for your next adventure.`
+            : 'Your adventure bucket list'} />
         {dreamTrips.length > 0 ? (
           <div className="space-y-3" style={{ margin: '0 4px' }}>
             {dreamTrips.map((trip: any) => {
               const firstStopName = trip.stops?.[0]?.campground?.name || trip.stops?.[0]?.place?.name || trip.stops?.[0]?.name || '';
               const subtitle = trip.stopCount > 1 ? `${firstStopName} + ${trip.stopCount - 1} more` : firstStopName;
+              const states = [...new Set((trip.stops || []).map((s: any) => s.campground?.state || s.place?.state).filter(Boolean))];
               return (
-                <div key={trip.id} style={{
+                <Link key={trip.id} to={`/road-trips/${trip.id}`} style={{
                   display: 'flex', gap: 12,
                   border: `3px solid ${CN.cream}`, borderRadius: 16,
-                  boxShadow: `4px 4px 0px ${CN.deep}`, background: CN.navy,
+                  boxShadow: `4px 4px 0px ${CN.deep}`,
+                  background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
                   overflow: 'hidden', textDecoration: 'none',
-                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                }}>
-                  {/* Square cover tile — left */}
-                  <Link to={`/road-trips/${trip.id}`} style={{ flexShrink: 0 }}>
-                    <div style={{ width: 90, height: 90, overflow: 'hidden', position: 'relative', borderRadius: '13px 0 0 13px' }}>
-                      {trip.coverImage ? (
-                        <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <img src="/images/genie-full-v2.png" alt="" style={{
-                            width: '70%', height: '70%', objectFit: 'contain',
-                          }} />
-                        </div>
+                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
+                  cursor: 'pointer',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
+                  {/* Square cover tile */}
+                  <div style={{ width: 82, height: 82, overflow: 'hidden', flexShrink: 0, borderRadius: '13px 0 0 13px' }}>
+                    {trip.coverImage ? (
+                      <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+                          style={{ width: '70%', height: '70%', objectFit: 'contain', animation: 'genie-float 3.5s ease-in-out infinite' }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0, padding: '8px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {trip.title}
+                    </h4>
+                    {subtitle && <p style={{ fontSize: 11, color: CN.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</p>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: 'rgba(201,168,76,0.15)', color: CN.gold, border: `1px solid rgba(201,168,76,0.3)` }}>
+                        ✨ {trip.stopCount} saved
+                      </span>
+                      {states.length > 1 && (
+                        <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: 'rgba(139,155,180,0.1)', color: CN.muted, border: `1px solid ${CN.border}` }}>
+                          🗺 {states.length} states
+                        </span>
                       )}
                     </div>
-                  </Link>
-
-                  {/* Info — right */}
-                  <div style={{ flex: 1, minWidth: 0, padding: '10px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <Link to={`/road-trips/${trip.id}`} style={{ textDecoration: 'none' }}>
-                      <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {trip.title}
-                      </h4>
-                    </Link>
-                    {subtitle && (
-                      <p style={{ fontSize: 11, color: CN.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {subtitle}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(201,168,76,0.15)', color: CN.gold, border: `1px solid rgba(201,168,76,0.3)` }}>
-                        ✨ {trip.stopCount} stop{trip.stopCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
                   </div>
-
-                  {/* Actions — right edge */}
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '8px 12px 8px 0', flexShrink: 0 }}>
-                    <Link to={`/road-trips/${trip.id}`}
-                      style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: CN.gold, color: CN.deep, textDecoration: 'none', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      Open
-                    </Link>
+                  {/* CTA */}
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 0 0', flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: CN.gold, whiteSpace: 'nowrap' }}>
+                      View Wishlist →
+                    </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -348,29 +358,33 @@ export default function DiscoveryHub() {
           ═══════════════════════════════════════════════════════════ */}
       {campKitchen && campKitchen.featured && (
         <div style={{ marginBottom: 20 }}>
-          <SectionHeader icon="🍳" title="Camp Kitchen" subtitle="Recipes made for the campfire" />
+          <SectionHeader icon="🍳" title="Camp Kitchen" subtitle="Tonight's perfect meal after a day on the trail." />
 
           {/* Featured recipe card */}
           <Link to={`/recipes/${campKitchen.featured.id}`} style={{
-            display: 'flex', gap: 12, margin: '0 4px', padding: 12,
+            display: 'flex', gap: 12, margin: '0 4px',
             border: `3px solid ${CN.cream}`, borderRadius: 16,
-            boxShadow: `4px 4px 0px ${CN.deep}`, background: CN.navy,
-            textDecoration: 'none', transform: 'rotate(0.5deg)',
-            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            boxShadow: `4px 4px 0px ${CN.deep}`,
+            background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(232,98,42,0.04) 100%)`,
+            textDecoration: 'none', overflow: 'hidden',
+            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
+            cursor: 'pointer',
           }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'rotate(0deg) scale(1.02)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'rotate(0.5deg)'; }}>
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
             {campKitchen.featured.imageUrl ? (
               <img src={campKitchen.featured.imageUrl} alt="" loading="lazy"
-                style={{ width: 90, height: 90, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                style={{ width: 82, height: 82, borderRadius: '13px 0 0 13px', objectFit: 'cover', flexShrink: 0 }} />
             ) : (
               /* SVG illustration variant by recipe category */
               <div style={{
-                width: 90, height: 90, borderRadius: 12, flexShrink: 0,
+                width: 82, height: 82, borderRadius: '13px 0 0 13px', flexShrink: 0,
                 background: `linear-gradient(135deg, ${CN.deep} 0%, #1a1235 50%, ${CN.navy} 100%)`,
-                border: `2px solid ${CN.border}`,
                 position: 'relative', overflow: 'hidden',
               }}>
+                {/* Steam wisps */}
+                <div className="steam-anim" style={{ position: 'absolute', top: 8, left: '30%', width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', animation: 'steam-rise 2.5s ease-in-out infinite' }} />
+                <div className="steam-anim" style={{ position: 'absolute', top: 12, left: '55%', width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', animation: 'steam-rise 3s ease-in-out 0.8s infinite' }} />
                 {/* Campfire flames SVG */}
                 <svg viewBox="0 0 90 90" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
                   {/* Glow */}
@@ -397,19 +411,26 @@ export default function DiscoveryHub() {
                 </div>
               </div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 4, lineHeight: 1.3 }}>
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0, padding: '8px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 3, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {campKitchen.featured.title}
               </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginBottom: 4 }}>
                 {campKitchen.featured.cookTime && (
-                  <span style={{ fontSize: 11, color: CN.muted }}>⏱ {campKitchen.featured.cookTime} min</span>
+                  <span style={{ fontSize: 10, color: CN.muted }}>⏱ {campKitchen.featured.cookTime} min</span>
                 )}
                 {campKitchen.featured.difficulty && (
-                  <span style={{ fontSize: 11, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
+                  <span style={{ fontSize: 10, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
                 )}
               </div>
               <CBadge color="orange">🔥 Perfect for campfires</CBadge>
+            </div>
+            {/* CTA */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 0 0', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: CN.orange, whiteSpace: 'nowrap' }}>
+                Cook Tonight →
+              </span>
             </div>
           </Link>
 
