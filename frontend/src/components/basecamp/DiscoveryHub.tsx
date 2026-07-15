@@ -268,10 +268,9 @@ export default function DiscoveryHub() {
                       {trip.coverImage ? (
                         <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 60%, ${CN.deep} 100%)`, position: 'relative' }}>
+                        <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <img src="/images/genie-full-v2.png" alt="" style={{
-                            position: 'absolute', bottom: 4, right: 4,
-                            width: 40, height: 40, objectFit: 'contain', opacity: 0.4,
+                            width: '70%', height: '70%', objectFit: 'contain',
                           }} />
                         </div>
                       )}
