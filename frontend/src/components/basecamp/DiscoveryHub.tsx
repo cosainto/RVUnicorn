@@ -257,10 +257,21 @@ export default function DiscoveryHub() {
       `}</style>
 
       <div style={{ marginBottom: 20 }}>
-        <SectionHeader icon="✨" title="Dream Campgrounds"
-          subtitle={dreamTrips.length > 0
-            ? `${wishlist.length} place${wishlist.length !== 1 ? 's are' : ' is'} waiting for your next adventure.`
-            : 'Your adventure bucket list'} />
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
+          <div>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              ✨ Dream Campgrounds
+            </h3>
+            <p style={{ fontSize: 10, color: CN.muted, marginTop: 2 }}>
+              {dreamTrips.length > 0
+                ? `${wishlist.length} place${wishlist.length !== 1 ? 's are' : ' is'} waiting for your next adventure.`
+                : 'Your adventure bucket list'}
+            </p>
+          </div>
+          {dreamTrips.length > 0 && (
+            <Link to="/road-trips?filter=dream" style={{ fontSize: 10, fontWeight: 700, color: CN.gold, textDecoration: 'none' }}>View all →</Link>
+          )}
+        </div>
         {dreamTrips.length > 0 ? (
           <div className="space-y-3" style={{ margin: '0 4px' }}>
             {dreamTrips.map((trip: any) => {
@@ -295,7 +306,26 @@ export default function DiscoveryHub() {
                     <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {trip.title}
                     </h4>
-                    {subtitle && <p style={{ fontSize: 11, color: CN.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</p>}
+                    {/* Place thumbnails + names */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                      {(trip.stops || []).slice(0, 3).map((s: any, si: number) => {
+                        const img = s.campground?.imageUrl || s.place?.websiteImageUrl;
+                        const sName = s.campground?.name || s.place?.name || s.name;
+                        return (
+                          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            {img ? (
+                              <img src={img} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                            ) : (
+                              <div style={{ width: 18, height: 18, borderRadius: 4, background: CN.border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <MapPin style={{ width: 10, height: 10, color: CN.muted }} />
+                              </div>
+                            )}
+                            <span style={{ fontSize: 10, color: CN.muted, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sName}</span>
+                          </div>
+                        );
+                      })}
+                      {trip.stopCount > 3 && <span style={{ fontSize: 9, color: CN.muted }}>+{trip.stopCount - 3} more</span>}
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: 'rgba(201,168,76,0.15)', color: CN.gold, border: `1px solid rgba(201,168,76,0.3)` }}>
                         ✨ {trip.stopCount} saved
