@@ -308,7 +308,7 @@ export default function ScrapbookPublicPage() {
 
         {/* Footer CTA */}
         <div className="text-center py-12 px-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <img src="/images/Logo_RVUnicorn.png" className="w-10 h-10 mx-auto mb-3 opacity-60" alt="RVUnicorn" />
+          <img src="/images/logo-icon-v2.png" className="w-10 h-10 mx-auto mb-3 opacity-60" alt="RVUnicorn" />
           <p className="text-sm mb-4" style={{ color: 'rgba(245,240,232,0.5)' }}>Create your own RV travel scrapbook</p>
           <Link to="/register" className="inline-block px-6 py-2.5 rounded-xl text-sm font-bold transition hover:brightness-110" style={{ background: '#E8A838', color: '#0F1C35' }}>Join RVUnicorn →</Link>
         </div>

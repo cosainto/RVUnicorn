@@ -303,13 +303,9 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Logo */}
-            <Link to="/basecamp" className="flex items-center gap-2.5 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
-              <div className="relative">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-105" style={{ boxShadow: '0 2px 12px rgba(245,158,11,0.2)' }}>
-                  <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="h-8 w-auto" />
-                </div>
-              </div>
+            {/* Brand lockup — icon mark + wordmark */}
+            <Link to="/basecamp" className="flex items-center gap-2 flex-shrink-0 group" style={{ animation: triviaPhase !== 'off' ? triviaAnim.animation : 'none', borderRadius: '8px', padding: '4px 8px' }}>
+              <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="h-8 w-auto transition-transform duration-200 group-hover:scale-105" style={{ maxWidth: 64 }} />
               <div className="hidden md:flex flex-col leading-none">
                 <span className="text-[15px] font-black tracking-tight" style={{ color: '#fff', letterSpacing: '-0.02em' }}>
                   RV<span style={{ color: '#f59e0b' }}>Unicorn</span>

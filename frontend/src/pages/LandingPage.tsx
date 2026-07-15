@@ -117,7 +117,7 @@ function Navbar() {
       }}>
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-3">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
+          <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-9 h-9 rounded-full" />
           <span style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 22, fontWeight: 700, color: 'white' }}>RVUnicorn</span>
         </Link>
         <div className="hidden md:flex items-center gap-4">
@@ -410,7 +410,7 @@ function FinalCTA() {
       {/* Footer */}
       <div className="max-w-6xl mx-auto mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderTop: `1px solid ${C.border}` }}>
         <div className="flex items-center gap-2">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-6 h-6 rounded-full" />
+          <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-6 h-6 rounded-full" />
           <span className="text-xs font-medium" style={{ color: C.muted }}>© {new Date().getFullYear()} RVUnicorn</span>
         </div>
         <div className="flex gap-6 text-xs" style={{ color: C.muted }}>

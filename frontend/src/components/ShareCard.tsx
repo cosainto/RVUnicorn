@@ -119,7 +119,7 @@ export default function ShareCard({ type, title, subtitle, stat, campgroundName,
           {/* Header gradient */}
           <div className="px-6 pt-6 pb-4" style={{ background: 'linear-gradient(to bottom, rgba(232,98,42,0.15), transparent)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-8 h-8 rounded-full" crossOrigin="anonymous" />
+              <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-8 h-8 rounded-full" crossOrigin="anonymous" />
               <span className="text-[13px] font-bold" style={{ color: '#E8A838', fontFamily: "'Playfair Display',serif" }}>RVUnicorn</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(232,168,56,0.1)', color: '#E8A838' }}>
                 {type === 'checkin' ? 'Checked In' : 'Trip Complete'}

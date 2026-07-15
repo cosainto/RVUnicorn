@@ -38,7 +38,7 @@ export default function LoginPage() {
           {/* Logo + Welcome */}
           <div className="text-center mb-8">
             <Link to="/">
-              <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-16 h-16 rounded-full mx-auto mb-4 border-2" style={{ borderColor: '#E8A838' }} />
+              <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-16 h-16 rounded-full mx-auto mb-4 border-2" style={{ borderColor: '#E8A838' }} />
             </Link>
             <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>Welcome back</h1>
             <p className="text-[13px]" style={{ color: 'rgba(245,240,232,0.4)' }}>Sign in to your RVUnicorn account</p>

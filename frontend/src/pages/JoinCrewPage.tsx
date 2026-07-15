@@ -31,7 +31,7 @@ export default function JoinCrewPage() {
 
         {/* Logo */}
         <Link to="/">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-12 h-12 rounded-full mx-auto mb-4 border-2" style={{ borderColor: '#E8A838' }} />
+          <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-12 h-12 rounded-full mx-auto mb-4 border-2" style={{ borderColor: '#E8A838' }} />
         </Link>
 
         {profile ? (

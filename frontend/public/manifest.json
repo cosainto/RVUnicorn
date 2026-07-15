@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/images/Logo_RVUnicorn.png",
+      "src": "/images/logo-icon-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/images/Logo_RVUnicorn.png",
+      "src": "/images/logo-icon-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -26,12 +26,12 @@
     {
       "name": "Campgrounds",
       "url": "/campgrounds",
-      "icons": [{ "src": "/images/Logo_RVUnicorn.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/images/logo-icon-v2.png", "sizes": "96x96" }]
     },
     {
       "name": "My Trips",
       "url": "/trips",
-      "icons": [{ "src": "/images/Logo_RVUnicorn.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/images/logo-icon-v2.png", "sizes": "96x96" }]
     }
   ]
 }

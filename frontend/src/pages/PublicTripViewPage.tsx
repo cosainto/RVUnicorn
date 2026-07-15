@@ -44,7 +44,7 @@ export default function PublicTripViewPage() {
 
           {/* Logo */}
           <Link to="/" className="absolute top-4 left-4 z-10 flex items-center gap-2">
-            <img src="/images/Logo_RVUnicorn.png" alt="" className="w-8 h-8 rounded-full" />
+            <img src="/images/logo-icon-v2.png" alt="" className="w-8 h-8 rounded-full" />
             <span className="text-sm font-bold" style={{ color: '#E8A838' }}>RVUnicorn</span>
           </Link>
 
@@ -188,7 +188,7 @@ export default function PublicTripViewPage() {
         {!user && (
           <div className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-between px-4 py-3" style={{ background: '#0F1C35', borderTop: '1px solid rgba(232,168,56,0.2)', height: '72px' }}>
             <div className="flex items-center gap-3">
-              <img src="/images/Logo_RVUnicorn.png" alt="" className="w-8 h-8 rounded-full" />
+              <img src="/images/logo-icon-v2.png" alt="" className="w-8 h-8 rounded-full" />
               <div>
                 <p className="text-[14px] font-bold">Join the crew</p>
                 <p className="text-[13px]" style={{ color: 'rgba(245,240,232,0.6)' }}>Follow along and plan your own adventure</p>

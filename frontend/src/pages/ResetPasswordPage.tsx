@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(232,98,42,0.08) 0%, transparent 60%), #0F1C35', fontFamily: "'DM Sans',sans-serif" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <Link to="/"><img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-14 h-14 rounded-full mx-auto mb-3 border-2" style={{ borderColor: '#E8A838' }} /></Link>
+          <Link to="/"><img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-14 h-14 rounded-full mx-auto mb-3 border-2" style={{ borderColor: '#E8A838' }} /></Link>
           <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>Set New Password</h1>
         </div>
 

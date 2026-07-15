@@ -92,7 +92,7 @@ export default function BasecampTriviaCard({ campgroundId }: Props) {
         if (Notification.permission === 'granted') {
           new Notification('🎯 Campfire Trivia starting in 3 minutes!', {
             body: `${nextSession.label} session is almost here. Get ready!`,
-            icon: '/images/Logo_RVUnicorn.png',
+            icon: '/images/logo-icon-v2.png',
           });
         }
       }

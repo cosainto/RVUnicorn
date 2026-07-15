@@ -45,7 +45,7 @@ export default function GateModal({ isOpen, onClose, trigger, context = {} }: Pr
 
         {/* Logo */}
         <div className="flex justify-center mb-4">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-12 h-12 rounded-full" />
+          <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-12 h-12 rounded-full" />
         </div>
 
         {/* Headline */}

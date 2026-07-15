@@ -84,7 +84,7 @@ export default function RegisterPage() {
           {/* Logo */}
           <div className="text-center mb-6">
             <Link to="/">
-              <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-14 h-14 rounded-full mx-auto mb-3 border-2" style={{ borderColor: '#E8A838' }} />
+              <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-14 h-14 rounded-full mx-auto mb-3 border-2" style={{ borderColor: '#E8A838' }} />
             </Link>
             <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: "'Playfair Display',serif", color: '#F5F0E8' }}>
               {isInvited ? 'Join your friend' : 'Create your account'}

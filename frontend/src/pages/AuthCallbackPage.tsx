@@ -25,7 +25,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#0F1C35' }}>
-      <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-16 h-16 rounded-full mb-4" />
+      <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-16 h-16 rounded-full mb-4" />
       <div className="animate-spin w-8 h-8 border-b-2 rounded-full mb-4" style={{ borderColor: '#E8A838' }} />
       <p className="text-sm" style={{ color: '#E8A838' }}>Getting your campfire ready... {'\u{1F525}'}</p>
     </div>

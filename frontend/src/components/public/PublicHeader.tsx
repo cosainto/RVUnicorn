@@ -12,7 +12,7 @@ export default function PublicHeader() {
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/images/Logo_RVUnicorn.png" alt="RVUnicorn" className="w-8 h-8 rounded-full" />
+          <img src="/images/logo-icon-v2.png" alt="RVUnicorn" className="w-8 h-8 rounded-full" />
           <span className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif", color: '#F5F0E8' }}>
             RVUnicorn
           </span>
