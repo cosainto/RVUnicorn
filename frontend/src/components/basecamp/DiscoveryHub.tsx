@@ -118,7 +118,7 @@ function ScrollRow({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: 'flex', gap: 14, overflowX: 'auto', overflowY: 'hidden',
-      paddingBottom: 14, paddingLeft: 4, paddingRight: 16, paddingTop: 6,
+      paddingBottom: 14, paddingLeft: 0, paddingRight: 16, paddingTop: 6,
       scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
       scrollbarWidth: 'none',
     }}>
@@ -130,7 +130,7 @@ function ScrollRow({ children }: { children: React.ReactNode }) {
 /* ── Section header (shared) ──────────────────────────────────── */
 function SectionHeader({ icon, title, subtitle }: { icon: string; title: string; subtitle?: string }) {
   return (
-    <div style={{ marginBottom: 8, paddingLeft: 4 }}>
+    <div style={{ marginBottom: 8, paddingLeft: 0 }}>
       <h3 style={{ fontSize: 13, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
         {icon} {title}
       </h3>
@@ -142,7 +142,7 @@ function SectionHeader({ icon, title, subtitle }: { icon: string; title: string;
 /* ── Skeleton row ─────────────────────────────────────────────── */
 function SkeletonRow({ count = 3, w = 280 }: { count?: number; w?: number }) {
   return (
-    <div style={{ display: 'flex', gap: 14, overflowX: 'hidden', paddingLeft: 4, paddingBottom: 14 }}>
+    <div style={{ display: 'flex', gap: 14, overflowX: 'hidden', paddingLeft: 0, paddingBottom: 14 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{ width: w, height: 200, flexShrink: 0, background: CN.navyLight, borderRadius: 20, border: `3px solid ${CN.border}` }} className="animate-pulse" />
       ))}
@@ -195,7 +195,7 @@ export default function DiscoveryHub() {
       {/* ═══════════════════════════════════════════════════════════
           SECTION 1: Discovery Hero Band
           ═══════════════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: 16, paddingLeft: 4 }}>
+      <div style={{ marginBottom: 16, paddingLeft: 0 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: CN.cream, marginBottom: 2 }}>
           Discover Your Next Adventure
         </h2>
@@ -257,7 +257,7 @@ export default function DiscoveryHub() {
       `}</style>
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 0 }}>
           <div>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
               ✨ Dream Campgrounds
@@ -289,7 +289,7 @@ export default function DiscoveryHub() {
 
           return (
             <div style={{
-              margin: '0 4px',
+              margin: 0,
               border: `3px solid ${CN.cream}`, borderRadius: 16,
               boxShadow: `4px 4px 0px ${CN.deep}`,
               background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
@@ -370,7 +370,7 @@ export default function DiscoveryHub() {
         ) : (
           /* Aspirational empty state — full-intensity sticker card */
           <div style={{
-            margin: '0 4px', padding: 20, textAlign: 'center',
+            margin: 0, padding: 20, textAlign: 'center',
             border: `3px solid ${CN.cream}`, borderRadius: 20,
             boxShadow: `5px 5px 0px ${CN.deep}`, background: CN.navy,
             transform: 'rotate(-0.5deg)',
@@ -403,7 +403,7 @@ export default function DiscoveryHub() {
 
           {/* Featured recipe card */}
           <Link to={`/recipes/${campKitchen.featured.id}`} style={{
-            display: 'flex', gap: 12, margin: '0 4px',
+            display: 'flex', gap: 12, margin: 0,
             border: `3px solid ${CN.cream}`, borderRadius: 16,
             boxShadow: `4px 4px 0px ${CN.deep}`,
             background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(232,98,42,0.04) 100%)`,
@@ -476,7 +476,7 @@ export default function DiscoveryHub() {
           </Link>
 
           {/* Category chips */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingLeft: 4, overflowX: 'auto', paddingBottom: 4 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingLeft: 0, overflowX: 'auto', paddingBottom: 4 }}>
             {(campKitchen.categories || KITCHEN_CATEGORIES.map(c => c.label)).map((cat: string, i: number) => (
               <Link key={i} to="/recipes" style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: 20,
@@ -495,7 +495,7 @@ export default function DiscoveryHub() {
       {(!campKitchen || !campKitchen.featured) && (
         <div style={{ marginBottom: 20 }}>
           <SectionHeader icon="🍳" title="Camp Kitchen" subtitle="Recipes made for the campfire" />
-          <div style={{ display: 'flex', gap: 6, paddingLeft: 4, overflowX: 'auto', paddingBottom: 4 }}>
+          <div style={{ display: 'flex', gap: 6, paddingLeft: 0, overflowX: 'auto', paddingBottom: 4 }}>
             {KITCHEN_CATEGORIES.map((cat, i) => (
               <Link key={i} to="/recipes" style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: 20,
