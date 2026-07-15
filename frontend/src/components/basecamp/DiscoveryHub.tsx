@@ -345,19 +345,37 @@ export default function DiscoveryHub() {
               <img src={campKitchen.featured.imageUrl} alt="" loading="lazy"
                 style={{ width: 90, height: 90, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
             ) : (
-              /* Themed no-image variant: category-specific icon on gradient */
+              /* SVG illustration variant by recipe category */
               <div style={{
                 width: 90, height: 90, borderRadius: 12, flexShrink: 0,
-                background: `linear-gradient(135deg, ${CN.navy} 0%, #2D1B4E 100%)`,
+                background: `linear-gradient(135deg, ${CN.deep} 0%, #1a1235 50%, ${CN.navy} 100%)`,
                 border: `2px solid ${CN.border}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                position: 'relative', overflow: 'hidden',
               }}>
-                <span style={{ fontSize: 32 }}>
-                  {(campKitchen.featured.category || '').includes('Dutch') ? '🏺' :
-                   (campKitchen.featured.category || '').includes('Blackstone') ? '🥩' :
-                   (campKitchen.featured.category || '').includes('Kids') ? '🧒' : '🔥'}
-                </span>
-                <span style={{ fontSize: 8, color: CN.muted, marginTop: 2 }}>{campKitchen.featured.category || 'Campfire'}</span>
+                {/* Campfire flames SVG */}
+                <svg viewBox="0 0 90 90" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                  {/* Glow */}
+                  <circle cx="45" cy="65" r="20" fill={CN.orange} opacity="0.15" />
+                  {/* Flame outer */}
+                  <path d="M45 25 C35 40, 28 55, 32 65 C34 72, 40 75, 45 75 C50 75, 56 72, 58 65 C62 55, 55 40, 45 25Z" fill={CN.orange} opacity="0.7" />
+                  {/* Flame inner */}
+                  <path d="M45 35 C40 45, 36 55, 38 62 C39 67, 42 70, 45 70 C48 70, 51 67, 52 62 C54 55, 50 45, 45 35Z" fill={CN.gold} opacity="0.9" />
+                  {/* Flame core */}
+                  <path d="M45 45 C43 50, 41 56, 42 60 C43 63, 44 65, 45 65 C46 65, 47 63, 48 60 C49 56, 47 50, 45 45Z" fill="#FFF3CD" opacity="0.8" />
+                  {/* Logs */}
+                  <rect x="28" y="72" width="34" height="5" rx="2.5" fill="#5C3D2E" />
+                  <rect x="30" y="68" width="30" height="5" rx="2.5" fill="#7A5033" transform="rotate(-8 45 70)" />
+                </svg>
+                {/* Category accent icon */}
+                <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 16, opacity: 0.7 }}>
+                  {(() => {
+                    const cat = (campKitchen.featured.category || '').toLowerCase();
+                    if (cat.includes('dutch')) return <svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="6" width="12" height="8" rx="2" fill={CN.gold} opacity="0.8"/><rect x="4" y="4" width="8" height="3" rx="1" fill={CN.gold} opacity="0.6"/><rect x="6" y="2" width="4" height="3" rx="1" fill={CN.gold} opacity="0.4"/></svg>;
+                    if (cat.includes('blackstone')) return <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="7" width="14" height="3" rx="1" fill={CN.muted} opacity="0.8"/><rect x="2" y="5" width="3" height="3" rx="1" fill="#CD7F32"/><rect x="7" y="4" width="4" height="4" rx="1" fill="#CD7F32"/></svg>;
+                    if (cat.includes('kids')) return <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="6" r="4" fill={CN.gold} opacity="0.7"/><path d="M3 14 C3 10, 6 8, 8 8 C10 8, 13 10, 13 14" fill={CN.gold} opacity="0.5"/></svg>;
+                    return <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 L6 6 L1 6 L5 9 L3.5 14 L8 11 L12.5 14 L11 9 L15 6 L10 6Z" fill={CN.gold} opacity="0.6"/></svg>;
+                  })()}
+                </div>
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
