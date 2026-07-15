@@ -1239,8 +1239,12 @@ export default function EventDetailPage() {
                 className="w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1B2B4B, #0F1C35)' }}>
-                <p className="text-xl sm:text-2xl font-bold text-center px-6 opacity-40" style={{ fontFamily: "'Playfair Display', serif", color: '#C9A84C' }}>{event.campground?.name || event.title}</p>
+              <div className="w-full h-full flex items-center justify-center" style={{ background: isDreamTrip ? 'linear-gradient(135deg, #0F1C35, #2D1B4E)' : 'linear-gradient(135deg, #1B2B4B, #0F1C35)' }}>
+                {isDreamTrip ? (
+                  <img src="/images/genie-full-v2.png" alt="" style={{ width: 80, height: 80, objectFit: 'contain', opacity: 0.3 }} />
+                ) : (
+                  <p className="text-xl sm:text-2xl font-bold text-center px-6 opacity-40" style={{ fontFamily: "'Playfair Display', serif", color: '#C9A84C' }}>{event.campground?.name || event.title}</p>
+                )}
               </div>
             );
           })()}
@@ -1301,7 +1305,9 @@ export default function EventDetailPage() {
                 </div>
               )}
               <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-1" style={{ color: '#8B9BB4' }}><Users className="w-5 h-5" /><span>{event._count?.attendees || 0} attending</span></div>
+                {(event._count?.attendees || 0) > 0 && (
+                  <div className="flex items-center gap-1" style={{ color: '#8B9BB4' }}><Users className="w-5 h-5" /><span>{event._count.attendees} attending</span></div>
+                )}
               </div>
 
               {/* Weather strip */}

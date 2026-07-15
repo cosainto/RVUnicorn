@@ -103,7 +103,7 @@ router.post('/save', authenticateToken, async (req: Request, res: Response) => {
 
     // Create a new dream trip with this as the first stop
     const tripTitle = `Dream: ${name || 'New Place'}`;
-    const farFuture = new Date('2099-01-01'); // Placeholder — dream trips have no real dates
+    // Dream trip stops have NULL dates — no sentinel
     const trip = await db.roadTrip.create({
       data: {
         userId,
@@ -113,8 +113,8 @@ router.post('/save', authenticateToken, async (req: Request, res: Response) => {
           create: {
             title: name || 'Dream Stop',
             organizerId: userId,
-            startDate: farFuture,
-            endDate: farFuture,
+            startDate: null,
+            endDate: null,
             isWishlist: true,
             campgroundId: campgroundId || null,
             placeId: placeId || null,
@@ -563,13 +563,12 @@ router.post('/clone/:roadTripId', authenticateToken, async (req: Request, res: R
 
     // Copy stops (without dates, participants, photos, check-ins)
     for (const stop of source.stops) {
-      const farFuture = new Date('2099-01-01');
       await db.event.create({
         data: {
           title: stop.title,
           organizerId: userId,
-          startDate: farFuture,
-          endDate: farFuture,
+          startDate: null,
+          endDate: null,
           isWishlist: true,
           location: stop.location,
           campgroundId: stop.campgroundId,

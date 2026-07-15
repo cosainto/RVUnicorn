@@ -872,8 +872,8 @@ model Event {
   id                String               @id @default(cuid())
   title             String
   description       String?
-  startDate         DateTime
-  endDate           DateTime
+  startDate         DateTime?
+  endDate           DateTime?
   location          String?
   campgroundId      String?
   createdAt         DateTime             @default(now())
