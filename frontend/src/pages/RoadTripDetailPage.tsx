@@ -105,11 +105,8 @@ export default function RoadTripDetailPage() {
     try {
       const { data } = await api.get(`/road-trips/${id}`);
       setRoadTrip(data);
-      // Skip routing for dream trips — they're collections, not itineraries
-      if (!data.isDream) {
-        if (data.driveInfos) setDriveInfos(data.driveInfos);
-        else calculateAllDriveTimes(data.stops);
-      }
+      if (data.driveInfos) setDriveInfos(data.driveInfos);
+      else if (data.stops?.length > 0) calculateAllDriveTimes(data.stops);
       if (data.rvProfile) {
         setRvProfile(data.rvProfile);
         setLocalMpg(data.rvProfile.rvMpg);
@@ -447,115 +444,15 @@ export default function RoadTripDetailPage() {
         </div>
       )}
 
-      {/* ═══ DREAM TRIP — COLLECTION VIEW ═══ */}
+      {/* ═══ DREAM TRIP BANNER ═══ */}
       {roadTrip.isDream && (
-        <div style={{ background: '#0F1C35', minHeight: '100vh' }}>
-          {/* Header */}
-          <div style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)', padding: '12px 16px' }}>
-            <div className="max-w-3xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button onClick={() => navigate('/road-trips')} style={{ color: '#0F1C35', opacity: 0.7 }}>
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div>
-                  <h1 className="text-lg font-bold" style={{ color: '#0F1C35' }}>{roadTrip.title}</h1>
-                  <p className="text-xs" style={{ color: 'rgba(15,28,53,0.7)' }}>
-                    {roadTrip.stops.length} saved place{roadTrip.stops.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowPromoteModal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition hover:brightness-110"
-                style={{ background: '#0F1C35', color: '#C9A84C' }}>
-                <Sparkles className="w-4 h-4" /> Promote to Real Trip
-              </button>
-            </div>
-          </div>
-
-          {/* Collection grid */}
-          <div className="max-w-3xl mx-auto px-4 py-6">
-            {roadTrip.stops.length === 0 ? (
-              <div className="text-center py-16">
-                <img src="/images/genie-full-v2.png" alt="" style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto 12px' }} />
-                <p className="text-sm font-semibold" style={{ color: '#F5F0E8' }}>No saved places yet</p>
-                <p className="text-xs mt-1" style={{ color: '#8B9BB4' }}>Use the genie button on campgrounds and places to add them here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {roadTrip.stops.map((stop: any, i: number) => {
-                  const target = stop.campground || stop.place;
-                  const name = stop.title || target?.name || `Stop ${i + 1}`;
-                  const location = [target?.city, target?.state].filter(Boolean).join(', ');
-                  const imageUrl = target?.imageUrl || target?.websiteImageUrl;
-                  const link = stop.campgroundId ? `/campgrounds/${stop.campgroundId}` : stop.placeId ? `/place/${stop.placeId}` : null;
-
-                  return (
-                    <div key={stop.id} style={{
-                      background: '#1B2B4B', border: '3px solid #2A3F5F', borderRadius: 16,
-                      boxShadow: '4px 4px 0px #0F1C35', overflow: 'hidden',
-                    }}>
-                      {/* Image */}
-                      <div style={{ height: 120, overflow: 'hidden', position: 'relative' }}>
-                        {imageUrl ? (
-                          <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0F1C35, #2D1B4E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <MapPin style={{ width: 32, height: 32, color: '#2A3F5F' }} />
-                          </div>
-                        )}
-                        {/* Unsave button */}
-                        <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                          <GenieWishlistButton
-                            itemId={stop.campgroundId || stop.placeId || stop.id}
-                            itemType={stop.campgroundId ? 'campground' : 'place'}
-                            itemName={name}
-                            saved={true}
-                            size="sm"
-                            scrim
-                            onToggle={(saved) => { if (!saved) loadRoadTrip(); }}
-                          />
-                        </div>
-                      </div>
-                      {/* Info */}
-                      <div style={{ padding: '10px 12px' }}>
-                        {link ? (
-                          <Link to={link} style={{ textDecoration: 'none' }}>
-                            <h3 className="text-sm font-bold hover:underline" style={{ color: '#F5F0E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</h3>
-                          </Link>
-                        ) : (
-                          <h3 className="text-sm font-bold" style={{ color: '#F5F0E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</h3>
-                        )}
-                        {location && <p className="text-xs mt-1" style={{ color: '#8B9BB4' }}>{location}</p>}
-                        {target?.googleRating && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Star className="w-3 h-3" style={{ color: '#C9A84C', fill: '#C9A84C' }} />
-                            <span className="text-xs font-semibold" style={{ color: '#C9A84C' }}>{target.googleRating}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Promote CTA at bottom */}
-            {roadTrip.stops.length > 0 && (
-              <div className="text-center mt-8">
-                <button onClick={() => setShowPromoteModal(true)}
-                  className="px-6 py-3 rounded-xl text-sm font-bold transition hover:brightness-110"
-                  style={{ background: '#C9A84C', color: '#0F1C35', border: '3px solid #C9A84C', boxShadow: '4px 4px 0px rgba(0,0,0,0.3)' }}>
-                  ✨ Ready to go? Promote to Real Trip
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="text-center py-2 px-4" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)', color: '#0F1C35' }}>
+          <p className="text-xs font-bold">
+            ✨ Dream Trip — plan your route, then set dates when you're ready.
+            <button onClick={() => setShowPromoteModal(true)} className="ml-2 underline font-bold">Set Dates & Promote →</button>
+          </p>
         </div>
       )}
-
-      {/* ═══ REGULAR TRIP PLANNER (non-dream) ═══ */}
-      {roadTrip.isDream ? null : (<>
-      {/* Legacy dream banner removed — dream trips use collection view above */}
 
       {/* ═══ PART A: THIN TRIP HEADER ═══ */}
       <div className={`bg-gradient-to-r ${gradient} text-white`}>
@@ -579,7 +476,7 @@ export default function RoadTripDetailPage() {
                 <p className="text-[10px] text-white/60 uppercase">Total Drive</p>
               </div>
             )}
-            {hasConflicts && <span className="bg-red-500/30 border border-red-300/50 px-2 py-0.5 rounded-full text-[10px] font-bold">⚠️ Conflicts</span>}
+            {hasConflicts && !roadTrip.isDream && <span className="bg-red-500/30 border border-red-300/50 px-2 py-0.5 rounded-full text-[10px] font-bold">⚠️ Conflicts</span>}
             <button onClick={() => setShowAddStop(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
               <Plus className="w-3 h-3" /> Add Stop
             </button>
@@ -960,7 +857,7 @@ export default function RoadTripDetailPage() {
                         </button>
                       </div>
                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
-                        {stop.startDate && (
+                        {stop.startDate && !roadTrip.isDream && (
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {new Date(stop.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1500,7 +1397,6 @@ export default function RoadTripDetailPage() {
           </div>
         </div>
       )}
-      </>)}
     </div>
   );
 }

@@ -359,4 +359,91 @@ router.post('/:id/invite', authenticateToken, async (req: Request, res: Response
   }
 });
 
+// ──────────────────────────────────────────────
+// POST /clone/:roadTripId — Clone a visible trip as a dream trip
+// ──────────────────────────────────────────────
+router.post('/clone/:roadTripId', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { roadTripId } = req.params;
+
+    // Load the source trip with stops
+    const source = await db.roadTrip.findUnique({
+      where: { id: roadTripId },
+      include: {
+        stops: {
+          select: {
+            title: true, location: true, campgroundId: true, placeId: true,
+            stopNumber: true, description: true, isWishlist: true,
+          },
+          orderBy: { stopNumber: 'asc' },
+        },
+        user: { select: { id: true, firstName: true, username: true } },
+      },
+    });
+
+    if (!source) return res.status(404).json({ error: 'Trip not found' });
+
+    // Respect privacy: only clone public/shared trips
+    if (source.privacy === 'PRIVATE' && source.userId !== userId) {
+      return res.status(403).json({ error: 'This trip is private' });
+    }
+
+    // Don't clone your own trip
+    if (source.userId === userId) {
+      return res.status(400).json({ error: 'Cannot clone your own trip' });
+    }
+
+    // Create the dream trip clone
+    const clone = await db.roadTrip.create({
+      data: {
+        userId,
+        title: `Dream: ${source.title}`,
+        description: source.description || null,
+        isDream: true,
+        color: source.color,
+        font: source.font,
+      },
+    });
+
+    // Copy stops (without dates, participants, photos, check-ins)
+    for (const stop of source.stops) {
+      await db.event.create({
+        data: {
+          title: stop.title,
+          organizerId: userId,
+          startDate: new Date(),
+          endDate: new Date(),
+          isWishlist: true,
+          location: stop.location,
+          campgroundId: stop.campgroundId,
+          placeId: stop.placeId,
+          stopNumber: stop.stopNumber,
+          roadTripId: clone.id,
+        },
+      });
+    }
+
+    // Store attribution (sourceTrip reference in description)
+    const attribution = source.user
+      ? `Inspired by ${source.user.firstName || source.user.username}'s "${source.title}"`
+      : `Inspired by a fellow RVer's "${source.title}"`;
+    await db.roadTrip.update({
+      where: { id: clone.id },
+      data: { description: attribution },
+    });
+
+    res.json({
+      cloned: true,
+      tripId: clone.id,
+      title: clone.title,
+      stopCount: source.stops.length,
+      attribution,
+    });
+  } catch (e: any) {
+    console.error('[DreamTrips] clone error:', e.message);
+    res.status(500).json({ error: 'Failed to clone trip' });
+  }
+});
+
 export default router;
