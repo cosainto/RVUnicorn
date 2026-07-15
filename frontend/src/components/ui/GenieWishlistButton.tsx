@@ -56,8 +56,8 @@ export default function GenieWishlistButton({
   const [animating, setAnimating] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const iconSize = size === 'sm' ? 18 : size === 'lg' ? 28 : 22;
-  const btnSize = size === 'sm' ? 28 : size === 'lg' ? 44 : 34;
+  const iconSize = size === 'sm' ? 28 : size === 'lg' ? 36 : 30;
+  const btnSize = size === 'sm' ? 40 : size === 'lg' ? 52 : 44;
 
   const toggle = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
