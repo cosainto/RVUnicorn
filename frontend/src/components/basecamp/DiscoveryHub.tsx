@@ -296,23 +296,25 @@ export default function DiscoveryHub() {
               border: `3px solid ${CN.cream}`, borderRadius: 16,
               boxShadow: `4px 4px 0px ${CN.deep}`,
               background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
-              overflow: 'hidden',
+              overflow: 'hidden', position: 'relative',
             }}>
-              {/* Compact header — mascot as supporting brand element */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', position: 'relative' }}>
+              {/* Genie watermark — large, right-anchored, behind content */}
+              <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+                style={{
+                  position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)',
+                  width: 180, height: 180, objectFit: 'contain', opacity: 0.14,
+                  pointerEvents: 'none', zIndex: 0,
+                  animation: 'genie-float 3.5s ease-in-out infinite',
+                }} />
+
+              {/* Header — no internal View all (section header has it) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', position: 'relative', zIndex: 1 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, flex: 1 }}>
                   ✨ My Wishlist
                   <span style={{ fontSize: 11, fontWeight: 500, color: CN.muted, marginLeft: 6 }}>
                     {totalCount} place{totalCount !== 1 ? 's' : ''}
                   </span>
                 </h4>
-                <Link to="/trips?filter=dream" style={{ fontSize: 10, fontWeight: 700, color: CN.gold, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  View all →
-                </Link>
-                {/* Genie mascot — supporting corner position */}
-                <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
-                  style={{ position: 'absolute', right: 50, top: -2, width: 40, height: 40, objectFit: 'contain', opacity: 0.25,
-                    animation: 'genie-float 3.5s ease-in-out infinite', pointerEvents: 'none' }} />
               </div>
 
               {/* Gallery tiles — the dominant element */}
@@ -321,6 +323,7 @@ export default function DiscoveryHub() {
                   display: 'flex', gap: 10, padding: '0 12px 12px',
                   overflowX: 'auto', scrollbarWidth: 'none',
                   WebkitOverflowScrolling: 'touch',
+                  position: 'relative', zIndex: 1,
                 }}>
                   {allStops.slice(0, 5).map((stop: any, i: number) => {
                     const target = stop.campground || stop.place;
@@ -331,7 +334,17 @@ export default function DiscoveryHub() {
                     const tripFirstStop = stop._tripStops?.[0];
                     const href = tripFirstStop?.id ? `/trips/${tripFirstStop.id}` : '/trips?filter=dream';
                     const isNew = stop.createdAt && (now - new Date(stop.createdAt).getTime()) < sevenDaysMs;
-                    const category = target?.category || (stop.campgroundId ? 'CAMPGROUND' : 'OTHER');
+                    // Infer category: explicit > campground > name-based guess > OTHER
+                    let category = target?.category || (stop.campgroundId ? 'CAMPGROUND' : '');
+                    if (!category) {
+                      const lc = name.toLowerCase();
+                      if (/restaurant|grill|café|cafe|diner|bistro|tavern|inn.*restaurant/i.test(lc)) category = 'RESTAURANT';
+                      else if (/inn|lodge|hotel|motel|hostel/i.test(lc)) category = 'OVERNIGHT_STOP';
+                      else if (/trail|hike|path/i.test(lc)) category = 'HIKING_TRAIL';
+                      else if (/museum/i.test(lc)) category = 'MUSEUM';
+                      else if (/overlook|viewpoint|vista/i.test(lc)) category = 'SCENIC_OVERLOOK';
+                      else category = 'ATTRACTION';
+                    }
                     const catMeta = CATEGORY_META[category] || CATEGORY_META.OTHER;
 
                     return (
