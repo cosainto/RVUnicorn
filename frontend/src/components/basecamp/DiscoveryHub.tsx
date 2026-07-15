@@ -2,9 +2,9 @@
  * DiscoveryHub — Basecamp discovery sections 1-6.
  * Uses shared cartoon primitives (full intensity for cards, subtle for containers).
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, X } from 'lucide-react';
 import GenieWishlistButton from '../ui/GenieWishlistButton';
 import api from '../../services/api';
 import { CBadge, CN, SquiggleUnderline } from '../ui/CartoonPrimitives';
@@ -164,6 +164,47 @@ const KITCHEN_CATEGORIES = [
 export default function DiscoveryHub() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [undoToast, setUndoToast] = useState<{ name: string; itemId: string; itemType: 'campground' | 'place'; itemName: string } | null>(null);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+
+  const handleRemoveStop = useCallback(async (stopId: string, itemId: string, itemType: 'campground' | 'place', itemName: string) => {
+    // Optimistic removal
+    setRemovedIds(prev => new Set(prev).add(stopId));
+    setUndoToast({ name: itemName, itemId, itemType, itemName });
+
+    // Auto-dismiss after 6s
+    const timer = setTimeout(() => setUndoToast(null), 6000);
+
+    try {
+      await api.delete(`/dream-trips/unsave?${itemType === 'campground' ? 'campgroundId' : 'placeId'}=${itemId}`);
+    } catch {
+      // Rollback on failure
+      setRemovedIds(prev => { const next = new Set(prev); next.delete(stopId); return next; });
+      setUndoToast(null);
+      clearTimeout(timer);
+    }
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    if (!undoToast) return;
+    const { itemId, itemType, itemName } = undoToast;
+    setUndoToast(null);
+    try {
+      await api.post('/dream-trips/save', {
+        ...(itemType === 'campground' ? { campgroundId: itemId } : { placeId: itemId }),
+        name: itemName,
+      });
+      // Remove from removedIds to show it again
+      setRemovedIds(prev => { const next = new Set(prev); next.delete(itemId); return next; });
+      // Reload data
+      Promise.all([
+        api.get('/dream-trips/stops').catch(() => ({ data: [] })),
+        api.get('/dream-trips').catch(() => ({ data: [] })),
+      ]).then(([stopsRes, tripsRes]) => {
+        setData((d: any) => ({ ...d, wishlist: stopsRes.data || [], dreamTrips: tripsRes.data || [] }));
+      });
+    } catch {}
+  }, [undoToast]);
 
   useEffect(() => {
     Promise.all([
@@ -285,7 +326,8 @@ export default function DiscoveryHub() {
               }
             }
           }
-          const totalCount = allStops.length;
+          const visibleStops = allStops.filter((s: any) => !removedIds.has(s.id) && !removedIds.has(s.campground?.id || s.place?.id || s.id));
+          const totalCount = visibleStops.length;
 
           const now = Date.now();
           const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -317,7 +359,7 @@ export default function DiscoveryHub() {
                     overflowX: 'auto', scrollbarWidth: 'none',
                     WebkitOverflowScrolling: 'touch',
                   }}>
-                  {allStops.slice(0, 5).map((stop: any, i: number) => {
+                  {allStops.filter((s: any) => !removedIds.has(s.id) && !removedIds.has(s.campground?.id || s.place?.id || s.id)).slice(0, 5).map((stop: any, i: number) => {
                     const target = stop.campground || stop.place;
                     const img = target?.imageUrl || target?.websiteImageUrl;
                     const name = target?.name || stop.name || 'Place';
@@ -367,6 +409,27 @@ export default function DiscoveryHub() {
                             <span style={{ position: 'absolute', top: 4, left: 4, fontSize: 8, fontWeight: 700,
                               padding: '1px 5px', borderRadius: 4, background: CN.gold, color: CN.deep }}>New</span>
                           )}
+                          {/* Remove button — visible on hover (desktop) or always (mobile) */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const itemId = stop.campgroundId || stop.placeId || stop.id;
+                              const itemType = stop.campgroundId ? 'campground' as const : 'place' as const;
+                              handleRemoveStop(stop.id, itemId, itemType, name);
+                            }}
+                            aria-label={`Remove ${name} from wishlist`}
+                            className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                            style={{
+                              position: 'absolute', top: 3, right: 3,
+                              width: 20, height: 20, borderRadius: '50%',
+                              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                              border: 'none', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'white', padding: 0,
+                            }}>
+                            <X style={{ width: 12, height: 12 }} />
+                          </button>
                         </div>
                         {/* Info below tile */}
                         <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, marginTop: 4,
@@ -578,6 +641,21 @@ export default function DiscoveryHub() {
               </div>
             ))}
           </ScrollRow>
+        </div>
+      )}
+
+      {/* Undo toast */}
+      {undoToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 cartoon-card flex items-center gap-3 px-4 py-3 shadow-xl"
+          style={{ background: CN.navy, border: `2px solid ${CN.border}`, maxWidth: 400 }}>
+          <p className="text-sm" style={{ color: CN.cream }}>
+            Removed <span className="font-semibold">{undoToast.name}</span> from your wishlist
+          </p>
+          <button onClick={handleUndo}
+            className="text-xs font-bold px-3 py-1 rounded-lg flex-shrink-0"
+            style={{ background: CN.gold, color: CN.deep }}>
+            Undo
+          </button>
         </div>
       )}
     </div>
