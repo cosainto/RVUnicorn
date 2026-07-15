@@ -296,19 +296,10 @@ export default function DiscoveryHub() {
               border: `3px solid ${CN.cream}`, borderRadius: 16,
               boxShadow: `4px 4px 0px ${CN.deep}`,
               background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
-              overflow: 'hidden', position: 'relative',
+              overflow: 'hidden',
             }}>
-              {/* Genie watermark — centered in the right half, hidden on mobile */}
-              <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim hidden sm:block"
-                style={{
-                  position: 'absolute', right: '15%', top: '50%', transform: 'translateY(-50%)',
-                  width: 170, height: 170, objectFit: 'contain', opacity: 0.15,
-                  pointerEvents: 'none', zIndex: 0,
-                  animation: 'genie-float 3.5s ease-in-out infinite',
-                }} />
-
-              {/* Header — no internal View all (section header has it) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', position: 'relative', zIndex: 1 }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
                 <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, flex: 1 }}>
                   ✨ My Wishlist
                   <span style={{ fontSize: 11, fontWeight: 500, color: CN.muted, marginLeft: 6 }}>
@@ -317,14 +308,15 @@ export default function DiscoveryHub() {
                 </h4>
               </div>
 
-              {/* Gallery tiles — the dominant element */}
+              {/* Body: flex row = [tiles] + [spacer with genie] */}
               {totalCount > 0 && (
-                <div style={{
-                  display: 'flex', gap: 10, padding: '0 12px 12px',
-                  overflowX: 'auto', scrollbarWidth: 'none',
-                  WebkitOverflowScrolling: 'touch',
-                  position: 'relative', zIndex: 1,
-                }}>
+                <div style={{ display: 'flex', padding: '0 12px 12px' }}>
+                  {/* Tile row — scrolls horizontally, content-width */}
+                  <div style={{
+                    display: 'flex', gap: 10, flexShrink: 0,
+                    overflowX: 'auto', scrollbarWidth: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                  }}>
                   {allStops.slice(0, 5).map((stop: any, i: number) => {
                     const target = stop.campground || stop.place;
                     const img = target?.imageUrl || target?.websiteImageUrl;
@@ -402,6 +394,21 @@ export default function DiscoveryHub() {
                       <span style={{ fontSize: 9, color: CN.muted }}>more places</span>
                     </Link>
                   )}
+                  </div>
+
+                  {/* Spacer with centered genie — fills remaining width */}
+                  <div className="hidden lg:flex" style={{
+                    flex: 1, minWidth: 0,
+                    alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none', overflow: 'hidden',
+                  }}>
+                    <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+                      style={{
+                        width: 160, height: 160, objectFit: 'contain', opacity: 0.15,
+                        animation: 'genie-float 3.5s ease-in-out infinite',
+                        flexShrink: 0,
+                      }} />
+                  </div>
                 </div>
               )}
             </div>
