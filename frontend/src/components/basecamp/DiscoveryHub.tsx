@@ -279,7 +279,7 @@ export default function DiscoveryHub() {
               const subtitle = trip.stopCount > 1 ? `${firstStopName} + ${trip.stopCount - 1} more` : firstStopName;
               const states = [...new Set((trip.stops || []).map((s: any) => s.campground?.state || s.place?.state).filter(Boolean))];
               return (
-                <Link key={trip.id} to={`/road-trips/${trip.id}`} style={{
+                <Link key={trip.id} to={trip.stops?.[0]?.id ? `/trips/${trip.stops[0].id}` : `/road-trips/${trip.id}`} style={{
                   display: 'flex', gap: 12,
                   border: `3px solid ${CN.cream}`, borderRadius: 16,
                   boxShadow: `4px 4px 0px ${CN.deep}`,

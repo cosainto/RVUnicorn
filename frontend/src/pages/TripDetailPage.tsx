@@ -1010,6 +1010,7 @@ export default function EventDetailPage() {
     }
   };
   const isPastTrip = event?.endDate ? new Date(event.endDate) < new Date() : event?.startDate ? new Date(event.startDate) < new Date() : false;
+  const isDreamTrip = !!(event as any).roadTrip?.isDream || event.isWishlist;
 
   const handlePrivacyChange = async (newPrivacy: string) => {
     try {
@@ -1253,11 +1254,15 @@ export default function EventDetailPage() {
               <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" disabled={uploadingBanner} />
             </label>
           )}
-          {daysUntil && (
+          {isDreamTrip ? (
+            <div className="absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg" style={{ background: 'linear-gradient(90deg, #C9A84C, #E8622A)', color: '#0F1C35' }}>
+              <span className="font-bold text-sm">✨ Dream Trip</span>
+            </div>
+          ) : daysUntil ? (
             <div className={`absolute top-4 right-4 px-4 py-2 rounded-full shadow-lg ${event.isWishlist ? 'bg-yellow-100 border-2 border-yellow-300' : 'bg-white'}`}>
               <span className={`font-semibold ${daysUntil.color}`}>{daysUntil.text}</span>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="p-6">
@@ -1270,7 +1275,7 @@ export default function EventDetailPage() {
                 ) : (
                   event.title
                 )}
-                {event.isWishlist && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
+                {event.isWishlist && !isDreamTrip && <Star className="w-6 h-6 text-yellow-500 fill-yellow-400 inline ml-2" />}
               </h1>
               <ShareButton
                 title={`${event.title} - RVUnicorn`}

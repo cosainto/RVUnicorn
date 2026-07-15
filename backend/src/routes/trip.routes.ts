@@ -172,6 +172,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             title: true,
             color: true,
             font: true,
+            isDream: true,
             stops: {
               orderBy: [{ stopNumber: 'asc' }, { startDate: 'asc' }],
               select: {
@@ -805,6 +806,7 @@ router.get('/:id', async (req, res) => {
             title: true,
             color: true,
             font: true,
+            isDream: true,
             stops: {
               orderBy: [{ stopNumber: 'asc' }, { startDate: 'asc' }],
               select: {
