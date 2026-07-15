@@ -830,9 +830,14 @@ export default function RoadTripDetailPage() {
                       <GripVertical className="w-4 h-4" />
                     </div>
 
-                    {stop.campground?.imageUrl && (
-                      <img src={stop.campground.imageUrl} alt="" className="w-20 h-20 object-cover flex-shrink-0" />
-                    )}
+                    {/* Stop image: campground photo → place website image → category gradient fallback */}
+                    {(stop.campground?.imageUrl || stop.place?.websiteImageUrl) ? (
+                      <img src={stop.campground?.imageUrl || stop.place?.websiteImageUrl} alt="" className="w-20 h-20 object-cover flex-shrink-0" />
+                    ) : stop.place ? (
+                      <div className="w-20 h-20 flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0F1C35, #2D1B4E)' }}>
+                        <MapPin className="w-6 h-6" style={{ color: '#2A3F5F' }} />
+                      </div>
+                    ) : null}
 
                     <div className="flex-1 p-4 min-w-0">
                       <div className="flex items-start justify-between gap-2">
@@ -844,10 +849,15 @@ export default function RoadTripDetailPage() {
                           <div className="min-w-0">
                             <Link to={`/trips/${stop.id}`} className="font-bold text-gray-900 hover:underline truncate block"
                               style={{ fontFamily }}>{stop.title}</Link>
-                            {stop.campground && (
+                            {/* Location: campground OR place city/state */}
+                            {(stop.campground || stop.place) && (
                               <p className="text-xs text-gray-500 flex items-center gap-1">
                                 <MapPin className="w-3 h-3 flex-shrink-0" />
-                                {stop.campground.name}{stop.campground.city ? ` · ${stop.campground.city}, ${stop.campground.state}` : ''}
+                                {stop.campground
+                                  ? `${stop.campground.name}${stop.campground.city ? ` · ${stop.campground.city}, ${stop.campground.state}` : ''}`
+                                  : stop.place
+                                    ? `${stop.place.name}${stop.place.city ? ` · ${stop.place.city}, ${stop.place.state}` : ''}`
+                                    : stop.location || ''}
                               </p>
                             )}
                           </div>

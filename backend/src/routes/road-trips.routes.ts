@@ -77,7 +77,7 @@ async function getDriveTime(originLat: number, originLng: number, destLat: numbe
 
 const STOP_INCLUDE = {
   campground: { select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, imageUrl: true } },
-  // harvestHost would go here if Event model had a direct harvestHostId field
+  place: { select: { id: true, name: true, category: true, city: true, state: true, latitude: true, longitude: true, websiteImageUrl: true } },
   attendees: { select: { userId: true, status: true, user: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } } },
   _count: { select: { subevents: true, meals: true, tripPackItems: true } },
 };
