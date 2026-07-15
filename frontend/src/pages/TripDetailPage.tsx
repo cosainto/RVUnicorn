@@ -1171,8 +1171,34 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Road Trip Banner */}
-      {event.roadTrip && (
+      {/* Dream trip context bar — single compact element */}
+      {isDreamTrip && event.roadTrip && (
+        <div className="mb-4 rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #1B2B4B, rgba(45,27,78,0.15))', border: '1px solid #2A3F5F' }}>
+          <div className="px-4 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <span>✨</span>
+              <span style={{ color: '#F5F0E8' }}>Part of <Link to={`/trips/${event.roadTrip.stops?.[0]?.id || event.id}`} className="font-semibold underline" style={{ color: '#C9A84C' }}>{event.roadTrip.title}</Link></span>
+              <span style={{ color: '#8B9BB4' }}>— a dream trip</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link to={`/trips/${event.roadTrip.stops?.[0]?.id || event.id}`}
+                className="text-xs font-medium px-3 py-1 rounded-lg transition" style={{ color: '#8B9BB4', border: '1px solid #2A3F5F' }}>
+                View Trip
+              </Link>
+              <button onClick={() => {
+                const promoteModal = document.getElementById('promote-modal-trigger');
+                if (promoteModal) promoteModal.click();
+              }}
+                className="text-xs font-semibold px-3 py-1 rounded-lg transition" style={{ background: '#C9A84C', color: '#0F1C35' }}>
+                Set Dates
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Road Trip Banner — non-dream trips only */}
+      {event.roadTrip && !isDreamTrip && (
         <div className="mb-4 rounded-xl overflow-hidden shadow-md">
           <div className="px-4 py-3 flex items-center justify-between text-white text-sm font-semibold"
             style={{ background: 'linear-gradient(135deg, ' + event.roadTrip.color + ', ' + event.roadTrip.color + 'cc)' }}>
@@ -1188,7 +1214,6 @@ export default function EventDetailPage() {
             View Road Trip →
           </a>
           </div>
-          {/* Inline stop list in banner */}
           {event.roadTrip.stops && event.roadTrip.stops.length > 1 && (
             <div className="flex overflow-x-auto scrollbar-hide px-3 py-2 gap-2 bg-black/20">
               {event.roadTrip.stops.map((stop: any, i: number) => (
@@ -1207,11 +1232,14 @@ export default function EventDetailPage() {
           )}
         </div>
       )}
-      <button onClick={() => navigate('/events')} className="flex items-center mb-4 transition" style={{ color: '#8B9BB4' }}>
-        <ArrowLeft className="w-5 h-5 mr-2" />Back to Events
-      </button>
+      {!isDreamTrip && (
+        <button onClick={() => navigate('/events')} className="flex items-center mb-4 transition" style={{ color: '#8B9BB4' }}>
+          <ArrowLeft className="w-5 h-5 mr-2" />Back to Events
+        </button>
+      )}
 
-      {event.isWishlist && (
+      {/* Wishlist Event card — non-dream only */}
+      {event.isWishlist && !isDreamTrip && (
         <div className="bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-300 rounded-lg p-4 mb-4 flex items-center gap-3">
           <Star className="w-6 h-6 text-yellow-600 fill-yellow-400" />
           <div>
