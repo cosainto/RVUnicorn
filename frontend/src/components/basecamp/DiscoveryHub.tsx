@@ -519,9 +519,9 @@ export default function DiscoveryHub() {
         <div style={{ marginBottom: 20 }}>
           <SectionHeader icon="🍳" title="Recipe of the Day" subtitle="Tonight's perfect meal after a day on the trail." />
 
-          {/* Featured recipe card */}
-          <Link to={`/recipes/${campKitchen.featured.id}`} style={{
-            display: 'flex', gap: 12, margin: 0,
+          {/* Featured recipe card — body links to /recipes, CTA to detail */}
+          <Link to="/recipes" style={{
+            display: 'flex', margin: 0,
             border: `3px solid ${CN.cream}`, borderRadius: 16,
             boxShadow: `4px 4px 0px ${CN.deep}`,
             background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(232,98,42,0.04) 100%)`,
@@ -570,26 +570,39 @@ export default function DiscoveryHub() {
                 </div>
               </div>
             )}
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0, padding: '8px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 3, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {campKitchen.featured.title}
-              </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginBottom: 4 }}>
-                {campKitchen.featured.cookTime && (
-                  <span style={{ fontSize: 10, color: CN.muted }}>⏱ {campKitchen.featured.cookTime} min</span>
-                )}
-                {campKitchen.featured.difficulty && (
-                  <span style={{ fontSize: 10, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
-                )}
+            {/* Content row: info + watermark spacer */}
+            <div style={{ flex: 1, display: 'flex', gap: 12, minWidth: 0, padding: '8px 12px 8px 0' }}>
+              {/* Info */}
+              <div style={{ flex: 'none', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 3, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {campKitchen.featured.title}
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginBottom: 4 }}>
+                  {campKitchen.featured.cookTime != null && (
+                    <span style={{ fontSize: 10, color: CN.muted }}>⏱ {campKitchen.featured.cookTime > 0 ? campKitchen.featured.cookTime + ' min' : 'No cook'}</span>
+                  )}
+                  {campKitchen.featured.difficulty && (
+                    <span style={{ fontSize: 10, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
+                  )}
+                </div>
+                {/* CTA — links to detail, stops propagation to prevent card nav */}
+                <Link to={`/recipes/${campKitchen.featured.id}`} onClick={e => e.stopPropagation()}
+                  style={{ fontSize: 11, fontWeight: 700, color: CN.orange, textDecoration: 'none' }}>
+                  Cook Tonight →
+                </Link>
               </div>
-              <CBadge color="orange">🔥 Perfect for campfires</CBadge>
-            </div>
-            {/* CTA */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 0 0', flexShrink: 0 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: CN.orange, whiteSpace: 'nowrap' }}>
-                Cook Tonight →
-              </span>
+
+              {/* Watermark spacer — centered in remaining space */}
+              <div className="hidden lg:flex" style={{
+                flex: 1, minWidth: 0,
+                alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none', overflow: 'hidden',
+              }}>
+                {/* Renders only if the asset exists — no broken image */}
+                <img src="/images/hitch-bbq-v1.png" alt=""
+                  style={{ width: 160, height: 160, objectFit: 'contain', opacity: 0.15, flexShrink: 0 }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              </div>
             </div>
           </Link>
 

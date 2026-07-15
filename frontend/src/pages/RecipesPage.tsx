@@ -137,6 +137,17 @@ export default function RecipesPage() {
     imageUrl: '',
   });
 
+  // Featured Recipe of the Day
+  const [featuredRecipe, setFeaturedRecipe] = useState<Recipe | null>(null);
+  useEffect(() => {
+    api.get('/basecamp/v2/discovery').then(res => {
+      const featured = res.data?.campKitchen?.featured;
+      if (featured) {
+        api.get(`/recipes/${featured.id}`).then(r => setFeaturedRecipe(r.data)).catch(() => {});
+      }
+    }).catch(() => {});
+  }, []);
+
   // Load recipes when filters change
   useEffect(() => {
     loadRecipes();
@@ -528,6 +539,35 @@ export default function RecipesPage() {
         {loading ? 'Loading...' : `${recipes.length} recipe${recipes.length !== 1 ? 's' : ''} found`}
       </div>
 
+      {/* Featured Recipe of the Day */}
+      {featuredRecipe && !searchQuery && selectedCategory === 'All' && (
+        <Link to={`/recipes/${featuredRecipe.id}`}
+          className="block mb-6 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition"
+          style={{ background: 'linear-gradient(135deg, #1B2B4B, rgba(232,98,42,0.08))', border: '1px solid rgba(232,98,42,0.2)' }}>
+          <div className="flex flex-col sm:flex-row">
+            {featuredRecipe.imageUrl ? (
+              <img src={featuredRecipe.imageUrl} alt="" className="w-full sm:w-48 h-40 sm:h-auto object-cover" />
+            ) : (
+              <div className="w-full sm:w-48 h-40 sm:h-auto flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0F1C35, #2D1B4E)' }}>
+                <ChefHat className="w-12 h-12" style={{ color: 'rgba(232,98,42,0.4)' }} />
+              </div>
+            )}
+            <div className="p-5 flex-1">
+              <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-2" style={{ background: 'rgba(232,98,42,0.15)', color: '#E8622A', border: '1px solid rgba(232,98,42,0.3)' }}>
+                🍳 Recipe of the Day
+              </span>
+              <h3 className="text-xl font-bold mb-2" style={{ color: '#F5F0E8' }}>{featuredRecipe.title}</h3>
+              {featuredRecipe.description && <p className="text-sm line-clamp-2 mb-3" style={{ color: '#8B9BB4' }}>{featuredRecipe.description}</p>}
+              <div className="flex items-center gap-4 text-xs" style={{ color: '#8B9BB4' }}>
+                {featuredRecipe.cookTime != null && <span>⏱ {featuredRecipe.cookTime > 0 ? featuredRecipe.cookTime + ' min' : 'No cook'}</span>}
+                {featuredRecipe.difficulty && <span>· {featuredRecipe.difficulty}</span>}
+                {featuredRecipe.servings && <span>· Serves {featuredRecipe.servings}</span>}
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* Recipe Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -535,7 +575,7 @@ export default function RecipesPage() {
         </div>
       ) : recipes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recipes.map((recipe) => (
+          {recipes.filter(r => r.id !== featuredRecipe?.id).map((recipe) => (
             <Link
               key={recipe.id}
               to={`/recipes/${recipe.id}`}
