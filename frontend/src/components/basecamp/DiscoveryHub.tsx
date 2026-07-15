@@ -298,11 +298,11 @@ export default function DiscoveryHub() {
               background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
               overflow: 'hidden', position: 'relative',
             }}>
-              {/* Genie watermark — large, right-anchored, behind content */}
-              <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+              {/* Genie watermark — centered in the right half, hidden on mobile */}
+              <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim hidden sm:block"
                 style={{
-                  position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)',
-                  width: 180, height: 180, objectFit: 'contain', opacity: 0.14,
+                  position: 'absolute', right: '15%', top: '50%', transform: 'translateY(-50%)',
+                  width: 170, height: 170, objectFit: 'contain', opacity: 0.15,
                   pointerEvents: 'none', zIndex: 0,
                   animation: 'genie-float 3.5s ease-in-out infinite',
                 }} />
