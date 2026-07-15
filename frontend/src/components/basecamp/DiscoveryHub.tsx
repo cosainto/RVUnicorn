@@ -272,82 +272,93 @@ export default function DiscoveryHub() {
             <Link to="/road-trips?filter=dream" style={{ fontSize: 10, fontWeight: 700, color: CN.gold, textDecoration: 'none' }}>View all →</Link>
           )}
         </div>
-        {dreamTrips.length > 0 ? (
-          <div className="space-y-3" style={{ margin: '0 4px' }}>
-            {dreamTrips.map((trip: any) => {
-              const firstStopName = trip.stops?.[0]?.campground?.name || trip.stops?.[0]?.place?.name || trip.stops?.[0]?.name || '';
-              const subtitle = trip.stopCount > 1 ? `${firstStopName} + ${trip.stopCount - 1} more` : firstStopName;
-              const states = [...new Set((trip.stops || []).map((s: any) => s.campground?.state || s.place?.state).filter(Boolean))];
-              return (
-                <Link key={trip.id} to={trip.stops?.[0]?.id ? `/trips/${trip.stops[0].id}` : `/road-trips/${trip.id}`} style={{
-                  display: 'flex', gap: 12,
-                  border: `3px solid ${CN.cream}`, borderRadius: 16,
-                  boxShadow: `4px 4px 0px ${CN.deep}`,
-                  background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
-                  overflow: 'hidden', textDecoration: 'none',
-                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
-                  cursor: 'pointer',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
-                  {/* Square cover tile */}
-                  <div style={{ width: 82, height: 82, overflow: 'hidden', flexShrink: 0, borderRadius: '13px 0 0 13px' }}>
-                    {trip.coverImage ? (
-                      <img src={trip.coverImage} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
-                          style={{ width: '70%', height: '70%', objectFit: 'contain', animation: 'genie-float 3.5s ease-in-out infinite' }} />
-                      </div>
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0, padding: '8px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {trip.title}
-                    </h4>
-                    {/* Place thumbnails + names */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                      {(trip.stops || []).slice(0, 3).map((s: any, si: number) => {
-                        const img = s.campground?.imageUrl || s.place?.websiteImageUrl;
-                        const sName = s.campground?.name || s.place?.name || s.name;
-                        return (
-                          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            {img ? (
-                              <img src={img} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
-                            ) : (
-                              <div style={{ width: 18, height: 18, borderRadius: 4, background: CN.border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <MapPin style={{ width: 10, height: 10, color: CN.muted }} />
-                              </div>
-                            )}
-                            <span style={{ fontSize: 10, color: CN.muted, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sName}</span>
-                          </div>
-                        );
-                      })}
-                      {trip.stopCount > 3 && <span style={{ fontSize: 9, color: CN.muted }}>+{trip.stopCount - 3} more</span>}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: 'rgba(201,168,76,0.15)', color: CN.gold, border: `1px solid rgba(201,168,76,0.3)` }}>
-                        ✨ {trip.stopCount} saved
-                      </span>
-                      {states.length > 1 && (
-                        <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: 'rgba(139,155,180,0.1)', color: CN.muted, border: `1px solid ${CN.border}` }}>
-                          🗺 {states.length} states
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {/* CTA */}
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 0 0', flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: CN.gold, whiteSpace: 'nowrap' }}>
-                      View Wishlist →
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        ) : wishlist.length > 0 ? (
+        {dreamTrips.length > 0 ? ((() => {
+          // Aggregate all stops across all dream trips, deduped
+          const allStops: any[] = [];
+          const seenIds = new Set<string>();
+          for (const trip of dreamTrips) {
+            for (const stop of (trip.stops || [])) {
+              const key = stop.campground?.id || stop.place?.id || stop.id;
+              if (!seenIds.has(key)) {
+                seenIds.add(key);
+                allStops.push({ ...stop, _tripId: trip.id, _tripStops: trip.stops });
+              }
+            }
+          }
+          const totalCount = allStops.length;
+
+          return (
+            <div style={{
+              margin: '0 4px',
+              border: `3px solid ${CN.cream}`, borderRadius: 16,
+              boxShadow: `4px 4px 0px ${CN.deep}`,
+              background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
+              overflow: 'hidden',
+              transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
+              {/* Header row */}
+              <div style={{ display: 'flex', gap: 12, padding: 12 }}>
+                {/* Genie tile */}
+                <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden',
+                  background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+                    style={{ width: '70%', height: '70%', objectFit: 'contain', animation: 'genie-float 3.5s ease-in-out infinite' }} />
+                </div>
+                {/* Title + count */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, color: CN.cream }}>My Wishlist</h4>
+                  <p style={{ fontSize: 11, color: CN.muted, marginTop: 2 }}>
+                    {totalCount} place{totalCount !== 1 ? 's are' : ' is'} waiting for your next adventure
+                  </p>
+                </div>
+                {/* View all CTA */}
+                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <Link to="/trips?filter=dream" style={{ fontSize: 11, fontWeight: 700, color: CN.gold, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    View Wishlist →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Thumbnail row */}
+              {totalCount > 0 && (
+                <div style={{ display: 'flex', gap: 8, padding: '0 12px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  {allStops.slice(0, 6).map((stop: any, i: number) => {
+                    const target = stop.campground || stop.place;
+                    const img = target?.imageUrl || target?.websiteImageUrl;
+                    const name = target?.name || stop.name || 'Place';
+                    const tripFirstStop = stop._tripStops?.[0];
+                    const href = tripFirstStop?.id ? `/trips/${tripFirstStop.id}` : '/trips?filter=dream';
+                    return (
+                      <Link key={i} to={href} style={{ flexShrink: 0, textDecoration: 'none', textAlign: 'center', width: 64 }}>
+                        <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', margin: '0 auto',
+                          border: `2px solid ${CN.border}` }}>
+                          {img ? (
+                            <img src={img} alt={name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #2D1B4E)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <MapPin style={{ width: 16, height: 16, color: CN.border }} />
+                            </div>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 9, color: CN.muted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+                      </Link>
+                    );
+                  })}
+                  {totalCount > 6 && (
+                    <Link to="/trips?filter=dream" style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 10,
+                      background: CN.navyLight, border: `2px solid ${CN.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      textDecoration: 'none', margin: '0 auto' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: CN.muted }}>+{totalCount - 6}</span>
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()) : wishlist.length > 0 ? (
           /* Fallback: flat wishlist items if no dream trips but old saves exist */
           <ScrollRow>
             {wishlist.map((item, i) => (
