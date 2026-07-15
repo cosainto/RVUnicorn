@@ -517,7 +517,7 @@ export default function DiscoveryHub() {
           ═══════════════════════════════════════════════════════════ */}
       {campKitchen && campKitchen.featured && (
         <div style={{ marginBottom: 20 }}>
-          <SectionHeader icon="🍳" title="Camp Kitchen" subtitle="Tonight's perfect meal after a day on the trail." />
+          <SectionHeader icon="🍳" title="Recipe of the Day" subtitle="Tonight's perfect meal after a day on the trail." />
 
           {/* Featured recipe card */}
           <Link to={`/recipes/${campKitchen.featured.id}`} style={{
