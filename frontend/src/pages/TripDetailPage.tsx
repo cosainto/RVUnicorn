@@ -874,7 +874,7 @@ export default function EventDetailPage() {
   };
 
   const calculateDuration = () => {
-    if (!event?.startDate || event.isWishlist) return '';
+    if (!event?.startDate || event.isWishlist || isDreamTrip) return '';
     const start = new Date(event.startDate);
     const end = event.endDate ? new Date(event.endDate) : start;
     const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -883,6 +883,7 @@ export default function EventDetailPage() {
   };
 
   const getDaysUntilEvent = () => {
+    if (isDreamTrip) return null; // Dream trips have no dates
     if (!event?.startDate) return null;
     if (event.isWishlist) return { text: '⭐ Wishlist', color: 'text-yellow-600' };
     const start = new Date(event.startDate);
@@ -1131,8 +1132,8 @@ export default function EventDetailPage() {
         .trip-dark .bg-gradient-to-r.from-yellow-100 { background: rgba(232,168,56,0.1) !important; }
         .trip-dark details summary { color: #F5F0E8 !important; }
       `}</style>
-      {/* Pulse NowBar */}
-      {event && (
+      {/* Pulse NowBar — hidden for dream trips */}
+      {event && !isDreamTrip && (
         <NowBar
           tripState={pulse.tripState}
           stateLabel={pulse.stateLabel}
