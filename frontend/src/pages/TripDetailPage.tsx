@@ -1222,8 +1222,8 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      <div className={`rounded-xl overflow-hidden mb-6 ${isPastTrip ? 'hidden' : ''}`} style={{ background: '#1B2B4B', border: '1px solid #243552' }}>
-        <div className="h-64 relative group" style={{ background: 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}>
+      <div className={`rounded-xl overflow-hidden mb-6 ${isPastTrip ? 'hidden' : ''}`} style={{ background: isDreamTrip ? 'linear-gradient(135deg, #1B2B4B, rgba(45,27,78,0.08))' : '#1B2B4B', border: '1px solid #243552' }}>
+        <div className="h-64 relative group" style={{ background: isDreamTrip ? 'linear-gradient(135deg, #0F1C35, #2D1B4E)' : 'linear-gradient(135deg, #0F1C35, #1B2B4B)' }}>
           {(() => {
             const img = (event.bannerImage && !event.bannerImage.startsWith('/images/')) ? event.bannerImage : (event.imageUrl && !event.imageUrl.startsWith('/images/')) ? event.imageUrl : event.campground?.imageUrl;
             return img ? (
