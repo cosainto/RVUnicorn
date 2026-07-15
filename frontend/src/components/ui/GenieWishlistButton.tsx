@@ -23,27 +23,16 @@ const CN = {
   muted: '#8B9BB4',
 };
 
-// Genie lamp SVG icon (inline, works at any size, no external image needed for ≤40px)
-function GenieLampIcon({ size = 24, filled = false }: { size?: number; filled?: boolean }) {
+// Genie mascot icon — uses the prepped transparent PNG
+function GenieMascotIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Lamp base */}
-      <ellipse cx="12" cy="20" rx="6" ry="2" fill={filled ? CN.gold : 'none'} stroke={filled ? CN.gold : 'currentColor'} strokeWidth="1.5" />
-      {/* Lamp body */}
-      <path d="M8 20 C8 17, 7 15, 9 13 L15 13 C17 15, 16 17, 16 20" fill={filled ? CN.gold : 'none'} stroke={filled ? CN.gold : 'currentColor'} strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Spout */}
-      <path d="M15 13 C16 12, 18 11, 19 10" stroke={filled ? CN.gold : 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-      {/* Handle */}
-      <path d="M9 13 C8 11, 6 10, 7 8 C8 6, 10 7, 10 9" stroke={filled ? CN.gold : 'currentColor'} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      {/* Magic sparkles when filled */}
-      {filled && (
-        <>
-          <circle cx="17" cy="6" r="1" fill={CN.gold} opacity="0.8" />
-          <circle cx="19" cy="8" r="0.6" fill={CN.gold} opacity="0.6" />
-          <circle cx="15" cy="4" r="0.7" fill={CN.gold} opacity="0.7" />
-        </>
-      )}
-    </svg>
+    <img
+      src="/images/genie-full-v2.png"
+      alt="Add to wishlist"
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'contain', pointerEvents: 'none' }}
+    />
   );
 }
 
@@ -124,7 +113,7 @@ export default function GenieWishlistButton({
         backdropFilter: scrim ? 'blur(4px)' : undefined,
       }}
     >
-      <GenieLampIcon size={iconSize} filled={isSaved} />
+      <GenieMascotIcon size={iconSize} />
       {showLabel && (
         <span style={{ fontSize: size === 'sm' ? 10 : 12, fontWeight: 600 }}>
           {isSaved ? 'Wished' : 'Wish'}
